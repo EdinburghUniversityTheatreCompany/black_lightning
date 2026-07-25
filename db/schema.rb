@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_110728) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -667,12 +667,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
     t.string "airtable_record_id"
     t.decimal "amount", precision: 12, scale: 2
     t.bigint "budget_id", null: false
+    t.bigint "budget_update_id"
     t.datetime "created_at", null: false
     t.date "date"
     t.text "reason"
     t.datetime "updated_at", null: false
     t.index ["airtable_record_id"], name: "index_reimbursements_budget_forecasts_on_airtable_record_id", unique: true
     t.index ["budget_id"], name: "index_reimbursements_budget_forecasts_on_budget_id"
+    t.index ["budget_update_id"], name: "index_reimbursements_budget_forecasts_on_budget_update_id"
   end
 
   create_table "reimbursements_budget_owners", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -683,6 +685,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
     t.index ["budget_id", "person_id"], name: "index_reimbursements_budget_owners_on_budget_id_and_person_id", unique: true
     t.index ["budget_id"], name: "index_reimbursements_budget_owners_on_budget_id"
     t.index ["person_id"], name: "index_reimbursements_budget_owners_on_person_id"
+  end
+
+  create_table "reimbursements_budget_updates", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_by_id"
+    t.date "effective_date", null: false
+    t.bigint "financial_year_id"
+    t.text "note"
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_reimbursements_budget_updates_on_created_by_id"
+    t.index ["financial_year_id"], name: "index_reimbursements_budget_updates_on_financial_year_id"
   end
 
   create_table "reimbursements_budgets", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -1120,9 +1133,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
   add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_budget_forecasts", "reimbursements_budget_updates", column: "budget_update_id"
   add_foreign_key "reimbursements_budget_forecasts", "reimbursements_budgets", column: "budget_id"
   add_foreign_key "reimbursements_budget_owners", "reimbursements_budgets", column: "budget_id"
   add_foreign_key "reimbursements_budget_owners", "reimbursements_people", column: "person_id"
+  add_foreign_key "reimbursements_budget_updates", "reimbursements_financial_years", column: "financial_year_id"
+  add_foreign_key "reimbursements_budget_updates", "users", column: "created_by_id"
   add_foreign_key "reimbursements_budgets", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_budgets", "reimbursements_financial_years", column: "financial_year_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_budgets", column: "budget_id"

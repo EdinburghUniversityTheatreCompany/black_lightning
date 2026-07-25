@@ -56,6 +56,10 @@ module Reimbursements
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
     has_many :expenses, class_name: "Reimbursements::Expense",
                         dependent: :nullify, inverse_of: :budget
+    # Income budgets carry their reconciled EUSA credits directly on budget_id;
+    # Expense budgets' actuals hang off their expenses (expense.eusa_actuals).
+    has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
+                            dependent: :nullify, inverse_of: :budget
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast",
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
@@ -125,6 +129,68 @@ module Reimbursements
       return nil if current_forecast.nil? || initial_budget.nil?
 
       current_forecast - initial_budget
+    end
+
+    # --- Overview rollups (Track G) ----------------------------------------
+    # The "current plan" for the line: the latest logged forecast, falling back
+    # to the initial figure when none has been logged. Nil only when neither
+    # exists (an untracked line).
+    def projected_amount
+      current_forecast || initial_budget
+    end
+
+    # The portal's own view of what's been paid (status = Paid). Named to sit
+    # beside eusa_actual_amount, whose divergence from it is a reconciliation
+    # signal.
+    def paid_portal_amount
+      total_paid
+    end
+
+    # The EUSA ledger's view of actual spend for this line. For an Expense
+    # budget that's the sum of debit legs on the actuals reconciled to its
+    # expenses; for an Income budget it's the sum of credit legs booked
+    # directly against the budget.
+    def eusa_actual_amount
+      @eusa_actual_amount ||= income? ? credit_actual_total : debit_actual_total
+    end
+
+    # Pending expenses not yet approved: money in the pipeline that hasn't
+    # reached Committed. Kept separate so Committed keeps its meaning
+    # (Approved/Submitted/Paid).
+    def pipeline_amount
+      @pipeline_amount ||=
+        if expenses.loaded?
+          expenses.select { |e| e.status == Status::PENDING }.sum { |e| e.amount_excl_vat || 0 }
+        else
+          expenses.where(status: Status::PENDING).sum(:amount_excl_vat)
+        end
+    end
+
+    # The most this line could realistically end up costing: the greater of the
+    # current projection and what's already been spent or committed, so the
+    # number never drops below reality as spend lands.
+    def expected_outturn
+      [ projected_amount, committed_amount, paid_portal_amount, eusa_actual_amount ].compact.max
+    end
+
+    private
+
+    # Credit legs booked straight against an Income budget (budget_id set).
+    def credit_actual_total
+      if eusa_actuals.loaded?
+        eusa_actuals.sum { |a| a.credit || 0 }
+      else
+        eusa_actuals.sum(:credit) || 0
+      end
+    end
+
+    # Debit legs on actuals reconciled to this budget's expenses.
+    def debit_actual_total
+      if expenses.loaded? && expenses.all? { |e| e.association(:eusa_actuals).loaded? }
+        expenses.sum { |e| e.eusa_actuals.sum { |a| a.debit || 0 } }
+      else
+        EusaActual.where(expense_id: expenses.map(&:id)).sum(:debit) || 0
+      end
     end
   end
 end

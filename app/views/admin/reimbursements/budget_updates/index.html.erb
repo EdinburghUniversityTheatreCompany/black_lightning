@@ -1,0 +1,42 @@
+<p class="mb-3 text-gray-600">
+  A log of multi-budget forecast revisions. Each one revised several budgets' forecasts at once
+  under a shared effective date and note. The individual forecasts stay editable from each
+  budget's own forecast log.
+</p>
+
+<p class="mb-3">
+  <%= link_to "New budget update", new_admin_reimbursements_budget_update_path,
+        class: btn_classes(:primary, :sm) %>
+</p>
+
+<%= render CardComponent.new(title: "Budget updates", flush: true) do %>
+  <% if @budget_updates.empty? %>
+    <p class="py-4 text-center text-gray-600">No budget updates logged yet.</p>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Effective date</th>
+            <th scope="col">Note</th>
+            <th scope="col">Budgets revised</th>
+            <th scope="col">Logged by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @budget_updates.each do |update| %>
+            <tr>
+              <td class="whitespace-nowrap"><%= reimbursements_date(update.effective_date) %></td>
+              <td><%= update.note.presence || "-" %></td>
+              <td>
+                <% names = update.forecasts.filter_map { |f| @budgets_by_id[f.budget_id]&.name } %>
+                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "budget") %>
+              </td>
+              <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>

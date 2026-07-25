@@ -5,6 +5,11 @@
   initial figure and whether submitters can see it, or to log a projected-spend update.
 </p>
 
+<p class="mb-3">
+  <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path,
+        class: btn_classes(:secondary, :sm) %>
+</p>
+
 <p class="mb-2 text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
 
 <% if @budgets.total_count.zero? %>
@@ -12,8 +17,12 @@
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
 <% else %>
+  <% expected_header = content_tag(:span, "Expected outturn",
+       title: "The greater of the current projection and what's already been spent or committed, " \
+              "so the number never drops below reality.") %>
   <% headers = [ "Budget", "Type", "Visible", "Initial", "Current forecast", "Committed",
-                 "Total paid", "Remaining", "Variance", "Owners", "" ] %>
+                 "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
+                 "Remaining", "Variance", "Owners", "" ] %>
   <% field_sets = @budgets.map do |budget|
        over_flag = if budget.over_budget?
                      render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
@@ -60,7 +69,10 @@
            reimbursements_money(budget.initial_budget),
            reimbursements_money(budget.current_forecast),
            reimbursements_money(budget.committed_amount),
-           reimbursements_money(budget.total_paid),
+           reimbursements_money(budget.pipeline_amount),
+           reimbursements_money(budget.paid_portal_amount),
+           reimbursements_money(budget.eusa_actual_amount),
+           reimbursements_money(budget.expected_outturn),
            content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class,
                        title: ("Over budget — nothing left to spend" if budget.remaining&.negative?)),
            content_tag(:span, reimbursements_money(budget.variance), class: variance_class, title: variance_title),

@@ -14,6 +14,9 @@ module Reimbursements
     # Raised instead of removing an expense's last receipt (drafts excepted).
     class LastReceiptError < StandardError; end
 
+    # Bucket label for budgets with a blank nominal code in the overview.
+    NO_CODE_LABEL = "(none)".freeze
+
     # Attribute-vocabulary translations onto AR columns; everything else in
     # the vocabulary already matches its column name.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
@@ -62,12 +65,34 @@ module Reimbursements
     end
 
     def budgets
-      @budgets ||= Budget.includes(:owners, :forecasts, :expenses).to_a
+      # eusa_actuals are preloaded both directly (income credits on budget_id)
+      # and through expenses (expense debit legs) so the overview's per-line
+      # EUSA-actual rollup costs no per-budget queries.
+      @budgets ||= Budget.includes(:owners, :forecasts, :eusa_actuals,
+                                   expenses: :eusa_actuals).to_a
     end
 
     # Budgets a submitter may charge an expense to.
     def active_budgets
       budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
+    end
+
+    # Budgets grouped by nominal code for the overview page, ordered by code
+    # with the blank-code bucket ("(none)") sorted last. Each budget carries its
+    # own memoized rollups (preloaded in #budgets), so the grouped totals cost
+    # no extra queries.
+    def budgets_by_nominal_code
+      budgets.group_by { |b| b.nominal_code.presence || NO_CODE_LABEL }
+             .sort_by { |code, _| [ code == NO_CODE_LABEL ? 1 : 0, code ] }
+             .to_h
+    end
+
+    # EUSA actuals booked against a nominal code with no budget at all — real
+    # spend against a code no one planned for, surfaced separately on the
+    # overview so it isn't lost.
+    def unbudgeted_actuals
+      coded = budgets.map(&:nominal_code).to_set
+      eusa_actuals.reject { |a| coded.include?(a.nominal_code) }
     end
 
     def update_budget!(record_id, attrs)
@@ -83,7 +108,7 @@ module Reimbursements
     def budget_forecasts(budget_id)
       return [] if budget_id.blank?
 
-      BudgetForecast.where(budget_id: budget_id)
+      BudgetForecast.where(budget_id: budget_id).includes(:budget_update)
                     .order(date: :desc, id: :desc).to_a
     end
 
@@ -104,6 +129,32 @@ module Reimbursements
     def delete_forecast!(record_id)
       BudgetForecast.find(record_id).destroy!
       bust_budgets!
+    end
+
+    # Records a multi-budget revision in one gesture: a BudgetUpdate carrying
+    # the shared effective_date + note + author, and one BudgetForecast per
+    # entry linked to it (dated with the shared date, its reason set to the
+    # shared note). +forecasts+ is an array of {budget_id:, amount:} — the
+    # caller drops blank amounts. All-or-nothing: an invalid entry rolls the
+    # whole update back.
+    def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
+      update = nil
+      BudgetUpdate.transaction do
+        update = BudgetUpdate.create!(effective_date: effective_date, note: note,
+                                      created_by: created_by,
+                                      financial_year: FinancialYear.current)
+        forecasts.each do |entry|
+          BudgetForecast.create!(budget_id: entry[:budget_id], amount: entry[:amount],
+                                 date: effective_date, reason: note, budget_update: update)
+        end
+      end
+      bust_budgets!
+      update
+    end
+
+    def budget_updates
+      BudgetUpdate.includes(:created_by, :forecasts)
+                  .order(effective_date: :desc, id: :desc).to_a
     end
 
     # Retries the auto_number MAX+1 race: two concurrent creates (portal vs

@@ -213,5 +213,72 @@ module Reimbursements
       store.bust_expenses!
       assert_equal 1, store.expenses.size
     end
+
+    # --- Budget overview grouping (Track G Phase 2) ------------------------
+
+    test "budgets_by_nominal_code groups budgets under their code, sorted, blanks last" do
+      props_a = Budget.create!(name: "Props A", nominal_code: "4000")
+      props_b = Budget.create!(name: "Props B", nominal_code: "4000")
+      travel = Budget.create!(name: "Travel", nominal_code: "4100")
+      uncoded = Budget.create!(name: "Uncoded", nominal_code: "")
+
+      grouped = store.budgets_by_nominal_code
+
+      assert_equal [ "4000", "4100", "(none)" ].sort, grouped.keys.sort
+      assert_equal [ props_a.id, props_b.id ].sort, grouped["4000"].map(&:id).sort
+      assert_equal [ travel.id ], grouped["4100"].map(&:id)
+      assert_equal [ uncoded.id ], grouped["(none)"].map(&:id)
+    end
+
+    test "unbudgeted_actuals are those whose nominal code matches no budget" do
+      Budget.create!(name: "Props", nominal_code: "4000")
+      matched = EusaActual.create!(nominal_code: "4000", narrative: "matched", debit: 10)
+      orphan = EusaActual.create!(nominal_code: "9999", narrative: "no budget", debit: 20)
+
+      unbudgeted = store.unbudgeted_actuals
+
+      assert_includes unbudgeted.map(&:id), orphan.id
+      assert_not_includes unbudgeted.map(&:id), matched.id
+    end
+
+    # --- Budget updates (Track G Phase 3) ----------------------------------
+
+    test "create_budget_update! records the shared update and one forecast per entry" do
+      a = Budget.create!(name: "Props", nominal_code: "4000")
+      b = Budget.create!(name: "Travel", nominal_code: "4100")
+      user = users(:member)
+
+      update = store.create_budget_update!(
+        effective_date: Date.new(2026, 6, 1), note: "Budget meeting",
+        created_by: user,
+        forecasts: [ { budget_id: a.record_id, amount: BigDecimal("500") },
+                     { budget_id: b.record_id, amount: BigDecimal("250") } ]
+      )
+
+      assert_equal Date.new(2026, 6, 1), update.effective_date
+      assert_equal "Budget meeting", update.note
+      assert_equal user.id, update.created_by_id
+      assert_equal 2, update.forecasts.count
+      # Each forecast carries the shared date + note and links back to the update.
+      created = BudgetForecast.where(budget_update_id: update.id).order(:budget_id)
+      assert_equal [ BigDecimal("500"), BigDecimal("250") ].sort, created.map(&:amount).sort
+      assert created.all? { |f| f.date == Date.new(2026, 6, 1) && f.reason == "Budget meeting" }
+      # The new forecast becomes each budget's current forecast.
+      assert_equal BigDecimal("500"), Budget.find(a.id).current_forecast
+    end
+
+    test "create_budget_update! rolls back entirely if one forecast is invalid" do
+      a = Budget.create!(name: "Props", nominal_code: "4000")
+
+      assert_no_difference [ -> { BudgetUpdate.count }, -> { BudgetForecast.count } ] do
+        assert_raises(ActiveRecord::RecordInvalid) do
+          store.create_budget_update!(
+            effective_date: Date.new(2026, 6, 1), note: "x", created_by: nil,
+            forecasts: [ { budget_id: a.record_id, amount: BigDecimal("500") },
+                         { budget_id: a.record_id, amount: nil } ] # amount required
+          )
+        end
+      end
+    end
   end
 end

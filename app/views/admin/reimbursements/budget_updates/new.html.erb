@@ -1,0 +1,60 @@
+<p class="mb-3">
+  <%= link_to "← All budget updates", admin_reimbursements_budget_updates_path,
+        class: "text-sm text-primary underline" %>
+</p>
+
+<%= render CardComponent.new(title: "New budget update") do %>
+  <p class="text-sm text-gray-600 mb-4">
+    Revise several budgets' forecasts in one go — for example after a budget meeting. Set one
+    effective date and a shared note, then enter a new amount only for the budgets that changed.
+    Leave a budget blank to keep its current forecast.
+  </p>
+
+  <%= form_with url: admin_reimbursements_budget_updates_path, method: :post,
+                class: "flex flex-col gap-4" do %>
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= label_tag :effective_date, "Effective date", class: "block text-sm font-medium" %>
+        <%= date_field_tag :effective_date, @effective_date,
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+      <div class="grow">
+        <%= label_tag :note, "Shared note", class: "block text-sm font-medium" %>
+        <%= text_field_tag :note, nil, placeholder: "e.g. Agreed at the June budget meeting",
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-500 border-b border-gray-200">
+            <th scope="col" class="py-2 pr-3">Budget</th>
+            <th scope="col" class="py-2 pr-3">Nominal code</th>
+            <th scope="col" class="py-2 pr-3 text-right">Current forecast</th>
+            <th scope="col" class="py-2 text-right">New amount (£, excl. VAT)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @budgets.each do |budget| %>
+            <tr class="border-b border-gray-100">
+              <td class="py-2 pr-3"><%= budget.name.presence || "-" %></td>
+              <td class="py-2 pr-3 whitespace-nowrap"><%= budget.nominal_code.presence || "-" %></td>
+              <td class="py-2 pr-3 text-right"><%= reimbursements_money(budget.current_forecast) %></td>
+              <td class="py-2 text-right">
+                <%= number_field_tag "amounts[#{budget.record_id}]", nil, step: "0.01",
+                      "aria-label": "New forecast for #{budget.name}",
+                      class: "border border-gray-300 rounded px-2 py-1 text-sm w-40 text-right" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <%= submit_tag "Save budget update", class: btn_classes(:primary) %>
+      <%= link_to "Cancel", admin_reimbursements_budget_updates_path, class: btn_classes(:secondary) %>
+    </div>
+  <% end %>
+<% end %>

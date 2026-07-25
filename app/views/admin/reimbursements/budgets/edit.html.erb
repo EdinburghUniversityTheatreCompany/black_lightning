@@ -77,7 +77,10 @@
   <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
     <div><dt class="text-gray-500">Current forecast</dt><dd class="font-medium"><%= reimbursements_money(@budget.current_forecast) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@budget.committed_amount) %></dd></div>
-    <div><dt class="text-gray-500">Total paid</dt><dd class="font-medium"><%= reimbursements_money(@budget.total_paid) %></dd></div>
+    <div><dt class="text-gray-500">Pipeline</dt><dd class="font-medium" title="Pending expenses not yet approved."><%= reimbursements_money(@budget.pipeline_amount) %></dd></div>
+    <div><dt class="text-gray-500">Paid (portal)</dt><dd class="font-medium"><%= reimbursements_money(@budget.paid_portal_amount) %></dd></div>
+    <div><dt class="text-gray-500">EUSA actual</dt><dd class="font-medium" title="Reconciled EUSA ledger spend for this line."><%= reimbursements_money(@budget.eusa_actual_amount) %></dd></div>
+    <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
     <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium <%= "text-danger" if @budget.remaining&.negative? %>"><%= reimbursements_money(@budget.remaining) %></dd></div>
     <div>
       <dt class="text-gray-500">Variance</dt>
@@ -159,7 +162,13 @@
               <tr class="border-b border-gray-100">
                 <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(forecast.date) %></td>
                 <td class="py-2 pr-3 text-right"><%= reimbursements_money(forecast.amount) %></td>
-                <td class="py-2"><%= forecast.reason.presence || "-" %></td>
+                <td class="py-2">
+                  <%= forecast.reason.presence || "-" %>
+                  <% if forecast.budget_update_id.present? %>
+                    <span class="ml-1 text-xs text-gray-500">(part of a budget update
+                      on <%= reimbursements_date(forecast.budget_update.effective_date) %>)</span>
+                  <% end %>
+                </td>
                 <td class="py-2 text-right whitespace-nowrap">
                   <%= link_to "Edit",
                         edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),

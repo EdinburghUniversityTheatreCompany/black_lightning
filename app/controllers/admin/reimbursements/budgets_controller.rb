@@ -24,6 +24,19 @@ module Admin
         @people_by_id = store.people.index_by(&:record_id)
       end
 
+      # A finance overview grouping every budget by nominal code — a subtotal
+      # per code, a grand-total footer, and a separate list of EUSA spend
+      # booked against a code with no budget at all.
+      def overview
+        @title = "Budget overview"
+        @rollups = store.budgets_by_nominal_code.map do |code, budgets|
+          ::Reimbursements::NominalCodeRollup.new(code, budgets)
+        end
+        @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, store.budgets)
+        @unbudgeted_actuals = store.unbudgeted_actuals
+        @budgets_by_id = store.budgets.index_by(&:record_id)
+      end
+
       def edit
         @title = "Budget — #{@budget.name}"
         @people = store.people
