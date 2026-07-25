@@ -134,6 +134,38 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunities(:active_opportunity).expired?
   end
 
+  # Regression: both expiry comparisons must be date-to-date. Against
+  # Time.current an expiry_date coerces to midnight UTC, which during British
+  # Summer Time is LATER than "now" between 00:00 and 01:00 local — so a posting
+  # that expires today (including one just closed) read as still active, and
+  # still listable, for that one hour a day. Travel into that window so the
+  # date-vs-time distinction is what the test turns on; it would pass for the
+  # other 23 hours either way.
+  test "a posting expiring today is expired inside the 00:00-01:00 BST window" do
+    travel_to Time.zone.local(2026, 7, 25, 0, 30) do
+      assert_equal 3600, Time.zone.now.utc_offset, "sanity: 00:30 on 25 July is BST (UTC+1)"
+
+      opp = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current)
+
+      assert_predicate opp, :expired?
+      assert_not opp.active?
+      assert_not Opportunity.listable.exists?(opp.id),
+                 "a posting expiring today must not be publicly listable at 00:30 BST"
+    end
+  end
+
+  # The other side of the same window: tomorrow's expiry is still live, so the
+  # fix didn't just expire everything an hour early.
+  test "a posting expiring tomorrow is still live inside the 00:00-01:00 BST window" do
+    travel_to Time.zone.local(2026, 7, 25, 0, 30) do
+      opp = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.tomorrow)
+
+      assert_not opp.expired?
+      assert_predicate opp, :active?
+      assert Opportunity.listable.exists?(opp.id)
+    end
+  end
+
 
   test "display_title falls back to company and project" do
     opp = opportunities(:internal_project_opportunity)
