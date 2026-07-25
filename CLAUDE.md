@@ -218,6 +218,40 @@ survive as historical import provenance and are never written. Spec + plan in
 - **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
   the *development* credentials are publicly readable, so no secret values there), then
   per-env credentials `reimbursements:` (production only).
+- **Outbound Graph calls are gated to production** (`Settings.outbound_enabled?`): true in
+  production, elsewhere only with `REIMBURSEMENTS_ENABLE_OUTBOUND` set (the test suite opts in
+  via `test_helper.rb`, since it fakes the transport). **This is why email-in appears to do
+  nothing locally — by design, not a bug.** `MailboxPollJob#perform` returns immediately;
+  `send_mail` and `create_draft` log and return a stub; `MailboxClient#reply/#move/#mark_read`
+  no-op. `upload_to_folder` and `delete_message` instead **raise** `OutboundSuppressedError`,
+  because a plausible return value there is indistinguishable from success and would stamp
+  `receipts_offloaded` on receipts that were never backed up (the flag that tells a producer it
+  is safe to delete their only copy). Read-only Graph probes stay live in dev, so the Settings
+  integration dashboard still works. Without this, a dev machine holding fnox Azure credentials
+  would email real producers and PUT the BACS spreadsheet into production SharePoint.
+- **Bank details are encrypted at rest** (ActiveRecord Encryption, non-deterministic):
+  `sort_code`/`account_number`/`notes` on `Reimbursements::PaymentDetails`, and the
+  `sort_code_override`/`account_number_override`/`payee_name_override` trio on
+  `Reimbursements::Expense`. Nothing queries these by value (non-deterministic would break that);
+  the money path reads the decrypted attributes. Keys: production credentials under
+  `active_record_encryption:` (Rails' railtie reads them automatically); development takes
+  `REIMBURSEMENTS_AR_ENCRYPTION_*` from ENV (fnox) **falling back to throwaway literals in
+  `config/application.rb`** — needed because an encrypted attribute requires a key on write even
+  when blank, so without them every `Expense.create!` in a fnox-less dev shell raised; test uses
+  literals in `config/environments/test.rb`. `development.key` is *committed*, so real key
+  material must never go in `development.yml.enc`.
+  - **The rollout is unfinished**: `support_unencrypted_data = true` is still set, so existing
+    plaintext rows keep reading and **no data is protected yet**. Finishing it means deploy → run
+    `bin/rails reimbursements:encrypt_backfill` → verify a raw column is ciphertext → flip the
+    flag off and deploy again. The backfill aborts non-zero if any row fails, because flipping the
+    flag over an unconverted row makes it unreadable. Full sequence in
+    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md). After
+    backfill, losing the production credential keys makes the bank details unrecoverable.
+  - Rails' auto-injected `validate_column_size` guard is **off** (`config.active_record.encryption
+    .validate_column_size = false`): it measures the *decrypted* value, so it never caught the real
+    hazard, and it crashed `database_consistency` on both models. Explicit plaintext length caps on
+    the models do that job instead. Ciphertext runs roughly 2× plaintext plus envelope, which is
+    why `payee_name_override` had to become TEXT.
 - **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): **opt-in per receipt**.
   Selecting a file no longer auto-scans; the receipt form reveals a consent radio group
   (`reimbursements_receipt_controller.js`) and only "Yes, reimburse myself" (`mode: self`)
