@@ -62,7 +62,7 @@ module Admin
       end
 
       def edit
-        @title = "Settings — #{@cost_centre.name}"
+        @title = "Settings: #{@cost_centre.name}"
         setup_folder_picker if params[:picker].present?
       end
 
@@ -75,7 +75,7 @@ module Admin
       # grants worked before relying on email-in or Build Batch. Renders the edit
       # page with a per-check pass/fail list.
       def test_access
-        @title = "Settings — #{@cost_centre.name}"
+        @title = "Settings: #{@cost_centre.name}"
         @access_checks = run_access_checks
         respond_to do |format|
           format.turbo_stream
@@ -99,7 +99,7 @@ module Admin
         if @cost_centre.update(settings_params)
           redirect_to edit_path, notice: "Settings saved for #{@cost_centre.name}."
         else
-          @title = "Settings — #{@cost_centre.name}"
+          @title = "Settings: #{@cost_centre.name}"
           flash.now[:alert] = @cost_centre.errors.full_messages.to_sentence
           render :edit, status: :unprocessable_entity
         end
@@ -140,8 +140,8 @@ module Admin
         end
 
         unless verified_folder?(params[:drive_id], params[:folder_id])
-          return redirect_to(edit_path, alert: "That folder could not be verified against SharePoint " \
-                                               "— please pick it again.")
+          return redirect_to(edit_path, alert: "That folder could not be verified against SharePoint. " \
+                                               "Please pick it again.")
         end
 
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])

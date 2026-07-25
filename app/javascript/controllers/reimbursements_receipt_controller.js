@@ -116,7 +116,7 @@ export default class extends Controller {
     if (this.hasReattachNoticeTarget) this.reattachNoticeTarget.classList.add("hidden")
     // A file is present again, so offer the consent choice for it once more.
     this.#refreshConsentVisibility()
-    this.#setStatus("Kept the receipt you attached — check the errors above and submit again.")
+    this.#setStatus("Kept the receipt you attached. Check the errors above and submit again.")
   }
 
   // Opt-in scan, invoked from the consent radios. mode is "self" (reimburse the

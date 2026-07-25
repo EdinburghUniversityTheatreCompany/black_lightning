@@ -174,12 +174,12 @@ module ReimbursementsHelper
   # is "where's my money?", so the portal shows a plainer label with a tooltip.
   # Finance pages keep the raw status. Status.badge_variant still drives colour.
   PRODUCER_STATUS = {
-    "Draft" => [ "Draft", "Only you can see this — submit it when you're ready." ],
+    "Draft" => [ "Draft", "Only you can see this. Submit it when you're ready." ],
     "Pending" => [ "Waiting for review", "With the finance team, waiting to be checked." ],
-    "Approved" => [ "Approved", "Checked and approved — waiting to be sent to EUSA for payment." ],
+    "Approved" => [ "Approved", "Checked and approved; waiting to be sent to EUSA for payment." ],
     "Submitted" => [ "Sent to EUSA", "Sent to the Students' Association (EUSA) for payment." ],
     "Paid" => [ "Paid", "Paid into your bank account." ],
-    "Rejected" => [ "Rejected", "Not approved — see the reason on the row." ]
+    "Rejected" => [ "Rejected", "Not approved. See the reason on the row." ]
   }.freeze
 
   # A status badge with the producer-facing label + an explaining tooltip.

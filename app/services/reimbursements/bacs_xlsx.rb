@@ -62,7 +62,7 @@ module Reimbursements
     def generate(rows)
       if rows.size > MAX_ROWS
         raise TemplateError,
-              "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity — " \
+              "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity. " \
               "split this into multiple submissions."
       end
 

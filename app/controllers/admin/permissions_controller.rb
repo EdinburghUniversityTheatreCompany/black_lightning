@@ -22,7 +22,7 @@ class Admin::PermissionsController < AdminController
     end
     @roles = [ @role ]
     @actions = %w[read create update delete manage]
-    @title = "Permissions — #{@role.name}"
+    @title = "Permissions: #{@role.name}"
     @models.sort_by!(&:name)
   end
 

@@ -18,7 +18,7 @@ class Admin::DebtCheckersController < AdminController
     authorize! :check_debt, Admin::Debt
 
     @user = User.find(params[:id])
-    @title = "Debt Check — #{@user.name_or_email}"
+    @title = "Debt Check: #{@user.name_or_email}"
   end
 
   def lookup

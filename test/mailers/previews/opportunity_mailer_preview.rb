@@ -4,7 +4,7 @@ class OpportunityMailerPreview < ActionMailer::Preview
   end
 
   def approved
-    OpportunityMailer.approved(sample_opportunity, "Thanks — this looks great, it's now live.")
+    OpportunityMailer.approved(sample_opportunity, "Thanks, this looks great. It's now live.")
   end
 
   def rejected

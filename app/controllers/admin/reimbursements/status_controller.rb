@@ -55,10 +55,10 @@ module Admin
         return graph_skip unless ::Reimbursements::Settings.mailbox_configured?
 
         graph.check_reachable
-        Check.new(label: "Microsoft Graph", status: :ok, detail: "Reachable — acquired an app token.")
+        Check.new(label: "Microsoft Graph", status: :ok, detail: "Reachable: acquired an app token.")
       rescue StandardError => e
         Check.new(label: "Microsoft Graph", status: :fail,
-                  detail: "#{e.message}. The Azure app's client secret may have expired — contact IT " \
+                  detail: "#{e.message}. The Azure app's client secret may have expired. Contact IT " \
                           "to rotate it (it's a server credential, not set here).")
       end
 
@@ -75,7 +75,7 @@ module Admin
           Check.new(label: "Gemini (AI checker)", status: :ok, detail: "API key configured.")
         else
           Check.new(label: "Gemini (AI checker)", status: :skip,
-                    detail: "No API key set — AI checks are disabled.")
+                    detail: "No API key set. AI checks are disabled.")
         end
       end
     end

@@ -245,7 +245,7 @@ module Reimbursements
         end
         true
       rescue StandardError => e
-        result.errors << "SUBMIT FAILED — DOUBLE-DRAFT RISK: could not mark expense " \
+        result.errors << "SUBMIT FAILED (DOUBLE-DRAFT RISK): could not mark expense " \
           "#{expense.auto_number} as Submitted after #{WRITE_RETRY_ATTEMPTS} attempts, even though " \
           "it is included in the live EUSA draft (#{result.eusa_draft_web_link}). Fix this " \
           "expense's status manually before rebuilding, or it will be drafted a second time: #{e.message}"
@@ -265,7 +265,7 @@ module Reimbursements
     def orphan_draft_message(result)
       "ORPHAN DRAFT: the EUSA draft was created (#{result.eusa_draft_web_link}) but the batch record " \
         "could not be saved. The expenses were marked Submitted to stop a rebuild creating a SECOND " \
-        "draft — send THIS existing draft and repair the batch record manually. DO NOT rebuild."
+        "draft. Send THIS existing draft and repair the batch record manually. DO NOT rebuild."
     end
 
     # Producer notifications go via Graph (Notifier#producer_notification), one
@@ -317,7 +317,7 @@ module Reimbursements
         with_write_retry { @store.update_expense!(expense.record_id, producer_notified: true) }
       rescue StandardError => e
         result.errors << "Failed to mark producer_notified on #{expense.auto_number} after " \
-          "#{WRITE_RETRY_ATTEMPTS} attempts — their notification email was already sent, so a " \
+          "#{WRITE_RETRY_ATTEMPTS} attempts; their notification email was already sent, so a " \
           "rebuild risks emailing them twice: #{e.message}"
       end
     end
