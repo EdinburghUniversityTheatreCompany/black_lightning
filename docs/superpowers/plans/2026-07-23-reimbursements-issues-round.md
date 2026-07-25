@@ -447,6 +447,45 @@ Track E's consent flow is hollow without this. All four reviewers missed it.
 
 ---
 
+### Track N: in-page receipt viewing + side-by-side checking (Mick, 2026-07-25)
+
+Two requests that are really one feature: receipts open in a new tab today, which makes checking
+a claim a tab-flipping exercise. Finance compares a figure on a document against a figure in a
+form dozens of times in a sitting, so the document and the details should be visible together.
+
+**Decisions (Mick, 2026-07-25):**
+1. **Inline viewing everywhere a receipt appears**: the Review page, the finance expense
+   edit/show pages, and the producer's own claim pages. Same partial/component in all three, so
+   this is one implementation, not three.
+2. **Review page layout**: receipt pane beside the details, with a **thumbnail strip** to switch
+   when a claim has several receipts (one shown large at a time). Not a stacked scroll, which
+   pushes the relevant document off-screen on a multi-receipt claim.
+3. **Opened per claim, on demand**, not on for every card. The queue must stay scannable, and
+   this also avoids loading every PDF on page load. No persisted per-operator preference.
+
+**Implementation notes:**
+- **PDFs**: prefer the browser's native viewer via `<iframe>`/`<object>` pointed at the existing
+  `rails_blob_path`, with a visible "open in a new tab" / download fallback for browsers that
+  refuse to render inline. Do NOT vendor pdf.js unless native embedding proves inadequate: it is a
+  large dependency for a small win here, and `vendor/assets` would be the place if it ever is.
+- Images already have `rails_representation_path` thumbnails (`Expense.wrap_receipt`), so the
+  thumbnail strip has what it needs for images; PDFs will need a generic document icon rather than
+  a real page preview unless a preview is already generated.
+- Stimulus controller for the switching and the open/close; no JS framework. Lazy: set the pane's
+  `src` when it is first opened so nothing is fetched for a collapsed card.
+- Check `Attachment::ALLOWED_CONTENT_TYPES` for what can actually arrive (the sheet-music MIME
+  registrations mean the set is wider than images+PDF, e.g. `.mscz`/`.mxl`); anything not
+  renderable inline must degrade to the download link rather than an empty frame.
+- **Narrow screens**: side-by-side is untenable on a phone, so the pane must stack below the
+  details rather than squeezing both. Verify at a mobile width.
+- Accessibility: the strip is a list of controls, not decorative thumbnails, so it needs real
+  buttons with accessible names ("Receipt 2 of 3, invoice.pdf") and the pane needs a label.
+- Tests: request-level rendering for each of the three pages; a system test opening the pane,
+  switching receipts, and confirming the PDF frame gets a `src` only after opening; the
+  markdown-editor caveat in CLAUDE.md means don't drive the description field in the browser.
+
+---
+
 ### Track D: Fringe generalisation + em-dash sweep (CANCELLED)
 
 Mick stopped this agent mid-run on 2026-07-25. The Fringe generalisation (~21 hardcoded
