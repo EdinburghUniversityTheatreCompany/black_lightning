@@ -473,6 +473,17 @@ module Reimbursements
     NEAR_MISS_CREDIT = { nominal: "432320", date: "28/05/2025", period: "2", ref: "1137",
                          narrative: "PI 40000456 1234567890", value: "-200.00" }.freeze
 
+    # A Sage payment-run reference is stamped across every row of the run, so a
+    # cost and an unrelated income of the same size share it. On the score alone
+    # that is ref (4) + period (1) with no date penalty = 5, comfortably over the
+    # floor, and both rows would be stamped offset: the lighting hire vanishes
+    # from the ledger and the expense behind it is never paid. Same nominal code
+    # is therefore a hard requirement, not a scoring signal.
+    CROSS_NOMINAL_DEBIT = { nominal: "041000", date: "12/06/2025", period: "3", ref: "BACS0099",
+                            narrative: "Lighting hire for the summer run", value: "1234.56" }.freeze
+    CROSS_NOMINAL_CREDIT = { nominal: "081000", date: "12/06/2025", period: "3", ref: "BACS0099",
+                             narrative: "Ticket income june transfer", value: "-1234.56" }.freeze
+
     REAL_SHAPES = [ ACCRUAL_LEG, REVERSAL_LEG, JOURNAL_LEG_A, JOURNAL_LEG_B,
                     CROSS_MONTH_LEG_A, CROSS_MONTH_LEG_B, COLLIDING_SPEND,
                     NEAR_MISS_DEBIT, NEAR_MISS_CREDIT ].freeze
@@ -545,6 +556,27 @@ module Reimbursements
       assert_equal 7, pairs.first.score
       assert_equal [ weaker_claimant[:narrative] ], remaining.map(&:narrative),
                    "the weaker claimant (score 4) loses the reversal leg and stays unmatched"
+    end
+
+    test "detect_offsetting_pairs never pairs rows on different nominal codes" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ CROSS_NOMINAL_DEBIT, CROSS_NOMINAL_CREDIT ])
+      )
+
+      assert_empty pairs,
+                   "a shared payment-run reference is not evidence of an offset across nominal codes"
+      assert_equal 2, remaining.size, "both rows stay in the working set for a human to handle"
+    end
+
+    # The gate is the codes agreeing, not merely being equal strings: two blank
+    # codes agree on nothing.
+    test "detect_offsetting_pairs never pairs two rows with blank nominal codes" do
+      blank_debit = ACCRUAL_LEG.merge(nominal: "")
+      blank_credit = REVERSAL_LEG.merge(nominal: "")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ blank_debit, blank_credit ]))
+
+      assert_empty pairs
+      assert_equal 2, remaining.size
     end
 
     test "detect_offsetting_pairs needs the exact same absolute amount" do

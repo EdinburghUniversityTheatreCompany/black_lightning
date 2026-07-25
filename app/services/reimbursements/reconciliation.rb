@@ -163,22 +163,31 @@ module Reimbursements
 
     # --- offsetting pairs --------------------------------------------------
 
-    # Scoring weights, tuned against a real 309-row EUSA F40 export. Offset
-    # legs there are overwhelmingly on the SAME nominal code (they are
-    # accrual/reversal and re-booked journal pairs, not cross-code
-    # reclassifications), but the reference only matches about half the time,
-    # and legs routinely straddle months (a September accrual released in
-    # October; one pair three months apart). So no single predicate can be a
-    # hard filter: a genuine claim can collide by amount with an unrelated
-    # reversal, and only weighing the evidence keeps the two apart.
+    # Scoring weights, tuned against a real 309-row EUSA F40 export. The
+    # reference there matches only about half the time, and legs routinely
+    # straddle months (a September accrual released in October; one pair three
+    # months apart), so neither can be a hard filter: a genuine claim can
+    # collide by amount with an unrelated reversal, and only weighing the
+    # evidence keeps the two apart.
+    #
+    # The nominal code IS a hard filter (see offset_candidates) and still
+    # scores, so the score a pair shows finance keeps its /8 scale.
     OFFSET_SCORE_SAME_REF = 4
     OFFSET_SCORE_SAME_NOMINAL = 2
     OFFSET_SCORE_SAME_PERIOD = 1
     OFFSET_SCORE_NARRATIVE_PREFIX = 1
-    # A pair must reach this to be proposed at all: a reference match on its
-    # own clears it, as does nominal + period + narrative agreement on the same
-    # day. Anything weaker leaves BOTH rows in the working set rather than
-    # guessing.
+    # A pair must reach this to be proposed at all. Since same nominal code is
+    # required, every candidate starts from 2 and has to find 2 more points:
+    #
+    #   * a reference match takes it to 6, or 5/4 once the date penalty bites
+    #     (ref agreement ALONE is 4 minus that penalty, so only a same-day
+    #     reference match would clear the floor by itself);
+    #   * without a reference, period + narrative agreement on the same day is
+    #     exactly 4.
+    #
+    # Anything weaker (nominal + period a fortnight apart is 2) leaves BOTH rows
+    # in the working set rather than guessing. Maximum is 8: everything
+    # agreeing, same day.
     OFFSET_MIN_SCORE = 4
     # Legs this far apart or less cost 1 point, further costs 2.
     OFFSET_NEAR_DATE_DAYS = 31
@@ -197,10 +206,10 @@ module Reimbursements
     # debit->expense / credit->budget matching.
     #
     # Candidates are rows with an identical absolute amount (exact BigDecimal,
-    # never a float), opposite signs, in the same financial year. Each is
-    # scored, anything below OFFSET_MIN_SCORE is dropped, and the survivors are
-    # taken greedily strongest-first so a row can only ever belong to one pair
-    # and the best-evidenced claim on a leg wins.
+    # never a float), opposite signs, on the same nominal code, in the same
+    # financial year. Each is scored, anything below OFFSET_MIN_SCORE is
+    # dropped, and the survivors are taken greedily strongest-first so a row can
+    # only ever belong to one pair and the best-evidenced claim on a leg wins.
     def detect_offsetting_pairs(rows)
       candidates = offset_candidates(rows)
       occurrences = row_occurrences(rows)
@@ -260,6 +269,17 @@ module Reimbursements
 
         bucket.combination(2) do |(row_a, index_a, amount_a), (row_b, index_b, amount_b)|
           next unless amount_a.negative? ^ amount_b.negative?
+          # Same nominal code is a HARD requirement, not just 2 points. A Sage
+          # payment-run reference is stamped across every row of the run, so
+          # ref (4) + period (1) on the same day clears the floor with no code
+          # agreement at all and pairs a cost with an unrelated income of the
+          # same size: both stamped offset, the cost hidden from every rollup,
+          # and the expense behind it never paid. In the real 309-row export
+          # essentially every genuine pair was same-nominal (they are
+          # accrual/reversal and re-booked journal pairs, not cross-code
+          # reclassifications), so this costs approximately nothing. Blank codes
+          # agree on nothing, so they never pair either.
+          next unless same_field?(row_a.nominal_code, row_b.nominal_code)
           next unless same_financial_year?(row_a.date, row_b.date)
 
           score = offset_pair_score(row_a, row_b)
