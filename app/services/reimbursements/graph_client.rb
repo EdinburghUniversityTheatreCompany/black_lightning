@@ -75,7 +75,16 @@ module Reimbursements
 
     # Delete a message from a mailbox — used to clean up the stale EUSA draft
     # when a batch is reopened for rebuild. Graph replies 204 (no body).
+    #
+    # Gated: a non-production shell holding real Azure credentials must not delete
+    # a message out of the live shared mailbox. RAISES rather than returning nil,
+    # because nil is this method's success value — a silently suppressed delete
+    # would have BatchesController tell the operator "the old EUSA draft in
+    # Outlook has been deleted" while it is still sitting there, ready to be sent
+    # alongside the rebuilt one. Its caller already rescues into the truthful
+    # "delete the old EUSA draft in Outlook manually" warning.
     def delete_message(mailbox:, message_id:)
+      refuse_outbound!("delete message #{message_id} from #{mailbox}")
       graph_request(:delete, "/users/#{mailbox}/messages/#{message_id}")
       nil
     end
@@ -114,7 +123,17 @@ module Reimbursements
     end
 
     # Upload a file into a SharePoint folder; returns its webUrl.
+    #
+    # Gated: this is the call that carries the bank details. BatchProcessor uploads
+    # the BACS xlsx (every payee's full sort code and account number) and every
+    # receipt BEFORE the EUSA draft, so a dev shell with real Azure credentials
+    # clicking Build Batch used to PUT them straight into production SharePoint.
+    # RAISES rather than returning "" or a fake URL: BatchProcessor counts a
+    # returned URL as an uploaded receipt and stamps receipts_offloaded from it,
+    # which is what tells an operator it is safe to delete the only local copy.
+    # Both call sites already rescue into a visible result.errors entry.
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
+      refuse_outbound!("SharePoint upload of #{filename}")
       raise GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
 
       # Sanitise path separators, then percent-encode the filename segment so
@@ -192,6 +211,32 @@ module Reimbursements
     end
 
     private
+
+    # The outbound gate for Graph calls with a SIDE EFFECT, i.e. everything except
+    # reads. Production always passes; anywhere else needs the explicit
+    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in (a staging box on a throwaway tenant,
+    # or the test suite, which fakes the transport anyway).
+    #
+    # The scope is deliberately "no outbound side effect", not "no outbound mail":
+    # the same fnox Azure credentials that let a dev shell read a real tenant also
+    # let it write to one, and SharePoint upload / message delete were the two
+    # writes carrying bank details. Read-only probes (#check_mailbox,
+    # #check_reachable, #draft_message?, #get_site, #list_drives,
+    # #list_folder_contents, #download) stay ungated: they are how the Settings
+    # dashboard and folder picker report on a real tenant, and they mutate nothing.
+    #
+    # #create_draft and #send_mail keep their older suppress-and-stub behaviour
+    # (a "suppressed-…" draft id, nil) so a dev Build Batch still walks the whole
+    # flow; only the calls whose stub a caller could mistake for real success
+    # raise. Everything the gate refuses is contained by an existing rescue, so a
+    # dev Build Batch performs zero outbound Graph calls and reports why.
+    def refuse_outbound!(description)
+      return if @settings.outbound_enabled?
+
+      raise GraphAuth::OutboundSuppressedError,
+            "Reimbursements refused an outbound Graph side effect in #{Rails.env}: #{description}. " \
+            "Set REIMBURSEMENTS_ENABLE_OUTBOUND to opt in (only against a throwaway tenant)."
+    end
 
     # Follows Graph's @odata.nextLink so a site/drive with more items than fit
     # in one page (folders, drives) isn't silently truncated to the first page.

@@ -190,8 +190,30 @@ module Reimbursements
 
       assert_includes chat.prompt, "DIRECT PAYMENT TO A THIRD PARTY"
       assert_includes chat.prompt, "Acme Lighting Ltd"
-      assert_includes chat.prompt, "20-00-00"
-      assert_includes chat.prompt, "12345678"
+    end
+
+    # S9: the finance-triggered AI check shipped a third party's full sort code and
+    # account number verbatim to the same free-tier Gemini endpoint that receipt
+    # extraction only reaches behind an explicit "Google may store and human-review
+    # this" consent — with no notice to anyone. Mask them to their last four
+    # digits, the same rule BankDetails.mask already applies to the exports and the
+    # People audit trail. The mismatch check survives on the masked digits.
+    test "a payee override's bank details are masked in the prompt, never sent verbatim" do
+      checker, chat = build(content: { "status" => "pass" })
+      overridden = expense(payee_name_override: "Acme Lighting Ltd",
+                           sort_code_override: "20-00-00", account_number_override: "12345678")
+
+      checker.check(overridden, [ budget ])
+
+      assert_not_includes chat.prompt, "20-00-00",
+                          "the full sort code must never reach the model"
+      assert_not_includes chat.prompt, "200000",
+                          "nor an undashed spelling of it"
+      assert_not_includes chat.prompt, "12345678",
+                          "the full account number must never reach the model"
+      # Masked to last-4 so the model can still spot a mismatch against the invoice.
+      assert_includes chat.prompt, "****0000"
+      assert_includes chat.prompt, "****5678"
     end
     test "a locally-stored receipt (database backend) is read from its blob, not HTTP" do
       blob = Struct.new(:content) do

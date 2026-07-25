@@ -15,8 +15,20 @@ cleartext.
   still plaintext, so nothing breaks between deploy and backfill.
 - `lib/tasks/reimbursements_encrypt_backfill.rake` — re-saves every payee record so its
   bank details land as ciphertext (`bin/rails reimbursements:encrypt_backfill`).
-- No schema migration is needed: the ciphertext fits the existing `string(255)` / `text`
-  columns.
+- `config.active_record.encryption.validate_column_size = false` — Rails' auto-injected
+  guard validates the **decrypted** value against the column limit, which is the wrong
+  value (the ciphertext is what has to fit), and it broke `database_consistency` on both
+  encrypted models. Explicit plaintext length validations on the models take its place.
+- **One schema migration IS needed**, contrary to what this doc originally claimed:
+  `20260725150000_widen_reimbursements_payee_name_override_for_encryption` changes
+  `reimbursements_expenses.payee_name_override` from `string(255)` to `text`. AR Encryption
+  stores a JSON envelope of base64 IV + ciphertext + auth tag, so a low-redundancy plaintext
+  of ~124 characters already exceeds 255 bytes and 255 characters lands at ~394 — the pre-
+  encryption column could no longer hold every value it used to. The other encrypted columns
+  were measured and genuinely do fit: `sort_code`, `account_number`,
+  `sort_code_override` and `account_number_override` are format-validated to 6 and 8 digits
+  (~82 bytes encrypted, in `string(255)`), and `notes` is already `text` and compresses.
+  `test/models/reimbursements/encryption_test.rb` pins all three measurements.
 
 ## Where the keys live, per environment
 
@@ -69,9 +81,13 @@ the record and for any future key rotation.
    Save; commit the re-encrypted `config/credentials/production.yml.enc` (never the
    `.key`).
 
-3. **Deploy** with `support_unencrypted_data = true` (already set in the code). At this
-   point new writes encrypt; existing rows stay plaintext and read fine. **This is where the
-   rollout currently stands: the keys are shipped but no data is encrypted yet.**
+3. **Deploy and migrate**, with `support_unencrypted_data = true` (already set in the
+   code). The deploy must include
+   `20260725150000_widen_reimbursements_payee_name_override_for_encryption` — the
+   backfill in step 4 writes through `update_columns`, which skips validations, so the
+   column has to be wide enough for the ciphertext first. At this point new writes
+   encrypt; existing rows stay plaintext and read fine. **This is where the rollout
+   currently stands: the keys are shipped but no data is encrypted yet.**
 
 4. **Run the backfill** in the deployed image (kamal needs an interactive terminal on this
    host — SSH password auth):
@@ -80,7 +96,16 @@ the record and for any future key rotation.
    kamal app exec -i --reuse "bin/rails reimbursements:encrypt_backfill"
    ```
 
-   It prints per-model processed counts and re-runs idempotently.
+   It prints per-model processed counts. **Safe to re-run, but not a no-op:**
+   `#encrypt` rewrites every row unconditionally (`update_columns`, no dirty check)
+   and the encryption is non-deterministic, so each run mints a fresh IV and fresh
+   ciphertext for every row, already-encrypted ones included. The end state is
+   correct either way, but "processed N/N" counts rows *touched*, not rows newly
+   encrypted — it is not a progress figure for a resumed partial run.
+
+   `update_columns` also skips validations, so **the migration in step 3 must
+   already be applied**: without the widened `payee_name_override` column, a long
+   plaintext payee name would be truncated here.
 
 5. **Verify** in `kamal console` that a sample row's **raw** column is ciphertext while the
    model still reads plaintext:

@@ -121,15 +121,19 @@ module Admin
       # detail change, mirroring bedlam-bacs `5_People.py` (`_audit_line` /
       # `_append_note`): existing notes are preserved, one line per change.
       #
-      # The account number is masked to its last 4 digits so the audit trail
-      # never reintroduces a cleartext bank account (the `notes` column is
-      # encrypted at rest, but it's also rendered on the People page, so the
-      # visible copy stays masked). The acting user's name + id is recorded so
-      # bank-detail changes carry per-change actor attribution.
+      # BOTH the sort code and the account number are masked to their last 4
+      # digits, matching Exports::People — the stricter of the two rules this app
+      # had. The audit trail is a RECORD of a change, not a value anything pays
+      # from, and it is rendered on the People page right beside the masked
+      # account number, where the pair is what identifies an account. (The `notes`
+      # column is encrypted at rest, but the visible copy has to stay masked too.)
+      # The acting user's name + id is recorded so bank-detail changes carry
+      # per-change actor attribution.
       def appended_notes(sort_code, account_number)
         timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M UTC")
         actor = "#{current_user.name_or_email} (##{current_user.id})"
-        audit_line = "[#{timestamp}] Bank details updated: sort code #{sort_code}, " \
+        audit_line = "[#{timestamp}] Bank details updated: " \
+                     "sort code #{::Reimbursements::BankDetails.mask(sort_code)}, " \
                      "account #{::Reimbursements::BankDetails.mask(account_number)} by #{actor}"
         existing = @person.notes.to_s
         existing.strip.empty? ? audit_line : "#{existing.rstrip}\n#{audit_line}"

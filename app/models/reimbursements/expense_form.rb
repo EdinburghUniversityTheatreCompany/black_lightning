@@ -54,8 +54,11 @@ module Reimbursements
       ActiveModel::Type::Boolean.new.cast(@internal)
     end
 
+    # Anything in the receipts param that is not actually an uploaded file is
+    # dropped here rather than reaching #size / #original_filename below (a bare
+    # String answers #size but not #read) — see ReceiptContentType.uploads_from.
     def receipts
-      Array(@receipts).compact_blank
+      ReceiptContentType.uploads_from(@receipts)
     end
 
     # Edit doesn't force a re-upload; create requires at least one receipt.
@@ -201,6 +204,13 @@ module Reimbursements
     end
 
     def overrides_valid
+      # Length first: the model caps this too (so the ciphertext fits its column),
+      # and without a form-level check an over-long invoice-mode prefill would
+      # reach store.create_expense! and raise RecordInvalid instead of re-rendering
+      # the form with a fixable error.
+      if payee_name_override.to_s.length > BankDetails::PAYEE_NAME_MAX_LENGTH
+        errors.add(:payee_name_override, BankDetails::PAYEE_NAME_HINT)
+      end
       if sort_code_override.present? && !BankDetails.valid_sort_code?(sort_code_override)
         errors.add(:sort_code_override, BankDetails::SORT_CODE_HINT)
       end

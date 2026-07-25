@@ -144,6 +144,97 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
+    # S2: Track B delivered "dev can't send mail", not "dev has no outbound Graph
+    # side effects" — and the two ungated calls were the ones carrying bank
+    # details. batch_processor uploads the BACS xlsx (full sort codes and account
+    # numbers) and every receipt BEFORE create_draft, so a dev shell holding fnox
+    # Azure credentials that clicked Build Batch PUT them into PRODUCTION
+    # SharePoint, and reopen could DELETE a real draft out of the live mailbox.
+    #
+    # These two raise rather than returning a plausible stub, unlike create_draft /
+    # send_mail: a suppressed upload that returned "" or a fake URL would be
+    # counted as uploaded by BatchProcessor and stamp receipts_offloaded, telling
+    # an operator it is safe to delete the only copy of a receipt that was never
+    # backed up; and a suppressed delete that returned nil would tell the operator
+    # "the old EUSA draft has been deleted" when it is still sitting there. Both
+    # call sites already rescue StandardError into a visible best-effort error, so
+    # raising is both louder and truer.
+    test "upload_to_folder is suppressed with no Graph request when outbound is disabled" do
+      client, http = build_client([ token_response, [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ] ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      error = assert_raises(GraphAuth::OutboundSuppressedError) do
+        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "r.pdf", content: "BYTES")
+      end
+
+      assert_match(/SharePoint upload/i, error.message)
+      assert_empty http.requests, "no Graph call (not even a token) when outbound is disabled"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
+    test "delete_message is suppressed with no Graph request when outbound is disabled" do
+      client, http = build_client([ token_response, [ 204, "" ] ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      assert_raises(GraphAuth::OutboundSuppressedError) do
+        client.delete_message(mailbox: "send@x", message_id: "msg-1")
+      end
+
+      assert_empty http.requests, "no Graph call when outbound is disabled"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
+    # The whole suite runs with REIMBURSEMENTS_ENABLE_OUTBOUND set, so without
+    # this the production branch of the gate is never exercised and deleting
+    # `return true if Rails.env.production?` from Settings would stay green while
+    # production silently stopped uploading and deleting.
+    test "production performs the upload and the delete without the ENV opt-in" do
+      original_env = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      original_rails_env = Rails.env
+      Rails.env = "production"
+
+      client, http = build_client([
+        token_response,
+        [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ],
+        [ 204, "" ]
+      ])
+
+      assert_equal "https://sp.example/r.pdf",
+                   client.upload_to_folder(drive_id: "drv", folder_id: "fld",
+                                           filename: "r.pdf", content: "BYTES")
+      assert_nil client.delete_message(mailbox: "send@x", message_id: "msg-1")
+
+      methods = http.requests.map { |r| r.method.to_s }
+      assert_includes methods, "put", "production must still PUT the file to SharePoint"
+      assert_includes methods, "delete", "production must still DELETE the stale draft"
+    ensure
+      Rails.env = original_rails_env
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original_env if original_env
+    end
+
+    # Read-only probes must keep working in a dev shell: they are how the Settings
+    # dashboard and folder picker report on a real tenant, and they mutate nothing.
+    test "read-only Graph probes are not gated by the outbound switch" do
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([
+        token_response,
+        [ 200, { id: "site-1", displayName: "Finance", webUrl: "https://sp.example/sites/f" }.to_json ],
+        [ 200, { id: "inbox" }.to_json ],
+        [ 200, { isDraft: true }.to_json ]
+      ])
+
+      assert_equal "site-1", client.get_site("https://tenant.sharepoint.com/sites/Finance").id
+      assert client.check_mailbox("send@x")
+      assert client.draft_message?(mailbox: "send@x", message_id: "msg-1")
+      graph_calls = http.requests.reject { |r| r.uri.include?("login.microsoftonline.com") }
+      assert_equal %w[get get get], graph_calls.map { |r| r.method.to_s },
+                   "every probe is a GET; only the token exchange is a POST"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
     test "upload_to_folder does a simple PUT for a small file and returns webUrl" do
       client, http = build_client([
         token_response,

@@ -205,6 +205,20 @@ module Admin
       assert_not response.parsed_body["ok"]
     end
 
+    # S10: a String has #size, so it passed the byte check and then hit
+    # ReceiptContentType.allowed_upload?'s #read — an unrescued NoMethodError
+    # (500) from any authenticated producer who hand-crafts the post.
+    test "extract rejects a string receipts param instead of raising" do
+      sign_in @user
+      BaseController.extractor_builder = -> { raise "extractor must not be built" }
+
+      post :extract, params: { mode: "self", receipts: [ "not-a-file" ] }
+
+      assert_response :success
+      assert_not response.parsed_body["ok"]
+      assert_equal "no usable receipt files", response.parsed_body["error"]
+    end
+
     test "extract rejects an unknown mode with a 422 before touching gemini" do
       sign_in @user
       BaseController.extractor_builder = -> { raise "extractor must not be built" }

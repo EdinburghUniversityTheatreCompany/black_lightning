@@ -29,6 +29,14 @@ module Reimbursements
     # continues to fail loudly.
     class NotFoundError < Error; end
 
+    # An outbound Graph SIDE EFFECT was refused because this is not production
+    # and REIMBURSEMENTS_ENABLE_OUTBOUND is not set. Raised (rather than quietly
+    # returning a plausible value) by the calls whose suppressed result a caller
+    # must not mistake for success — see GraphClient#upload_to_folder and
+    # #delete_message. A subclass of Error so every existing `rescue Error` /
+    # best-effort rescue already contains it.
+    class OutboundSuppressedError < Error; end
+
     private
 
     # Issue a Graph request and return the parsed JSON body ({} when empty).
