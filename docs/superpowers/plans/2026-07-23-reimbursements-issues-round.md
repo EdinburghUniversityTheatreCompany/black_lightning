@@ -388,7 +388,74 @@ attachments if the component's preview doesn't cover it.
 
 ---
 
-### Track D: Fringe generalisation + em-dash sweep (final wave)
+### Track M: the AI check must honour the submitter's consent (found by Mick, 2026-07-25)
+
+**The defect.** `Reimbursements::AiChecker` sends the receipt *files* to Gemini
+(`.ask(prompt, with: attachments(expense.receipts))`), exactly as the extractor does, and
+`AiCheckJob` is enqueued **by the Review page on load**, one per unchecked Pending expense. So a
+producer who ticks "No, I will fill in all the details myself" — explicitly declining to send
+their receipt to Google — has it sent anyway, automatically, as soon as finance opens the queue.
+Track E's consent flow is hollow without this. All four reviewers missed it.
+
+**Decisions (Mick, 2026-07-25):**
+1. **One consent covering both purposes.** The existing radio group is the single decision, and
+   its copy must say the receipt may also be used to *check* the claim, not only to read it.
+   "No" means no extraction *and* no AI check. Do not add a second question.
+2. **No consent on file means no check.** Absent consent is refusal, so every pre-existing claim
+   and every email-in claim (no submitter present to ask) stops being AI-checked. Finance reviews
+   those by hand, as they did before the checker existed. Verdicts already written stay — don't
+   delete history.
+3. **No override.** A refusal is final; finance keeps the receipt, the modulus check, owner
+   endorsement and their own judgement. The verdict area reads "not checked" with the reason.
+
+**Implementation sketch:**
+- Persist the choice on `reimbursements_expenses` as a **nullable boolean** (e.g.
+  `ai_processing_consent`): `nil` = never asked, `false` = declined, `true` = consented. Both
+  falsey states block the check; keeping them distinct lets the UI say "declined" versus "not
+  asked" honestly. Nullable additive column, no backfill (nil is exactly right for old rows).
+- The submitter's radio must reach the server **on create**, not only on the extract POST — a
+  submitter who picks "No" never fires an extract, so today nothing records their choice. Derive
+  the boolean: self → true, invoice → true, no → false.
+- Gate in **two** places: `ReviewController` must not enqueue `AiCheckJob` without consent, and
+  `AiChecker#check` must refuse independently (defence in depth, since the job is also reachable
+  from a console and from any future caller).
+- Finance UI: the verdict slot shows "Not checked: the submitter did not consent to AI
+  processing" (or "…was not asked" for `nil`) styled as neutral information, **not** as a failed
+  check — a declined claim must not look suspicious.
+- **Rewrite the disclosure copy** (`_form.html.erb`). Two problems with the current text: it only
+  covers reading the receipt, not checking it, and it treats "a receipt goes to Google" as the
+  risk. Mick's steer (2026-07-25): a photo of a till receipt is mostly unremarkable, so the copy
+  should be proportionate and point at what actually matters, which is **personal details printed
+  on the document**. Draft for his sign-off (no em dashes, per this round's own rule):
+
+  > If you say yes, we send the receipt to Google Gemini twice: once now, to read it and fill in
+  > this form, and once later, so finance can check your claim against it. We use Gemini's free
+  > tier, which means Google may keep a copy and have people look at it.
+  >
+  > For most receipts that isn't much of a worry. A till receipt for props or paint is
+  > unremarkable. It's worth a moment's thought if the document carries personal details, such as
+  > a supplier invoice printed with someone's bank details, an order confirmation showing your
+  > home address, or anything medical. If you'd rather not, pick "No" and type the details in
+  > yourself. Nothing else about your claim changes.
+
+  The three option labels stay exactly as Mick worded them. The closing promise must stay true:
+  with no override (decision 3), declining genuinely costs the submitter nothing.
+- Tests: consent persisted from the form on create for all three options; the Review page
+  enqueues nothing for a nil/false claim; `AiChecker#check` refuses directly; a consented claim
+  still checks as before; the verdict partial renders the neutral not-checked state. Email-in
+  creates a claim with `nil` and is never checked.
+
+---
+
+### Track D: Fringe generalisation + em-dash sweep (CANCELLED)
+
+Mick stopped this agent mid-run on 2026-07-25. The Fringe generalisation (~21 hardcoded
+"Bedlam Fringe"/"Bedlam BACS"/`finance@bedlamfringe.co.uk`/`"F40"` sites) and the em-dash sweep
+(~71 user-facing prose sites, 6 placeholder glyphs) remain undone, as do two stale "Airtable"
+copy lines on the budgets index and reconcile preview. The findings file's tables are the work
+list if it is ever picked up. **Do not relaunch without Mick asking.**
+
+### Track D (original brief, retained for reference)
 
 **Findings section:** "Find hardcoded fringe lang + em dashes" — the tables ARE the work list.
 
