@@ -99,6 +99,18 @@ module Reimbursements
                      @exporter.filename(date: Date.new(2026, 5, 13))
       end
 
+      # People/Expenses read the checker for their bank-details verdict, and both
+      # are built generically by Workbook, whose checker keyword defaults to nil.
+      # A nil there used to NoMethodError on the first payee with bank details.
+      test "an exporter built without a checker still has a usable one" do
+        assert_same ModulusCheck.default_checker, Fake.new(store: nil).send(:checker)
+      end
+
+      test "an injected checker is never replaced by the default" do
+        fake = Object.new
+        assert_same fake, Fake.new(store: nil, checker: fake).send(:checker)
+      end
+
       test "a subclass that forgets #row says so" do
         incomplete = Class.new(Base) { const_set(:HEADERS, [ "A" ]) }
 

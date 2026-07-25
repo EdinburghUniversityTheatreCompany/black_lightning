@@ -173,7 +173,9 @@ module Admin
       get :index, format: :csv
 
       rows = CSV.parse(response.body)
-      assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period" ], rows.first
+      assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period",
+                     "Status" ],
+                   rows.first
       assert_equal 4, rows.size, "header + three actuals"
 
       # The expense-linked debit row resolves the expense's auto-number.
@@ -182,12 +184,43 @@ module Admin
       assert_equal "123.45", exp_row[3]
       assert_equal "42", exp_row[5]
       assert_equal "03", exp_row[6]
+      assert_equal "", exp_row[7].to_s, "an ordinary row has no reconciliation status"
 
       # The budget-linked credit row resolves the budget name.
       bud_row = rows.find { |r| r[2] == "Box office" }
       assert_equal "Credit", bud_row[1]
-      assert_equal "500.0", bud_row[3]
+      assert_equal "-500.0", bud_row[3], "income is signed negative (see the export's Amount note)"
       assert_equal "Props", bud_row[4]
+    end
+
+    # Amount was unsigned, so a naive SUM() over a mixed export added income to
+    # spend, and an offset pair counted twice its value instead of zero. Income
+    # is now negative and both offset legs are labelled, so the column sums to
+    # net spend.
+    test "index CSV export signs the amount so income subtracts from spend" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body, headers: true)
+      debit = rows.find { |r| r["Description"] == "Alice Producer" }
+      credit = rows.find { |r| r["Description"] == "Box office" }
+      assert_equal BigDecimal("123.45"), BigDecimal(debit["Amount"])
+      assert_equal BigDecimal("-500.0"), BigDecimal(credit["Amount"]),
+                   "a credit is income, so it must not add to spend"
+    end
+
+    test "index CSV export marks both legs of an offsetting pair, and they sum to zero" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }, format: :csv
+
+      rows = CSV.parse(response.body, headers: true)
+      legs = rows.select { |r| r["Status"] == "Offset" }
+      assert_equal 2, legs.size, "an included offset pair is flagged on both legs"
+      assert_equal BigDecimal("0"), legs.sum { |r| BigDecimal(r["Amount"]) },
+                   "a cross-linked pair contributes nothing to a SUM of the column"
     end
 
     test "index CSV export neutralises formula-injected narrative text" do
