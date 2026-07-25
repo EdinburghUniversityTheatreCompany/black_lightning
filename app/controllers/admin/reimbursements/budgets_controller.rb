@@ -19,7 +19,9 @@ module Admin
 
       def index
         @title = "Reimbursements Budgets"
-        sorted = store.budgets.sort_by { |budget| budget.name.to_s.downcase }
+        # This table (and its CSV) shows the EUSA-actual rollup per line, so it's
+        # one of the two readers that pays for the actuals preload.
+        sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
         @people_by_id = store.people.index_by(&:record_id)
         respond_to do |format|
           format.html { @budgets = paginate(sorted) }

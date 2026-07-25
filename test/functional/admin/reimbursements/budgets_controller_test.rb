@@ -331,6 +331,24 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
+      test "the overview's query count does not grow with the number of budgets" do
+        sign_in @user
+        # One budget with an expense and a linked actual, so every preload on the
+        # page has rows to load before the baseline is taken (Rails skips a
+        # preload query for an association with nothing to load, which would
+        # otherwise make the two renders different shapes rather than different
+        # sizes).
+        seed_budget_with_actual(0)
+        overview_query_count # warm up anything cached per process
+        baseline = overview_query_count
+
+        9.times { |i| seed_budget_with_actual(i + 1) }
+
+        # Every figure on the page comes off a preloaded association, so nine more
+        # budgets with their expenses and ledger rows cost exactly what one did.
+        assert_equal baseline, overview_query_count
+      end
+
       test "overview totals expense and income budgets separately, never as one figure" do
         sign_in @user
         # @props (Expense) already carries initial 1000, so expense initial is
@@ -666,6 +684,29 @@ module Admin
 
         assert_redirected_to edit_admin_reimbursements_budget_path(@income.record_id)
         assert_match(/isn't part of this budget/i, flash[:alert])
+      end
+
+      private
+
+      # Real SQL count for one render of the overview (schema + cached queries
+      # excluded), so the preload guarantee is measured rather than assumed.
+      def overview_query_count
+        count = 0
+        counter = ->(*, payload) do
+          count += 1 unless payload[:cached] || payload[:name] == "SCHEMA"
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get :overview }
+        count
+      end
+
+      # An Expense budget with a paid expense and a linked EUSA actual: one of
+      # everything the overview's rollups walk.
+      def seed_budget_with_actual(index)
+        budget = create_reimbursements_budget(name: "Extra #{index}", nominal_code: "42#{index}")
+        expense = create_reimbursements_expense(budget: budget, receipt: false,
+                                                status: ::Reimbursements::Status::PAID)
+        ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),
+                                            nominal_code: budget.nominal_code)
       end
     end
   end

@@ -257,6 +257,48 @@ module Reimbursements
       assert_equal [ uncoded.id ], grouped["(none)"].map(&:id)
     end
 
+    # --- Preloads (what each reader costs) ---------------------------------
+
+    test "budgets does not drag the actuals ledger in for a budget dropdown" do
+      budget = Budget.create!(name: "Props", nominal_code: "4000")
+      expense = Expense.create!(budget: budget, status: Status::PAID, amount_excl_vat: 10)
+      EusaActual.create!(expense: expense, nominal_code: "4000", debit: 10)
+
+      # The producer's new-expense form only needs names for a <select>; it must
+      # not instantiate every expense and every ledger row to draw it.
+      assert_no_queries_match(/reimbursements_eusa_actuals/i) { DatabaseStore.new.budgets }
+      assert_no_queries_match(/reimbursements_expenses/i) { DatabaseStore.new.budgets }
+      assert_no_queries_match(/reimbursements_eusa_actuals/i) { DatabaseStore.new.active_budgets }
+    end
+
+    test "budgets_with_actuals preloads so the EUSA rollup costs no per-budget query" do
+      3.times do |i|
+        budget = Budget.create!(name: "Props #{i}", nominal_code: "400#{i}")
+        expense = Expense.create!(budget: budget, status: Status::PAID, amount_excl_vat: 10)
+        EusaActual.create!(expense: expense, nominal_code: "400#{i}", debit: 10)
+      end
+      income = Budget.create!(name: "Ticket income", nominal_code: "8000", budget_type: "Income")
+      EusaActual.create!(budget: income, nominal_code: "8000", credit: 50)
+
+      loaded = DatabaseStore.new.budgets_with_actuals
+
+      assert_queries_count(0) do
+        assert_equal 4, loaded.size
+        loaded.each { |budget| budget.eusa_actual_amount }
+      end
+    end
+
+    test "expenses preloads payment details so a payee bank check costs no query" do
+      pat = create_person(sort_code: "001122", account_number: "12345678")
+      Expense.create!(person: pat, status: Status::PENDING, amount_excl_vat: 10)
+
+      loaded = store.expenses
+
+      # ReviewSupport.attention_summary asks this of every expense; without the
+      # preload an end-of-year export pays one query per payee.
+      assert_queries_count(0) { loaded.each(&:effective_has_bank_details?) }
+    end
+
     test "unattributed_actuals are the rows no budget's figures account for" do
       props = Budget.create!(name: "Props", nominal_code: "4000")
       income = Budget.create!(name: "Ticket income", nominal_code: "8000", budget_type: "Income")

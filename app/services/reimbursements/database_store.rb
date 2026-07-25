@@ -23,8 +23,11 @@ module Reimbursements
     PERSON_FIELDS = %i[name email].freeze
     PAYMENT_DETAILS_FIELDS = %i[sort_code account_number verified notes].freeze
 
+    # The payee's payment_details ride along: every attention/BACS check asks an
+    # expense for its EFFECTIVE bank details, which falls through to the linked
+    # person, so without this a 150-payee workbook paid 150 extra queries.
     def expenses
-      @expenses ||= Expense.includes(:person, :budget, :batch)
+      @expenses ||= Expense.includes(:budget, :batch, person: :payment_details)
                            .with_attached_receipt_files.to_a
     end
 
@@ -64,12 +67,23 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
+    # Every budget with the owners + forecasts every caller needs. Deliberately
+    # WITHOUT the actuals preload: most callers (the producer's budget <select>,
+    # the review queue's over-budget check, the nightly job) only want names and
+    # forecasts, and pulling the whole expenses + actuals ledger to draw a
+    # dropdown cost them six queries and the entire expenses table in memory.
     def budgets
-      # eusa_actuals are preloaded both directly (income credits on budget_id)
-      # and through expenses (expense debit legs) so the overview's per-line
-      # EUSA-actual rollup costs no per-budget queries.
-      @budgets ||= Budget.includes(:owners, :forecasts, :eusa_actuals,
-                                   expenses: :eusa_actuals).to_a
+      @budgets ||= Budget.includes(:owners, :forecasts).to_a
+    end
+
+    # Budgets with their EUSA actuals preloaded, for the two places that show the
+    # EUSA-actual rollup: the budgets index/overview and the Budgets export.
+    # Actuals are preloaded both directly (income credits on budget_id) and
+    # through expenses (expense debit legs), so the per-line rollup costs no
+    # per-budget query however many budgets there are.
+    def budgets_with_actuals
+      @budgets_with_actuals ||= Budget.includes(:owners, :forecasts, :eusa_actuals,
+                                                expenses: :eusa_actuals).to_a
     end
 
     # Budgets a submitter may charge an expense to.
@@ -78,11 +92,11 @@ module Reimbursements
     end
 
     # Budgets grouped by nominal code for the overview page, ordered by code
-    # with the blank-code bucket ("(none)") sorted last. Each budget carries its
-    # own memoized rollups (preloaded in #budgets), so the grouped totals cost
-    # no extra queries.
+    # with the blank-code bucket ("(none)") sorted last. Built from
+    # #budgets_with_actuals, since the overview shows the EUSA-actual rollup for
+    # every line, so the grouped totals cost no extra queries.
     def budgets_by_nominal_code
-      budgets.group_by { |b| b.nominal_code.presence || NO_CODE_LABEL }
+      budgets_with_actuals.group_by { |b| b.nominal_code.presence || NO_CODE_LABEL }
              .sort_by { |code, _| [ code == NO_CODE_LABEL ? 1 : 0, code ] }
              .to_h
     end
@@ -382,6 +396,7 @@ module Reimbursements
 
     def bust_budgets!
       @budgets = nil
+      @budgets_with_actuals = nil
     end
 
     # nil values are dropped (email-in gaps); the sharepoint URL array joins
