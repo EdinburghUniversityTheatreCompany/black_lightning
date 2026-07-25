@@ -259,6 +259,67 @@ module Admin
         assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
       end
 
+      # A claim that will never be checked must say so plainly, instead of
+      # promising a verdict that can never arrive ("AI check running…").
+      test "the card explains a declined claim was not checked, not that a check is running" do
+        pending_expense(ai_processing_consent: false)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "did not consent to AI processing"
+        assert_not_includes response.body, "AI check running"
+      end
+
+      test "the card distinguishes a claim nobody was asked from an outright refusal" do
+        pending_expense(ai_processing_consent: nil)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "no consent to AI processing recorded"
+        assert_not_includes response.body, "AI check running"
+      end
+
+      # Neither state is a failure or a flag: a declined claim must not read as
+      # suspicious, so no warning/danger styling and no AI badge pill.
+      test "the not-checked explanation is neutral, not a failed or flagged verdict" do
+        pending_expense(ai_processing_consent: false)
+        sign_in @user
+
+        get :index
+
+        assert_not_includes response.body, "AI check flagged this"
+        assert_not_includes response.body, "AI check could not run"
+        assert_not_includes response.body, "AI: Fail"
+        assert_not_includes response.body, "AI: Error"
+      end
+
+      # Decision: verdicts already written stay. A claim checked before the gate
+      # existed still shows its verdict, however its consent column reads.
+      test "a verdict written before the gate existed is still shown" do
+        pending_expense(ai_processing_consent: nil, ai_check_status: "fail",
+                        ai_comment: "Amount doesn't match.")
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "AI: Fail"
+        assert_includes response.body, "Amount doesn&#39;t match."
+        assert_not_includes response.body, "no consent to AI processing recorded"
+      end
+
+      test "a consented but unchecked claim still shows the running placeholder" do
+        pending_expense
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "AI check running"
+      end
+
       # --- Bulk actions ----------------------------------------------------
 
       test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do

@@ -400,6 +400,38 @@ module Admin
         assert_includes response.body, "text-success"
       end
 
+      # The finance edit page is the other place a verdict surfaces, so the
+      # reason a claim has none belongs here too — otherwise the AI section just
+      # vanishes and finance can't tell "not checked yet" from "never will be".
+      test "edit explains why a declined claim has no AI verdict" do
+        expense = expense_at("Pending", ai_processing_consent: false)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_includes response.body, "did not consent to AI processing"
+      end
+
+      test "edit explains an unasked claim has no AI verdict" do
+        expense = expense_at("Pending", ai_processing_consent: nil)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_includes response.body, "no consent to AI processing recorded"
+      end
+
+      test "edit still shows a verdict written before the consent gate existed" do
+        expense = expense_at("Pending", ai_processing_consent: nil, ai_check_status: "pass")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_includes response.body, "AI: Pass"
+        assert_not_includes response.body, "no consent to AI processing recorded"
+      end
+
       test "edit lists advisory reasons separately from blocking ones" do
         # No receipt = advisory; no budget = blocking. Both should show, each in
         # its own section.
