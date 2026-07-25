@@ -166,10 +166,15 @@ jobs:
       #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
+      # Keep in step with the production Dockerfile and .devcontainer/Dockerfile.dev.
+      # libheif-plugin-libde265 is NOT implied here the way it is on Debian: Ubuntu's
+      # libvips pulls in libheif but no codec plugin, so a HEIC fails to decode with
+      # "Unsupported codec" and the reimbursements HEIC-to-JPEG receipt tests fail on
+      # CI only. Verified on both ubuntu 24.04 and 26.04.
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
           build-essential git libpq-dev pkg-config google-chrome-stable
-          libvips-dev poppler-utils
+          libvips-dev poppler-utils libheif-plugin-libde265
 
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
