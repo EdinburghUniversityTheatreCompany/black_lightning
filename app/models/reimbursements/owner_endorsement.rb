@@ -31,8 +31,10 @@ module Reimbursements
   # (recorded here as +overridden_by+ with no endorsing person). A submitter who
   # owns the budget is auto-bypassed by the gate and needs no row here.
   #
-  # Keyed by the expense and budget record ids rather than by FK, so an
-  # endorsement outlives either record being replaced.
+  # The expense and budget are referenced by string record id, NOT by foreign
+  # key (unlike +overridden_by+), so nothing here is cascaded or nullified when
+  # either record goes: the uniqueness rule and every lookup below key on
+  # expense_record_id.
   class OwnerEndorsement < ApplicationRecord
     # The finance user who overrode the gate (nil for a genuine owner sign-off).
     belongs_to :overridden_by, class_name: "User", optional: true

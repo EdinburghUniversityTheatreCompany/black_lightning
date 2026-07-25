@@ -1,9 +1,9 @@
 module Reimbursements
   ##
-  # Expense domain predicates, kept out of the model itself so they can be
-  # unit-tested against anything answering the same readers. Includers provide
-  # status, expense_type, budget, amount, amount_excl_vat, description,
-  # payment_reference, receipts, sharepoint_receipt_urls and ai_check_status.
+  # Expense domain predicates, split out of the model to keep it readable.
+  # Includers provide status, expense_type, budget, amount, amount_excl_vat,
+  # description, payment_reference, receipts, sharepoint_receipt_urls and
+  # ai_check_status.
   module ExpenseSemantics
     def pending? = status == Status::PENDING
     def draft? = status == Status::DRAFT

@@ -43,7 +43,7 @@ module Reimbursements
     # the integer FK.
     def budget_id = self[:budget_id]&.to_s
 
-    # The display label finance knows these by: "<budget> - YYYY-MM-DD".
+    # Display label: "<budget> - YYYY-MM-DD".
     def name
       [ budget&.name, date&.strftime("%Y-%m-%d") ].compact.join(" - ")
     end

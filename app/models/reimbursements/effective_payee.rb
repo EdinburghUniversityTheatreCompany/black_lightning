@@ -1,7 +1,7 @@
 module Reimbursements
   ##
-  # The effective-payee money path, kept out of Expense itself so the BACS-row
-  # rules can be unit-tested against anything answering the same readers.
+  # The effective-payee money path, split out of Expense to keep the BACS-row
+  # rules in one place.
   #
   # For an Invoice the submitter can override payee name + bank details so
   # EUSA pays a third party directly. The BACS row, modulus check and

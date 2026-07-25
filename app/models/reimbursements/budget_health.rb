@@ -1,9 +1,9 @@
 module Reimbursements
   ##
-  # Budget health flags. The over-budget badge logic was got wrong once
-  # already (a red badge next to a positive Remaining), so it lives here under
-  # its own tests rather than inline in the views. Includers provide
-  # budget_type, remaining, initial_budget, committed_amount and total_paid.
+  # Budget health flags. The over-budget badge logic was got wrong once already
+  # (a red badge next to a positive Remaining), so it lives in one place rather
+  # than being re-derived in the views. Includers provide budget_type,
+  # remaining, initial_budget, committed_amount and total_paid.
   module BudgetHealth
     def income? = budget_type == "Income"
 
