@@ -205,6 +205,33 @@ module Reimbursements
       assert_equal [ budget.record_id ], EusaActual.find(actual.id).linked_budget_ids
     end
 
+    test "link_offsetting_pair! stamps both legs and points them at each other" do
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
+      reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
+
+      store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+      accrual.reload
+      reversal.reload
+      assert_predicate accrual, :offset?
+      assert_predicate reversal, :offset?
+      assert_equal reversal.id, accrual.offset_of_id
+      assert_equal accrual.id, reversal.offset_of_id
+    end
+
+    # Both rows survive an offset: finance needs the audit trail, so pairing
+    # only ever stamps and cross-links, it never deletes.
+    test "link_offsetting_pair! keeps both rows and refreshes the memoized list" do
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
+      reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
+      store.eusa_actuals # memoize the pre-pairing list
+
+      store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+      assert_equal 2, EusaActual.count
+      assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
+    end
+
     test "memoized lists refresh after bust_expenses!" do
       store.expenses
       Expense.create!(status: Status::PENDING)

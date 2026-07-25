@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_110728) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_081600) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -751,7 +751,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_110728) do
     t.text "narrative_1"
     t.decimal "net", precision: 12, scale: 2
     t.string "nominal_code", default: "", null: false
+    t.bigint "offset_of_id"
     t.string "period"
+    t.string "reconciliation_status"
     t.string "ref"
     t.string "source_month", default: "", null: false
     t.datetime "updated_at", null: false
@@ -760,7 +762,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_110728) do
     t.index ["expense_id"], name: "index_reimbursements_eusa_actuals_on_expense_id"
     t.index ["financial_year_id"], name: "index_reimbursements_eusa_actuals_on_financial_year_id"
     t.index ["nominal_code"], name: "index_reimbursements_eusa_actuals_on_nominal_code"
+    t.index ["offset_of_id"], name: "index_reimbursements_eusa_actuals_on_offset_of_id"
     t.index ["period"], name: "index_reimbursements_eusa_actuals_on_period"
+    t.index ["reconciliation_status"], name: "index_reimbursements_eusa_actuals_on_reconciliation_status"
     t.index ["source_month"], name: "index_reimbursements_eusa_actuals_on_source_month"
   end
 
@@ -1142,6 +1146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_110728) do
   add_foreign_key "reimbursements_budgets", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_budgets", "reimbursements_financial_years", column: "financial_year_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_eusa_actuals", "reimbursements_eusa_actuals", column: "offset_of_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_expenses", column: "expense_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_financial_years", column: "financial_year_id"
   add_foreign_key "reimbursements_expenses", "reimbursements_batches", column: "batch_id"
