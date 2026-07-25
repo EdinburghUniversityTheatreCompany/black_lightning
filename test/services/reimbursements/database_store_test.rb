@@ -257,15 +257,47 @@ module Reimbursements
       assert_equal [ uncoded.id ], grouped["(none)"].map(&:id)
     end
 
-    test "unbudgeted_actuals are those whose nominal code matches no budget" do
-      Budget.create!(name: "Props", nominal_code: "4000")
-      matched = EusaActual.create!(nominal_code: "4000", narrative: "matched", debit: 10)
-      orphan = EusaActual.create!(nominal_code: "9999", narrative: "no budget", debit: 20)
+    test "unattributed_actuals are the rows no budget's figures account for" do
+      props = Budget.create!(name: "Props", nominal_code: "4000")
+      income = Budget.create!(name: "Ticket income", nominal_code: "8000", budget_type: "Income")
+      expense = Expense.create!(budget: props, status: Status::PAID, amount_excl_vat: 10)
 
-      unbudgeted = store.unbudgeted_actuals
+      # Counted by Props via its expense, and by the income budget directly.
+      linked_expense = EusaActual.create!(nominal_code: "4000", narrative: "linked", debit: 10,
+                                          expense: expense)
+      linked_budget = EusaActual.create!(nominal_code: "8000", narrative: "income", credit: 50,
+                                         budget: income)
+      # Counted by nobody, even though 4000 *does* have a budget: linkage is what
+      # a budget rollup can see, so this is exactly the invisible spend.
+      on_budgeted_code = EusaActual.create!(nominal_code: "4000", narrative: "unlinked hire",
+                                            debit: BigDecimal("1250"))
+      no_budget_at_all = EusaActual.create!(nominal_code: "9999", narrative: "no budget", debit: 20)
+      blank_code = EusaActual.create!(nominal_code: "", narrative: "no code", debit: 5)
+      unlinked_credit = EusaActual.create!(nominal_code: "4000", narrative: "refund", credit: 30)
 
-      assert_includes unbudgeted.map(&:id), orphan.id
-      assert_not_includes unbudgeted.map(&:id), matched.id
+      unattributed = store.unattributed_actuals.map(&:id)
+
+      assert_includes unattributed, on_budgeted_code.id
+      assert_includes unattributed, no_budget_at_all.id
+      assert_includes unattributed, blank_code.id, "a blank nominal code must not be suppressed"
+      assert_includes unattributed, unlinked_credit.id
+      assert_not_includes unattributed, linked_expense.id
+      assert_not_includes unattributed, linked_budget.id
+      # Sorted by nominal code (blank first, then numerically ascending) so
+      # finance can see which budget a row probably belongs to.
+      assert_equal [ blank_code.id, on_budgeted_code.id, unlinked_credit.id,
+                     no_budget_at_all.id ], store.unattributed_actuals.map(&:id)
+    end
+
+    test "unattributed_actuals excludes both legs of an offsetting pair" do
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL",
+                                     debit: BigDecimal("4200"))
+      reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL",
+                                      credit: BigDecimal("4200"))
+      store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+      assert_empty store.unattributed_actuals,
+                   "a correctly-offset accrual pair nets to zero, it is not unplanned spend"
     end
 
     # --- Budget updates (Track G Phase 3) ----------------------------------

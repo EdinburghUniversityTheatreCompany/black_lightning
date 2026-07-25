@@ -87,12 +87,25 @@ module Reimbursements
              .to_h
     end
 
-    # EUSA actuals booked against a nominal code with no budget at all — real
-    # spend against a code no one planned for, surfaced separately on the
-    # overview so it isn't lost.
-    def unbudgeted_actuals
-      coded = budgets.map(&:nominal_code).to_set
-      eusa_actuals.reject { |a| coded.include?(a.nominal_code) }
+    # EUSA ledger rows that no budget's figures account for: not linked to an
+    # expense (which is how an Expense budget reaches its actuals), not linked
+    # to a budget (how an Income budget reaches its credits), and not a leg of
+    # an offsetting pair (an accrual and its reversal net to zero, so neither is
+    # spend).
+    #
+    # Deliberately linkage-based rather than nominal-code based. Several budgets
+    # can share one nominal code, so a per-budget rollup can only ever count
+    # what is actually linked to it; matching on the code instead would hide an
+    # unlinked row behind any budget sharing that code, which is exactly how
+    # real spend used to disappear from this page. (The old code-matching
+    # version also put "" into its exclusion set whenever any budget had a blank
+    # nominal code, silently suppressing every blank-code actual.)
+    #
+    # Sorted by nominal code, then date, so finance can see which budget each
+    # row probably belongs to.
+    def unattributed_actuals
+      eusa_actuals.reject { |a| a.offset? || a[:expense_id].present? || a[:budget_id].present? }
+                  .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 
     def update_budget!(record_id, attrs)

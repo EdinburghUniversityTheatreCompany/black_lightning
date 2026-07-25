@@ -320,30 +320,56 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
-      test "overview lists unbudgeted spend for actuals whose nominal matches no budget" do
+      test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
-        # 4000 has a budget (@props); 9999 does not.
+        # 4000 IS budgeted (@props), but nothing links this row to an expense, so
+        # no budget's figures count it. It used to fall through both the rollups
+        # and the "unbudgeted" list and vanish from the page entirely.
+        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Unlinked hire",
+                                             debit: BigDecimal("1250.00"))
         ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
                                              debit: BigDecimal("42.00"))
-        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Budgeted",
-                                             debit: BigDecimal("10.00"))
+        # Linked to one of @props's expenses, so @props already counts it.
+        linked = ::Reimbursements::Expense.where(budget_id: @props.id).first
+        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Reconciled row",
+                                             debit: BigDecimal("10.00"), expense: linked)
 
         get :overview
 
         assert_response :success
-        assert_includes response.body, "Unbudgeted spend"
+        assert_includes response.body, "Actuals not attributed to any budget"
+        assert_includes response.body, "Unlinked hire"
+        assert_includes response.body, "£1,250.00"
         assert_includes response.body, "Mystery charge"
-        assert_includes response.body, "9999"
-        # The budgeted actual is not in the unbudgeted section.
-        assert_not_includes response.body, "Budgeted"
+        # Total unattributed = 1250 + 42 = 1292; the linked row is not in the list.
+        assert_includes response.body, "£1,292.00"
+        assert_not_includes response.body, "Reconciled row"
       end
 
-      test "overview shows a friendly note when there is no unbudgeted spend" do
+      test "overview does not report a correctly-offset accrual pair as unattributed" do
+        sign_in @user
+        store = ::Reimbursements::DatabaseStore.new
+        accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL 4200",
+                                       debit: BigDecimal("4200"))
+        reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL 4200",
+                                        credit: BigDecimal("4200"))
+        store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Every EUSA actual is attributed to a budget."
+        assert_not_includes response.body, "ACCRUAL 4200"
+        assert_not_includes response.body, "£4,200.00"
+      end
+
+      test "overview shows a friendly note when every actual is attributed" do
         sign_in @user
         get :overview
 
         assert_response :success
-        assert_includes response.body, "Unbudgeted spend"
+        assert_includes response.body, "Actuals not attributed to any budget"
+        assert_includes response.body, "Every EUSA actual is attributed to a budget."
       end
 
       # --- Edit --------------------------------------------------------------

@@ -70,6 +70,18 @@ module Reimbursements
                                  foreign_key: :offset_of_id, inverse_of: :offset_of,
                                  dependent: :nullify
 
+    # The net position of a set of ledger rows, from the spending side: debits
+    # less credits, so a supplier refund or a credit note reduces the figure
+    # instead of inflating it. Offsetting legs are dropped rather than netted:
+    # an accrual and its reversal cancel out, so neither is spend, and dropping
+    # both is right even when only one leg happens to be linked to an expense.
+    #
+    # The single definition of "what did this cost", shared by the budget
+    # rollups and the overview's unattributed list.
+    def self.net(actuals)
+      actuals.reject(&:offset?).sum { |a| (a.debit || 0) - (a.credit || 0) }
+    end
+
     # The PORO exposed arrays of linked record ids; reconcile only ever links
     # one of each, so these wrap the single FKs to keep the array interface.
     def linked_expense_ids = [ self[:expense_id]&.to_s ].compact

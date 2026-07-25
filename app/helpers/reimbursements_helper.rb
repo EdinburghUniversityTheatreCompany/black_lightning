@@ -88,6 +88,13 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # Debits less credits over a set of EUSA ledger rows (offsetting legs
+  # dropped) — the same netting the budget rollups use, so the overview's
+  # unattributed totals can't disagree with the per-budget figures.
+  def reimbursements_actuals_net(actuals)
+    Reimbursements::EusaActual.net(actuals)
+  end
+
   # Comma-joined owner names for a budget, resolving its owner_ids against a
   # {record_id => Person} lookup. Unknown ids are skipped.
   def budget_owner_names(budget, people_by_id)

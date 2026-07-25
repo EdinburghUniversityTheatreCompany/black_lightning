@@ -28,17 +28,17 @@ module Admin
         end
       end
 
-      # A finance overview grouping every budget by nominal code — a subtotal
-      # per code, a grand-total footer, and a separate list of EUSA spend
-      # booked against a code with no budget at all.
+      # A finance overview grouping every budget by nominal code: a subtotal per
+      # code and per budget type, a grand total per type, and a separate list of
+      # the EUSA ledger rows no budget's figures account for.
       def overview
         @title = "Budget overview"
-        @rollups = store.budgets_by_nominal_code.map do |code, budgets|
-          ::Reimbursements::NominalCodeRollup.new(code, budgets)
+        grouped = store.budgets_by_nominal_code
+        @rollups = grouped.map { |code, group| ::Reimbursements::NominalCodeRollup.new(code, group) }
+        @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, grouped.values.flatten)
+        @unattributed_by_code = store.unattributed_actuals.group_by do |actual|
+          actual.nominal_code.presence || ::Reimbursements::DatabaseStore::NO_CODE_LABEL
         end
-        @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, store.budgets)
-        @unbudgeted_actuals = store.unbudgeted_actuals
-        @budgets_by_id = store.budgets.index_by(&:record_id)
       end
 
       def edit
