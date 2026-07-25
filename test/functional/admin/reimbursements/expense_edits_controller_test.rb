@@ -249,6 +249,19 @@ module Admin
         assert_equal 61, rows.size, "header + all 60 expenses (pagination is display-only)"
       end
 
+      test "index CSV export neutralises formula-injected submitter text" do
+        # A description a submitter controls entirely: on CSV re-import Excel
+        # would execute a leading "=" as a formula.
+        expense_at("Pending", auto_number: 9, description: "=HYPERLINK(\"http://evil\",\"click\")")
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        injected = rows.find { |r| r[0] == "9" }
+        assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", injected[6]
+      end
+
       test "index CSV export joins the needs-attention reasons" do
         # An expense with no ex-VAT amount and no budget flags two reasons.
         expense_at("Pending", budget: nil, auto_number: 7, description: "Flagged item",

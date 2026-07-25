@@ -193,6 +193,19 @@ module Admin
       assert_equal "Props", bud_row[4]
     end
 
+    test "index CSV export neutralises formula-injected narrative text" do
+      create_reimbursements_actual(nominal_code: "600000", period: "05",
+                                   narrative: "=1+1", date: Date.new(2026, 7, 1),
+                                   debit: BigDecimal("9.99"))
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body)
+      injected = rows.find { |r| r[6] == "05" }
+      assert_equal "'=1+1", injected[2]
+    end
+
     test "index CSV export carries the period filter, exporting only that period" do
       sign_in @user
       get :index, params: { period: "04" }, format: :csv
