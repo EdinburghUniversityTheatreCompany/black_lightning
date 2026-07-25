@@ -1,0 +1,44 @@
+<p class="mb-3 text-gray-600">
+  This EUSA row is a cost the Students' Association levied on us directly, not a claim anyone
+  submitted. Recording it as a From-EUSA expense charges it to a budget so the budget's spend is
+  honest. The money has already gone, so it is created as <strong>already paid</strong>: it never
+  enters the review queue or a BACS batch, and nobody is emailed.
+  <%= link_to "← All actuals", admin_reimbursements_actuals_path, class: "text-primary underline" %>
+</p>
+
+<%= render CardComponent.new(title: "The EUSA row") do %>
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
+    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
+    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
+    <span>Amount: <strong><%= reimbursements_money(@actual.debit) %></strong></span>
+    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
+  </div>
+  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
+<% end %>
+
+<%= simple_horizontal_form_for @form,
+      url: create_expense_admin_reimbursements_actual_path(@actual.record_id),
+      method: :post do |f| %>
+  <% content_for :override_card_footer do %>
+    <div class="form-actions flex flex-wrap items-center gap-2">
+      <%= f.button :submit, "Create expense as paid", class: btn_classes(:primary) %>
+      <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+    </div>
+    <p class="mt-2 mb-0 text-sm text-gray-500">
+      The amount comes from the ledger row and can't be edited here: it is what EUSA actually
+      charged us.
+    </p>
+  <% end %>
+
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.input :budget_record_id, label: "Budget", required: true,
+          collection: @budgets.map { |budget| [ budget.name, budget.record_id ] },
+          include_blank: "Pick a budget",
+          hint: "Which budget this cost comes out of." %>
+    <%= f.input :description, label: "Description",
+          hint: "Prefilled from the ledger narrative; tidy it up if it's cryptic." %>
+    <%= f.input :payment_reference, label: "Payment reference",
+          input_html: { maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT } %>
+  <% end %>
+<% end %>

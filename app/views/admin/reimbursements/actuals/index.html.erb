@@ -1,23 +1,36 @@
 <p class="mb-3 text-gray-600">
   The EUSA Actuals ledger imported during reconciliation. Each row shows its nominal
   code, EUSA period, transaction date, narrative and debit/credit, plus whether it's
-  been linked to an expense or an income budget. Read-only; imports happen on the
-  <%= link_to "Reconcile", admin_reimbursements_reconciliation_path, class: "underline" %> page.
+  been linked to an expense or an income budget. Imports happen on the
+  <%= link_to "Reconcile", admin_reimbursements_reconciliation_path, class: "underline" %> page;
+  an unlinked debit row can be turned into a From-EUSA expense here.
 </p>
 
-<% if @periods.any? %>
+<% if @periods.any? || @offset_count.positive? %>
   <%= render CardComponent.new(title: "Filter") do %>
     <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
-      <div>
-        <%= label_tag :period, "EUSA period", class: "block text-sm font-medium mb-1" %>
-        <%= select_tag :period,
-                       options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
-                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <% if @periods.any? %>
+        <div>
+          <%= label_tag :period, "EUSA period", class: "block text-sm font-medium mb-1" %>
+          <%= select_tag :period,
+                         options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+        </div>
+      <% end %>
+      <div class="flex items-center gap-2 pb-1">
+        <%= check_box_tag :include_offsets, "1", @include_offsets, class: "h-4 w-4" %>
+        <%= label_tag :include_offsets, "Show offsetting rows", class: "text-sm" %>
       </div>
       <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
-      <% if @period.present? %>
+      <% if @period.present? || @include_offsets %>
         <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
       <% end %>
+    <% end %>
+    <% if @offset_count.positive? && !@include_offsets %>
+      <p class="mt-2 mb-0 text-sm text-gray-600">
+        <%= pluralize(@offset_count, "row") %> cancel out against a counterpart
+        <%= @offset_count == 1 ? "and is" : "and are" %> hidden.
+      </p>
     <% end %>
   <% end %>
 <% end %>
@@ -36,10 +49,12 @@
     <p class="py-4 text-center text-gray-600">No EUSA Actuals imported yet.</p>
   <% end %>
 <% else %>
-  <% headers = [ "Nominal", "Period", "Date", "Narrative", "Debit", "Credit", "Linked to" ] %>
+  <% headers = [ "Nominal", "Period", "Date", "Narrative", "Debit", "Credit", "Linked to", "" ] %>
   <% field_sets = @actuals.map do |actual|
        linked =
-         if actual.linked_expense_ids.any?
+         if actual.offset?
+           render(BadgeComponent.new(type: :warning, pill: true).with_content("Offset"))
+         elsif actual.linked_expense_ids.any?
            link_to(edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first), class: "no-underline") do
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
@@ -57,7 +72,12 @@
            actual.narrative.presence || "-",
            (reimbursements_money(actual.debit) if actual.debit&.positive?),
            (reimbursements_money(actual.credit) if actual.credit&.positive?),
-           linked
+           linked,
+           (if actual.convertible_to_expense?
+              link_to("Create expense",
+                      new_expense_admin_reimbursements_actual_path(actual.record_id),
+                      class: btn_classes(:secondary, :sm))
+            end)
          ]
        }
      end %>

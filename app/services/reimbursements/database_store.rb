@@ -312,6 +312,10 @@ module Reimbursements
       eusa_actuals.select { |a| a.period == period }
     end
 
+    def find_actual(record_id)
+      EusaActual.includes(:expense, :budget).find_by(id: record_id)
+    end
+
     def create_actual!(attrs)
       actual = EusaActual.create!(actual_columns(attrs)
                                     .reverse_merge(financial_year: FinancialYear.current))

@@ -212,6 +212,269 @@ module Admin
       assert_empty assigns(:actuals)
       assert_includes response.body, "No EUSA Actuals imported yet."
     end
+
+    # --- Offsetting rows ---------------------------------------------------
+
+    # An accrual and its reversal, cross-linked by the reconcile wizard.
+    def create_offsetting_pair
+      accrual = create_reimbursements_actual(
+        nominal_code: "331300", period: "04", narrative: "Venue hire accrual",
+        date: Date.new(2026, 6, 2), debit: BigDecimal("500.0"),
+        reconciliation_status: ::Reimbursements::EusaActual::STATUS_OFFSET,
+        imported_at: Time.utc(2026, 6, 6, 9)
+      )
+      reversal = create_reimbursements_actual(
+        nominal_code: "331300", period: "05", narrative: "Venue hire accrual reversal",
+        date: Date.new(2026, 6, 3), debit: nil, credit: BigDecimal("500.0"),
+        reconciliation_status: ::Reimbursements::EusaActual::STATUS_OFFSET,
+        offset_of: accrual, imported_at: Time.utc(2026, 6, 6, 10)
+      )
+      accrual.update!(offset_of: reversal)
+      [ accrual, reversal ]
+    end
+
+    test "offsetting rows are kept out of the working set by default" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index
+
+      assert_response :success
+      assert_equal [ @unlinked, @linked_budget, @linked_expense ].map(&:record_id),
+                   assigns(:actuals).map(&:record_id),
+                   "the two offsetting rows net to zero, so they are noise by default"
+      assert_equal 2, assigns(:offset_count)
+    end
+
+    test "offsetting rows can be shown on request and are badged" do
+      accrual, reversal = create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }
+
+      assert_response :success
+      assert_includes assigns(:actuals).map(&:record_id), accrual.record_id
+      assert_includes assigns(:actuals).map(&:record_id), reversal.record_id
+      assert_includes response.body, "Offset"
+    end
+
+    test "the offsetting filter carries through to the CSV export" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index, format: :csv
+      assert_equal 4, CSV.parse(response.body).size, "header + the three non-offsetting rows"
+
+      get :index, params: { include_offsets: "1" }, format: :csv
+      assert_equal 6, CSV.parse(response.body).size, "header + all five rows"
+    end
+
+    # --- Convert an actual into a From-EUSA expense ------------------------
+
+    test "an unlinked debit row offers a create-expense button" do
+      sign_in @user
+      get :index
+
+      assert_response :success
+      assert_includes response.body, new_expense_admin_reimbursements_actual_path(@unlinked.record_id)
+    end
+
+    test "an offsetting row never offers a create-expense button" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }
+
+      assert_response :success
+      assert_not_includes response.body,
+                          new_expense_admin_reimbursements_actual_path(accrual.record_id)
+    end
+
+    test "an already-linked row offers no create-expense button" do
+      sign_in @user
+      get :index
+
+      assert_response :success
+      assert_not_includes response.body,
+                          new_expense_admin_reimbursements_actual_path(@linked_expense.record_id)
+    end
+
+    test "new_expense prefills the form from the ledger row" do
+      sign_in @user
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, assigns(:form).expense_type
+      assert_equal BigDecimal("42.0"), assigns(:form).amount_decimal
+      assert_equal "Sundry", assigns(:form).description
+    end
+
+    test "new_expense preselects the budget when the nominal code maps to exactly one" do
+      only_budget = create_reimbursements_budget(name: "Venue", nominal_code: "500000")
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_equal only_budget.record_id, assigns(:form).budget_record_id
+    end
+
+    test "new_expense leaves the budget blank when the nominal code is ambiguous" do
+      create_reimbursements_budget(name: "Venue A", nominal_code: "500000")
+      create_reimbursements_budget(name: "Venue B", nominal_code: "500000")
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_nil assigns(:form).budget_record_id, "the operator picks between them"
+    end
+
+    test "new_expense refuses an offsetting row" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      get :new_expense, params: { id: accrual.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/offset/i, flash[:alert])
+    end
+
+    test "new_expense refuses a credit row" do
+      sign_in @user
+      get :new_expense, params: { id: @linked_budget.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/debit/i, flash[:alert])
+    end
+
+    test "new_expense refuses a row already linked to an expense" do
+      sign_in @user
+      get :new_expense, params: { id: @linked_expense.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/already/i, flash[:alert])
+    end
+
+    test "new_expense 404s for an unknown row" do
+      sign_in @user
+      get :new_expense, params: { id: "999999" }
+
+      assert_response :not_found
+    end
+
+    # A From-EUSA expense records a cost EUSA has already taken from us, so it
+    # is created settled: it must never enter the review or BACS batch pipeline.
+    test "create_expense creates a Paid From-EUSA expense dated from the ledger row" do
+      sign_in @user
+
+      post :create_expense, params: {
+        id: @unlinked.record_id,
+        reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                       description: "Room hire recharge",
+                                       payment_reference: "J000001234" }
+      }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+      assert_equal ::Reimbursements::Status::PAID, expense.status
+      assert_equal @unlinked.date, expense.payment_confirmed_date
+      assert_equal BigDecimal("42.0"), expense.amount
+      assert_equal BigDecimal("42.0"), expense.amount_excl_vat
+      assert_equal "Room hire recharge", expense.description
+      assert_equal @budget.record_id, expense.budget_record_id
+      assert_nil expense.person, "a cost EUSA levied directly has no payee to reimburse"
+      assert_empty expense.receipts
+      assert_nil expense.batch_id
+    end
+
+    test "create_expense cross-links the row to the expense it created" do
+      sign_in @user
+
+      post :create_expense, params: {
+        id: @unlinked.record_id,
+        reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                       description: "Room hire recharge",
+                                       payment_reference: "J000001234" }
+      }
+
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_equal [ expense.record_id ], @unlinked.reload.linked_expense_ids
+      assert_not_predicate @unlinked, :convertible_to_expense?, "and can't be converted twice"
+    end
+
+    test "create_expense re-renders the form when the budget is missing" do
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: @unlinked.record_id,
+          reimbursements_expense_form: { budget_record_id: "", description: "Room hire",
+                                         payment_reference: "J000001234" }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert assigns(:form).errors[:budget_record_id].present?
+      assert_empty @unlinked.reload.linked_expense_ids
+    end
+
+    test "create_expense rejects a budget that no longer exists" do
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: @unlinked.record_id,
+          reimbursements_expense_form: { budget_record_id: "999999", description: "Room hire",
+                                         payment_reference: "J000001234" }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer exists/i, assigns(:form).errors[:budget_record_id].to_sentence)
+    end
+
+    test "create_expense refuses an offsetting row" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: accrual.record_id,
+          reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                         description: "x", payment_reference: "y" }
+        }
+      end
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/offset/i, flash[:alert])
+    end
+
+    test "the amount always comes from the ledger row, not the posted form" do
+      sign_in @user
+
+      post :create_expense, params: {
+        id: @unlinked.record_id,
+        reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                       description: "Room hire", payment_reference: "J1",
+                                       amount: "9999.99", expense_type: "Reimbursement" }
+      }
+
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_equal BigDecimal("42.0"), expense.amount, "the ledger row is the source of truth"
+      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+    end
+
+    test "conversion is gated by the finance permission" do
+      sign_in users(:committee)
+
+      get :new_expense, params: { id: @unlinked.record_id }
+      assert_response :forbidden
+
+      post :create_expense, params: { id: @unlinked.record_id }
+      assert_response :forbidden
+    end
   end
   end
 end

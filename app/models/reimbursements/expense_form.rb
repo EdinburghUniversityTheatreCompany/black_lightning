@@ -22,21 +22,21 @@ module Reimbursements
                   :sort_code_override, :account_number_override,
                   :vat_itemised, :vat_acknowledged, :save_as_draft,
                   :large_amount_acknowledged, :expense_receipt_count
-    attr_writer :receipts, :require_receipts
+    attr_writer :receipts, :require_receipts, :internal
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
     # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
     # would otherwise sail into the finance queue and skew a budget.
     LARGE_AMOUNT_THRESHOLD = BigDecimal("1000")
 
-    validates :expense_type, inclusion: { in: Expense::SUBMITTER_TYPES }
+    validates :expense_type, inclusion: { in: :permitted_expense_types }
     validates :budget_record_id, :description, :payment_reference, presence: true, unless: :draft?
     validates :payment_reference, length: { maximum: REFERENCE_LIMIT }
     validate :amounts_valid
     validate :receipts_valid
     validate :overrides_valid
-    validate :vat_soft_block, unless: :draft?
-    validate :large_amount_soft_block, unless: :draft?
+    validate :vat_soft_block, unless: :skip_soft_blocks?
+    validate :large_amount_soft_block, unless: :skip_soft_blocks?
 
     def initialize(attributes = {})
       super
@@ -45,6 +45,13 @@ module Reimbursements
 
     def draft?
       ActiveModel::Type::Boolean.new.cast(save_as_draft)
+    end
+
+    # Set only by from_actual below (never a permitted parameter on the producer
+    # form), so a submitter can't pick the internal From-EUSA type to dodge the
+    # receipt, VAT and large-amount rules those exist to enforce on them.
+    def internal?
+      ActiveModel::Type::Boolean.new.cast(@internal)
     end
 
     def receipts
@@ -116,7 +123,33 @@ module Reimbursements
       )
     end
 
+    # Pre-fills the finance form that turns an imported EUSA ledger row into a
+    # From-EUSA expense: a cost EUSA levied on us directly (a utility, a staff
+    # recharge), so there is no receipt, no VAT breakdown and no submitter. The
+    # operator still picks the budget.
+    def self.from_actual(actual)
+      new(
+        expense_type: Expense::TYPE_FROM_EUSA,
+        internal: true,
+        amount: actual.debit&.to_s("F"),
+        amount_excl_vat: actual.debit&.to_s("F"),
+        description: actual.narrative.to_s.strip,
+        payment_reference: actual.ref.to_s.strip[0, REFERENCE_LIMIT],
+        require_receipts: false
+      )
+    end
+
     private
+
+    def permitted_expense_types
+      internal? ? Expense::TYPES : Expense::SUBMITTER_TYPES
+    end
+
+    # A From-EUSA line records an already-settled cost with no receipt and no
+    # itemised VAT: the submitter-facing soft blocks have nothing to protect.
+    def skip_soft_blocks?
+      draft? || internal?
+    end
 
     # Accepts "£1,234.56" (comma thousands) and "12,50" (comma decimal —
     # common for international students; naively stripping the comma would
@@ -163,7 +196,7 @@ module Reimbursements
         end
       end
 
-      return if draft? || receipts.any? || expense_receipt_count.to_i.positive?
+      return if draft? || internal? || receipts.any? || expense_receipt_count.to_i.positive?
 
       if require_receipts?
         # Create: the form has its own file input to hang the error on.
