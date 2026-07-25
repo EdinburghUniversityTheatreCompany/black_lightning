@@ -89,33 +89,83 @@ module Admin
                                   amounts: { @props.record_id => "", @travel.record_id => "" } }
         end
 
-        assert_redirected_to new_admin_reimbursements_budget_update_path
-        assert_match(/at least one budget/i, flash[:alert])
+        assert_response :unprocessable_entity
+        assert_match(/at least one budget/i, response.body)
       end
 
-      test "create with a malformed effective date is rejected without a write" do
+      test "create with a malformed effective date keeps the typed amounts" do
         sign_in @user
 
         assert_no_difference -> { ::Reimbursements::BudgetUpdate.count } do
           post :create, params: { effective_date: "not-a-date", note: "x",
-                                  amounts: { @props.record_id => "500" } }
+                                  amounts: { @props.record_id => "500",
+                                             @travel.record_id => "250" } }
         end
 
-        assert_redirected_to new_admin_reimbursements_budget_update_path
-        assert_match(/valid effective date/i, flash[:alert])
+        # Re-rendered, not redirected: 40 amounts typed after a budget meeting
+        # must not evaporate because of one bad date.
+        assert_response :unprocessable_entity
+        assert_match(/valid effective date/i, response.body)
+        assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
+        assert_select "input[name=?][value=?]", "amounts[#{@travel.record_id}]", "250"
       end
 
-      test "a malformed amount is silently skipped, not written" do
+      test "an unreadable amount fails the whole update and names the budget" do
         sign_in @user
 
-        assert_difference -> { ::Reimbursements::BudgetForecast.count }, 1 do
+        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+          assert_no_difference -> { ::Reimbursements::BudgetUpdate.count } do
+            post :create, params: {
+              effective_date: "2026-06-01", note: "one good one bad",
+              amounts: { @props.record_id => "500", @travel.record_id => "twelve pounds" }
+            }
+          end
+        end
+
+        assert_response :unprocessable_entity
+        # The good budget's forecast is NOT logged: the whole update fails, so
+        # the flash can never claim "1 forecast logged" while a budget silently
+        # kept its superseded figure.
+        assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
+        assert_match(/Check the amount for .*Travel/, response.body)
+        assert_includes response.body, "twelve pounds"
+        assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
+      end
+
+      test "comma and pound-sign amounts are read, not dropped" do
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::BudgetForecast.count }, 3 do
           post :create, params: {
-            effective_date: "2026-06-01", note: "one good one bad",
-            amounts: { @props.record_id => "500", @travel.record_id => "not-a-number" }
+            effective_date: "2026-06-01", note: "typed the way people type",
+            amounts: { @props.record_id => "1,200", @travel.record_id => "£1200",
+                       @hidden.record_id => "12,50" }
           }
         end
 
         assert_redirected_to admin_reimbursements_budget_updates_path
+        assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find(@props.id).current_forecast
+        assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find(@travel.id).current_forecast
+        # "12,50" is a comma decimal (12.50), not 1250 — same reading as the
+        # submitter-facing ExpenseForm.
+        assert_equal BigDecimal("12.5"), ::Reimbursements::Budget.find(@hidden.id).current_forecast
+      end
+
+      test "a budget deleted while the form was open is refused, not a 500" do
+        sign_in @user
+        stale_id = @travel.record_id
+        @travel.destroy!
+
+        assert_no_difference -> { ::Reimbursements::BudgetUpdate.count } do
+          post :create, params: {
+            effective_date: "2026-06-01", note: "raced with a deletion",
+            amounts: { @props.record_id => "500", stale_id => "250" }
+          }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/no longer exists/i, response.body)
+        assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
       end
     end
   end

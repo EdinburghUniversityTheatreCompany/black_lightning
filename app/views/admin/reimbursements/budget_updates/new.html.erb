@@ -37,14 +37,28 @@
         </thead>
         <tbody>
           <% @budgets.each do |budget| %>
+            <% field_name = "amounts[#{budget.record_id}]" %>
+            <% error = @field_errors[budget.record_id] %>
+            <% error_id = "amount-error-#{budget.record_id}" %>
             <tr class="border-b border-gray-100">
               <td class="py-2 pr-3"><%= budget.name.presence || "-" %></td>
               <td class="py-2 pr-3 whitespace-nowrap"><%= budget.nominal_code.presence || "-" %></td>
               <td class="py-2 pr-3 text-right"><%= reimbursements_money(budget.current_forecast) %></td>
               <td class="py-2 text-right">
-                <%= number_field_tag "amounts[#{budget.record_id}]", nil, step: "0.01",
+                <%# A text field, not a number field: the server reads "£1,200"
+                    and "12,50" (AmountParser), which a number input would have
+                    thrown away in the browser before we could report it. %>
+                <%= text_field_tag field_name, @amounts[budget.record_id],
+                      inputmode: "decimal",
                       "aria-label": "New forecast for #{budget.name}",
-                      class: "border border-gray-300 rounded px-2 py-1 text-sm w-40 text-right" %>
+                      "aria-invalid": error.present?.to_s,
+                      "aria-describedby": (error_id if error),
+                      class: "border rounded px-2 py-1 text-sm w-40 text-right " \
+                             "#{error ? 'border-danger' : 'border-gray-300'}" %>
+                <% if error %>
+                  <p id="<%= error_id %>" role="alert"
+                     class="mt-1 text-xs text-danger text-right"><%= error %></p>
+                <% end %>
               </td>
             </tr>
           <% end %>

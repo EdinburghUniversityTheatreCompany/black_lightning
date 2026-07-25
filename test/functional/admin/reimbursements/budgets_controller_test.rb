@@ -292,6 +292,17 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/budgets?format=csv"
       end
 
+      test "a forecast amount typed with a comma or a pound sign is read" do
+        sign_in @user
+
+        post :forecast, params: { id: @props.record_id, amount: "£1,200", date: "2026-06-01",
+                                  reason: "typed the way people type" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_equal BigDecimal("1200"),
+                     ::Reimbursements::Budget.find(@props.id).current_forecast
+      end
+
       # --- Overview (nominal-code rollup) ------------------------------------
 
       test "overview requires the finance permission" do

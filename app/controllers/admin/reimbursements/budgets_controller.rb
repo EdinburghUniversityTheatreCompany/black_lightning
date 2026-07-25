@@ -148,12 +148,12 @@ module Admin
         attrs
       end
 
+      # The same lenient reading as the submitter form: "£1,200" and "12,50" are
+      # amounts, not rubbish. This used to be a bare BigDecimal(), which raised
+      # on both, so a comma-typed forecast was rejected as "not a valid amount"
+      # (and a comma-typed initial budget was quietly left unchanged).
       def parse_decimal(value)
-        return nil if value.blank?
-
-        BigDecimal(value.to_s)
-      rescue ArgumentError
-        nil
+        ::Reimbursements::AmountParser.parse(value)
       end
 
       def parse_date(value)
