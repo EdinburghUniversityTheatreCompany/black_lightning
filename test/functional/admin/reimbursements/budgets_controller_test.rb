@@ -313,21 +313,28 @@ module Admin
 
       test "overview groups budgets by nominal code with a per-code subtotal" do
         sign_in @user
-        # @props is nominal 4000, initial 1000. Add a second 4000 budget and a
-        # 4100 budget so there are two groups.
+        # @props is nominal 4000, initial 1000. Add a second 4000 budget and TWO
+        # 4100 budgets, with amounts chosen so every subtotal is a figure no
+        # individual row carries — otherwise an assertion on "4000" or "200" is
+        # satisfied by the budget row itself and pins no grouping at all.
         create_reimbursements_budget(name: "Set", nominal_code: "4000", initial_budget: 500)
         create_reimbursements_budget(name: "Travel", nominal_code: "4100", initial_budget: 200)
+        create_reimbursements_budget(name: "Digs", nominal_code: "4100", initial_budget: 350)
 
         get :overview
 
         assert_response :success
-        # Both nominal codes head their own group.
-        assert_includes response.body, "4000"
-        assert_includes response.body, "4100"
-        # The 4000 group's initial subtotal is 1000 + 500 = 1500.
+        # Each nominal code heads its own group, and each group ends in a subtotal.
+        assert_includes response.body, "Nominal code 4000"
+        assert_includes response.body, "Nominal code 4100"
+        assert_includes response.body, "Subtotal 4000"
+        assert_includes response.body, "Subtotal 4100"
+        # Subtotals: 4000 = 1000 + 500 = 1500; 4100 = 200 + 350 = 550. Neither
+        # figure appears on any single budget row.
         assert_includes response.body, "1,500"
-        # Grand total initial = 1000 + 500 + 200 = 1700 (Income budget has no initial).
-        assert_includes response.body, "1,700"
+        assert_includes response.body, "550"
+        # Grand total initial = 1000 + 500 + 200 + 350 = 2050 (Income has none).
+        assert_includes response.body, "2,050"
         assert_includes response.body, "Grand total"
       end
 
@@ -436,8 +443,22 @@ module Admin
         get :overview
 
         assert_response :success
+        # The card title renders either way, so assert the empty-state SENTENCE,
+        # which only appears when the list really is empty.
         assert_includes response.body, "Actuals not attributed to any budget"
         assert_includes response.body, "Every EUSA actual is attributed to a budget."
+        assert_empty assigns(:unattributed_by_code)
+      end
+
+      test "overview does not show the empty-state note when there IS unattributed spend" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_not_includes response.body, "Every EUSA actual is attributed to a budget."
       end
 
       # --- Edit --------------------------------------------------------------

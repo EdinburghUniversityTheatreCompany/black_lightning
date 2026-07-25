@@ -277,10 +277,12 @@
       the Save form above has unsaved changes and a decision button is clicked.
       The title text is set from the clicked button's verb (approving/rejecting). %>
   <dialog data-review-decision-target="dialog"
-          data-action="click->review-decision#backdropClose"
+          data-action="click->review-decision#backdropClose close->review-decision#closed"
+          aria-labelledby="unsaved-edits-title-<%= expense.record_id %>"
           class="rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
     <div class="max-w-sm p-4">
-      <h2 class="text-base font-medium" data-review-decision-target="title">
+      <h2 class="text-base font-medium" id="unsaved-edits-title-<%= expense.record_id %>"
+          data-review-decision-target="title">
         Do you want to save the changes before continuing?
       </h2>
       <p class="mt-2 text-sm text-gray-600">
