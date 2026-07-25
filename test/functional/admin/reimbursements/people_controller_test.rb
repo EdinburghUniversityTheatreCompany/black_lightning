@@ -125,12 +125,16 @@ module Admin
       details = @missing_person.reload.payment_details
       assert_equal "08-99-99", details.sort_code
       assert_equal "66374958", details.account_number
-      # The audit line masks the account number to last-4 and records the actor,
-      # and must never carry the full cleartext account number.
+      # The audit line masks BOTH bank details to last-4 and records the actor; it
+      # must never carry either value in the clear.
       assert_includes details.notes,
-                      "Bank details updated: sort code 08-99-99, account ****4958"
+                      "Bank details updated: sort code ****9999, account ****4958"
       assert_not_includes details.notes, "66374958",
                           "the audit line must not embed the full account number"
+      assert_not_includes details.notes, "08-99-99",
+                          "the audit line must not embed the full sort code"
+      assert_not_includes details.notes, "089999",
+                          "the audit line must not embed the full sort code undashed either"
     end
 
     test "the audit line is appended to existing notes, preserving them" do
@@ -142,20 +146,28 @@ module Admin
 
       notes = person.reload.payment_details.notes
       assert notes.start_with?("Earlier note.\n[")
-      assert_includes notes, "sort code 08-99-99, account ****4958"
+      assert_includes notes, "sort code ****9999, account ****4958"
     end
 
-    test "the audit line masks the account number and names the acting user" do
+    # S6: the line masked the account number but wrote the full sort code, while
+    # Exports::People masks both. The stricter rule wins in both places — a sort
+    # code is not a secret on its own, but the audit trail sits next to the masked
+    # account number on the People page, and the pair is what identifies an
+    # account.
+    test "the audit line masks both bank details and names the acting user" do
       sign_in @user
 
       patch :update, params: { id: @missing_person.record_id,
                                sort_code: "089999", account_number: "66374958" }
 
       notes = @missing_person.reload.payment_details.notes
-      # Masked account number, never the full digits.
+      # Masked account number and sort code, never the full digits.
       assert_includes notes, "account ****4958"
+      assert_includes notes, "sort code ****9999"
       assert_not_includes notes, "66374958",
                           "the full account number must not appear in the audit trail"
+      assert_not_includes notes, "08-99-99",
+                          "the full sort code must not appear in the audit trail"
       # Actor attribution: the signed-in operator's name + id.
       assert_includes notes, @user.name_or_email
       assert_includes notes, "(##{@user.id})"
