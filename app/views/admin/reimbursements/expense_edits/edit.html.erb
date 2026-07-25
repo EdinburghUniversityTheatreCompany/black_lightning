@@ -1,7 +1,7 @@
 <% modulus = modulus_checker.check(@expense.effective_sort_code, @expense.effective_account_number) %>
 
 <p class="mb-3 text-gray-600">
-  Finance edit for a single expense at any status. Changes save straight to Airtable.
+  Finance edit for a single expense at any status. Changes save immediately.
   <%= link_to "← All expenses", admin_reimbursements_expense_edits_path, class: "text-primary underline" %>
   or the <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
 </p>
@@ -162,7 +162,7 @@
             <span class="truncate text-gray-600"><%= receipt.filename.presence || "receipt" %></span>
             <%= button_to "Remove",
                           admin_reimbursements_expense_edit_receipt_path(@expense.record_id, receipt.attachment_id),
-                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },
+                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt?" } },
                           "aria-label": "Remove #{receipt.filename.presence || 'receipt'}",
                           class: btn_classes(:danger, :sm) %>
           </li>

@@ -2,8 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 import { getMetaValue } from "../helpers"
 
 // Immediate receipt add/remove for the expense edit page. Files go straight
-// to the receipts endpoint (Airtable-backed, so no ActiveStorage direct
-// upload) and the server's turbo stream replaces #receipts-gallery. Turbo
+// to the receipts endpoint as a plain multipart POST (not an ActiveStorage
+// direct upload) and the server's turbo stream replaces #receipts-gallery. Turbo
 // Drive is disabled app-wide, so streams are piped through
 // Turbo.renderStreamMessage by hand.
 export default class extends Controller {

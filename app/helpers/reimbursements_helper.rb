@@ -143,7 +143,7 @@ module ReimbursementsHelper
                 class: "relative inline-block", data: { controller: "popover" })
   end
 
-  # Producer-facing status wording. The Airtable status values answer the
+  # Producer-facing status wording. The stored status values answer the
   # SYSTEM's question ("Submitted" = batched to EUSA); a submitter's question
   # is "where's my money?", so the portal shows a plainer label with a tooltip.
   # Finance pages keep the raw status. Status.badge_variant still drives colour.

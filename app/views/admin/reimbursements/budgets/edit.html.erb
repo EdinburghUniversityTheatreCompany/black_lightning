@@ -63,7 +63,7 @@
 
 <%= render CardComponent.new(title: "Financials (read-only)", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
-    Airtable computes these from the expenses and forecasts linked to this budget.
+    Computed from the expenses, forecasts and EUSA actuals linked to this budget.
   </p>
   <% if @budget.over_budget? %>
     <p class="mb-3">

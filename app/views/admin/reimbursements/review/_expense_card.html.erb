@@ -198,7 +198,7 @@
             <span class="truncate text-gray-600"><%= receipt.filename.presence || "receipt" %></span>
             <%= button_to "Remove",
                           admin_reimbursements_review_receipt_path(expense.record_id, receipt.attachment_id, tab: @tab),
-                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },
+                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt?" } },
                           "aria-label": "Remove #{receipt.filename.presence || 'receipt'} from expense ##{expense.auto_number}",
                           class: btn_classes(:danger, :sm) %>
           </li>
