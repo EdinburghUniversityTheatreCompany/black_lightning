@@ -122,6 +122,32 @@ module Admin
         assert_text "Unmatched rows (1)"
       end
 
+      # (d2) Two byte-identical offsetting pairs must be two independently
+      # tickable rows in a real browser. On a content-only key both rows shared
+      # one DOM id, so the second row's label activated the FIRST checkbox and
+      # unticking one silently offset both, stamping a genuine transaction as
+      # bookkeeping noise.
+      test "unticking one of two identical offsetting pairs leaves the other ticked" do
+        accrual = "331300\tF40\tJ000000884\t27/04/2026\t01\tVenue hire accrual\tShow\t10.00\t\t10.00"
+        reversal = "331300\tF40\tJ000000884\t28/04/2026\t02\tVenue hire accrual\tShow\t\t10.00\t-10.00"
+        header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet"
+
+        visit admin_reimbursements_reconciliation_path
+        fill_in "Actuals data (tab- or comma-separated, include the header row)",
+                with: [ header, accrual, reversal, accrual, reversal ].join("\n")
+        click_on "Parse and match"
+
+        assert_text "Offsetting pairs (2)", wait: 5
+        boxes = all("input[type=checkbox][name='offset_pair_keys[]']")
+        assert_equal 2, boxes.size
+        assert_equal 2, boxes.map { |box| box[:id] }.uniq.size, "each pair needs its own DOM id"
+
+        boxes.first.uncheck
+
+        assert_not boxes.first.checked?
+        assert boxes.last.checked?, "unticking one pair must not untick the other"
+      end
+
       # (e) A rejected (422) form save must still SHOW its flash error. Turbo
       # never fires turbo:load for non-redirect form responses, so the old
       # turbo:load-only flash listener left these saves failing with zero

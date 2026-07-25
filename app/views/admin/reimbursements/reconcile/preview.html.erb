@@ -164,8 +164,12 @@
             <tbody>
               <% @offsetting_pairs.each do |pair| %>
                 <% checkbox_id = "offset-pair-#{pair.key}" %>
+                <% consequence = @offset_pair_consequences[pair.key] || {} %>
+                <% untick_expense = consequence[:expense] %>
+                <% untick_budget = consequence[:budget] %>
+                <% spans = untick_expense || untick_budget ? 3 : 2 %>
                 <tr class="border-t border-gray-200">
-                  <td class="py-1 pr-3" rowspan="2">
+                  <td class="py-1 pr-3" rowspan="<%= spans %>">
                     <%= check_box_tag "offset_pair_keys[]", pair.key, true, id: checkbox_id,
                                       class: "h-4 w-4" %>
                     <%= label_tag checkbox_id, "Treat as offsetting", class: "sr-only" %>
@@ -177,11 +181,11 @@
                   <td class="py-1 pr-3"><%= pair.debit_row.narrative %></td>
                   <td class="py-1 pr-3 text-right"><%= reimbursements_money(pair.debit_row.debit) %></td>
                   <td class="py-1 pr-3"></td>
-                  <td class="py-1 text-right text-gray-600" rowspan="2">
+                  <td class="py-1 text-right text-gray-600" rowspan="<%= spans %>">
                     <%= pair.score %>/8
                   </td>
                 </tr>
-                <tr class="border-b border-gray-100">
+                <tr class="<%= spans == 3 ? "" : "border-b border-gray-100" %>">
                   <td class="py-1 pr-3 font-mono"><%= pair.credit_row.nominal_code %></td>
                   <td class="py-1 pr-3 font-mono"><%= pair.credit_row.period %></td>
                   <td class="py-1 pr-3"><%= reimbursements_date(pair.credit_row.date) %></td>
@@ -190,6 +194,26 @@
                   <td class="py-1 pr-3"></td>
                   <td class="py-1 pr-3 text-right"><%= reimbursements_money(pair.credit_row.credit) %></td>
                 </tr>
+                <%# Applying restores an unticked pair's legs to the ordinary
+                    matching, so say what that would do BEFORE the operator
+                    submits: the "N matched expenses" count above covers the
+                    unpaired rows only. %>
+                <% if spans == 3 %>
+                  <tr class="border-b border-gray-100">
+                    <td class="py-1 pr-3 text-warning" colspan="7">
+                      If you untick this pair:
+                      <% if untick_expense %>
+                        its debit matches expense #<%= untick_expense.auto_number %>
+                        (<%= untick_expense.effective_payee_name %>), which would be marked Paid
+                        and its producer emailed.
+                      <% end %>
+                      <% if untick_budget %>
+                        Its credit would be logged against the
+                        <strong><%= untick_budget.name %></strong> income budget.
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
               <% end %>
             </tbody>
           </table>
@@ -203,6 +227,10 @@
       <p class="mb-3 text-gray-600">
         Applying will create the EUSA Actuals records, mark the
         <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
+        <% if @offset_pair_consequences.values.any? { |c| c[:expense] } %>
+          Any offsetting pair you untick above is matched as well, so it can add to that count:
+          the pairs flagged in orange say which expense each one would pay.
+        <% end %>
       </p>
       <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
                      data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>

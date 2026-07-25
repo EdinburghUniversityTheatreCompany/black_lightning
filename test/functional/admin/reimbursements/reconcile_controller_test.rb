@@ -517,6 +517,61 @@ module Admin
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
     end
 
+    # --- The preview is honest about what unticking would do ---------------
+    #
+    # preview counts matched expenses over the UNPAIRED rows only, while apply
+    # hands an unticked pair's legs back to the ordinary matching and can pay
+    # (and email) expenses the confirmation never mentioned. Each pair therefore
+    # states what unticking it would cost.
+
+    def lookalike_expense
+      create_reimbursements_expense(
+        person: @person, budget: @budget, amount: BigDecimal("500.00"),
+        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
+        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
+        receipt: false
+      )
+    end
+
+    test "the preview spells out the expense a pair would pay if unticked" do
+      lookalike = lookalike_expense
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits), "a paired row is not in the ordinary matching"
+      key = assigns(:offsetting_pairs).sole.key
+      assert_equal lookalike.record_id, assigns(:offset_pair_consequences)[key][:expense].record_id
+      assert_select "td[colspan=7]", text: /If you untick this pair.*##{lookalike.auto_number}/m
+      assert_select "td[rowspan=3]", 2, "the checkbox and score cells span the note row"
+      assert_includes response.body, "can add to that count"
+    end
+
+    test "the preview says nothing about a pair whose legs match nothing" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      assert_nil assigns(:offset_pair_consequences)[assigns(:offsetting_pairs).sole.key][:expense]
+      assert_no_match(/if you untick/i, response.body)
+    end
+
+    # Two pairs that both look like the same expense must not both claim it:
+    # apply matches each expense once, so the preview has to as well.
+    test "two identical pairs never both claim the same expense if unticked" do
+      lookalike_expense
+      sign_in @user
+
+      post :preview, params: { pasted_text: [ HEADER, accrual_row, reversal_row,
+                                              accrual_row, reversal_row ].join("\n") }
+
+      assert_response :success
+      claimed = assigns(:offset_pair_consequences).values.filter_map { |c| c[:expense] }
+      assert_equal 1, claimed.size, "the second pair has no expense left to pay"
+    end
+
     # --- A pair is written all-or-nothing ----------------------------------
     #
     # A half-written pair is the worst state available: the debit leg is
