@@ -371,6 +371,136 @@ module Admin
 
       assert_redirected_to admin_reimbursements_reconciliation_path
     end
+
+    # --- Offsetting pairs --------------------------------------------------
+    #
+    # An accrual and its reversal on the same nominal code and reference, a day
+    # apart in consecutive periods: the shape that dominates a real EUSA export.
+
+    ACCRUAL_REF = "J000000884".freeze
+    ACCRUAL_NOMINAL = "331300".freeze
+
+    def accrual_row(nominal: ACCRUAL_NOMINAL, ref: ACCRUAL_REF, date: "27/04/2026", period: "01",
+                    narrative: "Venue hire accrual", amount: "500.00")
+      "#{nominal}\tF40\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t#{amount}\t\t#{amount}"
+    end
+
+    def reversal_row(nominal: ACCRUAL_NOMINAL, ref: ACCRUAL_REF, date: "28/04/2026", period: "02",
+                     narrative: "Venue hire accrual", amount: "500.00")
+      "#{nominal}\tF40\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t\t#{amount}\t-#{amount}"
+    end
+
+    def offsetting_paste
+      "#{HEADER}\n#{accrual_row}\n#{reversal_row}"
+    end
+
+    test "preview proposes an offsetting pair instead of listing both legs as unmatched" do
+      sign_in @user
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      pair = assigns(:offsetting_pairs).sole
+      assert_equal BigDecimal("500.00"), pair.debit_row.debit
+      assert_equal BigDecimal("500.00"), pair.credit_row.credit
+      assert_empty assigns(:unmatched_rows), "a paired row is not an unmatched row"
+    end
+
+    test "preview offers every proposed pair as a ticked checkbox the operator can untick" do
+      sign_in @user
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      key = assigns(:offsetting_pairs).sole.key
+      assert_select "input[type=checkbox][name='offset_pair_keys[]'][value=?][checked=checked]", key
+    end
+
+    test "apply creates both legs, cross-links them, and stamps both offset" do
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal 2, ::Reimbursements::EusaActual.count, "both legs are kept for the audit trail"
+      legs = ::Reimbursements::EusaActual.order(:id).to_a
+      assert legs.all?(&:offset?)
+      assert_equal legs.last.id, legs.first.offset_of_id
+      assert_equal legs.first.id, legs.last.offset_of_id
+      assert_equal 1, assigns(:offsets_linked)
+      assert_equal 0, assigns(:unmatched_saved)
+    end
+
+    test "an unticked pair is imported as two ordinary rows instead" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
+
+      assert_response :success
+      assert_equal 2, ::Reimbursements::EusaActual.count
+      assert ::Reimbursements::EusaActual.none?(&:offset?),
+             "unticking the pair must leave both rows as ordinary unlinked actuals"
+      assert_equal 0, assigns(:offsets_linked)
+      assert_equal 2, assigns(:unmatched_saved)
+    end
+
+    # The whole point of pairing: an accrual leg that happens to look like a
+    # real claim must not pay that claim. Only rows left OUT of a pair reach the
+    # debit-to-expense matcher.
+    test "an applied pair's legs never match (or pay) an expense" do
+      lookalike = create_reimbursements_expense(
+        person: @person, budget: @budget, amount: BigDecimal("500.00"),
+        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
+        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
+        receipt: false
+      )
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal ::Reimbursements::Status::SUBMITTED, lookalike.reload.status
+      assert_nil lookalike.payment_confirmed_date
+      assert_equal 0, assigns(:expenses_paid)
+      assert_empty @graph.send_mails
+    end
+
+    # Unticking hands the legs back to the ordinary matcher, so a leg that does
+    # match an expense pays it — the operator's judgement, not the heuristic's.
+    test "unticking a pair returns its legs to the ordinary debit matching" do
+      lookalike = create_reimbursements_expense(
+        person: @person, budget: @budget, amount: BigDecimal("500.00"),
+        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
+        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
+        receipt: false
+      )
+      sign_in @user
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: [ "" ] }
+
+      assert_response :success
+      assert_equal ::Reimbursements::Status::PAID, lookalike.reload.status
+      assert_equal 1, assigns(:expenses_paid)
+    end
+
+    test "a same-amount row that is not part of a pair still reaches the matcher" do
+      sign_in @user
+      paste = "#{offsetting_paste}\n#{debit_row}"
+
+      post :preview, params: { pasted_text: paste }
+
+      assert_response :success
+      assert_equal 1, assigns(:offsetting_pairs).size
+      assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+    end
+
+    # Preview and apply both re-derive the pairs from the pasted text (the
+    # wizard keeps no session state), so the tickbox keys must survive the round
+    # trip. The helper mimics what the preview form posts back.
+    def offsetting_pair_keys(pasted_text)
+      rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text, cost_centre_code: "F40")
+      ::Reimbursements::Reconciliation.detect_offsetting_pairs(rows).first.map(&:key)
+    end
   end
   end
 end

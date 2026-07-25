@@ -7,11 +7,13 @@ module Admin
     #   1. show    — paste the monthly EUSA actuals export.
     #   2. preview — parse (legacy/Sage auto-detect), dedup against rows already
     #                imported for the same EUSA period (P1..P12, taken per row
-    #                from the export), and match debits to Submitted/Paid
-    #                expenses and credits to income budgets.
+    #                from the export), propose the offsetting pairs (an accrual
+    #                and its reversal), and match the rest — debits to
+    #                Submitted/Paid expenses, credits to income budgets.
     #   3. apply   — create EUSA Actuals records, link them to the matched
-    #                expense/budget, mark matched expenses Paid, and email the
-    #                producers "you've been paid".
+    #                expense/budget, cross-link the offsetting pairs the
+    #                operator left ticked, mark matched expenses Paid, and email
+    #                the producers "you've been paid".
     #
     # The wizard is stateless: preview/apply re-parse the pasted text carried in
     # the form (the parse + match functions are pure), so nothing is stashed in
@@ -40,7 +42,8 @@ module Admin
         end
 
         @new_rows, @skipped_rows = dedup(parsed)
-        @matched_debits, @matched_credits, @unmatched_rows = build_matches(@new_rows)
+        @offsetting_pairs, unpaired = ::Reimbursements::Reconciliation.detect_offsetting_pairs(@new_rows)
+        @matched_debits, @matched_credits, @unmatched_rows = build_matches(unpaired)
         render :preview
       end
 
@@ -61,12 +64,17 @@ module Admin
         end
 
         new_rows, @skipped_count = dedup(parsed).then { |new_r, skipped| [ new_r, skipped.size ] }
-        matched_debits, matched_credits, unmatched = build_matches(new_rows)
+        # Only the pairs the operator left ticked are collapsed; an unticked
+        # pair's legs go back into the ordinary matching as genuine rows.
+        pairs, = ::Reimbursements::Reconciliation.detect_offsetting_pairs(new_rows)
+        applied_pairs = pairs.select { |pair| ticked_offset_pair_keys.include?(pair.key) }
+        matched_debits, matched_credits, unmatched = build_matches(rows_outside(new_rows, applied_pairs))
 
-        committed_debits, committed_credits, committed_unmatched =
-          apply_reconciliation(matched_debits, matched_credits, unmatched)
+        committed_pairs, committed_debits, committed_credits, committed_unmatched =
+          apply_reconciliation(applied_pairs, matched_debits, matched_credits, unmatched)
         notify_paid_producers(committed_debits)
 
+        @offsets_linked = committed_pairs.size
         @expenses_paid = committed_debits.size
         @credits_linked = committed_credits.size
         @unmatched_saved = committed_unmatched.size
@@ -101,6 +109,26 @@ module Admin
           )
           !existing_by_period[row.period].include?(key)
         end
+      end
+
+      # The pair keys the operator left ticked on the preview. Every proposed
+      # pair renders as a ticked checkbox alongside one blank hidden entry, so
+      # the parameter is always present when pairs were shown: an absent key
+      # means unticked, never "we didn't ask".
+      def ticked_offset_pair_keys
+        keys = params[:offset_pair_keys]
+        return Set.new unless keys.is_a?(Array)
+
+        keys.map(&:to_s).compact_blank.to_set
+      end
+
+      # Rows not claimed by one of the applied pairs, in paste order. Keyed on
+      # the pair's row INDEXES, not row equality: two byte-identical rows in one
+      # paste are two real transactions, and pairing one must not silently drop
+      # the other.
+      def rows_outside(rows, pairs)
+        consumed = pairs.flat_map { |pair| [ pair.debit_index, pair.credit_index ] }.to_set
+        rows.each_with_index.reject { |_row, index| consumed.include?(index) }.map(&:first)
       end
 
       # Match debits to Submitted/Paid expenses (each claimed at most once) and
@@ -167,18 +195,29 @@ module Admin
       # and since apply is idempotent-by-design (already_reconciled? excludes
       # anything already linked), a retry could never re-send those emails —
       # they'd be lost permanently even though rows 1..k-1 were genuinely paid.
-      # Returns [committed_debits, committed_credits, committed_unmatched] —
-      # each the subset that actually made it through, so the caller's summary
-      # counts (and the producer-notification list) never claim more happened
-      # than really did.
-      def apply_reconciliation(matched_debits, matched_credits, unmatched)
+      # Returns [committed_pairs, committed_debits, committed_credits,
+      # committed_unmatched] — each the subset that actually made it through, so
+      # the caller's summary counts (and the producer-notification list) never
+      # claim more happened than really did.
+      def apply_reconciliation(pairs, matched_debits, matched_credits, unmatched)
         imported_at = Time.current
 
+        committed_pairs = pairs.select { |pair| apply_offsetting_pair(pair, imported_at) }
         committed_debits = matched_debits.select { |row, expense| apply_debit_row(row, expense, imported_at) }
         committed_credits = matched_credits.select { |row, budget| apply_credit_row(row, budget, imported_at) }
         committed_unmatched = unmatched.select { |row| apply_unmatched_row(row, imported_at) }
 
-        [ committed_debits, committed_credits, committed_unmatched ]
+        [ committed_pairs, committed_debits, committed_credits, committed_unmatched ]
+      end
+
+      # Both legs are imported and then pointed at each other: the pair nets to
+      # zero, but finance still needs to see that both entries exist.
+      def apply_offsetting_pair(pair, imported_at)
+        with_row_rescue("an offsetting pair") do
+          debit = store.create_actual!(actuals_attrs(pair.debit_row, imported_at))
+          credit = store.create_actual!(actuals_attrs(pair.credit_row, imported_at))
+          store.link_offsetting_pair!(debit.record_id, credit.record_id)
+        end
       end
 
       def apply_debit_row(row, expense, imported_at)

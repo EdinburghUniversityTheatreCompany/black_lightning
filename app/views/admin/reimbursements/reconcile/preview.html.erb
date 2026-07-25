@@ -3,8 +3,9 @@
 <%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
   Review the matches below. Debits are matched to Submitted or Paid expenses; credits to
-  income budgets. When you're happy, apply the reconciliation to save everything to Airtable,
-  mark the matched expenses Paid, and email the producers.
+  income budgets. Rows that cancel each other out are proposed as offsetting pairs for you to
+  confirm. When you're happy, apply the reconciliation to save everything, mark the matched
+  expenses Paid, and email the producers.
 </p>
 
 <% if @skipped_rows.any? %>
@@ -131,13 +132,78 @@
     <% end %>
   <% end %>
 
-  <%= render CardComponent.new(title: "Step 3: Apply reconciliation") do %>
-    <p class="mb-3 text-gray-600">
-      Applying will create the EUSA Actuals records, mark the
-      <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
-    </p>
-    <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
-      <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
+  <%# The offsetting-pair tickboxes and the Apply button are one form: the
+      pairs you leave ticked are the pairs that get collapsed. %>
+  <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
+    <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
+
+    <%= render CardComponent.new(title: "Offsetting pairs (#{@offsetting_pairs.size})") do %>
+      <% if @offsetting_pairs.any? %>
+        <p class="mb-3 text-gray-600">
+          These rows cancel each other out: an accrual and its reversal, or a journal booked
+          and re-booked. Both rows are still imported, but a ticked pair is marked as offsetting
+          so it drops out of the working set instead of looking like real spend. Untick any pair
+          that is really two separate transactions and its rows will be matched normally.
+        </p>
+        <%# Always posted, so an untick is a real "no" rather than a missing parameter. %>
+        <%= hidden_field_tag "offset_pair_keys[]", "", id: nil %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th scope="col" class="py-1 pr-3">Offset?</th><th scope="col" class="py-1 pr-3">Nominal</th>
+                <th scope="col" class="py-1 pr-3">Period</th><th scope="col" class="py-1 pr-3">Date</th>
+                <th scope="col" class="py-1 pr-3">Ref</th><th scope="col" class="py-1 pr-3">Narrative</th>
+                <th scope="col" class="py-1 pr-3 text-right">Debit</th>
+                <th scope="col" class="py-1 pr-3 text-right">Credit</th>
+                <th scope="col" class="py-1 text-right">
+                  <abbr title="How much the two rows agree: their reference, nominal code, EUSA period and narrative, less how far apart their dates are. 8 is everything matching on the same day.">Evidence</abbr>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @offsetting_pairs.each do |pair| %>
+                <% checkbox_id = "offset-pair-#{pair.key}" %>
+                <tr class="border-t border-gray-200">
+                  <td class="py-1 pr-3" rowspan="2">
+                    <%= check_box_tag "offset_pair_keys[]", pair.key, true, id: checkbox_id,
+                                      class: "h-4 w-4" %>
+                    <%= label_tag checkbox_id, "Treat as offsetting", class: "sr-only" %>
+                  </td>
+                  <td class="py-1 pr-3 font-mono"><%= pair.debit_row.nominal_code %></td>
+                  <td class="py-1 pr-3 font-mono"><%= pair.debit_row.period %></td>
+                  <td class="py-1 pr-3"><%= reimbursements_date(pair.debit_row.date) %></td>
+                  <td class="py-1 pr-3 font-mono"><%= pair.debit_row.ref.presence || "-" %></td>
+                  <td class="py-1 pr-3"><%= pair.debit_row.narrative %></td>
+                  <td class="py-1 pr-3 text-right"><%= reimbursements_money(pair.debit_row.debit) %></td>
+                  <td class="py-1 pr-3"></td>
+                  <td class="py-1 text-right text-gray-600" rowspan="2">
+                    <%= pair.score %>/8
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-100">
+                  <td class="py-1 pr-3 font-mono"><%= pair.credit_row.nominal_code %></td>
+                  <td class="py-1 pr-3 font-mono"><%= pair.credit_row.period %></td>
+                  <td class="py-1 pr-3"><%= reimbursements_date(pair.credit_row.date) %></td>
+                  <td class="py-1 pr-3 font-mono"><%= pair.credit_row.ref.presence || "-" %></td>
+                  <td class="py-1 pr-3"><%= pair.credit_row.narrative %></td>
+                  <td class="py-1 pr-3"></td>
+                  <td class="py-1 pr-3 text-right"><%= reimbursements_money(pair.credit_row.credit) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="py-2 text-gray-600">No offsetting pairs found in this paste.</p>
+      <% end %>
+    <% end %>
+
+    <%= render CardComponent.new(title: "Step 3: Apply reconciliation") do %>
+      <p class="mb-3 text-gray-600">
+        Applying will create the EUSA Actuals records, mark the
+        <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
+      </p>
       <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
                      data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
     <% end %>

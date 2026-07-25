@@ -186,5 +186,63 @@ module Reimbursements
       assert_equal "11-22-33", attrs[:sort_code_override]
       assert_equal "12345678", attrs[:account_number_override]
     end
+
+    # --- from_actual (converting an imported EUSA row) ----------------------
+
+    def build_actual(**attrs)
+      defaults = { nominal_code: "431580", narrative: "Room hire recharge", ref: "J000001234",
+                   debit: BigDecimal("42.00"), date: Date.new(2026, 5, 13) }
+      EusaActual.new(**defaults.merge(attrs))
+    end
+
+    test "from_actual prefills the internal From-EUSA type from the ledger row" do
+      form = ExpenseForm.from_actual(build_actual)
+
+      assert_equal Expense::TYPE_FROM_EUSA, form.expense_type
+      assert_equal BigDecimal("42.00"), form.amount_decimal
+      assert_equal BigDecimal("42.00"), form.amount_excl_vat_decimal
+      assert_equal "Room hire recharge", form.description
+      assert_equal "J000001234", form.payment_reference
+      assert_not form.require_receipts?, "a cost EUSA levied directly has no receipt to attach"
+    end
+
+    # A From-EUSA line has no receipt and no VAT breakdown, and can easily run
+    # into four figures: the submitter-facing soft blocks would only get in the
+    # way of recording an already-settled cost.
+    test "from_actual needs no receipt, VAT tick or large-amount tick" do
+      form = ExpenseForm.from_actual(build_actual(debit: BigDecimal("5000.00")))
+      form.budget_record_id = "recBud1"
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    test "from_actual still requires a budget, a description and a reference" do
+      form = ExpenseForm.from_actual(build_actual(narrative: "", ref: ""))
+
+      assert_not form.valid?
+      %i[budget_record_id description payment_reference].each do |field|
+        assert form.errors[field].present?, "expected error on #{field}"
+      end
+    end
+
+    test "from_actual truncates an over-long reference to what EUSA accepts" do
+      form = ExpenseForm.from_actual(build_actual(ref: "J0000012345678901234567890"))
+
+      assert_equal ExpenseForm::REFERENCE_LIMIT, form.payment_reference.length
+      form.budget_record_id = "recBud1"
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    # The relaxations ride on an internal flag the producer form never permits,
+    # so a submitter can't pick the internal type to dodge the receipt rule.
+    test "a submitted expense_type of From EUSA is still rejected on the producer form" do
+      form = ExpenseForm.new(expense_type: Expense::TYPE_FROM_EUSA, amount: "10.00",
+                             amount_excl_vat: "10.00", budget_record_id: "recBud1",
+                             description: "x", payment_reference: "y")
+
+      assert_not form.valid?
+      assert form.errors[:expense_type].present?
+      assert form.errors[:receipts].present?, "and it still has to carry a receipt"
+    end
   end
 end

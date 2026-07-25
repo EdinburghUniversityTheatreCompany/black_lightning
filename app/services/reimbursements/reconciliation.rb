@@ -1,5 +1,6 @@
 require "csv"
 require "bigdecimal"
+require "digest"
 
 module Reimbursements
   ##
@@ -17,6 +18,18 @@ module Reimbursements
       :nominal_code, :cost_centre, :ref, :date, :period,
       :narrative, :narrative_1, :debit, :credit, :net
     )
+
+    ##
+    # Two rows of a paste that cancel each other out (an accrual and its
+    # reversal, a journal booked and re-booked), with the evidence score that
+    # got them proposed. +key+ identifies the pair by CONTENT, not by position,
+    # so the preview's tickbox survives the stateless wizard's re-parse on
+    # apply even if the rows shift.
+    OffsetPair = Data.define(:debit_row, :credit_row, :debit_index, :credit_index, :score) do
+      def key
+        "#{Reconciliation.row_key(debit_row)}:#{Reconciliation.row_key(credit_row)}"
+      end
+    end
 
     REQUIRED_COLUMNS = %i[nominal_code cost_centre date period narrative].freeze
 
@@ -127,6 +140,168 @@ module Reimbursements
     def match_credit_to_budget(row, budgets)
       budgets.find { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
     end
+
+    # --- offsetting pairs --------------------------------------------------
+
+    # Scoring weights, tuned against a real 309-row EUSA F40 export. Offset
+    # legs there are overwhelmingly on the SAME nominal code (they are
+    # accrual/reversal and re-booked journal pairs, not cross-code
+    # reclassifications), but the reference only matches about half the time,
+    # and legs routinely straddle months (a September accrual released in
+    # October; one pair three months apart). So no single predicate can be a
+    # hard filter: a genuine claim can collide by amount with an unrelated
+    # reversal, and only weighing the evidence keeps the two apart.
+    OFFSET_SCORE_SAME_REF = 4
+    OFFSET_SCORE_SAME_NOMINAL = 2
+    OFFSET_SCORE_SAME_PERIOD = 1
+    OFFSET_SCORE_NARRATIVE_PREFIX = 1
+    # A pair must reach this to be proposed at all: a reference match on its
+    # own clears it, as does nominal + period + narrative agreement on the same
+    # day. Anything weaker leaves BOTH rows in the working set rather than
+    # guessing.
+    OFFSET_MIN_SCORE = 4
+    # Legs this far apart or less cost 1 point, further costs 2.
+    OFFSET_NEAR_DATE_DAYS = 31
+    # Narratives counted as agreeing when their normalised forms share this
+    # many leading characters. In the real export the shared-prefix length is
+    # bimodal (either 0 or 10+ characters), so anywhere in that gap behaves
+    # identically; 8 sits in the middle of it.
+    OFFSET_NARRATIVE_PREFIX_CHARS = 8
+    # EUSA's financial year, and its accounting periods 1..12, run April to March.
+    FINANCIAL_YEAR_START_MONTH = 4
+
+    # Finds the offsetting pairs in a parsed paste. Returns
+    # [pairs, remaining_rows]: +pairs+ are OffsetPairs ordered strongest
+    # evidence first (what the preview shows for ticking), +remaining_rows+ is
+    # every row that was NOT paired, in paste order, ready for the ordinary
+    # debit->expense / credit->budget matching.
+    #
+    # Candidates are rows with an identical absolute amount (exact BigDecimal,
+    # never a float), opposite signs, in the same financial year. Each is
+    # scored, anything below OFFSET_MIN_SCORE is dropped, and the survivors are
+    # taken greedily strongest-first so a row can only ever belong to one pair
+    # and the best-evidenced claim on a leg wins.
+    def detect_offsetting_pairs(rows)
+      candidates = offset_candidates(rows)
+      consumed = Set.new
+      pairs = []
+
+      candidates.each do |score, debit, credit|
+        next if consumed.include?(debit.last) || consumed.include?(credit.last)
+
+        consumed << debit.last << credit.last
+        pairs << OffsetPair.new(debit_row: debit.first, credit_row: credit.first,
+                                debit_index: debit.last, credit_index: credit.last, score: score)
+      end
+
+      remaining = rows.each_with_index.reject { |_row, index| consumed.include?(index) }.map(&:first)
+      [ pairs, remaining ]
+    end
+
+    # Content digest identifying one parsed row, stable across re-parses of the
+    # same paste and independent of its position (see OffsetPair#key).
+    def row_key(row)
+      fields = [ row.nominal_code, row.cost_centre, row.ref, row.date, row.period,
+                 row.narrative, row.narrative_1, row.debit, row.credit, row.net ]
+      Digest::SHA256.hexdigest(fields.map(&:to_s).join(""))[0, 12]
+    end
+
+    # The eligible pairs, strongest evidence first; ties break on paste order so
+    # the result is deterministic. Rows are bucketed by absolute amount before
+    # pairing, so a big paste doesn't pay for comparing every row with every
+    # other one.
+    def offset_candidates(rows)
+      signed = rows.each_with_index.filter_map do |row, index|
+        amount = row.debit - row.credit
+        [ row, index, amount ] unless amount.zero?
+      end
+
+      candidates = []
+      signed.group_by { |(_row, _index, amount)| amount.abs }.each_value do |bucket|
+        next if bucket.size < 2
+
+        bucket.combination(2) do |(row_a, index_a, amount_a), (row_b, index_b, amount_b)|
+          next unless amount_a.negative? ^ amount_b.negative?
+          next unless same_financial_year?(row_a.date, row_b.date)
+
+          score = offset_pair_score(row_a, row_b)
+          next if score < OFFSET_MIN_SCORE
+
+          debit, credit = amount_a.positive? ? [ [ row_a, index_a ], [ row_b, index_b ] ]
+                                             : [ [ row_b, index_b ], [ row_a, index_a ] ]
+          candidates << [ score, debit, credit ]
+        end
+      end
+
+      candidates.sort_by { |score, debit, credit| [ -score, debit.last, credit.last ] }
+    end
+    private_class_method :offset_candidates
+
+    # How much evidence says these two rows are the same transaction booked
+    # both ways. See the OFFSET_SCORE_* constants for why each signal weighs
+    # what it does.
+    def offset_pair_score(row_a, row_b)
+      score = 0
+      score += OFFSET_SCORE_SAME_REF if same_field?(row_a.ref, row_b.ref)
+      score += OFFSET_SCORE_SAME_NOMINAL if same_field?(row_a.nominal_code, row_b.nominal_code)
+      score += OFFSET_SCORE_SAME_PERIOD if same_field?(row_a.period, row_b.period)
+      if narrative_prefix_similar?(row_a.narrative, row_b.narrative)
+        score += OFFSET_SCORE_NARRATIVE_PREFIX
+      end
+      score - offset_date_penalty(row_a.date, row_b.date)
+    end
+    private_class_method :offset_pair_score
+
+    # Two blank fields agree on nothing, so a blank never scores.
+    def same_field?(left, right)
+      left = left.to_s.strip
+      right = right.to_s.strip
+      left.present? && left.casecmp?(right)
+    end
+    private_class_method :same_field?
+
+    def offset_date_penalty(left, right)
+      gap = (left - right).abs.to_i
+      return 0 if gap.zero?
+
+      gap <= OFFSET_NEAR_DATE_DAYS ? 1 : 2
+    end
+    private_class_method :offset_date_penalty
+
+    def same_financial_year?(left, right)
+      financial_year_start_year(left) == financial_year_start_year(right)
+    end
+    private_class_method :same_financial_year?
+
+    def financial_year_start_year(date)
+      date.month >= FINANCIAL_YEAR_START_MONTH ? date.year : date.year - 1
+    end
+    private_class_method :financial_year_start_year
+
+    # An accrual and its reversal are usually the same narrative with one word
+    # swapped part-way through ("PO 40000123 accrual ..." / "PO 40000123
+    # reversal ..."), so the shared LEADING run is the signal, not equality.
+    def narrative_prefix_similar?(left, right)
+      left = normalise_narrative(left)
+      right = normalise_narrative(right)
+      return false if left.length < OFFSET_NARRATIVE_PREFIX_CHARS ||
+        right.length < OFFSET_NARRATIVE_PREFIX_CHARS
+
+      common_prefix_length(left, right) >= OFFSET_NARRATIVE_PREFIX_CHARS
+    end
+    private_class_method :narrative_prefix_similar?
+
+    def normalise_narrative(value)
+      value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
+    end
+    private_class_method :normalise_narrative
+
+    def common_prefix_length(left, right)
+      length = 0
+      length += 1 while length < [ left.length, right.length ].min && left[length] == right[length]
+      length
+    end
+    private_class_method :common_prefix_length
 
     # --- private helpers ---------------------------------------------------
 

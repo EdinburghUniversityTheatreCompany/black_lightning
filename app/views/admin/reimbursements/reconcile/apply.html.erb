@@ -19,10 +19,14 @@
 <% end %>
 
 <%= render CardComponent.new(title: "Summary") do %>
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
     <div>
       <div class="text-2xl font-semibold"><%= @expenses_paid %></div>
       <div class="text-sm text-gray-600">Expenses marked Paid</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @offsets_linked %></div>
+      <div class="text-sm text-gray-600">Offsetting pairs linked</div>
     </div>
     <div>
       <div class="text-2xl font-semibold"><%= @credits_linked %></div>

@@ -134,8 +134,14 @@ ChaosRails::Application.routes.draw do
         post :apply
       end
 
-      # Read-only browser over the imported EUSA Actuals ledger.
-      resources :actuals, only: %i[index]
+      # Browser over the imported EUSA Actuals ledger, plus turning an unlinked
+      # debit row into a From-EUSA expense.
+      resources :actuals, only: %i[index] do
+        member do
+          get :new_expense
+          post :create_expense
+        end
+      end
 
       # One xlsx containing every resource, a sheet each. (Each list also
       # downloads on its own as CSV, via ?format=csv on its index.)

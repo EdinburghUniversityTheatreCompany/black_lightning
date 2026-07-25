@@ -312,6 +312,10 @@ module Reimbursements
       eusa_actuals.select { |a| a.period == period }
     end
 
+    def find_actual(record_id)
+      EusaActual.includes(:expense, :budget).find_by(id: record_id)
+    end
+
     def create_actual!(attrs)
       actual = EusaActual.create!(actual_columns(attrs)
                                     .reverse_merge(financial_year: FinancialYear.current))
@@ -331,6 +335,22 @@ module Reimbursements
       actual.update!(budget_id: budget_id)
       bust_eusa_actuals!
       actual
+    end
+
+    # Records that two imported rows cancel each other out (an accrual and its
+    # reversal). Both rows survive — finance needs the audit trail — so each leg
+    # is stamped "offset" and pointed at the other. All-or-nothing: a half-
+    # stamped pair would show one leg as noise and the other as real spend.
+    def link_offsetting_pair!(actual_id, counterpart_id)
+      legs = [ EusaActual.find(actual_id), EusaActual.find(counterpart_id) ]
+      EusaActual.transaction do
+        legs.each_with_index do |leg, index|
+          leg.update!(offset_of_id: legs[1 - index].id,
+                      reconciliation_status: EusaActual::STATUS_OFFSET)
+        end
+      end
+      bust_eusa_actuals!
+      legs
     end
 
     private
