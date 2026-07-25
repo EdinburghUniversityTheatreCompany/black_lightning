@@ -468,9 +468,24 @@ form dozens of times in a sitting, so the document and the details should be vis
   `rails_blob_path`, with a visible "open in a new tab" / download fallback for browsers that
   refuse to render inline. Do NOT vendor pdf.js unless native embedding proves inadequate: it is a
   large dependency for a small win here, and `vendor/assets` would be the place if it ever is.
-- Images already have `rails_representation_path` thumbnails (`Expense.wrap_receipt`), so the
-  thumbnail strip has what it needs for images; PDFs will need a generic document icon rather than
-  a real page preview unless a preview is already generated.
+- **PDF previews already work; no setup needed.** Verified empirically on 2026-07-25: Rails' default
+  previewers include `PopplerPDFPreviewer` and `MuPDFPreviewer`, a PDF blob reports
+  `representable? == previewable? == true`, and `representation(resize_to_limit: [512, 512])
+  .processed` produced an 11 KB `image/png` first-page thumbnail from a real PDF. `pdftoppm` and
+  `mutool` are on the host and `poppler-utils` is in the production `Dockerfile`, so
+  `Expense.wrap_receipt` is *already* emitting a `thumbnail_url` for PDF receipts. The thumbnail
+  strip can therefore show real first-page previews for PDFs exactly as it does for images.
+  (An earlier draft of this spec wrongly said PDFs would need a generic icon.)
+- **Two gaps to close, though:**
+  - `.devcontainer/Dockerfile.dev` installs `libvips` but **not** `poppler-utils`, so PDF preview
+    generation fails inside the dev container while working on the host and in production. Add it
+    there (and keep the devcontainer's package list in step with the production `Dockerfile`).
+  - A malformed PDF raises `ActiveStorage::PreviewError` at generation time, not at upload:
+    verified with a stub file (`pdftoppm failed (status 1): Couldn't find trailer dictionary`).
+    Since generation is lazy, that surfaces as a failed thumbnail request rather than a page crash,
+    but the strip still needs a graceful fallback (an `onerror` swap to a document icon, or a
+    rescue around the representation) so a producer's dodgy PDF shows an icon rather than a broken
+    image. Receipts arrive from phone cameras and random suppliers, so this will happen.
 - Stimulus controller for the switching and the open/close; no JS framework. Lazy: set the pane's
   `src` when it is first opened so nothing is fetched for a collapsed card.
 - Check `Attachment::ALLOWED_CONTENT_TYPES` for what can actually arrive (the sheet-music MIME
