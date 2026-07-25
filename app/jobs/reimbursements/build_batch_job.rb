@@ -35,8 +35,6 @@ module Reimbursements
       "reimbursements_build_batch_#{params[:cost_centre_key]}"
     }
 
-    SENDER_FALLBACK = "Bedlam Fringe Finance".freeze
-
     # Injection seams for tests (mirrors NightlyBatchJob; no mocking library).
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :processor_builder,
@@ -76,7 +74,8 @@ module Reimbursements
 
       result = processor(cost_centre).process(
         expenses: approved, bacs_date: parse_date(bacs_date),
-        sender_name: sender_name.presence || SENDER_FALLBACK, eusa_recipient: eusa_recipient,
+        sender_name: sender_name.presence || cost_centre.finance_sender_name,
+        eusa_recipient: eusa_recipient,
         eusa_subject: eusa_subject, eusa_body_html: eusa_body_html
       )
       attempt.resolve!(status: result.success ? "completed" : "failed",

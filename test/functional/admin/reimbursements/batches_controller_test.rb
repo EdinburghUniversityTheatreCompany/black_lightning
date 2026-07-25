@@ -71,7 +71,10 @@ module Admin
         assert_response :success
         assert_includes response.body, "Alice Producer"
         assert_includes response.body, "Create draft and process batch"
-        assert_includes response.body, "Bedlam Fringe BACS Request", "default EUSA subject is prefilled"
+        # Derived from the cost centre, so a second one never sends EUSA a
+        # request labelled with the Fringe's name.
+        assert_includes response.body, "#{::Reimbursements::CostCentre.default.name} BACS Request",
+                        "default EUSA subject is prefilled"
       end
 
       test "new redirects with an alert when no cost centre is configured" do

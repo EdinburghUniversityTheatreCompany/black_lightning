@@ -68,7 +68,7 @@ module Reimbursements
       xlsx_bytes = build_xlsx(expenses)
       renamed = collect_receipts(expenses, bacs_date)
 
-      bacs_filename = "#{bacs_date.iso8601}-bedlam-fringe-BACS-request-#{@cost_centre.eusa_code}.xlsx"
+      bacs_filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
       upload_bacs_file(result, bacs_filename, xlsx_bytes)
       urls_by_expense = upload_receipts(result, renamed)
 
@@ -194,7 +194,7 @@ module Reimbursements
       return [ subject_override, body_override ] if subject_override.present? && body_override.present?
 
       email = @composer.compose(expenses: expenses, bacs_date: bacs_date, sender_name: sender_name,
-                                eusa_code: @cost_centre.eusa_code, eusa_contact_name: contact)
+                                cost_centre: @cost_centre, eusa_contact_name: contact)
       [ subject_override.presence || email.subject, body_override.presence || email.body_html ]
     end
 

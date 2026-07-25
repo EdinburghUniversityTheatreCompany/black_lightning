@@ -203,13 +203,13 @@ module Admin
       end
 
       def default_sender
-        current_user.try(:full_name).presence || "Bedlam Fringe Finance"
+        current_user.try(:full_name).presence || @cost_centre.finance_sender_name
       end
 
       def compose_default_email(bacs_date, sender_name)
         ::Reimbursements::EusaEmailComposer.new.compose(
           expenses: approved_expenses, bacs_date: bacs_date, sender_name: sender_name,
-          eusa_code: @cost_centre.eusa_code
+          cost_centre: @cost_centre
         )
       end
 

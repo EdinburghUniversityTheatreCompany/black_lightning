@@ -17,16 +17,18 @@ module Reimbursements
     # setting so the composed body is always clean.
     ANNOTATION_COMMENT = /<!--\s*(?:BEGIN|END)\s+\S+\.erb\s*-->\n?/
 
-    def compose(expenses:, bacs_date:, sender_name:, eusa_code:, eusa_contact_name: "")
+    # +cost_centre+ supplies both the EUSA code the subject quotes and the name
+    # the body and sign-off use, so a termtime batch never says "Bedlam Fringe".
+    def compose(expenses:, bacs_date:, sender_name:, cost_centre:, eusa_contact_name: "")
       total = expenses.sum { |expense| expense.amount || 0 }
       Email.new(
-        subject: "Bedlam Fringe BACS Request - #{bacs_date.iso8601} - #{eusa_code}",
+        subject: "#{cost_centre.name} BACS Request - #{bacs_date.iso8601} - #{cost_centre.eusa_code}",
         body_html: ApplicationController.render(
           template: "reimbursements/emails/eusa",
           layout: false,
           locals: { expenses: expenses, bacs_date: bacs_date, total: total,
                     expense_count: expenses.size, sender_name: sender_name,
-                    eusa_contact_name: eusa_contact_name }
+                    cost_centre_name: cost_centre.name, eusa_contact_name: eusa_contact_name }
         ).gsub(ANNOTATION_COMMENT, "")
       )
     end

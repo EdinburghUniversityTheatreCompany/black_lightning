@@ -126,6 +126,18 @@ module Reimbursements
       assert_in_delta(-12.5, cell.value, 0.001)
     end
 
+    # A blank cost centre used to be silently written as "F40", which books a
+    # second cost centre's spend against the Fringe and has EUSA pay it from
+    # the wrong pot. Refusing the workbook is the safe direction.
+    test "refuses to build a workbook when a row has no cost-centre code" do
+      blank = rows.first.dup
+      blank.cost_centre = ""
+
+      error = assert_raises(BacsXlsx::TemplateError) { BacsXlsx.new.generate([ blank ]) }
+      assert_match(/cost-centre code/, error.message)
+      assert_no_match(/F40/, error.message)
+    end
+
     test "raises when the template file is missing" do
       assert_raises(BacsXlsx::TemplateError) do
         BacsXlsx.new(template_path: Rails.root.join("lib/reimbursements/templates/nope.xlsx"))

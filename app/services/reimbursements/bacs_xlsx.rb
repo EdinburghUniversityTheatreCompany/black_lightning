@@ -66,6 +66,14 @@ module Reimbursements
               "split this into multiple submissions."
       end
 
+      # The cost-centre cell used to fall back to a literal "F40" when blank.
+      # That is the wrong direction to fail: a termtime row silently stamped
+      # F40 books its spend against the Fringe and EUSA pays it from the wrong
+      # pot. Refuse the workbook instead — the caller always has a cost centre.
+      if rows.any? { |row| row.cost_centre.blank? }
+        raise TemplateError, "every BACS row needs a cost-centre code before the spreadsheet can be built."
+      end
+
       workbook = RubyXL::Parser.parse(@template_path.to_s)
       sheet = workbook[SHEET_NAME]
       unless sheet
@@ -97,7 +105,7 @@ module Reimbursements
       text_cell(sheet, row_index, COL_SORT_CODE, row.sort_code)
       text_cell(sheet, row_index, COL_ACCOUNT_NUMBER, row.account_number)
       text_cell(sheet, row_index, COL_NOMINAL_CODE, row.nominal_code)
-      sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre.presence || "F40")
+      sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre)
       sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
       sheet.add_cell(row_index, COL_DESCRIPTION, sanitize(row.description))
     end
