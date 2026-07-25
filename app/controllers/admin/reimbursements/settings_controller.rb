@@ -40,7 +40,6 @@ module Admin
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
       end
 
-      # GET /admin/reimbursements/settings/new
       # Collects only the five required fields for a valid cost centre; the
       # mailbox-access, EUSA and SharePoint setup live on the edit page, so a new
       # row redirects straight there to finish configuration.
@@ -49,7 +48,6 @@ module Admin
         @cost_centre = ::Reimbursements::CostCentre.new
       end
 
-      # POST /admin/reimbursements/settings
       def create
         @cost_centre = ::Reimbursements::CostCentre.new(create_params)
         if @cost_centre.save

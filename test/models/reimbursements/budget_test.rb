@@ -84,7 +84,7 @@ module Reimbursements
       assert_not build_budget(name: "E").income?
     end
 
-    # --- Overview rollups (Track G Phase 1) --------------------------------
+    # --- Overview rollups --------------------------------------------------
 
     test "projected_amount is the current forecast, falling back to the initial budget" do
       # No forecast, no initial → nil (not tracked).
@@ -135,7 +135,7 @@ module Reimbursements
 
       fresh = Budget.find(budget.id)
       assert_equal BigDecimal("600"), fresh.eusa_actual_amount
-      # expected_outturn inherited the overstatement, so it must fall too:
+      # expected_outturn reads the netted figure too:
       # max(projected nil, committed 900, paid 900, eusa 600) = 900, not 1200.
       assert_equal BigDecimal("900"), fresh.expected_outturn
     end

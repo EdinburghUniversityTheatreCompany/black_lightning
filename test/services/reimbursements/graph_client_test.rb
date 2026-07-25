@@ -144,12 +144,12 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    # S2: Track B delivered "dev can't send mail", not "dev has no outbound Graph
-    # side effects" — and the two ungated calls were the ones carrying bank
-    # details. batch_processor uploads the BACS xlsx (full sort codes and account
-    # numbers) and every receipt BEFORE create_draft, so a dev shell holding fnox
-    # Azure credentials that clicked Build Batch PUT them into PRODUCTION
-    # SharePoint, and reopen could DELETE a real draft out of the live mailbox.
+    # The gate has to be "no outbound Graph SIDE EFFECT", not merely "no outbound
+    # mail": upload and delete are the two calls carrying bank details.
+    # BatchProcessor uploads the BACS xlsx (full sort codes and account numbers)
+    # and every receipt BEFORE create_draft, so an ungated dev shell holding fnox
+    # Azure credentials would PUT them into PRODUCTION SharePoint on a Build
+    # Batch, and reopen could DELETE a real draft out of the live mailbox.
     #
     # These two raise rather than returning a plausible stub, unlike create_draft /
     # send_mail: a suppressed upload that returned "" or a fake URL would be

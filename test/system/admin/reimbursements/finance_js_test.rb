@@ -142,12 +142,12 @@ module Admin
         assert_no_selector ".fancybox__container"
       end
 
-      # --- In-page receipt viewer (Track N) ---------------------------------
+      # --- In-page receipt viewer -------------------------------------------
 
-      # The queue used to be a tab-flipping exercise. A card's receipt now opens
-      # in place, one at a time, and only when asked for: a twenty-claim queue
-      # that fetched twenty PDFs on load would be slower than the tabs it
-      # replaces, so the "no src before opening" assertions are the point.
+      # A card's receipt opens in place, one at a time, and only when asked for:
+      # a twenty-claim queue that fetched twenty PDFs on load would be slower
+      # than the tab-flipping it replaces, so the "no src before opening"
+      # assertions are the point.
       test "a receipt pane opens on demand, lazily, and switches from the strip" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "first.pdf", bytes: renderable_pdf_bytes)
@@ -177,8 +177,8 @@ module Admin
         assert_no_selector "##{pane}"
       end
 
-      # A PDF used to fall through to a generic document icon because the gallery
-      # asked whether the file was an image. Its first page renders fine.
+      # A PDF's first page renders fine, so it gets a real thumbnail rather than
+      # the generic document icon an is-it-an-image test would leave it with.
       test "a PDF receipt renders a real first-page preview in the strip" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
@@ -256,9 +256,9 @@ module Admin
       end
 
       # (d2) Two byte-identical offsetting pairs must be two independently
-      # tickable rows in a real browser. On a content-only key both rows shared
-      # one DOM id, so the second row's label activated the FIRST checkbox and
-      # unticking one silently offset both, stamping a genuine transaction as
+      # tickable rows in a real browser. On a content-only key both rows share
+      # one DOM id, so the second row's label activates the FIRST checkbox and
+      # unticking one silently offsets both, stamping a genuine transaction as
       # bookkeeping noise.
       test "unticking one of two identical offsetting pairs leaves the other ticked" do
         accrual = "331300\tF40\tJ000000884\t27/04/2026\t01\tVenue hire accrual\tShow\t10.00\t\t10.00"
@@ -406,11 +406,11 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
       end
 
-      # (g5) The traced bug: an aborted Save left its injected hidden inputs in
-      # the DOM, so the NEXT decision — including an explicit "Discard Changes" —
-      # still carried the edit and save_changes=1, committing the very edit the
-      # operator discarded. Reachable on the override-approve form, which always
-      # carries a turbo-confirm the operator can cancel.
+      # (g5) An aborted Save leaves its injected hidden inputs in the DOM unless
+      # they are cleared, so the NEXT decision — including an explicit "Discard
+      # Changes" — carries the edit and save_changes=1 and commits the very edit
+      # the operator discarded. Reachable on the override-approve form, which
+      # always carries a turbo-confirm the operator can cancel.
       test "an aborted Save Changes leaves nothing behind for a later Discard to commit" do
         owner = create_reimbursements_person(name: "Olga Owner", email: "olga@example.com")
         owned = create_reimbursements_budget(name: "Owned", nominal_code: "4100", owners: [ owner ])

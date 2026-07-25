@@ -8,12 +8,10 @@ module Admin
     # per-budget forecast log surfaces the shared note.
     #
     # A BLANK amount means "leave this budget alone"; an amount that can't be
-    # read means the operator typed something we don't understand, and that
-    # fails the WHOLE update with a per-field error naming the budget. The two
-    # used to be the same thing (parse rescued to nil, nil meant skip), so a
-    # typed "1,200" produced "5 forecasts logged" while the sixth budget quietly
-    # kept its superseded forecast. Amounts are read by
-    # Reimbursements::AmountParser, the same parser the submitter form uses.
+    # read fails the WHOLE update with a per-field error naming the budget.
+    # Treating the two alike is how a budget silently keeps a superseded
+    # forecast while the flash reports the other five as logged. Amounts are
+    # read by Reimbursements::AmountParser, the parser the submitter form uses.
     #
     # Every failure re-renders the form with the operator's numbers intact
     # (never a redirect): 40 amounts typed after a budget meeting must not

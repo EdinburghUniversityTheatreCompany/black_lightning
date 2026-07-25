@@ -100,8 +100,8 @@ module Reimbursements
       end
 
       # People/Expenses read the checker for their bank-details verdict, and both
-      # are built generically by Workbook, whose checker keyword defaults to nil.
-      # A nil there used to NoMethodError on the first payee with bank details.
+      # are built generically by Workbook, whose checker keyword defaults to nil
+      # — a nil that reaches the first payee with bank details is a NoMethodError.
       test "an exporter built without a checker still has a usable one" do
         assert_same ModulusCheck.default_checker, Fake.new(store: nil).send(:checker)
       end

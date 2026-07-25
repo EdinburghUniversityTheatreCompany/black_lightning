@@ -24,10 +24,6 @@ end
 require "html_acceptance"
 
 ENV["RAILS_ENV"] = "test"
-# The reimbursements portal has a single data backend now: the ActiveRecord
-# DatabaseStore. The REIMBURSEMENTS_BACKEND switch (and the Airtable layer it
-# selected) was removed in the post-flip cleanup, so there is nothing to force
-# here.
 
 # Outbound Graph sends/replies are gated to production (Settings.outbound_enabled?).
 # Tests fake the HTTP transport, so opting in here exercises the send/poll logic

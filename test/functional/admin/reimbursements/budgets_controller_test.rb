@@ -71,8 +71,8 @@ module Admin
 
       # On top of the setup (forecast 800, committed 300 = Approved 150 + Paid
       # 150), give @props a Pending expense of 275 (pipeline) and a reconciled
-      # EUSA debit of 161 against its Paid expense — so every Track G rollup on
-      # the line has a distinct, recognisable figure.
+      # EUSA debit of 161 against its Paid expense — so every rollup on the line
+      # has a distinct, recognisable figure.
       def seed_pipeline_and_eusa_debit
         create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PENDING,
                                       amount_excl_vat: 275, amount: 330, receipt: false)
@@ -359,8 +359,8 @@ module Admin
       test "overview totals expense and income budgets separately, never as one figure" do
         sign_in @user
         # @props (Expense) already carries initial 1000, so expense initial is
-        # 1000 + 9000 = 10,000 and income initial is 8000. The old single
-        # grand total reported 18,000, which is neither total spend nor net.
+        # 1000 + 9000 = 10,000 and income initial is 8000. A single grand total
+        # would read 18,000, which is neither total spend nor net.
         create_reimbursements_budget(name: "Lighting", nominal_code: "4200",
                                      initial_budget: 9000)
         create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
@@ -398,8 +398,8 @@ module Admin
       test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
         # 4000 IS budgeted (@props), but nothing links this row to an expense, so
-        # no budget's figures count it. It used to fall through both the rollups
-        # and the "unbudgeted" list and vanish from the page entirely.
+        # no budget's figures count it. A code-based "unbudgeted" list would let
+        # it fall through both the rollups and the list, off the page entirely.
         ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Unlinked hire",
                                              debit: BigDecimal("1250.00"))
         ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",

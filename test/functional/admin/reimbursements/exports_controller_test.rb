@@ -153,7 +153,7 @@ module Admin
         assert_equal "Yes", batches[1][5]
       end
 
-      # --- Masking (the whole point of the locked decision) ------------------
+      # --- Masking ------------------------------------------------------------
 
       test "the People sheet MASKS both bank details to their last four digits" do
         sign_in @user

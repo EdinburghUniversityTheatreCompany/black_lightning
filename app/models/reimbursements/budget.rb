@@ -127,7 +127,7 @@ module Reimbursements
       current_forecast - initial_budget
     end
 
-    # --- Overview rollups (Track G) ----------------------------------------
+    # --- Overview rollups ---------------------------------------------------
     # The "current plan" for the line: the latest logged forecast, falling back
     # to the initial figure when none has been logged. Nil only when neither
     # exists (an untracked line).

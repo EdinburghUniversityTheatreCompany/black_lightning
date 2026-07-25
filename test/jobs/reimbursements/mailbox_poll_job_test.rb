@@ -486,9 +486,9 @@ module Reimbursements
     # --- Vanished mailbox messages (Graph 404 ErrorItemNotFound) -----------
 
     # Drives the REAL MailboxClient (not the FakeMailbox) over FakeHttp so the
-    # 404-swallowing added in MailboxClient#mark_read/#move/#reply is exercised
-    # end to end: a message handled/deleted by hand in Outlook between the
-    # poll's listing and the mark_read PATCH used to 404 and alert every cycle.
+    # 404 swallowing in MailboxClient#mark_read/#move/#reply is exercised end to
+    # end: a message handled or deleted by hand in Outlook between the poll's
+    # listing and the mark_read PATCH is nothing to alert about.
     test "a message whose mark_read 404s (vanished from the mailbox) doesn't abort the poll or alert" do
       setup_job(messages: [])
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
@@ -528,13 +528,11 @@ module Reimbursements
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
-    # S4: Exchange CHANGES a message's id when the message is moved, so a mark_read
-    # 404 can mean "still in the mailbox, still unread, under a new id". The old
-    # blanket 404 swallow turned exactly that case into silence: the expense was
-    # created, mark_read reported SUCCESS, the reply also 404'd so the sender was
-    # never told their claim had arrived, the move 404'd, and nothing above
-    # logger.info fired — no Honeybadger notice, no duplicate_risk flag, the claim
-    # silently abandoned and the message left to be reprocessed forever.
+    # Exchange CHANGES a message's id when the message is moved, so a mark_read
+    # 404 can mean "still in the mailbox, still unread, under a new id". A
+    # blanket 404 swallow turns that into silence: the expense is created,
+    # mark_read reports SUCCESS, the sender is never told their claim arrived,
+    # and no Honeybadger notice or duplicate_risk flag says so.
     #
     # Drives the REAL MailboxClient over FakeHttp, like the confirmed-gone test
     # above, so the difference between the two is only what the confirmation GET

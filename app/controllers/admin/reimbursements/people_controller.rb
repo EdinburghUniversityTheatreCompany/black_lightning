@@ -14,8 +14,7 @@ module Admin
         @title = "Reimbursements People"
         respond_to do |format|
           format.html { load_registry }
-          # Export the whole registry — pagination is display-only. Bank details
-          # are masked to their last four digits (Exports::People).
+          # Bank details are masked to their last four digits (Exports::People).
           format.csv { send_export ::Reimbursements::Exports::People, store.people }
         end
       end
@@ -122,13 +121,11 @@ module Admin
       # `_append_note`): existing notes are preserved, one line per change.
       #
       # BOTH the sort code and the account number are masked to their last 4
-      # digits, matching Exports::People — the stricter of the two rules this app
-      # had. The audit trail is a RECORD of a change, not a value anything pays
-      # from, and it is rendered on the People page right beside the masked
-      # account number, where the pair is what identifies an account. (The `notes`
-      # column is encrypted at rest, but the visible copy has to stay masked too.)
-      # The acting user's name + id is recorded so bank-detail changes carry
-      # per-change actor attribution.
+      # digits, matching Exports::People. The audit trail is a RECORD of a
+      # change, not a value anything pays from, and it renders on the People page
+      # right beside the masked account number, where the pair is what identifies
+      # an account. (The `notes` column is encrypted at rest, but the visible
+      # copy has to stay masked too.)
       def appended_notes(sort_code, account_number)
         timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M UTC")
         actor = "#{current_user.name_or_email} (##{current_user.id})"

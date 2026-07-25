@@ -25,7 +25,6 @@ module Admin
         @people_by_id = store.people.index_by(&:record_id)
         respond_to do |format|
           format.html { @budgets = paginate(sorted) }
-          # Export every budget — pagination is display-only, so the CSV isn't paged.
           format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
         end
       end
@@ -151,9 +150,7 @@ module Admin
       end
 
       # The same lenient reading as the submitter form: "£1,200" and "12,50" are
-      # amounts, not rubbish. This used to be a bare BigDecimal(), which raised
-      # on both, so a comma-typed forecast was rejected as "not a valid amount"
-      # (and a comma-typed initial budget was quietly left unchanged).
+      # amounts, not rubbish. A bare BigDecimal() raises on both.
       def parse_decimal(value)
         ::Reimbursements::AmountParser.parse(value)
       end

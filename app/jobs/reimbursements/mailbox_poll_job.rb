@@ -282,7 +282,7 @@ module Reimbursements
     end
 
     # A blank DRAFT: only the receipt and the email subject (as a starting
-    # description) are known. Email-in no longer reads the receipt with Gemini
+    # description) are known. Email-in does not read the receipt with Gemini
     # (no submitter is present to consent), so the amount, budget and payment
     # reference are all left for the sender to fill in. The reply asks them to
     # complete and submit it in the portal, so review only ever sees confirmed

@@ -241,12 +241,12 @@ module Reimbursements
       assert_includes chat.prompt, "Acme Lighting Ltd"
     end
 
-    # S9: the finance-triggered AI check shipped a third party's full sort code and
-    # account number verbatim to the same free-tier Gemini endpoint that receipt
-    # extraction only reaches behind an explicit "Google may store and human-review
-    # this" consent — with no notice to anyone. Mask them to their last four
-    # digits, the same rule BankDetails.mask already applies to the exports and the
-    # People audit trail. The mismatch check survives on the masked digits.
+    # This check reaches the same free-tier Gemini endpoint that receipt
+    # extraction only reaches behind an explicit "Google may store and
+    # human-review this" consent, and it runs with no notice to the third party
+    # at all — so it must never carry their full sort code and account number.
+    # Masked to last-4, the rule BankDetails.mask applies to the exports and the
+    # People audit trail; the mismatch check survives on the masked digits.
     test "a payee override's bank details are masked in the prompt, never sent verbatim" do
       checker, chat = build(content: { "status" => "pass" })
       overridden = expense(payee_name_override: "Acme Lighting Ltd",

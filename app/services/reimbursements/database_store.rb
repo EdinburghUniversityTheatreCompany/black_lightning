@@ -113,11 +113,9 @@ module Reimbursements
     #
     # Deliberately linkage-based rather than nominal-code based. Several budgets
     # can share one nominal code, so a per-budget rollup can only ever count
-    # what is actually linked to it; matching on the code instead would hide an
-    # unlinked row behind any budget sharing that code, which is exactly how
-    # real spend used to disappear from this page. (The old code-matching
-    # version also put "" into its exclusion set whenever any budget had a blank
-    # nominal code, silently suppressing every blank-code actual.)
+    # what is actually linked to it; defining this list by code instead would
+    # hide an unlinked row behind any budget sharing that code — which is
+    # precisely the spend this list exists to surface.
     #
     # Sorted by nominal code, then date, so finance can see which budget each
     # row probably belongs to.

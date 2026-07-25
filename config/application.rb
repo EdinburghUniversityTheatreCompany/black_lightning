@@ -83,7 +83,7 @@ module ChaosRails
 
     config.start_year = 1871
 
-    # --- Reimbursements bank-details encryption at rest (Track F) ----------
+    # --- Reimbursements bank-details encryption at rest ---------------------
     # ActiveRecord Encryption protects the payee bank details
     # (Reimbursements::PaymentDetails + the Expense third-party override trio).
     # Key material by environment:
@@ -103,22 +103,20 @@ module ChaosRails
     config.active_record.encryption.support_unencrypted_data = true
 
     # Rails auto-injects a `validate_column_size` length validation on every
-    # encrypted attribute, but it validates the DECRYPTED value against the
-    # column limit — the wrong value, since it is the (much longer) ciphertext
-    # that has to fit. So it never caught payee_name_override overflowing
-    # varchar(255), while it did break `database_consistency`, which walks the
-    # validators and hits Rails' lazily-registered length validation mid-
-    # iteration ("can't add a new key into hash during iteration"), silently
-    # dropping both encrypted models from that step's coverage. Column fit is
-    # instead handled where it belongs: wide enough columns (see
-    # 20260725150000_widen_reimbursements_payee_name_override_for_encryption)
+    # encrypted attribute, but it measures the DECRYPTED value against the
+    # column limit — the wrong value, since it is the much longer ciphertext
+    # that has to fit, so it cannot catch an overflow. It also breaks
+    # `database_consistency`, which walks the validators and hits Rails'
+    # lazily-registered length validation mid-iteration ("can't add a new key
+    # into hash during iteration"), silently dropping both encrypted models from
+    # that step's coverage. Column fit is handled instead by wide enough columns
     # plus explicit plaintext length validations on the models.
     config.active_record.encryption.validate_column_size = false
 
     if Rails.env.development?
       # Throwaway fallbacks so a dev shell without the fnox exports can still
       # write an expense: an encrypted attribute needs a key on write even when
-      # it is blank, so with no key configured every Expense.create! raised
+      # it is blank, so with none configured every Expense.create! raises
       # "Missing Active Record encryption credential". These protect nothing —
       # they are published in the repo and the dev database holds no real bank
       # details. Never reuse them anywhere data matters.
