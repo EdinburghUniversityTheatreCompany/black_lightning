@@ -1,0 +1,145 @@
+<%# locals: (receipts:, key:, label:, group: nil, empty_message: "No receipts attached.", remove_url: nil) %>
+<%#
+  The one in-page receipt viewer. Shared by the Review queue, the finance
+  expense edit/show pages and the producer's own claim pages, so all three read
+  a receipt the same way.
+
+  A thumbnail strip of real buttons (one per receipt) plus a single large pane
+  that opens on demand. Nothing large is fetched until an operator asks for a
+  receipt: every <img>/<iframe> in the pane ships with data-src and no src, and
+  receipt_viewer_controller copies the source across the first time that receipt
+  is shown. A twenty-claim review queue therefore downloads no receipt documents
+  on page load, which is the whole point of opening per claim.
+
+  What renders where:
+  - the strip draws a real thumbnail whenever the file is previewable? — every
+    image AND every PDF, since ActiveStorage renders a PDF's first page (see
+    Reimbursements::Attachment). A file with no thumbnail, and one whose
+    thumbnail fails to generate (a malformed PDF only raises when the preview is
+    requested, long after a successful upload), falls back to a document icon.
+  - the pane renders images itself and PDFs through the browser's native viewer.
+    Anything else Attachment::ALLOWED_CONTENT_TYPES admits (Office documents,
+    MuseScore/MusicXML sheet music, MIDI) cannot be displayed by a browser, so
+    it degrades to a download link rather than an empty frame.
+
+  Elements are shown and hidden through the `hidden` ATTRIBUTE, never a `hidden`
+  class, and nothing that starts hidden carries a display utility of its own —
+  an author `display:` declaration outranks the UA's `[hidden] { display: none }`
+  and would leave a "hidden" element on screen.
+
+  Locals:
+  - receipts: array of Reimbursements::Attachment
+  - key: unique-per-page string (an expense record id) for the DOM ids
+  - label: names the claim in accessible names, e.g. "expense #41"
+  - group: fancybox group, so a page of claims pages within one claim only
+  - empty_message: what to say when there are no receipts
+  - remove_url: ->(receipt) { … } to draw a per-thumbnail remove button
+%>
+<% group ||= "receipts-#{key}" %>
+<% pane_id = "receipt-pane-#{key}" %>
+<div data-controller="fancybox receipt-viewer">
+  <% if receipts.empty? %>
+    <p class="mb-0 text-sm text-gray-500"><%= empty_message %></p>
+  <% else %>
+    <ul class="flex list-none flex-wrap gap-3 p-0">
+      <% receipts.each_with_index do |receipt, index| %>
+        <% position = "receipt #{index + 1} of #{receipts.size}, #{receipt.filename.presence || 'receipt'}" %>
+        <li class="relative w-40">
+          <%# The strip is a set of controls, not decoration: real buttons with
+              their own accessible names, and aria-expanded says whether the pane
+              below is currently showing this receipt. %>
+          <button type="button"
+                  class="block w-full cursor-pointer rounded border border-gray-200 p-2 text-center hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aria-expanded:border-primary aria-expanded:ring-1 aria-expanded:ring-primary"
+                  aria-label="View <%= position %>"
+                  aria-expanded="false"
+                  aria-controls="<%= pane_id %>"
+                  data-receipt-viewer-target="thumb"
+                  data-action="receipt-viewer#show"
+                  data-receipt-index="<%= index %>"
+                  data-receipt-slot="true"
+                  data-receipt-status="Showing <%= position %>">
+            <% if receipt.previewable? %>
+              <%# alt is empty on purpose: the button already carries the name. %>
+              <%= image_tag receipt.preview_url, alt: "", loading: "lazy",
+                    class: "mx-auto mb-1 h-40 w-full rounded bg-gray-50 object-contain",
+                    data: { action: "error->receipt-viewer#imageFailed" } %>
+              <span data-receipt-fallback="true" hidden>
+                <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
+                  <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
+                </span>
+              </span>
+            <% else %>
+              <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
+                <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
+              </span>
+            <% end %>
+            <span class="block truncate text-xs text-gray-600"><%= receipt.filename %></span>
+          </button>
+          <% if remove_url %>
+            <button type="button"
+                    class="absolute right-1 top-1 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-danger/15 text-danger transition-colors hover:bg-danger/40"
+                    aria-label="Remove <%= receipt.filename %>"
+                    data-action="receipts-upload#remove"
+                    data-url="<%= remove_url.call(receipt) %>"
+                    data-filename="<%= receipt.filename %>">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+
+    <div id="<%= pane_id %>" hidden
+         role="group" aria-label="Receipt viewer for <%= label %>"
+         class="mt-3 rounded border border-gray-200"
+         data-receipt-viewer-target="pane">
+      <div class="flex items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2">
+        <p class="mb-0 text-sm font-medium">Receipt</p>
+        <p class="sr-only" aria-live="polite" data-receipt-viewer-target="status"></p>
+        <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
+                aria-label="Hide the receipt for <%= label %>"
+                data-action="receipt-viewer#hide">
+          Hide
+        </button>
+      </div>
+      <% receipts.each do |receipt| %>
+        <div class="p-3" hidden data-receipt-viewer-target="frame">
+          <div data-receipt-slot="true">
+            <% if receipt.image? %>
+              <%# Still fancybox-bound, so the image can also be opened full screen. %>
+              <%= link_to receipt.url, class: "block",
+                          data: { fancybox: group, caption: receipt.filename } do %>
+                <img data-src="<%= receipt.inline_url %>" alt="Receipt: <%= receipt.filename %>"
+                     class="mx-auto max-h-[70vh] w-auto rounded bg-gray-50 object-contain"
+                     data-action="error->receipt-viewer#imageFailed">
+              <% end %>
+            <% elsif receipt.pdf? %>
+              <%# The browser's own PDF viewer, pointed at a same-origin inline
+                  URL. No pdf.js: a large dependency for no gain here. %>
+              <iframe data-src="<%= receipt.inline_url %>" class="h-[70vh] w-full rounded bg-gray-50"
+                      title="Receipt: <%= receipt.filename %>"></iframe>
+            <% else %>
+              <p class="mb-0 text-sm text-gray-600">
+                <%= receipt.filename %> can't be shown in the browser. Download it to open it.
+              </p>
+            <% end %>
+            <p class="mb-0 mt-2 text-sm text-gray-600" data-receipt-fallback="true" hidden>
+              No preview could be generated for <%= receipt.filename %>. Download it to open it.
+            </p>
+          </div>
+          <p class="mb-0 mt-2 flex flex-wrap items-baseline gap-x-3 text-sm">
+            <span class="truncate text-gray-600"><%= receipt.filename %></span>
+            <% if receipt.inline_viewable? %>
+              <%= link_to "Open in a new tab", receipt.inline_url, target: "_blank", rel: "noopener",
+                          "aria-label": "Open #{receipt.filename} in a new tab",
+                          class: "text-primary underline" %>
+            <% end %>
+            <%= link_to "Download", receipt.download_url,
+                        "aria-label": "Download #{receipt.filename}",
+                        class: "text-primary underline" %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

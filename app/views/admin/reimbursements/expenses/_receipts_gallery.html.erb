@@ -1,46 +1,25 @@
 <%# locals: (expense:, upload_errors: [], readonly: false) %>
 <%# Replaced wholesale by turbo streams from receipts#create/#destroy; the
-    fancybox controller reconnects with the new DOM on each replacement.
-    readonly hides the remove control for the view-only show page. %>
-<div id="receipts-gallery" data-controller="fancybox">
+    fancybox and receipt-viewer controllers reconnect with the new DOM on each
+    replacement. readonly hides the remove control for the view-only show page.
+
+    Display, thumbnails and the in-page pane all come from the shared
+    shared/_receipt_viewer partial, the same one the Review queue and the finance
+    expense pages use; this wrapper only adds the producer's upload errors and
+    the per-thumbnail remove button. %>
+<% remove_url = ->(receipt) {
+     admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id)
+   } unless readonly %>
+<% draft_note =expense.draft? ? " yet. A draft can wait, but the claim needs one before you submit it." : "." %>
+<div id="receipts-gallery">
   <% upload_errors.each do |message| %>
     <p class="mb-2 text-sm text-danger"><%= message %></p>
   <% end %>
 
-  <% if expense.receipts.empty? %>
-    <p class="mb-0 text-sm text-gray-500">
-      No receipts attached<%= expense.draft? ? " yet. A draft can wait, but the claim needs one before you submit it." : "." %>
-    </p>
-  <% else %>
-    <div class="flex flex-wrap gap-3">
-      <% expense.receipts.each do |receipt| %>
-        <div class="relative w-40 rounded border border-gray-200 p-2 text-center">
-          <% unless readonly %>
-            <button type="button"
-                    class="absolute right-1 top-1 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-danger/15 text-danger transition-colors hover:bg-danger/40"
-                    aria-label="Remove <%= receipt.filename %>"
-                    data-action="receipts-upload#remove"
-                    data-url="<%= admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id) %>"
-                    data-filename="<%= receipt.filename %>">
-              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-            </button>
-          <% end %>
-          <% if receipt.image? %>
-            <%= link_to receipt.url, data: { fancybox: "receipts", title: receipt.filename }, class: "block" do %>
-              <%= image_tag receipt.preview_url, alt: receipt.filename,
-                    class: "mx-auto mb-1 h-40 w-full rounded object-contain bg-gray-50" %>
-              <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
-            <% end %>
-          <% else %>
-            <%= link_to receipt.url, target: "_blank", rel: "noopener", class: "block" do %>
-              <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
-                <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
-              </span>
-              <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render "admin/reimbursements/shared/receipt_viewer",
+             receipts: expense.receipts,
+             key: expense.record_id,
+             label: "expense ##{expense.auto_number}",
+             empty_message: "No receipts attached#{draft_note}",
+             remove_url: remove_url %>
 </div>

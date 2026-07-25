@@ -22,7 +22,12 @@ Rails.application.configure do
     # Needed for the pretix widget stylesheet injected dynamically by pretix_modal_controller.
     policy.style_src_elem :self, :unsafe_inline, "https://pretix.eu"
 
-    policy.frame_src "https://tickets.bedlamtheatre.co.uk", "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
+    # :self is required for the reimbursements receipt viewer, which frames a
+    # receipt PDF at its own (proxied, same-origin) Active Storage URL so the
+    # browser's native PDF viewer renders it in the page. frame-src does NOT
+    # inherit default-src once it is set explicitly, so without :self here every
+    # in-page PDF preview is blocked.
+    policy.frame_src :self, "https://tickets.bedlamtheatre.co.uk", "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
     policy.font_src :self
     policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://pretix.eu", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com", "https://bedlam-theatre-website.s3.eu-central-1.wasabisys.com"

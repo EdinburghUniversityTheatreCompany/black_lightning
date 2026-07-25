@@ -45,6 +45,41 @@ module Reimbursements
       assert_not receipt.image?
     end
 
+    # A PDF receipt is representable (poppler/mupdf render its first page), so
+    # the wrapper must carry a thumbnail: the strip draws a real first-page
+    # preview instead of a generic document icon.
+    test "a PDF receipt is wrapped with a first-page thumbnail and an inline URL" do
+      expense = create_expense
+      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
+                                   content_type: "application/pdf")
+
+      receipt = expense.receipts.sole
+      assert receipt.pdf?
+      assert receipt.previewable?, "a PDF must offer a thumbnail preview"
+      assert_match %r{/rails/active_storage/representations/}, receipt.preview_url
+      assert receipt.inline_viewable?, "a PDF renders in the browser's own viewer"
+      # Proxied + inline so the <iframe> stays same-origin and is not downloaded.
+      assert_match %r{/rails/active_storage/blobs/proxy/}, receipt.inline_url
+      assert_match(/disposition=inline/, receipt.inline_url)
+      # The viewer's Download link must save the file even for a type the browser
+      # would happily display, and even when the URL redirects to the storage host.
+      assert_match(/disposition=attachment/, receipt.download_url)
+    end
+
+    # Sheet music and Office documents are in Attachment::ALLOWED_CONTENT_TYPES
+    # but are neither representable nor renderable, so the viewer has to fall
+    # back to the document icon plus a download link.
+    test "an unrenderable receipt has no thumbnail and is not inline viewable" do
+      expense = create_expense
+      expense.receipt_files.attach(io: StringIO.new("PK"), filename: "score.mscz",
+                                   content_type: "application/x-musescore")
+
+      receipt = expense.receipts.sole
+      assert_not receipt.previewable?
+      assert_not receipt.inline_viewable?
+      assert_nil receipt.preview_url
+    end
+
     test "missing_completion_fields mirrors the PORO, including offloaded receipts" do
       expense = create_expense
       missing = expense.missing_completion_fields

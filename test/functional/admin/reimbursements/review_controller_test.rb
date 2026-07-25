@@ -170,7 +170,7 @@ module Admin
         get :index
 
         assert_response :success
-        assert_includes response.body, 'data-controller="fancybox"'
+        assert_includes response.body, 'data-controller="fancybox receipt-viewer"'
         # Each card gets its own fancybox group so the lightbox pages within one expense.
         assert_includes response.body, "data-fancybox=\"receipts-#{a.record_id}\""
         assert_includes response.body, "data-fancybox=\"receipts-#{b.record_id}\""
@@ -178,6 +178,51 @@ module Admin
         # Reviewers can still attach/detach receipts inline (per-tab review routes).
         assert_match(/Remove this receipt/, response.body)
         assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "pending")
+      end
+
+      # --- In-page receipt viewer (Track N) --------------------------------
+
+      # The queue used to send an operator to a new tab per receipt. Each card now
+      # carries its own viewer pane, closed until a thumbnail is clicked.
+      test "each card renders a receipt strip wired to its own closed viewer pane" do
+        a = pending_expense(receipt: false)
+        b = pending_expense(receipt: false)
+        attach_test_receipt(a, filename: "invoice-a.pdf")
+        attach_test_receipt(b, filename: "invoice-b.pdf")
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        [ a, b ].each do |expense|
+          pane_id = "receipt-pane-#{expense.record_id}"
+          assert_includes response.body, "id=\"#{pane_id}\""
+          assert_includes response.body, "aria-controls=\"#{pane_id}\""
+          assert_includes response.body, "aria-label=\"Receipt viewer for expense ##{expense.auto_number}\""
+        end
+        # A thumbnail is a real button with its own accessible name, not a link.
+        assert_includes response.body, 'aria-label="View receipt 1 of 1, invoice-a.pdf"'
+        assert_includes response.body, 'data-action="receipt-viewer#show"'
+        # Nothing navigates away from the queue any more.
+        assert_no_match(/<a[^>]+target="_blank"[^>]*>\s*<span[^>]*>\s*<i class="fa-solid fa-file-lines/,
+                        response.body)
+      end
+
+      # Twenty pending claims must not pull twenty PDFs on page load, so the pane's
+      # <iframe> ships with data-src only and the controller assigns src on open.
+      test "a queue of claims fetches no receipt documents on page load" do
+        3.times { |i| attach_test_receipt(pending_expense(receipt: false), filename: "r#{i}.pdf") }
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        frames = response.body.scan(/<iframe[^>]*>/)
+        assert_equal 3, frames.size, "one frame per claim"
+        frames.each do |frame|
+          assert_match(/data-src="/, frame)
+          assert_no_match(/\ssrc="/, frame, "the frame must not be loaded until it is opened")
+        end
       end
 
       test "renders a duplicate-submission warning" do

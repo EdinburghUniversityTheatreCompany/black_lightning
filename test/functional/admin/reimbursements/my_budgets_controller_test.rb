@@ -54,6 +54,21 @@ module Admin
         assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path(@pending.record_id)
       end
 
+      # An owner endorses against the receipt, so the same in-page viewer as the
+      # Review queue: opened per claim, nothing fetched until it is.
+      test "a claim awaiting endorsement offers the in-page receipt viewer, closed" do
+        sign_in @user
+        get :index
+
+        assert_response :success
+        pane_id = "receipt-pane-my-budgets-#{@pending.record_id}"
+        assert_select "div[data-controller='fancybox receipt-viewer']"
+        assert_select "button[aria-controls=?][aria-expanded='false']", pane_id
+        assert_select "div##{pane_id}[hidden]"
+        assert_select "iframe[data-src=?]", @pending.receipts.sole.inline_url
+        assert_select "iframe[src]", 0
+      end
+
       test "shows an empty state for a person who owns no budgets" do
         @owned.budget_ownerships.destroy_all
         @owned.owners << @stranger

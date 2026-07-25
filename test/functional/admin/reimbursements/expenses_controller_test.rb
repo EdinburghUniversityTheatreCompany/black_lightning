@@ -368,6 +368,40 @@ module Admin
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 
+    # --- In-page receipt viewer (Track N) ---------------------------------
+    # The producer reads their own receipt in the page, through the same shared
+    # partial the Review queue and the finance pages use.
+
+    test "show renders the shared in-page receipt viewer, closed and unloaded" do
+      sign_in @user
+
+      get :show, params: { id: @expense.record_id }
+
+      assert_response :success
+      receipt = @expense.receipts.sole
+      assert_select "div[data-controller='fancybox receipt-viewer']"
+      assert_select "button[data-action='receipt-viewer#show'][aria-expanded='false']" do |buttons|
+        assert_equal "View receipt 1 of 1, receipt.pdf", buttons.first["aria-label"]
+      end
+      # A PDF gets a real first-page thumbnail, not a generic document icon.
+      assert_select "img[src=?]", receipt.preview_url
+      # The pane is present but closed, and its frame carries no src yet.
+      assert_select "div#receipt-pane-#{@expense.record_id}[hidden]"
+      assert_select "iframe[data-src=?]", receipt.inline_url
+      assert_select "iframe[src]", 0
+    end
+
+    test "edit renders the viewer with the producer's own remove control" do
+      sign_in @user
+
+      get :edit, params: { id: @expense.record_id }
+
+      assert_response :success
+      assert_select "div[data-controller='fancybox receipt-viewer']"
+      assert_select "button[data-action='receipts-upload#remove']", 1
+      assert_select "iframe[data-src]", 1
+    end
+
     test "show 404s for another person's expense" do
       sign_in @user
 
