@@ -84,3 +84,8 @@ stats.html
 
 # fnox secret references (public repo — collaborators may not use fnox)
 fnox.toml
+
+# database_consistency writes its report to a timestamped file in the repo root
+# when run without --config-only style flags. Those reports carry absolute paths
+# from whoever ran it and are pure noise in a diff, so never commit one.
+/database_consistency_*.txt
