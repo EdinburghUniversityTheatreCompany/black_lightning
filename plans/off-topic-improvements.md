@@ -19,6 +19,19 @@ what remains (~170 findings) is a real **schema-migration project**:
   the data is verified, then drop the `|| true` to make the gate enforce. Note the legacy
   integer-PK FK columns can't take a `t.references ... type: :integer` FK trivially.
 
+**Coverage of the two encrypted models was restored on 2026-07-25** (review finding S5): Rails'
+auto-injected `validate_column_size` validator registered itself lazily from `load_schema!`,
+mid-iteration over the validators hash, so `database_consistency` **crashed** on
+`Reimbursements::PaymentDetails` and `Reimbursements::Expense` (`can't add a new key into hash
+during iteration`) and wrote a 51 KB error report instead of checking them. The step is advisory,
+so CI stayed green while those two models were silently unchecked. Turning
+`config.active_record.encryption.validate_column_size` off fixed it, and the ~16 findings that
+reappeared for those models (mostly `LengthConstraintChecker` and `UniqueIndexChecker`) belong to
+the same backlog above — including `PaymentDetails#notes`, deliberately left uncapped because it
+is an append-only audit trail and a cap would eventually make a payee's bank details un-editable
+(its headroom is measured in `test/models/reimbursements/encryption_test.rb`). A bounded audit log
+that trims its oldest lines would be the proper fix if that ever needs closing.
+
 ## Upstream a mise-driven devcontainer template into dev-hooks
 
 - Consider upstreaming devcontainer-mise support into the `dev-hooks:dev-env-setup` skill: it
