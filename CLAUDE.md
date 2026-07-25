@@ -233,6 +233,22 @@ survive as historical import provenance and are never written. Spec + plan in
   batch unless Graph positively confirms the stored draft is still unsent — a batch whose
   draft was already sent by hand in Outlook must never be silently rebuilt into a second
   live submission.
+- **Exports** (`app/services/reimbursements/exports/`): one exporter per resource
+  (`Expenses`, `Actuals`, `Budgets`, `People`, `Batches`) under `Exports::Base`, each
+  owning its `HEADERS` and a private `#row` **once**. That single definition drives both
+  the per-view "Download CSV" (`FinanceController#send_export`, called from each index's
+  `format.csv`, with the link built as
+  `request.query_parameters.merge(format: :csv)` so the on-screen filters carry through)
+  **and** the matching sheet of the combined workbook (`Exports::Workbook`,
+  `ExportsController#show` at `GET /admin/reimbursements/export`). Add a column in the
+  exporter, not in a controller. Conventions: amounts stay numeric (no "£"), dates are
+  ISO 8601 strings with blanks left empty (not the on-screen "-"), and **every cell goes
+  through `Reimbursements::CellSanitizer`** — the shared formula-injection guard that
+  `BacsXlsx` uses too. `Base#add_sheet` pins every String cell to Axlsx `:string`, or a
+  numeric-looking identifier is coerced to a number (nominal code `041000` → 41000,
+  period `03` → 3). **Bank details in an export are masked to their last four digits**
+  via `BankDetails.mask` (also used by the People notes audit line); only the BACS
+  spreadsheet EUSA pays from carries full numbers.
 
 ## Opportunities
 
