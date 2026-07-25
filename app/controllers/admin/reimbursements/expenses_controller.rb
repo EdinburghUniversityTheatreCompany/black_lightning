@@ -155,7 +155,7 @@ module Admin
                       :description, :payment_reference, :payee_name_override,
                       :sort_code_override, :account_number_override,
                       :vat_itemised, :vat_acknowledged, :large_amount_acknowledged,
-                      :save_as_draft, receipts: [])
+                      :save_as_draft, :receipt_scan_consent, receipts: [])
       end
 
       def attach_receipts(record_id)

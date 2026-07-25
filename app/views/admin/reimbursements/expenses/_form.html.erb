@@ -86,25 +86,23 @@
             people review it to improve their products. If your receipt shows anything you'd
             rather keep private, pick "No" and type the details in yourself.
           </p>
+          <%# The radio posts with the form (nested under the form object's
+              params), so the answer is recorded on create — a submitter who
+              picks "No" never fires an extract, so the extract POST can't be
+              what records it. Being bound to the form object also means the
+              answer survives a 422 re-render, alongside the file the Stimulus
+              controller restores. %>
           <div class="flex flex-col gap-2">
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="self" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>Yes, to be reimbursed to myself</span>
-            </label>
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="invoice" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>Yes, as an invoice paid out to the bank details listed on the invoice</span>
-            </label>
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="no" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>No, I will fill in all the details myself</span>
-            </label>
+            <% [ [ "self", "Yes, to be reimbursed to myself" ],
+                 [ "invoice", "Yes, as an invoice paid out to the bank details listed on the invoice" ],
+                 [ "no", "No, I will fill in all the details myself" ] ].each do |value, label| %>
+              <label class="flex items-start gap-2 text-sm">
+                <%= f.radio_button :receipt_scan_consent, value, class: "mt-1",
+                      data: { reimbursements_receipt_target: "consentOption",
+                              action: "change->reimbursements-receipt#consentChanged" } %>
+                <span><%= label %></span>
+              </label>
+            <% end %>
           </div>
         </fieldset>
 

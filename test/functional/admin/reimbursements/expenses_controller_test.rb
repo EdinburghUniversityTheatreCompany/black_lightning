@@ -159,6 +159,42 @@ module Admin
       assert_equal 1, expense.receipt_files.count
     end
 
+    # The receipt form's consent radio governs BOTH AI uses of the receipt
+    # (prefill now, the finance check later), so the choice has to be persisted
+    # on create. It cannot be inferred from the extract POST: a submitter who
+    # picks "No" never fires one.
+    test "create records consent for each of the three receipt scan choices" do
+      sign_in @user
+
+      { "self" => true, "invoice" => true, "no" => false }.each do |choice, expected|
+        post :create, params: { reimbursements_expense_form:
+          valid_form_params.merge(receipt_scan_consent: choice, receipts: [ receipt_upload ]) }
+
+        assert_equal expected, ::Reimbursements::Expense.order(:id).last.ai_processing_consent,
+                     "receipt_scan_consent=#{choice} must persist as #{expected.inspect}"
+      end
+    end
+
+    # No radio picked at all (JavaScript off, so the choice was never revealed)
+    # is "never asked", which must stay distinguishable from a refusal.
+    test "create leaves consent nil when no scan choice was made" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params }
+
+      assert_nil ::Reimbursements::Expense.order(:id).last.ai_processing_consent
+    end
+
+    # Consent is the submitter's to give, so a garbage value is not consent.
+    test "create treats an unrecognised scan choice as no consent" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form:
+        valid_form_params.merge(receipt_scan_consent: "yes-please") }
+
+      assert_nil ::Reimbursements::Expense.order(:id).last.ai_processing_consent
+    end
+
     test "create as draft accepts gaps and writes Draft status" do
       sign_in @user
 
