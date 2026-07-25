@@ -143,6 +143,23 @@ module Admin
       assert_not_includes response.body, "In use"
     end
 
+    # The disclosure has to describe BOTH uses of the receipt, because one answer
+    # governs both. It only ever mentioned prefilling, which is how the finance
+    # check came to run on receipts whose submitters had refused.
+    test "new discloses both AI uses of the receipt and that declining costs nothing" do
+      sign_in @user
+
+      get :new
+
+      assert_includes response.body, "so finance can check your claim against it"
+      assert_includes response.body, "We use Gemini's free tier"
+      assert_includes response.body, "Nothing else about your claim changes."
+      # The three option labels are Mick's wording and must stay verbatim.
+      assert_includes response.body, "Yes, to be reimbursed to myself"
+      assert_includes response.body, "Yes, as an invoice paid out to the bank details listed on the invoice"
+      assert_includes response.body, "No, I will fill in all the details myself"
+    end
+
     test "create writes a pending expense with receipts and redirects" do
       sign_in @user
 

@@ -86,13 +86,15 @@ module Admin
 
         # Present in the DOM but hidden until a receipt is picked.
         assert_selector "[data-reimbursements-receipt-target='consent']", visible: :hidden
-        assert_no_text "Read the receipt to prefill the form?"
+        assert_no_text "Read this receipt with AI?"
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
 
-        assert_text "Read the receipt to prefill the form?"
+        assert_text "Read this receipt with AI?"
         assert_text "We use Gemini's free tier"
+        # One consent, both uses: prefilling now AND the finance check later.
+        assert_text "so finance can check your claim against it"
       end
 
       test "choosing 'to be reimbursed to myself' scans in self mode, not invoice mode" do
@@ -137,7 +139,7 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         choose "No, I will fill in all the details myself"
 
-        assert_text "nothing was sent to Google"
+        assert_text "nothing will be sent to Google, now or later"
         assert_empty page.find_field("Amount (£, incl. VAT)").value
       end
     end
