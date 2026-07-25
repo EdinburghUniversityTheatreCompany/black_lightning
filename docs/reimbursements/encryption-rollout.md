@@ -23,15 +23,16 @@ cleartext.
 | Env | Source | Notes |
 |---|---|---|
 | production | `config/credentials/production.yml.enc` under `active_record_encryption:` | Rails' `active_record` railtie reads these automatically. |
-| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV (fnox) | Dev credentials are **public** — never put key material in `development.yml.enc`. |
+| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV (fnox), else the throwaway literals in `config/application.rb` | `config/credentials/development.key` is **committed**, so `development.yml.enc` protects nothing — key material must never go there. The literals exist because an encrypted attribute needs a key on write even when blank: without them every `Expense.create!` in a fnox-less dev shell raised "Missing Active Record encryption credential". |
 | test | literal dummy keys in `config/environments/test.rb` | Throwaway, test-only, safe to commit. |
-
-If **no** keys are present the app still boots; encrypted attributes only error on
-read/write, which is acceptable in a dev shell without fnox.
 
 ## Rollout sequence (production)
 
-1. **Mint the production key set** (do this locally, once):
+**Steps 1 and 2 are already done** (commit `0b606bb7`): a fresh key set was minted and added
+to `config/credentials/production.yml.enc`. Start at step 3. The two steps are kept below for
+the record and for any future key rotation.
+
+1. ~~**Mint the production key set**~~ (done). To rotate, locally run:
 
    ```
    bin/rails db:encryption:init
@@ -49,8 +50,8 @@ read/write, which is acceptable in a dev shell without fnox.
    > These are **new, real secrets** — do **not** reuse the throwaway keys from the test
    > env, and do not commit them anywhere except the encrypted production credentials.
 
-2. **Add the keys to production credentials.** Edit the encrypted file and paste the block
-   at the top level (sibling to the other production keys):
+2. ~~**Add the keys to production credentials**~~ (done). To rotate, edit the encrypted file
+   and replace the block at the top level (sibling to the other production keys):
 
    ```
    EDITOR="code --wait" bin/rails credentials:edit --environment production
@@ -69,7 +70,8 @@ read/write, which is acceptable in a dev shell without fnox.
    `.key`).
 
 3. **Deploy** with `support_unencrypted_data = true` (already set in the code). At this
-   point new writes encrypt; existing rows stay plaintext and read fine.
+   point new writes encrypt; existing rows stay plaintext and read fine. **This is where the
+   rollout currently stands: the keys are shipped but no data is encrypted yet.**
 
 4. **Run the backfill** in the deployed image (kamal needs an interactive terminal on this
    host — SSH password auth):
