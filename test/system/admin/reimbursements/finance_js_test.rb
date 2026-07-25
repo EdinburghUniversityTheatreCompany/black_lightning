@@ -182,6 +182,118 @@ module Admin
         assert_field "Description", with: "Edited in the browser"
       end
 
+      # (g3) The Save Changes branch, end to end. Nothing else drives
+      # saveThenDecide / #injectEditFields: the server tests hand-craft the flat
+      # params this JS is supposed to produce, so dropping the injected
+      # save_changes input (or the edit fields themselves) would leave every
+      # "Save Changes" click silently discarding the operator's edits and
+      # deciding on the un-edited claim.
+      test "Save Changes saves the edit and then runs the decision" do
+        expense = seed_expense(status: "Pending", description: "Original wording")
+
+        visit admin_reimbursements_review_path
+
+        fill_in "Description", with: "Edited then saved"
+        click_button "Approve", exact: true
+        within("dialog[open]") { click_button "Save Changes" }
+
+        assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
+        expense.reload
+        assert_equal "Edited then saved", expense.description, "the edit must be persisted"
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status, "and the decision must run"
+      end
+
+      # (g4) The Discard branch: the decision runs, the edit does NOT land.
+      test "Discard Changes runs the decision without saving the edit" do
+        expense = seed_expense(status: "Pending", description: "Original wording")
+
+        visit admin_reimbursements_review_path
+
+        fill_in "Description", with: "Edited then discarded"
+        click_button "Approve", exact: true
+        within("dialog[open]") { click_button "Discard Changes" }
+
+        assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
+        expense.reload
+        assert_equal "Original wording", expense.description, "the discarded edit must not persist"
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+      end
+
+      # (g5) The traced bug: an aborted Save left its injected hidden inputs in
+      # the DOM, so the NEXT decision — including an explicit "Discard Changes" —
+      # still carried the edit and save_changes=1, committing the very edit the
+      # operator discarded. Reachable on the override-approve form, which always
+      # carries a turbo-confirm the operator can cancel.
+      test "an aborted Save Changes leaves nothing behind for a later Discard to commit" do
+        owner = create_reimbursements_person(name: "Olga Owner", email: "olga@example.com")
+        owned = create_reimbursements_budget(name: "Owned", nominal_code: "4100", owners: [ owner ])
+        expense = create_reimbursements_expense(person: @person, budget: owned, status: "Pending",
+                                                description: "Original wording")
+
+        visit admin_reimbursements_review_path
+
+        fill_in "Description", with: "Edited then abandoned"
+        click_button "Approve (override sign-off)"
+        within("dialog[open]") { click_button "Save Changes" }
+        # The override form's own turbo-confirm: cancelling it aborts the submit
+        # with the injected fields already appended to the form.
+        within(".swal2-container") { click_button "Cancel" }
+        assert_no_selector ".swal2-container"
+
+        # Second run at the same decision, this time discarding the edit.
+        click_button "Approve (override sign-off)"
+        within("dialog[open]") { click_button "Discard Changes" }
+        within(".swal2-container") { click_button "Yes" }
+
+        assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
+        expense.reload
+        assert_equal "Original wording", expense.description,
+                     "an abandoned Save must not be committed by a later Discard"
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+      end
+
+      # (g6) The native Escape key closes the dialog without going through the
+      # Cancel button, so the close event is what has to reset the pending
+      # decision. Behaviourally it must match Cancel: edit intact, nothing decided.
+      test "Escape closes the unsaved-edits dialog and decides nothing" do
+        expense = seed_expense(status: "Pending")
+
+        visit admin_reimbursements_review_path
+
+        fill_in "Description", with: "Edited in the browser"
+        click_button "Approve", exact: true
+        assert_selector "dialog[open]", wait: 5
+
+        find("dialog[open]").send_keys(:escape)
+
+        assert_no_selector "dialog[open]"
+        assert_field "Description", with: "Edited in the browser"
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
+      end
+
+      # (g7) The dirty check serialises the Save form as name=value pairs. Joined
+      # RAW, a value containing the separators could make two DIFFERENT sets of
+      # field values serialise to the same string — the form then reads as
+      # pristine and the decision drops the edits without ever offering the
+      # dialog. The pair below collides exactly that way unencoded: the seeded
+      # payment reference is longer than the input's maxlength, which only
+      # constrains typing, so both states are reachable in a real browser.
+      test "the dirty check is not defeated by separators inside a field value" do
+        expense = seed_expense(status: "Pending", description: "x",
+                               payment_reference: "y&payment_reference=z")
+
+        visit admin_reimbursements_review_path
+
+        # Same unencoded serialisation as the seeded state, different values.
+        fill_in "Description", with: "x&payment_reference=y"
+        fill_in "Payment reference", with: "z"
+        click_button "Approve", exact: true
+
+        assert_selector "dialog[open]", wait: 5
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status,
+                     "the decision must not have run behind the operator's back"
+      end
+
       # (g2) A pristine card never shows the unsaved-edits dialog — the decision's
       # own turbo-confirm (a SweetAlert here) fires as usual.
       test "a pristine review card skips the dialog and runs the normal confirm" do

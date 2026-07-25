@@ -27,12 +27,21 @@ module Admin
         end
       end
 
-      # A stub that returns a canned extraction (recording the mode it was asked
-      # for) so the browser can exercise the consent radios and the prefill,
-      # without any real Gemini call.
-      def prefilling_extractor(extraction)
+      # A stub that reports the mode it was asked for IN the extraction it
+      # returns, so a browser test can tell WHICH mode the JS posted — a canned
+      # extraction that ignores the mode makes the two consent choices
+      # indistinguishable, and flipping the "self" radio's value to "invoice"
+      # would then silently ask Gemini for a third party's bank details. It also
+      # always volunteers the bank trio, so self mode's server-side strip is
+      # visible in the same test.
+      def mode_reporting_extractor
+        test = self
         Object.new.tap do |ext|
-          ext.define_singleton_method(:extract) { |**| extraction }
+          ext.define_singleton_method(:extract) do |mode:, **|
+            test.canned_extraction(suggested_description: "scanned in #{mode} mode",
+                                   payee_name: "Acme Props Ltd", sort_code: "12-34-56",
+                                   account_number: "12345678")
+          end
         end
       end
 
@@ -86,8 +95,8 @@ module Admin
         assert_text "We use Gemini's free tier"
       end
 
-      test "choosing 'to be reimbursed to myself' prefills the everyday fields, not bank details" do
-        ExpensesController.extractor_builder = -> { prefilling_extractor(canned_extraction) }
+      test "choosing 'to be reimbursed to myself' scans in self mode, not invoice mode" do
+        ExpensesController.extractor_builder = -> { mode_reporting_extractor }
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
@@ -95,15 +104,16 @@ module Admin
         choose "Yes, to be reimbursed to myself"
 
         assert_text "Prefilled from your receipt", wait: 5
+        # The mode the JS actually posted, echoed back through the extraction.
+        assert_equal "scanned in self mode", page.find_field("Description").value
         assert_equal "42.0", page.find_field("Amount (£, incl. VAT)").value
-        # Self mode never returns bank details, so the payee trio stays empty.
+        # Self mode strips the bank trio even though this extraction volunteers it.
         assert_empty page.find_field("Payee account name").value
+        assert_empty page.find_field("Payee sort code").value
       end
 
-      test "choosing the invoice option prefills the third-party payee bank details" do
-        extraction = canned_extraction(payee_name: "Acme Props Ltd",
-                                       sort_code: "12-34-56", account_number: "12345678")
-        ExpensesController.extractor_builder = -> { prefilling_extractor(extraction) }
+      test "choosing the invoice option scans in invoice mode and prefills the payee bank details" do
+        ExpensesController.extractor_builder = -> { mode_reporting_extractor }
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
@@ -111,6 +121,7 @@ module Admin
         choose "Yes, as an invoice paid out to the bank details listed on the invoice"
 
         assert_text "Prefilled from your receipt", wait: 5
+        assert_equal "scanned in invoice mode", page.find_field("Description").value
         assert_equal "Acme Props Ltd", page.find_field("Payee account name").value
         assert_equal "12-34-56", page.find_field("Payee sort code").value
         assert_equal "12345678", page.find_field("Payee account number").value

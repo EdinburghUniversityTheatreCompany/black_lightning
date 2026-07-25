@@ -1011,6 +1011,11 @@ module Admin
         assert_select "dialog button", text: "Cancel"
         assert_select "dialog button", text: "Save Changes"
         assert_select "dialog button", text: "Discard Changes"
+        # The heading is the dialog's accessible name, and the native close event
+        # (Escape included) is wired so a dismissed dialog forgets its decision.
+        title_id = "unsaved-edits-title-#{expense.record_id}"
+        assert_select "dialog[aria-labelledby=?][data-action*=?]", title_id, "close->review-decision#closed"
+        assert_select "h2##{title_id}[data-review-decision-target=title]"
       end
 
       test "the review card wires the guard on the owner-gate override button too" do
