@@ -188,6 +188,33 @@ survive as historical import provenance and are never written. Spec + plan in
   public API. No cache layer: lists are memoized per instance (one store per
   request/job run). `DatabaseStore::LastReceiptError` guards removing an expense's last
   receipt. Never hit AR models directly from controllers/jobs — go through the store.
+- **Budget figures and the overview** (`Reimbursements::Budget`, `NominalCodeRollup`,
+  `/admin/reimbursements/budgets/overview`):
+  - **`eusa_actual_amount` is linkage-based and NET.** An Expense budget counts the actuals
+    reconciled to its *expenses*, an Income budget the ones booked against its `budget_id`;
+    matching on nominal code would be wrong because several budgets share a code. Both
+    directions net through `EusaActual.net` (debits less credits, offsetting legs dropped),
+    so a refund reduces a line instead of inflating it.
+  - Because the rollups are linkage-based, the overview's second card
+    (`DatabaseStore#unattributed_actuals`) is what stops unlinked spend disappearing: rows
+    linked to neither an expense nor a budget, offsetting legs excluded. It is NOT
+    "nominal code with no budget" — that older definition hid unlinked spend behind any
+    budget sharing the code, and suppressed every blank-code row.
+  - **Expense and Income budgets are never totalled together** (£10k spend + £8k income is
+    not £18k of anything). Every total comes from `NominalCodeRollup#by_type`.
+    **`expected_outturn` is nil for an Income budget** and renders blank/empty everywhere
+    (overview, index, edit, CSV, xlsx): the "never below reality" max reads as *best-case*
+    income on that side.
+  - **`store.budgets` deliberately does NOT preload actuals** — only
+    `store.budgets_with_actuals` does (budgets index/overview + the Budgets export sheet).
+    Don't "fix" a caller by switching it: the producer's budget `<select>` used to load the
+    whole expenses + actuals ledger to draw a dropdown.
+- **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma
+  decimal). `.parse` → nil for anything unreadable; **`.parse!` distinguishes blank
+  ("nothing typed", nil) from unreadable (raises)** — the batch budget-update form needs
+  that to tell a deliberate blank from a typo, since treating both as "skip" silently kept
+  a budget on a superseded forecast. `AmountValidation` (Review/expense-edit write paths)
+  is a separate, stricter validator by design.
 - **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
   the *development* credentials are publicly readable, so no secret values there), then
   per-env credentials `reimbursements:` (production only).

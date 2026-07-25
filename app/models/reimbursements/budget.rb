@@ -146,10 +146,13 @@ module Reimbursements
       total_paid
     end
 
-    # The EUSA ledger's view of actual spend for this line. For an Expense
-    # budget that's the sum of debit legs on the actuals reconciled to its
-    # expenses; for an Income budget it's the sum of credit legs booked
-    # directly against the budget.
+    # The EUSA ledger's view of what actually landed on this line, NET. For an
+    # Expense budget that's the debits less the credits on the actuals
+    # reconciled to its expenses; for an Income budget it's the credits less the
+    # debits booked directly against the budget. Netting matters both ways: a
+    # supplier refund or a credit note genuinely reduces what a line cost, and
+    # summing debits alone left a £900 line reading £900 when the true net was
+    # £600 (and dragged expected_outturn up with it).
     def eusa_actual_amount
       @eusa_actual_amount ||= income? ? credit_actual_total : debit_actual_total
     end
@@ -166,30 +169,40 @@ module Reimbursements
         end
     end
 
-    # The most this line could realistically end up costing: the greater of the
+    # The most this line could realistically end up COSTING: the greater of the
     # current projection and what's already been spent or committed, so the
     # number never drops below reality as spend lands.
+    #
+    # Nil for an Income budget, deliberately. The same max over income figures
+    # is best-case income, the opposite direction from "never drops below
+    # reality" — a £8,000 target with £3,000 banked would report £8,000 as
+    # though it were assured. Better blank than confidently wrong; the
+    # projection and the EUSA actual are both still shown on their own.
     def expected_outturn
+      return nil if income?
+
       [ projected_amount, committed_amount, paid_portal_amount, eusa_actual_amount ].compact.max
     end
 
     private
 
-    # Credit legs booked straight against an Income budget (budget_id set).
+    # Income booked straight against an Income budget (budget_id set), credits
+    # less debits: a debit on an income line is income handed back.
+    # (#to_a on a loaded association reuses the preload, so this stays one query
+    # for a budget loaded on its own and none for one the store preloaded.)
     def credit_actual_total
-      if eusa_actuals.loaded?
-        eusa_actuals.sum { |a| a.credit || 0 }
-      else
-        eusa_actuals.sum(:credit) || 0
-      end
+      -EusaActual.net(eusa_actuals.to_a)
     end
 
-    # Debit legs on actuals reconciled to this budget's expenses.
+    # Spend on the actuals reconciled to this budget's expenses, debits less
+    # credits. Both branches net through EusaActual.net (which also drops
+    # offsetting legs), so a preloaded and a freshly-queried budget can never
+    # report different figures.
     def debit_actual_total
       if expenses.loaded? && expenses.all? { |e| e.association(:eusa_actuals).loaded? }
-        expenses.sum { |e| e.eusa_actuals.sum { |a| a.debit || 0 } }
+        expenses.sum { |e| EusaActual.net(e.eusa_actuals) }
       else
-        EusaActual.where(expense_id: expenses.map(&:id)).sum(:debit) || 0
+        EusaActual.net(EusaActual.where(expense_id: expenses.map(&:id)).to_a)
       end
     end
   end

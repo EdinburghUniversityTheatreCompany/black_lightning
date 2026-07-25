@@ -24,7 +24,8 @@
 <% else %>
   <% expected_header = content_tag(:span, "Expected outturn",
        title: "The greater of the current projection and what's already been spent or committed, " \
-              "so the number never drops below reality.") %>
+              "so the number never drops below reality. Blank on income lines, where the same " \
+              "figure would read as best-case income instead.") %>
   <% headers = [ "Budget", "Type", "Visible", "Initial", "Current forecast", "Committed",
                  "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
                  "Remaining", "Variance", "Owners", "" ] %>

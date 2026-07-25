@@ -188,3 +188,41 @@ and the cost is negligible at this table's size (about 300 rows per financial ye
 query-level scopes the deferred financial-year rollups will want anyway
 (`EusaActual.offset` / `.not_offset` used from SQL rather than filtering arrays in Ruby).
 The same review deferred FY scoping for the rollups (finding 9), so the two belong together.
+## Should an unlinked EUSA credit auto-attach to an *expense* budget? (product decision)
+
+`Reconciliation.match_credit_to_budget` (called from `ReconcileController`) only ever offers
+a credit row to **income** budgets: `income_budgets = budgets.select(&:income?)`. So a
+supplier refund credited back on an expense nominal code has no path to the budget it
+belongs to. Reconciliation leaves it unmatched, and it now shows up in the budget overview's
+"actuals not attributed to any budget" card, where finance can see it but can't attach it.
+
+`Budget#eusa_actual_amount` **does** net a credit that is already linked to one of the
+budget's expenses (fixed in the 2026-07-25 round: a £300 refund on a £900 line now reads
+£600), so the arithmetic is ready. What's missing is the *matching* half, and that's a
+product call rather than a bug:
+
+- Auto-attaching a credit to an expense budget by nominal code would be a guess whenever
+  several budgets share a code (which is common here), and a wrong guess silently
+  understates one line and overstates another.
+- The safer shape is probably an explicit operator action ("credit this refund to budget X")
+  on the actuals/reconcile screen, or letting a credit be linked to a specific *expense*
+  (which is what the netting already keys off), rather than a code-based auto-match.
+- Either way it needs a decision on year-end accrual reversals, which arrive as credits on
+  expense codes too and are usually better handled as offsetting pairs.
+
+Deliberately not implemented in the round that fixed the netting: changing matching
+semantics needs Mick's call on which of those shapes finance actually wants.
+
+## `AmountValidation` is a fourth, stricter money parser
+
+The 2026-07-25 round consolidated the three lenient decimal parsers (ExpenseForm and the two
+budget controllers) into `Reimbursements::AmountParser`. `Reimbursements::AmountValidation`
+(used by Review#save and ExpenseEditsController#update) still has its own `DECIMAL_FORMAT` +
+`Float()` reading, deliberately stricter: it rejects anything that isn't a plain decimal so
+`Float()` and `String#to_f` can never disagree on the value that reaches the write path.
+
+That's a defensible reason to differ, but the upshot is that the *finance* edit forms reject
+"£1,200" while the submitter form and the budget forms accept it. Worth a look at whether
+those two paths should parse with `AmountParser` and then validate the parsed BigDecimal
+(rather than validating the raw string), so "what counts as an amount" is one answer across
+the portal.

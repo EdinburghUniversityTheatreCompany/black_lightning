@@ -153,19 +153,11 @@ module Reimbursements
 
     # Accepts "£1,234.56" (comma thousands) and "12,50" (comma decimal —
     # common for international students; naively stripping the comma would
-    # record a 100x amount).
+    # record a 100x amount). Lives in AmountParser so the finance-side budget
+    # forms read an amount identically; a blank or unreadable value is nil here
+    # and the amounts_valid validation reports it.
     def parse_decimal(value)
-      cleaned = value.to_s.gsub(/[£\s]/, "")
-      return nil if cleaned.blank?
-
-      cleaned = if cleaned.match?(/,\d{1,2}\z/) && cleaned.exclude?(".")
-        cleaned.tr(",", ".")
-      else
-        cleaned.delete(",")
-      end
-      BigDecimal(cleaned)
-    rescue ArgumentError
-      nil
+      AmountParser.parse(value)
     end
 
     def amounts_valid

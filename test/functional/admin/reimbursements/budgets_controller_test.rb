@@ -292,6 +292,17 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/budgets?format=csv"
       end
 
+      test "a forecast amount typed with a comma or a pound sign is read" do
+        sign_in @user
+
+        post :forecast, params: { id: @props.record_id, amount: "£1,200", date: "2026-06-01",
+                                  reason: "typed the way people type" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_equal BigDecimal("1200"),
+                     ::Reimbursements::Budget.find(@props.id).current_forecast
+      end
+
       # --- Overview (nominal-code rollup) ------------------------------------
 
       test "overview requires the finance permission" do
@@ -320,30 +331,113 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
-      test "overview lists unbudgeted spend for actuals whose nominal matches no budget" do
+      test "the overview's query count does not grow with the number of budgets" do
         sign_in @user
-        # 4000 has a budget (@props); 9999 does not.
-        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
-                                             debit: BigDecimal("42.00"))
-        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Budgeted",
-                                             debit: BigDecimal("10.00"))
+        # One budget with an expense and a linked actual, so every preload on the
+        # page has rows to load before the baseline is taken (Rails skips a
+        # preload query for an association with nothing to load, which would
+        # otherwise make the two renders different shapes rather than different
+        # sizes).
+        seed_budget_with_actual(0)
+        overview_query_count # warm up anything cached per process
+        baseline = overview_query_count
 
-        get :overview
+        9.times { |i| seed_budget_with_actual(i + 1) }
 
-        assert_response :success
-        assert_includes response.body, "Unbudgeted spend"
-        assert_includes response.body, "Mystery charge"
-        assert_includes response.body, "9999"
-        # The budgeted actual is not in the unbudgeted section.
-        assert_not_includes response.body, "Budgeted"
+        # Every figure on the page comes off a preloaded association, so nine more
+        # budgets with their expenses and ledger rows cost exactly what one did.
+        assert_equal baseline, overview_query_count
       end
 
-      test "overview shows a friendly note when there is no unbudgeted spend" do
+      test "overview totals expense and income budgets separately, never as one figure" do
+        sign_in @user
+        # @props (Expense) already carries initial 1000, so expense initial is
+        # 1000 + 9000 = 10,000 and income initial is 8000. The old single
+        # grand total reported 18,000, which is neither total spend nor net.
+        create_reimbursements_budget(name: "Lighting", nominal_code: "4200",
+                                     initial_budget: 9000)
+        create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
+                                     budget_type: "Income", initial_budget: 8000)
+
+        get :overview
+
+        assert_response :success
+        expense_total, income_total = assigns(:grand_total).by_type
+        assert_equal BigDecimal("10000"), expense_total.initial
+        assert_equal BigDecimal("8000"), income_total.initial
+        assert_includes response.body, "Grand total (Expense budgets)"
+        assert_includes response.body, "Grand total (Income budgets)"
+        assert_includes response.body, "£10,000.00"
+        assert_includes response.body, "£8,000.00"
+        assert_not_includes response.body, "£18,000.00"
+      end
+
+      test "overview marks each row's budget type and leaves income outturn blank" do
+        sign_in @user
+        create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
+                                     budget_type: "Income", initial_budget: 8000)
+
+        get :overview
+
+        assert_response :success
+        # A Type cell per row, so an income line can't be read as spend.
+        assert_select "table.table thead th", text: "Type"
+        assert_select "table.table tbody td", text: "Income"
+        assert_select "table.table tbody td", text: "Expense"
+        assert_nil assigns(:rollups).flat_map(&:budgets)
+                                    .find { |b| b.name == "Programme ads" }.expected_outturn
+      end
+
+      test "overview lists unattributed actuals, including spend on a budgeted code" do
+        sign_in @user
+        # 4000 IS budgeted (@props), but nothing links this row to an expense, so
+        # no budget's figures count it. It used to fall through both the rollups
+        # and the "unbudgeted" list and vanish from the page entirely.
+        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Unlinked hire",
+                                             debit: BigDecimal("1250.00"))
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+        # Linked to one of @props's expenses, so @props already counts it.
+        linked = ::Reimbursements::Expense.where(budget_id: @props.id).first
+        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Reconciled row",
+                                             debit: BigDecimal("10.00"), expense: linked)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Actuals not attributed to any budget"
+        assert_includes response.body, "Unlinked hire"
+        assert_includes response.body, "£1,250.00"
+        assert_includes response.body, "Mystery charge"
+        # Total unattributed = 1250 + 42 = 1292; the linked row is not in the list.
+        assert_includes response.body, "£1,292.00"
+        assert_not_includes response.body, "Reconciled row"
+      end
+
+      test "overview does not report a correctly-offset accrual pair as unattributed" do
+        sign_in @user
+        store = ::Reimbursements::DatabaseStore.new
+        accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL 4200",
+                                       debit: BigDecimal("4200"))
+        reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL 4200",
+                                        credit: BigDecimal("4200"))
+        store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Every EUSA actual is attributed to a budget."
+        assert_not_includes response.body, "ACCRUAL 4200"
+        assert_not_includes response.body, "£4,200.00"
+      end
+
+      test "overview shows a friendly note when every actual is attributed" do
         sign_in @user
         get :overview
 
         assert_response :success
-        assert_includes response.body, "Unbudgeted spend"
+        assert_includes response.body, "Actuals not attributed to any budget"
+        assert_includes response.body, "Every EUSA actual is attributed to a budget."
       end
 
       # --- Edit --------------------------------------------------------------
@@ -590,6 +684,29 @@ module Admin
 
         assert_redirected_to edit_admin_reimbursements_budget_path(@income.record_id)
         assert_match(/isn't part of this budget/i, flash[:alert])
+      end
+
+      private
+
+      # Real SQL count for one render of the overview (schema + cached queries
+      # excluded), so the preload guarantee is measured rather than assumed.
+      def overview_query_count
+        count = 0
+        counter = ->(*, payload) do
+          count += 1 unless payload[:cached] || payload[:name] == "SCHEMA"
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get :overview }
+        count
+      end
+
+      # An Expense budget with a paid expense and a linked EUSA actual: one of
+      # everything the overview's rollups walk.
+      def seed_budget_with_actual(index)
+        budget = create_reimbursements_budget(name: "Extra #{index}", nominal_code: "42#{index}")
+        expense = create_reimbursements_expense(budget: budget, receipt: false,
+                                                status: ::Reimbursements::Status::PAID)
+        ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),
+                                            nominal_code: budget.nominal_code)
       end
     end
   end

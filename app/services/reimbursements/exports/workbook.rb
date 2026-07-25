@@ -21,10 +21,13 @@ module Reimbursements
       # Sheet order = the order finance works in: the claims, then the EUSA
       # ledger they reconcile against, then the budgets they land on, then the
       # payee registry and the submission history.
+      # The Budgets sheet carries the EUSA-actual rollup per line, so it reads the
+      # actuals-preloaded list; every other caller of store.budgets deliberately
+      # does not pay for that preload.
       SHEETS = [
         [ Expenses, :expenses ],
         [ Actuals, :eusa_actuals ],
-        [ Budgets, :budgets ],
+        [ Budgets, :budgets_with_actuals ],
         [ People, :people ],
         [ Batches, :batches ]
       ].freeze

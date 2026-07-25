@@ -1,0 +1,15 @@
+<%# locals: (label:, rollup:, row_class: "border-t border-gray-300 font-medium") %>
+<%# One totals row of the overview table (a per-code-and-type subtotal or a
+    per-type grand total), so every total on the page is built from the same
+    cells in the same order as the budget rows above it. Expected outturn is
+    blank for an income total on purpose — see NominalCodeRollup#expected. %>
+<tr class="<%= row_class %>">
+  <td colspan="2" class="text-right"><%= label %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.initial) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.projected) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.committed) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.pipeline) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.paid_portal) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.eusa_actual) %></td>
+  <td class="text-right"><%= reimbursements_money(rollup.expected) %></td>
+</tr>

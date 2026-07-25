@@ -80,7 +80,7 @@
     <div><dt class="text-gray-500">Pipeline</dt><dd class="font-medium" title="Pending expenses not yet approved."><%= reimbursements_money(@budget.pipeline_amount) %></dd></div>
     <div><dt class="text-gray-500">Paid (portal)</dt><dd class="font-medium"><%= reimbursements_money(@budget.paid_portal_amount) %></dd></div>
     <div><dt class="text-gray-500">EUSA actual</dt><dd class="font-medium" title="Reconciled EUSA ledger spend for this line."><%= reimbursements_money(@budget.eusa_actual_amount) %></dd></div>
-    <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
+    <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality. Blank on income lines, where the same figure would read as best-case income instead."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
     <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium <%= "text-danger" if @budget.remaining&.negative? %>"><%= reimbursements_money(@budget.remaining) %></dd></div>
     <div>
       <dt class="text-gray-500">Variance</dt>
