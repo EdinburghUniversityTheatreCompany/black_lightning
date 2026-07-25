@@ -99,6 +99,24 @@ module Reimbursements
       assert_not create_expense.ai_checked?
     end
 
+    # One consent governs both AI uses of a receipt (prefill + the finance
+    # check), and it has three states: consented, declined, never asked. Only an
+    # explicit true permits the check; nil (nobody was ever asked, which is every
+    # pre-existing claim and every email-in claim) is a refusal too.
+    test "ai_processing_consented? is true only for an explicit consent" do
+      assert create_expense(ai_processing_consent: true).ai_processing_consented?
+      assert_not create_expense(ai_processing_consent: false).ai_processing_consented?
+      assert_not create_expense.ai_processing_consented?
+    end
+
+    # Kept distinct from "never asked" so the finance UI can say which it was
+    # without guessing.
+    test "ai_processing_declined? distinguishes a refusal from never having been asked" do
+      assert create_expense(ai_processing_consent: false).ai_processing_declined?
+      assert_not create_expense(ai_processing_consent: true).ai_processing_declined?
+      assert_not create_expense.ai_processing_declined?
+    end
+
     test "status and expense_type are validated against the known sets" do
       assert_raises(ActiveRecord::RecordInvalid) { create_expense(status: "Bogus") }
       assert_raises(ActiveRecord::RecordInvalid) { create_expense(expense_type: "Bogus") }
