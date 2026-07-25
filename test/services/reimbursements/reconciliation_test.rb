@@ -599,5 +599,34 @@ module Reimbursements
 
       assert_equal forwards.first.key, with_lead_row.first.key
     end
+
+    # Two identical accruals and two identical reversals are FOUR real
+    # transactions, so the two pairs they form must stay distinguishable. On a
+    # content-only key they collapse into one, and unticking either one of them
+    # in the preview offsets both — stamping a genuine transaction as
+    # bookkeeping noise.
+    test "two byte-identical pairs in one paste get distinct keys" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ])
+      )
+
+      assert_equal 2, pairs.size
+      assert_empty remaining
+      assert_equal 2, pairs.map(&:key).uniq.size, "each pair of real rows needs its own key"
+    end
+
+    # The occurrence counter that keeps duplicates apart counts only rows with
+    # identical CONTENT, so it survives the re-parse the same way the digest
+    # does: adding unrelated rows around a duplicated pair leaves both keys
+    # untouched.
+    test "duplicate pair keys are stable when unrelated rows surround them" do
+      duplicated = [ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ]
+      bare, = Reconciliation.detect_offsetting_pairs(parse_shapes(duplicated))
+      padded, = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ COLLIDING_SPEND ] + duplicated + [ NEAR_MISS_DEBIT ])
+      )
+
+      assert_equal bare.map(&:key), padded.map(&:key)
+    end
   end
 end

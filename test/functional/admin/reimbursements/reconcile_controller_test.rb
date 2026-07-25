@@ -494,6 +494,49 @@ module Admin
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
     end
 
+    # --- Duplicate pairs ---------------------------------------------------
+    #
+    # A paste really can contain the same £10 accrual and reversal twice: two
+    # separate transactions, two separate pairs. They must get two tickboxes,
+    # because ticking one and unticking the other has to mean exactly that.
+
+    def duplicate_pairs_paste
+      accrual = accrual_row(amount: "10.00")
+      reversal = reversal_row(amount: "10.00")
+      [ HEADER, accrual, reversal, accrual, reversal ].join("\n")
+    end
+
+    test "two byte-identical pairs render as two separately tickable rows" do
+      sign_in @user
+      post :preview, params: { pasted_text: duplicate_pairs_paste }
+
+      assert_response :success
+      pairs = assigns(:offsetting_pairs)
+      assert_equal 2, pairs.size
+      assert_equal 2, pairs.map(&:key).uniq.size, "two real pairs, two keys"
+      pairs.each do |pair|
+        assert_select "input[type=checkbox][name='offset_pair_keys[]'][value=?][checked=checked]",
+                      pair.key
+        assert_select "##{"offset-pair-#{pair.key}"}", 1, "each checkbox needs its own DOM id"
+      end
+    end
+
+    test "unticking one of two identical pairs offsets only the other" do
+      sign_in @user
+      keys = offsetting_pair_keys(duplicate_pairs_paste)
+      assert_equal 2, keys.uniq.size, "the two pairs must be distinguishable to begin with"
+
+      post :apply, params: { pasted_text: duplicate_pairs_paste, offset_pair_keys: [ keys.first ] }
+
+      assert_response :success
+      assert_equal 1, assigns(:offsets_linked)
+      assert_equal 4, ::Reimbursements::EusaActual.count, "all four rows are still imported"
+      assert_equal 2, ::Reimbursements::EusaActual.all.count(&:offset?),
+                   "only the ticked pair's two legs are stamped offset"
+      assert_equal 2, assigns(:unmatched_saved),
+                   "the unticked pair's legs are imported as ordinary rows"
+    end
+
     # Preview and apply both re-derive the pairs from the pasted text (the
     # wizard keeps no session state), so the tickbox keys must survive the round
     # trip. The helper mimics what the preview form posts back.
