@@ -420,5 +420,184 @@ module Reimbursements
       right = Budget.new(name: "Correct", nominal_code: "250000")
       assert_same right, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ wrong, right ])
     end
+
+    # --- detect_offsetting_pairs -------------------------------------------
+    #
+    # The fixtures below are ANONYMISED reproductions of the pair shapes in a
+    # real EUSA F40 export (309 rows). Nominal codes, dates, periods, ref
+    # formats and amounts keep the real structure because that is exactly what
+    # the heuristic keys on; every narrative and payee is invented.
+    #
+    #   Shape 1  same-ref accrual <-> reversal: same nominal, same date,
+    #            periods differ (accrual booked in one period, released in the
+    #            next). Narratives share a long prefix but diverge mid-string
+    #            ("... accrual ..." vs "... reversal ..."). Scores 7.
+    #   Shape 2  two journal legs on the SAME nominal with DIFFERENT refs, same
+    #            date and period, narratives agreeing on their prefix. Scores
+    #            exactly 4 (nominal + period + narrative), the floor at which a
+    #            pair is proposed without a ref match at all.
+    #   Shape 3  cross-month accrual release: same ref and nominal, three
+    #            months apart, periods differ. The 92-day gap costs the full
+    #            2-point date penalty, so it survives on ref + nominal +
+    #            narrative and scores 5.
+    #   Collision  a GENUINE spend row whose amount happens to equal shape 1's
+    #            (real export: a real 186.23 claim colliding with an unrelated
+    #            186.23 reversal). Different nominal, unrelated narrative, 13
+    #            days later, and it only shares the period, so it scores 0 and
+    #            must be left alone.
+    #   Near miss  same nominal and period, different ref, unrelated
+    #            narratives, 16 days apart: scores 2 and must NOT be paired.
+
+    # One row in the real Sage export's column order (SAGE_HEADER above).
+    def sage_row(nominal:, date:, period:, ref:, narrative:, value:)
+      [ nominal, "F40", "", "COST CENTRE ACCOUNT", date, period, ref, narrative, value, "EUSA" ]
+        .join("\t")
+    end
+
+    ACCRUAL_LEG = { nominal: "431580", date: "24/07/2025", period: "4", ref: "P8838",
+                    narrative: "PO 40000123 accrual jul 25 400123", value: "186.23" }.freeze
+    REVERSAL_LEG = { nominal: "431580", date: "24/07/2025", period: "5", ref: "P8838",
+                     narrative: "PO 40000123 reversal jul 25 400123", value: "-186.23" }.freeze
+    JOURNAL_LEG_A = { nominal: "331130", date: "28/09/2025", period: "6", ref: "J000003374",
+                      narrative: "Summer season staff costs accrual reversal", value: "11620.00" }.freeze
+    JOURNAL_LEG_B = { nominal: "331130", date: "28/09/2025", period: "6", ref: "J000000934",
+                      narrative: "Summer season staff costs accrual", value: "-11620.00" }.freeze
+    CROSS_MONTH_LEG_A = { nominal: "331300", date: "27/04/2025", period: "1", ref: "J000000884",
+                          narrative: "Venue hire accrual to be released", value: "35775.84" }.freeze
+    CROSS_MONTH_LEG_B = { nominal: "331300", date: "28/07/2025", period: "5", ref: "J000000884",
+                          narrative: "Venue hire accrual to be released", value: "-35775.84" }.freeze
+    COLLIDING_SPEND = { nominal: "435499", date: "06/08/2025", period: "5", ref: "BACS",
+                        narrative: "Green room supplies", value: "186.23" }.freeze
+    NEAR_MISS_DEBIT = { nominal: "432320", date: "12/05/2025", period: "2", ref: "BACS",
+                        narrative: "Rehearsal room hire deposit", value: "200.00" }.freeze
+    NEAR_MISS_CREDIT = { nominal: "432320", date: "28/05/2025", period: "2", ref: "1137",
+                         narrative: "PI 40000456 1234567890", value: "-200.00" }.freeze
+
+    REAL_SHAPES = [ ACCRUAL_LEG, REVERSAL_LEG, JOURNAL_LEG_A, JOURNAL_LEG_B,
+                    CROSS_MONTH_LEG_A, CROSS_MONTH_LEG_B, COLLIDING_SPEND,
+                    NEAR_MISS_DEBIT, NEAR_MISS_CREDIT ].freeze
+
+    def parse_shapes(shapes)
+      text = ([ SAGE_HEADER ] + shapes.map { |s| sage_row(**s) }).join("\n")
+      Reconciliation.parse_actuals_rows(text, cost_centre_code: "F40")
+    end
+
+    def pair_narratives(pair)
+      [ pair.debit_row.narrative, pair.credit_row.narrative ]
+    end
+
+    test "detect_offsetting_pairs proposes the three real pair shapes and nothing else" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+
+      assert_equal 3, pairs.size
+      assert_equal [ [ ACCRUAL_LEG[:narrative], REVERSAL_LEG[:narrative] ],
+                     [ CROSS_MONTH_LEG_A[:narrative], CROSS_MONTH_LEG_B[:narrative] ],
+                     [ JOURNAL_LEG_A[:narrative], JOURNAL_LEG_B[:narrative] ] ],
+                   pairs.map { |pair| pair_narratives(pair) },
+                   "highest-scoring pair first: 7 (same ref), 5 (cross-month), 4 (nominal+period+narrative)"
+      assert_equal [ 7, 5, 4 ], pairs.map(&:score)
+      assert_equal [ COLLIDING_SPEND[:narrative], NEAR_MISS_DEBIT[:narrative],
+                     NEAR_MISS_CREDIT[:narrative] ],
+                   remaining.map(&:narrative),
+                   "the colliding genuine spend and the near-miss pair stay in the working set"
+    end
+
+    test "detect_offsetting_pairs orients each pair debit leg first" do
+      pairs, = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+
+      pairs.each do |pair|
+        assert_operator pair.debit_row.debit, :>, 0, "the debit leg carries the positive amount"
+        assert_operator pair.credit_row.credit, :>, 0, "the credit leg carries the offsetting amount"
+      end
+    end
+
+    test "detect_offsetting_pairs leaves an amount collision with a genuine row unpaired" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG, COLLIDING_SPEND ])
+      )
+
+      assert_equal 1, pairs.size
+      assert_equal [ ACCRUAL_LEG[:narrative], REVERSAL_LEG[:narrative] ], pair_narratives(pairs.first)
+      assert_equal [ COLLIDING_SPEND[:narrative] ], remaining.map(&:narrative)
+    end
+
+    test "detect_offsetting_pairs leaves a same-nominal near miss unpaired" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ NEAR_MISS_DEBIT, NEAR_MISS_CREDIT ])
+      )
+
+      assert_empty pairs, "nominal + period alone (score 2) is below the threshold"
+      assert_equal 2, remaining.size
+    end
+
+    # Greed matters when two eligible pairs compete for the same leg: the
+    # stronger evidence must win and the loser must be left unmatched rather
+    # than paired with whatever is left over.
+    test "detect_offsetting_pairs consumes each row at most once, best score first" do
+      weaker_claimant = { nominal: "431580", date: "24/07/2025", period: "5", ref: "BACS",
+                          narrative: "PO 40000123 accrual jul 25 400123", value: "186.23" }
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ weaker_claimant, ACCRUAL_LEG, REVERSAL_LEG ])
+      )
+
+      assert_equal 1, pairs.size
+      assert_equal [ ACCRUAL_LEG[:narrative], REVERSAL_LEG[:narrative] ], pair_narratives(pairs.first)
+      assert_equal 7, pairs.first.score
+      assert_equal [ weaker_claimant[:narrative] ], remaining.map(&:narrative),
+                   "the weaker claimant (score 4) loses the reversal leg and stays unmatched"
+    end
+
+    test "detect_offsetting_pairs needs the exact same absolute amount" do
+      penny_off = REVERSAL_LEG.merge(value: "-186.24")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ ACCRUAL_LEG, penny_off ]))
+
+      assert_empty pairs, "a penny apart is a different transaction, not an offset"
+      assert_equal 2, remaining.size
+    end
+
+    test "detect_offsetting_pairs never pairs two rows of the same sign" do
+      same_sign = REVERSAL_LEG.merge(value: "186.23")
+      pairs, = Reconciliation.detect_offsetting_pairs(parse_shapes([ ACCRUAL_LEG, same_sign ]))
+
+      assert_empty pairs
+    end
+
+    test "detect_offsetting_pairs never pairs across financial years" do
+      # 31 March and 1 April sit either side of the April-based financial year
+      # boundary, so these are two different years' books despite everything
+      # else matching.
+      last_year = ACCRUAL_LEG.merge(date: "31/03/2025", period: "12")
+      this_year = REVERSAL_LEG.merge(date: "01/04/2025", period: "1")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ last_year, this_year ]))
+
+      assert_empty pairs
+      assert_equal 2, remaining.size
+    end
+
+    test "detect_offsetting_pairs ignores rows that net to zero" do
+      zero_debit = ACCRUAL_LEG.merge(value: "0.00")
+      zero_credit = REVERSAL_LEG.merge(value: "-0.00")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ zero_debit, zero_credit ]))
+
+      assert_empty pairs
+      assert_equal 2, remaining.size
+    end
+
+    test "a pair key is stable across re-parses of the same paste" do
+      first_pairs, = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+      second_pairs, = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+
+      assert_equal first_pairs.map(&:key), second_pairs.map(&:key)
+      assert_equal 3, first_pairs.map(&:key).uniq.size, "each proposed pair gets its own key"
+    end
+
+    test "a pair key does not depend on the row's position in the paste" do
+      forwards, = Reconciliation.detect_offsetting_pairs(parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG ]))
+      with_lead_row, = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ COLLIDING_SPEND, ACCRUAL_LEG, REVERSAL_LEG ])
+      )
+
+      assert_equal forwards.first.key, with_lead_row.first.key
+    end
   end
 end
