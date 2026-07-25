@@ -241,6 +241,107 @@ module Reimbursements
       assert_equal 1, store.expenses.size
     end
 
+    # --- Cache busting on every write --------------------------------------
+    # One store serves a whole request, so a write that forgets its bust_*! makes
+    # every later read in that request render pre-write figures — the operator
+    # saves a budget and the page redraws with the old number. These read the
+    # memoized list first, write, then re-read and assert the FRESH figures.
+
+    test "update_budget! and the forecast writes refresh the memoized budgets" do
+      budget = Budget.create!(name: "Props", nominal_code: "4000", initial_budget: 100)
+      store.budgets # memoize the pre-write list
+
+      store.update_budget!(budget.record_id, initial_budget: 250)
+      assert_equal BigDecimal("250"), store.budgets.sole.initial_budget,
+                   "update_budget! must bust the memoized budgets"
+
+      store.create_forecast!(budget_id: budget.record_id, amount: 400,
+                             date: Date.new(2026, 6, 1), reason: "revised")
+      assert_equal BigDecimal("400"), store.budgets.sole.current_forecast,
+                   "create_forecast! must bust the memoized budgets"
+    end
+
+    test "create_budget_update! refreshes the memoized budgets" do
+      budget = Budget.create!(name: "Props", nominal_code: "4000")
+      store.budgets
+
+      store.create_budget_update!(
+        effective_date: Date.new(2026, 6, 1), note: "Budget meeting", created_by: users(:member),
+        forecasts: [ { budget_id: budget.record_id, amount: BigDecimal("500") } ]
+      )
+
+      assert_equal BigDecimal("500"), store.budgets.sole.current_forecast
+    end
+
+    test "update_person! refreshes the memoized people" do
+      person = store.create_person!(name: "Pat", email: "pat@example.com")
+      store.people # memoize the pre-write list
+
+      store.update_person!(person.record_id, name: "Pat Producer", account_number: "66374958")
+
+      refreshed = store.people.sole
+      assert_equal "Pat Producer", refreshed.name, "update_person! must bust the memoized people"
+      assert_equal "66374958", refreshed.account_number
+    end
+
+    test "update_expense! refreshes the memoized expenses" do
+      expense = Expense.create!(status: Status::PENDING, amount: 5)
+      store.expenses # memoize the pre-write list
+
+      store.update_expense!(expense.record_id, amount: BigDecimal("42"))
+
+      assert_equal BigDecimal("42"), store.expenses.sole.amount,
+                   "update_expense! must bust the memoized expenses"
+    end
+
+    # The sweep: 22 bust_*! call sites, one row per mutator. A missing bust
+    # leaves the very same memoized array object in place, so identity is the
+    # honest uniform check — the content assertions above pin the figures.
+    test "every write busts the memoized list it affects" do
+      person = create_person
+      budget = Budget.create!(name: "Props", nominal_code: "4000")
+      forecast = store.create_forecast!(budget_id: budget.record_id, amount: 100,
+                                        date: Date.new(2026, 5, 1), reason: "initial")
+      expense = Expense.create!(status: Status::SUBMITTED, person: person, budget: budget)
+      draft = Expense.create!(status: Status::DRAFT, person: person)
+      batch = Batch.create!(date_sent: Date.new(2026, 5, 13))
+      accrual = EusaActual.create!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
+      reversal = EusaActual.create!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
+
+      writes = [
+        [ :budgets, "update_budget!", -> { store.update_budget!(budget.record_id, notes: "n") } ],
+        [ :budgets, "update_forecast!",
+          -> { store.update_forecast!(forecast.record_id, amount: 120, date: Date.new(2026, 5, 2), reason: "fix") } ],
+        [ :budgets, "delete_forecast!", -> { store.delete_forecast!(forecast.record_id) } ],
+        [ :expenses, "create_expense!",
+          -> { store.create_expense!(person_record_id: person.record_id, status: Status::PENDING) } ],
+        [ :expenses, "attach_receipt!",
+          -> { store.attach_receipt!(draft.record_id, filename: "d.pdf", content_type: "application/pdf", bytes: "%PDF") } ],
+        [ :expenses, "remove_receipt!",
+          -> { store.remove_receipt!(draft.record_id, draft.reload.receipts.sole.attachment_id) } ],
+        [ :expenses, "revert_expense_to_approved!", -> { store.revert_expense_to_approved!(expense.record_id) } ],
+        [ :expenses, "delete_expense!", -> { store.delete_expense!(draft.record_id) } ],
+        [ :people, "create_person!", -> { store.create_person!(name: "New", email: "new@example.com") } ],
+        [ :batches, "create_batch!", -> { store.create_batch!(date_sent: Date.new(2026, 6, 3)) } ],
+        [ :batches, "update_batch!", -> { store.update_batch!(batch.record_id, producer_notifications_sent: true) } ],
+        [ :batches, "delete_batch!", -> { store.delete_batch!(batch.record_id) } ],
+        [ :eusa_actuals, "create_actual!", -> { store.create_actual!(nominal_code: "4000", narrative: "new", debit: 1) } ],
+        [ :eusa_actuals, "link_actual_to_expense!",
+          -> { store.link_actual_to_expense!(accrual.record_id, expense.record_id) } ],
+        [ :eusa_actuals, "link_actual_to_budget!",
+          -> { store.link_actual_to_budget!(accrual.record_id, budget.record_id) } ],
+        [ :eusa_actuals, "link_offsetting_pair!",
+          -> { store.link_offsetting_pair!(accrual.record_id, reversal.record_id) } ]
+      ]
+
+      writes.each do |list, label, write|
+        before = store.public_send(list)
+        write.call
+        assert_not_same before, store.public_send(list),
+                        "#{label} must bust the memoized #{list} list"
+      end
+    end
+
     # --- Budget overview grouping (Track G Phase 2) ------------------------
 
     test "budgets_by_nominal_code groups budgets under their code, sorted, blanks last" do
