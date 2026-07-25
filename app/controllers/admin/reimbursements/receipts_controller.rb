@@ -28,9 +28,12 @@ module Admin
       private
 
       def attach_uploads(expense)
-        return [ "No files received." ] if ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts]).empty?
+        attached, upload_errors = attach_posted_receipts(expense)
+        return upload_errors if attached.positive? || upload_errors.any?
 
-        attach_posted_receipts(expense).last
+        # Nothing usable and nothing to report on: the drop target posted no
+        # files at all (or only things that were never uploads).
+        [ "No files received." ]
       end
 
       def respond_with_gallery(record_id, upload_errors: [], notice: nil)
