@@ -25,6 +25,8 @@ namespace :reimbursements do
   # See docs/reimbursements/encryption-rollout.md for the full sequence.
   desc "Backfill: re-save reimbursements bank details so they encrypt at rest"
   task encrypt_backfill: :environment do
+    failures = 0
+
     [ Reimbursements::PaymentDetails, Reimbursements::Expense ].each do |model|
       total = model.count
       encrypted = 0
@@ -39,9 +41,17 @@ namespace :reimbursements do
         warn "  ! #{model.name}##{record.id} failed: #{e.class}: #{e.message}"
       end
 
+      failures += failed
       puts "  #{model.name}: processed #{encrypted}/#{total}" \
            "#{failed.positive? ? " (#{failed} failed)" : ''}"
     end
+
+    # Abort loudly rather than printing the flip-the-flag advice: the next step
+    # turns support_unencrypted_data off, after which any row this task failed
+    # to convert raises on read and its bank details are unrecoverable. Exiting
+    # 0 here would let a scripted rollout march straight past that.
+    abort "#{failures} record(s) failed to encrypt. Fix these before going further: " \
+          "flipping support_unencrypted_data off now would make them unreadable." if failures.positive?
 
     puts "Done. Verify a sample row's raw column is ciphertext, then flip " \
          "config.active_record.encryption.support_unencrypted_data to false."
