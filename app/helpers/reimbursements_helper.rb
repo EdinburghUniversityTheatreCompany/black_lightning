@@ -88,6 +88,15 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # Who a submitter writes to about a claim finance has already picked up.
+  # Read from the cost centre rather than hardcoded, so a second cost centre
+  # points at a mailbox its own finance team actually reads. Falls back to
+  # plain words rather than an empty mailto when no cost centre is configured.
+  def reimbursements_contact_link
+    email = Reimbursements::CostCentre.default&.contact_email
+    email.present? ? mail_to(email) : "the finance team"
+  end
+
   # Debits less credits over a set of EUSA ledger rows (offsetting legs
   # dropped) — the same netting the budget rollups use, so the overview's
   # unattributed totals can't disagree with the per-budget figures.

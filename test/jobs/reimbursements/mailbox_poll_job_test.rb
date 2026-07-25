@@ -119,6 +119,24 @@ module Reimbursements
       assert_equal 0, Expense.count
     end
 
+    # The reply is written in the name of the cost centre whose mailbox the
+    # message arrived on. A termtime submitter told to write to the Fringe's
+    # finance address emails a team that can't help them.
+    test "the automated reply names the cost centre whose mailbox it came from" do
+      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+      CostCentre.where.not(id: termtime.id).destroy_all
+      setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
+
+      MailboxPollJob.perform_now
+
+      reply = @mailbox.replies.sole.last
+      assert_includes reply, "If you're part of Bedlam Termtime,"
+      assert_includes reply, "Contact termtime@bedlamtheatre.co.uk."
+      assert_includes reply, "Bedlam Termtime finance (automated reply)"
+      assert_not_includes reply, "Fringe"
+    end
+
     test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do
       # mark_read_and_move moves BEFORE marking read specifically so a move
       # failure here (no expense created on this path) leaves the message
