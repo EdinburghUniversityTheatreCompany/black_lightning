@@ -44,6 +44,7 @@ module Admin
         @new_rows, @skipped_rows = dedup(parsed)
         @offsetting_pairs, unpaired = ::Reimbursements::Reconciliation.detect_offsetting_pairs(@new_rows)
         @matched_debits, @matched_credits, @unmatched_rows = build_matches(unpaired)
+        @offset_pair_consequences = offset_pair_consequences(@offsetting_pairs, @matched_debits)
         render :preview
       end
 
@@ -140,11 +141,8 @@ module Admin
       # that's already been paid — the per-period dedup only catches an identical
       # row, so a row that differs slightly would otherwise slip through.
       def build_matches(rows)
-        reconciled_ids = reconciled_expense_ids
-        remaining = store.expenses.select do |e|
-          matchable_statuses.include?(e.status) && !already_reconciled?(e, reconciled_ids)
-        end
-        income_budgets = store.budgets.select(&:income?)
+        remaining = matchable_expenses
+        income_budgets = income_budgets_pool
 
         matched_debits = []
         matched_credits = []
@@ -172,6 +170,46 @@ module Admin
 
       def matchable_statuses
         [ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]
+      end
+
+      # Every expense a debit row is allowed to match, as a fresh array the
+      # caller may consume from (a matched expense is deleted so it can't be
+      # claimed twice).
+      def matchable_expenses
+        reconciled_ids = reconciled_expense_ids
+        store.expenses.select do |e|
+          matchable_statuses.include?(e.status) && !already_reconciled?(e, reconciled_ids)
+        end
+      end
+
+      def income_budgets_pool
+        store.budgets.select(&:income?)
+      end
+
+      # What each proposed pair would do if the operator unticked it, as
+      # { pair key => { expense:, budget: } }.
+      #
+      # The "will mark N matched expenses Paid" count is computed from the
+      # UNPAIRED rows only, but apply hands an unticked pair's legs back to the
+      # ordinary matching, so it can pay (and email) expenses the confirmation
+      # never mentioned. Naming the specific expense per pair is more use than a
+      # corrected total: it tells the operator what THIS tick is deciding,
+      # before they submit, and stays right however many pairs they untick.
+      #
+      # Pairs are walked in order, each consuming its match from the pool that
+      # the ordinary matching left behind, because apply claims each expense
+      # once — two lookalike pairs must not both promise to pay the same one.
+      def offset_pair_consequences(pairs, matched_debits)
+        claimed = matched_debits.map { |_row, expense| expense.record_id }.to_set
+        remaining = matchable_expenses.reject { |e| claimed.include?(e.record_id) }
+        budgets = income_budgets_pool
+
+        pairs.to_h do |pair|
+          expense = ::Reimbursements::Reconciliation.match_debit_to_expense(pair.debit_row, remaining)
+          remaining.delete(expense) if expense
+          budget = ::Reimbursements::Reconciliation.match_credit_to_budget(pair.credit_row, budgets)
+          [ pair.key, { expense: expense, budget: budget } ]
+        end
       end
 
       # Record ids of every expense already linked to an imported EUSA actual —
@@ -211,12 +249,13 @@ module Admin
       end
 
       # Both legs are imported and then pointed at each other: the pair nets to
-      # zero, but finance still needs to see that both entries exist.
+      # zero, but finance still needs to see that both entries exist. One store
+      # call, one transaction — see DatabaseStore#create_offsetting_pair! for why
+      # a half-written pair is unrepairable.
       def apply_offsetting_pair(pair, imported_at)
         with_row_rescue("an offsetting pair") do
-          debit = store.create_actual!(actuals_attrs(pair.debit_row, imported_at))
-          credit = store.create_actual!(actuals_attrs(pair.credit_row, imported_at))
-          store.link_offsetting_pair!(debit.record_id, credit.record_id)
+          store.create_offsetting_pair!(actuals_attrs(pair.debit_row, imported_at),
+                                        actuals_attrs(pair.credit_row, imported_at))
         end
       end
 

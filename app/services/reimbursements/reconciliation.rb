@@ -22,12 +22,32 @@ module Reimbursements
     ##
     # Two rows of a paste that cancel each other out (an accrual and its
     # reversal, a journal booked and re-booked), with the evidence score that
-    # got them proposed. +key+ identifies the pair by CONTENT, not by position,
-    # so the preview's tickbox survives the stateless wizard's re-parse on
-    # apply even if the rows shift.
-    OffsetPair = Data.define(:debit_row, :credit_row, :debit_index, :credit_index, :score) do
+    # got them proposed.
+    #
+    # +key+ identifies the pair by each leg's CONTENT plus which occurrence of
+    # that content it is (0 for the first row carrying it, 1 for the next, ...),
+    # never by absolute position. Both halves matter:
+    #
+    # * the content digest is what survives the stateless wizard's re-parse on
+    #   apply, and is unaffected by rows shifting position;
+    # * the occurrence counter is what keeps two byte-identical pairs apart. A
+    #   paste really can contain two separate £10 accruals and their two
+    #   reversals; on a content-only key those collapse into one tickbox, so
+    #   ticking one "votes for" the other and a genuine transaction is stamped
+    #   as bookkeeping noise. A bare row index would separate them too, but it
+    #   moves whenever anything earlier in the paste is added, removed or
+    #   reordered, whereas an occurrence counter only moves when a row with
+    #   IDENTICAL content is added or removed.
+    #
+    # If a key does fail to match on apply (the operator edited the textarea, or
+    # a concurrent import changed what the dedup step drops), the pair reads as
+    # unticked: both legs import as ordinary rows for a human to look at, which
+    # is the safe direction. Inventing an offset is the unrecoverable mistake.
+    OffsetPair = Data.define(:debit_row, :credit_row, :debit_index, :credit_index,
+                             :debit_occurrence, :credit_occurrence, :score) do
       def key
-        "#{Reconciliation.row_key(debit_row)}:#{Reconciliation.row_key(credit_row)}"
+        "#{Reconciliation.row_key(debit_row)}-#{debit_occurrence}" \
+          "_#{Reconciliation.row_key(credit_row)}-#{credit_occurrence}"
       end
     end
 
@@ -143,22 +163,31 @@ module Reimbursements
 
     # --- offsetting pairs --------------------------------------------------
 
-    # Scoring weights, tuned against a real 309-row EUSA F40 export. Offset
-    # legs there are overwhelmingly on the SAME nominal code (they are
-    # accrual/reversal and re-booked journal pairs, not cross-code
-    # reclassifications), but the reference only matches about half the time,
-    # and legs routinely straddle months (a September accrual released in
-    # October; one pair three months apart). So no single predicate can be a
-    # hard filter: a genuine claim can collide by amount with an unrelated
-    # reversal, and only weighing the evidence keeps the two apart.
+    # Scoring weights, tuned against a real 309-row EUSA F40 export. The
+    # reference there matches only about half the time, and legs routinely
+    # straddle months (a September accrual released in October; one pair three
+    # months apart), so neither can be a hard filter: a genuine claim can
+    # collide by amount with an unrelated reversal, and only weighing the
+    # evidence keeps the two apart.
+    #
+    # The nominal code IS a hard filter (see offset_candidates) and still
+    # scores, so the score a pair shows finance keeps its /8 scale.
     OFFSET_SCORE_SAME_REF = 4
     OFFSET_SCORE_SAME_NOMINAL = 2
     OFFSET_SCORE_SAME_PERIOD = 1
     OFFSET_SCORE_NARRATIVE_PREFIX = 1
-    # A pair must reach this to be proposed at all: a reference match on its
-    # own clears it, as does nominal + period + narrative agreement on the same
-    # day. Anything weaker leaves BOTH rows in the working set rather than
-    # guessing.
+    # A pair must reach this to be proposed at all. Since same nominal code is
+    # required, every candidate starts from 2 and has to find 2 more points:
+    #
+    #   * a reference match takes it to 6, or 5/4 once the date penalty bites
+    #     (ref agreement ALONE is 4 minus that penalty, so only a same-day
+    #     reference match would clear the floor by itself);
+    #   * without a reference, period + narrative agreement on the same day is
+    #     exactly 4.
+    #
+    # Anything weaker (nominal + period a fortnight apart is 2) leaves BOTH rows
+    # in the working set rather than guessing. Maximum is 8: everything
+    # agreeing, same day.
     OFFSET_MIN_SCORE = 4
     # Legs this far apart or less cost 1 point, further costs 2.
     OFFSET_NEAR_DATE_DAYS = 31
@@ -177,12 +206,13 @@ module Reimbursements
     # debit->expense / credit->budget matching.
     #
     # Candidates are rows with an identical absolute amount (exact BigDecimal,
-    # never a float), opposite signs, in the same financial year. Each is
-    # scored, anything below OFFSET_MIN_SCORE is dropped, and the survivors are
-    # taken greedily strongest-first so a row can only ever belong to one pair
-    # and the best-evidenced claim on a leg wins.
+    # never a float), opposite signs, on the same nominal code, in the same
+    # financial year. Each is scored, anything below OFFSET_MIN_SCORE is
+    # dropped, and the survivors are taken greedily strongest-first so a row can
+    # only ever belong to one pair and the best-evidenced claim on a leg wins.
     def detect_offsetting_pairs(rows)
       candidates = offset_candidates(rows)
+      occurrences = row_occurrences(rows)
       consumed = Set.new
       pairs = []
 
@@ -191,7 +221,10 @@ module Reimbursements
 
         consumed << debit.last << credit.last
         pairs << OffsetPair.new(debit_row: debit.first, credit_row: credit.first,
-                                debit_index: debit.last, credit_index: credit.last, score: score)
+                                debit_index: debit.last, credit_index: credit.last,
+                                debit_occurrence: occurrences[debit.last],
+                                credit_occurrence: occurrences[credit.last],
+                                score: score)
       end
 
       remaining = rows.each_with_index.reject { |_row, index| consumed.include?(index) }.map(&:first)
@@ -205,6 +238,20 @@ module Reimbursements
                  row.narrative, row.narrative_1, row.debit, row.credit, row.net ]
       Digest::SHA256.hexdigest(fields.map(&:to_s).join(""))[0, 12]
     end
+
+    # For each row, how many EARLIER rows in the paste carry byte-identical
+    # content: 0 for the first occurrence, 1 for the next, and so on. This is
+    # what lets two duplicate pairs have two tickboxes (see OffsetPair#key).
+    def row_occurrences(rows)
+      seen = Hash.new(0)
+      rows.map do |row|
+        key = row_key(row)
+        count = seen[key]
+        seen[key] = count + 1
+        count
+      end
+    end
+    private_class_method :row_occurrences
 
     # The eligible pairs, strongest evidence first; ties break on paste order so
     # the result is deterministic. Rows are bucketed by absolute amount before
@@ -222,6 +269,17 @@ module Reimbursements
 
         bucket.combination(2) do |(row_a, index_a, amount_a), (row_b, index_b, amount_b)|
           next unless amount_a.negative? ^ amount_b.negative?
+          # Same nominal code is a HARD requirement, not just 2 points. A Sage
+          # payment-run reference is stamped across every row of the run, so
+          # ref (4) + period (1) on the same day clears the floor with no code
+          # agreement at all and pairs a cost with an unrelated income of the
+          # same size: both stamped offset, the cost hidden from every rollup,
+          # and the expense behind it never paid. In the real 309-row export
+          # essentially every genuine pair was same-nominal (they are
+          # accrual/reversal and re-booked journal pairs, not cross-code
+          # reclassifications), so this costs approximately nothing. Blank codes
+          # agree on nothing, so they never pair either.
+          next unless same_field?(row_a.nominal_code, row_b.nominal_code)
           next unless same_financial_year?(row_a.date, row_b.date)
 
           score = offset_pair_score(row_a, row_b)

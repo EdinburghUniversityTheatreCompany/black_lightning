@@ -5,6 +5,23 @@ module Admin
   class ActualsControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
+    # A store whose actual-to-expense link write always fails: the conversion's
+    # second write dying after the expense was created.
+    class UnlinkableStore < ::Reimbursements::DatabaseStore
+      def link_actual_to_expense!(_actual_id, _expense_id)
+        raise "blip"
+      end
+    end
+
+    # A store that hands the controller a STALE row: the copy the before_action
+    # checks still looks unlinked while the stored row has already been
+    # converted. This is what a second click on a double-submitted form sees.
+    class StaleActualStore < ::Reimbursements::DatabaseStore
+      def find_actual(record_id)
+        super&.tap { |actual| actual.expense_id = nil }
+      end
+    end
+
     setup do
       finance = Role.create!(name: "Business Manager")
       finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -29,6 +46,12 @@ module Admin
         date: Date.new(2026, 6, 1), debit: BigDecimal("42.0"),
         imported_at: Time.utc(2026, 6, 5, 9)
       )
+    end
+
+    # store_builder is a class attribute, so a test that swaps in a failing store
+    # must hand the real one back or every later test inherits it.
+    teardown do
+      BaseController.store_builder = -> { ::Reimbursements.build_store }
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -173,7 +196,9 @@ module Admin
       get :index, format: :csv
 
       rows = CSV.parse(response.body)
-      assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period" ], rows.first
+      assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period",
+                     "Status" ],
+                   rows.first
       assert_equal 4, rows.size, "header + three actuals"
 
       # The expense-linked debit row resolves the expense's auto-number.
@@ -182,12 +207,43 @@ module Admin
       assert_equal "123.45", exp_row[3]
       assert_equal "42", exp_row[5]
       assert_equal "03", exp_row[6]
+      assert_equal "", exp_row[7].to_s, "an ordinary row has no reconciliation status"
 
       # The budget-linked credit row resolves the budget name.
       bud_row = rows.find { |r| r[2] == "Box office" }
       assert_equal "Credit", bud_row[1]
-      assert_equal "500.0", bud_row[3]
+      assert_equal "-500.0", bud_row[3], "income is signed negative (see the export's Amount note)"
       assert_equal "Props", bud_row[4]
+    end
+
+    # Amount was unsigned, so a naive SUM() over a mixed export added income to
+    # spend, and an offset pair counted twice its value instead of zero. Income
+    # is now negative and both offset legs are labelled, so the column sums to
+    # net spend.
+    test "index CSV export signs the amount so income subtracts from spend" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body, headers: true)
+      debit = rows.find { |r| r["Description"] == "Alice Producer" }
+      credit = rows.find { |r| r["Description"] == "Box office" }
+      assert_equal BigDecimal("123.45"), BigDecimal(debit["Amount"])
+      assert_equal BigDecimal("-500.0"), BigDecimal(credit["Amount"]),
+                   "a credit is income, so it must not add to spend"
+    end
+
+    test "index CSV export marks both legs of an offsetting pair, and they sum to zero" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }, format: :csv
+
+      rows = CSV.parse(response.body, headers: true)
+      legs = rows.select { |r| r["Status"] == "Offset" }
+      assert_equal 2, legs.size, "an included offset pair is flagged on both legs"
+      assert_equal BigDecimal("0"), legs.sum { |r| BigDecimal(r["Amount"]) },
+                   "a cross-linked pair contributes nothing to a SUM of the column"
     end
 
     test "index CSV export neutralises formula-injected narrative text" do
@@ -277,6 +333,93 @@ module Admin
 
       get :index, params: { include_offsets: "1" }, format: :csv
       assert_equal 6, CSV.parse(response.body).size, "header + all five rows"
+    end
+
+    # --- Undoing an offset --------------------------------------------------
+    #
+    # A false positive in the pairing heuristic stamps real spend as noise,
+    # hiding it from the ledger view and every rollup. There has to be a way
+    # back that doesn't need a console.
+
+    test "unoffset clears the stamp and the cross-link on both legs" do
+      accrual, reversal = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      [ accrual, reversal ].each do |leg|
+        leg.reload
+        assert_not_predicate leg, :offset?
+        assert_nil leg.offset_of_id
+      end
+      assert_equal 2, ::Reimbursements::EusaActual.where(id: [ accrual.id, reversal.id ]).count,
+                   "both rows survive: finance needs the audit trail either way"
+    end
+
+    test "unoffset works from either leg" do
+      accrual, reversal = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: reversal.record_id }
+
+      assert_not_predicate accrual.reload, :offset?
+      assert_not_predicate reversal.reload, :offset?
+    end
+
+    # An un-offset debit row is ordinary spend again, so it can be converted.
+    test "an un-offset debit row becomes convertible again" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_predicate accrual.reload, :convertible_to_expense?
+    end
+
+    test "unoffset keeps the operator's filters" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id, period: "04", include_offsets: "1" }
+
+      assert_redirected_to admin_reimbursements_actuals_path(period: "04", include_offsets: "1")
+    end
+
+    test "unoffset refuses a row that is not marked offsetting" do
+      sign_in @user
+
+      post :unoffset, params: { id: @unlinked.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/not marked/i, flash[:alert])
+    end
+
+    test "unoffset 404s for an unknown row" do
+      sign_in @user
+      post :unoffset, params: { id: "999999" }
+
+      assert_response :not_found
+    end
+
+    test "unoffset is gated by the finance permission" do
+      accrual, = create_offsetting_pair
+      sign_in users(:committee)
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_response :forbidden
+      assert_predicate accrual.reload, :offset?
+    end
+
+    test "an offsetting row offers the undo button" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }
+
+      assert_response :success
+      assert_includes response.body, unoffset_admin_reimbursements_actual_path(accrual.record_id)
     end
 
     # --- Convert an actual into a From-EUSA expense ------------------------
@@ -474,6 +617,55 @@ module Admin
       expense = ::Reimbursements::Expense.order(:id).last
       assert_equal BigDecimal("42.0"), expense.amount, "the ledger row is the source of truth"
       assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+    end
+
+    # --- Conversion is one unit ---------------------------------------------
+    #
+    # create_expense! and link_actual_to_expense! used to run as two unrescued
+    # writes, and the "already converted" guard is state-based: if the link
+    # failed, a Paid expense existed charged to a budget while the row stayed
+    # unlinked and kept offering a "Create expense" button, so the next click
+    # double-counted the same EUSA charge.
+
+    test "a conversion whose link write fails creates no expense at all" do
+      BaseController.store_builder = -> { UnlinkableStore.new }
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        assert_raises(RuntimeError) do
+          post :create_expense, params: {
+            id: @unlinked.record_id,
+            reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                           description: "Room hire recharge",
+                                           payment_reference: "J000001234" }
+          }
+        end
+      end
+
+      assert_empty @unlinked.reload.linked_expense_ids
+    end
+
+    # The convertibility check has to be re-taken inside the writing
+    # transaction: a second click whose before_action read the row before the
+    # first click committed would otherwise convert it again.
+    test "a conversion racing another one is refused rather than duplicated" do
+      BaseController.store_builder = -> { StaleActualStore.new }
+      ::Reimbursements::EusaActual.find(@unlinked.id).update!(expense: @expense)
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: @unlinked.record_id,
+          reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                         description: "Room hire recharge",
+                                         payment_reference: "J000001234" }
+        }
+      end
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/already/i, flash[:alert])
+      assert_equal [ @expense.record_id ], @unlinked.reload.linked_expense_ids,
+                   "the first conversion's link stands"
     end
 
     test "conversion is gated by the finance permission" do

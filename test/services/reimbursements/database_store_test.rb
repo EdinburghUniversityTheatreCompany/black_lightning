@@ -232,6 +232,82 @@ module Reimbursements
       assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
     end
 
+    test "create_expense_for_actual! creates the expense already linked to the row" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+
+      expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_equal [ expense.record_id ], actual.reload.linked_expense_ids
+      assert_not_predicate actual, :convertible_to_expense?
+    end
+
+    # The convertibility guard lives INSIDE the writing transaction, so a caller
+    # whose own check went stale cannot convert the same row twice.
+    test "create_expense_for_actual! refuses a row that is already converted" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+      store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_raises(DatabaseStore::NotConvertibleError) do
+        store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+      end
+      assert_equal 1, Expense.count, "the second attempt writes nothing"
+    end
+
+    test "create_expense_for_actual! refuses an offsetting leg" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Accrual", debit: 42)
+      counterpart = store.create_actual!(nominal_code: "4000", narrative: "Reversal", credit: 42)
+      store.link_offsetting_pair!(actual.record_id, counterpart.record_id)
+
+      assert_raises(DatabaseStore::NotConvertibleError) do
+        store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+      end
+      assert_equal 0, Expense.count, "an offsetting leg nets to zero, converting it invents spend"
+    end
+
+    test "create_offsetting_pair! imports both legs already cross-linked" do
+      legs = store.create_offsetting_pair!(
+        { nominal_code: "4000", narrative: "ACCRUAL", debit: 10 },
+        { nominal_code: "4000", narrative: "REVERSAL", credit: 10 }
+      )
+
+      assert_equal 2, EusaActual.count
+      assert legs.all?(&:offset?)
+      assert_equal legs.last.id, legs.first.offset_of_id
+      assert_equal legs.first.id, legs.last.offset_of_id
+      assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
+    end
+
+    test "unlink_offsetting_pair! clears both legs from either side" do
+      accrual = store.create_actual!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10)
+      reversal = store.create_actual!(nominal_code: "4000", narrative: "REVERSAL", credit: 10)
+      store.link_offsetting_pair!(accrual.record_id, reversal.record_id)
+
+      store.unlink_offsetting_pair!(reversal.record_id)
+
+      [ accrual, reversal ].each do |leg|
+        leg.reload
+        assert_not_predicate leg, :offset?
+        assert_nil leg.offset_of_id
+      end
+      assert_equal 2, EusaActual.count, "unlinking never deletes a row"
+      assert store.eusa_actuals.none?(&:offset?), "the memoized list is busted, not stale"
+    end
+
+    # A row pointing AT the one being cleared is cleared too, so a half-linked
+    # row from an older import can't be left stamped with a dangling pointer.
+    test "unlink_offsetting_pair! also clears a leg that only points at this one" do
+      target = store.create_actual!(nominal_code: "4000", narrative: "TARGET", debit: 10)
+      pointer = store.create_actual!(nominal_code: "4000", narrative: "POINTER", credit: 10)
+      pointer.update!(offset_of_id: target.id, reconciliation_status: EusaActual::STATUS_OFFSET)
+      target.update!(reconciliation_status: EusaActual::STATUS_OFFSET)
+
+      store.unlink_offsetting_pair!(target.record_id)
+
+      assert_not_predicate pointer.reload, :offset?
+      assert_nil pointer.offset_of_id
+      assert_not_predicate target.reload, :offset?
+    end
+
     test "memoized lists refresh after bust_expenses!" do
       store.expenses
       Expense.create!(status: Status::PENDING)

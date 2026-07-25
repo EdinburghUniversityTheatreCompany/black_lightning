@@ -31,6 +31,29 @@ module Admin
       end
     end
 
+    # DatabaseStore that fails part-way through writing an offsetting pair: on
+    # the second leg's insert, or on the cross-link that follows it.
+    class HalfPairStore < ::Reimbursements::DatabaseStore
+      def initialize(fail_on:)
+        super()
+        @fail_on = fail_on
+        @creates = 0
+      end
+
+      def create_actual!(attrs)
+        @creates += 1
+        raise "blip" if @fail_on == :second_leg && @creates == 2
+
+        super
+      end
+
+      def link_offsetting_pair!(actual_id, counterpart_id)
+        raise "blip" if @fail_on == :link
+
+        super
+      end
+    end
+
     setup do
       finance = Role.create!(name: "Business Manager")
       finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -492,6 +515,139 @@ module Admin
       assert_response :success
       assert_equal 1, assigns(:offsetting_pairs).size
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+    end
+
+    # --- The preview is honest about what unticking would do ---------------
+    #
+    # preview counts matched expenses over the UNPAIRED rows only, while apply
+    # hands an unticked pair's legs back to the ordinary matching and can pay
+    # (and email) expenses the confirmation never mentioned. Each pair therefore
+    # states what unticking it would cost.
+
+    def lookalike_expense
+      create_reimbursements_expense(
+        person: @person, budget: @budget, amount: BigDecimal("500.00"),
+        amount_excl_vat: BigDecimal("500.00"), status: ::Reimbursements::Status::SUBMITTED,
+        submitted_to_eusa_date: Date.new(2026, 4, 27), nominal_code_override: ACCRUAL_NOMINAL,
+        receipt: false
+      )
+    end
+
+    test "the preview spells out the expense a pair would pay if unticked" do
+      lookalike = lookalike_expense
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits), "a paired row is not in the ordinary matching"
+      key = assigns(:offsetting_pairs).sole.key
+      assert_equal lookalike.record_id, assigns(:offset_pair_consequences)[key][:expense].record_id
+      assert_select "td[colspan=7]", text: /If you untick this pair.*##{lookalike.auto_number}/m
+      assert_select "td[rowspan=3]", 2, "the checkbox and score cells span the note row"
+      assert_includes response.body, "can add to that count"
+    end
+
+    test "the preview says nothing about a pair whose legs match nothing" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      assert_nil assigns(:offset_pair_consequences)[assigns(:offsetting_pairs).sole.key][:expense]
+      assert_no_match(/if you untick/i, response.body)
+    end
+
+    # Two pairs that both look like the same expense must not both claim it:
+    # apply matches each expense once, so the preview has to as well.
+    test "two identical pairs never both claim the same expense if unticked" do
+      lookalike_expense
+      sign_in @user
+
+      post :preview, params: { pasted_text: [ HEADER, accrual_row, reversal_row,
+                                              accrual_row, reversal_row ].join("\n") }
+
+      assert_response :success
+      claimed = assigns(:offset_pair_consequences).values.filter_map { |c| c[:expense] }
+      assert_equal 1, claimed.size, "the second pair has no expense left to pay"
+    end
+
+    # --- A pair is written all-or-nothing ----------------------------------
+    #
+    # A half-written pair is the worst state available: the debit leg is
+    # committed WITHOUT the offset stamp, so every rollup reads it as real
+    # spend, and re-pasting cannot repair it because dedup then skips that leg
+    # and the pair can never be re-formed. Both legs and the cross-link are one
+    # transaction.
+
+    test "a pair whose second leg fails to insert writes neither leg" do
+      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :second_leg) }
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count,
+                   "a stranded unstamped debit leg would read as real spend forever"
+      assert_equal 0, assigns(:offsets_linked)
+      assert_match(/offsetting pair.*blip/i, assigns(:reconciliation_errors).sole)
+    end
+
+    test "a pair whose cross-link fails writes neither leg" do
+      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :link) }
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count,
+                   "two unlinked ordinary actuals are exactly what the pair transaction prevents"
+      assert_equal 0, assigns(:offsets_linked)
+    end
+
+    # --- Duplicate pairs ---------------------------------------------------
+    #
+    # A paste really can contain the same £10 accrual and reversal twice: two
+    # separate transactions, two separate pairs. They must get two tickboxes,
+    # because ticking one and unticking the other has to mean exactly that.
+
+    def duplicate_pairs_paste
+      accrual = accrual_row(amount: "10.00")
+      reversal = reversal_row(amount: "10.00")
+      [ HEADER, accrual, reversal, accrual, reversal ].join("\n")
+    end
+
+    test "two byte-identical pairs render as two separately tickable rows" do
+      sign_in @user
+      post :preview, params: { pasted_text: duplicate_pairs_paste }
+
+      assert_response :success
+      pairs = assigns(:offsetting_pairs)
+      assert_equal 2, pairs.size
+      assert_equal 2, pairs.map(&:key).uniq.size, "two real pairs, two keys"
+      pairs.each do |pair|
+        assert_select "input[type=checkbox][name='offset_pair_keys[]'][value=?][checked=checked]",
+                      pair.key
+        assert_select "##{"offset-pair-#{pair.key}"}", 1, "each checkbox needs its own DOM id"
+      end
+    end
+
+    test "unticking one of two identical pairs offsets only the other" do
+      sign_in @user
+      keys = offsetting_pair_keys(duplicate_pairs_paste)
+      assert_equal 2, keys.uniq.size, "the two pairs must be distinguishable to begin with"
+
+      post :apply, params: { pasted_text: duplicate_pairs_paste, offset_pair_keys: [ keys.first ] }
+
+      assert_response :success
+      assert_equal 1, assigns(:offsets_linked)
+      assert_equal 4, ::Reimbursements::EusaActual.count, "all four rows are still imported"
+      assert_equal 2, ::Reimbursements::EusaActual.all.count(&:offset?),
+                   "only the ticked pair's two legs are stamped offset"
+      assert_equal 2, assigns(:unmatched_saved),
+                   "the unticked pair's legs are imported as ordinary rows"
     end
 
     # Preview and apply both re-derive the pairs from the pasted text (the

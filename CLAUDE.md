@@ -251,22 +251,43 @@ survive as historical import provenance and are never written. Spec + plan in
   spreadsheet EUSA pays from carries full numbers.
 - **EUSA actuals — offsetting pairs + conversion.**
   `Reconciliation.detect_offsetting_pairs` finds the accrual/reversal legs that cancel out
-  in a pasted export: same absolute amount (exact BigDecimal), opposite sign, same
-  financial year, then **scored** (ref 4, nominal 2, period 1, narrative prefix 1, minus a
-  date-distance penalty) and taken greedily from the strongest, with a floor of 4. The
-  weights are tuned against a real 309-row F40 export — legs are nearly always on the
-  *same* nominal code, refs match only about half the time, and legs straddle months, so
-  nothing can be a hard filter: a genuine claim collides by amount with an unrelated
-  reversal in that data, and only scoring keeps them apart. The preview shows every pair as
-  a **ticked checkbox** (keyed by row *content*, so it survives the stateless wizard's
-  re-parse on apply); unticking hands the legs back to the ordinary matching. Applying
-  imports both legs and stamps each `reconciliation_status: "offset"` + `offset_of_id` at
-  the other — rows are never deleted, finance needs the audit trail.
+  in a pasted export. **The governing asymmetry for every judgement call here**: a false
+  positive stamps real spend as offset, which hides it from the ledger view and every
+  rollup, while a false negative just leaves rows visibly unmatched for a human. Prefer
+  missing a pair over inventing one.
+  **Hard requirements**: same absolute amount (exact BigDecimal), opposite sign, **same
+  nominal code**, same financial year. Survivors are **scored** (ref 4, nominal 2, period 1,
+  narrative prefix 1, minus a date-distance penalty of 1 or 2) and taken greedily from the
+  strongest, with a floor of 4 — so with the nominal gate every candidate starts at 2 and
+  must find 2 more points (ref alone is 4 *minus* the date penalty, so a ref match on its
+  own only clears the floor same-day). The weights are tuned against a real 309-row F40
+  export: refs match only about half the time and legs straddle months, so neither can be a
+  hard filter, but the nominal code *is* one (a Sage payment-run ref stamped across a run
+  otherwise scored 5 pairing a cost with unrelated income of the same size). Verified on
+  that export: 58 pairs with the gate, 58 without, none cross-nominal, so the tightening
+  costs nothing.
+  The preview shows every pair as a **ticked checkbox** keyed by row *content plus an
+  occurrence index* — content alone collapses two byte-identical pairs into one vote (that
+  export contains a byte-identical row group), and the occurrence index survives rows
+  shifting position, which a bare row index would not. A key that fails to match on apply
+  reads as unticked, the safe direction. Each pair also states what unticking it would pay,
+  because the "N matched expenses" count covers the unpaired rows only. Applying imports
+  both legs and stamps each `reconciliation_status: "offset"` + `offset_of_id` at the other
+  in **one transaction** (`DatabaseStore#create_offsetting_pair!`: a half-written pair leaves
+  the debit leg reading as real spend, and re-pasting can't repair it because dedup then
+  skips that leg). Rows are never deleted, finance needs the audit trail — and a
+  mis-detected pair is undone with the finance-gated **"Not offsetting"** button on the
+  Actuals index (`ActualsController#unoffset` + `DatabaseStore#unlink_offsetting_pair!`).
   **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`,
   Mick's call): it nets to zero, so converting it would invent spend. Unlinked *debit* rows
   can be converted (`ExpenseForm.from_actual` + `ActualsController#new_expense/#create_expense`),
   created **directly Paid** with `payment_confirmed_date` from the row so they never enter
-  review/batch. `from_actual` sets an `internal` flag that admits `TYPE_FROM_EUSA` and
+  review/batch. The conversion goes through `DatabaseStore#create_expense_for_actual!`, which
+  creates the expense and links the row in one transaction and **re-takes the convertibility
+  check inside it under a row lock** — the controller's own check is a read that goes stale on
+  a double-submitted form, and an expense created without its back-link leaves the row still
+  offering "Create expense", so the next click double-counts the same EUSA charge.
+  `NotConvertibleError` surfaces as a redirect saying nothing was created twice. `from_actual` sets an `internal` flag that admits `TYPE_FROM_EUSA` and
   relaxes the receipt/VAT/large-amount blocks; it is deliberately **not** a permitted
   parameter on the producer form, so a submitter can't pick the internal type to dodge the
   receipt rule.

@@ -77,6 +77,17 @@
               link_to("Create expense",
                       new_expense_admin_reimbursements_actual_path(actual.record_id),
                       class: btn_classes(:secondary, :sm))
+            elsif actual.offset?
+              # The pairing heuristic can be wrong, and a wrong pair hides real
+              # spend from every rollup, so the operator can always undo one.
+              button_to("Not offsetting",
+                        unoffset_admin_reimbursements_actual_path(
+                          actual.record_id, period: @period.presence,
+                          include_offsets: (@include_offsets ? "1" : nil)
+                        ),
+                        class: btn_classes(:secondary, :sm), form_class: "inline-block",
+                        data: { turbo_confirm: "Treat these two rows as real spend or income " \
+                                               "again? Both stay on the ledger." })
             end)
          ]
        }

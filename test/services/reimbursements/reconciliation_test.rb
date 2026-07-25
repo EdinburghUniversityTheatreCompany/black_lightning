@@ -473,6 +473,17 @@ module Reimbursements
     NEAR_MISS_CREDIT = { nominal: "432320", date: "28/05/2025", period: "2", ref: "1137",
                          narrative: "PI 40000456 1234567890", value: "-200.00" }.freeze
 
+    # A Sage payment-run reference is stamped across every row of the run, so a
+    # cost and an unrelated income of the same size share it. On the score alone
+    # that is ref (4) + period (1) with no date penalty = 5, comfortably over the
+    # floor, and both rows would be stamped offset: the lighting hire vanishes
+    # from the ledger and the expense behind it is never paid. Same nominal code
+    # is therefore a hard requirement, not a scoring signal.
+    CROSS_NOMINAL_DEBIT = { nominal: "041000", date: "12/06/2025", period: "3", ref: "BACS0099",
+                            narrative: "Lighting hire for the summer run", value: "1234.56" }.freeze
+    CROSS_NOMINAL_CREDIT = { nominal: "081000", date: "12/06/2025", period: "3", ref: "BACS0099",
+                             narrative: "Ticket income june transfer", value: "-1234.56" }.freeze
+
     REAL_SHAPES = [ ACCRUAL_LEG, REVERSAL_LEG, JOURNAL_LEG_A, JOURNAL_LEG_B,
                     CROSS_MONTH_LEG_A, CROSS_MONTH_LEG_B, COLLIDING_SPEND,
                     NEAR_MISS_DEBIT, NEAR_MISS_CREDIT ].freeze
@@ -547,6 +558,27 @@ module Reimbursements
                    "the weaker claimant (score 4) loses the reversal leg and stays unmatched"
     end
 
+    test "detect_offsetting_pairs never pairs rows on different nominal codes" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ CROSS_NOMINAL_DEBIT, CROSS_NOMINAL_CREDIT ])
+      )
+
+      assert_empty pairs,
+                   "a shared payment-run reference is not evidence of an offset across nominal codes"
+      assert_equal 2, remaining.size, "both rows stay in the working set for a human to handle"
+    end
+
+    # The gate is the codes agreeing, not merely being equal strings: two blank
+    # codes agree on nothing.
+    test "detect_offsetting_pairs never pairs two rows with blank nominal codes" do
+      blank_debit = ACCRUAL_LEG.merge(nominal: "")
+      blank_credit = REVERSAL_LEG.merge(nominal: "")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ blank_debit, blank_credit ]))
+
+      assert_empty pairs
+      assert_equal 2, remaining.size
+    end
+
     test "detect_offsetting_pairs needs the exact same absolute amount" do
       penny_off = REVERSAL_LEG.merge(value: "-186.24")
       pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ ACCRUAL_LEG, penny_off ]))
@@ -598,6 +630,35 @@ module Reimbursements
       )
 
       assert_equal forwards.first.key, with_lead_row.first.key
+    end
+
+    # Two identical accruals and two identical reversals are FOUR real
+    # transactions, so the two pairs they form must stay distinguishable. On a
+    # content-only key they collapse into one, and unticking either one of them
+    # in the preview offsets both — stamping a genuine transaction as
+    # bookkeeping noise.
+    test "two byte-identical pairs in one paste get distinct keys" do
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ])
+      )
+
+      assert_equal 2, pairs.size
+      assert_empty remaining
+      assert_equal 2, pairs.map(&:key).uniq.size, "each pair of real rows needs its own key"
+    end
+
+    # The occurrence counter that keeps duplicates apart counts only rows with
+    # identical CONTENT, so it survives the re-parse the same way the digest
+    # does: adding unrelated rows around a duplicated pair leaves both keys
+    # untouched.
+    test "duplicate pair keys are stable when unrelated rows surround them" do
+      duplicated = [ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ]
+      bare, = Reconciliation.detect_offsetting_pairs(parse_shapes(duplicated))
+      padded, = Reconciliation.detect_offsetting_pairs(
+        parse_shapes([ COLLIDING_SPEND ] + duplicated + [ NEAR_MISS_DEBIT ])
+      )
+
+      assert_equal bare.map(&:key), padded.map(&:key)
     end
   end
 end

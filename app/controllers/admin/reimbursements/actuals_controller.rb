@@ -58,17 +58,51 @@ module Admin
           return
         end
 
-        expense = store.create_expense!(
+        # One store call, one transaction: a Paid expense with no back-link would
+        # leave the row still offering its "Create expense" button, so the next
+        # click would double-count the same EUSA charge.
+        expense = store.create_expense_for_actual!(
+          @actual.record_id,
           @form.create_attrs(nil).merge(status: ::Reimbursements::Status::PAID,
                                         payment_confirmed_date: @actual.date)
         )
-        store.link_actual_to_expense!(@actual.record_id, expense.record_id)
         redirect_to admin_reimbursements_actuals_path,
                     notice: "Expense ##{expense.auto_number} created from this EUSA row and " \
                             "recorded as already paid."
+      rescue ::Reimbursements::DatabaseStore::NotConvertibleError
+        # The row was converted between this request's check and its write (a
+        # double-submitted form, or another operator).
+        redirect_to admin_reimbursements_actuals_path,
+                    alert: "That row had already been converted to an expense, so nothing was " \
+                           "created a second time."
+      end
+
+      # Undo a mis-detected offsetting pair. The heuristic proposes pairs and the
+      # operator ticks them, but a wrong tick stamps real spend as noise and
+      # hides it from the ledger view and every rollup, so the way back must not
+      # need a console. Both legs stay on the ledger, they just stop cancelling.
+      def unoffset
+        actual = find_or_404(:find_actual)
+        unless actual.offset?
+          redirect_to actuals_path_with_filters, alert: "That row is not marked as offsetting."
+          return
+        end
+
+        store.unlink_offsetting_pair!(actual.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "Both rows of that pair are ordinary ledger rows again, so they count " \
+                            "as real spend or income."
       end
 
       private
+
+      # The index's own filters, so undoing an offset doesn't throw the operator
+      # back to an unfiltered first page.
+      def actuals_path_with_filters
+        admin_reimbursements_actuals_path(
+          params.permit(:period, :include_offsets).to_h.compact_blank
+        )
+      end
 
       def set_convertible_actual
         @actual = find_or_404(:find_actual)
