@@ -211,6 +211,39 @@ module Reimbursements
       end
     end
 
+    # S2: the whole point of the outbound gate, driven through the REAL GraphClient
+    # rather than the fake, because the fake has no gate to exercise. A dev shell
+    # holding fnox Azure credentials that clicks Build Batch must not PUT a
+    # spreadsheet of full sort codes and account numbers into production
+    # SharePoint. And the suppressed path has to stay coherent: BatchProcessor must
+    # NOT come away believing the files exist, or an operator reading
+    # receipts_offloaded could delete the only copy of a receipt that was never
+    # backed up.
+    test "a batch built with outbound disabled issues no Graph request and offloads nothing" do
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      build_scenario
+      store = FlakyStore.new
+      http = FakeHttp.new([]) # any request at all would raise "no queued response"
+      graph = GraphClient.new(settings: Settings, http: http, clock: -> { Time.current })
+      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: configured_cost_centre,
+                                    sleeper: ->(_seconds) { })
+
+      result = run_batch(processor, store)
+
+      assert_empty http.requests,
+                   "no Graph request may leave a non-production environment, token exchange included"
+      assert_equal "", result.bacs_sharepoint_url
+      assert_equal 0, result.receipts_uploaded
+      assert(result.errors.any? { |e| e.include?("BACS file SharePoint upload failed") },
+             "the suppression is surfaced, not silent: #{result.errors.inspect}")
+      store.expenses.each do |expense|
+        assert_not expense.receipts_offloaded,
+                   "a suppressed upload must never be recorded as an offloaded receipt"
+      end
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
     test "a BACS-xlsx SharePoint upload failure doesn't block sending to EUSA or the receipt uploads" do
       processor, store, graph = build_scenario
       bacs_filename = "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
