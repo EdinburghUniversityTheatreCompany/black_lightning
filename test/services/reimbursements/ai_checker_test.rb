@@ -30,7 +30,10 @@ module Reimbursements
       defaults = {
         status: Status::PENDING, auto_number: 1,
         person: person, amount: BigDecimal("12.50"), amount_excl_vat: BigDecimal("10.42"),
-        budget: budget, description: "Fake blood"
+        budget: budget, description: "Fake blood",
+        # The submitter consented to AI processing; without that the checker
+        # refuses to run at all (see the consent tests below).
+        ai_processing_consent: true
       }
       exp = Expense.new(**defaults.merge(attrs))
       exp.instance_variable_set(:@receipts, receipts)
@@ -88,6 +91,44 @@ module Reimbursements
 
       assert_equal "Costumes", result.suggested_budget
       assert_includes result.comment, "Suggested budget: Costumes"
+    end
+
+    # The consent the receipt form asks for covers BOTH AI uses of the document:
+    # reading it to prefill the form, and this check. The Review page's gate is
+    # not enough on its own — the job is reachable from a console and from any
+    # future caller — so the checker refuses independently.
+    test "refuses to check a claim whose submitter declined AI processing" do
+      built = false
+      checker = AiChecker.new(chat_builder: -> { built = true; FakeChat.new })
+
+      result = checker.check(expense(ai_processing_consent: false), [ budget ])
+
+      assert result.skipped?, "a declined claim must produce a skipped, unrecorded result"
+      assert_not built, "nothing may be sent to Gemini without consent"
+    end
+
+    # Absent consent is a refusal too: nobody was ever asked (a claim from before
+    # the question existed, or an email-in claim with no submitter present).
+    test "refuses to check a claim with no consent recorded at all" do
+      built = false
+      checker = AiChecker.new(chat_builder: -> { built = true; FakeChat.new })
+
+      result = checker.check(expense(ai_processing_consent: nil), [ budget ])
+
+      assert result.skipped?
+      assert_not built
+    end
+
+    # A refusal must not read as a failed or errored check anywhere: it is not a
+    # verdict at all, so it never gets written to the expense.
+    test "a skipped result is not a pass, fail or error verdict" do
+      checker, = build
+
+      result = checker.check(expense(ai_processing_consent: false), [ budget ])
+
+      assert_not_equal "pass", result.status
+      assert_not_equal "fail", result.status
+      assert_not_equal "error", result.status
     end
 
     test "returns an error verdict without building a chat when there are no receipts" do

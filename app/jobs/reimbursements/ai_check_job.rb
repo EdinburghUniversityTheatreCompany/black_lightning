@@ -41,6 +41,13 @@ module Reimbursements
       return if expense.nil? || expense.ai_checked?
 
       result = checker_builder.call.check(expense, store.active_budgets)
+      # The checker refused because the submitter's consent doesn't cover the
+      # check (declined, or never asked). That is not a verdict, so nothing is
+      # written and nothing is broadcast: the expense keeps its blank AI status
+      # and the Review card explains the absence from the consent column. Writing
+      # a pseudo-verdict here would make a declined claim look flagged.
+      return if result.skipped?
+
       # update_expense! returns the freshly-mapped expense (with the new verdict),
       # so the broadcast partial reflects the just-written status without a re-read.
       updated = store.update_expense!(expense_record_id,

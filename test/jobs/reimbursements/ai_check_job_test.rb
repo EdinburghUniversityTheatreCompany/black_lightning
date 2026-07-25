@@ -28,7 +28,8 @@ module Reimbursements
     def seed_expense(**attrs)
       person = create_reimbursements_person
       @budget = create_reimbursements_budget
-      create_reimbursements_expense(person: person, budget: @budget, **attrs)
+      create_reimbursements_expense(person: person, budget: @budget,
+                                    **{ ai_processing_consent: true }.merge(attrs))
     end
 
     teardown do
@@ -90,6 +91,23 @@ module Reimbursements
       assert_equal [ expense.record_id ], checker.checked.map(&:first),
                    "the second serialised run must see the written verdict and no-op"
       assert_equal "pass", expense.reload.ai_check_status
+    end
+
+    # A skipped result (no consent) is not a verdict, so nothing is written and
+    # nothing is broadcast: the expense keeps its blank AI status and the finance
+    # UI reads the reason off the consent column instead.
+    test "writes no verdict when the checker skips a claim for want of consent" do
+      expense = seed_expense(ai_processing_consent: false)
+      AiCheckJob.checker_builder = -> { AiChecker.new(chat_builder: -> { raise "must not reach Gemini" }) }
+
+      streams = capture_turbo_stream_broadcasts "reimbursements_review_ai" do
+        AiCheckJob.perform_now(expense.record_id)
+      end
+
+      expense.reload
+      assert_equal "", expense.ai_check_status
+      assert_nil expense.ai_checked_at
+      assert_empty streams
     end
 
     test "does nothing when the expense is gone" do

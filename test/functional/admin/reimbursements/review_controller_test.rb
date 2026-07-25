@@ -37,8 +37,12 @@ module Admin
           ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
       end
 
+      # Consented by default (the ordinary case for a claim submitted through the
+      # portal since the consent question shipped); the AI-check gate tests pass
+      # false/nil explicitly.
       def pending_expense(person: @person, budget: @budget, **attrs)
-        create_reimbursements_expense(person: person, budget: budget, **attrs)
+        create_reimbursements_expense(person: person, budget: budget,
+                                      **{ ai_processing_consent: true }.merge(attrs))
       end
 
       def attach_image_receipt(expense, tag)
@@ -215,6 +219,44 @@ module Admin
         assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ errored.record_id ]) do
           get :index
         end
+      end
+
+      # The consent the receipt form asks for covers this check too, so opening
+      # the queue must not send a declined submitter's receipt to Google. Before
+      # this gate existed, picking "No" was hollow: the check ran anyway the
+      # moment finance opened Review.
+      test "kicks no AI check for a claim whose submitter declined AI processing" do
+        pending_expense(ai_processing_consent: false)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_no_enqueued_jobs only: ::Reimbursements::AiCheckJob
+      end
+
+      # Absent consent is a refusal: pre-existing claims and email-in claims were
+      # never asked, so they are reviewed by hand.
+      test "kicks no AI check for a claim with no consent recorded" do
+        pending_expense(ai_processing_consent: nil)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_no_enqueued_jobs only: ::Reimbursements::AiCheckJob
+      end
+
+      test "still kicks an AI check for the consented claim in a mixed queue" do
+        consented = pending_expense
+        pending_expense(amount: BigDecimal("77"), ai_processing_consent: false)
+        pending_expense(amount: BigDecimal("88"), ai_processing_consent: nil)
+        sign_in @user
+
+        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ consented.record_id ]) do
+          get :index
+        end
+        assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
       end
 
       # --- Bulk actions ----------------------------------------------------
