@@ -233,6 +233,49 @@ module Admin
         resize_window_to(1400, 1400)
       end
 
+      # The attach form, i.e. the last row of the receipts block. Reached through
+      # its file field because the remove-receipt buttons post to a URL with the
+      # same /receipts prefix.
+      def attach_form
+        find("input[name='receipts[]']").find(:xpath, "ancestor::form[1]")
+      end
+
+      # A claim with nothing to read beside the form must not be given a column
+      # anyway. It used to get one regardless: two fifths of the card, stretched
+      # to the height of the details, holding an attach button — and since a
+      # receiptless claim always sorts into Needs attention, that empty block
+      # landed at the bottom of the queue.
+      test "a claim with no receipt is not given a receipt column at all" do
+        seed_expense(status: "Pending", receipt: false)
+
+        visit admin_reimbursements_review_path
+
+        details = find("form[action*='/save']").native.rect
+        receipts = attach_form.native.rect
+        assert_in_delta details.x, receipts.x, 24,
+                        "no side column, so the receipts block starts at the same edge as the details"
+        assert_operator receipts.y, :>, details.y + details.height,
+                        "and sits below the details rather than beside them"
+      end
+
+      # The column a receipted claim does get must end with its own content. A
+      # stretched column rules the divider down blank space to the card floor,
+      # which is what the empty area looked like.
+      test "the receipt column ends with its content instead of stretching to the card floor" do
+        expense = seed_expense(status: "Pending", receipt: false)
+        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
+
+        visit admin_reimbursements_review_path
+        assert_selector "button[aria-label='View receipt 1 of 1, invoice.pdf']"
+
+        attach = attach_form.native.rect
+        column = attach_form.find(:xpath, "..").native.rect
+        assert_operator column.x, :>, find("form[action*='/save']").native.rect.x,
+                        "the column is beside the details on a wide screen"
+        assert_in_delta column.y + column.height, attach.y + attach.height, 8,
+                        "the column stops at its last row rather than being stretched"
+      end
+
       # (d) The Reconcile wizard's forms render their next step directly (the
       # stateless wizard re-POSTs the full paste, so it can't redirect). That
       # only works inside a Turbo Frame — outside one, Turbo Drive silently
