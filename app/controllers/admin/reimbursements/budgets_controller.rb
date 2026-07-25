@@ -20,8 +20,12 @@ module Admin
       def index
         @title = "Reimbursements Budgets"
         sorted = store.budgets.sort_by { |budget| budget.name.to_s.downcase }
-        @budgets = paginate(sorted)
         @people_by_id = store.people.index_by(&:record_id)
+        respond_to do |format|
+          format.html { @budgets = paginate(sorted) }
+          # Export every budget — pagination is display-only, so the CSV isn't paged.
+          format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
+        end
       end
 
       # A finance overview grouping every budget by nominal code — a subtotal

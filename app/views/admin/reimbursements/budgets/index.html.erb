@@ -10,7 +10,12 @@
         class: btn_classes(:secondary, :sm) %>
 </p>
 
-<p class="mb-2 text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
+<div class="mb-2 flex items-center justify-between gap-3">
+  <p class="text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
+  <%= link_to "Download CSV",
+              admin_reimbursements_budgets_path(request.query_parameters.merge(format: :csv)),
+              class: btn_classes(:secondary, :sm) %>
+</div>
 
 <% if @budgets.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>
