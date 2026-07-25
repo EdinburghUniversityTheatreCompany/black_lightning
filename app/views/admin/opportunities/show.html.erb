@@ -2,7 +2,7 @@
 <% if @opportunity.roles.any? %>
   <% roles_html = @opportunity.roles.map do |role|
        label = content_tag(:strong, role.position)
-       label += " — #{role.department.name}".html_safe if role.department
+       label += ": #{role.department.name}".html_safe if role.department
        label += " (#{role.note})".html_safe if role.note.present?
        content_tag(:li, label)
      end %>

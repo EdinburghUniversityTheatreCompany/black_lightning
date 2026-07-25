@@ -1,6 +1,6 @@
 <p class="mb-3 text-gray-600">
   <% if @expense.status == Reimbursements::Status::DRAFT %>
-    This claim is a draft — only you can see it. Finish it and submit it below.
+    This claim is a draft. Only you can see it. Finish it and submit it below.
   <% else %>
     You can edit this claim while it's still waiting for review. Once the finance team
     picks it up, contact <%= reimbursements_contact_link %> for changes.

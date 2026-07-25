@@ -16,7 +16,7 @@
 
     <%= f.input :company_name, as: :select, label: "Company",
         collection: Company.internal_first.pluck(:name),
-        allow_custom_input: true, include_blank: "— None —",
+        allow_custom_input: true, include_blank: "None",
         hint: "The company or society. Pick one, or type a new name to add it (it'll be flagged for review)." %>
     <%= f.input :project, hint: "Optional. The play, show, or production this is for." %>
     <%= f.input :author, hint: "Optional. The playwright." %>
@@ -61,12 +61,12 @@
       <h3>Attribution (optional)</h3>
       <p class="text-gray-500 small mx-2 mb-3">
         Submit on someone else's behalf. Either pick an existing user, or enter the name and email
-        of an external submitter — you will be recorded as having created it on their behalf.
+        of an external submitter. You will be recorded as having created it on their behalf.
         Leave blank to attribute it to yourself.
       </p>
       <%= f.association :creator,
           collection: User.accessible_by(current_ability).order(:first_name, :last_name),
-          include_blank: "— Me / external —",
+          include_blank: "Me / external",
           label: "Creator (user)" %>
       <%= f.input :submitter_name, label: "External submitter name" %>
       <%= f.input :submitter_email, label: "External submitter email" %>

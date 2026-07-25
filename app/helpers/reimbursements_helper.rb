@@ -88,6 +88,16 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # The one "no value here" glyph for the reimbursements section, matching what
+  # reimbursements_date / reimbursements_money already render for nil. Views
+  # used to hardcode an em dash, so the same empty cell read as "—" in one
+  # column and "-" in the next.
+  BLANK_VALUE = "-".freeze
+
+  def reimbursements_value(value)
+    value.presence || BLANK_VALUE
+  end
+
   # Who a submitter writes to about a claim finance has already picked up.
   # Read from the cost centre rather than hardcoded, so a second cost centre
   # points at a mailbox its own finance team actually reads. Falls back to

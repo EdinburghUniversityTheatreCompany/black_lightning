@@ -38,7 +38,7 @@
         This claim is with the finance team. <strong>Save changes</strong> keeps it in the review
         queue; <strong>Withdraw back to draft</strong> takes it out until you submit it again.
       <% elsif current_status == Reimbursements::Status::DRAFT %>
-        This claim is a draft — only you can see it. <strong>Submit expense</strong> sends it to the
+        This claim is a draft. Only you can see it. <strong>Submit expense</strong> sends it to the
         finance team for review; <strong>Save as draft</strong> keeps it private.
       <% else %>
         <strong>Submit expense</strong> sends it to the finance team for review.
@@ -56,7 +56,7 @@
           <p class="mb-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
              role="status" aria-live="polite"
              data-reimbursements-receipt-target="reattachNotice">
-            Please re-attach your receipt below — check the errors above, then submit again.
+            Please re-attach your receipt below. Check the errors above, then submit again.
           </p>
         <% end %>
         <p class="mb-2 text-sm text-gray-600">
@@ -142,7 +142,7 @@
     <div data-reimbursements-receipt-target="largeAmountWarning" role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:large_amount_acknowledged].any? || form.large_amount? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
-        That's a large claim. Please double-check the amount is right — a common slip is
+        That's a large claim. Please double-check the amount is right; a common slip is
         typing pence as pounds (e.g. 4999 instead of 49.99).
       </p>
       <%= f.input :large_amount_acknowledged, as: :boolean,

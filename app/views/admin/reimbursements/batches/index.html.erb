@@ -15,20 +15,20 @@
   <% if attempt.stale? %>
     <%= render AlertComponent.new(type: :warning) do %>
       A batch build for <%= attempt.cost_centre.name %> started
-      <%= time_ago_in_words(attempt.created_at) %> ago and hasn't finished — it has likely
+      <%= time_ago_in_words(attempt.created_at) %> ago and hasn't finished; it has likely
       failed without reporting back. Check the job queue (or ask IT) before rebuilding.
     <% end %>
   <% elsif attempt.building? %>
     <%= render AlertComponent.new(type: :info) do %>
       A batch is building for <%= attempt.cost_centre.name %>
       (started <%= time_ago_in_words(attempt.created_at) %> ago<%= " by #{attempt.triggered_by_email}" if attempt.triggered_by_email.present? %>).
-      Its EUSA draft will appear below when ready — don't rebuild in the meantime.
+      Its EUSA draft will appear below when ready. Don't rebuild in the meantime.
     <% end %>
   <% elsif attempt.failed? %>
     <%= render AlertComponent.new(type: :danger) do %>
       <p>
         The batch build for <%= attempt.cost_centre.name %> on
-        <%= reimbursements_date(attempt.created_at.to_date) %> <strong>failed</strong> —
+        <%= reimbursements_date(attempt.created_at.to_date) %> <strong>failed</strong>:
         no EUSA draft was created, and the expenses are still Approved. Fix the problem
         below and rebuild:
       </p>
@@ -41,15 +41,15 @@
   <% elsif attempt.nothing_to_build? %>
     <%= render AlertComponent.new(type: :info) do %>
       The batch build for <%= attempt.cost_centre.name %> on
-      <%= reimbursements_date(attempt.created_at.to_date) %> found no Approved expenses —
-      nothing was built. (A build just before it probably already submitted them.)
+      <%= reimbursements_date(attempt.created_at.to_date) %> found no Approved expenses.
+      Nothing was built. (A build just before it probably already submitted them.)
     <% end %>
   <% elsif attempt.completed? %>
     <%= render AlertComponent.new(type: :warning) do %>
       <p>
         The batch built for <%= attempt.cost_centre.name %> on
         <%= reimbursements_date(attempt.created_at.to_date) %>, but some follow-up steps
-        failed — the EUSA draft is fine, check these before filing the batch away:
+        failed. The EUSA draft is fine; check these before filing the batch away:
       </p>
       <ul class="list-disc list-inside mt-1">
         <% attempt.error_messages.to_s.split("\n").each do |message| %>
@@ -84,7 +84,7 @@
           <% if batch.eusa_draft_created %>
             <%= render BadgeComponent.new(type: :success, pill: true).with_content("Draft created") %>
           <% else %>
-            <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft — needs a look") %>
+            <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft: needs a look") %>
           <% end %>
           <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id),
                       "aria-label": "Detail for batch #{batch.name.presence || batch.record_id}",
