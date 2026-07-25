@@ -23,7 +23,7 @@
   <% if @duplicates[:same_id].any? %>
     <%= render CardComponent.new(title: "Definite Duplicates (Same Student/Associate ID) — #{@duplicates[:same_id].size} group(s)", variant: :danger) do %>
       <p class="text-gray-500">These users share the same student or associate ID, or have equivalent email addresses (e.g. s1234567@sms.ed.ac.uk and s1234567@ed.ac.uk). They are almost certainly duplicates and should be merged.</p>
-      <table class="table table-sm table-hover">
+      <table class="table table-sm table-hover table-sticky-head">
         <thead>
           <tr>
             <th>Match Type</th>
@@ -66,7 +66,7 @@
   <% if @duplicates[:fuzzy_name_overlapping].any? %>
     <%= render CardComponent.new(title: "Likely Duplicates (Name Match + Overlapping Activity) — #{@duplicates[:fuzzy_name_overlapping].size} pair(s)", variant: :warning) do %>
       <p class="text-gray-500">These users have matching last names, similar first names, and were active during overlapping time periods. They are likely the same person.</p>
-      <table class="table table-sm table-hover">
+      <table class="table table-sm table-hover table-sticky-head">
         <thead>
           <tr>
             <th>User 1</th>
@@ -118,7 +118,7 @@
   <% if @duplicates[:fuzzy_name_non_overlapping].any? %>
     <%= render CardComponent.new(title: "Possible Duplicates (Name Match, Different Time Periods) — #{@duplicates[:fuzzy_name_non_overlapping].size} pair(s)", variant: :info) do %>
       <p class="text-gray-500">These users have matching names but were active in different time periods (more than 4 years apart). They are less likely to be the same person, but you may want to review them.</p>
-      <table class="table table-sm table-hover">
+      <table class="table table-sm table-hover table-sticky-head">
         <thead>
           <tr>
             <th>User 1</th>
@@ -170,7 +170,7 @@
   <% if @duplicates[:fuzzy_both_overlapping].any? %>
     <%= render CardComponent.new(title: "Fuzzy Name Match (Both Names) — Overlapping Years — #{@duplicates[:fuzzy_both_overlapping].size} pair(s)", variant: :secondary) do %>
       <p class="text-gray-500">Users with similar first AND last names who were active during overlapping years.</p>
-      <table class="table table-sm table-hover">
+      <table class="table table-sm table-hover table-sticky-head">
         <thead>
           <tr>
             <th>User 1</th>
@@ -222,7 +222,7 @@
   <% if @duplicates[:fuzzy_both_no_overlap].any? %>
     <%= render CardComponent.new(title: "Fuzzy Name Match (Both Names) — No Overlapping Years — #{@duplicates[:fuzzy_both_no_overlap].size} pair(s)") do %>
       <p class="text-gray-500">Users with similar first AND last names active in different time periods (lower confidence).</p>
-      <table class="table table-sm table-hover">
+      <table class="table table-sm table-hover table-sticky-head">
         <thead>
           <tr>
             <th>User 1</th>

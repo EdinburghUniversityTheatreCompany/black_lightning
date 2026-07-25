@@ -13,8 +13,8 @@
   <% if @budget_updates.empty? %>
     <p class="py-4 text-center text-gray-600">No budget updates logged yet.</p>
   <% else %>
-    <div class="overflow-x-auto">
-      <table class="table table-hover">
+    <div class="table-scroll">
+      <table class="table table-hover table-sticky-head">
         <thead>
           <tr>
             <th scope="col">Effective date</th>

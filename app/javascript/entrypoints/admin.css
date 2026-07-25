@@ -25,6 +25,37 @@ select.simple-select2 {
   .sidebar-collapsed {
     display: none !important;
   }
+
+  /* Sticky column headers for admin index/list tables.
+     Admin-only on purpose: this lives here rather than in the shared
+     bootstrap_compat.css because on the public site the whole page scrolls, so
+     a `top: 0` header would stick under the public header. The class is emitted
+     by shared/_table.erb regardless; without this rule it is simply inert.
+
+     Sticks the cells, not the <thead> — Safari and older Chrome ignore
+     `position: sticky` on <thead>/<tr>. The cells must be opaque or rows show
+     through as they scroll underneath, and need a stacking order above the row
+     content (but below .dropdown-menu at z-50, so popovers still open over it). */
+  .table-sticky-head>thead th {
+    @apply sticky top-0 z-20 bg-white;
+
+    /* Tailwind's preflight sets `border-collapse: collapse`, which drops a
+       sticky cell's own bottom border once it detaches. Draw the header rule as
+       an inset shadow instead so it travels with the cell. */
+    box-shadow: inset 0 -1px 0 var(--color-gray-200);
+  }
+
+  /* Scroll box for a wide table that needs its own horizontal scrollbar.
+     `overflow-x: auto` forces the other axis to compute to `auto` too, which
+     makes this element — not <main> — the scrollport the sticky header above
+     resolves against. An unbounded height therefore means it never scrolls
+     vertically and the header never sticks, so cap it. Mirrors the permissions
+     grid, the pattern this generalises. */
+  .table-scroll {
+    @apply overflow-auto;
+
+    max-height: calc(100vh - 12rem);
+  }
 }
 
 /* Heading styles — Tailwind resets headings; restore sensible defaults */

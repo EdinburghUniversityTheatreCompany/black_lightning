@@ -41,8 +41,8 @@
   <% if @expenses.empty? %>
     <p class="py-2 text-gray-600">No expenses linked to this batch.</p>
   <% else %>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="table-scroll">
+      <table class="w-full text-sm table-sticky-head">
         <thead class="text-left text-gray-500 border-b border-gray-200">
           <tr>
             <th scope="col" class="py-1 pr-3">#</th>
