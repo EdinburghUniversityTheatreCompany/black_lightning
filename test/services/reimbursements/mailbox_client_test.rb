@@ -218,29 +218,107 @@ module Reimbursements
       assert_match(/ErrorItemNotFound/, error.message)
     end
 
-    test "reply swallows a 404 (message vanished) and returns nil" do
-      client, http = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+    test "reply swallows a 404 (message confirmed gone) and returns nil" do
+      client, http = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ], # reply -> 404
+        [ 404, ITEM_NOT_FOUND ]  # confirmation re-GET -> also 404, so genuinely gone
+      ])
 
       assert_nil client.reply("msg1", html: "<p>hi</p>"), "a vanished message means nothing to reply to"
-      assert_equal "post", http.requests.last.method.to_s, "the reply was still attempted"
+      assert_equal "post", http.requests[-2].method.to_s, "the reply was still attempted"
     end
 
-    test "mark_read swallows a 404 (message vanished) and returns nil" do
-      client, http = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+    test "mark_read swallows a 404 (message confirmed gone) and returns nil" do
+      client, http = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ], # mark_read -> 404
+        [ 404, ITEM_NOT_FOUND ]  # confirmation re-GET -> also 404
+      ])
 
       assert_nil client.mark_read("msg1"), "a vanished message is already effectively read"
-      assert_equal "patch", http.requests.last.method.to_s
+      assert_equal "patch", http.requests[-2].method.to_s
     end
 
-    test "move swallows a 404 (message vanished) and returns nil" do
+    test "move swallows a 404 (message confirmed gone) and returns nil" do
       client, http = build_client([
         token_response,
         [ 200, { value: [ { id: "fld-processed" } ] }.to_json ], # folder lookup
-        [ 404, ITEM_NOT_FOUND ]                                  # move -> 404
+        [ 404, ITEM_NOT_FOUND ],                                 # move -> 404
+        [ 404, ITEM_NOT_FOUND ]                                  # confirmation re-GET -> also 404
       ])
 
       assert_nil client.move("msg1", :processed), "a vanished message has nothing to file"
-      assert_includes http.requests.last.uri, "messages/msg1/move"
+      assert_includes http.requests[-2].uri, "messages/msg1/move"
+    end
+
+    # --- S4: a 404 does NOT prove the message is gone ------------------------
+    #
+    # Exchange CHANGES a message's id when the message is moved, so a mutation can
+    # 404 on a message that is still sitting in the mailbox, still unread. The old
+    # blanket swallow turned that into silence: the draft was created, mark_read
+    # reported success, the reply 404'd so the sender was never told their claim
+    # arrived, the move 404'd too, and nothing above logger.info fired — no
+    # Honeybadger, no duplicate_risk flag. The email was silently abandoned.
+
+    test "mark_read stays loud when a 404 is contradicted by the message still existing" do
+      client, http = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ],            # mark_read -> 404
+        [ 200, { id: "msg1" }.to_json ]     # but the message IS still there
+      ])
+
+      error = assert_raises(GraphAuth::NotFoundError) { client.mark_read("msg1") }
+      assert_match(/ErrorItemNotFound/, error.message)
+      assert_equal "get", http.requests.last.method.to_s, "existence was actually confirmed"
+    end
+
+    test "reply stays loud when the message still exists" do
+      client, = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ],
+        [ 200, { id: "msg1" }.to_json ]
+      ])
+
+      assert_raises(GraphAuth::NotFoundError) { client.reply("msg1", html: "<p>hi</p>") }
+    end
+
+    test "move stays loud when the message still exists" do
+      client, = build_client([
+        token_response,
+        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ],
+        [ 404, ITEM_NOT_FOUND ],
+        [ 200, { id: "msg1" }.to_json ]
+      ])
+
+      assert_raises(GraphAuth::NotFoundError) { client.move("msg1", :processed) }
+    end
+
+    # An inconclusive confirmation (5xx, timeout, auth) must fail CLOSED — treat
+    # the message as still present and take the loud path, rather than swallowing
+    # a message that may still need processing.
+    test "an inconclusive existence check keeps the 404 loud" do
+      client, = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ], # mark_read -> 404
+        [ 500, "boom" ]          # confirmation inconclusive
+      ])
+
+      assert_raises(GraphAuth::NotFoundError) { client.mark_read("msg1") }
+    end
+
+    # move wrapped folder_id -> find_or_create_folder inside the same rescue, so a
+    # 404 from the FOLDER lookup was mislabelled "message gone" and swallowed —
+    # hiding a mailbox/folder misconfiguration entirely.
+    test "a 404 from the folder lookup is not mislabelled as the message being gone" do
+      client, http = build_client([
+        token_response,
+        [ 404, ITEM_NOT_FOUND ] # the mailFolders lookup itself 404s
+      ])
+
+      error = assert_raises(GraphAuth::NotFoundError) { client.move("msg1", :processed) }
+      assert_match(%r{mailFolders}, error.message, "the error names the folder request, not the message")
+      assert_equal 2, http.requests.size, "no message-scoped call and no existence probe was made"
     end
   end
 end

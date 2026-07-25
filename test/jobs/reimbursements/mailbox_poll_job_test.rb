@@ -489,7 +489,8 @@ module Reimbursements
         [ 202, "" ],                                                                   # reply msgGone
         [ 200, { value: [ { id: "fld-rejected" } ] }.to_json ],                        # folder lookup
         [ 201, { id: "moved" }.to_json ],                                              # move msgGone
-        [ 404, item_not_found ],                                                        # mark_read msgGone -> vanished
+        [ 404, item_not_found ],                                                        # mark_read msgGone -> 404
+        [ 404, item_not_found ],                                                        # re-GET confirms it IS gone
         [ 202, "" ],                                                                   # reply msgOk
         [ 201, { id: "moved2" }.to_json ],                                             # move msgOk (folder cached)
         [ 200, "" ]                                                                    # mark_read msgOk
@@ -506,6 +507,53 @@ module Reimbursements
       assert(patched.any? { |uri| uri.include?("messages/msgOk") },
              "the poll must continue past the vanished message and mark the next one read")
       assert_equal 0, Expense.count
+    ensure
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
+    end
+
+    # S4: Exchange CHANGES a message's id when the message is moved, so a mark_read
+    # 404 can mean "still in the mailbox, still unread, under a new id". The old
+    # blanket 404 swallow turned exactly that case into silence: the expense was
+    # created, mark_read reported SUCCESS, the reply also 404'd so the sender was
+    # never told their claim had arrived, the move 404'd, and nothing above
+    # logger.info fired — no Honeybadger notice, no duplicate_risk flag, the claim
+    # silently abandoned and the message left to be reprocessed forever.
+    #
+    # Drives the REAL MailboxClient over FakeHttp, like the confirmed-gone test
+    # above, so the difference between the two is only what the confirmation GET
+    # answers.
+    test "a mark_read 404 on a message that still exists flags duplicate_risk loudly" do
+      setup_job(messages: [])
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
+      person = create_reimbursements_person(name: "Moved Morgan", email: "morgan@example.com")
+      pdf = Base64.strict_encode64(PDF_ATTACHMENT[:bytes])
+      item_not_found = { error: { code: "ErrorItemNotFound",
+                                  message: "The specified object was not found in the store." } }.to_json
+      http = FakeHttp.new([
+        [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ],                  # token
+        [ 200, { value: [ { id: "msgMoved", subject: "Receipt", bodyPreview: "see attached",
+                            from: { emailAddress: { address: person.email } } } ] }.to_json ],
+        [ 200, { value: [ { "@odata.type" => "#microsoft.graph.fileAttachment",
+                            name: PDF_ATTACHMENT[:filename], contentType: PDF_ATTACHMENT[:content_type],
+                            contentBytes: pdf } ] }.to_json ],                         # attachments
+        [ 404, item_not_found ],                                                       # mark_read -> 404
+        [ 200, { id: "msgMovedNewId" }.to_json ]                                       # ...but it IS still there
+      ])
+      MailboxPollJob.mailbox_builder = lambda do |cost_centre|
+        MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
+                          clock: -> { Time.zone.local(2026, 7, 9, 12) })
+      end
+
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_equal 1, Expense.count, "the expense was created before the mark_read attempt"
+      assert_equal 1, notified.size, "a moved-but-present message must reach Honeybadger"
+      assert notified.first.last.dig(:context, :duplicate_risk),
+             "the duplicate_risk flag is the whole point of the loud path: #{notified.first.inspect}"
+      # Nothing is attempted after the failed commit point: replying to or filing a
+      # still-unread message would be acting on a message the next cycle will retry.
+      assert_equal 5, http.requests.size,
+                   "no reply and no move after mark_read failed: #{http.requests.map(&:uri).inspect}"
     ensure
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
