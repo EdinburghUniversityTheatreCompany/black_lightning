@@ -196,6 +196,17 @@ module Admin
 
       # --- CSV export --------------------------------------------------------
 
+      # The combined workbook hangs off the Finance sidebar, which renders on
+      # every finance page — so any of them proves the link is reachable.
+      test "the Finance sidebar links to the combined workbook" do
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "Export Workbook"
+        assert_includes response.body, "/admin/reimbursements/export"
+      end
+
       test "index CSV export answers a text/csv download named for today" do
         seed_multi_expenses
         sign_in @user

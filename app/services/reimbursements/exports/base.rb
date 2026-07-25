@@ -56,8 +56,8 @@ module Reimbursements
       # working across exports.
       def add_sheet(workbook, collection, name: sheet_name)
         workbook.add_worksheet(name: name) do |sheet|
-          sheet.add_row(headers)
-          rows(collection).each { |row| sheet.add_row(row) }
+          sheet.add_row(headers, types: cell_types(headers))
+          rows(collection).each { |row| sheet.add_row(row, types: cell_types(row)) }
         end
       end
 
@@ -71,6 +71,20 @@ module Reimbursements
 
       def row(_record)
         raise NotImplementedError, "#{self.class} must define a private #row(record)"
+      end
+
+      # Force every String cell to stay literal text in the xlsx; let Axlsx
+      # infer the rest (nil means "infer").
+      #
+      # Axlsx types a cell from its value, and a numeric-LOOKING string becomes
+      # a number: nominal code "041000" would arrive as 41000 and EUSA period
+      # "03" as 3, silently corrupting the identifiers finance reconciles on.
+      # The exporters already draw the line for us — a quantity is a Numeric, a
+      # String is always an identifier or a label — so this needs no per-column
+      # configuration. It is the same reason BacsXlsx forces text format on the
+      # sort code, account number and nominal code.
+      def cell_types(row)
+        row.map { |value| value.is_a?(String) ? :string : nil }
       end
 
       # ISO 8601, or nil so the cell comes out empty. Accepts a Date or a Time.

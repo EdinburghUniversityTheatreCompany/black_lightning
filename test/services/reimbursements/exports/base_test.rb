@@ -67,6 +67,26 @@ module Reimbursements
         assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", sheet.rows[2].cells[0].value
       end
 
+      test "add_sheet keeps a numeric-looking identifier as literal text" do
+        # A nominal code or EUSA period must not be coerced to a number: 041000
+        # would arrive as 41000 and "03" as 3.
+        package = Axlsx::Package.new
+        Fake.new(store: nil).add_sheet(package.workbook, [ { name: "041000", amount: 1, when: nil } ])
+
+        cell = package.workbook.worksheets.first.rows[1].cells[0]
+        assert_equal "041000", cell.value
+        assert_equal :string, cell.type
+      end
+
+      test "add_sheet still types a real amount as a number" do
+        package = Axlsx::Package.new
+        Fake.new(store: nil).add_sheet(package.workbook, [ { name: "x", amount: BigDecimal("12.5"), when: nil } ])
+
+        cell = package.workbook.worksheets.first.rows[1].cells[1]
+        assert_equal 12.5, cell.value
+        assert_equal :float, cell.type
+      end
+
       test "add_sheet accepts an explicit sheet name" do
         package = Axlsx::Package.new
         @exporter.add_sheet(package.workbook, @records, name: "Something else")
