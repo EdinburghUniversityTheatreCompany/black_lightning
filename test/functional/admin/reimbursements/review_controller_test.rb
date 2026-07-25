@@ -901,6 +901,84 @@ module Admin
         assert_equal "Fake blood", gated_expense.description, "no edit persisted on an aborted decision"
       end
 
+      # The decision must act on the SAVED values, not the pre-edit ones. Returning
+      # the stale expense from save_edits_before_decision passes every test above
+      # (they only check the row afterwards), while the owner-endorsement gate would
+      # be evaluated against superseded terms: an owner-endorsed £12.50 claim edited
+      # to £3,000 through Save Changes would be approved against the £12.50
+      # sign-off, defeating the re-endorsement rule entirely.
+      test "approve with save_changes re-opens the owner gate when the edit changes the amount" do
+        endorse_gated_expense! # covers amount 12.5 on owned_budget
+        sign_in @user
+
+        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                  amount: "3000.00", amount_excl_vat: "2500.00",
+                                  description: "Edited up before approve",
+                                  payment_reference: "OWNED PAT",
+                                  budget_record_id: owned_budget.record_id }
+
+        assert_match(/needs a budget owner's endorsement/i, flash[:alert],
+                     "the decision must see the SAVED amount, not the endorsed one")
+        gated_expense.reload
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
+        # The save still stands — only the decision is blocked, so the operator can
+        # see what they changed and chase a fresh sign-off.
+        assert_equal BigDecimal("3000"), gated_expense.amount
+      end
+
+      # The mirror case: an edit that leaves the endorsed terms alone still approves,
+      # so re-opening the gate isn't just "any save_changes blocks".
+      test "approve with save_changes still approves when the edit leaves the endorsed terms alone" do
+        endorse_gated_expense!
+        sign_in @user
+
+        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                  amount: "12.50", amount_excl_vat: "10.42",
+                                  description: "Wording fixed only",
+                                  payment_reference: "OWNED PAT",
+                                  budget_record_id: owned_budget.record_id }
+
+        gated_expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
+        assert_equal "Wording fixed only", gated_expense.description
+      end
+
+      test "override_approve with save_changes snapshots the SAVED amount on the endorsement" do
+        gated_expense
+        sign_in @user
+
+        patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                           amount: "3000.00", amount_excl_vat: "2500.00",
+                                           description: "Edited up before override",
+                                           payment_reference: "OWNED PAT",
+                                           budget_record_id: owned_budget.record_id }
+
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert_equal BigDecimal("3000"), endorsement.endorsed_amount,
+                     "the override must snapshot the amount it actually approved"
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
+      end
+
+      # Moving the claim to a DIFFERENT owned budget through Save Changes re-opens
+      # the gate too — the endorsement was given for the old budget's line.
+      test "approve with save_changes re-opens the owner gate when the edit changes the budget" do
+        endorse_gated_expense!
+        other_owned = create_reimbursements_budget(name: "Owned Too", nominal_code: "4200",
+                                                   owners: [ owner_person ])
+        sign_in @user
+
+        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                  amount: "12.50", amount_excl_vat: "10.42",
+                                  description: "Moved to another budget",
+                                  payment_reference: "OWNED PAT",
+                                  budget_record_id: other_owned.record_id }
+
+        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
+        gated_expense.reload
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
+        assert_equal other_owned.id, gated_expense.budget_id, "the move still saved"
+      end
+
       test "a plain approve without save_changes still approves without touching the edit fields" do
         # Backwards-compatibility: the pristine-form path posts no edit params.
         expense = pending_expense(description: "Original", payment_reference: "KEEP")
