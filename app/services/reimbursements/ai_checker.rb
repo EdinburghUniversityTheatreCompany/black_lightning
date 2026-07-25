@@ -70,8 +70,8 @@ module Reimbursements
     private
 
     # Read the bytes out of storage and hand Gemini the content, never the
-    # receipt's URL: that URL is app-authenticated, so a remote fetcher could
-    # not read it anyway.
+    # receipt's URL: that URL is host-relative, so a remote fetcher could not
+    # resolve it anyway.
     def attachments(receipts)
       receipts.map do |receipt|
         RubyLLM::Attachment.new(StringIO.new(receipt.bytes), filename: receipt.filename)
