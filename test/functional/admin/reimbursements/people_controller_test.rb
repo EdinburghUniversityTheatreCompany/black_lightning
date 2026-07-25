@@ -275,6 +275,88 @@ module Admin
 
       assert_response :not_found
     end
+
+    # --- CSV export ----------------------------------------------------------
+
+    test "index CSV export answers a text/csv download named for today" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      assert_response :success
+      assert_includes response.media_type, "text/csv"
+      assert_match(/attachment/, response.headers["Content-Disposition"])
+      assert_match(/reimbursements-people-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+    end
+
+    test "index CSV export has a header row and one row per person" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body)
+      assert_equal [ "Name", "Email", "Sort code", "Account number",
+                     "Modulus check", "Verified" ], rows.first
+      assert_equal 5, rows.size, "header + four people"
+
+      vic = rows.find { |r| r[0] == "Valid Vic" }
+      assert_equal "vic@example.com", vic[1]
+      assert_equal "Valid", vic[4]
+      assert_equal "No", vic[5]
+    end
+
+    test "index CSV export MASKS both bank details to their last four digits" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      vic = CSV.parse(response.body).find { |r| r[0] == "Valid Vic" }
+      assert_equal "****9999", vic[2], "the sort code must be masked"
+      assert_equal "****4958", vic[3], "the account number must be masked"
+      # The export leaves the portal, so no complete bank detail may travel in it.
+      assert_not_includes response.body, "66374958"
+      assert_not_includes response.body, "08-99-99"
+      assert_not_includes response.body, "089999"
+    end
+
+    test "index CSV export leaves a person with no bank details blank, not masked" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      mo = CSV.parse(response.body).find { |r| r[0] == "Missing Mo" }
+      assert_nil mo[2]
+      assert_nil mo[3]
+      assert_equal "Missing", mo[4]
+    end
+
+    test "index CSV export reports each modulus verdict" do
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body)
+      assert_equal "Invalid", rows.find { |r| r[0] == "Invalid Ivy" }[4]
+      assert_equal "Outside spec", rows.find { |r| r[0] == "Outside Ophelia" }[4]
+    end
+
+    test "index CSV export reports a verified payee as verified" do
+      sign_in @user
+      @valid_person.payment_details.update!(verified: true)
+
+      get :index, format: :csv
+
+      assert_equal "Yes", CSV.parse(response.body).find { |r| r[0] == "Valid Vic" }[5]
+    end
+
+    test "index offers a Download CSV link" do
+      sign_in @user
+
+      get :index
+
+      assert_includes response.body, "Download CSV"
+      assert_includes response.body, "/admin/reimbursements/people?format=csv"
+    end
   end
   end
 end

@@ -18,6 +18,13 @@
   <% end %>
 <% end %>
 
+<div class="mb-2 flex items-center justify-end">
+  <%= link_to "Download CSV",
+              admin_reimbursements_people_path(request.query_parameters.merge(format: :csv)),
+              title: "Bank details are masked to their last four digits",
+              class: btn_classes(:secondary, :sm) %>
+</div>
+
 <%= render CardComponent.new(title: "#{@people.total_count} #{'person'.pluralize(@people.total_count)}") do %>
   <% if @people.total_count.zero? %>
     <p class="py-4 text-center text-gray-600">No people found in the registry.</p>
