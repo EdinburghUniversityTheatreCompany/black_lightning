@@ -468,6 +468,18 @@ form dozens of times in a sitting, so the document and the details should be vis
   `rails_blob_path`, with a visible "open in a new tab" / download fallback for browsers that
   refuse to render inline. Do NOT vendor pdf.js unless native embedding proves inadequate: it is a
   large dependency for a small win here, and `vendor/assets` would be the place if it ever is.
+- **Why no PDF previews are visible today (root cause, found 2026-07-25).**
+  `_receipts_gallery.html.erb` (and `shared/_receipts_lightbox.html.erb`) branch on
+  `receipt.image?`: images render `image_tag receipt.preview_url` inside a fancybox link, and
+  **everything else falls through to a generic `fa-file-lines` icon plus a `target: "_blank"`
+  link**. So a PDF's preview is never requested. Meanwhile `Attachment#preview_url` is already
+  `thumbnail_url.presence || (url if image?)` and `thumbnail_url` *is* populated for PDFs, because
+  `wrap_receipt` sets it whenever the blob is `representable?`. The preview URL has been available
+  and unused. `image?` is simply the wrong predicate now: it dates from the Airtable era, when only
+  images ever had a thumbnail. Replace it with a `previewable?`-style test
+  (`preview_url.present?`), which fixes PDFs without special-casing content types. **That same
+  `else` branch is the `target: "_blank"` behaviour Mick asked to remove, so the preview fix and
+  request 1 are the same few lines.**
 - **PDF previews already work; no setup needed.** Verified empirically on 2026-07-25: Rails' default
   previewers include `PopplerPDFPreviewer` and `MuPDFPreviewer`, a PDF blob reports
   `representable? == previewable? == true`, and `representation(resize_to_limit: [512, 512])
