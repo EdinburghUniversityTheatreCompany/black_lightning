@@ -320,6 +320,45 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
+      test "overview totals expense and income budgets separately, never as one figure" do
+        sign_in @user
+        # @props (Expense) already carries initial 1000, so expense initial is
+        # 1000 + 9000 = 10,000 and income initial is 8000. The old single
+        # grand total reported 18,000, which is neither total spend nor net.
+        create_reimbursements_budget(name: "Lighting", nominal_code: "4200",
+                                     initial_budget: 9000)
+        create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
+                                     budget_type: "Income", initial_budget: 8000)
+
+        get :overview
+
+        assert_response :success
+        expense_total, income_total = assigns(:grand_total).by_type
+        assert_equal BigDecimal("10000"), expense_total.initial
+        assert_equal BigDecimal("8000"), income_total.initial
+        assert_includes response.body, "Grand total (Expense budgets)"
+        assert_includes response.body, "Grand total (Income budgets)"
+        assert_includes response.body, "£10,000.00"
+        assert_includes response.body, "£8,000.00"
+        assert_not_includes response.body, "£18,000.00"
+      end
+
+      test "overview marks each row's budget type and leaves income outturn blank" do
+        sign_in @user
+        create_reimbursements_budget(name: "Programme ads", nominal_code: "8100",
+                                     budget_type: "Income", initial_budget: 8000)
+
+        get :overview
+
+        assert_response :success
+        # A Type cell per row, so an income line can't be read as spend.
+        assert_select "table.table thead th", text: "Type"
+        assert_select "table.table tbody td", text: "Income"
+        assert_select "table.table tbody td", text: "Expense"
+        assert_nil assigns(:rollups).flat_map(&:budgets)
+                                    .find { |b| b.name == "Programme ads" }.expected_outturn
+      end
+
       test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
         # 4000 IS budgeted (@props), but nothing links this row to an expense, so

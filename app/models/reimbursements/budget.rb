@@ -169,10 +169,18 @@ module Reimbursements
         end
     end
 
-    # The most this line could realistically end up costing: the greater of the
+    # The most this line could realistically end up COSTING: the greater of the
     # current projection and what's already been spent or committed, so the
     # number never drops below reality as spend lands.
+    #
+    # Nil for an Income budget, deliberately. The same max over income figures
+    # is best-case income, the opposite direction from "never drops below
+    # reality" — a £8,000 target with £3,000 banked would report £8,000 as
+    # though it were assured. Better blank than confidently wrong; the
+    # projection and the EUSA actual are both still shown on their own.
     def expected_outturn
+      return nil if income?
+
       [ projected_amount, committed_amount, paid_portal_amount, eusa_actual_amount ].compact.max
     end
 

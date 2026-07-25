@@ -199,6 +199,21 @@ module Reimbursements
       assert_equal BigDecimal("400"), Budget.find(budget.id).expected_outturn
     end
 
+    test "expected_outturn is blank for an Income budget" do
+      # "The greater of the projection and what's already been spent" is a
+      # worst-case cost. On an income line the same max reads as BEST-case
+      # income, the opposite direction, so it would be actively misleading:
+      # blank instead of a wrong number.
+      income = build_budget(name: "Ticket income", budget_type: "Income", initial_budget: 8000)
+      EusaActual.create!(budget: income, nominal_code: "8000", credit: BigDecimal("3000"))
+
+      fresh = Budget.find(income.id)
+      assert_nil fresh.expected_outturn
+      # The underlying figures are still reported.
+      assert_equal BigDecimal("8000"), fresh.projected_amount
+      assert_equal BigDecimal("3000"), fresh.eusa_actual_amount
+    end
+
     test "expected_outturn is zero when a budget has no plan and no activity" do
       # projected is nil but committed/paid/eusa default to 0, so the compacted
       # max is 0 (never below reality, and reality here is "nothing yet").

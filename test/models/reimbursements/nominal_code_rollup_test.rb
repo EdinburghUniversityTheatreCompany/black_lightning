@@ -41,5 +41,36 @@ module Reimbursements
       assert_equal "(none)", rollup.code
       assert_equal 2, rollup.budgets.size
     end
+
+    test "by_type splits a mixed group so spend and income are never added up" do
+      spend = build_budget(nominal_code: "4000", initial_budget: 10_000)
+      income = build_budget(nominal_code: "4000", budget_type: "Income", initial_budget: 8000)
+
+      subtotals = NominalCodeRollup.new("4000", [ spend, income ]).by_type
+
+      assert_equal %w[Expense Income], subtotals.map(&:budget_type)
+      assert_equal BigDecimal("10000"), subtotals.first.initial
+      assert_equal BigDecimal("8000"), subtotals.last.initial
+      # 18,000 is neither total spend nor net, so no rollup reports it.
+      assert_empty subtotals.select { |s| s.initial == BigDecimal("18000") }
+      assert subtotals.all? { |s| s.budgets.all? { |b| b.budget_type == s.budget_type } }
+    end
+
+    test "by_type omits a type with no budgets in the group" do
+      only_spend = NominalCodeRollup.new("4000", [ build_budget(nominal_code: "4000") ]).by_type
+
+      assert_equal [ "Expense" ], only_spend.map(&:budget_type)
+    end
+
+    test "expected is blank for an income subtotal, summed for an expense one" do
+      spend = build_budget(nominal_code: "4000", initial_budget: 250)
+      income = build_budget(nominal_code: "8000", budget_type: "Income", initial_budget: 8000)
+
+      expense_rollup, income_rollup =
+        NominalCodeRollup.new(nil, [ spend, income ]).by_type
+
+      assert_equal BigDecimal("250"), expense_rollup.expected
+      assert_nil income_rollup.expected, "best-case income is not an expected outturn"
+    end
   end
 end

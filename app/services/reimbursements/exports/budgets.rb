@@ -14,7 +14,9 @@ module Reimbursements
     #   the EUSA ledger's. A divergence between the two is a reconciliation
     #   signal, which is exactly why both travel in the export.
     # * Expected outturn — the greater of the projection and what's already
-    #   spent or committed, so the number never drops below reality.
+    #   spent or committed, so the number never drops below reality. EMPTY for an
+    #   Income budget: the same max there is best-case income, the opposite
+    #   direction, so a number would mislead (see Budget#expected_outturn).
     # * Remaining (forecast - committed) and Variance (forecast - initial) are
     #   blank without a forecast, and Variance is legitimately negative when the
     #   forecast came in under the original plan.

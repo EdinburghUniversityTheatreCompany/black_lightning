@@ -3,15 +3,17 @@
 </p>
 
 <p class="mb-3 text-gray-600">
-  Every budget grouped by nominal code, with a subtotal per code and a grand total. Expected
-  outturn is the greater of the current projection and what's already been spent or committed,
-  so the number never drops below reality.
+  Every budget grouped by nominal code, with a subtotal per code and a grand total. Expense and
+  income budgets are totalled separately, since adding spend to income gives a figure that is
+  neither. Expected outturn is the greater of the current projection and what's already been
+  spent or committed, so the number never drops below reality; it is left blank on income lines,
+  where the same figure would read as best-case income instead.
 </p>
 
 <%
   money = ->(amount) { reimbursements_money(amount) }
   expected_tip = "The greater of the current projection and what's already been spent or " \
-                 "committed, so the number never drops below reality."
+                 "committed, so the number never drops below reality. Blank on income lines."
 %>
 
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
@@ -20,6 +22,7 @@
       <thead>
         <tr>
           <th scope="col">Budget</th>
+          <th scope="col">Type</th>
           <th scope="col" class="text-right">Initial</th>
           <th scope="col" class="text-right">Projected</th>
           <th scope="col" class="text-right">Committed</th>
@@ -32,11 +35,11 @@
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
-            <th scope="rowgroup" colspan="8" class="text-left font-semibold py-2">
+            <th scope="rowgroup" colspan="9" class="text-left font-semibold py-2">
               Nominal code <%= rollup.code %>
             </th>
           </tr>
-          <% rollup.budgets.sort_by { |b| b.name.to_s.downcase }.each do |budget| %>
+          <% rollup.rows.each do |budget| %>
             <tr>
               <td>
                 <%= link_to budget.name.presence || "-",
@@ -46,6 +49,7 @@
                   <span class="text-gray-400 text-xs">(hidden)</span>
                 <% end %>
               </td>
+              <td><%= budget.budget_type %></td>
               <td class="text-right"><%= money.(budget.initial_budget) %></td>
               <td class="text-right"><%= money.(budget.projected_amount) %></td>
               <td class="text-right"><%= money.(budget.committed_amount) %></td>
@@ -55,29 +59,20 @@
               <td class="text-right"><%= money.(budget.expected_outturn) %></td>
             </tr>
           <% end %>
-          <tr class="border-t border-gray-300 font-medium">
-            <td class="text-right">Subtotal <%= rollup.code %></td>
-            <td class="text-right"><%= money.(rollup.initial) %></td>
-            <td class="text-right"><%= money.(rollup.projected) %></td>
-            <td class="text-right"><%= money.(rollup.committed) %></td>
-            <td class="text-right"><%= money.(rollup.pipeline) %></td>
-            <td class="text-right"><%= money.(rollup.paid_portal) %></td>
-            <td class="text-right"><%= money.(rollup.eusa_actual) %></td>
-            <td class="text-right"><%= money.(rollup.expected) %></td>
-          </tr>
+          <%# One subtotal per budget type in the group: a code holding both an
+              expense and an income budget has no single meaningful subtotal. %>
+          <% rollup.by_type.each do |subtotal| %>
+            <%= render "rollup_row", rollup: subtotal,
+                  label: "Subtotal #{rollup.code} (#{subtotal.budget_type})" %>
+          <% end %>
         </tbody>
       <% end %>
       <tfoot>
-        <tr class="border-t-2 border-gray-400 font-semibold">
-          <td class="text-right">Grand total</td>
-          <td class="text-right"><%= money.(@grand_total.initial) %></td>
-          <td class="text-right"><%= money.(@grand_total.projected) %></td>
-          <td class="text-right"><%= money.(@grand_total.committed) %></td>
-          <td class="text-right"><%= money.(@grand_total.pipeline) %></td>
-          <td class="text-right"><%= money.(@grand_total.paid_portal) %></td>
-          <td class="text-right"><%= money.(@grand_total.eusa_actual) %></td>
-          <td class="text-right"><%= money.(@grand_total.expected) %></td>
-        </tr>
+        <% @grand_total.by_type.each do |total| %>
+          <%= render "rollup_row", rollup: total,
+                label: "Grand total (#{total.budget_type} budgets)",
+                row_class: "border-t-2 border-gray-400 font-semibold" %>
+        <% end %>
       </tfoot>
     </table>
   </div>
