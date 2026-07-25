@@ -337,6 +337,24 @@ module Reimbursements
       actual
     end
 
+    # Imports both legs of an offsetting pair and cross-links them as ONE unit.
+    #
+    # Persisting the legs with two separate create_actual! calls and linking
+    # afterwards leaves the worst state available if anything in the middle
+    # fails: the debit leg committed WITHOUT the offset stamp, so every rollup
+    # reads it as real spend. Re-pasting cannot repair that, because the dedup
+    # step then skips the already-imported leg and the pair can never be
+    # re-formed. Returns the two linked legs.
+    def create_offsetting_pair!(debit_attrs, credit_attrs)
+      legs = EusaActual.transaction do
+        debit = create_actual!(debit_attrs)
+        credit = create_actual!(credit_attrs)
+        link_offsetting_pair!(debit.record_id, credit.record_id)
+      end
+      bust_eusa_actuals!
+      legs
+    end
+
     # Records that two imported rows cancel each other out (an accrual and its
     # reversal). Both rows survive — finance needs the audit trail — so each leg
     # is stamped "offset" and pointed at the other. All-or-nothing: a half-

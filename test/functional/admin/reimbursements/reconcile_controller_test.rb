@@ -31,6 +31,29 @@ module Admin
       end
     end
 
+    # DatabaseStore that fails part-way through writing an offsetting pair: on
+    # the second leg's insert, or on the cross-link that follows it.
+    class HalfPairStore < ::Reimbursements::DatabaseStore
+      def initialize(fail_on:)
+        super()
+        @fail_on = fail_on
+        @creates = 0
+      end
+
+      def create_actual!(attrs)
+        @creates += 1
+        raise "blip" if @fail_on == :second_leg && @creates == 2
+
+        super
+      end
+
+      def link_offsetting_pair!(actual_id, counterpart_id)
+        raise "blip" if @fail_on == :link
+
+        super
+      end
+    end
+
     setup do
       finance = Role.create!(name: "Business Manager")
       finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -492,6 +515,41 @@ module Admin
       assert_response :success
       assert_equal 1, assigns(:offsetting_pairs).size
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+    end
+
+    # --- A pair is written all-or-nothing ----------------------------------
+    #
+    # A half-written pair is the worst state available: the debit leg is
+    # committed WITHOUT the offset stamp, so every rollup reads it as real
+    # spend, and re-pasting cannot repair it because dedup then skips that leg
+    # and the pair can never be re-formed. Both legs and the cross-link are one
+    # transaction.
+
+    test "a pair whose second leg fails to insert writes neither leg" do
+      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :second_leg) }
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count,
+                   "a stranded unstamped debit leg would read as real spend forever"
+      assert_equal 0, assigns(:offsets_linked)
+      assert_match(/offsetting pair.*blip/i, assigns(:reconciliation_errors).sole)
+    end
+
+    test "a pair whose cross-link fails writes neither leg" do
+      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :link) }
+      sign_in @user
+      keys = offsetting_pair_keys(offsetting_paste)
+
+      post :apply, params: { pasted_text: offsetting_paste, offset_pair_keys: keys }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count,
+                   "two unlinked ordinary actuals are exactly what the pair transaction prevents"
+      assert_equal 0, assigns(:offsets_linked)
     end
 
     # --- Duplicate pairs ---------------------------------------------------

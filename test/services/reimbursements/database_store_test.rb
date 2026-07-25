@@ -232,6 +232,19 @@ module Reimbursements
       assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
     end
 
+    test "create_offsetting_pair! imports both legs already cross-linked" do
+      legs = store.create_offsetting_pair!(
+        { nominal_code: "4000", narrative: "ACCRUAL", debit: 10 },
+        { nominal_code: "4000", narrative: "REVERSAL", credit: 10 }
+      )
+
+      assert_equal 2, EusaActual.count
+      assert legs.all?(&:offset?)
+      assert_equal legs.last.id, legs.first.offset_of_id
+      assert_equal legs.first.id, legs.last.offset_of_id
+      assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
+    end
+
     test "memoized lists refresh after bust_expenses!" do
       store.expenses
       Expense.create!(status: Status::PENDING)

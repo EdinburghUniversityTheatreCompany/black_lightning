@@ -211,12 +211,13 @@ module Admin
       end
 
       # Both legs are imported and then pointed at each other: the pair nets to
-      # zero, but finance still needs to see that both entries exist.
+      # zero, but finance still needs to see that both entries exist. One store
+      # call, one transaction — see DatabaseStore#create_offsetting_pair! for why
+      # a half-written pair is unrepairable.
       def apply_offsetting_pair(pair, imported_at)
         with_row_rescue("an offsetting pair") do
-          debit = store.create_actual!(actuals_attrs(pair.debit_row, imported_at))
-          credit = store.create_actual!(actuals_attrs(pair.credit_row, imported_at))
-          store.link_offsetting_pair!(debit.record_id, credit.record_id)
+          store.create_offsetting_pair!(actuals_attrs(pair.debit_row, imported_at),
+                                        actuals_attrs(pair.credit_row, imported_at))
         end
       end
 
