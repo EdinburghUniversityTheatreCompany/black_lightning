@@ -27,8 +27,7 @@
 module Reimbursements
   ##
   # A versioned projected-expenditure update for a budget. The latest row
-  # (date desc) is the budget's current_forecast. ActiveRecord replacement for
-  # the Airtable-era PORO (now Reimbursements::Airtable::BudgetForecast).
+  # (date desc) is the budget's current_forecast.
   class BudgetForecast < ApplicationRecord
     include RecordId
     belongs_to :budget, class_name: "Reimbursements::Budget", inverse_of: :forecasts
@@ -44,7 +43,7 @@ module Reimbursements
     # the integer FK.
     def budget_id = self[:budget_id]&.to_s
 
-    # The Airtable "Name" formula label: "<budget> - YYYY-MM-DD".
+    # The display label finance knows these by: "<budget> - YYYY-MM-DD".
     def name
       [ budget&.name, date&.strftime("%Y-%m-%d") ].compact.join(" - ")
     end

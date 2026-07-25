@@ -47,8 +47,6 @@
 module Reimbursements
   ##
   # A row from EUSA's ledger export, imported during reconciliation.
-  # ActiveRecord replacement for the Airtable-era PORO (now
-  # Reimbursements::Airtable::EusaActual).
   class EusaActual < ApplicationRecord
     include RecordId
 

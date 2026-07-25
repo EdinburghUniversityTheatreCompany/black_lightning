@@ -1,7 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team management of the Airtable Budgets table: an overview of every
+    # Finance-team management of the budgets: an overview of every
     # budget's financials (initial, rolled-up current forecast, committed, total
     # paid, remaining, variance), an edit form for the operator-editable fields
     # (name, nominal code, visible-to-submitters, notes, initial budget, budget
@@ -9,8 +9,8 @@ module Admin
     # an "add a projected-spend update" action that appends a Budget Forecasts
     # record.
     #
-    # Rollups/formulas (current_forecast, committed_amount, total_paid,
-    # remaining, variance) are read-only displays — Airtable computes them.
+    # The rollups (current_forecast, committed_amount, total_paid, remaining,
+    # variance) are read-only displays — Budget derives them from the claims.
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
@@ -62,8 +62,8 @@ module Admin
         redirect_to edit_path, notice: "Budget saved."
       end
 
-      # Appends a projected-spend update (amount + date + reason) to this budget,
-      # which Airtable rolls up into its current forecast.
+      # Appends a projected-spend update (amount + date + reason) to this budget;
+      # the newest one becomes its current forecast.
       def forecast
         amount = parse_decimal(params[:amount])
         date = parse_date(params[:date])
@@ -119,9 +119,9 @@ module Admin
         edit_admin_reimbursements_budget_path(@budget.record_id)
       end
 
-      # No validation existed on this write path at all: a blank name/nominal
-      # code or a mangled budget_type param would previously write straight
-      # through to Airtable with no feedback to the operator.
+      # The budget write path has no model-backed form object, so a blank
+      # name/nominal code or a mangled budget_type param has to be caught here
+      # or it reaches the store with no feedback to the operator.
       def budget_validation_error(attrs)
         return "Enter a budget name." if attrs[:name].blank?
         return "Enter a nominal code." if attrs[:nominal_code].blank?

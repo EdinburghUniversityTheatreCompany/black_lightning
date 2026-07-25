@@ -1,7 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team management of the Airtable People registry (payee names,
+    # Finance-team management of the People registry (payee names,
     # emails, bank details). Ports bedlam-bacs `pages/5_People.py`: a duplicate
     # name/email banner, a live modulus badge on each person's bank details,
     # inline editing of sort code / account number (with a timestamped audit

@@ -3,8 +3,8 @@ module Reimbursements
   # Budget-owner review gate helpers. A budget's owners must sign off on an
   # expense charged to their budget before finance can approve it — unless the
   # submitter is themselves an owner (auto-bypass) or the budget has no owners.
-  # The pure predicates operate on Airtable POROs; +gate_satisfied?+ also
-  # consults the OwnerEndorsement table.
+  # The predicates are pure; +gate_satisfied?+ also consults the
+  # OwnerEndorsement table.
   module OwnerReview
     module_function
 

@@ -218,7 +218,7 @@ module Reimbursements
       columns = expense_columns(attrs)
       # A blank budget on the finance edit forms means "clear the budget" —
       # nil-compaction would otherwise make the link settable but never
-      # removable (same explicit-clear the Airtable store performs).
+      # removable.
       columns[:budget_id] = nil if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
       expense.update!(columns)
       bust_expenses!
@@ -263,11 +263,6 @@ module Reimbursements
 
       Batch.find_by(draft_message_id: message_id)
     end
-
-    # Mailbox idempotency (the deferred-robustness fix Airtable couldn't
-    # store): the poll job stamps the Graph message id on the expense it
-    # creates and skips a message it has already seen.
-    def supports_message_idempotency? = true
 
     # PersonLink's stored user->payee link: the real FK on this backend.
     # update_column deliberately skips validations/callbacks so legacy user

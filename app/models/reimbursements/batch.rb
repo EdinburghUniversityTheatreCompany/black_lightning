@@ -21,13 +21,12 @@
 #
 module Reimbursements
   ##
-  # A batch of expenses submitted to EUSA in one BACS request. ActiveRecord
-  # replacement for the Airtable-era PORO (now Reimbursements::Airtable::Batch).
+  # A batch of expenses submitted to EUSA in one BACS request.
   #
-  # The eusa_draft_created boolean is gone (roadmap Phase H step 6): a present
-  # draft_message_id means the draft exists. Legacy batches imported from
-  # before the message id was stored have date_sent set — a sent batch
-  # necessarily had its draft — so the predicate folds that in.
+  # There is no eusa_draft_created column: a present draft_message_id means
+  # the draft exists. Legacy batches imported from before the message id was
+  # stored have date_sent set — a sent batch necessarily had its draft — so the
+  # predicate folds that in.
   class Batch < ApplicationRecord
     include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",
@@ -35,8 +34,8 @@ module Reimbursements
 
     validates :name, presence: true
 
-    # The Airtable "Name" was a formula echoing Date Sent; BatchProcessor
-    # never sends a name, so derive it the same way.
+    # BatchProcessor never sends a name, and the historical batches were named
+    # after the date they were sent, so derive it the same way.
     before_validation -> { self.name = date_sent.to_s if name.blank? && date_sent.present? }
 
     def eusa_draft_created

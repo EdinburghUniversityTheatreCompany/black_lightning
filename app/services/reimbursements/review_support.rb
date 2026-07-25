@@ -2,7 +2,7 @@ module Reimbursements
   ##
   # Pure helpers for the Review page. Ported from bedlam-bacs `review_helpers.py`
   # (minus send_rejection_notification, which orchestrates Graph/mailer and lands
-  # with the Review UI). All operate on POROs so they unit-test without Airtable.
+  # with the Review UI). Nothing here touches the database.
   module ReviewSupport
     BACS_SAFE_PATTERN = /[^a-zA-Z0-9 \-]/
     BACS_MAX_LEN = 18
@@ -89,7 +89,7 @@ module Reimbursements
     private_class_method :over_budget?
 
     # The ex-VAT amount can never legitimately exceed the gross (VAT is
-    # non-negative), yet a real Airtable row does exactly this and single-
+    # non-negative), yet a real imported claim does exactly this and single-
     # handedly flips its budget over-budget. Flag it (advisory) so the operator
     # catches the data-entry error before it distorts the numbers. Both amounts
     # must be present and non-zero — a 0 sentinel means "not yet known".

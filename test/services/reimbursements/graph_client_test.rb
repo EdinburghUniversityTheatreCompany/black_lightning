@@ -338,20 +338,6 @@ module Reimbursements
       end
     end
 
-    test "download fetches bytes without a Graph auth header" do
-      client, http = build_client([ [ 200, "RECEIPTBYTES" ] ])
-
-      assert_equal "RECEIPTBYTES", client.download("https://airtable.example/signed")
-      assert_nil http.requests.sole.headers["Authorization"]
-    end
-
-    test "download raises on a non-2xx status from the signed URL" do
-      client, = build_client([ [ 404, "not found" ] ])
-
-      error = assert_raises(GraphAuth::Error) { client.download("https://airtable.example/expired") }
-      assert_includes error.message, "404"
-    end
-
     test "upload_to_folder's chunked path issues one PUT per chunk for a genuinely multi-chunk file" do
       big = "x" * (GraphClient::UPLOAD_CHUNK_SIZE + 1)
       client, http = build_client([

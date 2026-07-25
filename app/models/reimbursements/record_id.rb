@@ -1,9 +1,8 @@
 module Reimbursements
   ##
-  # The PORO-compat identifier shim shared by every reimbursements AR model:
-  # callers treat record ids as opaque strings (they were Airtable "rec…"
-  # ids). One seam to delete when the post-flip cleanup retires the
-  # string-id vocabulary.
+  # Every reimbursements AR model exposes its id as an opaque string: the
+  # store's public API, the params it takes and the views all speak record ids
+  # as strings, so nothing above the store has to know they are integer PKs.
   module RecordId
     def record_id = id&.to_s
   end

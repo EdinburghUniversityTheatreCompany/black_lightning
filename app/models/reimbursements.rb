@@ -5,9 +5,8 @@ module Reimbursements
     "reimbursements_"
   end
 
-  # The single data gateway every store_builder seam calls. The MySQL cutover
-  # is complete, so the ActiveRecord-backed DatabaseStore is now the only
-  # backend (the Airtable layer was removed in the post-flip cleanup).
+  # The single data gateway every store_builder seam calls. One store per
+  # request or job run: DatabaseStore memoizes its lists per instance.
   def self.build_store
     DatabaseStore.new
   end

@@ -50,7 +50,7 @@ module Admin
         # A covering owner endorsement before the edit means this Save may have
         # re-opened the gate (if it changed amount/budget) — tell finance so the
         # claim jumping back to "awaiting sign-off" isn't a surprise. update_expense!
-        # returns the updated claim, so no extra Airtable read.
+        # returns the updated claim, so no re-read is needed.
         was_endorsed = ::Reimbursements::OwnerReview.gate_applies?(expense) &&
                        ::Reimbursements::OwnerReview.gate_satisfied?(expense)
         updated = store.update_expense!(expense.record_id, save_attrs)

@@ -22,7 +22,7 @@
 #
 module Reimbursements
   ##
-  # Budget <-> People ownership (many-to-many; the Airtable "Owner" link).
+  # Budget <-> People ownership (many-to-many).
   # Owners are payees, not user accounts — a budget owner may never log in.
   class BudgetOwner < ApplicationRecord
     belongs_to :budget, class_name: "Reimbursements::Budget", inverse_of: :budget_ownerships

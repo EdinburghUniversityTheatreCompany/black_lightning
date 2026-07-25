@@ -319,8 +319,8 @@ module Admin
         end
       end
 
-      # The EUSA period (from the row) is now the scoping key, so source_month is
-      # no longer written — the Airtable field is simply left blank.
+      # The EUSA period (from the row) is the scoping key, so source_month is
+      # never written and its column stays blank on new rows.
       def actuals_attrs(row, imported_at)
         {
           nominal_code: row.nominal_code, cost_centre: row.cost_centre, ref: row.ref,

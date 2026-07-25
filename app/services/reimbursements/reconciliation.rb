@@ -5,12 +5,10 @@ require "digest"
 module Reimbursements
   ##
   # Pure functions for reconciling EUSA "actuals" exports against expenses and
-  # budgets — no Airtable/Rails dependencies. Ported from bedlam-bacs
-  # `reconciliation.py`. The hardcoded F40 cost-centre filter there becomes the
-  # +cost_centre_code+ argument here so each cost centre reconciles its own rows.
-  #
-  # `match_debit_to_expense` / `match_credit_to_budget` (which need the extended
-  # Expense/Budget POROs) are ported alongside the model extension.
+  # budgets — no Rails dependencies, so they unit-test without a database.
+  # Ported from bedlam-bacs `reconciliation.py`. The hardcoded F40 cost-centre
+  # filter there becomes the +cost_centre_code+ argument here so each cost
+  # centre reconciles its own rows.
   module Reconciliation
     ##
     # One row from the EUSA actuals sheet.
@@ -120,7 +118,7 @@ module Reimbursements
 
     # Canonical key for deduplicating EUSA Actuals rows. Uses narrative (not date,
     # which timezone shifts can move) and normalises amounts so a zero BigDecimal,
-    # an absent field (nil/""), and an Airtable-stored float all compare equal.
+    # an absent field (nil/"") and a float all compare equal.
     def actuals_row_dedup_key(nominal_code, narrative, debit, credit)
       [ nominal_code.to_s, narrative.to_s.strip, norm_amount(debit), norm_amount(credit) ]
     end
@@ -369,9 +367,9 @@ module Reimbursements
       # BigDecimal (not Float) so the key is exact at every magnitude — a
       # float round-trip collapses distinct large amounts onto one key.
       # BigDecimal("0") renders "0.0", matching the nil/"" branch above — but
-      # BigDecimal("-0.00") renders "-0.0", so a negative-zero value (an
-      # Airtable formula or manual entry that preserves the sign) must be
-      # normalised to the same key as an ordinary zero.
+      # BigDecimal("-0.00") renders "-0.0", so a negative-zero value (a sheet
+      # or manual entry that preserves the sign) must be normalised to the same
+      # key as an ordinary zero.
       amount = BigDecimal(value.to_s)
       amount.zero? ? "0.0" : amount.to_s("F")
     rescue ArgumentError, TypeError

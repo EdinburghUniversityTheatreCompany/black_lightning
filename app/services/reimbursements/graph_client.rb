@@ -151,16 +151,6 @@ module Reimbursements
       end
     end
 
-    # Download bytes from a (signed, pre-authenticated) URL — receipts from
-    # Airtable, whose URLs expire after ~2h, so always fetch fresh in one run.
-    # No Graph auth header: the URL carries its own token.
-    def download(url)
-      status, body = @http.call(:get, URI(url), {}, nil)
-      raise GraphAuth::Error, "receipt download failed (#{status})" unless (200..299).cover?(status)
-
-      body
-    end
-
     # A light read probe confirming the app can reach a mailbox, i.e. it sits in
     # the Exchange ApplicationAccessPolicy group that scopes Mail.* for this app.
     # Returns true on success; raises (403 etc.) so the Settings access-check turns
@@ -222,8 +212,8 @@ module Reimbursements
     # let it write to one, and SharePoint upload / message delete were the two
     # writes carrying bank details. Read-only probes (#check_mailbox,
     # #check_reachable, #draft_message?, #get_site, #list_drives,
-    # #list_folder_contents, #download) stay ungated: they are how the Settings
-    # dashboard and folder picker report on a real tenant, and they mutate nothing.
+    # #list_folder_contents) stay ungated: they are how the Settings dashboard
+    # and folder picker report on a real tenant, and they mutate nothing.
     #
     # #create_draft and #send_mail keep their older suppress-and-stub behaviour
     # (a "suppressed-…" draft id, nil) so a dev Build Batch still walks the whole
@@ -252,7 +242,7 @@ module Reimbursements
       items
     end
 
-    # Airtable's free-text email fields carry stray whitespace; an un-stripped
+    # Hand-entered email addresses carry stray whitespace; an un-stripped
     # address is rejected by Graph as an invalid recipient. Ported from
     # bedlam-bacs _clean_recipients.
     def recipients(addresses)

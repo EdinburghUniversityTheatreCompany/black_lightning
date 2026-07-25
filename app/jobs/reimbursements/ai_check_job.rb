@@ -1,7 +1,7 @@
 module Reimbursements
   ##
-  # Runs the AI expense check for one Pending expense and writes the verdict
-  # back to Airtable, off the request thread. The Review page enqueues one of
+  # Runs the AI expense check for one Pending expense and stores the verdict,
+  # off the request thread. The Review page enqueues one of
   # these per unchecked Pending expense on load, so the operator isn't blocked
   # waiting on Gemini. Idempotent for a genuine pass/fail verdict: skips an
   # expense that already has one. An "error" verdict deliberately does NOT

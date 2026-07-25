@@ -69,12 +69,9 @@ module Admin
         send_data exporter.to_csv(collection), type: "text/csv", filename: exporter.filename
       end
 
-      # A submitted Airtable link-field id (budget_record_id, owner_ids) must
-      # resolve to a real, known record before writing the link — none of the
-      # write paths that touch these link fields validated this before;
-      # Airtable's own API rejects an unknown linked-record id with an error,
-      # which would otherwise surface as an unhandled 500 instead of a
-      # friendly flash pointing at what to fix.
+      # A submitted link id (budget_record_id, owner_ids) must resolve to a real
+      # record before the link is written: the FK would otherwise raise, giving
+      # the operator a 500 instead of a flash naming what to fix.
       def budget_record_id_error(record_id)
         return nil if record_id.blank?
         return nil if store.find_budget(record_id)

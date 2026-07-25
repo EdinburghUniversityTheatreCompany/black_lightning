@@ -31,8 +31,8 @@ module Reimbursements
   # (recorded here as +overridden_by+ with no endorsing person). A submitter who
   # owns the budget is auto-bypassed by the gate and needs no row here.
   #
-  # Lives in MySQL (Airtable's schema isn't ours to change) keyed by the
-  # Airtable expense/budget record ids; survives the planned cutover.
+  # Keyed by the expense and budget record ids rather than by FK, so an
+  # endorsement outlives either record being replaced.
   class OwnerEndorsement < ApplicationRecord
     # The finance user who overrode the gate (nil for a genuine owner sign-off).
     belongs_to :overridden_by, class_name: "User", optional: true

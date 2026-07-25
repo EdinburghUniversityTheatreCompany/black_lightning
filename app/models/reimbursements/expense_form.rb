@@ -1,8 +1,8 @@
 module Reimbursements
   ##
-  # Form object for submitting/editing an expense. When submitting, it
-  # mirrors the Airtable form's required fields exactly — the portal must not
-  # be a way around them. Saving as a DRAFT relaxes the presence rules (like
+  # Form object for submitting/editing an expense. When submitting, it enforces
+  # every field finance requires — the portal must not be a way around them.
+  # Saving as a DRAFT relaxes the presence rules (like
   # email-in, gaps are completed later); format rules still apply to whatever
   # was filled in, and submitting the draft re-runs the full validation.
   #
@@ -14,7 +14,7 @@ module Reimbursements
     include ActiveModel::Model
 
     ALLOWED_RECEIPT_TYPES = %w[application/pdf image/jpeg image/png image/webp].freeze
-    MAX_RECEIPT_BYTES = 5.megabytes # Airtable content-API per-upload limit
+    MAX_RECEIPT_BYTES = 5.megabytes # per-receipt upload cap; a batch mails them all as attachments
     REFERENCE_LIMIT = 18 # EUSA truncates payment references beyond this
 
     attr_accessor :expense_type, :amount, :amount_excl_vat, :budget_record_id,
@@ -118,9 +118,9 @@ module Reimbursements
     end
 
     # Attributes for Store#update_expense!. Overrides are written as empty
-    # strings (not nil) so clearing them actually clears the Airtable fields;
-    # the status write is what promotes a draft on submission (or files it
-    # back as a draft).
+    # strings (not nil) so clearing them actually clears the stored value
+    # instead of being compacted away; the status write is what promotes a
+    # draft on submission (or files it back as a draft).
     def update_attrs
       {
         status: draft? ? Status::DRAFT : Status::PENDING,

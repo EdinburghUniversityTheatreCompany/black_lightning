@@ -30,12 +30,8 @@
 #
 module Reimbursements
   ##
-  # A budget category. ActiveRecord replacement for the Airtable-era PORO
-  # (now Reimbursements::Airtable::Budget), same public interface.
-  #
-  # The Airtable rollups/formulas are computed here instead of loaded
-  # (definitions confirmed from the base schema export — all amounts are
-  # excl-VAT, mirroring the BACS spreadsheet):
+  # A budget category. The rollups are computed here rather than stored — all
+  # amounts excl-VAT, mirroring the BACS spreadsheet:
   #
   #   committed_amount = Σ amount_excl_vat, status ∈ {Approved, Submitted, Paid}
   #   total_paid       = Σ amount_excl_vat, status = Paid
@@ -118,7 +114,7 @@ module Reimbursements
     end
 
     # Nil when no forecast has been logged yet — callers treat nil as "not
-    # tracked, don't block", exactly as the blank Airtable formula did.
+    # tracked, don't block" rather than as zero remaining.
     def remaining
       return nil if current_forecast.nil?
 

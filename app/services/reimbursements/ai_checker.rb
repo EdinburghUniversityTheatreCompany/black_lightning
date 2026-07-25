@@ -40,9 +40,8 @@ module Reimbursements
              description: "A more suitable budget category name, if the chosen one looks wrong"
     end
 
-    def initialize(chat_builder: nil, http: nil)
+    def initialize(chat_builder: nil)
       @chat_builder = chat_builder || -> { RubyLLM.chat(model: MODEL) }
-      @http = http || HttpTransport
     end
 
     # expense: a Reimbursements::Expense; budgets: [Budget] shown to the model so
@@ -70,22 +69,13 @@ module Reimbursements
 
     private
 
-    # Airtable's attachment URL is a short-lived signed URL that can expire
-    # before Gemini would get around to fetching it (the same reason
-    # BatchProcessor/Extractor never hand a bare Airtable URL to a remote
-    # fetcher). Download the bytes ourselves right before the check instead.
+    # Read the bytes out of storage and hand Gemini the content, never the
+    # receipt's URL: that URL is app-authenticated, so a remote fetcher could
+    # not read it anyway.
     def attachments(receipts)
       receipts.map do |receipt|
-        content = receipt.bytes || download(receipt.url)
-        RubyLLM::Attachment.new(StringIO.new(content), filename: receipt.filename)
+        RubyLLM::Attachment.new(StringIO.new(receipt.bytes), filename: receipt.filename)
       end
-    end
-
-    def download(url)
-      status, body = @http.call(:get, URI(url), {}, nil)
-      raise "receipt download failed (#{status})" unless (200..299).cover?(status)
-
-      body
     end
 
     def verdict(data)
@@ -95,8 +85,8 @@ module Reimbursements
       suggested = data["suggested_budget"].to_s
 
       # Fold the suggestion into the comment so it surfaces in the UI without a
-      # separate Airtable field. A suggestion can accompany a passing verdict,
-      # so fold it in regardless of status.
+      # column of its own. A suggestion can accompany a passing verdict, so
+      # fold it in regardless of status.
       comment = "#{comment} Suggested budget: #{suggested}".strip if suggested.present?
 
       Result.new(status: status, comment: comment, suggested_budget: suggested, checked_at: Time.current)

@@ -4,7 +4,7 @@ module Reimbursements
   # A single #process call, triggered from Build Batch, does everything:
   #
   #   1. generate the BACS xlsx from the EFFECTIVE payee/sort/account/nominal
-  #   2. download every receipt (Airtable URLs expire) and rename them
+  #   2. read every receipt's bytes and rename them
   #   3. upload the xlsx + receipts to the cost centre's SharePoint folders
   #   4. create the EUSA draft in the cost centre's send mailbox
   #   5. create the Batch record, mark expenses Submitted + link + store URLs
@@ -35,9 +35,9 @@ module Reimbursements
     XLSX_CONTENT_TYPE =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
 
-    # How many times to retry a post-draft Airtable write (the Batch record, or
-    # a producer_notified stamp) before giving up. Retries are immediate: a
-    # transient Airtable blip clears, and we must not sit on a live draft.
+    # How many times to retry a post-draft write (the Batch record, or a
+    # producer_notified stamp) before giving up. Retries are immediate: a
+    # transient blip clears, and we must not sit on a live draft.
     WRITE_RETRY_ATTEMPTS = 3
 
     # The outcome handed back to the UI.
@@ -158,7 +158,7 @@ module Reimbursements
             description: expense.description.to_s, original_filename: receipt.filename, index: index + 1
           )
           GraphClient::Attachment.new(
-            filename: filename, content: receipt.bytes || @graph.download(receipt.url),
+            filename: filename, content: receipt.bytes,
             content_type: receipt.content_type.presence || "application/octet-stream"
           )
         end
@@ -206,7 +206,7 @@ module Reimbursements
     # later reopen can verify the draft still exists before deleting it —
     # retrying transient failures since the draft is already live and we must
     # recover rather than sit on it. Before any retry beyond the first, checks
-    # whether the previous attempt actually reached Airtable despite raising
+    # whether the previous attempt actually landed despite raising
     # (a lost response, not a lost request) and reuses that record instead of
     # creating a second, duplicate Batch for the same live draft. Returns nil
     # only when every attempt failed (the caller then invokes the orphan-draft
@@ -342,8 +342,8 @@ module Reimbursements
       rescue StandardError
         raise unless attempts < WRITE_RETRY_ATTEMPTS
 
-        # A short, immediate-but-increasing back-off so a genuine Airtable
-        # outage isn't hammered by 3 retries with zero delay between them —
+        # A short, immediate-but-increasing back-off so a genuine outage isn't
+        # hammered by 3 retries with zero delay between them —
         # this runs from a background job, so a brief sleep costs nothing.
         @sleeper.call(attempts)
         retry
