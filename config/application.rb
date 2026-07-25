@@ -91,26 +91,32 @@ module ChaosRails
     #                  `active_record_encryption:` (Rails' active_record railtie
     #                  reads those automatically; nothing is wired here).
     #   development -> REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY /
-    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV (fnox).
-    #                  Dev credentials are PUBLIC, so key material must never live
-    #                  in development.yml.enc.
+    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV (fnox),
+    #                  falling back to the throwaway literals below. Dev
+    #                  credentials are PUBLIC, so real key material must never
+    #                  live in development.yml.enc.
     #   test        -> literal dummy keys in config/environments/test.rb.
-    # With NO keys present (a dev shell without fnox) the encryption config is
-    # left unset so the app still boots; encrypted attributes then raise only on
-    # read/write, which is acceptable in development.
     #
     # support_unencrypted_data stays true during the rollout so existing
     # plaintext rows keep reading. Flipping it off is a documented production
     # follow-up — see docs/reimbursements/encryption-rollout.md.
     config.active_record.encryption.support_unencrypted_data = true
 
-    if Rails.env.development? &&
-       (ar_enc_primary = ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"]).present? &&
-       (ar_enc_deterministic = ENV["REIMBURSEMENTS_AR_ENCRYPTION_DETERMINISTIC_KEY"]).present? &&
-       (ar_enc_salt = ENV["REIMBURSEMENTS_AR_ENCRYPTION_KEY_DERIVATION_SALT"]).present?
-      config.active_record.encryption.primary_key = ar_enc_primary
-      config.active_record.encryption.deterministic_key = ar_enc_deterministic
-      config.active_record.encryption.key_derivation_salt = ar_enc_salt
+    if Rails.env.development?
+      # Throwaway fallbacks so a dev shell without the fnox exports can still
+      # write an expense: an encrypted attribute needs a key on write even when
+      # it is blank, so with no key configured every Expense.create! raised
+      # "Missing Active Record encryption credential". These protect nothing —
+      # they are published in the repo and the dev database holds no real bank
+      # details. Never reuse them anywhere data matters.
+      config.active_record.encryption.primary_key =
+        ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"].presence || "dev-only-insecure-primary-key"
+      config.active_record.encryption.deterministic_key =
+        ENV["REIMBURSEMENTS_AR_ENCRYPTION_DETERMINISTIC_KEY"].presence ||
+        "dev-only-insecure-deterministic-key"
+      config.active_record.encryption.key_derivation_salt =
+        ENV["REIMBURSEMENTS_AR_ENCRYPTION_KEY_DERIVATION_SALT"].presence ||
+        "dev-only-insecure-key-derivation-salt"
     end
 
     # Set image loading to lazy.
