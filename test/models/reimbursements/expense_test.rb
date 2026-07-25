@@ -61,6 +61,9 @@ module Reimbursements
       # Proxied + inline so the <iframe> stays same-origin and is not downloaded.
       assert_match %r{/rails/active_storage/blobs/proxy/}, receipt.inline_url
       assert_match(/disposition=inline/, receipt.inline_url)
+      # The viewer's Download link must save the file even for a type the browser
+      # would happily display, and even when the URL redirects to the storage host.
+      assert_match(/disposition=attachment/, receipt.download_url)
     end
 
     # Sheet music and Office documents are in Attachment::ALLOWED_CONTENT_TYPES
