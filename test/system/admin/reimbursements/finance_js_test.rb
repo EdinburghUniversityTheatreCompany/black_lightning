@@ -43,6 +43,46 @@ module Admin
                                       receipt: receipt, **attrs)
       end
 
+      # A PDF poppler can actually render, so the first-page preview these tests
+      # assert on is a real one. The suite's default receipt bytes are a stub
+      # header that raises ActiveStorage::PreviewError at generation time.
+      def renderable_pdf_bytes
+        file_fixture("renderable_receipt.pdf").binread
+      end
+
+      def renderable_png_bytes
+        file_fixture("renderable_receipt.png").binread
+      end
+
+      # The src ATTRIBUTE of every frame in a pane, in strip order. nil means
+      # that receipt has never been fetched.
+      def frame_sources(pane_id)
+        evaluate_script(
+          "Array.from(document.querySelectorAll('##{pane_id} iframe')).map(f => f.getAttribute('src'))"
+        )
+      end
+
+      # Whether an <img> actually decoded. A thumbnail that fails is hidden by
+      # receipt_viewer#imageFailed in favour of the document icon, so "visible"
+      # alone would pass before the request even finished.
+      def image_rendered?(selector, timeout: 5)
+        deadline = Time.current + timeout
+        script = <<~JS
+          (() => { const i = document.querySelector("#{selector}");
+                   return !!i && i.complete && i.naturalWidth > 0 })()
+        JS
+        loop do
+          return true if evaluate_script(script)
+          return false if Time.current > deadline
+
+          sleep 0.1
+        end
+      end
+
+      def resize_window_to(width, height)
+        page.driver.browser.manage.window.resize_to(width, height)
+      end
+
       # (a) The accessible reasons popover on the finance expenses table.
       test "needs-attention popover opens on click and closes on Escape" do
         expense = seed_expense(status: "Pending", receipt: false)
@@ -83,21 +123,114 @@ module Admin
         assert_no_selector "##{panel}"
       end
 
-      # (b) The Fancybox lightbox opens on a receipt thumbnail.
+      # (b) The Fancybox lightbox still opens an image full screen — from inside
+      # the viewer pane, which is where the lightbox link now lives.
       test "clicking a receipt thumbnail opens the Fancybox lightbox" do
         expense = seed_expense(status: "Approved", receipt: false)
-        attach_test_receipt(expense, filename: "receipt.jpg", content_type: "image/jpeg",
-                            bytes: "JPEGDATA")
+        attach_test_receipt(expense, filename: "receipt.png", content_type: "image/png",
+                            bytes: renderable_png_bytes)
 
         visit edit_admin_reimbursements_expense_edit_path(expense.record_id)
 
         assert_no_selector ".fancybox__container"
+        find("button[aria-label='View receipt 1 of 1, receipt.png']").click
         find("a[data-fancybox='receipts-#{expense.record_id}']").click
         assert_selector ".fancybox__container", wait: 5
 
         # Escape dismisses the lightbox.
         find("body").send_keys(:escape)
         assert_no_selector ".fancybox__container"
+      end
+
+      # --- In-page receipt viewer (Track N) ---------------------------------
+
+      # The queue used to be a tab-flipping exercise. A card's receipt now opens
+      # in place, one at a time, and only when asked for: a twenty-claim queue
+      # that fetched twenty PDFs on load would be slower than the tabs it
+      # replaces, so the "no src before opening" assertions are the point.
+      test "a receipt pane opens on demand, lazily, and switches from the strip" do
+        expense = seed_expense(status: "Pending", receipt: false)
+        attach_test_receipt(expense, filename: "first.pdf", bytes: renderable_pdf_bytes)
+        attach_test_receipt(expense, filename: "second.pdf", bytes: renderable_pdf_bytes)
+        pane = "receipt-pane-#{expense.record_id}"
+
+        visit admin_reimbursements_review_path
+
+        # Closed, and nothing fetched.
+        assert_no_selector "##{pane}"
+        assert_equal [ nil, nil ], frame_sources(pane)
+
+        find("button[aria-label='View receipt 1 of 2, first.pdf']").click
+
+        assert_selector "##{pane}", visible: true
+        first_src, second_src = frame_sources(pane)
+        assert_match(/first\.pdf/, first_src.to_s, "opening loads the receipt asked for")
+        assert_nil second_src, "the other receipt stays unfetched until it is asked for"
+
+        find("button[aria-label='View receipt 2 of 2, second.pdf']").click
+
+        assert_match(/second\.pdf/, frame_sources(pane).last.to_s)
+        assert_equal "true", find("button[aria-label='View receipt 2 of 2, second.pdf']")["aria-expanded"]
+        assert_equal "false", find("button[aria-label='View receipt 1 of 2, first.pdf']")["aria-expanded"]
+
+        within("##{pane}") { click_button "Hide" }
+        assert_no_selector "##{pane}"
+      end
+
+      # A PDF used to fall through to a generic document icon because the gallery
+      # asked whether the file was an image. Its first page renders fine.
+      test "a PDF receipt renders a real first-page preview in the strip" do
+        expense = seed_expense(status: "Pending", receipt: false)
+        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
+
+        visit admin_reimbursements_review_path
+
+        thumbnail = "button[aria-label='View receipt 1 of 1, invoice.pdf'] img"
+        assert_selector thumbnail
+        assert image_rendered?(thumbnail), "the PDF's first page must decode as a real preview"
+        assert_no_selector "button[aria-label='View receipt 1 of 1, invoice.pdf'] i.fa-file-lines",
+                           visible: true
+      end
+
+      # A malformed PDF only raises ActiveStorage::PreviewError when the preview
+      # is REQUESTED, so a producer's dodgy upload surfaces as a failed thumbnail
+      # request. It has to leave a document icon, not a broken image.
+      test "a receipt whose preview cannot be generated falls back to the document icon" do
+        expense = seed_expense(status: "Pending") # default bytes are a stub PDF header
+
+        visit admin_reimbursements_review_path
+
+        label = "button[aria-label='View receipt 1 of 1, receipt.pdf']"
+        assert_selector "#{label} i.fa-file-lines", visible: true, wait: 5
+        assert_no_selector "#{label} img", visible: true
+      end
+
+      # Side by side is the whole request; on a phone it has to stack instead of
+      # squeezing both columns into unreadable slivers.
+      test "the receipt pane sits beside the claim details, and stacks on a phone" do
+        expense = seed_expense(status: "Pending", receipt: false)
+        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
+        pane = "receipt-pane-#{expense.record_id}"
+
+        visit admin_reimbursements_review_path
+        find("button[aria-label='View receipt 1 of 1, invoice.pdf']").click
+        assert_selector "##{pane}", visible: true
+
+        details = find("form[action*='/save']").native.rect
+        beside = find("##{pane}").native.rect
+        assert_operator beside.x, :>, details.x + (details.width / 2),
+                        "on a wide screen the receipt sits beside the details"
+        assert_operator beside.y, :<, details.y + details.height,
+                        "level with the details, not pushed below them"
+
+        resize_window_to(390, 844)
+
+        details = find("form[action*='/save']").native.rect
+        stacked = find("##{pane}").native.rect
+        assert_in_delta details.x, stacked.x, 24, "stacked, so both start at the same edge"
+        assert_operator stacked.y, :>, details.y + details.height, "with the pane below the details"
+      ensure
+        resize_window_to(1400, 1400)
       end
 
       # (d) The Reconcile wizard's forms render their next step directly (the
