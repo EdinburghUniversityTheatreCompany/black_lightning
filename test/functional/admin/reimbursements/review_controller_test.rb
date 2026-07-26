@@ -542,6 +542,24 @@ module Admin
         assert_equal "4100", expense.nominal_code_override
       end
 
+      # Money on the review card reads through AmountParser like every other form in the
+      # portal, so a pasted "£1,200" is accepted — and the PARSED value is what gets
+      # written. AR casts a string to a decimal column with to_d, which reads "£1,200" as
+      # 0, so passing the raw field through would turn an approved claim into £0.
+      test "save accepts a currency-formatted amount and stores the parsed number" do
+        expense = pending_expense
+        sign_in @user
+
+        patch :save, params: { id: expense.record_id, amount: "£1,200.50",
+                               amount_excl_vat: "1,000", description: "Updated blood",
+                               payment_reference: "NEWREF", budget_record_id: @budget.record_id }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        expense.reload
+        assert_equal BigDecimal("1200.50"), expense.amount
+        assert_equal BigDecimal("1000"), expense.amount_excl_vat
+      end
+
       # A rejected edit must write NOTHING — no field of the record, not just
       # the one the validation tripped on. Compares every column against the
       # pre-request copy (updated_at excluded: the seed helper's receipt

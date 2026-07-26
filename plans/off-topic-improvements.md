@@ -125,27 +125,3 @@ product call rather than a bug:
 Deliberately not implemented in the round that fixed the netting: changing matching
 semantics needs Mick's call on which of those shapes finance actually wants.
 
-## `AmountValidation` is a fourth, stricter money parser
-
-The 2026-07-25 round consolidated the three lenient decimal parsers (ExpenseForm and the two
-budget controllers) into `Reimbursements::AmountParser`. `Reimbursements::AmountValidation`
-(used by Review#save and ExpenseEditsController#update) still has its own `DECIMAL_FORMAT` +
-`Float()` reading, deliberately stricter: it rejects anything that isn't a plain decimal so
-`Float()` and `String#to_f` can never disagree on the value that reaches the write path.
-
-That's a defensible reason to differ, but the upshot is that the *finance* edit forms reject
-"£1,200" while the submitter form and the budget forms accept it. Worth a look at whether
-those two paths should parse with `AmountParser` and then validate the parsed BigDecimal
-(rather than validating the raw string), so "what counts as an amount" is one answer across
-the portal.
-## `PersonLink`'s stale-stored-link branch is unreachable in-app
-
-A real FK (`add_foreign_key "users", "reimbursements_people"`) plus
-`has_one :user, dependent: :nullify` on `Reimbursements::Person` mean a user's
-`reimbursements_person_id` can never dangle through any application path — deleting a payee
-nullifies the FK instead. `PersonLink#person_for`'s fall-through therefore only defends
-against DB-level damage (a restore or maintenance script with `FOREIGN_KEY_CHECKS=0`).
-Worth keeping (its failure mode is a duplicate payee with the wrong bank details), but the
-review's framing of it as an everyday path is wrong. `test/services/reimbursements/person_link_test.rb`
-now covers it by reproducing the orphan with referential integrity disabled, and says why.
-

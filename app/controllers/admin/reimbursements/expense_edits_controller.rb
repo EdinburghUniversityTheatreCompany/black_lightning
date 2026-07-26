@@ -164,7 +164,9 @@ module Admin
 
       def update_attrs
         attrs = {
-          amount: params[:amount].presence,
+          # The parsed BigDecimal AmountValidation just approved, not the raw field:
+          # AR would cast "£1,200" to 0 on the decimal column.
+          amount: ::Reimbursements::AmountValidation.amount(params[:amount]),
           description: params[:description],
           payment_reference: params[:payment_reference],
           nominal_code_override: params[:nominal_code_override].to_s,
@@ -180,8 +182,8 @@ module Admin
         }
         # Only write excl-VAT when a positive value is given (0 means "not yet
         # known", leave the field alone), mirroring the Review save.
-        excl_vat = params[:amount_excl_vat].to_f
-        attrs[:amount_excl_vat] = excl_vat if excl_vat.positive?
+        excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
+        attrs[:amount_excl_vat] = excl_vat if excl_vat
         attrs
       end
 

@@ -494,6 +494,37 @@ module Admin
         end
       end
 
+      # The finance forms read money through AmountParser now, like the submitter form
+      # and the budget forms, so a pasted "£1,200" is accepted here too. It has to be
+      # the PARSED value that gets written: ActiveRecord casts a string to a decimal
+      # column with to_d, which reads "£1,200" as 0 — a validated amount would have
+      # become a zero payment.
+      test "update accepts a currency-formatted amount and stores the parsed number" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "£1,200.50",
+                                 amount_excl_vat: "£1,000", description: "x",
+                                 payment_reference: "y", budget_record_id: @budget.record_id }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        expense.reload
+        assert_equal BigDecimal("1200.50"), expense.amount
+        assert_equal BigDecimal("1000"), expense.amount_excl_vat
+      end
+
+      test "update reads a comma decimal as a decimal, not a thousands separator" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "12,50", description: "x",
+                                 payment_reference: "y", budget_record_id: @budget.record_id }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal BigDecimal("12.50"), expense.reload.amount,
+                     "12,50 is twelve pounds fifty, not one thousand two hundred and fifty"
+      end
+
       test "update leaves excl VAT untouched when zero is submitted" do
         expense = expense_at("Paid")
         sign_in @user
