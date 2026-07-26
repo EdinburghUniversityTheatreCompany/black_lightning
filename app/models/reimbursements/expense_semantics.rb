@@ -2,7 +2,7 @@ module Reimbursements
   ##
   # Expense domain predicates, split out of the model to keep it readable.
   # Includers provide status, expense_type, budget, amount, amount_excl_vat,
-  # description, payment_reference, receipts, sharepoint_receipt_urls and
+  # description, payment_reference, receipt_files, sharepoint_receipt_urls and
   # ai_check_status.
   module ExpenseSemantics
     def pending? = status == Status::PENDING
@@ -28,7 +28,7 @@ module Reimbursements
       missing << "a payment reference" if payment_reference.blank?
       # A receipt counts as present if a file is attached OR a SharePoint URL
       # was stored when it was offloaded during batch processing.
-      missing << "a receipt" if receipts.empty? && sharepoint_receipt_urls.blank?
+      missing << "a receipt" if receipt_files.empty? && sharepoint_receipt_urls.blank?
       missing
     end
 
@@ -38,8 +38,13 @@ module Reimbursements
 
     # Attached files if any, otherwise the count of SharePoint URLs stored
     # when the files were offloaded during batch processing.
+    #
+    # Counts the attachments, NOT the wrapped #receipts: each wrapper mints a signed id,
+    # a blob path and a variant representation path, and this is asked once per row on the
+    # batch-builder and expense-edit screens — a lot of URL signing to answer "how many?".
     def receipt_count
-      receipts.any? ? receipts.size : sharepoint_receipt_urls.size
+      attached = receipt_files.size
+      attached.positive? ? attached : sharepoint_receipt_urls.size
     end
 
     # Whether this claim's receipts may be sent to Gemini. ONE consent covers

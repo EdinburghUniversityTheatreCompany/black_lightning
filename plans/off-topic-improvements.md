@@ -70,13 +70,6 @@ cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-
 per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
 per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
 
-## Deferred from the MySQL-cutover code review (2026-07-18, branch reimbursements-mysql-cutover)
-
-- **Store-level attribute filtering instead of capability probes**: `MailboxPollJob#expense_attrs` still gates `source_message_id` on `store.supports_message_idempotency?`, and `DatabaseStore#batch_columns` silently `.except(:eusa_draft_created)`. The deeper fix is each store declaring/filtering its supported write vocabulary so callers always send full attrs. Both become moot at the post-flip cleanup when the Airtable store is deleted.
-- **Post-flip cleanup list additions**: the review card's "Remove this receipt from Airtable?" confirm copy (`app/views/admin/reimbursements/review/_expense_card.html.erb`), and `ExpenseEditsController#lookup_expense`'s `"rec"`-prefix live-fetch special-casing (dead on the DB backend — `DatabaseStore#find_expense!` returns nil instead of raising).
-- **Three hand-maintained bank-fields lists** (importer guard, `DatabaseStore::PAYMENT_DETAILS_FIELDS`, the test seed helper) could derive from one `PaymentDetails::FIELDS` constant.
-- **ExpenseSemantics#receipt_count** still builds Attachment wrappers to count; `receipt_files.size` would be free on the AR side, but the shared module keeps the PORO shape until the POROs die.
-
 ## Per-worktree / per-subagent database isolation (dev + test) — spotted 2026-07-23
 
 `config/database.yml` only **half** isolates today:

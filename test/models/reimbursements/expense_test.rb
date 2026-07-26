@@ -100,6 +100,22 @@ module Reimbursements
       assert_equal 2, expense.receipt_count
     end
 
+    # #receipts wraps each attachment in an Attachment value object, minting a signed id, a
+    # blob path and a variant representation path apiece. The batch builder and the
+    # expense-edit screen ask for the COUNT once per row, so counting must not pay for that.
+    test "receipt_count counts attachments without building the receipt wrappers" do
+      expense = create_expense
+      expense.receipt_files.attach(io: File.open(Rails.root.join("test", "test.png")),
+                                   filename: "receipt.png", content_type: "image/png")
+
+      assert_equal 1, expense.receipt_count
+      assert_nil expense.instance_variable_get(:@receipts),
+                 "counting receipts must not build the Attachment wrappers"
+      assert_empty expense.missing_completion_fields.grep(/receipt/)
+      assert_nil expense.instance_variable_get(:@receipts),
+                 "the completeness check must not build them either"
+    end
+
     test "effective payee falls back through PaymentDetails" do
       person = Person.create!(name: "Pat", email: "payee@example.com")
       person.create_payment_details!(sort_code: "80-22-60", account_number: "12345678")
