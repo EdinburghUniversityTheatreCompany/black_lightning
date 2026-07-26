@@ -25,10 +25,20 @@
       claim means reading a figure on the document against the figure in the form,
       dozens of times in a sitting, which two browser tabs make needlessly hard.
       The columns stack on narrow screens, where side by side would squeeze both.
+
+      Only a claim that HAS a receipt gets the second column. With no receipt
+      there is no document to read beside the form, so a side column would
+      reserve two fifths of the card, stretched to the full height of the
+      details, for an attach button — and receiptless claims sort into Needs
+      attention, i.e. the bottom of the queue, which is where that empty block
+      was showing up. items-start keeps the columns at their own heights so the
+      divider ends with the receipts rather than ruling a line down blank space.
+
       The content below is deliberately NOT re-indented into these two wrappers:
       two levels of indentation would rewrite every line of the card for no
       behaviour change and bury the next real diff. %>
-  <div class="flex flex-col gap-4 lg:flex-row">
+  <% has_receipts = expense.receipts.any? %>
+  <div class="flex flex-col gap-4<%= " lg:flex-row lg:items-start" if has_receipts %>">
   <div class="min-w-0 lg:flex-1">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
     <% if selectable %>
@@ -255,7 +265,7 @@
   </div>
 
   <%# --- Receipts (opened on demand beside the details; attach/detach inline) --- %>
-  <div class="min-w-0 border-t border-gray-200 pt-3 lg:w-2/5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
+  <div class="min-w-0 border-t border-gray-200 pt-3<%= " lg:w-2/5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4" if has_receipts %>">
     <p class="text-sm font-medium">Receipts</p>
     <div class="mt-1">
       <%= render "admin/reimbursements/shared/receipt_viewer",
