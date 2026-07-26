@@ -145,18 +145,6 @@ current working rule is "serialise agent test runs / go sequential" (see the glo
    wiring it up is likely the cleanest path, plus upstreaming any gaps into that skill. Also update
    the `parallel-worktree-dev-server-ports` global memory note once done.
 
-## Budgets index intro copy still says the financials come "from Airtable"
-
-`app/views/admin/reimbursements/budgets/index.html.erb` opens with "Every budget category
-from Airtable with its live financials … Those five are Airtable rollups, shown read-only
-here." The Airtable backend is gone (Track A) and every figure is now computed in
-`Reimbursements::Budget` from the local tables. The copy is also out of date on the count:
-the table shows nine rollup columns since Track G, not five.
-
-**Fix:** reword to describe the rollups as computed by the portal, and drop the Airtable
-reference. Noticed while adding the Budgets CSV export (Track H); left alone there because
-the Fringe/copy sweep (Track D) owns user-facing prose.
-
 ## No export on My Budgets (the owner-facing budget page)
 
 Track H added a "Download CSV" to every finance list (Expenses, Actuals, Budgets, People,

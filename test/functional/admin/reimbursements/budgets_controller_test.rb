@@ -69,6 +69,16 @@ module Admin
         assert_includes response.body, "500"
       end
 
+      # The Airtable backend is gone and every figure on this page is computed locally, so
+      # the intro copy must not send a reader looking for a base that no longer exists.
+      test "index copy does not reference the retired Airtable backend" do
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_no_match(/airtable/i, response.body)
+      end
+
       # On top of the setup (forecast 800, committed 300 = Approved 150 + Paid
       # 150), give @props a Pending expense of 275 (pipeline) and a reconciled
       # EUSA debit of 161 against its Paid expense — so every rollup on the line
