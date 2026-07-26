@@ -7,8 +7,9 @@ module Reimbursements
   # Pure functions for reconciling EUSA "actuals" exports against expenses and
   # budgets — no Rails dependencies, so they unit-test without a database.
   # Ported from bedlam-bacs `reconciliation.py`. The hardcoded F40 cost-centre
-  # filter there becomes the +cost_centre_code+ argument here so each cost
-  # centre reconciles its own rows.
+  # filter there is gone entirely: every row is parsed and carries its own code,
+  # and Reimbursements::ActualsAttribution (which can look codes up) decides
+  # which cost centre each row lands in.
   module Reconciliation
     ##
     # One row from the EUSA actuals sheet.
@@ -49,21 +50,26 @@ module Reimbursements
       end
     end
 
-    REQUIRED_COLUMNS = %i[nominal_code cost_centre date period narrative].freeze
+    # Cost Centre is deliberately NOT required: some exports omit the column
+    # entirely, and that is a paste whose rows have no cost centre (for an
+    # operator to assign), not a malformed one.
+    REQUIRED_COLUMNS = %i[nominal_code date period narrative].freeze
 
     module_function
 
     # Parse pasted tab- or comma-separated actuals text into typed rows. Accepts
     # both the legacy 10-column layout and the Sage export (headers drive the
-    # column mapping, so order/extra columns don't matter). Rows for a different
-    # cost centre are dropped; rows with no cost centre are kept (some exports
-    # omit it). Raises ArgumentError on missing columns or unparseable values.
+    # column mapping, so order/extra columns don't matter). Raises ArgumentError
+    # on missing columns or unparseable values.
     #
-    # cost_centre_code is required on purpose: it used to default to "F40", so a
-    # caller that forgot it silently filtered a second cost centre's export down
-    # to the Fringe's rows and imported nothing, or worse, kept rows that were
-    # never theirs.
-    def parse_actuals_rows(text, cost_centre_code:)
+    # EVERY row comes back, whatever cost centre it names — the parser is pure
+    # (no Rails), so it cannot know which codes are configured here and must not
+    # pretend to. It used to filter to one code and silently drop the rest,
+    # which meant a whole-organisation export lost its other cost centres with
+    # nothing on screen to say so. Attribution — this centre's rows, an
+    # unrecognised code, a blank one needing an operator's choice — belongs to
+    # ActualsAttribution on the Rails side, which can actually look the codes up.
+    def parse_actuals_rows(text)
       text = text.to_s.strip
       return [] if text.empty?
 
@@ -87,7 +93,7 @@ module Reimbursements
         end
 
         cell = ->(key) { row[col_map[key]].to_s.strip }
-        cost_centre = cell.call(:cost_centre)
+        cost_centre = col_map.key?(:cost_centre) ? cell.call(:cost_centre) : ""
         parsed_date = parse_british_date(cell.call(:date))
 
         if col_map.key?(:goods_value)
@@ -100,9 +106,6 @@ module Reimbursements
           credit = parse_amount(cell.call(:credit))
           net = parse_amount(cell.call(:net))
         end
-
-        # Keep only this cost centre's rows; blank cost centre is kept.
-        next if cost_centre.present? && cost_centre.upcase != cost_centre_code.upcase
 
         rows << ActualsRow.new(
           nominal_code: cell.call(:nominal_code),
@@ -209,12 +212,20 @@ module Reimbursements
     # debit->expense / credit->budget matching.
     #
     # Candidates are rows with an identical absolute amount (exact BigDecimal,
-    # never a float), opposite signs, on the same nominal code, in the same
-    # financial year. Each is scored, anything below OFFSET_MIN_SCORE is
-    # dropped, and the survivors are taken greedily strongest-first so a row can
-    # only ever belong to one pair and the best-evidenced claim on a leg wins.
-    def detect_offsetting_pairs(rows)
-      candidates = offset_candidates(rows)
+    # never a float), opposite signs, on the same nominal code, in the same COST
+    # CENTRE, in the same financial year. Each is scored, anything below
+    # OFFSET_MIN_SCORE is dropped, and the survivors are taken greedily
+    # strongest-first so a row can only ever belong to one pair and the
+    # best-evidenced claim on a leg wins.
+    #
+    # +cost_centres+ is an optional array of identity strings parallel to
+    # +rows+, for a caller that has already resolved each row's attribution: a
+    # blank-code row an operator assigned by hand belongs to the pot they chose,
+    # not to "blank". Omitted, each row's own exported code is used and a blank
+    # agrees with nothing — a conservative default, unlike the cost_centre_code
+    # argument this replaces, which defaulted to the literal "F40".
+    def detect_offsetting_pairs(rows, cost_centres: nil)
+      candidates = offset_candidates(rows, cost_centres || rows.map(&:cost_centre))
       occurrences = row_occurrences(rows)
       consumed = Set.new
       pairs = []
@@ -260,7 +271,7 @@ module Reimbursements
     # the result is deterministic. Rows are bucketed by absolute amount before
     # pairing, so a big paste doesn't pay for comparing every row with every
     # other one.
-    def offset_candidates(rows)
+    def offset_candidates(rows, cost_centre_keys)
       signed = rows.each_with_index.filter_map do |row, index|
         amount = row.debit - row.credit
         [ row, index, amount ] unless amount.zero?
@@ -283,6 +294,12 @@ module Reimbursements
           # reclassifications), so this costs approximately nothing. Blank codes
           # agree on nothing, so they never pair either.
           next unless same_field?(row_a.nominal_code, row_b.nominal_code)
+          # Same cost centre is a hard requirement too, for the same reason and
+          # with more at stake: a paste may now span several pots, and two
+          # unrelated real transactions of the same size on the same code in
+          # two different pots would otherwise be stamped as cancelling out,
+          # hiding real spend from BOTH pots' rollups irrecoverably.
+          next unless same_field?(cost_centre_keys[index_a], cost_centre_keys[index_b])
           next unless same_financial_year?(row_a.date, row_b.date)
 
           score = offset_pair_score(row_a, row_b)

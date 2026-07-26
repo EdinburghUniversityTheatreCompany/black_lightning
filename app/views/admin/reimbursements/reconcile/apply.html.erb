@@ -43,6 +43,25 @@
   </div>
 <% end %>
 
+<%# Rows this paste deliberately did not import. Reported after the fact as
+    well as in the preview, so the numbers in the summary above are never quietly
+    smaller than the paste. %>
+<% if @attribution.unrecognised_rows.any? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    <%= pluralize(@attribution.unrecognised_rows.size, "row") %> were not imported:
+    <%= "cost centre".pluralize(@attribution.unrecognised_codes.size) %>
+    <strong><%= @attribution.unrecognised_codes.to_sentence %></strong>
+    <%= @attribution.unrecognised_codes.size == 1 ? "is" : "are" %> not set up here.
+  <% end %>
+<% end %>
+
+<% if @attribution.skipped_blank_rows.any? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    <%= pluralize(@attribution.skipped_blank_rows.size, "row") %> with no cost centre
+    <%= @attribution.skipped_blank_rows.size == 1 ? "was" : "were" %> skipped, as you chose.
+  <% end %>
+<% end %>
+
 <p class="mt-2 text-sm text-gray-600">
   Producers whose expenses were marked Paid have been emailed a "you've been paid" note.
 </p>
