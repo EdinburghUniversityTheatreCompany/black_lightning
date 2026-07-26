@@ -449,6 +449,7 @@ module Reimbursements
 
       alice_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "alice@example.com" ] }
       assert_includes alice_mail[:subject], "2 expenses submitted for payment"
+      assert_includes alice_mail[:html], "Hi Alice,", "the payee is greeted by name"
       assert_includes alice_mail[:html], "Fake blood"
       assert_includes alice_mail[:html], "Face paint"
       assert_includes alice_mail[:html], "£20.00", "the total sums both of Alice's expenses"

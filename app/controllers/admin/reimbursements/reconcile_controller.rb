@@ -472,7 +472,11 @@ module Admin
 
           expenses = pairs.map { |_entry, expense| expense }
           begin
-            notifier.payment_confirmation(to: person.email, person: person, expenses: expenses)
+            notifier.payment_confirmation(
+              to: person.email,
+              greeting_name: ::Reimbursements::GreetingName.for(person),
+              expenses: expenses
+            )
           rescue StandardError => e
             log_and_notify("Reimbursements: payment email failed for #{person.email} — #{e.message}", e,
                            context: { source: "reimbursements_payment_email", payee: person.email })

@@ -28,37 +28,45 @@ module Reimbursements
       @graph = graph || GraphClient.new
     end
 
+    # The three producer-facing methods take +greeting_name+ — the single word
+    # the message opens with, already derived by the call site through
+    # GreetingName.for(person). The Notifier stays ActiveRecord-free at its
+    # boundary (line items are hashes, amounts pre-formatted strings), so the
+    # person lookup that derivation needs never happens inside the render path.
+    # NB the +payee_name+ keys inside the operator-alert row hashes below are a
+    # different thing and still carry full names.
+
     # Producer: their expense was rejected on Review reject.
-    def rejection(to:, payee_name:, auto_number:, amount:, budget_name:, description:, reason:)
+    def rejection(to:, greeting_name:, auto_number:, amount:, budget_name:, description:, reason:)
       send_email(
         to: to,
         subject: "Your #{@cost_centre.name} expense ##{auto_number} was not approved",
         template: "reimbursements/emails/rejection",
-        assigns: { payee_name: payee_name, auto_number: auto_number, amount: amount,
+        assigns: { greeting_name: greeting_name, auto_number: auto_number, amount: amount,
                    budget_name: budget_name, description: description, reason: reason }
       )
     end
 
     # Payee: "you've been paid" once EUSA's actuals confirm payment (Reconcile apply).
-    def payment_confirmation(to:, person:, expenses:)
+    def payment_confirmation(to:, greeting_name:, expenses:)
       count = Array(expenses).size
       send_email(
         to: to,
         subject: "EUSA has paid your expense#{'s' if count > 1}",
         template: "reimbursements/emails/payment_confirmation",
-        assigns: { person: person, expenses: Array(expenses) }
+        assigns: { greeting_name: greeting_name, expenses: Array(expenses) }
       )
     end
 
     # Producer: one notification per payee for a processed BACS batch.
-    def producer_notification(to:, recipient_name:, line_items:, bacs_date:, total:)
+    def producer_notification(to:, greeting_name:, line_items:, bacs_date:, total:)
       count = line_items.size
       send_email(
         to: to,
         subject: "#{@cost_centre.subject_prefix} #{count} #{'expense'.pluralize(count)} " \
                  "submitted for payment",
         template: "reimbursements/emails/producer_notification",
-        assigns: { recipient_name: recipient_name, line_items: line_items,
+        assigns: { greeting_name: greeting_name, line_items: line_items,
                    bacs_date: bacs_date, total: total }
       )
     end

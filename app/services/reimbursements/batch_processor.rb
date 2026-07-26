@@ -302,7 +302,7 @@ module Reimbursements
           description: expense.description.to_s }
       end
       @notifier.producer_notification(
-        to: email, recipient_name: items.first.person&.name.to_s,
+        to: email, greeting_name: GreetingName.for(items.first.person),
         line_items: line_items, bacs_date: bacs_date, total: format("%.2f", total(items))
       )
       result.producer_notifications_sent += 1

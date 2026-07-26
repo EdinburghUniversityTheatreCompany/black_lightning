@@ -4,7 +4,6 @@ module Reimbursements
   class NotifierTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    Person = Struct.new(:name, :email, keyword_init: true)
     PaidExpense = Struct.new(:description, :amount, :auto_number, keyword_init: true)
 
     MAILBOX = "send@bedlamfringe.co.uk".freeze
@@ -22,7 +21,7 @@ module Reimbursements
     test "rejection sends from the mailbox with the payee, subject and rendered body" do
       notifier, graph = build
 
-      notifier.rejection(to: "pat@example.com", payee_name: "Pat Producer", auto_number: 7,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7,
                          amount: 12.5, budget_name: "Props", description: "Fake blood",
                          reason: "Receipt is missing the VAT breakdown.")
 
@@ -30,7 +29,7 @@ module Reimbursements
       assert_equal MAILBOX, mail[:mailbox]
       assert_equal [ "pat@example.com" ], mail[:to]
       assert_match(/expense #7/i, mail[:subject])
-      assert_match "Pat Producer", mail[:html]
+      assert_match "Hi Pat,", mail[:html]
       assert_match "Receipt is missing the VAT breakdown.", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "Props", mail[:html]
@@ -38,18 +37,18 @@ module Reimbursements
 
     test "payment_confirmation addresses the payee and pluralises the subject" do
       notifier, graph = build
-      person = Person.new(name: "Alice Producer", email: "alice@example.com")
       expenses = [ PaidExpense.new(description: "Props", amount: 5, auto_number: 1),
                    PaidExpense.new(description: "Set", amount: 8, auto_number: 2) ]
 
-      notifier.payment_confirmation(to: person.email, person: person, expenses: expenses)
+      notifier.payment_confirmation(to: "alice@example.com", greeting_name: "Alice",
+                                    expenses: expenses)
 
       mail = graph.send_mails.sole
       assert_equal [ "alice@example.com" ], mail[:to]
       assert_equal "EUSA has paid your expenses", mail[:subject]
       assert_match "The Bedlam Fringe 2026 finance team", mail[:html],
                    "the sign-off must be the cost centre's name, not a hardcoded one"
-      assert_match "Alice Producer", mail[:html]
+      assert_match "Hi Alice,", mail[:html]
       assert_match "Props", mail[:html]
       assert_match "Set", mail[:html]
     end
@@ -59,12 +58,12 @@ module Reimbursements
       line_items = [ { amount: "12.50", budget_name: "Props", description: "Fake blood" },
                      { amount: "8.00", budget_name: "Props", description: "Brushes" } ]
 
-      notifier.producer_notification(to: "alice@example.com", recipient_name: "Alice Producer",
+      notifier.producer_notification(to: "alice@example.com", greeting_name: "Alice",
                                      line_items: line_items, bacs_date: Date.new(2026, 5, 13), total: "20.50")
 
       mail = graph.send_mails.sole
       assert_equal "[Bedlam Fringe 2026] 2 expenses submitted for payment", mail[:subject]
-      assert_match "Hi Alice Producer,", mail[:html]
+      assert_match "Hi Alice,", mail[:html]
       assert_match "Fake blood", mail[:html]
       assert_match "20.50", mail[:html]
       assert_match "2026-05-13", mail[:html]
@@ -121,7 +120,7 @@ module Reimbursements
     test "the rendered email is a complete HTML document, not a bare fragment" do
       notifier, graph = build
 
-      notifier.rejection(to: "pat@example.com", payee_name: "Pat Producer", auto_number: 7,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7,
                          amount: 12.5, budget_name: "Props", description: "Fake blood",
                          reason: "Missing VAT breakdown.")
 
@@ -146,9 +145,9 @@ module Reimbursements
       row = { auto_number: 7, payee_name: "Pat", amount: "12.50", age_days: 5,
               budget_name: "Props", description: "Paint", reason: "AI review: amount mismatch" }
 
-      notifier.rejection(to: "pat@example.com", payee_name: "Pat", auto_number: 7, amount: 12.5,
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, amount: 12.5,
                          budget_name: "Props", description: "Paint", reason: "No receipt.")
-      notifier.producer_notification(to: "pat@example.com", recipient_name: "Pat", total: "12.50",
+      notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
                                      line_items: [ row ], bacs_date: Date.new(2026, 5, 13))
       notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
                                 threshold_days: 3)

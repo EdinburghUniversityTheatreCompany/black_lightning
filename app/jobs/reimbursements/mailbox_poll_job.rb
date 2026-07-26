@@ -98,7 +98,7 @@ module Reimbursements
       return handle_rate_limited_sender(message) if sender_over_daily_limit?(message)
 
       receipts = usable_receipts(message)
-      return handle_missing_receipt(message) if receipts.empty?
+      return handle_missing_receipt(message, person) if receipts.empty?
 
       create_expense(message, person, receipts)
     rescue MailboxClient::AuthError
@@ -175,8 +175,8 @@ module Reimbursements
       mailbox.mark_read_and_move(message.id, :rejected)
     end
 
-    def handle_missing_receipt(message)
-      mailbox.reply(message.id, html: missing_receipt_html)
+    def handle_missing_receipt(message, person)
+      mailbox.reply(message.id, html: missing_receipt_html(person))
       mailbox.mark_read_and_move(message.id, :rejected)
     end
 
@@ -340,6 +340,17 @@ module Reimbursements
       @current_cost_centre.contact_email
     end
 
+    # These replies are built as raw HTML strings, not ERB, so nothing escapes
+    # for us — and the payee's name is the first submitter-controlled value to
+    # reach one (User#first_name is self-service editable).
+    #
+    # unknown_sender_html and rate_limited_html deliberately keep a bare "Hi,":
+    # the first has no matched person at all, and naming someone we are refusing
+    # to process for is not an improvement.
+    def greeting(person)
+      ERB::Util.html_escape(GreetingName.for(person))
+    end
+
     def unknown_sender_html
       <<~HTML
         <p>Hi,</p>
@@ -353,9 +364,9 @@ module Reimbursements
       HTML
     end
 
-    def missing_receipt_html
+    def missing_receipt_html(person)
       <<~HTML
-        <p>Hi,</p>
+        <p>Hi #{greeting(person)},</p>
         <p>Thanks for your email! We found your account, but there was no usable receipt
         attached.</p>
         <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP/HEIC,
@@ -379,7 +390,7 @@ module Reimbursements
     def created_html(expense)
       url = edit_url(expense)
       <<~HTML
-        <p>Hi,</p>
+        <p>Hi #{greeting(expense.person)},</p>
         <p>Thanks for your receipt! We've saved it as a draft expense claim.</p>
         <p><strong>Please check, complete, and submit the claim here:</strong>
         <a href="#{url}">#{url}</a>. Double-check the budget and the payment reference.</p>

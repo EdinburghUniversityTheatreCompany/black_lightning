@@ -170,3 +170,19 @@ indication why, or termtime rows would be filed under the Fringe.
 through the stateless preview/apply round trip, which re-parses the pasted text), and resolve
 the notifier's cost centre from the expense/batch being acted on rather than from `.default`.
 Until then the portal is single-cost-centre in practice, whatever the copy says.
+
+
+## A long worktree name overflows MySQL's identifier limit
+
+`.worktree-isolate.conf` derives `WORKTREE_DB_SUFFIX` from the worktree directory name, and
+`config/database.yml` appends it to `bedlam_blacklightning_development` (33 chars) plus a
+`_queue`/`_cache` namespace suffix (6). MySQL caps identifiers at 64 characters, so any
+worktree name over ~25 characters makes `bin/rails db:prepare` abort with "Identifier name
+'…' is too long" — the worktree provisions fine and only fails when you first touch the
+database. A `.worktrees/reimbursements-first-name-greeting` hit this; the workaround was
+hand-editing the generated `mise.local.toml` to a shorter suffix.
+
+**Fix:** cap the generated suffix (truncate to ~20 chars, or hash the tail) in dev-hooks'
+`isolate-worktree.sh`, and/or note the limit in `.worktree-isolate.conf`'s header comment so
+the constraint is visible where the naming decision is made. The upstream script is the
+better home — every repo using this isolation scheme has the same ceiling.

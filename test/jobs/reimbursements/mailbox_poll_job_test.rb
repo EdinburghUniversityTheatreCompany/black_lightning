@@ -115,6 +115,8 @@ module Reimbursements
 
       assert_equal 1, @mailbox.replies.size
       assert_match(/isn't in our submitter list/, @mailbox.replies.first.last)
+      assert_includes @mailbox.replies.first.last, "<p>Hi,</p>",
+                      "no matched person, so there is no name to greet"
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
       assert_equal 0, Expense.count
     end
@@ -157,8 +159,25 @@ module Reimbursements
       MailboxPollJob.perform_now
 
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
+      assert_includes @mailbox.replies.first.last, "Hi Pat,",
+                      "the sender was matched, so greet Pat Producer by first name"
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
       assert_equal 0, Expense.count
+    end
+
+    # The heredoc replies are raw HTML with no escaping of their own, and the
+    # name reaching them is submitter-controlled (User#first_name is
+    # self-service editable).
+    test "a payee name containing markup is escaped into the reply" do
+      setup_job(messages: [ inbound_message(from: "mallory@example.com") ])
+      create_reimbursements_person(name: "<script>alert(1)</script> Mallory",
+                                   email: "mallory@example.com")
+
+      MailboxPollJob.perform_now
+
+      reply = @mailbox.replies.sole.last
+      assert_not_includes reply, "<script>"
+      assert_includes reply, "Hi &lt;script&gt;alert(1)&lt;/script&gt;,"
     end
 
     test "automated senders get no reply (mail-loop guard)" do
@@ -209,6 +228,7 @@ module Reimbursements
       assert_equal 1, expense.receipt_files.count
       reply_html = @mailbox.replies.sole.last
       assert_includes reply_html, "/admin/reimbursements/expenses/#{expense.record_id}/edit"
+      assert_includes reply_html, "Hi Pat,", "the draft's payee is greeted by first name"
       assert_includes reply_html, "won't see the claim until you submit"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end

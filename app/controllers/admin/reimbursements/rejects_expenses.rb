@@ -31,7 +31,7 @@ module Admin
 
         notifier.rejection(
           to: email,
-          payee_name: expense.person.name,
+          greeting_name: ::Reimbursements::GreetingName.for(expense.person),
           auto_number: expense.auto_number,
           amount: expense.amount.to_f,
           budget_name: expense.budget&.name.to_s,

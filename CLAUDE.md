@@ -279,6 +279,19 @@ survive as historical import provenance and are never written. Spec + plan in
   Reply-then-move is the commit point; unread = will retry.
   `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
   subcommittee) before/when the Entra client secret dies.
+- **Every producer email greets by FIRST name through `Reimbursements::GreetingName.for`**
+  — the one derivation, because the two surfaces are written differently and must not
+  drift: the `Notifier`'s three producer templates (rejection, payment_confirmation,
+  producer_notification) are ERB, while `MailboxPollJob`'s replies are plain-Ruby
+  heredocs. It prefers the **linked `User#first_name`**, then the leading word of
+  `Person#name`, then `"there"` — the last because `PersonLink` stores the user's *email*
+  as the person name when they have no full name, so a bare split would open with "Hi
+  alice@example.com,". Callers derive the string and pass `greeting_name:`; the Notifier
+  itself stays ActiveRecord-free (`payee_name:` inside the operator-alert **row hashes**
+  is a different thing and still a full name, as is the BACS spreadsheet's payee). The
+  heredoc replies escape it (`ERB::Util`) — they have no escaping of their own and
+  `first_name` is self-service editable. `unknown_sender_html`/`rate_limited_html` keep a
+  bare "Hi," on purpose: no matched person to name.
 - **Tests**: seed real rows with the `create_reimbursements_*` helpers
   (`test/support/reimbursements_test_helpers.rb`). Pure-logic unit tests that need a
   value object without a DB round-trip build an unpersisted AR model and pin the
