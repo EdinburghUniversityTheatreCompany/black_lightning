@@ -293,6 +293,7 @@ module Admin
       assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
       assert_equal [ "alice@example.com" ], mail[:to]
       assert_match(/EUSA has paid/, mail[:subject])
+      assert_match "Hi Alice,", mail[:html], "Alice Producer is greeted by first name only"
 
       assert_response :success
       # One EUSA Actuals row created, then linked to the expense.

@@ -903,6 +903,7 @@ module Admin
         assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
         assert_equal [ "pat@example.com" ], mail[:to]
         assert_match(/not approved/, mail[:subject])
+        assert_match "Hi Pat,", mail[:html], "Pat Producer is greeted by first name only"
         assert_match "Missing receipt", mail[:html]
       end
 
