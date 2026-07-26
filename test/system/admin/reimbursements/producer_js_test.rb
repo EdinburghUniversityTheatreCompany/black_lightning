@@ -12,13 +12,18 @@ module Admin
         grant_producer_permission(users(:member))
         create_reimbursements_person(email: users(:member).email)
         create_reimbursements_budget(name: "Props")
+        # On BaseController, never on ExpensesController, and restored afterwards: a write to
+        # the subclass shadows the parent for the rest of the process, which used to break
+        # the functional extract tests whenever both suites ran in one process. See the seam
+        # definition in Admin::Reimbursements::BaseController.
+        @original_extractor_builder = BaseController.extractor_builder
         # No Gemini in the browser test; extract just fails softly.
-        ExpensesController.extractor_builder = -> { failing_extractor }
+        BaseController.extractor_builder = -> { failing_extractor }
         login_as users(:member)
       end
 
       teardown do
-        ExpensesController.extractor_builder = -> { ::Reimbursements::Extractor.new }
+        BaseController.extractor_builder = @original_extractor_builder
       end
 
       def failing_extractor
@@ -98,7 +103,7 @@ module Admin
       end
 
       test "choosing 'to be reimbursed to myself' scans in self mode, not invoice mode" do
-        ExpensesController.extractor_builder = -> { mode_reporting_extractor }
+        BaseController.extractor_builder = -> { mode_reporting_extractor }
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
@@ -115,7 +120,7 @@ module Admin
       end
 
       test "choosing the invoice option scans in invoice mode and prefills the payee bank details" do
-        ExpensesController.extractor_builder = -> { mode_reporting_extractor }
+        BaseController.extractor_builder = -> { mode_reporting_extractor }
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
@@ -132,7 +137,7 @@ module Admin
       test "choosing 'I will fill in the details myself' sends nothing to Gemini" do
         # If this option ever hit the endpoint, the raising extractor would 500
         # the request; the status line must instead confirm nothing was sent.
-        ExpensesController.extractor_builder = -> { raise "must not scan when the submitter declined" }
+        BaseController.extractor_builder = -> { raise "must not scan when the submitter declined" }
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
