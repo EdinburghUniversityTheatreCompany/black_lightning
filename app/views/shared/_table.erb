@@ -14,7 +14,7 @@
   end
 end %>
 
-<table class="table <%= table_class %>" <% if col_widths.any? %>style="table-layout: fixed; width: 100%"<% end %>>
+<table class="table table-sticky-head <%= table_class %>" <% if col_widths.any? %>style="table-layout: fixed; width: 100%"<% end %>>
   <% if col_widths.any? %>
     <colgroup>
       <% col_widths.each do |w| %>
@@ -33,7 +33,7 @@ end %>
   <% end %>
   <tbody>
     <% field_sets.each do |field_set| %>
-      <tr class="<%= field_set[:class]%>">
+      <tr class="<%= field_set[:class] %>">
         <% field_set[:fields].each do |field| %>
         <td> <%= field %> </td>
         <% end %>
