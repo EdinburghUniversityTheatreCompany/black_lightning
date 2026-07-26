@@ -70,35 +70,25 @@ cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-
 per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
 per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
 
-## Per-worktree / per-subagent database isolation (dev + test) — spotted 2026-07-23
+## Per-worktree / per-subagent database isolation — SEEDING still manual (2026-07-26)
 
-`config/database.yml` only **half** isolates today:
-- **test:** `bedlam_blacklightning_test<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>` — suffix exists
-  but defaults to **empty**, so it only isolates when a worktree explicitly sets
-  `WORKTREE_DB_SUFFIX` *and* provisions its own test DB (schema-load). Nothing sets it
-  automatically.
-- **dev:** the `development:` primary/queue/cache databases are hardcoded with **no suffix**, so
-  every worktree (and every `bin/dev`) shares one dev DB.
+The mechanism now exists: `.worktree-isolate.conf` is committed, so `worktree-setup` allocates
+each worktree its own `PORT`, `VITE_RUBY_PORT` and `WORKTREE_DB_SUFFIX`, and `config/database.yml`
+interpolates that suffix into the **dev** databases as well as the test one (it only did test
+before, which is why every worktree shared one dev DB).
 
-Consequence: parallel background **subagents** running `bin/rails test` against the single shared
-test DB truncate each other's fixtures, and parallel dev servers share dev data — which is why the
-current working rule is "serialise agent test runs / go sequential" (see the global memory note
-`hk-stash-vs-background-agents`). That's a workaround, not a fix.
+**What is still open — seeding:** a freshly provisioned worktree's databases do not exist until
+someone runs `bin/rails db:prepare && bin/rails db:test:prepare` in it, and `db:prepare` gives an
+EMPTY dev database rather than a copy of the data in the main checkout's dev DB. The nice version
+clones the main dev DB (mysqldump | mysql) so a new worktree comes up with data, and does it
+automatically as part of provisioning. Until then, a new worktree needs those two commands by hand
+and has no dev data.
 
-**Improvement — make the DBs subagent-compatible:**
-1. Extend the `WORKTREE_DB_SUFFIX` interpolation to the three `development:` databases too (or a
-   parallel `DEV_DB_SUFFIX`), so a worktree/subagent can run an isolated dev stack.
-2. Auto-provision on worktree creation: a setup step that derives a stable suffix from the
-   worktree/branch name, then **creates the worktree's dev + test DBs by cloning from the current
-   `main` dev DB** (or schema-load + seed if a clone is too heavy), so a fresh worktree comes up
-   with data without manual `db:prepare`.
-3. Do the same for background subagents dispatched in parallel: give each its own suffix + DB so
-   fix-agents can run tests concurrently without the serialise-or-clobber constraint. This is the
-   piece that removes the `hk-stash-vs-background-agents` limitation.
-4. This is exactly what the `dev-hooks:worktree-setup` skill's `.worktree-isolate.conf` mechanism
-   is designed to drive (per-worktree ports + DBs), which isn't configured in this repo yet —
-   wiring it up is likely the cleanest path, plus upstreaming any gaps into that skill. Also update
-   the `parallel-worktree-dev-server-ports` global memory note once done.
+Also still worth doing: teach the parallel-subagent dispatch path to give each agent its own
+suffix, which is what would actually retire the "serialise agent test runs" rule in the
+`hk-stash-vs-background-agents` global memory note — the test-DB half of that constraint is
+solved per *worktree* now, but two agents inside one worktree still share it. Update the
+`parallel-worktree-dev-server-ports` memory note when that lands.
 
 ## No export on My Budgets (the owner-facing budget page)
 
