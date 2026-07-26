@@ -1,4 +1,5 @@
 require "test_helper"
+require "rubyXL" # BacsXlsx#generate requires it lazily; this test also parses output with RubyXL directly
 
 module Reimbursements
   class BacsXlsxTest < ActiveSupport::TestCase

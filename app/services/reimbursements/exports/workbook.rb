@@ -46,6 +46,7 @@ module Reimbursements
       # large, the Reports::* + ReportsMailer.deliver_later pattern is the
       # ready escape hatch.
       def to_bytes
+        require "caxlsx" # lazy: kept out of the boot heap (Gemfile require:false)
         package = Axlsx::Package.new
         SHEETS.each do |exporter_class, collection_method|
           exporter = exporter_class.new(store: @store, checker: @checker)

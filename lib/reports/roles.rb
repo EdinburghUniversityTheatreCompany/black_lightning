@@ -6,6 +6,7 @@ class Reports::Roles
   # Returns the Axlsx package for the report.
   ##
   def create
+    require "caxlsx" # lazy: kept out of the boot heap (Gemfile require:false)
     package = Axlsx::Package.new
     wb = package.workbook
     datetime = wb.styles.add_style format_code: "dd/mm/yyyy hh:mm"
