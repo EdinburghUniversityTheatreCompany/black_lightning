@@ -187,95 +187,126 @@ module Reimbursements
     end
 
     # --- Rollout paths (support_unencrypted_data + backfill) ---------------
-    # The whole production rollout rests on one promise: rows that are STILL
-    # plaintext keep reading while the backfill catches up. Nothing else in the
-    # suite exercises it (every row a test writes is encrypted on the way in),
-    # so flipping config.active_record.encryption.support_unencrypted_data to
-    # false would stay green here and raise on every un-backfilled row's money
-    # path in production.
-
-    test "support_unencrypted_data lets a pre-existing plaintext payee row read" do
-      person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
-                                           sort_code: "20-20-20", account_number: "50502366",
-                                           notes: "pre-rollout note")
-      details = person.payment_details
-      write_plaintext(PaymentDetails, details.id,
-                      sort_code: "08-99-99", account_number: "66374958",
-                      notes: "Bank details updated: account ****4958")
-
-      # Sanity: the row really is plaintext on disk now, as it was pre-rollout.
-      assert_equal "66374958", raw_column(PaymentDetails, details.id, "account_number")
-
-      reread = PaymentDetails.find(details.id)
-      assert_equal "08-99-99", reread.sort_code
-      assert_equal "66374958", reread.account_number
-      assert_equal "Bank details updated: account ****4958", reread.notes
-      # The BACS spreadsheet and the modulus check read through these.
-      assert_equal "66374958", reread.person.account_number
+    # Reading plaintext is OFF in every environment now that production is
+    # backfilled, so a stray unencrypted value raises rather than being served.
+    # The rollout mechanism still has to work, though: encrypting a new column
+    # later means turning support_unencrypted_data on, deploying, backfilling
+    # and turning it off again. These tests therefore enable it for their own
+    # duration rather than relying on a global that no longer matches production.
+    def with_unencrypted_data_support
+      previous = ActiveRecord::Encryption.config.support_unencrypted_data
+      ActiveRecord::Encryption.config.support_unencrypted_data = true
+      yield
+    ensure
+      ActiveRecord::Encryption.config.support_unencrypted_data = previous
     end
 
-    test "support_unencrypted_data lets a pre-existing plaintext override trio read" do
-      expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
-                                              sort_code_override: "20-20-20",
-                                              account_number_override: "50502366")
-      write_plaintext(Expense, expense.id,
-                      payee_name_override: "Legacy Payee Ltd",
-                      sort_code_override: "08-99-99", account_number_override: "66374958")
-
-      reread = Expense.find(expense.id)
-      assert_equal "Legacy Payee Ltd", reread.payee_name_override
-      assert_equal "08-99-99", reread.sort_code_override
-      assert_equal "66374958", reread.account_number_override
-      # effective_* is what the BACS builder actually pays against.
-      assert_equal "66374958", reread.effective_account_number
-    end
-
-    test "the backfill task rewrites a plaintext row as ciphertext" do
+    # The protection itself: without that opt-in, a row left plaintext is a hard
+    # error on the money path, not a silent read. This is what would fail if
+    # support_unencrypted_data were ever turned back on and forgotten.
+    test "a plaintext row raises once support_unencrypted_data is off" do
       person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
                                            sort_code: "20-20-20", account_number: "50502366")
       details = person.payment_details
-      write_plaintext(PaymentDetails, details.id,
-                      sort_code: "08-99-99", account_number: "66374958")
+      write_plaintext(PaymentDetails, details.id, account_number: "66374958")
 
-      run_rake_task("reimbursements:encrypt_backfill")
+      assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
+        PaymentDetails.find(details.id).account_number
+      end
+    end
 
-      raw = raw_column(PaymentDetails, details.id, "account_number")
-      assert_not_equal "66374958", raw, "the backfill must leave ciphertext behind"
-      assert_not_includes raw.to_s, "66374958"
-      # And it is still the same value to the application.
-      assert_equal "66374958", PaymentDetails.find(details.id).account_number
-      assert_equal "08-99-99", PaymentDetails.find(details.id).sort_code
+    test "support_unencrypted_data lets a pre-existing plaintext payee row read" do
+      with_unencrypted_data_support do
+        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
+                                             sort_code: "20-20-20", account_number: "50502366",
+                                             notes: "pre-rollout note")
+        details = person.payment_details
+        write_plaintext(PaymentDetails, details.id,
+                        sort_code: "08-99-99", account_number: "66374958",
+                        notes: "Bank details updated: account ****4958")
+
+        # Sanity: the row really is plaintext on disk now, as it was pre-rollout.
+        assert_equal "66374958", raw_column(PaymentDetails, details.id, "account_number")
+
+        reread = PaymentDetails.find(details.id)
+        assert_equal "08-99-99", reread.sort_code
+        assert_equal "66374958", reread.account_number
+        assert_equal "Bank details updated: account ****4958", reread.notes
+        # The BACS spreadsheet and the modulus check read through these.
+        assert_equal "66374958", reread.person.account_number
+      end
+    end
+
+    test "support_unencrypted_data lets a pre-existing plaintext override trio read" do
+      with_unencrypted_data_support do
+        expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
+                                                sort_code_override: "20-20-20",
+                                                account_number_override: "50502366")
+        write_plaintext(Expense, expense.id,
+                        payee_name_override: "Legacy Payee Ltd",
+                        sort_code_override: "08-99-99", account_number_override: "66374958")
+
+        reread = Expense.find(expense.id)
+        assert_equal "Legacy Payee Ltd", reread.payee_name_override
+        assert_equal "08-99-99", reread.sort_code_override
+        assert_equal "66374958", reread.account_number_override
+        # effective_* is what the BACS builder actually pays against.
+        assert_equal "66374958", reread.effective_account_number
+      end
+    end
+
+    test "the backfill task rewrites a plaintext row as ciphertext" do
+      with_unencrypted_data_support do
+        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
+                                             sort_code: "20-20-20", account_number: "50502366")
+        details = person.payment_details
+        write_plaintext(PaymentDetails, details.id,
+                        sort_code: "08-99-99", account_number: "66374958")
+
+        run_rake_task("reimbursements:encrypt_backfill")
+
+        raw = raw_column(PaymentDetails, details.id, "account_number")
+        assert_not_equal "66374958", raw, "the backfill must leave ciphertext behind"
+        assert_not_includes raw.to_s, "66374958"
+        # And it is still the same value to the application.
+        assert_equal "66374958", PaymentDetails.find(details.id).account_number
+        assert_equal "08-99-99", PaymentDetails.find(details.id).sort_code
+      end
     end
 
     test "the backfill task also encrypts a plaintext expense override trio" do
-      expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
-                                              account_number_override: "50502366")
-      write_plaintext(Expense, expense.id,
-                      payee_name_override: "Legacy Payee Ltd", account_number_override: "66374958")
+      with_unencrypted_data_support do
+        expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
+                                                account_number_override: "50502366")
+        write_plaintext(Expense, expense.id,
+                        payee_name_override: "Legacy Payee Ltd", account_number_override: "66374958")
 
-      run_rake_task("reimbursements:encrypt_backfill")
+        run_rake_task("reimbursements:encrypt_backfill")
 
-      assert_not_includes raw_column(Expense, expense.id, "account_number_override").to_s, "66374958"
-      assert_not_includes raw_column(Expense, expense.id, "payee_name_override").to_s, "Legacy Payee"
-      assert_equal "66374958", Expense.find(expense.id).account_number_override
-      assert_equal "Legacy Payee Ltd", Expense.find(expense.id).payee_name_override
+        assert_not_includes raw_column(Expense, expense.id, "account_number_override").to_s, "66374958"
+        assert_not_includes raw_column(Expense, expense.id, "payee_name_override").to_s, "Legacy Payee"
+        assert_equal "66374958", Expense.find(expense.id).account_number_override
+        assert_equal "Legacy Payee Ltd", Expense.find(expense.id).payee_name_override
+      end
     end
 
     # Re-running after a partial run must not fail (an operator WILL re-run it),
     # and the values must survive the second pass intact.
     test "the backfill task is safe to run twice" do
-      person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
-                                           account_number: "50502366")
-      details = person.payment_details
-      write_plaintext(PaymentDetails, details.id, account_number: "66374958")
+      with_unencrypted_data_support do
+        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
+                                             account_number: "50502366")
+        details = person.payment_details
+        write_plaintext(PaymentDetails, details.id, account_number: "66374958")
 
-      output = run_rake_task("reimbursements:encrypt_backfill")
-      second = run_rake_task("reimbursements:encrypt_backfill")
+        output = run_rake_task("reimbursements:encrypt_backfill")
+        second = run_rake_task("reimbursements:encrypt_backfill")
 
-      assert_match(/processed 1\/1/, output)
-      assert_no_match(/failed/, second, "a re-run must report no failures")
-      assert_equal "66374958", PaymentDetails.find(details.id).account_number
-      assert_not_includes raw_column(PaymentDetails, details.id, "account_number").to_s, "66374958"
+        assert_match(/processed 1\/1/, output)
+        assert_no_match(/failed/, second, "a re-run must report no failures")
+        assert_equal "66374958", PaymentDetails.find(details.id).account_number
+        assert_not_includes raw_column(PaymentDetails, details.id, "account_number").to_s, "66374958"
+      end
     end
 
     private

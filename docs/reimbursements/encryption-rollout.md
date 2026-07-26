@@ -120,23 +120,42 @@ the record and for any future key rotation.
 
    Repeat for `Reimbursements::Expense` (`account_number_override`).
 
-6. **Flip `support_unencrypted_data` off** — a follow-up code change, deployed only once
-   step 5 confirms every row is ciphertext:
+6. ~~**Flip `support_unencrypted_data` off**~~ — **done 2026-07-26.**
+   `config/application.rb` now sets it to `false`, so any lingering plaintext row raises on
+   read instead of being served. The cleartext-at-rest risk is closed.
 
-   ```ruby
-   # config/application.rb
-   config.active_record.encryption.support_unencrypted_data = false
-   ```
+## Status: complete (2026-07-26)
 
-   After this, any lingering plaintext row raises on read, so it must not be flipped until
-   the backfill is verified complete. This is the point where the cleartext-at-rest risk is
-   fully closed.
+The rollout ran on production in this order: deploy → `reimbursements:encrypt_backfill`
+(10 `PaymentDetails` + 38 `Expense` records, 0 failures) → verification → flag off.
+Verification swept **every** value in all six encrypted columns, not a sample, and reported
+`still plaintext: 0`:
+
+```ruby
+pairs = [[Reimbursements::PaymentDetails, :account_number], [Reimbursements::PaymentDetails, :sort_code],
+         [Reimbursements::PaymentDetails, :notes], [Reimbursements::Expense, :account_number_override],
+         [Reimbursements::Expense, :sort_code_override], [Reimbursements::Expense, :payee_name_override]]
+total = 0; plain = 0
+pairs.each { |m, c| m.find_each { |r| next if r.public_send(c).blank?; total += 1; plain += 1 unless r.ciphertext_for(c).to_s.start_with?("{") } }
+puts "checked #{total} values, still plaintext: #{plain}"
+```
+
+Prefer that sweep over the single-row spot check in step 5: one missed row is exactly what
+raises forever once the flag is off, and a spot check cannot see it.
+
+**Encrypting a NEW column later** means repeating the whole sequence, because
+`reimbursements:encrypt_backfill` **cannot run while the flag is false** — it has to read the
+plaintext to rewrite it. So: add `encrypts`, set `support_unencrypted_data = true`, deploy,
+backfill, verify, set it back to `false`, deploy. The tests in
+`test/models/reimbursements/encryption_test.rb` enable the flag for their own duration via
+`with_unencrypted_data_support`, so they keep proving that mechanism works even though it is
+no longer the global default.
 
 ## Rollback
 
-Encryption is additive and reversible while `support_unencrypted_data = true`: removing the
-`encrypts` declarations would leave already-encrypted rows unreadable, so **do not** revert
-the model change after the backfill. If the keys are lost before backfill, plaintext rows
-still read (support_unencrypted_data). Losing the keys **after** backfill means the
-encrypted bank details cannot be recovered — treat the production credential keys with the
-same care as `master.key`.
+**There is no rollback now.** Removing the `encrypts` declarations would leave every stored
+value unreadable, and with the backfill complete there is no plaintext left to fall back to.
+The production credential keys under `active_record_encryption:` are the only thing that can
+read this data: lose them and the payee bank details are gone for good. Treat them with the
+same care as `master.key` — and note they are *not* in the repo, so a machine that can decrypt
+`production.yml.enc` is the only place they exist.

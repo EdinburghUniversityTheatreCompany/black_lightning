@@ -97,10 +97,16 @@ module ChaosRails
     #                  live in development.yml.enc.
     #   test        -> literal dummy keys in config/environments/test.rb.
     #
-    # support_unencrypted_data stays true during the rollout so existing
-    # plaintext rows keep reading. Flipping it off is a documented production
-    # follow-up — see docs/reimbursements/encryption-rollout.md.
-    config.active_record.encryption.support_unencrypted_data = true
+    # The rollout is finished: production was backfilled on 2026-07-26 (48 rows
+    # across six columns, all verified as ciphertext), so reading plaintext is
+    # no longer tolerated and a stray unencrypted value now raises instead of
+    # being served. Turning this back on would silently reopen the cleartext
+    # read path, so only do it deliberately and temporarily — encrypting a NEW
+    # column means setting it true, deploying, backfilling, and turning it off
+    # again. docs/reimbursements/encryption-rollout.md has the sequence, and
+    # reimbursements:encrypt_backfill cannot run at all while this is false,
+    # since it has to read the plaintext to rewrite it.
+    config.active_record.encryption.support_unencrypted_data = false
 
     # Rails auto-injects a `validate_column_size` length validation on every
     # encrypted attribute, but it measures the DECRYPTED value against the

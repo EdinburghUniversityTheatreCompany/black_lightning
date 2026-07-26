@@ -240,13 +240,16 @@ survive as historical import provenance and are never written. Spec + plan in
   when blank, so without them every `Expense.create!` in a fnox-less dev shell raised; test uses
   literals in `config/environments/test.rb`. `development.key` is *committed*, so real key
   material must never go in `development.yml.enc`.
-  - **The rollout is unfinished**: `support_unencrypted_data = true` is still set, so existing
-    plaintext rows keep reading and **no data is protected yet**. Finishing it means deploy → run
-    `bin/rails reimbursements:encrypt_backfill` → verify a raw column is ciphertext → flip the
-    flag off and deploy again. The backfill aborts non-zero if any row fails, because flipping the
-    flag over an unconverted row makes it unreadable. Full sequence in
-    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md). After
-    backfill, losing the production credential keys makes the bank details unrecoverable.
+  - **The rollout is complete** (production backfilled 2026-07-26; every value in all six columns
+    verified as ciphertext). `support_unencrypted_data = false`, so a stray plaintext value now
+    **raises** rather than being served, and **there is no rollback**: removing `encrypts` would
+    make the stored data unreadable, and losing the production credential keys loses the bank
+    details outright. **Encrypting a NEW column repeats the whole sequence**, because
+    `reimbursements:encrypt_backfill` cannot run while the flag is false (it must read the
+    plaintext to rewrite it): add `encrypts`, flag true, deploy, backfill, verify, flag false,
+    deploy. The backfill aborts non-zero on any failed row, since flipping the flag over an
+    unconverted row makes it unreadable. Sequence and the all-rows verification sweep in
+    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md).
   - Rails' auto-injected `validate_column_size` guard is **off** (`config.active_record.encryption
     .validate_column_size = false`): it measures the *decrypted* value, so it never caught the real
     hazard, and it crashed `database_consistency` on both models. Explicit plaintext length caps on
