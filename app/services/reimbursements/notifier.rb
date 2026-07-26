@@ -28,13 +28,10 @@ module Reimbursements
       @graph = graph || GraphClient.new
     end
 
-    # The three producer-facing methods take +greeting_name+ — the single word
-    # the message opens with, already derived by the call site through
-    # GreetingName.for(person). The Notifier stays ActiveRecord-free at its
-    # boundary (line items are hashes, amounts pre-formatted strings), so the
-    # person lookup that derivation needs never happens inside the render path.
-    # NB the +payee_name+ keys inside the operator-alert row hashes below are a
-    # different thing and still carry full names.
+    # The three producer methods take +greeting_name+ already derived by the
+    # call site (GreetingName.for), keeping the person lookup out of the render
+    # path and this boundary ActiveRecord-free. NB the +payee_name+ keys inside
+    # the operator-alert row hashes below are a different thing: still full names.
 
     # Producer: their expense was rejected on Review reject.
     def rejection(to:, greeting_name:, auto_number:, amount:, budget_name:, description:, reason:)

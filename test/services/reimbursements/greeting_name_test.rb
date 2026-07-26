@@ -4,8 +4,7 @@ module Reimbursements
   class GreetingNameTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # A payee-shaped value that has a name but no #user at all — the shape the
-    # Notifier's own test fake uses, and the reason +for+ goes through #try.
+    # A payee with no #user at all — the reason +for+ goes through #try.
     NamedOnly = Struct.new(:name)
 
     def link(person, user)
@@ -51,8 +50,7 @@ module Reimbursements
       assert_equal "there", GreetingName.for(Person.new(name: "   "))
     end
 
-    # PersonLink stores the user's EMAIL as the person name when the user has
-    # no full name, so this is a real row shape, not a hypothetical one.
+    # PersonLink writes this row shape whenever a linked user has no full name.
     test "an email-address name greets generically" do
       assert_equal "there", GreetingName.for(Person.new(name: "alice@example.com"))
       assert_equal "there", GreetingName.for(Person.new(name: "alice@example.com Producer"))
@@ -67,8 +65,7 @@ module Reimbursements
       assert_equal "Seán", GreetingName.for(Person.new(name: "Seán Ó Briain"))
     end
 
-    # Pins the deliberate no-titlecasing choice: normalising case would mangle
-    # McDonald, O'Brien and van der Berg.
+    # Titlecasing would mangle McDonald, O'Brien and van der Berg.
     test "the name's own capitalisation is preserved" do
       assert_equal "PAT", GreetingName.for(Person.new(name: "PAT PRODUCER"))
       assert_equal "van", GreetingName.for(Person.new(name: "van der Berg"))
