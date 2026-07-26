@@ -23,7 +23,12 @@ FROM debian:trixie-slim
 #  - core dev/devcontainer tooling (git, curl, sudo, ca-certificates, gnupg, extrepo)
 #  - C toolchain + headers for compiling the app's native gems (bcrypt, mysql2, nio4r,
 #    puma, …). Ruby itself is now a precompiled portable build (mise `compile = false`,
-#    jdx/ruby — see mise.toml), so these are NO longer needed to build Ruby, only gems.
+#    jdx/ruby — see mise.toml), so these are needed only for gems, not for Ruby. The
+#    ruby-build-only packages that used to be here (autoconf, libreadline-dev,
+#    libgdbm-dev, libncurses-dev, libgmp-dev, uuid-dev) were dropped after verifying a
+#    full `bundle install` still compiles and loads every native gem without them in a
+#    trixie container — jdx/ruby bundles its own readline/psych/openssl. Only add a
+#    header package back with the same kind of evidence.
 #  - the app's native dependencies + MySQL client (libmariadb, libvips,
 #    poppler-utils, mysql client). Keep this group in step with the production
 #    Dockerfile's base stage: poppler-utils is what renders a PDF's first page for
@@ -41,16 +46,10 @@ RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
       gnupg \
       sudo \
       extrepo \
-      autoconf \
       libssl-dev \
       zlib1g-dev \
-      libreadline-dev \
       libyaml-dev \
       libffi-dev \
-      libgdbm-dev \
-      libncurses-dev \
-      libgmp-dev \
-      uuid-dev \
       libmariadb-dev-compat \
       pkg-config \
       default-mysql-client \
