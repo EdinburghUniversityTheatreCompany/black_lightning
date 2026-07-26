@@ -212,6 +212,49 @@ module Admin
       assert_nil ::Reimbursements::Expense.order(:id).last.ai_processing_consent
     end
 
+    # iOS photographs default to HEIC. The conversion happens at intake so the
+    # stored blob is an ordinary JPEG for every downstream consumer (viewer,
+    # Gemini, the SharePoint offload, the receipts mailed with a BACS batch).
+    test "create stores an iPhone HEIC photo as a JPEG named .jpg" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form:
+        valid_form_params.merge(receipts: [ fixture_file_upload("reimbursements_receipt.heic", "image/heic") ]) }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      receipt = ::Reimbursements::Expense.order(:id).last.receipt_files.sole
+      assert_equal "image/jpeg", receipt.content_type
+      assert_equal "reimbursements_receipt.jpg", receipt.filename.to_s
+      assert_equal "image/jpeg", Marcel::MimeType.for(StringIO.new(receipt.download)),
+                   "the stored bytes must actually be a readable JPEG"
+    end
+
+    test "create keeps an ordinary PDF receipt exactly as uploaded" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params }
+
+      receipt = ::Reimbursements::Expense.order(:id).last.receipt_files.sole
+      assert_equal "application/pdf", receipt.content_type
+      assert_equal "reimbursements_receipt.pdf", receipt.filename.to_s
+      assert_equal File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")),
+                   receipt.download
+    end
+
+    # A damaged photo (or a libvips built without HEIF support) must come back
+    # through the normal validation path, not as a 500.
+    test "create re-renders with a friendly error when a photo can't be read" do
+      sign_in @user
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form:
+          valid_form_params.merge(receipts: [ fixture_file_upload("truncated_receipt.heic", "image/heic") ]) }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/couldn&#39;t read truncated_receipt\.heic/, response.body)
+    end
+
     test "create as draft accepts gaps and writes Draft status" do
       sign_in @user
 

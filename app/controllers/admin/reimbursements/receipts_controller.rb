@@ -5,6 +5,8 @@ module Admin
     # drop target and per-receipt removal. Both respond with a turbo stream
     # replacing #receipts-gallery (HTML fallback: redirect to edit).
     class ReceiptsController < BaseController
+      include AttachesReceipts
+
       def create
         expense = find_own_editable_expense!(params[:expense_id])
         upload_errors = attach_uploads(expense)
@@ -26,22 +28,12 @@ module Admin
       private
 
       def attach_uploads(expense)
-        files = ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts])
-        return [ "No files received." ] if files.empty?
+        attached, upload_errors = attach_posted_receipts(expense)
+        return upload_errors if attached.positive? || upload_errors.any?
 
-        files.filter_map do |file|
-          # Size checked first, before ReceiptContentType reads the whole file
-          # into memory to sniff it.
-          if file.size > ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
-            "#{file.original_filename} must be 5 MB or smaller."
-          elsif !::Reimbursements::ReceiptContentType.allowed_upload?(file)
-            "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP)."
-          else
-            store.attach_receipt!(expense.record_id, filename: file.original_filename,
-                                                     content_type: file.content_type, bytes: file.read)
-            nil
-          end
-        end
+        # Nothing usable and nothing to report on: the drop target posted no
+        # files at all (or only things that were never uploads).
+        [ "No files received." ]
       end
 
       def respond_with_gallery(record_id, upload_errors: [], notice: nil)

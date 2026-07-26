@@ -102,16 +102,15 @@ module Admin
           return
         end
 
-        files = ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts]).select do |file|
-          file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
-            ::Reimbursements::ReceiptContentType.allowed_upload?(file)
-        end
-        if files.empty?
+        # Gated exactly as on submit, through the same intake gate — so a HEIC
+        # photo reaches Gemini as the JPEG we will actually store.
+        receipts = ::Reimbursements::ReceiptIntake.from_params(params[:receipts]).select(&:ok?)
+        if receipts.empty?
           render json: { ok: false, error: "no usable receipt files" }
           return
         end
 
-        extraction = extractor.extract(receipts: files.map { |f| receipt_payload(f) },
+        extraction = extractor.extract(receipts: receipts.map(&:to_attachment),
                                        budgets: store.active_budgets, mode: mode)
         render json: extraction_json(extraction, mode)
       end
@@ -159,14 +158,7 @@ module Admin
       end
 
       def attach_receipts(record_id)
-        @form.receipts.each do |file|
-          store.attach_receipt!(record_id, filename: file.original_filename,
-                                           content_type: file.content_type, bytes: file.read)
-        end
-      end
-
-      def receipt_payload(file)
-        { filename: file.original_filename, content_type: file.content_type, bytes: file.read }
+        @form.usable_receipts.each { |receipt| store.attach_receipt!(record_id, **receipt) }
       end
 
       def extraction_json(extraction, mode)

@@ -22,13 +22,22 @@ ENV RAILS_ENV="production" \
     RAILS_LOG_TO_STDOUT="1" \
     RAILS_SERVE_STATIC_FILES="true"
 
-# Install base packages and clean up in single layer
+# Install base packages and clean up in single layer.
+#
+# libheif-plugin-libde265 is what lets libvips DECODE the HEVC image data inside a
+# HEIC: iOS photographs default to HEIC, and reimbursements converts those receipts
+# to JPEG at intake (Reimbursements::ReceiptIntake). Debian's libvips pulls it in
+# today as a dependency of libvips42t64, but it is named explicitly here so a
+# packaging change can't silently turn every iPhone receipt into "we couldn't read
+# that photo". Keep it in step with .devcontainer/Dockerfile.dev and the CI workflow,
+# where it is NOT implied (Ubuntu ships libheif without a codec plugin).
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y \
       curl \
       libjemalloc2 \
       libvips \
+      libheif-plugin-libde265 \
       poppler-utils \
       default-mysql-client \
       tzdata \

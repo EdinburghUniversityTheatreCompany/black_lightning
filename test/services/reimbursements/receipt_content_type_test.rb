@@ -6,19 +6,13 @@ module Reimbursements
     PNG_MAGIC = "\x89PNG\r\n\x1a\n".freeze
     EXE_MAGIC = "MZ\x90\x00\x03".freeze
 
-    test "accepts a real PDF whose declared type matches its actual bytes" do
-      assert ReceiptContentType.allowed?(bytes: PDF_MAGIC, filename: "receipt.pdf",
-                                         declared_type: "application/pdf")
-    end
-
-    test "accepts a real PNG whose declared type matches its actual bytes" do
-      assert ReceiptContentType.allowed?(bytes: PNG_MAGIC, filename: "receipt.png",
-                                         declared_type: "image/png")
-    end
-
-    test "rejects an executable disguised with a PDF filename and declared content_type" do
-      assert_not ReceiptContentType.allowed?(bytes: EXE_MAGIC, filename: "receipt.pdf",
-                                             declared_type: "application/pdf")
+    test "sniff reports the real type of a PDF and a PNG" do
+      assert_equal "application/pdf",
+                   ReceiptContentType.sniff(bytes: PDF_MAGIC, filename: "receipt.pdf",
+                                            declared_type: "application/pdf")
+      assert_equal "image/png",
+                   ReceiptContentType.sniff(bytes: PNG_MAGIC, filename: "receipt.png",
+                                            declared_type: "image/png")
     end
 
     test "sniff reports the actual detected type regardless of what was declared" do
@@ -27,29 +21,11 @@ module Reimbursements
                                             declared_type: "application/pdf")
     end
 
-    test "allowed_upload? reads and rewinds an uploaded file so it can still be read afterward" do
-      io = StringIO.new(PDF_MAGIC)
-      file = ActionDispatch::Http::UploadedFile.new(tempfile: io, filename: "receipt.pdf",
-                                                     type: "application/pdf")
-
-      assert ReceiptContentType.allowed_upload?(file)
-      assert_equal PDF_MAGIC, file.read, "the file must be rewound so a later read gets the full content"
-    end
-
-    test "allowed_upload? rewinds even when the sniffed type is rejected" do
-      io = StringIO.new(EXE_MAGIC)
-      file = ActionDispatch::Http::UploadedFile.new(tempfile: io, filename: "receipt.pdf",
-                                                     type: "application/pdf")
-
-      assert_not ReceiptContentType.allowed_upload?(file)
-      assert_equal EXE_MAGIC, file.read
-    end
-
     # A hand-crafted "receipts[]=something" post sends a String, which has #size
     # (so it sails past the byte check the intake paths do first) but no #read —
-    # an unrescued NoMethodError in allowed_upload?, i.e. a 500 any authenticated
-    # producer could trigger. Same for a nested hash or array, which Rails also
-    # happily parses out of a multipart body.
+    # an unrescued NoMethodError once something tries to read it, i.e. a 500 any
+    # authenticated producer could trigger. Same for a nested hash or array,
+    # which Rails also happily parses out of a multipart body.
     test "uploads_from drops receipts params that are not uploaded files" do
       real = ActionDispatch::Http::UploadedFile.new(tempfile: StringIO.new(PDF_MAGIC),
                                                     filename: "receipt.pdf",

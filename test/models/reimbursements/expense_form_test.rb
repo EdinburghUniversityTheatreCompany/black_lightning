@@ -118,6 +118,28 @@ module Reimbursements
       assert_not build_form(receipts: [ bad ]).valid?
     end
 
+    test "accepts an iPhone HEIC photo and hands the controller the converted JPEG" do
+      heic = Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/reimbursements_receipt.heic"), "image/heic"
+      )
+      form = build_form(receipts: [ heic ])
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_equal [ { filename: "reimbursements_receipt.jpg", content_type: "image/jpeg" } ],
+                   form.usable_receipts.map { |receipt| receipt.except(:bytes) }
+    end
+
+    test "an unreadable photo is a validation error, not an exception" do
+      truncated = Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/truncated_receipt.heic"), "image/heic"
+      )
+      form = build_form(receipts: [ truncated ])
+
+      assert_not form.valid?
+      assert_match(/couldn't read truncated_receipt\.heic/, form.errors[:receipts].sole)
+      assert_empty form.usable_receipts
+    end
+
     test "an oversized file is rejected by size without being read for content-type sniffing" do
       oversized = Object.new
       def oversized.size = ExpenseForm::MAX_RECEIPT_BYTES + 1

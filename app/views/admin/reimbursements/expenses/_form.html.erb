@@ -67,7 +67,7 @@
         </p>
         <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
               input_html: { multiple: true,
-                            accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
+                            accept: Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE,
                             data: { reimbursements_receipt_target: "files",
                                     action: "change->reimbursements-receipt#fileChanged change->reimbursements-receipt#stash" } } %>
 

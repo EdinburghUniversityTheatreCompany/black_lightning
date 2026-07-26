@@ -13,7 +13,17 @@ module Reimbursements
   class ExpenseForm
     include ActiveModel::Model
 
+    # What a receipt may be STORED as.
     ALLOWED_RECEIPT_TYPES = %w[application/pdf image/jpeg image/png image/webp].freeze
+    # Accepted at intake but never stored as-is: iOS photographs default to
+    # HEIC, so these are converted to JPEG before anything is attached (see
+    # ReceiptIntake).
+    CONVERTED_RECEIPT_TYPES = %w[image/heic image/heif].freeze
+    ACCEPTED_RECEIPT_TYPES = (ALLOWED_RECEIPT_TYPES + CONVERTED_RECEIPT_TYPES).freeze
+    # The file input's accept attribute. The extensions are listed alongside the
+    # types because browsers vary in which they match a HEIC file against, and a
+    # picker that filters the photo out is indistinguishable from "not allowed".
+    RECEIPT_ACCEPT_ATTRIBUTE = (ACCEPTED_RECEIPT_TYPES + %w[.heic .heif]).join(",").freeze
     MAX_RECEIPT_BYTES = 5.megabytes # per-receipt upload cap; a batch mails them all as attachments
     REFERENCE_LIMIT = 18 # EUSA truncates payment references beyond this
 
@@ -68,6 +78,19 @@ module Reimbursements
     # String answers #size but not #read) — see ReceiptContentType.uploads_from.
     def receipts
       ReceiptContentType.uploads_from(@receipts)
+    end
+
+    # Every uploaded receipt, vetted and normalised once (a HEIC photo is
+    # converted to JPEG here, not on attach) so the validation and the
+    # controller's attach step agree on exactly the same bytes and filename.
+    def receipt_intakes
+      @receipt_intakes ||= receipts.map { |file| ReceiptIntake.from_upload(file) }
+    end
+
+    # The receipts that passed, as attach_receipt! keyword hashes. Only ever
+    # read after #valid?, which is what reports the ones that didn't.
+    def usable_receipts
+      receipt_intakes.select(&:ok?).map(&:to_attachment)
     end
 
     # Edit doesn't force a re-upload; create requires at least one receipt.
@@ -205,16 +228,7 @@ module Reimbursements
     end
 
     def receipts_valid
-      receipts.each do |file|
-        # Size checked first, before ReceiptContentType reads the whole file
-        # into memory to sniff it — an oversized file should never pay that
-        # cost just to be rejected for size anyway.
-        if file.size > MAX_RECEIPT_BYTES
-          errors.add(:receipts, "#{file.original_filename} must be 5 MB or smaller.")
-        elsif !ReceiptContentType.allowed_upload?(file)
-          errors.add(:receipts, "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP).")
-        end
-      end
+      receipt_intakes.reject(&:ok?).each { |intake| errors.add(:receipts, intake.error) }
 
       return if draft? || internal? || receipts.any? || expense_receipt_count.to_i.positive?
 
