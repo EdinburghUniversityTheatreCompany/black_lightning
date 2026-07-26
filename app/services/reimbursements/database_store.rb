@@ -25,7 +25,9 @@ module Reimbursements
     # the vocabulary already matches its column name.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
     PERSON_FIELDS = %i[name email].freeze
-    PAYMENT_DETAILS_FIELDS = %i[sort_code account_number verified notes].freeze
+    # Bank fields route to the linked PaymentDetails record; the vocabulary is defined on
+    # that model, next to the columns it names.
+    PAYMENT_DETAILS_FIELDS = PaymentDetails::FIELDS
 
     # The payee's payment_details ride along: every attention/BACS check asks an
     # expense for its EFFECTIVE bank details, which falls through to the linked
