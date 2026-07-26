@@ -58,7 +58,12 @@ module Reimbursements
     # column mapping, so order/extra columns don't matter). Rows for a different
     # cost centre are dropped; rows with no cost centre are kept (some exports
     # omit it). Raises ArgumentError on missing columns or unparseable values.
-    def parse_actuals_rows(text, cost_centre_code: "F40")
+    #
+    # cost_centre_code is required on purpose: it used to default to "F40", so a
+    # caller that forgot it silently filtered a second cost centre's export down
+    # to the Fringe's rows and imported nothing, or worse, kept rows that were
+    # never theirs.
+    def parse_actuals_rows(text, cost_centre_code:)
       text = text.to_s.strip
       return [] if text.empty?
 

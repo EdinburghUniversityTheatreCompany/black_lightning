@@ -1,4 +1,7 @@
 <% fields = {
+    # Deliberately ungated: every member who can open a profile sees the id, theirs and
+    # each other's. It is no longer readable from the breadcrumb, which now names the user.
+    'ID' => @user.id,
     email: @user.email,
     student_id: @user.student_id.present? ? @user.student_id : 'Not set',
     associate_id: @user.associate_id.present? ? @user.associate_id : 'Not set',

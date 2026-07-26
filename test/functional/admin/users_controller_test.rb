@@ -38,6 +38,27 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert assigns(:link_to_admin_events)
   end
 
+  # The id used to be readable from the breadcrumb, as a side effect of it being built from
+  # the URL. The breadcrumb names the user now, so the profile has to show the id itself —
+  # to the member whose profile it is as well as to anyone else who can open it.
+  test "show displays the user's id" do
+    get :show, params: { id: @user }
+
+    assert_response :success
+    assert_select "li", text: /\AID:\s*#{@user.id}\z/
+  end
+
+  test "a member viewing their own profile sees their id" do
+    sign_out users(:admin)
+    member = FactoryBot.create(:member)
+    sign_in member
+
+    get :show, params: { id: member }
+
+    assert_response :success
+    assert_select "li", text: /\AID:\s*#{member.id}\z/
+  end
+
   test "should get new" do
     get :new
     assert_response :success

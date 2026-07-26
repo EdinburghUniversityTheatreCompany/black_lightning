@@ -89,10 +89,21 @@ module Admin
       rescue ArgumentError => e
         flash.now[:alert] = "Could not parse actuals: #{e.message}"
         nil
+      rescue ::Reimbursements::CostCentre::NotConfiguredError
+        flash.now[:alert] = "No cost centre is set up yet, so there is nothing to reconcile " \
+                            "these rows against. Add one under Settings first."
+        nil
       end
 
+      # Which cost centre's rows to keep out of the pasted export. No fallback:
+      # guessing a code would silently import another cost centre's ledger under
+      # this one, and every rollup downstream would then be wrong with nothing on
+      # screen to say so.
       def cost_centre_code
-        ::Reimbursements::CostCentre.default&.eusa_code || "F40"
+        code = ::Reimbursements::CostCentre.default&.eusa_code
+        raise ::Reimbursements::CostCentre::NotConfiguredError if code.blank?
+
+        code
       end
 
       # Split freshly-parsed rows into [new, already-imported] using the dedup

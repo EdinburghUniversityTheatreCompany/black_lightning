@@ -131,6 +131,21 @@ module Admin
 
     # --- Step 2: preview / parse + dedup + match ---------------------------
 
+    # The cost-centre code used to fall back to a literal "F40", so with no cost
+    # centre configured a paste was still filtered as though it were the Fringe's.
+    # Now it says so instead of guessing: a guessed code would file another cost
+    # centre's ledger under this one and every rollup would be quietly wrong.
+    test "preview says so when no cost centre is configured, rather than assuming one" do
+      sign_in @user
+      ::Reimbursements::CostCentre.delete_all
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_includes response.body, "No cost centre is set up yet"
+      assert_nil assigns(:matched_debits)
+    end
+
     test "preview matches a debit row to a submitted expense" do
       sign_in @user
       post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }

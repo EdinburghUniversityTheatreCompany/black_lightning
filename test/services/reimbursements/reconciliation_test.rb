@@ -79,15 +79,15 @@ module Reimbursements
     # --- parse_actuals_rows: legacy format --------------------------------
 
     test "empty string returns empty list" do
-      assert_empty Reconciliation.parse_actuals_rows("")
+      assert_empty Reconciliation.parse_actuals_rows("", cost_centre_code: "F40")
     end
 
     test "whitespace-only returns empty list" do
-      assert_empty Reconciliation.parse_actuals_rows("   \n  \t  ")
+      assert_empty Reconciliation.parse_actuals_rows("   \n  \t  ", cost_centre_code: "F40")
     end
 
     test "tab-separated single row" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40")
       assert_equal 1, rows.length
       row = rows.first
       assert_equal "439999", row.nominal_code
@@ -104,26 +104,26 @@ module Reimbursements
 
     test "comma-separated single row" do
       header = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net"
-      rows = Reconciliation.parse_actuals_rows("#{header}\n#{SAMPLE_CSV_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{header}\n#{SAMPLE_CSV_ROW}", cost_centre_code: "F40")
       assert_equal 1, rows.length
       assert_equal "439999", rows.first.nominal_code
       assert_equal bd("123.45"), rows.first.debit
     end
 
     test "skips blank lines" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}", cost_centre_code: "F40")
       assert_equal 2, rows.length
     end
 
     test "british date parsing" do
       row_text = "439999\tF40\tBACS001\t01/12/2024\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
       assert_equal Date.new(2024, 12, 1), rows.first.date
     end
 
     test "credit row" do
       row_text = "250000\tF40\tINC001\t10/04/2025\t04\tGrant income\t\t\t1000.00\t-1000.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
       assert_equal bd("1000.00"), rows.first.credit
       assert_equal bd(0), rows.first.debit
       assert_equal bd("-1000.00"), rows.first.net
@@ -131,7 +131,7 @@ module Reimbursements
 
     test "raises on too few columns" do
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{HEADER}\n439999\tF40\tBACS001")
+        Reconciliation.parse_actuals_rows("#{HEADER}\n439999\tF40\tBACS001", cost_centre_code: "F40")
       end
       assert_match(/columns/, error.message)
     end
@@ -139,7 +139,7 @@ module Reimbursements
     test "raises when the header is missing a required column" do
       header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\tNarr\tNarr1\t50.00\t\t50.00")
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\tNarr\tNarr1\t50.00\t\t50.00", cost_centre_code: "F40")
       end
       assert_match(/missing required columns/i, error.message)
       assert_match(/period/i, error.message)
@@ -148,32 +148,32 @@ module Reimbursements
     test "raises when the header has no amount columns at all (no GoodsValue, no Debit/Credit/Net)" do
       header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative"
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\t12\tNarr")
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\t12\tNarr", cost_centre_code: "F40")
       end
       assert_match(/GoodsValue column or Debit.Credit.Net/i, error.message)
     end
 
     test "parses an ISO 8601 date when the DD/MM/YYYY parse doesn't apply" do
       row_text = "439999\tF40\tBACS001\t2024-12-01\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
       assert_equal Date.new(2024, 12, 1), rows.first.date
     end
 
     test "a DD/MM/YY (2-digit year) date raises rather than silently landing in year 89" do
       row_text = "439999\tF40\tBACS001\t15/03/89\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40") }
       assert_match(/Cannot parse date/, error.message)
     end
 
     test "raises a clear error for a genuinely unparseable date" do
       row_text = "439999\tF40\tBACS001\tnot-a-date\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40") }
       assert_match(/Cannot parse date/, error.message)
     end
 
     test "multiple rows parsed correctly" do
       row2 = "250000\tF40\tINC001\t20/03/2025\t03\tGrant\t\t\t500.00\t-500.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{row2}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{row2}", cost_centre_code: "F40")
       assert_equal 2, rows.length
       assert_equal "439999", rows[0].nominal_code
       assert_equal "250000", rows[1].nominal_code
@@ -181,27 +181,27 @@ module Reimbursements
 
     test "amounts with commas are parsed" do
       row_text = "439999\tF40\tBACS001\t15/03/2025\t03\tNarr\tNarr1\t1,234.56\t\t1,234.56"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
       assert_equal bd("1234.56"), rows.first.debit
     end
 
     test "non-F40 cost centre rows are excluded" do
       other = "439999\tF99\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
-      assert_empty Reconciliation.parse_actuals_rows("#{HEADER}\n#{other}")
+      assert_empty Reconciliation.parse_actuals_rows("#{HEADER}\n#{other}", cost_centre_code: "F40")
     end
 
     test "F40 cost centre row is included" do
-      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}").length
+      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40").length
     end
 
     test "empty cost centre row is included" do
       row_text = "439999\t\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
-      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}").length
+      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40").length
     end
 
     test "mixed cost centres filter correctly" do
       other = "439999\tF99\tBACS002\t15/03/2025\t03\tBob\tOther\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{other}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{other}", cost_centre_code: "F40")
       assert_equal 1, rows.length
       assert_equal "F40", rows.first.cost_centre
     end
@@ -210,7 +210,7 @@ module Reimbursements
       # Per-cost-centre readiness: a BED row is kept when we ask for BED, not F40.
       bed = "439999\tBED\tBACS001\t15/03/2025\t03\tAlice\tShow\t10.00\t\t10.00"
       text = "#{HEADER}\n#{SAMPLE_ROW}\n#{bed}"
-      assert_equal [ "F40" ], Reconciliation.parse_actuals_rows(text).map(&:cost_centre)
+      assert_equal [ "F40" ], Reconciliation.parse_actuals_rows(text, cost_centre_code: "F40").map(&:cost_centre)
       assert_equal [ "BED" ], Reconciliation.parse_actuals_rows(text, cost_centre_code: "BED").map(&:cost_centre)
     end
 
@@ -227,21 +227,21 @@ module Reimbursements
     SAGE_CREDIT_ROW = "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t26/04/2026\t1\t0000001431\tSI / EUSAC201 / 0000001431\t-400.56\tEUSA".freeze
 
     test "sage debit row" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}", cost_centre_code: "F40").first
       assert_equal bd("118.24"), row.debit
       assert_equal bd(0), row.credit
       assert_equal bd("118.24"), row.net
     end
 
     test "sage credit row" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_CREDIT_ROW}").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_CREDIT_ROW}", cost_centre_code: "F40").first
       assert_equal bd(0), row.debit
       assert_equal bd("400.56"), row.credit
       assert_equal bd("-400.56"), row.net
     end
 
     test "sage field mapping" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}", cost_centre_code: "F40").first
       assert_equal "431580", row.nominal_code
       assert_equal "F40", row.cost_centre
       assert_equal "BACS", row.ref
@@ -252,7 +252,7 @@ module Reimbursements
     end
 
     test "legacy format still works alongside sage support" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40")
       assert_equal 1, rows.length
       assert_equal "439999", rows.first.nominal_code
       assert_equal bd("123.45"), rows.first.debit
@@ -265,7 +265,7 @@ module Reimbursements
         "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t24/04/2026\t1\tBACS\tEN-LIANG LEE - TECH PC MOTHERBOARD\t85.38\tEUSA",
         "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t26/04/2026\t1\t0000001431\tSI / EUSAC201 / 0000001431\t-400.56\tEUSA"
       ].join("\n")
-      rows = Reconciliation.parse_actuals_rows(sample)
+      rows = Reconciliation.parse_actuals_rows(sample, cost_centre_code: "F40")
       assert_equal 3, rows.length
       assert_equal bd("118.24"), rows[0].debit
       assert_equal bd("85.38"), rows[1].debit

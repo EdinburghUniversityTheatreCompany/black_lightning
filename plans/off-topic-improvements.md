@@ -152,3 +152,21 @@ product call rather than a bug:
 Deliberately not implemented in the round that fixed the netting: changing matching
 semantics needs Mick's call on which of those shapes finance actually wants.
 
+
+## Reconcile and the notifier still pick a cost centre by "first row by id"
+
+The hardcoded `"F40"` literals are gone (2026-07-26): `Reconciliation.parse_actuals_rows`
+requires `cost_centre_code:` with no default, and `ReconcileController` raises
+`CostCentre::NotConfiguredError` rather than guessing. But the *selection* is still
+`CostCentre.default`, which is `order(:id).first` — so once a second cost centre exists,
+reconcile silently filters a pasted export by whichever cost centre happens to have the lower
+id, and `BaseController` hands the same `.default` to the `Notifier`.
+
+That is a worse failure than the old hardcode in one respect: it looks configured. A termtime
+export pasted into reconcile would have its rows dropped as "another cost centre's" with no
+indication why, or termtime rows would be filed under the Fringe.
+
+**Fix:** give the reconcile wizard an explicit cost-centre selector (and carry the choice
+through the stateless preview/apply round trip, which re-parses the pasted text), and resolve
+the notifier's cost centre from the expense/batch being acted on rather than from `.default`.
+Until then the portal is single-cost-centre in practice, whatever the copy says.
