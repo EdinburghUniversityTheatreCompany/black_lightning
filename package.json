@@ -31,7 +31,7 @@
     "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.2",
     "tom-select": "^2.6.2",
-    "vite": "^8.1.4",
+    "vite": "^8.1.5",
     "vite-plugin-ruby": "^5.2.2"
   },
   "scripts": {
