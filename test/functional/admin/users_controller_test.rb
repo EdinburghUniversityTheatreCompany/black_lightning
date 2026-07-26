@@ -12,6 +12,20 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  # Breadcrumbs are built from the URL path, and an id segment titleizes into nonsense. The
+  # mechanism is generic (it reads the record the controller loaded), so cover it here as
+  # well as on the reimbursements budget it was reported against.
+  test "the edit breadcrumb names the user instead of their id" do
+    get :edit, params: { id: @user }
+
+    assert_response :success
+    assert_select "nav[aria-label=Breadcrumb]" do |nav|
+      assert_match(/Users/, nav.first.text, "collection segments still titleize")
+      assert_match(/#{Regexp.escape(@user.name)}/, nav.first.text)
+      assert_no_match(/ #{@user.id} /, nav.first.text)
+    end
+  end
+
   test "should get index with non_members" do
     get :index, params: { show_non_members: 1 }
 

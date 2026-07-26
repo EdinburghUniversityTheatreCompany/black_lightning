@@ -506,6 +506,21 @@ module Admin
         assert_includes response.body, "part of a budget update"
       end
 
+      # The breadcrumb is built from the URL, so the id segment used to titleize into
+      # nonsense: "Budgets / 12 / Edit", or "Rec X Ko G9m U Fbu Dn5 A" back on the Airtable
+      # ids. It now resolves the segment to the loaded record's name.
+      test "the edit breadcrumb names the budget instead of its id" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_response :success
+        assert_select "nav[aria-label=Breadcrumb]" do |nav|
+          assert_match(/Props/, nav.first.text)
+          assert_no_match(/#{@props.record_id}/, nav.first.text)
+        end
+      end
+
       test "editing an unknown budget 404s" do
         sign_in @user
         get :edit, params: { id: "999999" }
