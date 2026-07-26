@@ -199,6 +199,20 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  # The contact line names whoever posted the opportunity, and must pass the viewer to
+  # User#name like every other call site does: without it a nameless creator renders the
+  # "No Name Set" placeholder instead of the email an admin is allowed to see.
+  test "show's contact line resolves the poster's name for the viewer" do
+    creator = FactoryBot.create(:user, first_name: "", last_name: "")
+    @opportunity.update!(creator: creator, email_visibility: :members_only, contact_email: nil)
+
+    get :show, params: { id: @opportunity }
+
+    assert_response :success
+    assert_match "You can contact #{creator.email}", response.body
+    assert_no_match(/You can contact No Name Set/, response.body)
+  end
+
   test "manager submitting for an external person is recorded as creating it on their behalf" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       submitter_name: "Jane External",

@@ -31,7 +31,7 @@
 <% if @opportunity.members_only? || @opportunity.everyone? %>
   <% display_email = @opportunity.resolved_contact_email %>
   <% if display_email.present? %>
-    <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.submitter_display_name} by emailing them at #{mail_to display_email}.".html_safe } %>
+    <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.submitter_display_name(@current_user)} by emailing them at #{mail_to display_email}.".html_safe } %>
   <% end %>
 <% end %>
 
