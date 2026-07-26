@@ -4,7 +4,6 @@
 # Database name: primary
 #
 #  id                    :bigint           not null, primary key
-#  cost_centre           :string(255)      default(""), not null
 #  credit                :decimal(12, 2)
 #  date                  :date
 #  debit                 :decimal(12, 2)
@@ -66,18 +65,16 @@ module Reimbursements
     # Which pot this ledger row belongs to, resolved at import from the export's
     # own Cost Centre column (see Admin::Reimbursements::ReconcileController).
     #
-    # Deliberately NOT named +cost_centre+: that is already the string column
-    # holding the code the export printed, verbatim, and an association of the
-    # same name would shadow its reader and writer — every import would then try
-    # to assign "F40" to a belongs_to. The two are different facts and now have
-    # different names: +cost_centre+ is the evidence, this is the attribution.
+    # This is the ONLY record of a row's cost centre. The table used to carry the
+    # exported code as a string alongside it; that column is gone, because nothing
+    # read it and two sources of the same fact can only ever disagree. The exported
+    # code still exists where attribution actually needs it — on the parser's
+    # Reconciliation::ActualsRow — it just isn't persisted twice.
     #
-    # Optional, because a historical row whose code matched no configured cost
-    # centre — or that arrived with the column blank — genuinely has no centre,
-    # and guessing one would file real spend under the wrong pot.
-    belongs_to :attributed_cost_centre, class_name: "Reimbursements::CostCentre",
-                                        foreign_key: :cost_centre_id, optional: true,
-                                        inverse_of: false
+    # Optional, because a row whose code matched no configured cost centre, or
+    # that arrived with the column blank, genuinely has no centre, and guessing
+    # one would file real spend under the wrong pot.
+    belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
     # An offsetting pair's two legs each point at the other, so this reads the
     # same from either side.

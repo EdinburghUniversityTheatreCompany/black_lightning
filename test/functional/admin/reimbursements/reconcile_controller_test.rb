@@ -695,8 +695,8 @@ module Admin
       actuals = ::Reimbursements::EusaActual.order(:id).to_a
       assert_equal 2, actuals.size
       assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id)
-      assert_equal %w[F40 BED], actuals.map(&:cost_centre),
-                   "the string column still carries what the export printed"
+      assert_equal %w[F40 BED], actuals.map { |actual| actual.cost_centre.eusa_code },
+                   "each row resolves through the association to the pot its own code named"
     end
 
     test "an imported row records the cost centre it resolved to as a real association" do
@@ -704,7 +704,7 @@ module Admin
 
       post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
-      assert_equal fringe_cost_centre, ::Reimbursements::EusaActual.sole.attributed_cost_centre
+      assert_equal fringe_cost_centre, ::Reimbursements::EusaActual.sole.cost_centre
     end
 
     # Another society's spend in a whole-organisation export. Skipping it is
@@ -730,7 +730,7 @@ module Admin
       post :apply, params: { pasted_text: paste }
 
       assert_response :success
-      assert_equal [ "F40" ], ::Reimbursements::EusaActual.pluck(:cost_centre)
+      assert_equal [ fringe_cost_centre.id ], ::Reimbursements::EusaActual.pluck(:cost_centre_id)
       assert_match(/not set up here/, response.body)
     end
 
@@ -779,9 +779,8 @@ module Admin
       assert_response :success
       actuals = ::Reimbursements::EusaActual.order(:id).to_a
       assert_equal 2, actuals.size
-      assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id)
-      assert_equal [ "F40", "" ], actuals.map(&:cost_centre),
-                   "an operator's assignment never rewrites what the export said"
+      assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id),
+                   "the blank row lands in the pot the operator named, not the one its neighbour used"
     end
 
     test "the skip choice imports the rest and drops the blank rows" do
@@ -791,7 +790,7 @@ module Admin
                              blank_cost_centre_id: ::Reimbursements::ActualsAttribution::SKIP }
 
       assert_response :success
-      assert_equal [ "F40" ], ::Reimbursements::EusaActual.pluck(:cost_centre)
+      assert_equal [ fringe_cost_centre.id ], ::Reimbursements::EusaActual.pluck(:cost_centre_id)
       assert_match(/skipped, as you chose/, response.body)
     end
 
@@ -899,8 +898,7 @@ module Admin
     test "an identical row in another cost centre is not deduped away" do
       termtime = create_termtime_cost_centre
       create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
-                                   debit: BigDecimal("123.45"), cost_centre: "F40",
-                                   cost_centre_id: fringe_cost_centre.id)
+                                   debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
       sign_in @user
 
       post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
@@ -915,8 +913,7 @@ module Admin
     test "the same row in the same cost centre is still deduped away" do
       create_termtime_cost_centre
       create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
-                                   debit: BigDecimal("123.45"), cost_centre: "F40",
-                                   cost_centre_id: fringe_cost_centre.id)
+                                   debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
       sign_in @user
 
       post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }

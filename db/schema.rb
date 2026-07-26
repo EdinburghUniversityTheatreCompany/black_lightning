@@ -739,7 +739,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_26_090100) do
   create_table "reimbursements_eusa_actuals", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "airtable_record_id"
     t.bigint "budget_id"
-    t.string "cost_centre", default: "", null: false
     t.bigint "cost_centre_id"
     t.datetime "created_at", null: false
     t.decimal "credit", precision: 12, scale: 2

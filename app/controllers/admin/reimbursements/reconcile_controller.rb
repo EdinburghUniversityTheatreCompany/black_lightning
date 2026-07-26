@@ -483,17 +483,14 @@ module Admin
       # The EUSA period (from the row) is the scoping key, so source_month is
       # never written and its column stays blank on new rows.
       #
-      # Both cost-centre fields are written and they are not the same thing:
-      # +cost_centre+ is the code the export printed, verbatim (blank when the
-      # column was absent or empty), and +cost_centre_id+ is the attribution the
-      # code — or the operator — resolved to. Keeping the string means the audit
-      # trail still shows what EUSA said, even where an operator assigned the row
-      # by hand.
+      # The cost centre is stored as the resolved FK only. The exported code
+      # itself is not persisted: it is the *input* to attribution, kept on the
+      # parser's ActualsRow for exactly as long as that decision takes, and
+      # storing it beside the answer would only let the two disagree.
       def actuals_attrs(entry, imported_at)
         row = entry.row
         {
-          nominal_code: row.nominal_code, cost_centre: row.cost_centre,
-          cost_centre_id: entry.cost_centre.id, ref: row.ref,
+          nominal_code: row.nominal_code, cost_centre_id: entry.cost_centre.id, ref: row.ref,
           date: row.date, period: row.period, narrative: row.narrative,
           narrative_1: row.narrative_1, debit: row.debit, credit: row.credit, net: row.net,
           imported_at: imported_at
