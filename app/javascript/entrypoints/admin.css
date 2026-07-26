@@ -54,7 +54,11 @@ select.simple-select2 {
   .table-scroll {
     @apply overflow-auto;
 
-    max-height: calc(100vh - 12rem);
+    /* The 20rem floor is for zoom: browser zoom shrinks the CSS pixel, so at
+       400% (WCAG 1.4.10) `100vh - 12rem` collapses to roughly one row. Below
+       that point stop capping to the viewport and let the page scroll to the
+       rest of the box instead. */
+    max-height: max(20rem, calc(100vh - 12rem));
   }
 }
 
