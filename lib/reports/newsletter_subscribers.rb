@@ -9,8 +9,9 @@ class Reports::NewsletterSubscribers
     package = Axlsx::Package.new
 
     package.workbook.add_worksheet(name: "Subscribers") do |sheet|
-      NewsletterSubscriber.all.each do |subscriber|
-        sheet.add_row([ subscriber.email ])
+      # pluck the one column we emit rather than instantiating a model per row.
+      NewsletterSubscriber.pluck(:email).each do |email|
+        sheet.add_row([ email ])
       end
     end
 

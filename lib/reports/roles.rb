@@ -10,21 +10,23 @@ class Reports::Roles
     wb = package.workbook
     datetime = wb.styles.add_style format_code: "dd/mm/yyyy hh:mm"
 
-    # Add a worksheet with all users:
+    # Add a worksheet with all users. pluck the four emitted columns so the
+    # whole users table isn't instantiated as AR objects while the sheet grows.
     wb.add_worksheet(name: "All Users") do |sheet|
       sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-      User.order(:last_name, :first_name).each do |user|
-        sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ], style: [ nil, nil, nil, datetime ])
+      User.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |first_name, last_name, email, last_login|
+        sheet.add_row([ first_name, last_name, email, last_login ], style: [ nil, nil, nil, datetime ])
       end
     end
 
-    # Add a worksheet for each role - preload users to prevent N+1 queries
-    Role.includes(:users).order(:name).each do |role|
+    # Add a worksheet for each role. Plucking per role (rather than
+    # includes(:users)) means only one role's members are resident at a time,
+    # instead of every user of every role held simultaneously.
+    Role.order(:name).each do |role|
       wb.add_worksheet(name: role.name.gsub(/\//, " - ")) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-        # Use preloaded users (no additional queries)
-        role.users.sort_by { |u| [ u.last_name, u.first_name ] }.each do |user|
-          sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ])
+        role.users.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |first_name, last_name, email, last_login|
+          sheet.add_row([ first_name, last_name, email, last_login ])
         end
 
         sheet.sheet_view.pane do |pane|

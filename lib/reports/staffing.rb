@@ -24,9 +24,10 @@ class Reports::Staffing
 
     current_date = Date.new(@start_year, 1, 1)
 
-    # Preload all members once
-    members = User.with_role(:member).order(:last_name, :first_name).to_a
-    member_ids = members.map(&:id)
+    # Preload all members once. pluck the four columns we emit rather than
+    # holding a full User object per member across every 6-month period sheet.
+    members = User.with_role(:member).order(:last_name, :first_name).pluck(:id, :first_name, :last_name, :email)
+    member_ids = members.map(&:first)
 
     while current_date.year <= @end_year
       next_date = current_date.months_since(6)
@@ -65,14 +66,14 @@ class Reports::Staffing
           .select("user_id, COUNT(DISTINCT admin_staffings.id) as count")
           .each_with_object({}) { |result, hash| hash[result.user_id] = result.count }
 
-        members.each do |user|
+        members.each do |id, first_name, last_name, email|
           sheet.add_row([
-            user.first_name,
-            user.last_name,
-            user.email,
-            staffing_counts[user.id] || 0,
-            past_shows[user.id] || 0,
-            upcoming_shows[user.id] || 0
+            first_name,
+            last_name,
+            email,
+            staffing_counts[id] || 0,
+            past_shows[id] || 0,
+            upcoming_shows[id] || 0
           ])
         end
 
