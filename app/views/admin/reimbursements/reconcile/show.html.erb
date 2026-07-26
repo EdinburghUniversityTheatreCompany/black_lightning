@@ -29,8 +29,11 @@
                           class: "w-full border border-gray-300 rounded px-2 py-1 font-mono text-xs" %>
       </div>
       <p id="pasted_text_hint" class="text-xs text-gray-600">
-        Each row's EUSA period (P1–P12) is read from the pasted data and used to skip rows
-        already imported for that period, so there's no need to enter a month.
+        Each row's EUSA period (P1–P12) and cost centre are read from the pasted data, so
+        there's no need to enter a month or pick a cost centre. A paste may cover several cost
+        centres: each row is imported under its own, rows naming a cost centre that isn't set
+        up here are skipped (and reported), and rows with no cost centre at all will ask you
+        where they belong.
       </p>
       <div>
         <%= submit_tag "Parse and match", class: btn_classes(:primary) %>

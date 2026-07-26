@@ -86,12 +86,24 @@ module Admin
     end
 
     def debit_row(nominal: "439999", date: "13/05/2026", period: "03", narrative: "Alice Producer",
-                  debit: "123.45")
-      "#{nominal}\tF40\tBACS001\t#{date}\t#{period}\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
+                  debit: "123.45", cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\tBACS001\t#{date}\t#{period}\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
     end
 
-    def credit_row(nominal: "250000", period: "03", narrative: "Box office", credit: "500.00")
-      "#{nominal}\tF40\tBACS002\t13/05/2026\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
+    def credit_row(nominal: "250000", period: "03", narrative: "Box office", credit: "500.00",
+                   cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\tBACS002\t13/05/2026\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
+    end
+
+    # A second cost centre, so the single-cost-centre shortcuts stop applying.
+    def create_termtime_cost_centre
+      ::Reimbursements::CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+                                           receive_mailbox: "bed@example.com",
+                                           send_mailbox: "bed@example.com")
+    end
+
+    def fringe_cost_centre
+      ::Reimbursements::CostCentre.find_by!(eusa_code: "F40")
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -419,13 +431,13 @@ module Admin
     ACCRUAL_NOMINAL = "331300".freeze
 
     def accrual_row(nominal: ACCRUAL_NOMINAL, ref: ACCRUAL_REF, date: "27/04/2026", period: "01",
-                    narrative: "Venue hire accrual", amount: "500.00")
-      "#{nominal}\tF40\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t#{amount}\t\t#{amount}"
+                    narrative: "Venue hire accrual", amount: "500.00", cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t#{amount}\t\t#{amount}"
     end
 
     def reversal_row(nominal: ACCRUAL_NOMINAL, ref: ACCRUAL_REF, date: "28/04/2026", period: "02",
-                     narrative: "Venue hire accrual", amount: "500.00")
-      "#{nominal}\tF40\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t\t#{amount}\t-#{amount}"
+                     narrative: "Venue hire accrual", amount: "500.00", cost_centre: "F40")
+      "#{nominal}\t#{cost_centre}\t#{ref}\t#{date}\t#{period}\t#{narrative}\tShow\t\t#{amount}\t-#{amount}"
     end
 
     def offsetting_paste
@@ -665,12 +677,275 @@ module Admin
                    "the unticked pair's legs are imported as ordinary rows"
     end
 
+    # --- Per-row cost centres ----------------------------------------------
+    #
+    # The wizard used to filter a paste down to ONE cost-centre code and drop
+    # every other row in silence. The export names the cost centre per row, so
+    # each row now lands where its own code says.
+
+    test "a paste spanning two cost centres imports every row under its own" do
+      termtime = create_termtime_cost_centre
+      sign_in @user
+      paste = [ HEADER, debit_row(narrative: "Fringe spend"),
+                debit_row(narrative: "Termtime spend", cost_centre: "BED") ].join("\n")
+
+      post :apply, params: { pasted_text: paste }
+
+      assert_response :success
+      actuals = ::Reimbursements::EusaActual.order(:id).to_a
+      assert_equal 2, actuals.size
+      assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id)
+      assert_equal %w[F40 BED], actuals.map { |actual| actual.cost_centre.eusa_code },
+                   "each row resolves through the association to the pot its own code named"
+    end
+
+    test "an imported row records the cost centre it resolved to as a real association" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_equal fringe_cost_centre, ::Reimbursements::EusaActual.sole.cost_centre
+    end
+
+    # Another society's spend in a whole-organisation export. Skipping it is
+    # right; skipping it silently is the bug this replaces.
+    test "preview reports the rows it skipped for an unconfigured cost centre, and names the codes" do
+      sign_in @user
+      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
+                debit_row(narrative: "Someone else again", cost_centre: "H03") ].join("\n")
+
+      post :preview, params: { pasted_text: paste }
+
+      assert_response :success
+      assert_equal 2, assigns(:attribution).unrecognised_rows.size
+      assert_equal %w[G12 H03], assigns(:attribution).unrecognised_codes
+      assert_match(/2 rows skipped/, response.body)
+      assert_match(/G12 and H03/, response.body)
+    end
+
+    test "apply imports only the rows whose cost centre is set up here" do
+      sign_in @user
+      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12") ].join("\n")
+
+      post :apply, params: { pasted_text: paste }
+
+      assert_response :success
+      assert_equal [ fringe_cost_centre.id ], ::Reimbursements::EusaActual.pluck(:cost_centre_id)
+      assert_match(/not set up here/, response.body)
+    end
+
+    # --- Blank cost centres always need an explicit answer -----------------
+
+    def blank_centre_paste
+      [ HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
+    end
+
+    # Not inferred even here, where the fixture is the only cost centre in the
+    # database: "it must be the only one" is exactly the guess that files real
+    # spend under the wrong pot the day a second pot exists.
+    test "preview asks where blank-cost-centre rows belong rather than assuming the only centre" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: blank_centre_paste }
+
+      assert_response :success
+      assert assigns(:attribution).blank_choice_required?
+      assert_select "select[name=blank_cost_centre_id]"
+      assert_select "option[value=?]", fringe_cost_centre.id.to_s
+      assert_select "option[value=skip]"
+      assert_select "input[type=submit][value='Apply reconciliation']", false,
+                    "nothing may be applied while the question is unanswered"
+    end
+
+    test "apply refuses the whole paste while blank rows have no cost centre" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: blank_centre_paste }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count,
+                   "importing the attributed rows and losing the rest is the silent drop this prevents"
+      assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
+      assert_empty @graph.send_mails
+      assert_match(/no cost centre of their own/, response.body)
+    end
+
+    test "a chosen cost centre imports the blank rows under it" do
+      termtime = create_termtime_cost_centre
+      sign_in @user
+
+      post :apply, params: { pasted_text: blank_centre_paste, blank_cost_centre_id: termtime.id.to_s }
+
+      assert_response :success
+      actuals = ::Reimbursements::EusaActual.order(:id).to_a
+      assert_equal 2, actuals.size
+      assert_equal [ fringe_cost_centre.id, termtime.id ], actuals.map(&:cost_centre_id),
+                   "the blank row lands in the pot the operator named, not the one its neighbour used"
+    end
+
+    test "the skip choice imports the rest and drops the blank rows" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: blank_centre_paste,
+                             blank_cost_centre_id: ::Reimbursements::ActualsAttribution::SKIP }
+
+      assert_response :success
+      assert_equal [ fringe_cost_centre.id ], ::Reimbursements::EusaActual.pluck(:cost_centre_id)
+      assert_match(/skipped, as you chose/, response.body)
+    end
+
+    test "an unknown cost centre id reads as no answer at all" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: blank_centre_paste, blank_cost_centre_id: "999999" }
+
+      assert_response :success
+      assert_equal 0, ::Reimbursements::EusaActual.count
+    end
+
+    # --- Offsetting pairs never span cost centres --------------------------
+    #
+    # A false positive here stamps two unrelated real transactions as cancelling
+    # out, hiding real spend from BOTH pots' rollups with no way back except the
+    # "Not offsetting" button. A false negative just leaves two visible rows.
+
+    test "an accrual and a reversal in different cost centres are never paired" do
+      create_termtime_cost_centre
+      sign_in @user
+      paste = [ HEADER, accrual_row, reversal_row(cost_centre: "BED") ].join("\n")
+
+      post :preview, params: { pasted_text: paste }
+
+      assert_response :success
+      assert_empty assigns(:offsetting_pairs)
+      assert_equal 2, assigns(:unmatched_rows).size
+    end
+
+    test "the same pair inside one cost centre still forms" do
+      create_termtime_cost_centre
+      sign_in @user
+
+      post :preview, params: { pasted_text: offsetting_paste }
+
+      assert_response :success
+      assert_equal 1, assigns(:offsetting_pairs).size
+    end
+
+    # --- Matching is scoped to the row's cost centre -----------------------
+
+    test "a debit row never matches an expense whose budget is in another cost centre" do
+      @budget.update!(cost_centre: create_termtime_cost_centre)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits),
+                   "a Fringe debit must not pay (and email about) a termtime claim"
+      assert_equal 1, assigns(:unmatched_rows).size
+    end
+
+    test "a debit row matches an expense whose budget is in its own cost centre" do
+      create_termtime_cost_centre
+      @budget.update!(cost_centre: fringe_cost_centre)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+    end
+
+    test "a credit row never matches an income budget in another cost centre" do
+      @income.update!(cost_centre: create_termtime_cost_centre)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+
+      assert_response :success
+      assert_empty assigns(:matched_credits)
+      assert_equal 1, assigns(:unmatched_rows).size
+    end
+
+    # Budget#cost_centre_id is nullable and predates this scoping, so most
+    # existing budgets have none. While a single cost centre is configured there
+    # is nowhere else such an expense could belong, so it still matches; once a
+    # second centre exists the ambiguity is real and we stop guessing.
+    test "an expense with no cost centre still matches while only one centre is configured" do
+      assert_nil @budget.cost_centre_id
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_equal 1, assigns(:matched_debits).size
+    end
+
+    test "an expense with no cost centre stops matching once a second centre exists" do
+      create_termtime_cost_centre
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits),
+                   "an unattributed expense could belong to either pot, so we no longer guess"
+      assert_equal 1, assigns(:unmatched_rows).size
+    end
+
+    # --- Dedup is per period AND per cost centre ---------------------------
+
+    test "an identical row in another cost centre is not deduped away" do
+      termtime = create_termtime_cost_centre
+      create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
+                                   debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
+
+      assert_response :success
+      assert_empty assigns(:skipped_rows),
+                   "two pots can each carry the same charge in the same period"
+      assert_equal 1, assigns(:new_rows).size
+      assert_equal termtime.eusa_code, "BED"
+    end
+
+    test "the same row in the same cost centre is still deduped away" do
+      create_termtime_cost_centre
+      create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
+                                   debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_equal 1, assigns(:skipped_rows).size
+    end
+
+    # A row imported before this column existed can't say which pot it is in, and
+    # here the asymmetry runs the other way from the pairing heuristic: skipping
+    # a re-import leaves a visible gap, whereas importing a duplicate silently
+    # double-counts real spend in the ledger and every rollup.
+    test "a stored row with no cost centre of its own still blocks a re-import" do
+      create_termtime_cost_centre
+      create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
+                                   debit: BigDecimal("123.45"))
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
+
+      assert_response :success
+      assert_equal 1, assigns(:skipped_rows).size
+    end
+
     # Preview and apply both re-derive the pairs from the pasted text (the
     # wizard keeps no session state), so the tickbox keys must survive the round
     # trip. The helper mimics what the preview form posts back.
-    def offsetting_pair_keys(pasted_text)
-      rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text, cost_centre_code: "F40")
-      ::Reimbursements::Reconciliation.detect_offsetting_pairs(rows).first.map(&:key)
+    def offsetting_pair_keys(pasted_text, cost_centre: ::Reimbursements::CostCentre.default)
+      rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text)
+      ::Reimbursements::Reconciliation
+        .detect_offsetting_pairs(rows, cost_centres: rows.map { cost_centre.id.to_s })
+        .first.map(&:key)
     end
   end
   end

@@ -2,11 +2,75 @@
     renders inside a frame. %>
 <%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
-  Review the matches below. Debits are matched to Submitted or Paid expenses; credits to
-  income budgets. Rows that cancel each other out are proposed as offsetting pairs for you to
-  confirm. When you're happy, apply the reconciliation to save everything, mark the matched
-  expenses Paid, and email the producers.
+  Review the matches below. Every row is imported under the cost centre its own Cost Centre
+  column names. Debits are matched to Submitted or Paid expenses, credits to income budgets,
+  both within that row's cost centre. Rows that cancel each other out are proposed as
+  offsetting pairs for you to confirm. When you're happy, apply the reconciliation to save
+  everything, mark the matched expenses Paid, and email the producers.
 </p>
+
+<% if flash.now[:alert].present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
+<% end %>
+
+<%# What the paste covers, when it covers more than one pot: the old wizard
+    filtered to a single code and dropped the rest in silence, so say plainly
+    which centres these rows landed in. %>
+<% attributed_by_centre = @attribution.attributed.map(&:cost_centre).tally %>
+<% if attributed_by_centre.size > 1 %>
+  <%= render AlertComponent.new(type: :info) do %>
+    This paste covers <%= attributed_by_centre.size %> cost centres, and each row is imported
+    under its own:
+    <%= attributed_by_centre.map { |centre, count| "#{centre.name} (#{pluralize(count, 'row')})" }.to_sentence %>.
+  <% end %>
+<% end %>
+
+<%# A code we don't have set up is another society's spend in a whole-organisation
+    export. Skipping it is right; skipping it silently is the bug this replaces. %>
+<% if @attribution.unrecognised_rows.any? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    <%= pluralize(@attribution.unrecognised_rows.size, "row") %> skipped:
+    <%= "cost centre".pluralize(@attribution.unrecognised_codes.size) %>
+    <strong><%= @attribution.unrecognised_codes.to_sentence %></strong>
+    <%= @attribution.unrecognised_codes.size == 1 ? "is" : "are" %> not set up here.
+  <% end %>
+<% end %>
+
+<%# A blank cost centre is never inferred, not even when only one is configured:
+    that guess is exactly what files real spend under the wrong pot the day a
+    second pot exists. Nothing imports until the operator answers. %>
+<% if @attribution.blank_choice_required? %>
+  <%= render CardComponent.new(title: "Rows with no cost centre") do %>
+    <p class="mb-3 text-gray-600">
+      <%= pluralize(@attribution.unassigned_blank_rows.size, "row") %> in this paste
+      <%= @attribution.unassigned_blank_rows.size == 1 ? "has" : "have" %> no cost centre of
+      <%= @attribution.unassigned_blank_rows.size == 1 ? "its" : "their" %> own — the export
+      left the column out or blank. Say which cost centre they belong to, or skip them if they
+      are not ours. Nothing at all is imported until you answer.
+    </p>
+    <%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
+      <%= hidden_field_tag :pasted_text, @pasted_text %>
+      <div class="flex flex-wrap items-end gap-3">
+        <div>
+          <%= label_tag :blank_cost_centre_id, "These rows belong to",
+                        class: "block text-sm font-medium mb-1" %>
+          <%= select_tag :blank_cost_centre_id,
+                         options_for_select(blank_cost_centre_options(@cost_centres),
+                                            params[:blank_cost_centre_id]),
+                         class: "border border-gray-300 rounded px-2 py-1" %>
+        </div>
+        <%= submit_tag "Apply that choice", class: btn_classes(:secondary) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @attribution.skipped_blank_rows.any? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    <%= pluralize(@attribution.skipped_blank_rows.size, "row") %> with no cost centre
+    <%= @attribution.skipped_blank_rows.size == 1 ? "is" : "are" %> being skipped, as you chose.
+  <% end %>
+<% end %>
 
 <% if @skipped_rows.any? %>
   <%= render AlertComponent.new(type: :info) do %>
@@ -24,7 +88,13 @@
 
 <% if @new_rows.empty? %>
   <%= render AlertComponent.new(type: :warning) do %>
-    All rows are already imported, nothing new to reconcile.
+    <%= if @attribution.blank_choice_required?
+          "Nothing can be imported until you say where the rows with no cost centre belong."
+        elsif @attribution.attributed.empty?
+          "None of these rows belong to a cost centre set up here, so there is nothing to reconcile."
+        else
+          "All rows are already imported, nothing new to reconcile."
+        end %>
   <% end %>
 <% else %>
   <%= render CardComponent.new(title: "Matched expenses (#{@matched_debits.size})") do %>
@@ -136,6 +206,10 @@
       pairs you leave ticked are the pairs that get collapsed. %>
   <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
     <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
+    <%# The wizard keeps no session state, so the blank-cost-centre answer rides
+        along with the paste the way the pair ticks do. Without it, apply
+        re-derives "no choice made" and refuses. %>
+    <%= hidden_field_tag :blank_cost_centre_id, params[:blank_cost_centre_id] %>
 
     <%= render CardComponent.new(title: "Offsetting pairs (#{@offsetting_pairs.size})") do %>
       <% if @offsetting_pairs.any? %>
@@ -224,16 +298,24 @@
     <% end %>
 
     <%= render CardComponent.new(title: "Step 3: Apply reconciliation") do %>
-      <p class="mb-3 text-gray-600">
-        Applying will create the EUSA Actuals records, mark the
-        <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
-        <% if @offset_pair_consequences.values.any? { |c| c[:expense] } %>
-          Any offsetting pair you untick above is matched as well, so it can add to that count:
-          the pairs flagged in orange say which expense each one would pay.
-        <% end %>
-      </p>
-      <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
-                     data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
+      <% if @attribution.blank_choice_required? %>
+        <p class="mb-3 text-warning">
+          Answer the cost-centre question above first. Until then nothing here can be applied —
+          not even the rows that do have a cost centre, because importing those while the rest
+          quietly vanished is exactly what this step exists to prevent.
+        </p>
+      <% else %>
+        <p class="mb-3 text-gray-600">
+          Applying will create the EUSA Actuals records, mark the
+          <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
+          <% if @offset_pair_consequences.values.any? { |c| c[:expense] } %>
+            Any offsetting pair you untick above is matched as well, so it can add to that count:
+            the pairs flagged in orange say which expense each one would pay.
+          <% end %>
+        </p>
+        <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
+                       data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

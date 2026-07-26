@@ -72,15 +72,6 @@ module Reimbursements
     validates :eusa_recipient, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validate :nightly_run_days_are_weekday_numbers
 
-    # Raised where a cost centre is required and none exists, rather than
-    # falling back to a literal code. A guessed code books real money against
-    # the wrong pot and nothing on screen would say so.
-    class NotConfiguredError < StandardError
-      def message
-        "No reimbursements cost centre is configured"
-      end
-    end
-
     # The primary cost centre (Fringe today). Multi-cost-centre flows iterate
     # .all; .default is for the single-cost-centre call sites that predate the
     # per-cost-centre work (mailbox poll, mailbox client).

@@ -79,15 +79,15 @@ module Reimbursements
     # --- parse_actuals_rows: legacy format --------------------------------
 
     test "empty string returns empty list" do
-      assert_empty Reconciliation.parse_actuals_rows("", cost_centre_code: "F40")
+      assert_empty Reconciliation.parse_actuals_rows("")
     end
 
     test "whitespace-only returns empty list" do
-      assert_empty Reconciliation.parse_actuals_rows("   \n  \t  ", cost_centre_code: "F40")
+      assert_empty Reconciliation.parse_actuals_rows("   \n  \t  ")
     end
 
     test "tab-separated single row" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}")
       assert_equal 1, rows.length
       row = rows.first
       assert_equal "439999", row.nominal_code
@@ -104,26 +104,26 @@ module Reimbursements
 
     test "comma-separated single row" do
       header = "Nominal,Cost Centre,Ref,Date,Period,Narrative,Narrative 1,Debit,Credit,Net"
-      rows = Reconciliation.parse_actuals_rows("#{header}\n#{SAMPLE_CSV_ROW}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{header}\n#{SAMPLE_CSV_ROW}")
       assert_equal 1, rows.length
       assert_equal "439999", rows.first.nominal_code
       assert_equal bd("123.45"), rows.first.debit
     end
 
     test "skips blank lines" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}")
       assert_equal 2, rows.length
     end
 
     test "british date parsing" do
       row_text = "439999\tF40\tBACS001\t01/12/2024\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
       assert_equal Date.new(2024, 12, 1), rows.first.date
     end
 
     test "credit row" do
       row_text = "250000\tF40\tINC001\t10/04/2025\t04\tGrant income\t\t\t1000.00\t-1000.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
       assert_equal bd("1000.00"), rows.first.credit
       assert_equal bd(0), rows.first.debit
       assert_equal bd("-1000.00"), rows.first.net
@@ -131,7 +131,7 @@ module Reimbursements
 
     test "raises on too few columns" do
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{HEADER}\n439999\tF40\tBACS001", cost_centre_code: "F40")
+        Reconciliation.parse_actuals_rows("#{HEADER}\n439999\tF40\tBACS001")
       end
       assert_match(/columns/, error.message)
     end
@@ -139,7 +139,7 @@ module Reimbursements
     test "raises when the header is missing a required column" do
       header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\tNarr\tNarr1\t50.00\t\t50.00", cost_centre_code: "F40")
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\tNarr\tNarr1\t50.00\t\t50.00")
       end
       assert_match(/missing required columns/i, error.message)
       assert_match(/period/i, error.message)
@@ -148,32 +148,32 @@ module Reimbursements
     test "raises when the header has no amount columns at all (no GoodsValue, no Debit/Credit/Net)" do
       header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative"
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\t12\tNarr", cost_centre_code: "F40")
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\t12\tNarr")
       end
       assert_match(/GoodsValue column or Debit.Credit.Net/i, error.message)
     end
 
     test "parses an ISO 8601 date when the DD/MM/YYYY parse doesn't apply" do
       row_text = "439999\tF40\tBACS001\t2024-12-01\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
       assert_equal Date.new(2024, 12, 1), rows.first.date
     end
 
     test "a DD/MM/YY (2-digit year) date raises rather than silently landing in year 89" do
       row_text = "439999\tF40\tBACS001\t15/03/89\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40") }
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
       assert_match(/Cannot parse date/, error.message)
     end
 
     test "raises a clear error for a genuinely unparseable date" do
       row_text = "439999\tF40\tBACS001\tnot-a-date\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40") }
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
       assert_match(/Cannot parse date/, error.message)
     end
 
     test "multiple rows parsed correctly" do
       row2 = "250000\tF40\tINC001\t20/03/2025\t03\tGrant\t\t\t500.00\t-500.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{row2}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{row2}")
       assert_equal 2, rows.length
       assert_equal "439999", rows[0].nominal_code
       assert_equal "250000", rows[1].nominal_code
@@ -181,37 +181,44 @@ module Reimbursements
 
     test "amounts with commas are parsed" do
       row_text = "439999\tF40\tBACS001\t15/03/2025\t03\tNarr\tNarr1\t1,234.56\t\t1,234.56"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
       assert_equal bd("1234.56"), rows.first.debit
     end
 
-    test "non-F40 cost centre rows are excluded" do
+    # The parser no longer filters by cost centre: it is pure (no Rails), so it
+    # cannot know which codes are configured here. It hands every row back with
+    # the code the export gave it, and the Rails-side attribution decides what
+    # is ours, what is skipped and what needs an operator's choice.
+
+    test "a row from another cost centre is returned, carrying its own code" do
       other = "439999\tF99\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
-      assert_empty Reconciliation.parse_actuals_rows("#{HEADER}\n#{other}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{other}")
+      assert_equal [ "F99" ], rows.map(&:cost_centre)
     end
 
-    test "F40 cost centre row is included" do
-      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40").length
-    end
-
-    test "empty cost centre row is included" do
+    test "empty cost centre row is included, with a blank code" do
       row_text = "439999\t\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
-      assert_equal 1, Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}", cost_centre_code: "F40").length
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      assert_equal [ "" ], rows.map(&:cost_centre)
     end
 
-    test "mixed cost centres filter correctly" do
-      other = "439999\tF99\tBACS002\t15/03/2025\t03\tBob\tOther\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{other}", cost_centre_code: "F40")
-      assert_equal 1, rows.length
-      assert_equal "F40", rows.first.cost_centre
-    end
-
-    test "cost_centre_code argument selects a different cost centre" do
-      # Per-cost-centre readiness: a BED row is kept when we ask for BED, not F40.
+    test "a paste spanning several cost centres returns every row" do
       bed = "439999\tBED\tBACS001\t15/03/2025\t03\tAlice\tShow\t10.00\t\t10.00"
-      text = "#{HEADER}\n#{SAMPLE_ROW}\n#{bed}"
-      assert_equal [ "F40" ], Reconciliation.parse_actuals_rows(text, cost_centre_code: "F40").map(&:cost_centre)
-      assert_equal [ "BED" ], Reconciliation.parse_actuals_rows(text, cost_centre_code: "BED").map(&:cost_centre)
+      other = "439999\tF99\tBACS002\t15/03/2025\t03\tBob\tOther\t50.00\t\t50.00"
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{bed}\n#{other}")
+      assert_equal %w[F40 BED F99], rows.map(&:cost_centre)
+    end
+
+    # Some exports omit the column entirely. That is not a malformed paste —
+    # it is a paste whose rows have no cost centre, which the operator has to
+    # assign by hand before any of them can import.
+    test "a header with no Cost Centre column parses, leaving every code blank" do
+      header = "Nominal\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet"
+      row_text = "439999\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
+      rows = Reconciliation.parse_actuals_rows("#{header}\n#{row_text}")
+      assert_equal 1, rows.length
+      assert_equal "", rows.first.cost_centre
+      assert_equal bd("123.45"), rows.first.debit
     end
 
     # --- parse_actuals_rows: Sage export format ---------------------------
@@ -227,21 +234,21 @@ module Reimbursements
     SAGE_CREDIT_ROW = "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t26/04/2026\t1\t0000001431\tSI / EUSAC201 / 0000001431\t-400.56\tEUSA".freeze
 
     test "sage debit row" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}", cost_centre_code: "F40").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}").first
       assert_equal bd("118.24"), row.debit
       assert_equal bd(0), row.credit
       assert_equal bd("118.24"), row.net
     end
 
     test "sage credit row" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_CREDIT_ROW}", cost_centre_code: "F40").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_CREDIT_ROW}").first
       assert_equal bd(0), row.debit
       assert_equal bd("400.56"), row.credit
       assert_equal bd("-400.56"), row.net
     end
 
     test "sage field mapping" do
-      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}", cost_centre_code: "F40").first
+      row = Reconciliation.parse_actuals_rows("#{SAGE_HEADER}\n#{SAGE_DEBIT_ROW}").first
       assert_equal "431580", row.nominal_code
       assert_equal "F40", row.cost_centre
       assert_equal "BACS", row.ref
@@ -252,7 +259,7 @@ module Reimbursements
     end
 
     test "legacy format still works alongside sage support" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}", cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}")
       assert_equal 1, rows.length
       assert_equal "439999", rows.first.nominal_code
       assert_equal bd("123.45"), rows.first.debit
@@ -265,7 +272,7 @@ module Reimbursements
         "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t24/04/2026\t1\tBACS\tEN-LIANG LEE - TECH PC MOTHERBOARD\t85.38\tEUSA",
         "431580\tF40\t\tEQUIPMENT HIRE & PURCHASE\t26/04/2026\t1\t0000001431\tSI / EUSAC201 / 0000001431\t-400.56\tEUSA"
       ].join("\n")
-      rows = Reconciliation.parse_actuals_rows(sample, cost_centre_code: "F40")
+      rows = Reconciliation.parse_actuals_rows(sample)
       assert_equal 3, rows.length
       assert_equal bd("118.24"), rows[0].debit
       assert_equal bd("85.38"), rows[1].debit
@@ -449,8 +456,8 @@ module Reimbursements
     #            narratives, 16 days apart: scores 2 and must NOT be paired.
 
     # One row in the real Sage export's column order (SAGE_HEADER above).
-    def sage_row(nominal:, date:, period:, ref:, narrative:, value:)
-      [ nominal, "F40", "", "COST CENTRE ACCOUNT", date, period, ref, narrative, value, "EUSA" ]
+    def sage_row(nominal:, date:, period:, ref:, narrative:, value:, cost_centre: "F40")
+      [ nominal, cost_centre, "", "COST CENTRE ACCOUNT", date, period, ref, narrative, value, "EUSA" ]
         .join("\t")
     end
 
@@ -490,7 +497,7 @@ module Reimbursements
 
     def parse_shapes(shapes)
       text = ([ SAGE_HEADER ] + shapes.map { |s| sage_row(**s) }).join("\n")
-      Reconciliation.parse_actuals_rows(text, cost_centre_code: "F40")
+      Reconciliation.parse_actuals_rows(text)
     end
 
     def pair_narratives(pair)
@@ -566,6 +573,49 @@ module Reimbursements
       assert_empty pairs,
                    "a shared payment-run reference is not evidence of an offset across nominal codes"
       assert_equal 2, remaining.size, "both rows stay in the working set for a human to handle"
+    end
+
+    # A paste can now span several cost centres, so the cost centre is a hard
+    # requirement alongside the nominal code. Two unrelated real transactions in
+    # two different pots, same nominal code and same amount, would otherwise be
+    # stamped as cancelling out: the spend disappears from the ledger view and
+    # every rollup for BOTH pots, and re-pasting can't repair it. A false
+    # negative just leaves two rows visibly unmatched.
+    test "detect_offsetting_pairs never pairs rows from different cost centres" do
+      elsewhere = REVERSAL_LEG.merge(cost_centre: "BED")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ ACCRUAL_LEG, elsewhere ]))
+
+      assert_empty pairs, "two pots' rows never cancel each other out, however well they score"
+      assert_equal 2, remaining.size
+    end
+
+    # Same reason blank nominal codes never pair: a blank agrees with nothing.
+    test "detect_offsetting_pairs never pairs two rows with blank cost centres" do
+      blank_debit = ACCRUAL_LEG.merge(cost_centre: "")
+      blank_credit = REVERSAL_LEG.merge(cost_centre: "")
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes([ blank_debit, blank_credit ]))
+
+      assert_empty pairs
+      assert_equal 2, remaining.size
+    end
+
+    # ...unless the caller has resolved the attribution itself. Blank-code rows
+    # an operator has assigned to one pot ARE in that pot, so they pair like any
+    # other, and the caller says so by passing the identities it resolved.
+    test "detect_offsetting_pairs pairs blank-code rows the caller has attributed to one centre" do
+      rows = parse_shapes([ ACCRUAL_LEG.merge(cost_centre: ""), REVERSAL_LEG.merge(cost_centre: "") ])
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 7])
+
+      assert_equal 1, pairs.size
+      assert_empty remaining
+    end
+
+    test "detect_offsetting_pairs honours caller-supplied identities over the export's codes" do
+      rows = parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG ])
+      pairs, remaining = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 8])
+
+      assert_empty pairs, "the caller attributed these two identical-looking codes to different pots"
+      assert_equal 2, remaining.size
     end
 
     # The gate is the codes agreeing, not merely being equal strings: two blank

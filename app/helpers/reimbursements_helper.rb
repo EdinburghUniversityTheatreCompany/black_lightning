@@ -98,6 +98,20 @@ module ReimbursementsHelper
     value.presence || BLANK_VALUE
   end
 
+  # Choices for "which cost centre do the pasted rows with no cost centre of
+  # their own belong to?" on the Reconcile preview.
+  #
+  # There is deliberately NO pre-selected default, not even when a single cost
+  # centre is configured: the operator has to say. The explicit "skip" choice is
+  # what makes that demand answerable — facing another society's blank rows, an
+  # operator with no way to say "not ours" would park them under whichever
+  # centre the form offered.
+  def blank_cost_centre_options(cost_centres)
+    [ [ "Choose a cost centre…", "" ] ] +
+      cost_centres.map { |centre| [ "#{centre.name} (#{centre.eusa_code})", centre.id.to_s ] } +
+      [ [ "Skip these rows — they are not ours", Reimbursements::ActualsAttribution::SKIP ] ]
+  end
+
   # Who a submitter writes to about a claim finance has already picked up.
   # Read from the cost centre rather than hardcoded, so a second cost centre
   # points at a mailbox its own finance team actually reads. Falls back to
