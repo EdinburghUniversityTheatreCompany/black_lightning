@@ -472,11 +472,8 @@ module Reimbursements
       end
     end
 
-    # eusa_draft_created is a derived Batch method (from draft_message_id),
-    # not a column; BatchProcessor still passes the flag through create_batch!,
-    # so it is dropped here rather than raising an unknown-attribute error.
     def batch_columns(attrs)
-      attrs.compact.except(:eusa_draft_created)
+      attrs.compact
     end
 
     def actual_columns(attrs)

@@ -154,11 +154,11 @@ module Reimbursements
     test "batch lifecycle mirrors BatchProcessor's writes" do
       batch = store.create_batch!(date_sent: Date.new(2026, 5, 13),
                                   notes: "BACS SharePoint: https://sp/x",
-                                  eusa_draft_created: true,
                                   sharepoint_backup_url: "https://sp/x",
                                   draft_message_id: "AAMkAG=")
 
       assert_equal "2026-05-13", batch.name # derived, like the Airtable formula
+      # Derived from the draft message id, not sent by the caller and not a column.
       assert batch.eusa_draft_created
       assert_equal batch.id, store.find_batch_by_draft_message_id("AAMkAG=").id
       assert_nil store.find_batch_by_draft_message_id("")

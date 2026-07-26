@@ -214,9 +214,11 @@ module Reimbursements
     def create_batch(result)
       batch = with_write_retry do |attempt|
         (attempt > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
+          # No eusa_draft_created: it is derived from draft_message_id, which is set right
+          # here, so sending the flag only gave the store something to throw away.
           @store.create_batch!(date_sent: result.bacs_date,
                                notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
-                               eusa_draft_created: true, sharepoint_backup_url: result.bacs_sharepoint_url,
+                               sharepoint_backup_url: result.bacs_sharepoint_url,
                                draft_message_id: result.eusa_draft_message_id)
       end
       result.batch_id = batch.record_id
