@@ -1,6 +1,3 @@
-require "rubyXL"
-require "rubyXL/convenience_methods"
-
 module Reimbursements
   ##
   # Fills the vendored EUSA BACS request template in place (preserving EUSA's
@@ -60,6 +57,12 @@ module Reimbursements
     # uploading to SharePoint. The template is re-read on every call so one
     # instance can produce many workbooks without state bleed.
     def generate(rows)
+      # Loaded here rather than at file scope: this class is eager-loaded in
+      # production, so a top-level require would pull rubyXL into every process
+      # at boot even though only the BACS build touches it (Gemfile require:false).
+      require "rubyXL"
+      require "rubyXL/convenience_methods"
+
       if rows.size > MAX_ROWS
         raise TemplateError,
               "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity. " \

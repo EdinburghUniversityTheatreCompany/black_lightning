@@ -1,4 +1,5 @@
 require "test_helper"
+require "caxlsx" # the app requires it lazily at its call sites; these tests build Axlsx::Package directly
 
 module Reimbursements
   module Exports

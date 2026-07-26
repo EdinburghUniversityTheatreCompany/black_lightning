@@ -6,11 +6,13 @@ class Reports::NewsletterSubscribers
   # Returns the Axlsx package for the report.
   ##
   def create
+    require "caxlsx" # lazy: kept out of the boot heap (Gemfile require:false)
     package = Axlsx::Package.new
 
     package.workbook.add_worksheet(name: "Subscribers") do |sheet|
-      NewsletterSubscriber.all.each do |subscriber|
-        sheet.add_row([ subscriber.email ])
+      # pluck the one column we emit rather than instantiating a model per row.
+      NewsletterSubscriber.pluck(:email).each do |email|
+        sheet.add_row([ email ])
       end
     end
 

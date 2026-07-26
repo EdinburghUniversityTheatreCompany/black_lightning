@@ -12,8 +12,13 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
     # Clear old results
     CachedDuplicate.delete_all
 
-    # Group users by first letter of last name
-    users_by_letter = User.all.to_a.group_by { |u| u.last_name&.first&.upcase || "Z" }
+    # Group users by first letter of last name. Only the columns the pairwise
+    # comparison actually touches are loaded (id/name for matching, the JSON
+    # not-duplicate list for the skip check) — a full User row carries ~40
+    # columns, and every user is resident at once for the O(n2) group scan, so
+    # the narrow select keeps this job's peak RSS proportional to the work.
+    users_by_letter = User.select(:id, :first_name, :last_name, :not_duplicate_user_ids)
+                          .to_a.group_by { |u| u.last_name&.first&.upcase || "Z" }
 
     # Process each letter group
     users_by_letter.each do |letter, users|

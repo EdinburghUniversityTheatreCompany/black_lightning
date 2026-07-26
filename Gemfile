@@ -26,16 +26,18 @@ gem "commonmarker"
 
 gem "icalendar"
 
-gem "daemons"
-gem "delayed_job_active_record"
-
 gem "solid_queue"
 gem "solid_cache"
 gem "mission_control-jobs"
 
-gem "caxlsx"
-gem "roo"  # For reading xlsx files (membership imports)
-gem "rubyXL" # Fill the EUSA BACS xlsx template in place, preserving styling (reimbursements Build Batch)
+# Spreadsheet libraries — each pulls a sizeable Nokogiri-based class tree but is
+# only touched by occasional admin/finance actions (report downloads, the BACS
+# build, membership imports). require:false keeps them out of every process's
+# boot heap; each is `require`d at its call site (see bacs_xlsx.rb, workbook.rb,
+# lib/reports/*, import_parsing.rb).
+gem "caxlsx", require: false
+gem "roo", require: false  # For reading xlsx files (membership imports)
+gem "rubyXL", require: false # Fill the EUSA BACS xlsx template in place, preserving styling (reimbursements Build Batch)
 gem "rqrcode"
 
 gem "ruby_llm" # Unified LLM API (Gemini) for reimbursements AI receipt extraction + expense checks
@@ -128,12 +130,15 @@ group :test do
 end
 
 
-# Deploy with Kamal
-gem "kamal", "~> 2.0"
-gem "thruster"
+# Deploy with Kamal. Kamal is a local/CI deploy CLI — it never runs inside the
+# app process, so keeping it (and its net-ssh key deps bcrypt_pbkdf/ed25519) in
+# :development keeps sshkit/net-ssh/thor out of every Puma + job process's heap.
+gem "kamal", "~> 2.0", require: false, group: :development
+gem "bcrypt_pbkdf", require: false, group: :development
+gem "ed25519", require: false, group: :development
 
-gem "bcrypt_pbkdf"
-gem "ed25519"
+# thruster is a runtime HTTP/2 proxy in front of Puma — it stays in the image.
+gem "thruster"
 
 # Guards against unsafe migrations (NOT NULL adds, column removes, in-transaction backfills).
 # Runtime gem (ungrouped, not require:false): its initializer references the StrongMigrations

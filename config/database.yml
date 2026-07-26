@@ -60,3 +60,8 @@ production:
     <<: *primary_production
     database: bedlam_blacklightning_production_cache
     migrations_paths: db/cache_migrate
+    # The Solid Cache pool only needs one connection per request/job thread
+    # (RAILS_MAX_THREADS, default 3), not the primary's 5 — each idle mysql2
+    # connection holds a buffer. Overridable via CACHE_DB_POOL if cache traffic
+    # ever needs more headroom.
+    pool: <%= ENV.fetch("CACHE_DB_POOL", ENV.fetch("RAILS_MAX_THREADS", 3)) %>

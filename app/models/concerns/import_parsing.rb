@@ -74,6 +74,7 @@ module ImportParsing
   def parse_xlsx(file)
     return [] if file.blank?
 
+    require "roo" # lazy: kept out of the boot heap (Gemfile require:false)
     xlsx = Roo::Spreadsheet.open(file.path)
     sheet = xlsx.sheet(0)
     return [] if sheet.last_row.nil? || sheet.last_row < 2
