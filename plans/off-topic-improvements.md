@@ -63,15 +63,6 @@ turbo_stream via `render_index_stream_or_full`). Left untouched for now since it
 
 ---
 
-## RubyLLM legacy `acts_as` deprecation warning on boot (Phase B)
-
-Since introducing `ruby_llm`, every process load prints:
-`RubyLLM's legacy acts_as API is deprecated and will be removed in RubyLLM 2.0.0`.
-We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
-`RubyLLM.chat` directly), so the warning is pure noise from the gem's Rails engine.
-Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
-filter) so test/boot output stays clean. Harmless; not gating.
-
 ## Multiple financial years — PLANNED (post-MySQL)
 Now designed: a year-selector model (one active year + look-back), landing at the MySQL
 cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-roadmap.md`

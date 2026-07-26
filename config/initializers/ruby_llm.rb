@@ -9,6 +9,8 @@
 # resolvable — plain initializers run before the autoloader is ready.
 require "ruby_llm/schema" # RubyLLM::Schema (structured output) isn't auto-required
 
+# NOTE: `use_new_acts_as` is NOT set here — it has to be set in config/application.rb,
+# before any railtie initializer runs. See the comment there.
 Rails.application.config.to_prepare do
   RubyLLM.configure do |config|
     config.gemini_api_key = Reimbursements::Settings.gemini_api_key
