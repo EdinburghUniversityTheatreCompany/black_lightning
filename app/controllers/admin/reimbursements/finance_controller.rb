@@ -76,14 +76,14 @@ module Admin
         return nil if record_id.blank?
         return nil if store.find_budget(record_id)
 
-        "That budget no longer exists — please pick another."
+        "That budget no longer exists. Please pick another."
       end
 
       def owner_ids_error(record_ids)
         unknown = Array(record_ids).reject(&:blank?).reject { |id| store.find_person(id) }
         return nil if unknown.empty?
 
-        "One or more selected owners no longer exist — please update the list."
+        "One or more selected owners no longer exist. Please update the list."
       end
     end
   end

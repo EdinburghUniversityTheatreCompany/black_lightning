@@ -88,6 +88,25 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # The one "no value here" glyph for the reimbursements section, matching what
+  # reimbursements_date / reimbursements_money already render for nil. Views
+  # used to hardcode an em dash, so the same empty cell read as "—" in one
+  # column and "-" in the next.
+  BLANK_VALUE = "-".freeze
+
+  def reimbursements_value(value)
+    value.presence || BLANK_VALUE
+  end
+
+  # Who a submitter writes to about a claim finance has already picked up.
+  # Read from the cost centre rather than hardcoded, so a second cost centre
+  # points at a mailbox its own finance team actually reads. Falls back to
+  # plain words rather than an empty mailto when no cost centre is configured.
+  def reimbursements_contact_link
+    email = Reimbursements::CostCentre.default&.contact_email
+    email.present? ? mail_to(email) : "the finance team"
+  end
+
   # Debits less credits over a set of EUSA ledger rows (offsetting legs
   # dropped) — the same netting the budget rollups use, so the overview's
   # unattributed totals can't disagree with the per-budget figures.
@@ -155,12 +174,12 @@ module ReimbursementsHelper
   # is "where's my money?", so the portal shows a plainer label with a tooltip.
   # Finance pages keep the raw status. Status.badge_variant still drives colour.
   PRODUCER_STATUS = {
-    "Draft" => [ "Draft", "Only you can see this — submit it when you're ready." ],
+    "Draft" => [ "Draft", "Only you can see this. Submit it when you're ready." ],
     "Pending" => [ "Waiting for review", "With the finance team, waiting to be checked." ],
-    "Approved" => [ "Approved", "Checked and approved — waiting to be sent to EUSA for payment." ],
+    "Approved" => [ "Approved", "Checked and approved; waiting to be sent to EUSA for payment." ],
     "Submitted" => [ "Sent to EUSA", "Sent to the Students' Association (EUSA) for payment." ],
     "Paid" => [ "Paid", "Paid into your bank account." ],
-    "Rejected" => [ "Rejected", "Not approved — see the reason on the row." ]
+    "Rejected" => [ "Rejected", "Not approved. See the reason on the row." ]
   }.freeze
 
   # A status badge with the producer-facing label + an explaining tooltip.

@@ -27,14 +27,14 @@ module Admin
         # (mailbox / recipient / subject / body) rather than an enqueued mailer.
         @graph = FakeGraphClient.new
         ReviewController.notifier_builder =
-          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
+          ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
       end
 
       teardown do
         BaseController.store_builder = -> { ::Reimbursements.build_store }
         ReviewController.checker_builder = -> { MC.default_checker }
         ReviewController.notifier_builder =
-          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+          ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
       # Consented by default (the ordinary case for a claim submitted through the

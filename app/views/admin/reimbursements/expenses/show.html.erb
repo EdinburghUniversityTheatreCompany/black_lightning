@@ -20,8 +20,8 @@
   <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
     <div><dt class="text-gray-500">Amount</dt><dd class="font-medium"><%= reimbursements_money(@expense.amount) %></dd></div>
     <div><dt class="text-gray-500">Amount excl. VAT</dt><dd class="font-medium"><%= reimbursements_money(@expense.amount_excl_vat) %></dd></div>
-    <div><dt class="text-gray-500">Budget</dt><dd class="font-medium"><%= @expense.budget&.name || "—" %></dd></div>
-    <div><dt class="text-gray-500">Payment reference</dt><dd class="font-medium"><%= @expense.payment_reference.presence || "—" %></dd></div>
+    <div><dt class="text-gray-500">Budget</dt><dd class="font-medium"><%= reimbursements_value(@expense.budget&.name) %></dd></div>
+    <div><dt class="text-gray-500">Payment reference</dt><dd class="font-medium"><%= reimbursements_value(@expense.payment_reference) %></dd></div>
     <div><dt class="text-gray-500">Created</dt><dd class="font-medium"><%= reimbursements_date(@expense.submitted_at) %></dd></div>
     <% if @expense.payment_confirmed_date.present? %>
       <div><dt class="text-gray-500">Paid on</dt><dd class="font-medium"><%= reimbursements_date(@expense.payment_confirmed_date) %></dd></div>
@@ -30,16 +30,16 @@
 
   <dl class="mt-3">
     <dt class="text-sm text-gray-500">Description</dt>
-    <dd class="text-sm"><%= @expense.description.presence || "—" %></dd>
+    <dd class="text-sm"><%= reimbursements_value(@expense.description) %></dd>
   </dl>
 
   <% if @expense.payee_override? %>
     <div class="mt-3 rounded border border-gray-200 p-3 text-sm">
       <p class="font-medium">Paid to a third party</p>
       <p class="text-gray-600">
-        <%= @expense.effective_payee_name %> —
-        <%= @expense.effective_sort_code.presence || "—" %> /
-        <%= @expense.effective_account_number.presence || "—" %>
+        <%= @expense.effective_payee_name %>,
+        <%= reimbursements_value(@expense.effective_sort_code) %> /
+        <%= reimbursements_value(@expense.effective_account_number) %>
       </p>
     </div>
   <% end %>

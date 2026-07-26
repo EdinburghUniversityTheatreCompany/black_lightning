@@ -1,7 +1,7 @@
 <p>Hi <%= eusa_contact_name.presence || "Finance Team" %>,</p>
 
 <p>
-  Please find attached the BACS request from Bedlam Fringe for <%= reimbursements_date(bacs_date) %>,
+  Please find attached the BACS request from <%= cost_centre_name %> for <%= reimbursements_date(bacs_date) %>,
   covering <%= expense_count %> <%= "expense".pluralize(expense_count) %> totalling
   <%= reimbursements_money(total) %>.
 </p>
@@ -34,5 +34,5 @@
 <p>
   All the best,<br>
   <%= sender_name %><br>
-  Bedlam Fringe
+  <%= cost_centre_name %>
 </p>

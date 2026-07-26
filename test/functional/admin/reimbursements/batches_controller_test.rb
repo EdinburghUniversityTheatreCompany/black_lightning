@@ -71,7 +71,10 @@ module Admin
         assert_response :success
         assert_includes response.body, "Alice Producer"
         assert_includes response.body, "Create draft and process batch"
-        assert_includes response.body, "Bedlam Fringe BACS Request", "default EUSA subject is prefilled"
+        # Derived from the cost centre, so a second one never sends EUSA a
+        # request labelled with the Fringe's name.
+        assert_includes response.body, "#{::Reimbursements::CostCentre.default.name} BACS Request",
+                        "default EUSA subject is prefilled"
       end
 
       test "new redirects with an alert when no cost centre is configured" do
@@ -270,7 +273,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Draft created"
-        assert_includes response.body, "No EUSA draft — needs a look"
+        assert_includes response.body, "No EUSA draft: needs a look"
       end
 
       test "show renders one batch and its linked expenses" do
@@ -292,7 +295,7 @@ module Admin
 
         assert_response :success
         # EUSA draft succeeded (green "Yes"), producers were NOT notified (amber warning).
-        assert_includes response.body, "No — needs a look"
+        assert_includes response.body, "No: needs a look"
       end
 
       test "show 404s for an unknown batch id" do

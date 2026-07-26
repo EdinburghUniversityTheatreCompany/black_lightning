@@ -43,7 +43,7 @@ module Admin
       end
 
       def edit
-        @title = "Budget — #{@budget.name}"
+        @title = "Budget: #{@budget.name}"
         @people = store.people
         @forecasts = store.budget_forecasts(@budget.record_id)
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline

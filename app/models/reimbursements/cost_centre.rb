@@ -125,6 +125,41 @@ module Reimbursements
       eusa_recipient.presence || DEFAULT_EUSA_RECIPIENT
     end
 
+    # --- Copy derived from this cost centre -------------------------------
+    # Every producer- and operator-facing email, filename and sign-off reads
+    # its wording from here rather than hardcoding "Bedlam Fringe", so a second
+    # cost centre gets correct copy the moment its row exists. Subjects used to
+    # carry two different literal prefixes ("[Bedlam Fringe]" and
+    # "[Bedlam BACS]"); +subject_prefix+ is the single source they now share.
+
+    # The bracketed tag on every reimbursements email subject.
+    def subject_prefix
+      "[#{name}]"
+    end
+
+    # Who a person-written finance email is from when no operator name is
+    # available (the Build Batch sender field, the EUSA email sign-off).
+    def finance_sender_name
+      eusa_signature_name.presence || "#{name} Finance"
+    end
+
+    # Sign-off for the operator alerts the batch jobs send automatically.
+    def automated_sign_off
+      "#{name} BACS (automated)"
+    end
+
+    # Where a submitter should write with a question. The receive mailbox is
+    # the address email-in already answers, so it is the one guaranteed to be
+    # monitored for this cost centre.
+    def contact_email
+      receive_mailbox
+    end
+
+    # Filename-safe form of the name, for the BACS spreadsheet sent to EUSA.
+    def slug
+      name.to_s.parameterize
+    end
+
     # --- Nightly auto-submit scheduling -----------------------------------
     # Ports bedlam-bacs nightly_support.py (most_recent_run_day / is_due),
     # storing the last-completed date on the row instead of nightly_state.toml.

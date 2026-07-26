@@ -81,7 +81,7 @@ module Admin
         )
         redirect_to admin_reimbursements_batches_path,
                     notice: "Batch is building for #{@cost_centre.name}. Its EUSA draft link will appear " \
-                            "here and be emailed to you when ready — don't rebuild it in the meantime."
+                            "here and be emailed to you when ready. Don't rebuild it in the meantime."
       end
 
       def reopen
@@ -148,7 +148,7 @@ module Admin
         redirect_to admin_reimbursements_batches_path,
                     alert: "Can't reopen: the EUSA draft for this batch could not be confirmed as " \
                            "still unsent in Outlook (it may already have been sent, or Graph couldn't " \
-                           "be reached). If it was genuinely sent, do not reopen — repair reconciliation " \
+                           "be reached). If it was genuinely sent, do not reopen; repair reconciliation " \
                            "manually instead of rebuilding."
       end
 
@@ -203,13 +203,13 @@ module Admin
       end
 
       def default_sender
-        current_user.try(:full_name).presence || "Bedlam Fringe Finance"
+        current_user.try(:full_name).presence || @cost_centre.finance_sender_name
       end
 
       def compose_default_email(bacs_date, sender_name)
         ::Reimbursements::EusaEmailComposer.new.compose(
           expenses: approved_expenses, bacs_date: bacs_date, sender_name: sender_name,
-          eusa_code: @cost_centre.eusa_code
+          cost_centre: @cost_centre
         )
       end
 

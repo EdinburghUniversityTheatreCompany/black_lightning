@@ -246,7 +246,7 @@ module Reimbursements
       return unless BankDetails.overrides_incomplete?(payee_name_override, sort_code_override, account_number_override)
 
       errors.add(:base, "To pay a third party, fill in all three: payee name, sort code, " \
-                        "and account number — not just one or two.")
+                        "and account number, not just one or two.")
     end
 
     def vat_soft_block

@@ -55,7 +55,7 @@ module Reimbursements
       # this check is the gate that holds when the job is run from a console or
       # by any future caller.
       return skipped_result unless expense.ai_processing_consented?
-      return error_result("No receipts attached — cannot perform AI check.") if expense.receipts.empty?
+      return error_result("No receipts attached, so the AI check can't run.") if expense.receipts.empty?
 
       response = @chat_builder.call
                              .with_schema(SCHEMA)

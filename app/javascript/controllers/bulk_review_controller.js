@@ -43,7 +43,7 @@ export default class extends Controller {
           ? base
           : `${base} ${flagged} of them ${
               flagged === 1 ? "is" : "are"
-            } flagged as needing attention — check the reasons on the card${
+            } flagged as needing attention. Check the reasons on the card${
               flagged === 1 ? "" : "s"
             } before continuing.`
     }

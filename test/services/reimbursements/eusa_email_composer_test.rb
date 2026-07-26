@@ -8,6 +8,11 @@ module Reimbursements
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
 
+    def cost_centre(name: "Bedlam Fringe 2026")
+      CostCentre.new(key: "fringe", name: name, eusa_code: "F40",
+                     receive_mailbox: "in@example.com", send_mailbox: "out@example.com")
+    end
+
     def expense(payee:, amount:, budget:, nominal:, description:)
       person = Person.new(name: payee, email: "#{payee}@x")
       budget_obj = Budget.new(name: budget, nominal_code: nominal)
@@ -22,10 +27,10 @@ module Reimbursements
       ]
 
       email = EusaEmailComposer.new.compose(expenses: expenses, bacs_date: Date.new(2026, 5, 13),
-                                            sender_name: "Fringe Finance", eusa_code: "F40",
+                                            sender_name: "Fringe Finance", cost_centre: cost_centre,
                                             eusa_contact_name: "Sam")
 
-      assert_equal "Bedlam Fringe BACS Request - 2026-05-13 - F40", email.subject
+      assert_equal "Bedlam Fringe 2026 BACS Request - 2026-05-13 - F40", email.subject
       assert_includes email.body_html, "Hi Sam,"
       assert_includes email.body_html, "totalling"
       assert_includes email.body_html, "112.50" # rounded total of 12.50 + 100
@@ -37,7 +42,7 @@ module Reimbursements
     test "falls back to a generic greeting without a named contact" do
       email = EusaEmailComposer.new.compose(
         expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
-        bacs_date: Date.new(2026, 5, 13), sender_name: "F", eusa_code: "F40"
+        bacs_date: Date.new(2026, 5, 13), sender_name: "F", cost_centre: cost_centre
       )
       assert_includes email.body_html, "Hi Finance Team,"
     end
@@ -45,7 +50,7 @@ module Reimbursements
     test "strips dev-mode view-annotation comments from the body" do
       email = EusaEmailComposer.new.compose(
         expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
-        bacs_date: Date.new(2026, 5, 13), sender_name: "F", eusa_code: "F40"
+        bacs_date: Date.new(2026, 5, 13), sender_name: "F", cost_centre: cost_centre
       )
       assert_not_includes email.body_html, "BEGIN app/views",
                           "Rails view-annotation comments must never reach the EUSA draft"

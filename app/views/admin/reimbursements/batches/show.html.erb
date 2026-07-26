@@ -11,7 +11,7 @@
       <% if @batch.eusa_draft_created %>
         <%= render BadgeComponent.new(type: :success, pill: true).with_content("Yes") %>
       <% else %>
-        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No — needs a look") %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No: needs a look") %>
       <% end %>
     </dd>
     <dt class="font-medium">Producers notified</dt>
@@ -19,7 +19,7 @@
       <% if @batch.producer_notifications_sent %>
         <%= render BadgeComponent.new(type: :success, pill: true).with_content("Yes") %>
       <% else %>
-        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No — needs a look") %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No: needs a look") %>
       <% end %>
     </dd>
     <% if @batch.sharepoint_backup_url.present? %>

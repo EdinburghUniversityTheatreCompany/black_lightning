@@ -33,7 +33,6 @@ module Reimbursements
     # the single-flight guarantee that prevents double-processing unread mail.
     limits_concurrency key: "reimbursements_mailbox_poll", duration: 10.minutes
 
-    SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
     # A compromised/spoofed sender address could otherwise mint an unbounded
     # number of Draft expenses under a real payee's identity, or simply starve
@@ -316,16 +315,28 @@ module Reimbursements
       Rails.application.config.action_mailer.default_url_options || {}
     end
 
+    # Every reply is written in the name of the cost centre whose mailbox the
+    # message arrived on, so a termtime submitter is never told to write to the
+    # Fringe. Both read @current_cost_centre, which poll_cost_centre sets before
+    # any message is processed.
+    def sign_off
+      "#{@current_cost_centre.name} finance (automated reply)"
+    end
+
+    def contact_email
+      @current_cost_centre.contact_email
+    end
+
     def unknown_sender_html
       <<~HTML
         <p>Hi,</p>
         <p>Thanks for your email! Unfortunately this address isn't in our submitter list,
         so we couldn't link your receipt to an account.</p>
-        <p>If you're part of Bedlam Fringe, email from the address you registered with,
-        or submit directly through the portal:
+        <p>If you're part of #{@current_cost_centre.name}, email from the address you
+        registered with, or submit directly through the portal:
         <a href="#{portal_url}">#{portal_url}</a>.</p>
-        <p>Questions? Contact finance@bedlamfringe.co.uk.</p>
-        <p>#{SIGN_OFF}</p>
+        <p>Questions? Contact #{contact_email}.</p>
+        <p>#{sign_off}</p>
       HTML
     end
 
@@ -337,7 +348,7 @@ module Reimbursements
         <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP, up
         to 5&nbsp;MB). Attaching or pasting the photo into the email both work. Or submit
         through the portal instead: <a href="#{portal_url}">#{portal_url}</a>.</p>
-        <p>#{SIGN_OFF}</p>
+        <p>#{sign_off}</p>
       HTML
     end
 
@@ -347,8 +358,8 @@ module Reimbursements
         <p>Thanks for your email! We've received an unusually high number of receipts from
         this address today, so this one hasn't been processed automatically.</p>
         <p>Please submit it through the portal instead: <a href="#{portal_url}">#{portal_url}</a>,
-        or contact finance@bedlamfringe.co.uk if this doesn't look right.</p>
-        <p>#{SIGN_OFF}</p>
+        or contact #{contact_email} if this doesn't look right.</p>
+        <p>#{sign_off}</p>
       HTML
     end
 
@@ -360,7 +371,7 @@ module Reimbursements
         <p><strong>Please check, complete, and submit the claim here:</strong>
         <a href="#{url}">#{url}</a>. Double-check the budget and the payment reference.</p>
         <p>The finance team won't see the claim until you submit it.</p>
-        <p>#{SIGN_OFF}</p>
+        <p>#{sign_off}</p>
       HTML
     end
   end

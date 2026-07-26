@@ -29,8 +29,8 @@ module Reimbursements
       @notifier = FakeNotifier.new
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       BuildBatchJob.graph_builder = -> { Object.new }
-      BuildBatchJob.notifier_builder = lambda do |mailbox:, graph:|
-        @notifier.instance_variable_set(:@mailbox, mailbox)
+      BuildBatchJob.notifier_builder = lambda do |cost_centre:, graph:|
+        @notifier.instance_variable_set(:@mailbox, cost_centre.send_mailbox)
         @notifier
       end
     end
@@ -39,7 +39,8 @@ module Reimbursements
       BuildBatchJob.processor_builder =
         ->(store:, graph:, cost_centre:) { BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre) }
       BuildBatchJob.graph_builder = -> { GraphClient.new }
-      BuildBatchJob.notifier_builder = ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
+      BuildBatchJob.notifier_builder =
+        ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
     end
 
     def alerts(name) = @notifier.calls.select { |call| call.first == name }

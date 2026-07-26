@@ -24,12 +24,12 @@ module Admin
         # Reject emails go through the Graph notifier; inject a recording fake.
         @graph = FakeGraphClient.new
         MyBudgetsController.notifier_builder =
-          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
+          ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
       end
 
       teardown do
         MyBudgetsController.notifier_builder =
-          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+          ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
       test "requires sign-in" do

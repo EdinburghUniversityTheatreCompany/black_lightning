@@ -47,8 +47,8 @@ module Reimbursements
       NightlyBatchJob.graph_builder = -> { Object.new }
       # Capture the mailbox the notifier is built for so a test can assert the
       # operator alerts send from the cost centre's send mailbox.
-      NightlyBatchJob.notifier_builder = lambda do |mailbox:, graph:|
-        @notifier.instance_variable_set(:@mailbox, mailbox)
+      NightlyBatchJob.notifier_builder = lambda do |cost_centre:, graph:|
+        @notifier.instance_variable_set(:@mailbox, cost_centre.send_mailbox)
         @notifier
       end
 
@@ -62,7 +62,8 @@ module Reimbursements
       NightlyBatchJob.store_builder = -> { Reimbursements.build_store }
       NightlyBatchJob.checker_builder = -> { ModulusCheck.default_checker }
       NightlyBatchJob.graph_builder = -> { GraphClient.new }
-      NightlyBatchJob.notifier_builder = ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
+      NightlyBatchJob.notifier_builder =
+        ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
     end
 
     def mailer_calls(name) = @notifier.calls.select { |call| call.first == name }

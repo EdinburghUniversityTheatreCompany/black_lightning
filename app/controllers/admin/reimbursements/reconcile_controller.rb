@@ -53,14 +53,14 @@ module Admin
 
         unless pasted_text.strip.present?
           redirect_to admin_reimbursements_reconciliation_path,
-                      alert: "Nothing to apply — start again from the paste step."
+                      alert: "Nothing to apply. Start again from the paste step."
           return
         end
 
         parsed = parse_rows(pasted_text)
         if parsed.nil?
           redirect_to admin_reimbursements_reconciliation_path,
-                      alert: "Could not parse the actuals — start again from the paste step."
+                      alert: "Could not parse the actuals. Start again from the paste step."
           return
         end
 

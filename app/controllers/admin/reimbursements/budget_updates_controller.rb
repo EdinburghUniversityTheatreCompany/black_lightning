@@ -41,7 +41,7 @@ module Admin
         store.create_budget_update!(effective_date: @effective_date, note: params[:note].to_s,
                                     created_by: current_user, forecasts: entries)
         redirect_to admin_reimbursements_budget_updates_path,
-                    notice: "Budget update saved — #{pluralize_forecasts(entries.size)} logged."
+                    notice: "Budget update saved: #{pluralize_forecasts(entries.size)} logged."
       end
 
       private

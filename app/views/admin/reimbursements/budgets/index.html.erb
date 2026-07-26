@@ -48,7 +48,7 @@
                 (if budget.active
                    render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
                  else
-                   content_tag(:span, "—", class: "text-gray-400")
+                   content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
                  end)
        visible = if budget.active
                    render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
@@ -80,7 +80,7 @@
            reimbursements_money(budget.eusa_actual_amount),
            reimbursements_money(budget.expected_outturn),
            content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class,
-                       title: ("Over budget — nothing left to spend" if budget.remaining&.negative?)),
+                       title: ("Over budget: nothing left to spend" if budget.remaining&.negative?)),
            content_tag(:span, reimbursements_money(budget.variance), class: variance_class, title: variance_title),
            owners,
            edit

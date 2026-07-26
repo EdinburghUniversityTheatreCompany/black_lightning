@@ -53,7 +53,7 @@ module Reimbursements
       @composer = composer || EusaEmailComposer.new
       # Producer notifications send through Graph from the cost centre's send
       # mailbox (same client as the EUSA draft), so they land in its Sent Items.
-      @notifier = notifier || Notifier.new(mailbox: cost_centre.send_mailbox, graph: graph)
+      @notifier = notifier || Notifier.new(cost_centre: cost_centre, graph: graph)
       @sleeper = sleeper || ->(seconds) { sleep(seconds) }
     end
 
@@ -68,7 +68,7 @@ module Reimbursements
       xlsx_bytes = build_xlsx(expenses)
       renamed = collect_receipts(expenses, bacs_date)
 
-      bacs_filename = "#{bacs_date.iso8601}-bedlam-fringe-BACS-request-#{@cost_centre.eusa_code}.xlsx"
+      bacs_filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
       upload_bacs_file(result, bacs_filename, xlsx_bytes)
       urls_by_expense = upload_receipts(result, renamed)
 
@@ -194,7 +194,7 @@ module Reimbursements
       return [ subject_override, body_override ] if subject_override.present? && body_override.present?
 
       email = @composer.compose(expenses: expenses, bacs_date: bacs_date, sender_name: sender_name,
-                                eusa_code: @cost_centre.eusa_code, eusa_contact_name: contact)
+                                cost_centre: @cost_centre, eusa_contact_name: contact)
       [ subject_override.presence || email.subject, body_override.presence || email.body_html ]
     end
 
@@ -245,7 +245,7 @@ module Reimbursements
         end
         true
       rescue StandardError => e
-        result.errors << "SUBMIT FAILED — DOUBLE-DRAFT RISK: could not mark expense " \
+        result.errors << "SUBMIT FAILED (DOUBLE-DRAFT RISK): could not mark expense " \
           "#{expense.auto_number} as Submitted after #{WRITE_RETRY_ATTEMPTS} attempts, even though " \
           "it is included in the live EUSA draft (#{result.eusa_draft_web_link}). Fix this " \
           "expense's status manually before rebuilding, or it will be drafted a second time: #{e.message}"
@@ -265,7 +265,7 @@ module Reimbursements
     def orphan_draft_message(result)
       "ORPHAN DRAFT: the EUSA draft was created (#{result.eusa_draft_web_link}) but the batch record " \
         "could not be saved. The expenses were marked Submitted to stop a rebuild creating a SECOND " \
-        "draft — send THIS existing draft and repair the batch record manually. DO NOT rebuild."
+        "draft. Send THIS existing draft and repair the batch record manually. DO NOT rebuild."
     end
 
     # Producer notifications go via Graph (Notifier#producer_notification), one
@@ -317,7 +317,7 @@ module Reimbursements
         with_write_retry { @store.update_expense!(expense.record_id, producer_notified: true) }
       rescue StandardError => e
         result.errors << "Failed to mark producer_notified on #{expense.auto_number} after " \
-          "#{WRITE_RETRY_ATTEMPTS} attempts — their notification email was already sent, so a " \
+          "#{WRITE_RETRY_ATTEMPTS} attempts; their notification email was already sent, so a " \
           "rebuild risks emailing them twice: #{e.message}"
       end
     end

@@ -35,8 +35,6 @@ module Reimbursements
       "reimbursements_build_batch_#{params[:cost_centre_key]}"
     }
 
-    SENDER_FALLBACK = "Bedlam Fringe Finance".freeze
-
     # Injection seams for tests (mirrors NightlyBatchJob; no mocking library).
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :processor_builder,
@@ -46,7 +44,7 @@ module Reimbursements
     # Operator alerts send through Graph (Notifier) from the cost centre's send
     # mailbox, so they land in its Sent Items — the same as the nightly.
     class_attribute :notifier_builder,
-                    default: ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
+                    default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
     def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
                 eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
@@ -76,7 +74,8 @@ module Reimbursements
 
       result = processor(cost_centre).process(
         expenses: approved, bacs_date: parse_date(bacs_date),
-        sender_name: sender_name.presence || SENDER_FALLBACK, eusa_recipient: eusa_recipient,
+        sender_name: sender_name.presence || cost_centre.finance_sender_name,
+        eusa_recipient: eusa_recipient,
         eusa_subject: eusa_subject, eusa_body_html: eusa_body_html
       )
       attempt.resolve!(status: result.success ? "completed" : "failed",
@@ -123,7 +122,7 @@ module Reimbursements
         return
       end
 
-      emailer = notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph)
+      emailer = notifier_builder.call(cost_centre: cost_centre, graph: graph)
       if result.success
         emailer.batch_ready(recipients: recipients, expenses: notification_rows(approved),
                             total: format("%.2f", result.total_amount || 0),

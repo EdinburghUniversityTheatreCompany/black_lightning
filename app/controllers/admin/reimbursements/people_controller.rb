@@ -48,7 +48,7 @@ module Admin
         # operator can see on the same screen.
         if modulus_checker.check(@person.sort_code, @person.account_number) == ::Reimbursements::ModulusCheck::INVALID
           redirect_to admin_reimbursements_people_path,
-                      alert: "#{@person.name}'s bank details fail the modulus check — fix them " \
+                      alert: "#{@person.name}'s bank details fail the modulus check. Fix them " \
                              "before marking as verified."
           return
         end

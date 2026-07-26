@@ -42,7 +42,7 @@
                         class: "h-4 w-4" %>
     <% end %>
     <span class="font-medium">
-      #<%= expense.auto_number %> — <%= expense.person&.name.presence || "(no payee)" %>
+      #<%= expense.auto_number %>: <%= expense.person&.name.presence || "(no payee)" %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
     </span>
     <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>

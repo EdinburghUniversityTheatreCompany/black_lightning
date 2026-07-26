@@ -41,7 +41,7 @@ module Reimbursements
     # Operator alerts send through Graph (Notifier#send_mail) from the cost
     # centre's send mailbox, so they land in its Sent Items.
     class_attribute :notifier_builder,
-                    default: ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
+                    default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
     def perform(dry_run: false, today: Date.current)
       CostCentre.all.each { |cost_centre| run_for(cost_centre, dry_run: dry_run, today: today) }
@@ -274,7 +274,7 @@ module Reimbursements
     end
 
     def notifier(cost_centre)
-      notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph)
+      notifier_builder.call(cost_centre: cost_centre, graph: graph)
     end
 
     # The finance operators: users granted the finance permission via the grid,
