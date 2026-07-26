@@ -165,9 +165,7 @@ module Reimbursements
       assert_equal 0, Expense.count
     end
 
-    # The heredoc replies are raw HTML with no escaping of their own, and the
-    # name reaching them is submitter-controlled (User#first_name is
-    # self-service editable).
+    # The heredocs don't escape, and User#first_name is self-service editable.
     test "a payee name containing markup is escaped into the reply" do
       setup_job(messages: [ inbound_message(from: "mallory@example.com") ])
       create_reimbursements_person(name: "<script>alert(1)</script> Mallory",

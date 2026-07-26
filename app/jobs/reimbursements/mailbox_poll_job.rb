@@ -340,13 +340,10 @@ module Reimbursements
       @current_cost_centre.contact_email
     end
 
-    # These replies are built as raw HTML strings, not ERB, so nothing escapes
-    # for us — and the payee's name is the first submitter-controlled value to
-    # reach one (User#first_name is self-service editable).
-    #
-    # unknown_sender_html and rate_limited_html deliberately keep a bare "Hi,":
-    # the first has no matched person at all, and naming someone we are refusing
-    # to process for is not an improvement.
+    # The replies are raw HTML, not ERB, so nothing escapes for us — and the
+    # name is the first submitter-controlled value to reach one
+    # (User#first_name is self-service editable). unknown_sender_html and
+    # rate_limited_html keep a bare "Hi," on purpose: no matched person.
     def greeting(person)
       ERB::Util.html_escape(GreetingName.for(person))
     end
