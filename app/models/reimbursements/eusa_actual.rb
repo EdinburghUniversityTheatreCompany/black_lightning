@@ -21,6 +21,7 @@
 #  updated_at            :datetime         not null
 #  airtable_record_id    :string(255)
 #  budget_id             :bigint
+#  cost_centre_id        :bigint
 #  expense_id            :bigint
 #  financial_year_id     :bigint
 #  offset_of_id          :bigint
@@ -29,6 +30,7 @@
 #
 #  index_reimbursements_eusa_actuals_on_airtable_record_id     (airtable_record_id) UNIQUE
 #  index_reimbursements_eusa_actuals_on_budget_id              (budget_id)
+#  index_reimbursements_eusa_actuals_on_cost_centre_id         (cost_centre_id)
 #  index_reimbursements_eusa_actuals_on_expense_id             (expense_id)
 #  index_reimbursements_eusa_actuals_on_financial_year_id      (financial_year_id)
 #  index_reimbursements_eusa_actuals_on_nominal_code           (nominal_code)
@@ -40,6 +42,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (budget_id => reimbursements_budgets.id)
+#  fk_rails_...  (cost_centre_id => reimbursements_cost_centres.id)
 #  fk_rails_...  (expense_id => reimbursements_expenses.id)
 #  fk_rails_...  (financial_year_id => reimbursements_financial_years.id)
 #  fk_rails_...  (offset_of_id => reimbursements_eusa_actuals.id)
@@ -59,6 +62,14 @@ module Reimbursements
                          inverse_of: :eusa_actuals
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
+
+    # Which pot this ledger row belongs to, taken from the export's own Cost
+    # Centre column at import (see Admin::Reimbursements::ReconcileController).
+    # Optional: a historical row whose code matched no configured cost centre —
+    # or that arrived with the column blank — genuinely has no centre, and
+    # guessing one would file real spend under the wrong pot. The +cost_centre+
+    # STRING column keeps what the export said; this is the attribution.
+    belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
     # An offsetting pair's two legs each point at the other, so this reads the
     # same from either side.
