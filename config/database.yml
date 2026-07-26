@@ -12,19 +12,22 @@ default: &default
   host: "<%= ENV.fetch('DB_HOST') { '127.0.0.1' } %>"
   port: 3306
 
+# WORKTREE_DB_SUFFIX (see .worktree-isolate.conf) gives a git worktree its own dev stack, so
+# two `bin/dev`s don't share one development database. Empty by default -> the plain names,
+# which is what the main checkout uses. A worktree creates its own with `bin/rails db:prepare`.
 development:
   primary:
     <<: *default
-    database: bedlam_blacklightning_development
+    database: bedlam_blacklightning_development<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>
 
   queue:
     <<: *default
-    database: bedlam_blacklightning_development_queue
+    database: bedlam_blacklightning_development<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>_queue
     migrations_paths: db/queue_migrate
 
   cache:
     <<: *default
-    database: bedlam_blacklightning_development_cache
+    database: bedlam_blacklightning_development<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>_cache
     migrations_paths: db/cache_migrate
 
 # Warning: The database defined as "test" will be erased and

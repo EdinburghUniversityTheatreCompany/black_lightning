@@ -30,9 +30,9 @@ class Tasks::Logic::MarkdownHeadingFix
   # Every Markdown-authored column in the app, keyed by model name. Kept as
   # strings so the file can be required outside a fully-booted autoload context.
   #
-  # CarouselItem#tagline is intentionally absent: it is authored in the Markdown
-  # editor but rendered as PLAIN text, so a fix there would change the literal
-  # string users see rather than repair a heading (see plans/off-topic-improvements.md).
+  # CarouselItem#tagline is intentionally absent: it is rendered as PLAIN text (the
+  # carousel outputs it raw), and its form is a plain input to match, so a heading fix
+  # there would change the literal string users see rather than repair a heading.
   TARGETS = {
     "FaultReport" => [ :description ],
     "PictureTag" => [ :description ],

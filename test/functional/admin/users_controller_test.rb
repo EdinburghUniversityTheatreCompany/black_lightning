@@ -12,6 +12,20 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  # Breadcrumbs are built from the URL path, and an id segment titleizes into nonsense. The
+  # mechanism is generic (it reads the record the controller loaded), so cover it here as
+  # well as on the reimbursements budget it was reported against.
+  test "the edit breadcrumb names the user instead of their id" do
+    get :edit, params: { id: @user }
+
+    assert_response :success
+    assert_select "nav[aria-label=Breadcrumb]" do |nav|
+      assert_match(/Users/, nav.first.text, "collection segments still titleize")
+      assert_match(/#{Regexp.escape(@user.name)}/, nav.first.text)
+      assert_no_match(/ #{@user.id} /, nav.first.text)
+    end
+  end
+
   test "should get index with non_members" do
     get :index, params: { show_non_members: 1 }
 
@@ -259,9 +273,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     members.each { |member| assert_includes_user(member) }
 
-    assert_not_includes response.body, user.first_name, "Ocassionally fails if the first name is not unique"
-    assert_not_includes response.body, user.last_name, "Ocassionally fails if the last name is not unique"
-    assert_not_includes response.body, user.id.to_s
+    assert_not_includes_user user
   end
 
   test "get autocomplete list for all users" do
@@ -275,7 +287,9 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     users.each { |user| assert_includes_user(user) }
 
-    assert_not response.body["pagination"]["more"]
+    # `response.body["pagination"]["more"]` was string-slicing the raw JSON, which always
+    # came back nil and so asserted nothing. Read the parsed flag instead.
+    assert_not response.parsed_body["pagination"]["more"]
   end
 
   test "get autocomplete list excludes user when exclude_id provided" do
@@ -284,8 +298,8 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     get :autocomplete_list, params: { exclude_id: member1.id }
 
-    assert_includes response.body, member2.first_name
-    assert_not_includes response.body, member1.id.to_s
+    assert_includes_user member2
+    assert_not_includes_user member1
   end
 
   # Merge flow tests
@@ -353,9 +367,19 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
   private
 
+  # The autocomplete list is JSON, so assert against the parsed results rather than
+  # substrings of the body. Faker hands out colliding first/last names often enough that a
+  # `response.body` substring check is genuinely flaky in both directions, and a name
+  # containing & or < is escaped in the JSON so it would not match literally either.
+  def autocomplete_results
+    response.parsed_body["results"]
+  end
+
   def assert_includes_user(user)
-    assert_includes response.body, user.first_name
-    assert_includes response.body, user.last_name
-    assert_includes response.body, user.id.to_s
+    assert_includes autocomplete_results, { "id" => user.id, "text" => user.name_or_default }
+  end
+
+  def assert_not_includes_user(user)
+    assert_not_includes autocomplete_results.map { |result| result["id"] }, user.id
   end
 end

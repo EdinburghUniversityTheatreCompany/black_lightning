@@ -213,8 +213,12 @@ survive as historical import provenance and are never written. Spec + plan in
   decimal). `.parse` → nil for anything unreadable; **`.parse!` distinguishes blank
   ("nothing typed", nil) from unreadable (raises)** — the batch budget-update form needs
   that to tell a deliberate blank from a typo, since treating both as "skip" silently kept
-  a budget on a superseded forecast. `AmountValidation` (Review/expense-edit write paths)
-  is a separate, stricter validator by design.
+  a budget on a superseded forecast. **`AmountValidation` (Review#save, expense-edit
+  #update) reads through the same parser** and adds the finance rules on top: positive,
+  within `MAX_AMOUNT` (100k, the fat-finger backstop), excl-VAT not above gross. Its
+  callers must write `AmountValidation.amount` / `.amount_excl_vat` — the parsed
+  BigDecimal — never the raw param: AR casts a string to a decimal column with `to_d`, so
+  a validated "£1,200" handed through raw would store **0**.
 - **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
   the *development* credentials are publicly readable, so no secret values there), then
   per-env credentials `reimbursements:` (production only).

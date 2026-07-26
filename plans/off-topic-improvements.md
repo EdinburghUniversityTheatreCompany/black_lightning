@@ -1,7 +1,12 @@
 # Off-topic improvements
 
-Items noticed while building the opportunities overhaul that are out of scope for it,
-recorded for later. Each is optional.
+Improvements spotted mid-task and parked as out of scope, per the "Suggest Improvements" rule.
+Each is optional.
+
+Everything below is genuinely still open, and each item says what is blocking it. The file was
+drained on 2026-07-26 (branch `off-topic-backlog`): eleven items landed as their own commits, and
+what remains needs either a production data audit, a product decision from Mick, or a change to
+another repo.
 
 ## database_consistency — schema-migration backlog (gate still advisory)
 
@@ -36,73 +41,41 @@ that trims its oldest lines would be the proper fix if that ever needs closing.
 
 - Consider upstreaming devcontainer-mise support into the `dev-hooks:dev-env-setup` skill: it
   already standardises mise + hk + CI, but doesn't yet template a mise-driven `.devcontainer/`.
-  (This is a change to the dev-hooks plugin marketplace, not to this repo.)
+  (This is a change to the dev-hooks plugin marketplace, not to this repo — which is why the
+  2026-07-26 drain left it here: nothing to change in BlackLightning.) Worth carrying up with it:
+  the apt list this repo settled on for a precompiled-Ruby devcontainer, and the
+  `.worktree-isolate.conf` + `database.yml` suffix recipe now wired up here.
 
-## Prune ruby-build-only apt packages from the devcontainer (needs a bundle-install test)
-
-Now that Ruby is installed precompiled (`compile = false`, jdx/ruby), the packages in
-`.devcontainer/Dockerfile.dev` that existed *only* to build CRuby from source via ruby-build —
-`autoconf`, `libreadline-dev`, `libgdbm-dev`, `libncurses-dev`, `libgmp-dev`, `uuid-dev` — are
-no longer needed for Ruby itself. They appear unused by the app's compiling native gems
-(bcrypt, bcrypt_pbkdf, mysql2, nio4r, puma, json, prism, racc), so they're *probably* removable.
-Keep `build-essential`, `libssl-dev`, `zlib1g-dev`, `libyaml-dev`, `libffi-dev`,
-`libmariadb-dev-compat`, `pkg-config` (native gem builds). Before removing anything, verify with a
-real `bundle install` in a trixie container using the pruned set — don't remove on inspection alone.
-Payoff is modest (small image/layer shrink); the Ruby-compile time saving is already captured.
-
-## Admin::MembershipCardsController is unrouted dead code
+## Admin::MembershipCardsController is unrouted dead code — NEEDS MICK'S GO-AHEAD TO DELETE
 
 `admin/membership_cards` has **no routes** — the `resources :membership_cards` line in
-`config/routes.rb` is commented out (~line 233) and `bin/rails routes -c admin/membership_cards`
+`config/routes.rb` is commented out (~line 334) and `bin/rails routes -c admin/membership_cards`
 returns nothing. The controller (whose own header says "Has been severely neglected. Can probably
 use the GenericController.") and its views (`index`/`show`/`_index_results`) are therefore
 unreachable. Its `index` still renders the unguarded `shared/pages/index` turbo_stream fragment, but
-that's moot while unrouted. Decide to either **remove** the controller + views + empty test, or
-**wire it up** (route it and convert to `GenericController`, which already guards the index
-turbo_stream via `render_index_stream_or_full`). Left untouched for now since it can't be triggered.
+that's moot while unrouted.
 
-## Opportunity show contact line drops the viewer context
+Scoped out fully on 2026-07-26 while draining this file. **Removal is the right call** and the
+cluster is bigger than the note said — every one of these is reachable only through the unrouted
+controller:
 
-`app/views/admin/opportunities/show.html.erb`'s contact field calls
-`@opportunity.submitter_display_name` **without** passing `@current_user`, unlike the other
-call sites (`OpportunityCardComponent`, the created_by field before it was restructured), so
-`User#name(current_user = nil)` renders the creator's name without viewer-aware formatting.
-Probably harmless (admins see full names anyway), but inconsistent — pass `@current_user` or
-document why it's omitted. Also, `Opportunity#css_class` calls `.html_safe` on the literal
-strings `"table-success"`/`"table-danger"` for no reason; plain strings would do.
+- `app/controllers/admin/membership_cards_controller.rb`
+- `app/views/admin/membership_cards/` (`index`, `show`, `_index_results`)
+- `test/functional/admin/membership_cards_controller_test.rb` (an empty class, no tests)
+- `lib/membership_card_pdf.rb` — already gutted to a no-op stub ("Prawn broke on upgrading to
+  Ruby 3.1. Most of the contents of this file got deleted."), so `generate_card` produces nothing
+- `app/javascript/controllers/print_controller.js` — used by exactly one template, the unreachable
+  `show`, which POSTs to a hardcoded box-office receipt printer at `192.168.1.254:8179` /
+  `localhost:5000` behind an `if request.remote_ip == "79.77.20.249"` check
+- the commented-out `resources :membership_cards` block in `config/routes.rb`
 
-## CarouselItem#tagline: authored as Markdown but rendered as plain text (inconsistent)
+The `MembershipCard` **model stays** — `User has_one :membership_card`, `delegate :card_number`,
+the merge path and `MembershipMailer` all use it.
 
-`CarouselItem#tagline` is edited through the `Admin::MdEditorComponent` Markdown editor
-(`app/views/admin/carousel_items/_form.html.erb:6`) but is output raw, NOT through
-`render_markdown`, in `app/components/public/basic_info_component.html.erb:11`. So a tagline like
-`**bold**` or `##Heading` shows up literally on the public carousel rather than as formatted HTML —
-the opposite of every other Markdown column in the app. Because of this mismatch it was
-deliberately **excluded** from the `markdown:fix_heading_spaces` cleanup task
-(`lib/tasks/logic/markdown_heading_fix.rb` `TARGETS`): inserting a space there would visibly change
-the literal string users see rather than fix a heading.
-
-Pick one and make it consistent:
-- **Render it as Markdown** — swap the raw output for `render_markdown(@tagline)` (or
-  `render_plain`/`truncate_markdown` if only inline emphasis is wanted, no block elements). Then
-  add `CarouselItem => [:tagline]` back into the cleanup task's `TARGETS`.
-- **Or stop making it Markdown-authorable** — replace the `Admin::MdEditorComponent` with a plain
-  `f.input :tagline` text field, since a one-line carousel tagline arguably doesn't need Markdown.
-
-Recommended: the plain-text-field route (a hero tagline is short and rarely needs block Markdown),
-which also removes the heavyweight editor from a trivial field. Either way, resolve the
-edit-as-Markdown / render-as-plain contradiction.
+Not done because deleting files is exactly the case the worktree workflow says to surface rather
+than merge silently (and the sandbox declined the deletion). Say the word and it is one commit.
 
 ---
-
-## RubyLLM legacy `acts_as` deprecation warning on boot (Phase B)
-
-Since introducing `ruby_llm`, every process load prints:
-`RubyLLM's legacy acts_as API is deprecated and will be removed in RubyLLM 2.0.0`.
-We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
-`RubyLLM.chat` directly), so the warning is pure noise from the gem's Rails engine.
-Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
-filter) so test/boot output stays clean. Harmless; not gating.
 
 ## Multiple financial years — PLANNED (post-MySQL)
 Now designed: a year-selector model (one active year + look-back), landing at the MySQL
@@ -111,73 +84,25 @@ cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-
 per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
 per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
 
-## Reimbursements breadcrumb shows the raw Airtable record id
+## Per-worktree / per-subagent database isolation — SEEDING still manual (2026-07-26)
 
-On a budget (and likely expense/batch) edit page the breadcrumb renders the record id
-humanized — e.g. "Rec X Ko G9m U Fbu Dn5 A" instead of the budget name. The breadcrumb
-crumb for a show/edit resource should use the record's display name (`@budget.name`), not
-`to_param`. Low priority; spotted 2026-07-17 while linking the budget owners checkbox list.
+The mechanism now exists: `.worktree-isolate.conf` is committed, so `worktree-setup` allocates
+each worktree its own `PORT`, `VITE_RUBY_PORT` and `WORKTREE_DB_SUFFIX`, and `config/database.yml`
+interpolates that suffix into the **dev** databases as well as the test one (it only did test
+before, which is why every worktree shared one dev DB).
 
-## Deferred from the MySQL-cutover code review (2026-07-18, branch reimbursements-mysql-cutover)
+**What is still open — seeding:** a freshly provisioned worktree's databases do not exist until
+someone runs `bin/rails db:prepare && bin/rails db:test:prepare` in it, and `db:prepare` gives an
+EMPTY dev database rather than a copy of the data in the main checkout's dev DB. The nice version
+clones the main dev DB (mysqldump | mysql) so a new worktree comes up with data, and does it
+automatically as part of provisioning. Until then, a new worktree needs those two commands by hand
+and has no dev data.
 
-- **Store-level attribute filtering instead of capability probes**: `MailboxPollJob#expense_attrs` still gates `source_message_id` on `store.supports_message_idempotency?`, and `DatabaseStore#batch_columns` silently `.except(:eusa_draft_created)`. The deeper fix is each store declaring/filtering its supported write vocabulary so callers always send full attrs. Both become moot at the post-flip cleanup when the Airtable store is deleted.
-- **Post-flip cleanup list additions**: the review card's "Remove this receipt from Airtable?" confirm copy (`app/views/admin/reimbursements/review/_expense_card.html.erb`), and `ExpenseEditsController#lookup_expense`'s `"rec"`-prefix live-fetch special-casing (dead on the DB backend — `DatabaseStore#find_expense!` returns nil instead of raising).
-- **Three hand-maintained bank-fields lists** (importer guard, `DatabaseStore::PAYMENT_DETAILS_FIELDS`, the test seed helper) could derive from one `PaymentDetails::FIELDS` constant.
-- **ExpenseSemantics#receipt_count** still builds Attachment wrappers to count; `receipt_files.size` would be free on the AR side, but the shared module keeps the PORO shape until the POROs die.
-
-## Per-worktree / per-subagent database isolation (dev + test) — spotted 2026-07-23
-
-`config/database.yml` only **half** isolates today:
-- **test:** `bedlam_blacklightning_test<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>` — suffix exists
-  but defaults to **empty**, so it only isolates when a worktree explicitly sets
-  `WORKTREE_DB_SUFFIX` *and* provisions its own test DB (schema-load). Nothing sets it
-  automatically.
-- **dev:** the `development:` primary/queue/cache databases are hardcoded with **no suffix**, so
-  every worktree (and every `bin/dev`) shares one dev DB.
-
-Consequence: parallel background **subagents** running `bin/rails test` against the single shared
-test DB truncate each other's fixtures, and parallel dev servers share dev data — which is why the
-current working rule is "serialise agent test runs / go sequential" (see the global memory note
-`hk-stash-vs-background-agents`). That's a workaround, not a fix.
-
-**Improvement — make the DBs subagent-compatible:**
-1. Extend the `WORKTREE_DB_SUFFIX` interpolation to the three `development:` databases too (or a
-   parallel `DEV_DB_SUFFIX`), so a worktree/subagent can run an isolated dev stack.
-2. Auto-provision on worktree creation: a setup step that derives a stable suffix from the
-   worktree/branch name, then **creates the worktree's dev + test DBs by cloning from the current
-   `main` dev DB** (or schema-load + seed if a clone is too heavy), so a fresh worktree comes up
-   with data without manual `db:prepare`.
-3. Do the same for background subagents dispatched in parallel: give each its own suffix + DB so
-   fix-agents can run tests concurrently without the serialise-or-clobber constraint. This is the
-   piece that removes the `hk-stash-vs-background-agents` limitation.
-4. This is exactly what the `dev-hooks:worktree-setup` skill's `.worktree-isolate.conf` mechanism
-   is designed to drive (per-worktree ports + DBs), which isn't configured in this repo yet —
-   wiring it up is likely the cleanest path, plus upstreaming any gaps into that skill. Also update
-   the `parallel-worktree-dev-server-ports` global memory note once done.
-
-## search_form_helper — `except!` with an array arg is a no-op
-
-`app/helpers/search_form_helper.rb:94` does `params = params.except!([ :type, :slug ])`
-(here `params` is the field-config hash, not the request params). ActiveSupport's
-`Hash#except!` takes `*keys` (varargs), so passing a single **array** deletes the key
-`[:type, :slug]` — which never exists — and removes nothing. `:type`/`:slug` therefore
-leak through into the simple_form input options. It's also the bang variant, mutating the
-config hash in place (harmless today only because those configs are built fresh per render).
-
-**Fix:** `params = params.except(:type, :slug)` (non-bang, splatted keys). Noticed during
-the request-params-mutation audit (the params-no-mutate branch); unrelated to that change.
-
-## Budgets index intro copy still says the financials come "from Airtable"
-
-`app/views/admin/reimbursements/budgets/index.html.erb` opens with "Every budget category
-from Airtable with its live financials … Those five are Airtable rollups, shown read-only
-here." The Airtable backend is gone (Track A) and every figure is now computed in
-`Reimbursements::Budget` from the local tables. The copy is also out of date on the count:
-the table shows nine rollup columns since Track G, not five.
-
-**Fix:** reword to describe the rollups as computed by the portal, and drop the Airtable
-reference. Noticed while adding the Budgets CSV export (Track H); left alone there because
-the Fringe/copy sweep (Track D) owns user-facing prose.
+Also still worth doing: teach the parallel-subagent dispatch path to give each agent its own
+suffix, which is what would actually retire the "serialise agent test runs" rule in the
+`hk-stash-vs-background-agents` global memory note — the test-DB half of that constraint is
+solved per *worktree* now, but two agents inside one worktree still share it. Update the
+`parallel-worktree-dev-server-ports` memory note when that lands.
 
 ## No export on My Budgets (the owner-facing budget page)
 
@@ -201,6 +126,7 @@ and the cost is negligible at this table's size (about 300 rows per financial ye
 query-level scopes the deferred financial-year rollups will want anyway
 (`EusaActual.offset` / `.not_offset` used from SQL rather than filtering arrays in Ruby).
 The same review deferred FY scoping for the rollups (finding 9), so the two belong together.
+
 ## Should an unlinked EUSA credit auto-attach to an *expense* budget? (product decision)
 
 `Reconciliation.match_credit_to_budget` (called from `ReconcileController`) only ever offers
@@ -226,60 +152,3 @@ product call rather than a bug:
 Deliberately not implemented in the round that fixed the netting: changing matching
 semantics needs Mick's call on which of those shapes finance actually wants.
 
-## `AmountValidation` is a fourth, stricter money parser
-
-The 2026-07-25 round consolidated the three lenient decimal parsers (ExpenseForm and the two
-budget controllers) into `Reimbursements::AmountParser`. `Reimbursements::AmountValidation`
-(used by Review#save and ExpenseEditsController#update) still has its own `DECIMAL_FORMAT` +
-`Float()` reading, deliberately stricter: it rejects anything that isn't a plain decimal so
-`Float()` and `String#to_f` can never disagree on the value that reaches the write path.
-
-That's a defensible reason to differ, but the upshot is that the *finance* edit forms reject
-"£1,200" while the submitter form and the budget forms accept it. Worth a look at whether
-those two paths should parse with `AmountParser` and then validate the parsed BigDecimal
-(rather than validating the raw string), so "what counts as an amount" is one answer across
-the portal.
-## The encryption backfill task cannot run once `support_unencrypted_data` is off, and says so only in a summary count
-
-`lib/tasks/reimbursements_encrypt_backfill.rake` rescues per row and prints
-`processed 0/1 (1 failed)`, then still finishes with the cheerful "Done. Verify a sample
-row's raw column is ciphertext, then flip …" line and exit status 0. Observed while adding
-the T2 rollout tests: with `config.active_record.encryption.support_unencrypted_data = false`
-the task can no longer *read* a plaintext row, so every row fails and nothing is encrypted —
-the exact state an operator reaches if they flip the flag before backfilling (the order
-`docs/reimbursements/encryption-rollout.md` prescribes, but nothing enforces).
-
-**Fix:** exit non-zero when any row failed, and don't print the "flip the flag" advice on a
-run that had failures. Optionally refuse to run at all when `support_unencrypted_data` is
-already false, naming the flag.
-
-## `PersonLink`'s stale-stored-link branch is unreachable in-app
-
-A real FK (`add_foreign_key "users", "reimbursements_people"`) plus
-`has_one :user, dependent: :nullify` on `Reimbursements::Person` mean a user's
-`reimbursements_person_id` can never dangle through any application path — deleting a payee
-nullifies the FK instead. `PersonLink#person_for`'s fall-through therefore only defends
-against DB-level damage (a restore or maintenance script with `FOREIGN_KEY_CHECKS=0`).
-Worth keeping (its failure mode is a duplicate payee with the wrong bank details), but the
-review's framing of it as an everyday path is wrong. `test/services/reimbursements/person_link_test.rb`
-now covers it by reproducing the orphan with referential integrity disabled, and says why.
-
-## `users#autocomplete_list` test is intermittently flaky on Faker name collisions
-
-`test/functional/admin/users_controller_test.rb:262-263` asserts that the excluded
-non-member's `first_name`/`last_name` do **not** appear in the response body, and the
-assertions carry their own admission: *"Ocassionally fails if the first name is not unique"*.
-Faker can hand one of the seeded members the same first (or last) name as the excluded user,
-and the substring assertion then fails even though the controller behaved correctly. It dates
-to `4bf54a12` (2020-06-01) and surfaced again during the 2026-07-25 cleanup, passing on re-run.
-
-It is a real intermittent CI risk: a red pipeline that means nothing, which trains people to
-re-run rather than read failures.
-
-**Fix:** assert on identity rather than on name substrings. The row already carries the user id
-(`assert_not_includes response.body, user.id.to_s` on the next line is the assertion that
-actually holds), so the two name assertions can either be dropped as redundant or replaced with
-a parsed-response check that the excluded user's *record* is absent. If the names are worth
-asserting, generate them explicitly (e.g. `"Zzz Excluded"`) instead of leaving it to Faker.
-Related: the same Faker-versus-`response.body` trap bites differently when a name contains an
-apostrophe, since the body is HTML-escaped.

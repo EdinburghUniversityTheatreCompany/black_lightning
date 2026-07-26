@@ -3,7 +3,11 @@
 <%= simple_horizontal_form_for [:admin, @carousel_item] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :title %>
-    <%= render Admin::MdEditorComponent.new(f: f, field: :tagline ) %>
+    <%# Plain text on purpose: the carousel outputs the tagline raw (as do the event and
+        venue taglines rendered by the same Public::BasicInfoComponent), so Markdown typed
+        here would show up literally on the public page. %>
+    <%= f.input :tagline, input_html: { rows: 2 },
+          hint: 'A single line shown under the carousel image. Plain text, no Markdown.' %>
     <%= f.input :carousel_name, collection: CarouselItem::CAROUSEL_NAMES, include_blank: false %>
     <%= f.input :is_active %>
     <%= f.input :ordering, hint: 'The lower the number, the earlier it will appear.' %>

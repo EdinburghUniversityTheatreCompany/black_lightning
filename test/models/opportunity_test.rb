@@ -65,11 +65,11 @@ class Admin::OpportunityTest < ActionView::TestCase
     opportunity.expiry_date = Date.current.advance(days: 1)
     opportunity.approved = false
 
-    assert_equal "table-danger".html_safe, opportunity.css_class
+    assert_equal "table-danger", opportunity.css_class
 
     opportunity.approved = true
 
-    assert_equal "table-success".html_safe, opportunity.css_class
+    assert_equal "table-success", opportunity.css_class
   end
 
   test "is valid with a creator and no submitter details" do

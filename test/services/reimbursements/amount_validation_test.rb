@@ -47,12 +47,41 @@ module Reimbursements
       assert_nil error(amount: "20.00", amount_excl_vat: "20.00")
     end
 
-    # Kernel#Float alone accepts "0x1A" as hex (26.0) and "1e10" as scientific
-    # notation, but String#to_f — used by the actual write path,
-    # Mapper#expense_fields — parses either as 0.0/1.0, silently disagreeing
-    # with whatever this validator just approved. Rejecting anything that
-    # isn't a plain decimal number closes that gap at the source rather than
-    # trying to keep two separate parsers in sync.
+    # Reading is AmountParser's job now, so the finance forms accept the money
+    # formats the submitter form and the budget forms have always accepted. They
+    # used to reject these, which meant "what counts as an amount" had two answers
+    # depending on which form you were standing in front of.
+    test "a currency symbol and thousands separators are accepted" do
+      assert_nil error(amount: "£1,200")
+      assert_nil error(amount: "£1,200.50", amount_excl_vat: "£1,000")
+    end
+
+    test "a comma decimal is accepted, and read as a decimal not a thousands separator" do
+      assert_nil error(amount: "12,50")
+      assert_equal BigDecimal("12.50"), AmountValidation.amount("12,50")
+    end
+
+    # The reason this module used to do its own stricter reading was that the write
+    # path re-read the RAW string with to_f, so the two parsers could disagree.
+    # These accessors close that off: the caller writes the very value that was
+    # validated. AR casts a string to a decimal column with to_d, which reads
+    # "£1,200" as 0 — a validated amount silently becoming a zero payment.
+    test "the value to write is the parsed BigDecimal that was validated" do
+      assert_equal BigDecimal("1200"), AmountValidation.amount("£1,200")
+      assert_equal BigDecimal("20.5"), AmountValidation.amount("20.50")
+      assert_equal 0, "£1,200".to_d, "premise: handing the raw string to AR would store zero"
+    end
+
+    test "amount_excl_vat answers nil for the leave-alone sentinels" do
+      assert_nil AmountValidation.amount_excl_vat("")
+      assert_nil AmountValidation.amount_excl_vat("0")
+      assert_nil AmountValidation.amount_excl_vat("abc")
+      assert_equal BigDecimal("16.67"), AmountValidation.amount_excl_vat("16.67")
+    end
+
+    # Kernel#Float accepts "0x1A" as hex (26.0) and "1e10" as scientific notation.
+    # BigDecimal rejects the hex outright, and the sanity ceiling catches the
+    # scientific notation, so neither can reach a payment.
     test "a hex-looking amount is rejected, not silently accepted as if parsed by Float()" do
       assert_match(/valid amount/i, error(amount: "0x1A"))
     end

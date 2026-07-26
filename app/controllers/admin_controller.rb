@@ -28,25 +28,38 @@ class AdminController < ApplicationController
     @admin_site = true
   end
 
+  # Methods tried, in order, to name the record a URL segment identifies.
+  BREADCRUMB_NAME_METHODS = %i[to_label display_title name title].freeze
+
   def add_breadcrumbs
     add_breadcrumb "Home", :admin_path
 
-    path_array = @current_path.split("/")[2..-1]
     full_working_path = "/admin"
 
-    if path_array.is_a? Array
-      path_array.each do |working_path|
-        current_path_title = working_path.gsub(Regexp.union("_"), " ")
-        current_path_title = working_path.titleize
-        full_working_path += "/"+working_path
+    (@current_path.split("/")[2..] || []).each do |segment|
+      full_working_path += "/#{segment}"
 
-        add_breadcrumb current_path_title, full_working_path
-      end
-    elsif path_array.is_a? String
-      path_title = path_array.gsub(Regexp.union("_"), " ")
-      path_title = path_title.titleize
-
-      add_breadcrumb path_title, @current_path
+      # The name is a Proc so breadcrumbs_on_rails resolves it at RENDER time. It has to
+      # be lazy: this before_action is declared on AdminController, so it runs before the
+      # subclass's own set_<resource> / load_and_authorize_resource callbacks and the
+      # record does not exist yet.
+      add_breadcrumb ->(view) { breadcrumb_name_for(view, segment) }, full_working_path
     end
+  end
+
+  # A path segment that is a record identifier titleizes into nonsense: a budget edit page
+  # read "Home / Reimbursements / Budgets / 12 / Edit", and on the legacy Airtable ids
+  # "Rec X Ko G9m U Fbu Dn5 A". When the segment is the identifier of the record the
+  # controller loaded, use that record's own name instead.
+  def breadcrumb_name_for(view, segment)
+    record = view.instance_variable_get("@#{controller_name.singularize}")
+
+    return segment.titleize unless record.respond_to?(:to_param) && record.to_param.to_s == segment
+
+    name_method = BREADCRUMB_NAME_METHODS.find do |method|
+      record.respond_to?(method) && record.public_send(method).present?
+    end
+
+    name_method ? record.public_send(name_method).to_s : segment.titleize
   end
 end

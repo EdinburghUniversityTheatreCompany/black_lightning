@@ -29,6 +29,14 @@ module Reimbursements
     include RecordId
     belongs_to :person, class_name: "Reimbursements::Person", inverse_of: :payment_details
 
+    # The operator-writable vocabulary, i.e. every column of this table that is not
+    # bookkeeping. It lives here, next to the columns, because the store's person-update
+    # path routes exactly these keys onto the payment_details record: keeping a second copy
+    # over there meant a new bank field could be added to the model and then silently
+    # dropped on the way in. `payment_details_fields_are_complete` in the model test holds
+    # the two in step.
+    FIELDS = %i[sort_code account_number verified notes].freeze
+
     # Bank details encrypted at rest. Non-deterministic (the default):
     # nothing queries these by value — the modulus check and the BACS builder
     # read the decrypted attributes, and uniqueness is on person_id. `notes`

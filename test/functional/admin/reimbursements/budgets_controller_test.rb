@@ -69,6 +69,16 @@ module Admin
         assert_includes response.body, "500"
       end
 
+      # The Airtable backend is gone and every figure on this page is computed locally, so
+      # the intro copy must not send a reader looking for a base that no longer exists.
+      test "index copy does not reference the retired Airtable backend" do
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_no_match(/airtable/i, response.body)
+      end
+
       # On top of the setup (forecast 800, committed 300 = Approved 150 + Paid
       # 150), give @props a Pending expense of 275 (pipeline) and a reconciled
       # EUSA debit of 161 against its Paid expense — so every rollup on the line
@@ -494,6 +504,21 @@ module Admin
         assert_response :success
         assert_includes response.body, "June meeting"
         assert_includes response.body, "part of a budget update"
+      end
+
+      # The breadcrumb is built from the URL, so the id segment used to titleize into
+      # nonsense: "Budgets / 12 / Edit", or "Rec X Ko G9m U Fbu Dn5 A" back on the Airtable
+      # ids. It now resolves the segment to the loaded record's name.
+      test "the edit breadcrumb names the budget instead of its id" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_response :success
+        assert_select "nav[aria-label=Breadcrumb]" do |nav|
+          assert_match(/Props/, nav.first.text)
+          assert_no_match(/#{@props.record_id}/, nav.first.text)
+        end
       end
 
       test "editing an unknown budget 404s" do

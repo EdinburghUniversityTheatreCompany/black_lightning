@@ -25,7 +25,9 @@ module Reimbursements
     # the vocabulary already matches its column name.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
     PERSON_FIELDS = %i[name email].freeze
-    PAYMENT_DETAILS_FIELDS = %i[sort_code account_number verified notes].freeze
+    # Bank fields route to the linked PaymentDetails record; the vocabulary is defined on
+    # that model, next to the columns it names.
+    PAYMENT_DETAILS_FIELDS = PaymentDetails::FIELDS
 
     # The payee's payment_details ride along: every attention/BACS check asks an
     # expense for its EFFECTIVE bank details, which falls through to the linked
@@ -472,11 +474,8 @@ module Reimbursements
       end
     end
 
-    # eusa_draft_created is a derived Batch method (from draft_message_id),
-    # not a column; BatchProcessor still passes the flag through create_batch!,
-    # so it is dropped here rather than raising an unknown-attribute error.
     def batch_columns(attrs)
-      attrs.compact.except(:eusa_draft_created)
+      attrs.compact
     end
 
     def actual_columns(attrs)

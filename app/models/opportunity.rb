@@ -200,9 +200,9 @@ class Opportunity < ApplicationRecord
     return "" if expired?
 
     if active?
-      "table-success".html_safe
+      "table-success"
     else
-      "table-danger".html_safe
+      "table-danger"
     end
   end
 
