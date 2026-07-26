@@ -155,18 +155,6 @@ current working rule is "serialise agent test runs / go sequential" (see the glo
    wiring it up is likely the cleanest path, plus upstreaming any gaps into that skill. Also update
    the `parallel-worktree-dev-server-ports` global memory note once done.
 
-## search_form_helper — `except!` with an array arg is a no-op
-
-`app/helpers/search_form_helper.rb:94` does `params = params.except!([ :type, :slug ])`
-(here `params` is the field-config hash, not the request params). ActiveSupport's
-`Hash#except!` takes `*keys` (varargs), so passing a single **array** deletes the key
-`[:type, :slug]` — which never exists — and removes nothing. `:type`/`:slug` therefore
-leak through into the simple_form input options. It's also the bang variant, mutating the
-config hash in place (harmless today only because those configs are built fresh per render).
-
-**Fix:** `params = params.except(:type, :slug)` (non-bang, splatted keys). Noticed during
-the request-params-mutation audit (the params-no-mutate branch); unrelated to that change.
-
 ## Budgets index intro copy still says the financials come "from Airtable"
 
 `app/views/admin/reimbursements/budgets/index.html.erb` opens with "Every budget category
