@@ -17,6 +17,16 @@ module Admin
       before_action :authorize_reimbursements!
 
       # Injection seams for functional tests (this suite has no mocking library).
+      #
+      # A test must write each seam on ONE class and stick to it, and put the previous value
+      # back afterwards. class_attribute's writer defines a singleton reader on whatever
+      # receives it, so writing to a SUBCLASS shadows this default permanently for the rest
+      # of the process — a later `BaseController.<seam> = fake` is then invisible to that
+      # subclass and the real collaborator runs instead. That bit extractor_builder: the
+      # producer system test wrote ExpensesController while the functional tests wrote
+      # BaseController, so the four extract tests failed with "no Gemini API key configured"
+      # whenever both suites shared one process, and passed when each ran alone.
+      #
       # Interactive extraction retries less than the background poll job.
       class_attribute :store_builder, default: -> { ::Reimbursements.build_store }
       class_attribute :extractor_builder, default: -> { ::Reimbursements::Extractor.new(max_attempts: 2) }
