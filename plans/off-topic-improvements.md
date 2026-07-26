@@ -1,7 +1,12 @@
 # Off-topic improvements
 
-Items noticed while building the opportunities overhaul that are out of scope for it,
-recorded for later. Each is optional.
+Improvements spotted mid-task and parked as out of scope, per the "Suggest Improvements" rule.
+Each is optional.
+
+Everything below is genuinely still open, and each item says what is blocking it. The file was
+drained on 2026-07-26 (branch `off-topic-backlog`): eleven items landed as their own commits, and
+what remains needs either a production data audit, a product decision from Mick, or a change to
+another repo.
 
 ## database_consistency — schema-migration backlog (gate still advisory)
 
@@ -36,18 +41,39 @@ that trims its oldest lines would be the proper fix if that ever needs closing.
 
 - Consider upstreaming devcontainer-mise support into the `dev-hooks:dev-env-setup` skill: it
   already standardises mise + hk + CI, but doesn't yet template a mise-driven `.devcontainer/`.
-  (This is a change to the dev-hooks plugin marketplace, not to this repo.)
+  (This is a change to the dev-hooks plugin marketplace, not to this repo — which is why the
+  2026-07-26 drain left it here: nothing to change in BlackLightning.) Worth carrying up with it:
+  the apt list this repo settled on for a precompiled-Ruby devcontainer, and the
+  `.worktree-isolate.conf` + `database.yml` suffix recipe now wired up here.
 
-## Admin::MembershipCardsController is unrouted dead code
+## Admin::MembershipCardsController is unrouted dead code — NEEDS MICK'S GO-AHEAD TO DELETE
 
 `admin/membership_cards` has **no routes** — the `resources :membership_cards` line in
-`config/routes.rb` is commented out (~line 233) and `bin/rails routes -c admin/membership_cards`
+`config/routes.rb` is commented out (~line 334) and `bin/rails routes -c admin/membership_cards`
 returns nothing. The controller (whose own header says "Has been severely neglected. Can probably
 use the GenericController.") and its views (`index`/`show`/`_index_results`) are therefore
 unreachable. Its `index` still renders the unguarded `shared/pages/index` turbo_stream fragment, but
-that's moot while unrouted. Decide to either **remove** the controller + views + empty test, or
-**wire it up** (route it and convert to `GenericController`, which already guards the index
-turbo_stream via `render_index_stream_or_full`). Left untouched for now since it can't be triggered.
+that's moot while unrouted.
+
+Scoped out fully on 2026-07-26 while draining this file. **Removal is the right call** and the
+cluster is bigger than the note said — every one of these is reachable only through the unrouted
+controller:
+
+- `app/controllers/admin/membership_cards_controller.rb`
+- `app/views/admin/membership_cards/` (`index`, `show`, `_index_results`)
+- `test/functional/admin/membership_cards_controller_test.rb` (an empty class, no tests)
+- `lib/membership_card_pdf.rb` — already gutted to a no-op stub ("Prawn broke on upgrading to
+  Ruby 3.1. Most of the contents of this file got deleted."), so `generate_card` produces nothing
+- `app/javascript/controllers/print_controller.js` — used by exactly one template, the unreachable
+  `show`, which POSTs to a hardcoded box-office receipt printer at `192.168.1.254:8179` /
+  `localhost:5000` behind an `if request.remote_ip == "79.77.20.249"` check
+- the commented-out `resources :membership_cards` block in `config/routes.rb`
+
+The `MembershipCard` **model stays** — `User has_one :membership_card`, `delegate :card_number`,
+the merge path and `MembershipMailer` all use it.
+
+Not done because deleting files is exactly the case the worktree workflow says to surface rather
+than merge silently (and the sandbox declined the deletion). Say the word and it is one commit.
 
 ---
 
@@ -100,6 +126,7 @@ and the cost is negligible at this table's size (about 300 rows per financial ye
 query-level scopes the deferred financial-year rollups will want anyway
 (`EusaActual.offset` / `.not_offset` used from SQL rather than filtering arrays in Ruby).
 The same review deferred FY scoping for the rollups (finding 9), so the two belong together.
+
 ## Should an unlinked EUSA credit auto-attach to an *expense* budget? (product decision)
 
 `Reconciliation.match_credit_to_budget` (called from `ReconcileController`) only ever offers
