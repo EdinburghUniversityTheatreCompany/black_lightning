@@ -309,6 +309,31 @@ module Reimbursements
       end
     end
 
+    # The rollout order is "flag on, deploy, backfill, flag off". Run out of order the task
+    # cannot read a plaintext row at all, so it used to fail every row one by one and leave
+    # the operator to work out why. It now refuses up front, naming the flag. Note this test
+    # deliberately does NOT wrap itself in with_unencrypted_data_support: the flag being off
+    # is the condition under test, and it is the production state.
+    test "the backfill task refuses to run while support_unencrypted_data is off" do
+      assert_not ActiveRecord::Encryption.config.support_unencrypted_data,
+                 "test premise: the flag is off by default now that the rollout is closed"
+
+      create_reimbursements_person(name: "Payee Pat", email: "pat@example.com",
+                                   sort_code: "20-20-20", account_number: "50502366")
+      output = nil
+
+      error = assert_raises(SystemExit) do
+        output, = capture_io { run_rake_task("reimbursements:encrypt_backfill") }
+      end
+
+      assert_not_predicate error, :success?
+      assert_match(/support_unencrypted_data/, error.message,
+                   "the refusal has to name the flag that has to change")
+      # It bailed before touching a single row, rather than reporting the same thing once
+      # per row as a pile of decryption failures.
+      assert_no_match(/Encrypting/, output.to_s)
+    end
+
     private
 
     def ciphertext_bytesize(plaintext)

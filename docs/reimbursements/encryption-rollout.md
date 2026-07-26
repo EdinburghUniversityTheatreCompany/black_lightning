@@ -146,7 +146,9 @@ raises forever once the flag is off, and a spot check cannot see it.
 **Encrypting a NEW column later** means repeating the whole sequence, because
 `reimbursements:encrypt_backfill` **cannot run while the flag is false** — it has to read the
 plaintext to rewrite it. So: add `encrypts`, set `support_unencrypted_data = true`, deploy,
-backfill, verify, set it back to `false`, deploy. The tests in
+backfill, verify, set it back to `false`, deploy. The task now **refuses to start** while the
+flag is false and says which flag to change, rather than reporting one decryption failure per
+row and leaving you to work out why. The tests in
 `test/models/reimbursements/encryption_test.rb` enable the flag for their own duration via
 `with_unencrypted_data_support`, so they keep proving that mechanism works even though it is
 no longer the global default.

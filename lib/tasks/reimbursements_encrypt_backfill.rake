@@ -25,6 +25,19 @@ namespace :reimbursements do
   # See docs/reimbursements/encryption-rollout.md for the full sequence.
   desc "Backfill: re-save reimbursements bank details so they encrypt at rest"
   task encrypt_backfill: :environment do
+    # With support_unencrypted_data off, Rails cannot READ a plaintext row at all, so
+    # every row this task touches raises and nothing gets encrypted. Refuse up front and
+    # name the flag: reported one row at a time it looks like a data problem, when in fact
+    # the rollout steps have been run out of order (the flag must go back on, and deploy,
+    # before backfilling). Production sits with the flag off, so this is the state an
+    # operator encrypting a NEW column arrives in.
+    unless ActiveRecord::Encryption.config.support_unencrypted_data
+      abort "Refusing to run: config.active_record.encryption.support_unencrypted_data is " \
+            "false, so reading a plaintext row raises and every row would fail. Turn it on " \
+            "and deploy first, then backfill, then turn it off again. " \
+            "See docs/reimbursements/encryption-rollout.md."
+    end
+
     failures = 0
 
     [ Reimbursements::PaymentDetails, Reimbursements::Expense ].each do |model|
