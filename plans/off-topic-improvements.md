@@ -230,22 +230,3 @@ Worth keeping (its failure mode is a duplicate payee with the wrong bank details
 review's framing of it as an everyday path is wrong. `test/services/reimbursements/person_link_test.rb`
 now covers it by reproducing the orphan with referential integrity disabled, and says why.
 
-## `users#autocomplete_list` test is intermittently flaky on Faker name collisions
-
-`test/functional/admin/users_controller_test.rb:262-263` asserts that the excluded
-non-member's `first_name`/`last_name` do **not** appear in the response body, and the
-assertions carry their own admission: *"Ocassionally fails if the first name is not unique"*.
-Faker can hand one of the seeded members the same first (or last) name as the excluded user,
-and the substring assertion then fails even though the controller behaved correctly. It dates
-to `4bf54a12` (2020-06-01) and surfaced again during the 2026-07-25 cleanup, passing on re-run.
-
-It is a real intermittent CI risk: a red pipeline that means nothing, which trains people to
-re-run rather than read failures.
-
-**Fix:** assert on identity rather than on name substrings. The row already carries the user id
-(`assert_not_includes response.body, user.id.to_s` on the next line is the assertion that
-actually holds), so the two name assertions can either be dropped as redundant or replaced with
-a parsed-response check that the excluded user's *record* is absent. If the names are worth
-asserting, generate them explicitly (e.g. `"Zzz Excluded"`) instead of leaving it to Faker.
-Related: the same Faker-versus-`response.body` trap bites differently when a name contains an
-apostrophe, since the body is HTML-escaped.
