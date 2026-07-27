@@ -142,6 +142,14 @@ jobs:
           [ "$node_file" = "$node_mise" ] || { echo "::error::mise.toml node ($node_mise) != .node-version ($node_file)"; fail=1; }
           grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo "::error::prod Dockerfile must derive the Node major from .node-version, not hardcode it"; fail=1; }
           ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo "::error::remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version"; fail=1; }
+          mysql_pat='s/^[[:space:]]*image:[[:space:]]*mysql:\([0-9][0-9.]*\).*/\1/p'
+          mysql_prod=$(sed -n "$mysql_pat" config/deploy.yml)
+          mysql_ci=$(sed -n "$mysql_pat" .github/workflows/ci.yml)
+          mysql_dev=$(sed -n "$mysql_pat" .devcontainer/compose.yaml)
+          echo "mysql -> deploy.yml=$mysql_prod ci.yml=$mysql_ci devcontainer=$mysql_dev"
+          [ -n "$mysql_prod" ] && [ -n "$mysql_ci" ] && [ -n "$mysql_dev" ] || { echo "::error::could not read a mysql version from all three of config/deploy.yml, .github/workflows/ci.yml, .devcontainer/compose.yaml"; fail=1; }
+          [ "$mysql_prod" = "$mysql_ci" ] || { echo "::error::ci.yml mysql ($mysql_ci) != config/deploy.yml ($mysql_prod) — CI must test the server production runs; see docs/mysql-8.4-upgrade.md"; fail=1; }
+          [ "$mysql_prod" = "$mysql_dev" ] || { echo "::error::.devcontainer/compose.yaml mysql ($mysql_dev) != config/deploy.yml ($mysql_prod); see docs/mysql-8.4-upgrade.md"; fail=1; }
           exit $fail
 
   test:
