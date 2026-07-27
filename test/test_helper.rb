@@ -32,6 +32,7 @@ ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = "1"
 
 require File.expand_path("../../config/environment", __FILE__)
 require "rails/test_help"
+require "etc" # Etc.nprocessors, for the parallelize worker cap below
 
 # Shared test helper modules
 require_relative "support/import_cache_test_helpers"
@@ -50,8 +51,40 @@ class ActiveSupport::TestCase
   # -- they do not yet inherit this setting
   fixtures :all
 
+  # Rails gives each worker its own database and nothing else, so the shared
+  # filesystem state has to be split by hand -- see parallelize_setup below.
+  # PARALLEL_WORKERS=1 to debug a failure serially; system tests force it.
+  #
+  # Capped rather than :number_of_processors. Measured on a 20-thread
+  # i7-12700H (6 P-cores + 8 E-cores): 8 workers 38.9s, 12 40.3s, 20 52.1s --
+  # past the physical cores the workers just contend, for MySQL most of all.
+  # The cap is a no-op on CI, which has fewer cores than it.
+  parallelize(workers: [ Etc.nprocessors, 8 ].min)
+
+  parallelize_setup do |worker|
+    # Every worker's ActiveStorage disk service otherwise roots at the same
+    # tmp/storage, which the teardown below wipes -- one worker deleting
+    # another's blobs mid-test.
+    service = ActiveStorage::Blob.service
+    service.root = "#{service.root}-#{worker}" if service.respond_to?(:root=)
+
+    # Same for the generator tests, which all declare tmp/generators and call
+    # prepare_destination (which empties it).
+    if defined?(Rails::Generators::TestCase)
+      Rails::Generators::TestCase.descendants.each do |klass|
+        klass.destination_root = "#{klass.destination_root}-#{worker}"
+      end
+    end
+
+    # Workers would otherwise overwrite each other's coverage results; a
+    # distinct command_name per worker lets SimpleCov merge them instead.
+    SimpleCov.command_name("MiniTest-#{worker}") if ENV["COVERAGE"]
+  end
+
   teardown do
-    FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
+    # Deliberately not the hardcoded tmp/storage: under parallelize that is
+    # some other worker's data.
+    FileUtils.rm_rf(ActiveStorage::Blob.service.try(:root) || Rails.root.join("tmp", "storage"))
     if ENV["VALIDATE"]
       validate_html
     end
@@ -80,6 +113,7 @@ class ActionController::TestCase
   include ImportCacheTestHelpers
 
   teardown do
-    FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
+    # See the note on the ActiveSupport::TestCase teardown above.
+    FileUtils.rm_rf(ActiveStorage::Blob.service.try(:root) || Rails.root.join("tmp", "storage"))
   end
 end
