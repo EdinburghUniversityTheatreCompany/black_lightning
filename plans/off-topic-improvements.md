@@ -205,3 +205,35 @@ only sampled once (clean), so this may well predate the speedup branch rather th
 logs for `^Error:`/`^Failure:`), name the test, and fix the race — most likely a missing
 Capybara wait on an assertion that races the Turbo/Stimulus render, given the suite's use of
 `assert_selector … wait: 5` in some places and bare assertions in others.
+
+
+## CI tests against MySQL 8.4, production runs 8.0
+
+`.github/workflows/ci.yml` pins the service container to `mysql:8.4`, but
+`config/deploy.yml`'s accessory is `mysql:8.0`. The devcontainer's `mysql:8` floats to
+whatever the latest 8.x is (currently 8.4.8 locally), so **no environment actually tests
+against the version production runs**, and CI tests against a newer one. 8.4 changed
+defaults and dropped deprecated behaviour relative to 8.0, so this is the wrong direction
+for a safety net to lean.
+
+**Fix:** align CI (and ideally the devcontainer) to `mysql:8.0`, or upgrade production to
+8.4 deliberately. Note the ubuntu-24.04 runner ships MySQL **8.0.46** preinstalled
+(disabled; root/root, `sudo systemctl start mysql.service`), so switching CI to it would fix
+the mismatch *and* remove the ~28s spent pulling the service-container image. The cost is
+reproducibility: the runner's version drifts with the image, where the service container is
+pinned by SHA digest (deliberately, per c9933f12).
+
+## CI setup time is apt-get update and an image pull, not packages
+
+Measured 2026-07-27 across 6 runs. `Install packages` sits at 26-37s and `Initialize
+containers` at 28-31s, and neither moved when the obvious levers were pulled: dropping
+google-chrome-stable (a ~110MB download the runner already ships), git, pkg-config and the
+vestigial libpq-dev left the step at 28s, and tightening the MySQL health probe from a 10s
+interval to 3s left container init at exactly 28s.
+
+So the time is `apt-get update` fetching package lists, and pulling the mysql image --
+not the things being installed.
+
+**Fix:** if setup is worth attacking, the levers are caching apt lists, dropping the service
+container for the runner's preinstalled MySQL (above), and caching the 11s `bin/vite build`
+on a source hash. Setup is ~83s against ~100s of tests, so it is now roughly half the job.
