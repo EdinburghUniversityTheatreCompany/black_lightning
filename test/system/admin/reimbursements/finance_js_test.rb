@@ -52,12 +52,20 @@ module Admin
       # Capybara re-raises app-server exceptions as test errors, so a test that
       # deliberately uploads an unpreviewable file has to opt out -- otherwise
       # the PreviewError whose handling it asserts fails it instead.
-      def without_server_error_raising
-        original = Capybara.raise_server_errors
+      #
+      # Deliberately NOT scoped to a block. The browser fetches the preview
+      # asynchronously and Capybara collects late errors when it resets sessions
+      # in after_teardown, so on a slow machine the PreviewError lands after the
+      # test body has returned -- green locally, red on CI. The opt-out has to
+      # outlive the reset, hence restoring below it rather than around the body.
+      def tolerate_server_errors
         Capybara.raise_server_errors = false
-        yield
+      end
+
+      def after_teardown
+        super # Capybara.reset_sessions! runs in here, and raises what it collected
       ensure
-        Capybara.raise_server_errors = original
+        Capybara.raise_server_errors = true
       end
 
       # A PDF poppler can actually render, so the first-page preview these tests
@@ -215,14 +223,13 @@ module Admin
       test "a receipt whose preview cannot be generated falls back to the document icon" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense) # the suite default: a stub PDF header poppler cannot render
+        tolerate_server_errors
 
-        without_server_error_raising do
-          visit admin_reimbursements_review_path
+        visit admin_reimbursements_review_path
 
-          label = "button[aria-label='View receipt 1 of 1, receipt.pdf']"
-          assert_selector "#{label} i.fa-file-lines", visible: true, wait: 5
-          assert_no_selector "#{label} img", visible: true
-        end
+        label = "button[aria-label='View receipt 1 of 1, receipt.pdf']"
+        assert_selector "#{label} i.fa-file-lines", visible: true, wait: 5
+        assert_no_selector "#{label} img", visible: true
       end
 
       # Side by side is the whole request; on a phone it has to stack instead of
