@@ -186,3 +186,22 @@ hand-editing the generated `mise.local.toml` to a shorter suffix.
 `isolate-worktree.sh`, and/or note the limit in `.worktree-isolate.conf`'s header comment so
 the constraint is visible where the naming decision is made. The upstream script is the
 better home — every repo using this isolation scheme has the same ceiling.
+
+
+## An intermittently flaky system test
+
+`bin/rails test:system` fails roughly 1 run in 5 with a single error, and passes the other
+four. Observed on 2026-07-27 across ~8 consecutive runs while landing the test-suite speedup
+(`plans/test-suite-speedup.md`): 2 failing runs, 6 clean. It is **not** parallelisation —
+system tests are pinned to `parallelize(workers: 1)` and one of the failures happened with
+workers already forced to 1, so it is a timing race in a browser test.
+
+Not attributed to a specific test: both failures were caught in runs whose output was filtered
+to the summary line, and every attempt to reproduce it afterwards came back green. `main` was
+only sampled once (clean), so this may well predate the speedup branch rather than come from it.
+
+**Fix:** run `bin/rails test:system` in a loop capturing full output until it reproduces
+(`for i in $(seq 20); do bin/rails test:system > /tmp/sys-$i.log 2>&1; done`, then grep the
+logs for `^Error:`/`^Failure:`), name the test, and fix the race — most likely a missing
+Capybara wait on an assertion that races the Turbo/Stimulus render, given the suite's use of
+`assert_selector … wait: 5` in some places and bare assertions in others.

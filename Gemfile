@@ -70,15 +70,25 @@ gem "csv"
 # Use Puma as the app server
 gem "puma"
 
+# Caches compiled Ruby (ISeq) and resolved require paths to tmp/cache/bootsnap,
+# so every boot after the first skips re-parsing the app and its gems. Rails
+# ships this by default; this app predates that and never picked it up.
+gem "bootsnap", require: false
+
 gem "vite_rails"
 gem "view_component"
 
-group :development, :test do
-  gem "byebug"
-  gem "spring"
-
+# These two must NOT be in the :test group. They attach a Binding to
+# exceptions, and a Binding cannot be marshalled -- so under `parallelize`
+# every test failure becomes an unreportable worker crash
+# ("no _dump_data is defined for class Binding") instead of a readable failure.
+group :development do
   gem "better_errors"
   gem "binding_of_caller"
+end
+
+group :development, :test do
+  gem "byebug"
 
   gem "rails-controller-testing"
   gem "rdoc"

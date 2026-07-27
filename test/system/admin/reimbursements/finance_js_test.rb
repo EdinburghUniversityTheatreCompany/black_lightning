@@ -38,9 +38,27 @@ module Admin
         ReviewController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
       end
 
+      # Receipts default to a PDF poppler can actually render. The suite-wide
+      # default bytes are a stub header, which is fine everywhere a preview is
+      # never requested -- but in a browser the review page really does request
+      # one, and the stub raises ActiveStorage::PreviewError in the server
+      # thread. Only the fallback test below wants that, and it opts in.
       def seed_expense(status:, receipt: true, **attrs)
-        create_reimbursements_expense(person: @person, budget: @budget, status: status,
-                                      receipt: receipt, **attrs)
+        expense = create_reimbursements_expense(person: @person, budget: @budget, status: status,
+                                                receipt: false, **attrs)
+        attach_test_receipt(expense, bytes: renderable_pdf_bytes) if receipt
+        expense
+      end
+
+      # Capybara re-raises exceptions from the app server as test errors. A test
+      # that deliberately uploads an unpreviewable file has to opt out, or the
+      # PreviewError it is asserting the UI survives fails the test instead.
+      def without_server_error_raising
+        original = Capybara.raise_server_errors
+        Capybara.raise_server_errors = false
+        yield
+      ensure
+        Capybara.raise_server_errors = original
       end
 
       # A PDF poppler can actually render, so the first-page preview these tests
@@ -196,13 +214,16 @@ module Admin
       # is REQUESTED, so a producer's dodgy upload surfaces as a failed thumbnail
       # request. It has to leave a document icon, not a broken image.
       test "a receipt whose preview cannot be generated falls back to the document icon" do
-        expense = seed_expense(status: "Pending") # default bytes are a stub PDF header
+        expense = seed_expense(status: "Pending", receipt: false)
+        attach_test_receipt(expense) # the suite default: a stub PDF header poppler cannot render
 
-        visit admin_reimbursements_review_path
+        without_server_error_raising do
+          visit admin_reimbursements_review_path
 
-        label = "button[aria-label='View receipt 1 of 1, receipt.pdf']"
-        assert_selector "#{label} i.fa-file-lines", visible: true, wait: 5
-        assert_no_selector "#{label} img", visible: true
+          label = "button[aria-label='View receipt 1 of 1, receipt.pdf']"
+          assert_selector "#{label} i.fa-file-lines", visible: true, wait: 5
+          assert_no_selector "#{label} img", visible: true
+        end
       end
 
       # Side by side is the whole request; on a phone it has to stack instead of
@@ -457,8 +478,7 @@ module Admin
       test "an aborted Save Changes leaves nothing behind for a later Discard to commit" do
         owner = create_reimbursements_person(name: "Olga Owner", email: "olga@example.com")
         owned = create_reimbursements_budget(name: "Owned", nominal_code: "4100", owners: [ owner ])
-        expense = create_reimbursements_expense(person: @person, budget: owned, status: "Pending",
-                                                description: "Original wording")
+        expense = seed_expense(status: "Pending", budget: owned, description: "Original wording")
 
         visit admin_reimbursements_review_path
 
