@@ -386,6 +386,29 @@ An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional)
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
 
+- **The suite runs in parallel** (`parallelize` in `test_helper.rb`, capped at 8 workers —
+  measured optimum on a 20-thread machine; past the physical cores the workers contend, and
+  MySQL, shared behind the per-worker databases, is its own ceiling). `PARALLEL_WORKERS=1` to
+  debug a failure serially. **System tests are pinned to 1 worker** in
+  `application_system_test_case.rb`: in parallel they are flaky and no faster.
+  Rails gives each worker its own *database only*, so any new **shared filesystem or process
+  state needs splitting per worker** in `parallelize_setup` — the ActiveStorage disk root, the
+  generator tests' `tmp/generators`, and SimpleCov's `command_name` already are. A teardown
+  must remove `ActiveStorage::Blob.service.root`, never a hardcoded `tmp/storage`, which under
+  parallelize is another worker's data.
+- **Never put a dev-only gem in the `:test` group.** `better_errors` + `binding_of_caller` were
+  there, and both bite: they attach a `Binding` to exceptions (unmarshalable, so every parallel
+  failure became an unreportable worker crash), and `BetterErrors::Middleware` was silently
+  sitting in the *test* middleware stack swallowing app-server exceptions, which left the system
+  tests green over 8 real errors. If system tests suddenly surface server errors, that is them
+  working, not breaking.
+- **A slow suite is usually the machine, not the suite.** Same 3027 tests: 560s on the
+  `power-saver` power profile, 116s on `performance`. Check `powerprofilesctl get` first; the
+  tell is a local run losing to CI. Don't trust `/proc/cpuinfo` MHz, which reads ~500 MHz either
+  way. See [plans/test-suite-speedup.md](plans/test-suite-speedup.md) for the full profile.
+- **Minitest 6 made `load_plugins` opt-in**, so a `minitest/*_plugin.rb` on the load path
+  silently never runs — require it and push onto `Minitest.extensions` yourself.
+
 - **Validation/error messages are i18n-customised** (e.g. presence reads "must not be blank.", not Rails' default "can't be blank"). Assert on `errors[:field].present?` rather than the literal default string.
 - **Admin search-form/index table headers** translate symbol headers via `t("simple_form.labels.defaults.<key>")` (see `SearchFormHelper` and `shared/_table.erb`). A new column used as a header or search field needs a matching key in `config/locales/simple_form.en.yml` under `simple_form.labels.defaults`, or the page raises "Translation missing".
 - **The markdown editor (`Admin::MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
