@@ -1,6 +1,12 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  # Undo the parallelize inherited from ActiveSupport::TestCase. These drive a
+  # real browser against a real Puma, and in parallel they are flaky (1 error in
+  # one of two runs, clean serially every time) for no gain -- browser startup
+  # dominates, so 8 workers came out no faster than 1.
+  parallelize(workers: 1)
+
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |driver_options|
     driver_options.add_argument("--no-sandbox")
     driver_options.add_argument("--disable-dev-shm-usage")
