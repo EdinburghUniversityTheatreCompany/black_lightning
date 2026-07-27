@@ -70,6 +70,11 @@ gem "csv"
 # Use Puma as the app server
 gem "puma"
 
+# Caches compiled Ruby (ISeq) and resolved require paths to tmp/cache/bootsnap,
+# so every boot after the first skips re-parsing the app and its gems. Rails
+# ships this by default; this app predates that and never picked it up.
+gem "bootsnap", require: false
+
 gem "vite_rails"
 gem "view_component"
 

@@ -118,6 +118,8 @@ GEM
     bigdecimal (4.1.2)
     binding_of_caller (2.0.0)
       debug_inspector (>= 1.2.0)
+    bootsnap (1.24.6)
+      msgpack (~> 1.2)
     brakeman (8.0.5)
       racc
     breadcrumbs_on_rails (4.1.0)
@@ -310,6 +312,7 @@ GEM
       railties (>= 7.1)
       stimulus-rails
       turbo-rails
+    msgpack (1.8.3)
     multipart-post (2.4.1)
     mutex_m (0.3.0)
     mysql2 (0.5.7)
@@ -669,6 +672,7 @@ DEPENDENCIES
   bcrypt_pbkdf
   better_errors
   binding_of_caller
+  bootsnap
   brakeman
   breadcrumbs_on_rails
   bullet
