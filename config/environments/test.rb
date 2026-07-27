@@ -22,14 +22,10 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
 
-  # Without this Rails falls back to a FileStore on tmp/cache: a real disk
-  # round-trip per cache call, and one directory shared by every process that
-  # is never rolled back between tests. Tests that depend on cache state (rate
-  # limits, the daily alert dedupe key) then leak into each other -- which is
-  # what breaks first under `parallelize`. :memory_store is per-process, so it
-  # isolates workers for free.
-  #
-  # Not :null_store -- ImportCacheTestHelpers genuinely round-trips the cache.
+  # Unset, Rails falls back to a FileStore on tmp/cache -- shared by every
+  # parallel worker and never rolled back between tests, so cache-dependent
+  # tests (rate limits, the daily alert dedupe key) leak into each other.
+  # Not :null_store: ImportCacheTestHelpers genuinely round-trips the cache.
   config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.

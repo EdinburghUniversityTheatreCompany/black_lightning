@@ -22,13 +22,11 @@ module RakeTaskTestHelpers
   # Returns whatever the task wrote to stdout, so a test can assert on the
   # progress/summary output without it polluting the suite's own.
   #
-  # Deliberately swaps $stdout rather than using Minitest's capture_io. Under
-  # `parallelize`, capture_io synchronizes on a shared mutex, so a caller that
-  # wrapped this in its own capture_io -- the only way to read the output of a
-  # task that aborts, since capture_io drops its buffer when the block raises --
-  # locked that mutex twice on one thread and died with "deadlock; recursive
-  # locking". Keeping the buffer here means a task that raises SystemExit still
-  # leaves its output readable via #last_rake_output, so no caller has to nest.
+  # Swaps $stdout rather than using Minitest's capture_io, which synchronizes on
+  # a shared mutex under `parallelize`: nesting it (the only way to read the
+  # output of a task that aborts, since capture_io drops its buffer when the
+  # block raises) deadlocks with "recursive locking". Keeping the buffer here
+  # exposes that output via #last_rake_output, so no caller has to nest.
   def run_rake_task(name, *args)
     RakeTaskTestHelpers.load_tasks_once
     task = Rake::Task[name]

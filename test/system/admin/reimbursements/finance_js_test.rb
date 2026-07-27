@@ -38,11 +38,10 @@ module Admin
         ReviewController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
       end
 
-      # Receipts default to a PDF poppler can actually render. The suite-wide
-      # default bytes are a stub header, which is fine everywhere a preview is
-      # never requested -- but in a browser the review page really does request
-      # one, and the stub raises ActiveStorage::PreviewError in the server
-      # thread. Only the fallback test below wants that, and it opts in.
+      # Receipts default to a PDF poppler can render. The suite-wide default
+      # bytes are a stub header, fine wherever no preview is requested -- but in
+      # a browser the review page requests one, and the stub raises
+      # ActiveStorage::PreviewError. Only the fallback test below wants that.
       def seed_expense(status:, receipt: true, **attrs)
         expense = create_reimbursements_expense(person: @person, budget: @budget, status: status,
                                                 receipt: false, **attrs)
@@ -50,9 +49,9 @@ module Admin
         expense
       end
 
-      # Capybara re-raises exceptions from the app server as test errors. A test
-      # that deliberately uploads an unpreviewable file has to opt out, or the
-      # PreviewError it is asserting the UI survives fails the test instead.
+      # Capybara re-raises app-server exceptions as test errors, so a test that
+      # deliberately uploads an unpreviewable file has to opt out -- otherwise
+      # the PreviewError whose handling it asserts fails it instead.
       def without_server_error_raising
         original = Capybara.raise_server_errors
         Capybara.raise_server_errors = false

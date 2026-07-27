@@ -51,25 +51,24 @@ class ActiveSupport::TestCase
   # -- they do not yet inherit this setting
   fixtures :all
 
-  # Rails gives each worker its own database and nothing else, so the shared
-  # filesystem state has to be split by hand -- see parallelize_setup below.
-  # PARALLEL_WORKERS=1 to debug a failure serially; system tests force it.
+  # Rails gives each worker its own database and nothing else; the rest of the
+  # shared state is split in parallelize_setup below. PARALLEL_WORKERS=1 to
+  # debug serially.
   #
-  # Capped rather than :number_of_processors. Measured on a 20-thread
-  # i7-12700H (6 P-cores + 8 E-cores): 8 workers 38.9s, 12 40.3s, 20 52.1s --
-  # past the physical cores the workers just contend, for MySQL most of all.
-  # The cap is a no-op on CI, which has fewer cores than it.
+  # Capped rather than :number_of_processors. On a 20-thread i7-12700H: 8
+  # workers 38.9s, 12 40.3s, 20 52.1s -- past the physical cores they contend,
+  # MySQL most of all (relaxing its per-commit fsync moves the optimum to 12).
+  # A no-op on CI, which has fewer cores than the cap.
   parallelize(workers: [ Etc.nprocessors, 8 ].min)
 
   parallelize_setup do |worker|
-    # Every worker's ActiveStorage disk service otherwise roots at the same
-    # tmp/storage, which the teardown below wipes -- one worker deleting
-    # another's blobs mid-test.
+    # Otherwise every worker roots at the same tmp/storage, which the teardown
+    # below wipes -- one worker deleting another's blobs mid-test.
     service = ActiveStorage::Blob.service
     service.root = "#{service.root}-#{worker}" if service.respond_to?(:root=)
 
-    # Same for the generator tests, which all declare tmp/generators and call
-    # prepare_destination (which empties it).
+    # Same for the generator tests: all declare tmp/generators, and
+    # prepare_destination empties it.
     if defined?(Rails::Generators::TestCase)
       Rails::Generators::TestCase.descendants.each do |klass|
         klass.destination_root = "#{klass.destination_root}-#{worker}"
