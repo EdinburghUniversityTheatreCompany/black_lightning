@@ -320,10 +320,8 @@ module Reimbursements
 
       create_reimbursements_person(name: "Payee Pat", email: "pat@example.com",
                                    sort_code: "20-20-20", account_number: "50502366")
-      output = nil
-
       error = assert_raises(SystemExit) do
-        output, = capture_io { run_rake_task("reimbursements:encrypt_backfill") }
+        run_rake_task("reimbursements:encrypt_backfill")
       end
 
       assert_not_predicate error, :success?
@@ -331,7 +329,7 @@ module Reimbursements
                    "the refusal has to name the flag that has to change")
       # It bailed before touching a single row, rather than reporting the same thing once
       # per row as a pile of decryption failures.
-      assert_no_match(/Encrypting/, output.to_s)
+      assert_no_match(/Encrypting/, last_rake_output)
     end
 
     private
