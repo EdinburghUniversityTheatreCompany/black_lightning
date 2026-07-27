@@ -78,11 +78,17 @@ gem "bootsnap", require: false
 gem "vite_rails"
 gem "view_component"
 
-group :development, :test do
-  gem "byebug"
-
+# These two must NOT be in the :test group. They attach a Binding to
+# exceptions, and a Binding cannot be marshalled -- so under `parallelize`
+# every test failure becomes an unreportable worker crash
+# ("no _dump_data is defined for class Binding") instead of a readable failure.
+group :development do
   gem "better_errors"
   gem "binding_of_caller"
+end
+
+group :development, :test do
+  gem "byebug"
 
   gem "rails-controller-testing"
   gem "rdoc"
