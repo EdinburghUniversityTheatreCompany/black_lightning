@@ -157,8 +157,11 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s
-          --health-timeout=5s --health-retries=3
+        # Docker waits a full interval before the FIRST probe, so a 10s interval
+        # spent ~10s idle on a server that was ready in 2. Same total patience
+        # (30s) at a finer granularity.
+        options: --health-cmd="mysqladmin ping" --health-interval=3s
+          --health-timeout=5s --health-retries=10
       # redis:
       #   image: redis
       #   ports:
@@ -171,10 +174,12 @@ jobs:
       # libvips pulls in libheif but no codec plugin, so a HEIC fails to decode with
       # "Unsupported codec" and the reimbursements HEIC-to-JPEG receipt tests fail on
       # CI only. Verified on both ubuntu 24.04 and 26.04.
+      # Only what the runner image does NOT already ship. Chrome + ChromeDriver,
+      # git and pkg-config are preinstalled on ubuntu-24.04, and libpq-dev was
+      # vestigial -- this app is MySQL-only, there is no pg gem.
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
-          build-essential git libpq-dev pkg-config google-chrome-stable
-          libvips-dev poppler-utils libheif-plugin-libde265
+          build-essential libvips-dev poppler-utils libheif-plugin-libde265
 
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
