@@ -80,7 +80,6 @@ gem "view_component"
 
 group :development, :test do
   gem "byebug"
-  gem "spring"
 
   gem "better_errors"
   gem "binding_of_caller"
