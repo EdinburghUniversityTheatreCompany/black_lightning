@@ -506,9 +506,9 @@ module Admin
         assert_includes response.body, "part of a budget update"
       end
 
-      # The breadcrumb is built from the URL, so the id segment used to titleize into
-      # nonsense: "Budgets / 12 / Edit", or "Rec X Ko G9m U Fbu Dn5 A" back on the Airtable
-      # ids. It now resolves the segment to the loaded record's name.
+      # The breadcrumb is built from the URL, so an unresolved id segment titleizes
+      # into nonsense ("Budgets / 12 / Edit", or "Rec X Ko G9m U Fbu Dn5 A" on an
+      # Airtable id); the segment resolves to the loaded record's name instead.
       test "the edit breadcrumb names the budget instead of its id" do
         sign_in @user
 

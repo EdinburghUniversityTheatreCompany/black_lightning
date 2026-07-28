@@ -310,10 +310,10 @@ module Reimbursements
     end
 
     # The rollout order is "flag on, deploy, backfill, flag off". Run out of order the task
-    # cannot read a plaintext row at all, so it used to fail every row one by one and leave
-    # the operator to work out why. It now refuses up front, naming the flag. Note this test
-    # deliberately does NOT wrap itself in with_unencrypted_data_support: the flag being off
-    # is the condition under test, and it is the production state.
+    # cannot read a plaintext row at all, so it refuses up front naming the flag rather than
+    # failing every row one by one. Note this test deliberately does NOT wrap itself in
+    # with_unencrypted_data_support: the flag being off is the condition under test, and it
+    # is the production state.
     test "the backfill task refuses to run while support_unencrypted_data is off" do
       assert_not ActiveRecord::Encryption.config.support_unencrypted_data,
                  "test premise: the flag is off by default now that the rollout is closed"

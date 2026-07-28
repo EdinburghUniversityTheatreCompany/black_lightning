@@ -1,8 +1,8 @@
 require "test_helper"
 
 module Reimbursements
-  # Ported from bedlam-bacs tests/test_people_helpers.py. Flags People records
-  # that share a name or email (case-insensitive) with another record.
+  # Flags People records that share a name or email (case-insensitive) with
+  # another record.
   class PeopleSupportTest < ActiveSupport::TestCase
     # find_duplicate_people compares the AR models' name/email; built
     # unpersisted with record_id pinned (it keys the returned identity).

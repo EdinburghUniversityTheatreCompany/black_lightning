@@ -127,9 +127,9 @@ module Reimbursements
       assert_in_delta(-12.5, cell.value, 0.001)
     end
 
-    # A blank cost centre used to be silently written as "F40", which books a
-    # second cost centre's spend against the Fringe and has EUSA pay it from
-    # the wrong pot. Refusing the workbook is the safe direction.
+    # Defaulting a blank cost centre to "F40" books a second cost centre's spend
+    # against the Fringe and has EUSA pay it from the wrong pot, so refusing the
+    # workbook is the safe direction.
     test "refuses to build a workbook when a row has no cost-centre code" do
       blank = rows.first.dup
       blank.cost_centre = ""

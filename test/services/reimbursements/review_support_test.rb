@@ -2,9 +2,6 @@ require "test_helper"
 require "bigdecimal"
 
 module Reimbursements
-  # Ported from bedlam-bacs tests/test_review_helpers.py (needs_attention,
-  # auto_payment_reference, find_duplicate_submissions). send_rejection_notification
-  # ports with the Review UI (it needs Graph/mailer).
   class ReviewSupportTest < ActiveSupport::TestCase
     # These exercise the pure ReviewSupport predicates. The AR models keep the
     # POROs' public interface, so they serve as value objects built unpersisted:
