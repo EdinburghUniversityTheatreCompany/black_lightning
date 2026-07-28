@@ -259,6 +259,20 @@ survive as historical import provenance and are never written. Spec + plan in
     hazard, and it crashed `database_consistency` on both models. Explicit plaintext length caps on
     the models do that job instead. Ciphertext runs roughly 2× plaintext plus envelope, which is
     why `payee_name_override` had to become TEXT.
+- **An Invoice claim must carry the third-party payee trio** (`ExpenseForm#invoice_without_payee?`).
+  `expense_type == TYPE_INVOICE` means EUSA pays the supplier, so blank overrides are a money
+  bug, not a gap: `EffectivePayee` falls back to the **submitter's own** bank details, which
+  `ReviewSupport`'s "no bank details" block then reads as satisfied, and `AiChecker` only
+  verifies a payee it can see (`override_block` returns early without `payee_override?`) — so
+  the claim would quietly pay the producer for a bill they never paid. It is a submit-time
+  block only (drafts and email-in still save incomplete), and the message names Reimbursement
+  as the type for a bill they paid themselves. The finance edit form doesn't expose
+  `expense_type` at all, so this is purely a producer-portal rule.
+- **`:base` errors are rendered by `shared/pages/_form`**, not by simple_form: `f.error_notification`
+  is only the generic "review the problems below" banner and has no field to hang a base error
+  under. Anything added with `errors.add(:base, …)` on a form rendered through that partial is
+  visible; a form NOT using it (bare simple_form) still needs its own rendering, or the rule
+  fails the submit with no stated reason.
 - **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): **opt-in per receipt**.
   Selecting a file no longer auto-scans; the receipt form reveals a consent radio group
   (`reimbursements_receipt_controller.js`) and only "Yes, reimburse myself" (`mode: self`)

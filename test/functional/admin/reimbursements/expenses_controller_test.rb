@@ -360,6 +360,42 @@ module Admin
       assert_redirected_to admin_reimbursements_expenses_path
     end
 
+    # A :base error has no field to render under, so the generic "review the
+    # problems below" banner used to be ALL the producer saw — a form that
+    # failed with no stated reason. The shared form partial lists them now.
+    test "create shows the reason a base-level rule blocked the form" do
+      sign_in @user
+      params = valid_form_params.merge(payee_name_override: "Acme Props Ltd")
+
+      post :create, params: { reimbursements_expense_form: params }
+
+      assert_response :unprocessable_entity
+      assert_includes response.body, "fill in all three: payee name, sort code, and account number"
+    end
+
+    # The submitter's own bank details would otherwise stand in for the missing
+    # payee (EffectivePayee's fallback), so the claim would pay them for a bill
+    # they never paid — and review's "no bank details" block can't see it.
+    test "create rejects an invoice with no third-party payee details" do
+      sign_in @user
+      params = valid_form_params.merge(expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_response :unprocessable_entity
+      assert_includes response.body, "change the type to Reimbursement"
+
+      with_payee = params.merge(receipts: [ receipt_upload ], payee_name_override: "Acme Props Ltd",
+                                sort_code_override: "12-34-56", account_number_override: "12345678")
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: with_payee }
+      end
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_equal "Acme Props Ltd", ::Reimbursements::Expense.order(:id).last.payee_name_override
+    end
+
     test "extract returns the extraction as json" do
       sign_in @user
 

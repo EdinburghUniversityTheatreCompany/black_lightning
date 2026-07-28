@@ -174,6 +174,54 @@ module Reimbursements
       assert build_form.valid?
     end
 
+    # An Invoice means EUSA pays the supplier directly. Without the overrides the
+    # effective payee silently falls back to the SUBMITTER's own bank details,
+    # which review can't catch (effective_has_bank_details? is satisfied), so the
+    # portal would BACS-pay the producer for a bill they never paid.
+    test "an invoice requires the third-party payee trio to submit" do
+      form = build_form(expense_type: Expense::TYPE_INVOICE)
+
+      assert_not form.valid?
+      assert_includes form.errors[:base].join, "Reimbursement",
+                      "the error must point at the type to pick when they paid it themselves"
+    end
+
+    test "an invoice with the full payee trio submits" do
+      form = build_form(expense_type: Expense::TYPE_INVOICE,
+                        payee_name_override: "Stage Supplies Ltd",
+                        sort_code_override: "80-22-60", account_number_override: "12345678")
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    test "a partly-filled invoice trio reports the all-or-nothing rule once, not twice" do
+      form = build_form(expense_type: Expense::TYPE_INVOICE,
+                        payee_name_override: "Stage Supplies Ltd")
+
+      assert_not form.valid?
+      assert_equal 1, form.errors[:base].size, form.errors[:base].inspect
+      assert_includes form.errors[:base].sole, "fill in all three"
+    end
+
+    test "an invoice DRAFT still saves without payee details (gaps are completed later)" do
+      form = build_form(expense_type: Expense::TYPE_INVOICE, save_as_draft: "1")
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    test "a reimbursement needs no payee override" do
+      assert build_form(expense_type: Expense::TYPE_REIMBURSEMENT).valid?
+    end
+
+    # from_actual's internal type is finance recording an already-settled EUSA
+    # cost; there is no third party to pay and no overrides to demand.
+    test "the internal From-EUSA type is not caught by the invoice rule" do
+      form = ExpenseForm.from_actual(build_actual)
+      form.budget_record_id = "recBud1"
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
     test "create_attrs carries person, pending status and normalized values" do
       attrs = build_form.create_attrs("recPer1")
       assert_equal "recPer1", attrs[:person_record_id]

@@ -22,14 +22,31 @@ export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "budget",
     "description", "reference", "referenceCounter", "vatItemised", "vatWarning",
     "reattachNotice", "largeAmountWarning", "consent", "consentOption",
-    "payeeName", "sortCode", "accountNumber"]
-  static values = { extractUrl: String, resubmit: Boolean, largeAmountThreshold: { type: Number, default: 1000 } }
+    "payeeName", "sortCode", "accountNumber", "expenseType", "payeeOptional",
+    "payeeRequired"]
+  static values = {
+    extractUrl: String,
+    resubmit: Boolean,
+    largeAmountThreshold: { type: Number, default: 1000 },
+    invoiceType: String,
+  }
 
   connect() {
     this.updateCounter()
     this.#trackUserEdits()
     this.#restoreOrClearStash()
     this.#refreshConsentVisibility()
+    this.typeChanged()
+  }
+
+  // An Invoice is paid straight to the supplier, so the payee trio stops being
+  // optional there (the server enforces it; this just says so before submitting).
+  // The server renders the same two labels for the no-JS case.
+  typeChanged() {
+    if (!this.hasExpenseTypeTarget || !this.hasPayeeOptionalTarget) return
+    const invoice = this.expenseTypeTarget.value === this.invoiceTypeValue
+    this.payeeOptionalTarget.classList.toggle("hidden", invoice)
+    this.payeeRequiredTarget.classList.toggle("hidden", !invoice)
   }
 
   // Remember which fields the producer has typed into (by input name), so
