@@ -21,6 +21,15 @@ module Reimbursements
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
+    # The financial year the budget screens are scoped to, or nil for an
+    # unscoped store (jobs, the producer surfaces). Set once at construction —
+    # one store per request, so the memoized lists can never disagree with it.
+    attr_reader :financial_year
+
+    def initialize(financial_year: nil)
+      @financial_year = financial_year
+    end
+
     # Attribute-vocabulary translations onto AR columns; everything else in
     # the vocabulary already matches its column name.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
@@ -73,13 +82,28 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
-    # Every budget with the owners + forecasts every caller needs. Deliberately
-    # WITHOUT the actuals preload: most callers (the producer's budget <select>,
-    # the review queue's over-budget check, the nightly job) only want names and
-    # forecasts, and pulling the whole expenses + actuals ledger to draw a
-    # dropdown cost them six queries and the entire expenses table in memory.
+    # EVERY budget, every financial year, with the owners + forecasts every
+    # caller needs. Deliberately WITHOUT the actuals preload: most callers (the
+    # producer's budget <select>, the review queue's over-budget check, the
+    # nightly job) only want names and forecasts, and pulling the whole expenses
+    # + actuals ledger to draw a dropdown cost them six queries and the entire
+    # expenses table in memory.
+    #
+    # Also deliberately NOT scoped to the store's financial year. Its callers
+    # are id->budget LOOKUPS (Review, the expenses index, every export, the
+    # nightly job) and the reconcile matcher: scoping it would blank the budget
+    # name on last year's claims the moment this year was selected, and stop the
+    # year-boundary tail of EUSA credits matching their income line at all. The
+    # screens that LIST a year's budgets use #budgets_for_year.
     def budgets
       @budgets ||= Budget.includes(:owners, :forecasts).to_a
+    end
+
+    # The selected financial year's budgets — what the budget screens list.
+    # An unscoped store (jobs, the producer surfaces) sees every budget, which
+    # is also what a database whose rows predate financial years needs.
+    def budgets_for_year
+      @budgets_for_year ||= scoped_to_year(budgets)
     end
 
     # Budgets with their EUSA actuals preloaded, for the two places that show the
@@ -87,14 +111,20 @@ module Reimbursements
     # Actuals are preloaded both directly (income credits on budget_id) and
     # through expenses (expense debit legs), so the per-line rollup costs no
     # per-budget query however many budgets there are.
+    #
+    # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
-      @budgets_with_actuals ||= Budget.includes(:owners, :forecasts, :eusa_actuals,
-                                                expenses: :eusa_actuals).to_a
+      @budgets_with_actuals ||= scoped_to_year(
+        Budget.includes(:owners, :forecasts, :eusa_actuals, expenses: :eusa_actuals).to_a
+      )
     end
 
-    # Budgets a submitter may charge an expense to.
+    # Budgets a submitter may charge an expense to — from the ACTIVE year, never
+    # the selected one. A finance user browsing next year's draft lines must not
+    # be able to file (or convert an EUSA row into) a claim against a year the
+    # portal hasn't switched to yet.
     def active_budgets
-      budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
+      in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:name)
     end
 
     # Budgets grouped by nominal code for the overview page, ordered by code
@@ -171,9 +201,11 @@ module Reimbursements
     def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
       update = nil
       BudgetUpdate.transaction do
+        # The year being VIEWED, not merely the live one: a revision logged
+        # while setting next year's budgets up belongs to next year.
         update = BudgetUpdate.create!(effective_date: effective_date, note: note,
                                       created_by: created_by,
-                                      financial_year: FinancialYear.current)
+                                      financial_year: financial_year || FinancialYear.current)
         forecasts.each do |entry|
           BudgetForecast.create!(budget_id: entry[:budget_id], amount: entry[:amount],
                                  date: effective_date, reason: note, budget_update: update)
@@ -183,9 +215,10 @@ module Reimbursements
       update
     end
 
+    # The selected year's budget revisions, newest first.
     def budget_updates
-      BudgetUpdate.includes(:created_by, :forecasts)
-                  .order(effective_date: :desc, id: :desc).to_a
+      scoped_to_year(BudgetUpdate.includes(:created_by, :forecasts)
+                                 .order(effective_date: :desc, id: :desc).to_a)
     end
 
     # Retries the auto_number MAX+1 race: two concurrent creates (portal vs
@@ -459,7 +492,32 @@ module Reimbursements
 
     def bust_budgets!
       @budgets = nil
+      @budgets_for_year = nil
       @budgets_with_actuals = nil
+    end
+
+    # --- Financial-year scoping ---------------------------------------------
+
+    # +records+ narrowed to this store's financial year. An unscoped store (a
+    # job, the producer surfaces) gets the lot.
+    def scoped_to_year(records)
+      in_year(records, financial_year)
+    end
+
+    # +records+ belonging to +year+, treating a record with NO year as belonging
+    # to it.
+    #
+    # That leniency is deliberate and mirrors the reconcile matcher's handling
+    # of a budget with no cost centre. Every row written before financial years
+    # existed is unstamped, and the backfill is what fixes that — but if the
+    # backfill hasn't run (or half ran), the strict reading makes the finance
+    # team's entire budget list and every submitter's budget picker go EMPTY,
+    # with nothing on screen to explain it. Showing an unplaced row under the
+    # year being viewed is visible and correctable; hiding real money is not.
+    def in_year(records, year)
+      return records if year.nil?
+
+      records.select { |record| record.financial_year_id.nil? || record.financial_year_id == year.id }
     end
 
     # nil values are dropped (email-in gaps); the sharepoint URL array joins

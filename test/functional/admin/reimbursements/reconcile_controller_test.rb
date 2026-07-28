@@ -80,7 +80,7 @@ module Admin
     end
 
     teardown do
-      BaseController.store_builder = -> { ::Reimbursements.build_store }
+      BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
       ReconcileController.notifier_builder =
         ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
     end
@@ -387,7 +387,7 @@ module Admin
       )
       # second_expense's link write fails (simulating a transient blip after its
       # Actual record was already created); @expense's row is untouched.
-      BaseController.store_builder = -> { FlakyLinkStore.new(fail_expense_link_ids: [ second_expense.record_id ]) }
+      BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_expense_link_ids: [ second_expense.record_id ]) }
       sign_in @user
 
       post :apply, params: {
@@ -406,7 +406,7 @@ module Admin
     end
 
     test "a failed credit row is not counted in credits_linked" do
-      BaseController.store_builder = -> { FlakyLinkStore.new(fail_budget_links: true) }
+      BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_budget_links: true) }
       sign_in @user
 
       post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
@@ -609,7 +609,7 @@ module Admin
     # transaction.
 
     test "a pair whose second leg fails to insert writes neither leg" do
-      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :second_leg) }
+      BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: :second_leg) }
       sign_in @user
       keys = offsetting_pair_keys(offsetting_paste)
 
@@ -623,7 +623,7 @@ module Admin
     end
 
     test "a pair whose cross-link fails writes neither leg" do
-      BaseController.store_builder = -> { HalfPairStore.new(fail_on: :link) }
+      BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: :link) }
       sign_in @user
       keys = offsetting_pair_keys(offsetting_paste)
 

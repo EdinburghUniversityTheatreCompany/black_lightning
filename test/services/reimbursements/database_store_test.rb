@@ -558,5 +558,83 @@ module Reimbursements
         end
       end
     end
+
+    # --- Financial-year scoping ---------------------------------------------
+
+    def scoped_store(year) = DatabaseStore.new(financial_year: year)
+
+    test "budgets_for_year lists only the store's year" do
+      this_year = FinancialYear.create!(label: "Fringe 2027")
+      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      mine = Budget.create!(name: "Props", financial_year: this_year)
+      Budget.create!(name: "Old props", financial_year: last_year)
+
+      assert_equal [ mine.id ], scoped_store(this_year).budgets_for_year.map(&:id)
+    end
+
+    test "budgets_for_year returns every budget when the store has no year" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      Budget.create!(name: "Props", financial_year: year)
+      Budget.create!(name: "Unstamped")
+
+      # Jobs and the producer surfaces build an unscoped store; they must keep
+      # seeing everything rather than silently losing the unstamped rows a
+      # pre-financial-year database is full of.
+      assert_equal 2, store.budgets_for_year.size
+    end
+
+    test "budgets stays unscoped so a name lookup resolves across years" do
+      this_year = FinancialYear.create!(label: "Fringe 2027")
+      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      Budget.create!(name: "Props", financial_year: this_year)
+      old = Budget.create!(name: "Old props", financial_year: last_year)
+
+      # Review, the expenses index and every export resolve an expense's budget
+      # name through this list. Scoping it would blank the name on last year's
+      # claims while this year is selected.
+      assert_includes scoped_store(this_year).budgets.map(&:id), old.id
+    end
+
+    test "budgets_with_actuals is scoped to the store's year" do
+      this_year = FinancialYear.create!(label: "Fringe 2027")
+      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      mine = Budget.create!(name: "Props", financial_year: this_year)
+      Budget.create!(name: "Old props", financial_year: last_year)
+
+      assert_equal [ mine.id ], scoped_store(this_year).budgets_with_actuals.map(&:id)
+    end
+
+    test "active_budgets follows the ACTIVE year, not the selected one" do
+      live = FinancialYear.create!(label: "Fringe 2026", active: true)
+      draft = FinancialYear.create!(label: "Fringe 2027")
+      live_budget = Budget.create!(name: "Props", active: true, financial_year: live)
+      Budget.create!(name: "Next year props", active: true, financial_year: draft)
+
+      # A finance user browsing next year's draft budgets must not be able to
+      # file a claim against them — submitters file against the live year.
+      assert_equal [ live_budget.id ], scoped_store(draft).active_budgets.map(&:id)
+    end
+
+    test "budget_updates are scoped to the store's year" do
+      this_year = FinancialYear.create!(label: "Fringe 2027")
+      last_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      mine = BudgetUpdate.create!(effective_date: Date.new(2027, 1, 1), financial_year: this_year)
+      BudgetUpdate.create!(effective_date: Date.new(2026, 1, 1), financial_year: last_year)
+
+      assert_equal [ mine.id ], scoped_store(this_year).budget_updates.map(&:id)
+    end
+
+    test "create_budget_update! stamps the store's year, not just the active one" do
+      FinancialYear.create!(label: "Fringe 2026", active: true)
+      draft = FinancialYear.create!(label: "Fringe 2027")
+      budget = Budget.create!(name: "Props", financial_year: draft)
+
+      update = scoped_store(draft).create_budget_update!(
+        effective_date: Date.new(2027, 6, 1), note: "Committee budget", created_by: nil,
+        forecasts: [ { budget_id: budget.record_id, amount: BigDecimal("500") } ]
+      )
+
+      assert_equal draft, update.financial_year
+    end
   end
 end

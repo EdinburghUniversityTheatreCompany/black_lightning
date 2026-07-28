@@ -51,7 +51,7 @@ module Admin
     # store_builder is a class attribute, so a test that swaps in a failing store
     # must hand the real one back or every later test inherits it.
     teardown do
-      BaseController.store_builder = -> { ::Reimbursements.build_store }
+      BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -627,7 +627,7 @@ module Admin
     # double-counts the same EUSA charge.
 
     test "a conversion whose link write fails creates no expense at all" do
-      BaseController.store_builder = -> { UnlinkableStore.new }
+      BaseController.store_builder = ->(**) { UnlinkableStore.new }
       sign_in @user
 
       assert_no_difference -> { ::Reimbursements::Expense.count } do
@@ -648,7 +648,7 @@ module Admin
     # transaction: a second click whose before_action read the row before the
     # first click committed would otherwise convert it again.
     test "a conversion racing another one is refused rather than duplicated" do
-      BaseController.store_builder = -> { StaleActualStore.new }
+      BaseController.store_builder = ->(**) { StaleActualStore.new }
       ::Reimbursements::EusaActual.find(@unlinked.id).update!(expense: @expense)
       sign_in @user
 

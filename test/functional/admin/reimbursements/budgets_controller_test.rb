@@ -745,6 +745,77 @@ module Admin
         count
       end
 
+      # --- Financial-year selector -------------------------------------------
+
+      test "index shows the selected year's budgets, not every year's" do
+        this_year, next_year = seed_two_years
+        sign_in @user
+
+        get :index, params: { year: next_year.key }
+
+        assert_equal [ "Next year props" ], assigns(:budgets).map(&:name)
+        assert_not_includes assigns(:budgets).map(&:name), "Props"
+        assert_equal next_year, assigns(:selected_financial_year)
+        # Both years appear as selector links.
+        assert_includes response.body, this_year.label
+      end
+
+      test "index defaults to the active year" do
+        this_year, = seed_two_years
+        sign_in @user
+
+        get :index
+
+        assert_equal this_year, assigns(:selected_financial_year)
+        assert_includes assigns(:budgets).map(&:name), "Props"
+        assert_not_includes assigns(:budgets).map(&:name), "Next year props"
+      end
+
+      test "an unknown year falls back to the active year and says so" do
+        this_year, = seed_two_years
+        sign_in @user
+
+        get :index, params: { year: "fringe-1999" }
+
+        assert_response :success
+        assert_equal this_year, assigns(:selected_financial_year)
+        # flash.now is swept by the time a controller test can read `flash`, so
+        # assert on what the operator actually sees.
+        assert_match(/no financial year called .*fringe-1999/, response.body)
+      end
+
+      test "the overview scopes to the selected year" do
+        _, next_year = seed_two_years
+        sign_in @user
+
+        get :overview, params: { year: next_year.key }
+
+        assert_response :success
+        names = assigns(:rollups).flat_map { |rollup| rollup.budgets.map(&:name) }
+        assert_equal [ "Next year props" ], names
+      end
+
+      test "the selector is hidden while only one year exists" do
+        ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_no_match(/Financial year:/, response.body)
+      end
+
+      # The live year (holding the budgets seeded in setup) plus a draft year
+      # with one budget of its own.
+      def seed_two_years
+        this_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        [ @props, @income ].each { |budget| budget.update!(financial_year: this_year) }
+        create_reimbursements_budget(name: "Next year props", nominal_code: "4000")
+          .update!(financial_year: next_year)
+        [ this_year, next_year ]
+      end
+
       # An Expense budget with a paid expense and a linked EUSA actual: one of
       # everything the overview's rollups walk.
       def seed_budget_with_actual(index)

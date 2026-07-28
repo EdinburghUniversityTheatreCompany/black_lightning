@@ -28,7 +28,19 @@ module Admin
       # whenever both suites shared one process, and passed when each ran alone.
       #
       # Interactive extraction retries less than the background poll job.
-      class_attribute :store_builder, default: -> { ::Reimbursements.build_store }
+      # The store seam takes the financial year the request is scoped to (nil
+      # here — see #selected_financial_year). A test fake that ignores scoping
+      # is written as `->(**) { fake }`.
+      #
+      # Named, because a test that has swapped the seam has to put THIS back:
+      # restoring it with a hand-written `-> { build_store }` drops the year
+      # argument, and class_attribute makes that replacement stick for the rest
+      # of the process — so every later year-scoped page in that worker quietly
+      # renders every year's budgets at once.
+      DEFAULT_STORE_BUILDER =
+        ->(financial_year: nil) { ::Reimbursements.build_store(financial_year: financial_year) }
+
+      class_attribute :store_builder, default: DEFAULT_STORE_BUILDER
       class_attribute :extractor_builder, default: -> { ::Reimbursements::Extractor.new(max_attempts: 2) }
       # The Graph-backed email notifier (from the cost centre's send mailbox).
       # Lives here, not just on FinanceController, because a budget owner
@@ -50,7 +62,15 @@ module Admin
       end
 
       def store
-        @store ||= store_builder.call
+        @store ||= store_builder.call(financial_year: selected_financial_year)
+      end
+
+      # The producer surfaces are never year-scoped. A submitter files against
+      # the active year, which DatabaseStore#active_budgets enforces on its own,
+      # and their own past claims must stay visible whatever year finance is
+      # looking at. FinanceController overrides this with the ?year= selector.
+      def selected_financial_year
+        nil
       end
 
       def extractor

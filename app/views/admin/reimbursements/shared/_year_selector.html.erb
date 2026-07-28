@@ -1,0 +1,20 @@
+<%# The financial-year scope for the budget screens. URL-as-state: each year is
+    a plain link carrying the page's other query parameters, so a filter or a
+    CSV link survives switching year. Renders nothing until a second year
+    exists — one year is not a choice. %>
+<% if selectable_financial_years.size > 1 %>
+  <div class="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Financial year">
+    <span class="text-sm text-gray-600">Financial year:</span>
+    <% selectable_financial_years.each do |year| %>
+      <% selected = year == selected_financial_year %>
+      <%= link_to year.label,
+                  url_for(request.query_parameters.merge(year: year.key, page: nil)),
+                  "aria-current": (selected ? "true" : nil),
+                  class: class_names(
+                    "rounded border px-2 py-1 text-sm",
+                    "border-blue-600 bg-blue-50 font-medium text-blue-800" => selected,
+                    "border-gray-300 text-gray-700 hover:bg-gray-50" => !selected
+                  ) %>
+    <% end %>
+  </div>
+<% end %>
