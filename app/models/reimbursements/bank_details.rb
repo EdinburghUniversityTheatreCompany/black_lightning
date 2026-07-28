@@ -73,5 +73,11 @@ module Reimbursements
       overrides = [ payee_name, sort_code, account_number ]
       overrides.any?(&:present?) && !overrides.all?(&:present?)
     end
+
+    # No override at all, so the payee falls back to the submitter's own bank
+    # details: correct on a Reimbursement, a misdirected payment on an Invoice.
+    def overrides_missing?(payee_name, sort_code, account_number)
+      [ payee_name, sort_code, account_number ].all?(&:blank?)
+    end
   end
 end

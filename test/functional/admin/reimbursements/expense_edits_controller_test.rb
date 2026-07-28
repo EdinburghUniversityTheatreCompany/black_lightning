@@ -536,6 +536,113 @@ module Admin
         assert_equal BigDecimal("10.42"), expense.reload.amount_excl_vat
       end
 
+      # --- Expense type ----------------------------------------------------
+
+      # The producer form offers Reimbursement and Invoice; finance's own From
+      # EUSA is only settable here, and re-typing here is the only way to fix a
+      # claim a producer filed wrong.
+      test "update re-types a claim, including to finance's own From EUSA" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", payment_reference: "y",
+                                 budget_record_id: @budget.record_id,
+                                 expense_type: ::Reimbursements::Expense::TYPE_FROM_EUSA }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.reload.expense_type
+      end
+
+      test "update rejects an expense type that isn't one of ours" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", budget_record_id: @budget.record_id,
+                                 expense_type: "Petty cash" }
+
+        assert_response :unprocessable_content
+        assert_match(/unknown expense type/i, response.body)
+        assert_equal "Reimbursement", expense.reload.expense_type, "nothing was written"
+      end
+
+      # Same rule as the producer form: with no overrides, EffectivePayee falls
+      # back to the submitter's own bank details, so the Invoice would pay them.
+      test "update rejects switching a payable claim to Invoice with no payee overrides" do
+        expense = expense_at("Approved")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", budget_record_id: @budget.record_id,
+                                 expense_type: ::Reimbursements::Expense::TYPE_INVOICE }
+
+        assert_response :unprocessable_content
+        assert_match(/would pay Pat Producer/i, response.body)
+        assert_equal "Reimbursement", expense.reload.expense_type, "nothing was written"
+      end
+
+      test "update accepts Invoice once the payee overrides are filled in" do
+        expense = expense_at("Approved")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", budget_record_id: @budget.record_id,
+                                 expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
+                                 payee_name_override: "Acme Ltd", sort_code_override: "20-00-00",
+                                 account_number_override: "12345678" }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
+      end
+
+      # Submitted and Paid are records of what EUSA already did, so the payment
+      # can't be misdirected any more — and a historical row whose supplier
+      # details we never captured has to stay re-typable.
+      %w[Submitted Paid].each do |status|
+        test "update re-types an already-processed #{status} claim to Invoice without overrides" do
+          expense = expense_at(status)
+          sign_in @user
+
+          patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                   description: "x", budget_record_id: @budget.record_id,
+                                   expense_type: ::Reimbursements::Expense::TYPE_INVOICE }
+
+          assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+          assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
+        end
+      end
+
+      # The other forms that post here (Review's inline save, the receipt
+      # attach/remove buttons) send no expense_type at all.
+      test "update leaves the type alone when the field isn't posted" do
+        expense = expense_at("Pending", expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
+                                        payee_name_override: "Acme Ltd",
+                                        sort_code_override: "20-00-00",
+                                        account_number_override: "12345678")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", budget_record_id: @budget.record_id,
+                                 payee_name_override: "Acme Ltd", sort_code_override: "20-00-00",
+                                 account_number_override: "12345678" }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
+      end
+
+      test "edit renders the type select with the current type chosen" do
+        expense = expense_at("Pending", expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_select "select#expense_type option[selected][value=?]",
+                      ::Reimbursements::Expense::TYPE_INVOICE
+        assert_select "select#expense_type option", text: ::Reimbursements::Expense::TYPE_FROM_EUSA
+      end
+
       test "update rejects a budget_record_id that doesn't resolve to a real budget" do
         expense = expense_at("Pending")
         sign_in @user

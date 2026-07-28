@@ -66,7 +66,8 @@ module Admin
         expense = find_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        ) || bank_detail_override_error || budget_record_id_error(params[:budget_record_id])
+        ) || bank_detail_override_error || expense_type_error(expense) ||
+              budget_record_id_error(params[:budget_record_id])
         if error
           load_edit(expense)
           flash.now[:alert] = error
@@ -169,6 +170,7 @@ module Admin
           amount: ::Reimbursements::AmountValidation.amount(params[:amount]),
           description: params[:description],
           payment_reference: params[:payment_reference],
+          expense_type: params[:expense_type],
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence,
           payee_name_override: params[:payee_name_override].to_s,
@@ -223,6 +225,30 @@ module Admin
         end
 
         nil
+      end
+
+      # ExpenseForm's Invoice rule (no override trio means EffectivePayee pays
+      # the SUBMITTER) applies here too, but only while the money can still
+      # move: Submitted and Paid record what EUSA already did, and a historical
+      # row whose supplier details we never captured must stay re-typable
+      # instead of demanding invented bank details.
+      def expense_type_error(expense)
+        type = params[:expense_type].to_s
+        return nil if type.blank?
+        return "Unknown expense type." unless ::Reimbursements::Expense::TYPES.include?(type)
+        return nil unless type == ::Reimbursements::Expense::TYPE_INVOICE
+        return nil unless ::Reimbursements::ReviewSupport.attention_actionable?(expense)
+
+        unless ::Reimbursements::BankDetails.overrides_missing?(
+          params[:payee_name_override].to_s, params[:sort_code_override].to_s,
+          params[:account_number_override].to_s
+        )
+          return nil
+        end
+
+        "An Invoice pays the supplier directly, so it needs the payee overrides: name, sort " \
+          "code and account number. Without them this would pay #{expense.person&.name.presence || 'the submitter'} " \
+          "instead. Use Reimbursement if they paid the bill themselves."
       end
 
       def redirect_to_edit(expense, flash)
