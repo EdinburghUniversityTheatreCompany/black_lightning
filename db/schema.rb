@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_26_090100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_28_100100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -815,10 +815,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_26_090100) do
     t.boolean "active", default: false, null: false
     t.datetime "created_at", null: false
     t.date "ends_on"
+    t.string "key", null: false
     t.string "label", null: false
     t.date "starts_on"
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_reimbursements_financial_years_on_active"
+    t.index ["key"], name: "index_reimbursements_financial_years_on_key", unique: true
     t.index ["label"], name: "index_reimbursements_financial_years_on_label", unique: true
   end
 
