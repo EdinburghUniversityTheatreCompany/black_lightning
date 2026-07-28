@@ -1,7 +1,6 @@
 module Reimbursements
   ##
-  # Renders the default EUSA finance email (subject + HTML body) for a batch,
-  # ported from bedlam-bacs notifications.py / templates/eusa_email.html. The
+  # Renders the default EUSA finance email (subject + HTML body) for a batch. The
   # operator can edit the rendered subject + body on the Build Batch page before
   # the draft is created, so this only supplies the starting point.
   #

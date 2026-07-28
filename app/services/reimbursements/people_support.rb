@@ -2,8 +2,7 @@ module Reimbursements
   ##
   # Pure duplicate-detection for the People management page. A person is a
   # duplicate when another record shares their non-empty name or email
-  # (case-insensitive, whitespace-trimmed). Ported from bedlam-bacs
-  # `people_helpers.py`.
+  # (case-insensitive, whitespace-trimmed).
   module PeopleSupport
     module_function
 

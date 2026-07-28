@@ -2,7 +2,6 @@ module Reimbursements
   ##
   # Fills the vendored EUSA BACS request template in place (preserving EUSA's
   # exact cell styling) with one row per expense, and returns the workbook bytes.
-  # Ported from bedlam-bacs `xlsx_generator.py`, swapping openpyxl for rubyXL.
   #
   # The template's BREAKDOWN sheet has a header in row 1 and an F40 example in
   # row 2; data is written from row 3 (0-based index 2). Sort code, account
@@ -16,7 +15,7 @@ module Reimbursements
   class BacsXlsx
     # One row destined for the BACS spreadsheet. Bank-detail fields stay strings
     # to preserve leading zeros; +amount+ is numeric (the template's currency
-    # format applies). Mirrors bedlam-bacs' BacsRow.
+    # format applies).
     BacsRow = Struct.new(:payee_name, :amount, :sort_code, :account_number,
                          :nominal_code, :description, :payment_reference, :cost_centre,
                          keyword_init: true)
@@ -69,10 +68,9 @@ module Reimbursements
               "split this into multiple submissions."
       end
 
-      # The cost-centre cell used to fall back to a literal "F40" when blank.
-      # That is the wrong direction to fail: a termtime row silently stamped
-      # F40 books its spend against the Fringe and EUSA pays it from the wrong
-      # pot. Refuse the workbook instead — the caller always has a cost centre.
+      # A blank cost centre refuses the workbook rather than defaulting: a
+      # termtime row silently stamped F40 books its spend against the Fringe and
+      # EUSA pays it from the wrong pot. The caller always has a cost centre.
       if rows.any? { |row| row.cost_centre.blank? }
         raise TemplateError, "every BACS row needs a cost-centre code before the spreadsheet can be built."
       end

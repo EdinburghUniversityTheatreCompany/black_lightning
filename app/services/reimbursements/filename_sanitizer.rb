@@ -3,7 +3,6 @@ module Reimbursements
   # Builds and sanitizes receipt attachment filenames for the BACS batch, using
   # the scheme EUSA expects: "<YYYY-MM-DD> <budget> - <description>[ (n)].<ext>"
   # (the " (n)" suffix mirrors how operating systems name duplicate files).
-  # Ported from bedlam-bacs `filename_sanitizer.py`.
   module FilenameSanitizer
     # Characters unsafe on at least one OS or in email/SharePoint.
     FORBIDDEN_CHARS = %r{[<>:"/\\|?*\x00-\x1f]}

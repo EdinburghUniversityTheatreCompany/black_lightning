@@ -77,7 +77,7 @@ module Reimbursements
     # WITHOUT the actuals preload: most callers (the producer's budget <select>,
     # the review queue's over-budget check, the nightly job) only want names and
     # forecasts, and pulling the whole expenses + actuals ledger to draw a
-    # dropdown cost them six queries and the entire expenses table in memory.
+    # dropdown costs six queries and the entire expenses table in memory.
     def budgets
       @budgets ||= Budget.includes(:owners, :forecasts).to_a
     end
@@ -368,13 +368,12 @@ module Reimbursements
     # row is not (or is no longer) convertible.
     #
     # Both halves matter. Creating the expense and linking afterwards as two
-    # writes leaves, on a failure between them, a Paid expense charged to a
-    # budget while the row stays unlinked and keeps offering its "Create
-    # expense" button, so the next click double-counts the same EUSA charge. And
-    # the caller's convertibility check is a read that can go stale (a
-    # double-submitted form, two operators), so it is re-taken here under a row
-    # lock: the second writer blocks until the first commits, then sees the link
-    # and is refused instead of converting the row twice.
+    # writes leaves, on a failure between them, a Paid expense charged to a budget
+    # while the row stays unlinked and keeps offering its "Create expense" button,
+    # so the next click double-counts the same EUSA charge. And the caller's
+    # convertibility check is a read that goes stale on a double-submitted form,
+    # so it is re-taken here under a row lock: the second writer blocks until the
+    # first commits, then sees the link and is refused.
     def create_expense_for_actual!(actual_id, attrs)
       expense = nil
       EusaActual.transaction do
@@ -390,12 +389,11 @@ module Reimbursements
 
     # Imports both legs of an offsetting pair and cross-links them as ONE unit.
     #
-    # Persisting the legs with two separate create_actual! calls and linking
-    # afterwards leaves the worst state available if anything in the middle
-    # fails: the debit leg committed WITHOUT the offset stamp, so every rollup
-    # reads it as real spend. Re-pasting cannot repair that, because the dedup
-    # step then skips the already-imported leg and the pair can never be
-    # re-formed. Returns the two linked legs.
+    # Two separate create_actual! calls followed by a link leave the worst state
+    # available if anything in the middle fails: the debit leg committed WITHOUT
+    # the offset stamp, so every rollup reads it as real spend. Re-pasting cannot
+    # repair that, because dedup then skips the already-imported leg and the pair
+    # can never be re-formed. Returns the two linked legs.
     def create_offsetting_pair!(debit_attrs, credit_attrs)
       legs = EusaActual.transaction do
         debit = create_actual!(debit_attrs)

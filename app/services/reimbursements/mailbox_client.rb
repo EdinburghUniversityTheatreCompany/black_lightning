@@ -10,9 +10,9 @@ module Reimbursements
     FOLDERS = { processed: "Processed", rejected: "Rejected" }.freeze
     PAGE_SIZE = 20
 
-    # The app-only auth + request plumbing (token, request, error surfacing) now
-    # lives in GraphAuth, shared with GraphClient. Keep the historical error
-    # constant names pointing at the shared classes so existing rescues hold.
+    # Auth + request plumbing lives in GraphAuth, shared with GraphClient. These
+    # aliases keep the error constant names this class has always exposed, so
+    # existing rescues hold.
     Error = GraphAuth::Error
     AuthError = GraphAuth::AuthError
     NotFoundError = GraphAuth::NotFoundError
@@ -86,9 +86,9 @@ module Reimbursements
 
       # Resolve the destination folder OUTSIDE the rescue below. folder_id ->
       # find_or_create_folder issues its own GET (and possibly POST) against
-      # /mailFolders, so folding it into the message-scoped rescue mislabelled a
-      # 404 from a folder misconfiguration as "the message is gone" and swallowed
-      # it — hiding a real setup problem completely.
+      # /mailFolders, so inside the message-scoped rescue a 404 from a folder
+      # misconfiguration reads as "the message is gone" and gets swallowed,
+      # hiding a real setup problem.
       destination = folder_id(folder)
 
       begin
@@ -101,25 +101,18 @@ module Reimbursements
     end
 
     # Convenience for the reject paths (no expense created, so a failure just
-    # retries next cycle). Moves first, then marks read — a move failure
-    # leaves the message unread (retried next cycle, genuinely safe here: no
-    # expense exists yet), rather than the reverse order, which would leave a
-    # read-but-unfiled message silently stuck in the Inbox forever
-    # (unread_messages would never fetch it again to retry the move). This
-    # ordering has a narrower, symmetric edge case of its own: if the move
-    # succeeds but the follow-up mark_read call fails, the message is now
-    # unread but sitting in Rejected/Processed, invisible to both the normal
-    # Inbox retry path and anyone watching that folder for unread mail.
-    # Accepted trade-off — the failure it fixes (reprocessing risk) is worse
-    # than the one it leaves (a single stray unread message in a folder), and
-    # both require a Graph call to fail in the narrow gap between two
-    # adjacent requests.
+    # retries next cycle). Moves first, then marks read: a move failure then
+    # leaves the message unread and retried, whereas the reverse order leaves a
+    # read-but-unfiled message stuck in the Inbox forever, since unread_messages
+    # would never fetch it again to retry the move. The symmetric edge case — move
+    # succeeds, mark_read fails, leaving an unread message sitting in
+    # Rejected/Processed — is the accepted trade-off, being strictly less bad than
+    # reprocessing.
     #
-    # A 404 on either call propagates unless the message is confirmed gone
-    # (see swallow_only_if_gone), so a moved-but-present message aborts this pair
-    # into MailboxPollJob#process's rescue: logged, reported, and left unread for
-    # the next cycle. That is the right outcome here — no expense exists yet, and
-    # the message genuinely has not been filed.
+    # A 404 on either call propagates unless the message is confirmed gone (see
+    # swallow_only_if_gone), so a moved-but-present message aborts into
+    # MailboxPollJob#process's rescue: logged, reported, left unread. Right
+    # outcome here — no expense exists yet and the message really wasn't filed.
     def mark_read_and_move(message_id, folder)
       move(message_id, folder)
       mark_read(message_id)
@@ -130,9 +123,8 @@ module Reimbursements
 
     # A message-scoped mutation (reply / mark_read / move) 404'd. That is USUALLY
     # because someone handled or deleted the message by hand in Outlook between the
-    # poll's listing and this call: nothing left to reply to, mark read or file, and
-    # alerting on it every retry cycle would be pure noise. So the 404 is swallowed
-    # — but only once we have CONFIRMED it.
+    # poll's listing and this call, and alerting on it every retry cycle would be
+    # noise. So the 404 is swallowed — but only once CONFIRMED.
     #
     # A 404 alone does not prove the message is gone: Exchange CHANGES a message's
     # id when the message is moved, so the same 404 can mean "still in the mailbox,

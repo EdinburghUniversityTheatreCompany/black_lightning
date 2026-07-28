@@ -1,12 +1,10 @@
 module Reimbursements
   ##
   # Microsoft Graph client for the *operator* side of reimbursements: creating
-  # and sending the EUSA email, uploading receipts + the BACS xlsx to
-  # SharePoint, and browsing SharePoint for the Settings folder picker (Phase F).
-  # Ports bedlam-bacs graph_client.py, swapping its per-user interactive OAuth
-  # (a desktop, single-user assumption) for the same app-only client-credentials
-  # auth the shipped MailboxClient uses — a multi-user web app can't do
-  # interactive OAuth. Auth + request plumbing is shared via GraphAuth.
+  # and sending the EUSA email, uploading receipts + the BACS xlsx to SharePoint,
+  # and browsing SharePoint for the Settings folder picker. Auth is app-only
+  # client-credentials, shared with MailboxClient via GraphAuth — a multi-user
+  # web app can't do the per-user interactive OAuth a desktop tool would.
   #
   # Azure app-registration permissions required (application permissions, admin
   # consent — a MANUAL setup step, see the reimbursements setup guide):
@@ -79,10 +77,8 @@ module Reimbursements
     # Gated: a non-production shell holding real Azure credentials must not delete
     # a message out of the live shared mailbox. RAISES rather than returning nil,
     # because nil is this method's success value — a silently suppressed delete
-    # would have BatchesController tell the operator "the old EUSA draft in
-    # Outlook has been deleted" while it is still sitting there, ready to be sent
-    # alongside the rebuilt one. Its caller already rescues into the truthful
-    # "delete the old EUSA draft in Outlook manually" warning.
+    # would have BatchesController tell the operator the old EUSA draft has been
+    # deleted while it sits in Outlook ready to be sent alongside the rebuilt one.
     def delete_message(mailbox:, message_id:)
       refuse_outbound!("delete message #{message_id} from #{mailbox}")
       graph_request(:delete, "/users/#{mailbox}/messages/#{message_id}")
@@ -126,12 +122,11 @@ module Reimbursements
     #
     # Gated: this is the call that carries the bank details. BatchProcessor uploads
     # the BACS xlsx (every payee's full sort code and account number) and every
-    # receipt BEFORE the EUSA draft, so a dev shell with real Azure credentials
-    # clicking Build Batch used to PUT them straight into production SharePoint.
-    # RAISES rather than returning "" or a fake URL: BatchProcessor counts a
-    # returned URL as an uploaded receipt and stamps receipts_offloaded from it,
-    # which is what tells an operator it is safe to delete the only local copy.
-    # Both call sites already rescue into a visible result.errors entry.
+    # receipt BEFORE the EUSA draft, so an ungated dev shell with real Azure
+    # credentials would PUT them straight into production SharePoint. RAISES
+    # rather than returning "" or a fake URL: BatchProcessor counts a returned URL
+    # as an uploaded receipt and stamps receipts_offloaded from it, which is what
+    # tells an operator it is safe to delete the only local copy.
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
       refuse_outbound!("SharePoint upload of #{filename}")
       raise GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
@@ -172,7 +167,7 @@ module Reimbursements
       true
     end
 
-    # --- SharePoint browse (Settings folder picker, Phase F) ---------------
+    # --- SharePoint browse (Settings folder picker) ------------------------
 
     # Resolve a SharePoint site by its browser URL (e.g.
     # "https://tenant.sharepoint.com/sites/Finance") to its Graph Site + id, using
@@ -243,8 +238,7 @@ module Reimbursements
     end
 
     # Hand-entered email addresses carry stray whitespace; an un-stripped
-    # address is rejected by Graph as an invalid recipient. Ported from
-    # bedlam-bacs _clean_recipients.
+    # address is rejected by Graph as an invalid recipient.
     def recipients(addresses)
       Array(addresses).filter_map do |address|
         cleaned = address.to_s.strip

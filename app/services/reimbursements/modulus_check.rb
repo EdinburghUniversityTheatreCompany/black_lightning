@@ -3,7 +3,7 @@ module Reimbursements
   # UK bank account modulus check — the Pay.UK (formerly VocaLink) algorithm that
   # verifies a sort code + account number are mathematically consistent. This is
   # NOT Confirmation of Payee; it only catches typos (transposed/dropped/miskeyed
-  # digits). Ported wholesale from bedlam-bacs `modulus_check.py`.
+  # digits).
   #
   # Rule data (`valacdos.txt`, `scsubtab.txt`) comes from Pay.UK under a
   # click-through licence; it is vendored in vendor/pay_uk/ and committed so Kamal

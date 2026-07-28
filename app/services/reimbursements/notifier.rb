@@ -11,16 +11,15 @@ module Reimbursements
   # wrapped in the "reimbursements_mailer" layout (its own minimal <!DOCTYPE>/
   # <head>/<title> wrapper — deliberately not the app's shared, fully-branded
   # mail layout, whose marketing tone doesn't fit a plain finance notice) and
-  # hands the result to +send_mail+. The templates (app/views/reimbursements/emails)
-  # keep the copy the retired ActionMailer views used; assigns pass the same
-  # instance variables those templates already reference.
+  # hands the result to +send_mail+. Templates live in
+  # app/views/reimbursements/emails.
   #
   # Callers pass the sending +cost_centre+: it supplies the send mailbox AND
-  # every piece of copy that used to be hardcoded "Bedlam Fringe" (subject
-  # prefix, sign-offs, contact address). It is threaded into the template
-  # assigns ONCE here, so no call site has to pass a signature string. The
-  # IT/credential alerts stay on ActionMailer (ReimbursementsMailer): they go
-  # to a configured subcommittee address with no cost-centre mailbox context.
+  # every piece of society-specific copy (subject prefix, sign-offs, contact
+  # address). It is threaded into the template assigns ONCE here, so no call site
+  # has to pass a signature string. The IT/credential alerts stay on ActionMailer
+  # (ReimbursementsMailer): they go to a configured subcommittee address with no
+  # cost-centre mailbox context.
   class Notifier
     def initialize(cost_centre:, graph: nil)
       @cost_centre = cost_centre
@@ -93,8 +92,8 @@ module Reimbursements
       )
     end
 
-    # Operator: the Approved queue is clean and ready to batch. The nightly no
-    # longer auto-builds, so this just prompts the operator to open Build Batch —
+    # Operator: the Approved queue is clean and ready to batch. The nightly does
+    # not auto-build, so this only prompts the operator to open Build Batch —
     # there's no draft link (nothing has been submitted yet).
     def approved_ready(recipients:, expenses:, total:, run_date:)
       count = expenses.size

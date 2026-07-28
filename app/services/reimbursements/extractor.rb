@@ -13,8 +13,8 @@ module Reimbursements
   # no real Gemini call is made.
   class Extractor
     MODEL = "gemini-2.5-flash".freeze
-    # Kept for API compatibility with callers that tune retry aggressiveness
-    # (the poll job vs an interactive request); RubyLLM now owns the retry ladder.
+    # Vestigial: RubyLLM owns the retry ladder. Kept so callers that tune retry
+    # aggressiveness (the poll job vs an interactive request) still construct.
     MAX_ATTEMPTS = 5
     REFERENCE_LIMIT = ExpenseForm::REFERENCE_LIMIT
 
@@ -78,9 +78,9 @@ module Reimbursements
     # receipts: [{filename:, content_type:, bytes:}], budgets: [Budget].
     # mode: :self (reimburse the submitter, the default) or :invoice (pay the
     # bank details printed on the invoice). Only :invoice requests the payee
-    # bank trio; :self never does. Extraction is opt-in per receipt — the
-    # portal only calls this once the submitter has consented (see the receipt
-    # form's consent radios); email-in no longer extracts at all.
+    # bank trio; :self never does. Extraction is opt-in per receipt — the portal
+    # only calls this once the submitter has consented (see the receipt form's
+    # consent radios); email-in does not extract at all.
     def extract(receipts:, budgets:, mode: :self)
       return failure("no Gemini API key configured") if @api_key.blank?
       return failure("no receipts provided") if receipts.blank?

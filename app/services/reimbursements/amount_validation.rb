@@ -14,11 +14,9 @@ module Reimbursements
   #
   # Reading is delegated to AmountParser, the same lenient parser the submitter
   # form and the budget forms use, so "£1,200" and the comma decimal "12,50" mean
-  # here what they mean everywhere else in the portal. This module used to do its
-  # own stricter `Float()` reading of a plain-decimal regexp, because the write
-  # path then re-read the RAW STRING with `to_f` and the two could disagree — the
-  # divergence is gone now that callers write #amount / #amount_excl_vat, which
-  # hand back the very BigDecimal that was validated. Nothing re-parses.
+  # here what they mean everywhere else in the portal. Callers write #amount /
+  # #amount_excl_vat, which hand back the very BigDecimal that was validated, so
+  # nothing re-parses and the validated and written values cannot disagree.
   module AmountValidation
     # A generous sanity ceiling — no real Bedlam Fringe expense claim is ever
     # going to be six figures. Catches a fat-finger typo (an extra digit, a
@@ -40,10 +38,9 @@ module Reimbursements
         return "Enter a valid amount excl. VAT greater than 0, or leave it blank."
       end
 
-      # Matches the submitter-facing ExpenseForm's amounts_valid, which already
-      # rejects this — the finance write paths (Review#save,
-      # ExpenseEditsController#update) previously didn't, so an edit here
-      # could silently skew the over-budget check and reconciliation matching.
+      # Matches the submitter-facing ExpenseForm's amounts_valid. Unchecked on
+      # the finance write paths, an excl-VAT above gross silently skews the
+      # over-budget check and reconciliation matching.
       if payable?(net) && net > gross
         return "Amount excl. VAT can't be more than the total amount."
       end
