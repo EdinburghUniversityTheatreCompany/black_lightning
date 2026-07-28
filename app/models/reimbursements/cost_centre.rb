@@ -31,10 +31,11 @@ module Reimbursements
   # mailboxes. Fringe (F40) is live; termtime (BED) becomes a second row when the
   # portal takes over termtime payments — a row, not a rewrite.
   #
-  # Now an ActiveRecord model (was a frozen in-code value): the business manager
-  # edits these operational settings in the UI (Settings, Phase F). Each cost
-  # centre has its own +receive_mailbox+ (email-in) and +send_mailbox+ (draft /
-  # send-from) — they may differ. Table inferred as reimbursements_cost_centres.
+  # An ActiveRecord model rather than a frozen in-code value, because the
+  # business manager edits these operational settings in the UI (Settings). Each
+  # cost centre has its own +receive_mailbox+ (email-in) and +send_mailbox+
+  # (draft / send-from) — they may differ. Table inferred as
+  # reimbursements_cost_centres.
   class CostCentre < ApplicationRecord
     # EUSA finance's inbox, the default recipient for the BACS request email.
     DEFAULT_EUSA_RECIPIENT = "finance@eusa.ed.ac.uk".freeze
@@ -79,7 +80,7 @@ module Reimbursements
       order(:id).first
     end
 
-    # Where renamed receipts land, or nil until configured (Settings, Phase F).
+    # Where renamed receipts land, or nil until configured (Settings).
     def receipts_folder
       folder(sharepoint_receipts_drive_id, sharepoint_receipts_folder_id)
     end
@@ -128,9 +129,8 @@ module Reimbursements
     # --- Copy derived from this cost centre -------------------------------
     # Every producer- and operator-facing email, filename and sign-off reads
     # its wording from here rather than hardcoding "Bedlam Fringe", so a second
-    # cost centre gets correct copy the moment its row exists. Subjects used to
-    # carry two different literal prefixes ("[Bedlam Fringe]" and
-    # "[Bedlam BACS]"); +subject_prefix+ is the single source they now share.
+    # cost centre gets correct copy the moment its row exists. +subject_prefix+
+    # is the single source every subject line shares.
 
     # The bracketed tag on every reimbursements email subject.
     def subject_prefix
@@ -161,8 +161,7 @@ module Reimbursements
     end
 
     # --- Nightly auto-submit scheduling -----------------------------------
-    # Ports bedlam-bacs nightly_support.py (most_recent_run_day / is_due),
-    # storing the last-completed date on the row instead of nightly_state.toml.
+    # The last-completed run date is stored on the row itself.
     # +nightly_run_days+ uses Ruby wday (0=Sun..6=Sat), so [2, 4] = Tue/Thu.
 
     # Is +date+ one of the configured run-days? The plain schedule check.

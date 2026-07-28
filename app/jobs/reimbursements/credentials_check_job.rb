@@ -4,10 +4,9 @@ module Reimbursements
   # before the Entra client secret expires, so mailbox processing never dies
   # silently. Sudden auth failures are alerted separately by MailboxPollJob.
   # Explicitly ::ApplicationJob (not Reimbursements::ApplicationJob): this job
-  # never touches the store, and a bare `ApplicationJob` here would otherwise
-  # silently resolve to the new job base class via Ruby's lexical constant
-  # lookup (same module nesting) — a real, previously-invisible reparenting
-  # this exact line was added to prevent.
+  # never touches the store, and a bare `ApplicationJob` here would silently
+  # resolve to the reimbursements job base class via Ruby's lexical constant
+  # lookup (same module nesting), reparenting it invisibly.
   class CredentialsCheckJob < ::ApplicationJob
     queue_as :default
 
