@@ -261,3 +261,20 @@ revisited, note the ordering trap: it must be set **above the railtie requires**
 `config/application.rb`, not next to `require "image_processing/vips"`, because
 `active_storage/engine` eagerly requires `active_storage/analyzer/image_analyzer/vips` and
 libvips reads the variable once, in `vips_init()`.
+
+## Legacy Invoice claims that pay the submitter, and no finance-side way to re-type them
+
+`ExpenseForm` now blocks submitting an Invoice with a blank payee trio (2026-07-28), because
+the trio's absence silently routes payment to the submitter's own bank details. Two loose ends
+that were out of scope for that change:
+
+1. **Rows created before the rule.** Any Pending/Approved `Invoice` with no override was
+   submitted under the old rule and is still heading for the submitter's account. `ReviewSupport
+   .attention_summary` can't see it (the fallback satisfies its bank-details check), so it is not
+   flagged anywhere. Worth an advisory reason — "Invoice with no third-party payee" — and a
+   one-off count against production before deciding whether it needs a backfill at all.
+2. **Finance can't fix a mis-typed claim.** `ExpenseEditsController` edits every other field at
+   any status but never exposes `expense_type`, so an operator who sees "this is really a
+   reimbursement" has to ask the producer to withdraw and resubmit. Adding the type to that form
+   would close it, provided the same all-or-nothing/payee rules are applied to the edit path
+   (it validates the bank trio separately from `ExpenseForm`, via `bank_detail_override_error`).
