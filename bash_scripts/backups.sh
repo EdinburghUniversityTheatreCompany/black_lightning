@@ -10,7 +10,19 @@ set -euo pipefail
 # user=root
 # password=<the mysql root password from the mysql.key file or the bitwarden
 
-mysqldump -h 127.0.0.1--all-databases > black-lightning-db-backup.sql
+# MySQL is a Kamal accessory on the private `kamal` docker network and publishes
+# no port (removed deliberately in 6dfb22ee), so 127.0.0.1 on the HOST cannot
+# reach it. That went unnoticed because the running container kept a stale port
+# mapping from before that commit, until it was recreated on 2026-07-28 and this
+# script started failing. Go through the container instead -- no exposed port.
+# --single-transaction takes a consistent InnoDB snapshot without locking the
+# site out of its own tables for the length of the dump.
+# \042 = double quote, \047 = single quote; octal avoids nesting quotes here.
+MYSQL_PW=$(sed -n 's/^password[[:space:]]*=[[:space:]]*//p' ~/.my.cnf | tr -d '\042\047\r\n')
+docker exec -e MYSQL_PWD="$MYSQL_PW" blacklightning-mysql \
+  mysqldump -uroot --protocol=TCP -h127.0.0.1 \
+  --all-databases --single-transaction --routines --triggers --events \
+  > black-lightning-db-backup.sql
 
 /home/deploy/bin/duplicacy backup
 

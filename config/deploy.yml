@@ -91,6 +91,23 @@ accessories:
   mysql:
     image: mysql:8.4
     host: bdlm-eusa-ed-ac-uk
+    # The host has 1.7GB of RAM total, shared with Puma (which also runs Solid
+    # Queue in-process) and kamal-proxy. At MySQL's defaults that is not enough:
+    # on 2026-07-28 the kernel OOM-killed dockerd itself, taking the site down.
+    #
+    # performance_schema is the big one -- 200-400MB of instrumentation we do not
+    # read, because query timings come from Skylight on the Rails side. Losing it
+    # costs the sys schema views and post-hoc lock forensics; the slow query log
+    # below covers the everyday case. Drop the flag and reboot to get it back.
+    #
+    # max_connections defaults to 151, each reserving per-connection buffers, for
+    # a single Puma app that will never open that many.
+    cmd: >-
+      --performance-schema=OFF
+      --innodb-buffer-pool-size=192M
+      --max-connections=60
+      --slow-query-log=ON
+      --long-query-time=1
     env:
       clear:
         MYSQL_ROOT_HOST: "%"
