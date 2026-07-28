@@ -427,4 +427,13 @@ Start the test database using `docker start /mysql8` before running any tests.
 - **Admin search-form/index table headers** translate symbol headers via `t("simple_form.labels.defaults.<key>")` (see `SearchFormHelper` and `shared/_table.erb`). A new column used as a header or search field needs a matching key in `config/locales/simple_form.en.yml` under `simple_form.labels.defaults`, or the page raises "Translation missing".
 - **The markdown editor (`Admin::MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
 - **Fixtures with an explicit `id:` break association-by-label references.** Some fixtures set an explicit `id:` (e.g. `test/fixtures/users.yml` `admin` has `id: 1`). Referencing such a record by label in another fixture's association (`creator: admin`) sets the foreign key to `ActiveRecord::FixtureSet.identify(:admin)` — a *hashed* id that does **not** equal the explicit `id`, so the loaded association (`opportunity.creator`) comes back `nil` even though `creator_id` is set. When a test relies on the association resolving, reference the explicit id directly (`creator_id: 1`), not the label.
+- **Capybara's `select` can't drive most admin selects.** `select_controller.js` replaces every
+  `.simple-select2` element with a **Tom Select** widget and hides the original `<select>`, so
+  `select "X", from: "Label"` raises `ElementNotFound`. Click the widget instead (`.ts-control`,
+  then the `.ts-dropdown-content .option`) — see `tom_select` in
+  `test/system/admin/reimbursements/producer_js_test.rb`. Tom Select fires a native `change` on
+  the underlying select, so Stimulus actions bound to it still run.
+- **`test/system/konami_code_test.rb` errors with `ActiveStorage::FileNotFoundError`** on a
+  seeded header image (verified on an unmodified `main`, 2026-07-28) — a pre-existing failure,
+  not something your branch broke.
 - **No mocking library:** the suite has neither mocha nor `minitest/mock` (minitest 6 dropped it). Don't write `.stubs`/`.stub`. Stub external services by toggling their config instead (e.g. force a reCAPTCHA failure with `Recaptcha.configuration.skip_verify_env.delete("test")` and no token in the request).
