@@ -32,10 +32,37 @@ Three things bit during the real run, all worth knowing:
    booted three weeks earlier, before a credential rotation, so it no longer matched the
    app's. Harmless (see above), and the reboot refreshed it.
 
-Remaining, not addressed here: stale `config/master.key` copies in
-`/srv/black_lightning/shared/` and each release directory (Capistrano leftovers — the
-Kamal deploy reads the key locally or from Bitwarden, never from the server), and the
-root filesystem sitting at 92% full.
+## The host's three hard constraints
+
+Read this before running anything heavy on `bdlm-eusa-ed-ac-uk`. They compound, and on
+2026-07-28 they took the site down for roughly an hour.
+
+| Constraint | Consequence |
+|---|---|
+| **1.7 GB RAM** (cannot be raised) | Shared by MySQL, Puma (running Solid Queue in-process) and kamal-proxy. The kernel OOM-killed **dockerd itself**, which killed every container. |
+| **XFS formatted `ftype=0`** | Docker *cannot* use `overlay2` and falls back to **`fuse-overlayfs`**, which runs in userspace and is several times slower. Every `docker` command is slow; `docker system df` times out entirely. Only fixable by reformatting, or giving `/var/lib/docker` its own correctly-formatted volume. |
+| **44 GB disk** | Was at 92% before this cleanup; both XFS and overlay degrade badly when near full. |
+
+**What that means in practice:** never run two heavy I/O operations at once. The outage came
+from a `docker container prune` left running from a timed-out ssh call, a second detached
+prune started on top of it, plus a 7 GB `rm -rf` and a journal vacuum — load hit 47, the box
+swapped itself to a standstill, and sshd could not complete a handshake. Any one of those
+alone would have been fine.
+
+The daily prune (`/usr/local/sbin/docker-prune`, 06:30 via `/etc/cron.d/docker-prune`) is
+built for this: `flock` so runs can never overlap, `ionice -c3 nice -n19` so it yields, and
+06:30 to stay clear of the 04:17 backup which rclones two buckets and can run long.
+
+**The nightly backup depends on the accessory container name.** It runs
+`docker exec blacklightning-mysql mysqldump …` (see `bash_scripts/backups.sh`) because the
+accessory publishes no port. If that container is ever renamed, the backup silently fails.
+
+Cleared during the same session: the legacy nginx/Passenger stack and the **root cron entry
+that restarted it every 5 minutes** — it was holding ports 80/443, so which server answered
+the site was decided by boot-order race rather than configuration. Also the orphaned
+`certbot renew` cron (certbot manages no certificates; kamal-proxy does its own TLS), a
+world-readable CloudFlare origin private key under `/opt/nginx/certs`, and stale
+`config/master.key` copies left by Capistrano. Disk went 92% → 68%.
 
 ---
 
