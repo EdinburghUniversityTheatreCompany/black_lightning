@@ -69,8 +69,8 @@ module ReimbursementsHelper
 
   # The one date format for the whole reimbursements section: ISO 8601
   # (YYYY-MM-DD), or "-" when nil/blank. Accepts a Date or Time (the date part
-  # is taken). Use this everywhere a reimbursements date is shown so the ~6
-  # ad-hoc strftime/iso8601/localize formats never drift apart again.
+  # is taken). Use this everywhere a reimbursements date is shown, so ad-hoc
+  # strftime/iso8601/localize calls can't drift apart.
   def reimbursements_date(value)
     return "-" if value.blank?
 
@@ -79,9 +79,8 @@ module ReimbursementsHelper
 
   # The one money format for the whole reimbursements section: a GBP amount as
   # "£12.50" (2dp, thousands-separated), or "-" when nil. Accepts a numeric or a
-  # numeric string (some emails pre-format their amounts). Consolidates the old
-  # budget_money helper and the ad-hoc number_to_currency / number_with_precision
-  # / "£%.2f" call sites, so nil renders "-" (not "£0.00", not "—") everywhere.
+  # numeric string (some emails pre-format their amounts). The single definition
+  # is what makes nil render "-" (not "£0.00", not "—") everywhere.
   def reimbursements_money(amount)
     return "-" if amount.nil?
 
@@ -89,9 +88,9 @@ module ReimbursementsHelper
   end
 
   # The one "no value here" glyph for the reimbursements section, matching what
-  # reimbursements_date / reimbursements_money already render for nil. Views
-  # used to hardcode an em dash, so the same empty cell read as "—" in one
-  # column and "-" in the next.
+  # reimbursements_date / reimbursements_money already render for nil. A view
+  # hardcoding an em dash makes the same empty cell read "—" in one column and
+  # "-" in the next.
   BLANK_VALUE = "-".freeze
 
   def reimbursements_value(value)
@@ -135,10 +134,10 @@ module ReimbursementsHelper
   end
 
   # An accessible popover listing the reasons an expense needs attention /
-  # completion. Replaces the old `title=` tooltip (invisible to keyboard and
-  # screen-reader users) with a focusable <button> badge that carries
-  # aria-expanded + aria-controls and toggles a Popper-positioned panel of
-  # reasons (see popover_controller.js). Used on the Review card, the finance
+  # completion. A focusable <button> badge carrying aria-expanded +
+  # aria-controls, toggling a Popper-positioned panel of reasons (see
+  # popover_controller.js) — a `title=` tooltip would be invisible to keyboard
+  # and screen-reader users. Used on the Review card, the finance
   # expenses table and the producer's own expenses table so all three surface
   # the same reasons the same accessible way.
   #

@@ -13,9 +13,9 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%# What the paste covers, when it covers more than one pot: the old wizard
-    filtered to a single code and dropped the rest in silence, so say plainly
-    which centres these rows landed in. %>
+<%# What the paste covers, when it covers more than one pot: say plainly which
+    centres these rows landed in rather than leaving a multi-centre paste
+    looking like a single-centre one. %>
 <% attributed_by_centre = @attribution.attributed.map(&:cost_centre).tally %>
 <% if attributed_by_centre.size > 1 %>
   <%= render AlertComponent.new(type: :info) do %>
