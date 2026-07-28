@@ -1,8 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # EUSA actuals reconciliation for the finance team. Ports bedlam-bacs
-    # `pages/6_Reconcile.py`: a three-step wizard.
+    # EUSA actuals reconciliation for the finance team: a three-step wizard.
     #
     #   1. show    — paste the monthly EUSA actuals export.
     #   2. preview — parse (legacy/Sage auto-detect), ATTRIBUTE each row to the
@@ -17,25 +16,22 @@ module Admin
     #                operator left ticked, mark matched expenses Paid, and email
     #                the producers "you've been paid".
     #
-    # PER-ROW COST CENTRES. The wizard used to filter a paste down to ONE code
-    # (a hardcoded "F40", later CostCentre.default) and silently drop the rest,
-    # so a whole-organisation or termtime export lost its other centres with
-    # nothing on screen to explain it. The export already carries the answer per
-    # row, so nobody has to tell it: see Reimbursements::ActualsAttribution for
-    # the three outcomes (attributed / unrecognised code, skipped visibly /
-    # blank code, needing an explicit operator choice).
+    # PER-ROW COST CENTRES: a paste may span as many centres as it likes, each
+    # row landing in the centre its own Cost Centre column names. Filtering a
+    # paste to one code loses every other centre's rows silently. See
+    # Reimbursements::ActualsAttribution for the three outcomes (attributed /
+    # unrecognised code, skipped visibly / blank code, needing an explicit
+    # operator choice).
     #
     # The wizard is stateless: preview/apply re-parse the pasted text carried in
     # the form (the parse + match functions are pure), so nothing is stashed in
     # the session and the dedup on apply always re-checks a fresh actuals list.
-    # The operator's blank-row choice therefore travels in the form too, the way
-    # the offsetting-pair ticks do — and apply refuses to commit anything while
-    # that answer is missing, because quietly dropping the rows at the commit
-    # step is exactly the silent loss this change removes.
+    # The operator's blank-row choice travels in the form too, the way the
+    # offsetting-pair ticks do, and apply refuses to commit anything while that
+    # answer is missing rather than dropping those rows at the commit step.
     #
     # Dedup keys off each row's own EUSA period AND cost centre, so a single
-    # paste spanning several of either is deduped bucket-by-bucket rather than as
-    # one block.
+    # paste spanning several of either is deduped bucket-by-bucket.
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
@@ -184,20 +180,18 @@ module Admin
       # against the actuals already stored for the same EUSA period AND cost
       # centre.
       #
-      # The cost centre had to join the period in the bucket key the moment one
-      # paste could span several centres: two centres can each carry a row with
-      # the same nominal code, narrative and amount in the same period (a shared
-      # supplier charge split between pots, the same recurring journal), and on a
-      # period-only key the second centre's row reads as "already imported" and
-      # vanishes — the silent drop this whole change removes, reappearing one
-      # layer down.
+      # The cost centre belongs in the bucket key because a paste can span
+      # several centres: two can each carry a row with the same nominal code,
+      # narrative and amount in the same period (a shared supplier charge split
+      # between pots, the same recurring journal), and on a period-only key the
+      # second centre's row reads as "already imported" and vanishes.
       #
-      # A STORED row with no cost centre of its own (imported before this column
-      # existed, or with a blank code) is counted in EVERY centre's bucket. It
-      # cannot say which pot it belongs to, and here the asymmetry runs the other
-      # way from the offsetting-pair heuristic: skipping a re-import leaves a
-      # visible gap in a paste, whereas importing a duplicate double-counts real
-      # spend in the ledger and every rollup.
+      # A STORED row with no cost centre of its own (a blank code, or a row
+      # predating the column) is counted in EVERY centre's bucket. It cannot say
+      # which pot it belongs to, and here the asymmetry runs the OTHER way from
+      # the offsetting-pair heuristic: skipping a re-import leaves a visible gap
+      # in a paste, whereas importing a duplicate double-counts real spend in the
+      # ledger and every rollup.
       def dedup(entries)
         existing = Hash.new do |cache, key|
           period, cost_centre_id = key

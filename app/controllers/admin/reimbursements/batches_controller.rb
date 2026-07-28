@@ -1,8 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team Build Batch + History, porting bedlam-bacs
-    # pages/3_Build_Batch.py and pages/4_History.py.
+    # Finance-team Build Batch + History.
     #
     # * new / create — preview every Approved expense via its EFFECTIVE payee
     #   (flagging "→ third party" overrides), set the BACS date / EUSA recipient

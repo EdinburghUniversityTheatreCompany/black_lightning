@@ -1,7 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # The finance team's review queue. Ports bedlam-bacs `pages/2_Review.py`:
+    # The finance team's review queue:
     # Pending / Approved tabs, editable expense cards, an AI check kicked off per
     # unchecked Pending expense on load (a background job, so the request isn't
     # blocked), a modulus badge on the EFFECTIVE payee details, payee-override
@@ -359,8 +359,8 @@ module Admin
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence
         }
-        # Only write excl-VAT when a positive value is given, mirroring Review.py
-        # (0 means "not yet known", leave the field alone).
+        # Only write excl-VAT when a positive value is given: 0 means "not yet
+        # known", so leave the field alone.
         excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
         attrs[:amount_excl_vat] = excl_vat if excl_vat
         attrs
