@@ -100,10 +100,12 @@ module Admin
           "Reload the form to pick up the change."
       end
 
-      # Active budgets (income included — they carry forecasts too), named for a
-      # deterministic form order.
+      # The selected year's active budgets (income included — they carry
+      # forecasts too), named for a deterministic form order. Scoped to the
+      # year: a revision agreed at this year's budget meeting has no business
+      # re-forecasting last year's closed lines.
       def active_budgets_for_update
-        store.budgets.select(&:active).sort_by { |b| b.name.to_s.downcase }
+        store.budgets_for_year.select(&:active).sort_by { |b| b.name.to_s.downcase }
       end
 
       # One {budget_id:, amount:} per budget whose amount field holds a readable

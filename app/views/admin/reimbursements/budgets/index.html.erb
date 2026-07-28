@@ -1,3 +1,5 @@
+<%= render "admin/reimbursements/shared/year_selector" %>
+
 <p class="mb-3 text-gray-600">
   Every budget category with its live financials. Every money column here except the
   initial figure is computed by the portal from the claims, the forecast log and the EUSA
@@ -6,9 +8,11 @@
   update.
 </p>
 
-<p class="mb-3">
-  <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path,
+<p class="mb-3 flex flex-wrap gap-2">
+  <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path(year: selected_financial_year&.key),
         class: btn_classes(:secondary, :sm) %>
+  <%= link_to "New budget", new_admin_reimbursements_budget_path(year: selected_financial_year&.key),
+        class: btn_classes(:primary, :sm) %>
 </p>
 
 <div class="mb-2 flex items-center justify-between gap-3">

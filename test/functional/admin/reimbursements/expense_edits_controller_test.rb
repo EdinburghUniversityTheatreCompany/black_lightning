@@ -29,7 +29,7 @@ module Admin
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements.build_store }
+        BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
         ExpenseEditsController.checker_builder = -> { MC.default_checker }
       end
 

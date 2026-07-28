@@ -31,7 +31,7 @@ module Admin
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements.build_store }
+        BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
         ReviewController.checker_builder = -> { MC.default_checker }
         ReviewController.notifier_builder =
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
@@ -438,7 +438,7 @@ module Admin
         updates = []
         store.define_singleton_method(:find_expense!) { |_id| expense }
         store.define_singleton_method(:update_expense!) { |*args| updates << args }
-        BaseController.store_builder = -> { store }
+        BaseController.store_builder = ->(**) { store }
         sign_in @user
 
         patch :approve, params: { id: "recBlankBud" }

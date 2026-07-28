@@ -1,0 +1,46 @@
+<p class="mb-3">
+  <%= link_to admin_reimbursements_financial_years_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">&larr;</span> All financial years
+  <% end %>
+</p>
+
+<%= render CardComponent.new(title: @financial_year.label) do %>
+  <p class="mb-4 text-sm">
+    <% if @financial_year.active? %>
+      <%= render BadgeComponent.new(type: :success, pill: true).with_content("Active") %>
+      <span class="text-gray-600">This is the year submitters are filing claims against.</span>
+    <% elsif @financial_year.status == :past %>
+      <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Past") %>
+      <span class="text-gray-600">
+        A previous year, kept for reference. Its budgets are still viewable and editable.
+      </span>
+    <% else %>
+      <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Draft") %>
+      <span class="text-gray-600">
+        Not live yet. Set its budgets up here, then make it active from the
+        <%= link_to "financial years list", admin_reimbursements_financial_years_path,
+                    class: "text-blue-700 hover:underline" %>.
+      </span>
+    <% end %>
+  </p>
+
+  <%= render "form", financial_year: @financial_year,
+                     url: admin_reimbursements_financial_year_path(@financial_year.key),
+                     submit_label: "Save", show_key: false %>
+<% end %>
+
+<%= render CardComponent.new(title: "Budgets") do %>
+  <p class="mb-3 text-sm text-gray-600">
+    Set this year's budgets up from the committee's spreadsheet — paste it or upload the .xlsx, check
+    what it would do, then confirm. Re-import a revised sheet any time: matching lines are updated
+    rather than duplicated.
+  </p>
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "Import budgets",
+                admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+                class: btn_classes(:primary) %>
+    <%= link_to "View this year's budgets",
+                admin_reimbursements_budgets_path(year: @financial_year.key),
+                class: btn_classes(:secondary) %>
+  </div>
+<% end %>

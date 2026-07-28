@@ -261,3 +261,17 @@ revisited, note the ordering trap: it must be set **above the railtie requires**
 `config/application.rb`, not next to `require "image_processing/vips"`, because
 `active_storage/engine` eagerly requires `active_storage/analyzer/image_analyzer/vips` and
 libvips reads the variable once, in `vips_init()`.
+
+## `ImportParsing`'s categorisation helper is user-matching-specific
+
+*Noticed 2026-07-28 while writing `Reimbursements::BudgetImport`.*
+
+The concern's parsing half (`parse_data`/`parse_tsv`/`parse_xlsx`/`find_column`) is genuinely
+generic and the budget import reuses it happily. Its categorisation half is not:
+`build_categorized_result(multi_match_bucket:)` hardcodes the keys `:existing_user` /
+`:existing_users`, and `determine_bucket` is expected to return a `User`. `BudgetImport`
+therefore writes its own `categorize`, duplicating the bucket-loop shape.
+
+**Fix:** rename the payload key to something domain-neutral (`:match` / `:matches`) and let
+the including class name its own buckets, then have `BudgetImport` use it. Small, but it is
+the difference between a shared concern and a concern with one real user and one squatter.

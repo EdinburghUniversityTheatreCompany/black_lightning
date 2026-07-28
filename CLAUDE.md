@@ -209,6 +209,49 @@ survive as historical import provenance and are never written. Spec + plan in
     `store.budgets_with_actuals` does (budgets index/overview + the Budgets export sheet).
     Don't "fix" a caller by switching it: the producer's budget `<select>` used to load the
     whole expenses + actuals ledger to draw a dropdown.
+- **Financial years** (`Reimbursements::FinancialYear`, `Admin::Reimbursements::FinancialYearsController`).
+  Each Fringe recurs with its own budgets; a year is built as a **draft** (create → import its
+  budgets → check) and switched to with `activate!`, never a checkbox on the edit form —
+  activating changes every submitter's budget picker. `activate!` stands the incumbent down and
+  promotes the target in one transaction (`only_one_active` rejects the record otherwise, and a
+  target that fails to save must not leave the portal with NO active year).
+  - **The selector is `?year=<key>` on the budget screens only** (`FinanceController
+    #resolve_financial_year!`, defaulting to the active year; an unknown key alerts and falls
+    back). Expenses, Review, Actuals, Batches and Reconcile are deliberately NOT year-scoped yet.
+  - **Which store reads are scoped is the design, not an oversight.** `store.budgets` stays
+    UNSCOPED — its callers are id→budget lookups (Review, the expenses index, every export, the
+    nightly job) and the reconcile matcher, so scoping it would blank the budget name on last
+    year's claims and stop the year-boundary tail of EUSA credits matching their income line.
+    `budgets_for_year` / `budgets_with_actuals` / `budget_updates` are scoped.
+    **`active_budgets` follows the ACTIVE year, never the selected one**, so a finance user
+    browsing next year's draft can't file against it.
+  - **A row with no year counts as belonging to the year being viewed** (`DatabaseStore#in_year`),
+    the same leniency the reconcile matcher gives a budget with no cost centre: every row
+    predating financial years is unstamped until `reimbursements:financial_year_backfill` runs,
+    and the strict reading would empty the budget list and every submitter's budget picker with
+    nothing on screen to explain it.
+  - **`BaseController::DEFAULT_STORE_BUILDER` exists so a test can put the seam back.** The
+    store seam now takes `financial_year:`; restoring it by hand as `-> { build_store }` drops
+    the argument, and `class_attribute` makes that stick for the rest of the process — every
+    later year-scoped page in that worker then renders every year's budgets at once.
+- **Setting a year up = importing the committee's spreadsheet** (`Reimbursements::BudgetImport`,
+  `Admin::Reimbursements::BudgetImportsController`, `DatabaseStore#import_budgets!`). Paste TSV or
+  upload .xlsx (both via the shared `ImportParsing` concern, as the membership import does) →
+  preview → apply. **Stateless like Reconcile**: an upload is normalised to canonical TSV
+  (`BudgetImport#to_tsv`, escaping tabs/newlines inside a cell) and carried through the preview in
+  a hidden field, so apply re-parses and re-validates rather than trusting the preview.
+  - Buckets, matched by name within one `(financial year, cost centre)`: **create / revise /
+    unchanged / invalid**, plus `absent_budgets` (in the year, not in the sheet) which is
+    **reported and never deleted** — a budget's claims and history hang off it.
+  - **`initial_budget` is written ONLY on create.** A re-import logs revisions as forecasts under
+    one `BudgetUpdate`, so `Budget#variance` keeps meaning "drift from the figure the committee
+    agreed" however often the sheet is re-sent.
+  - **An unreadable amount blocks the whole import; an unknown owner email only warns.** A
+    mis-read figure is silent wrong money; a stale committee email must not stop thirty lines
+    landing, and a missing owner surfaces visibly as an unendorsed claim. No `Person` is ever
+    auto-created from a bare email. `import_budgets!` is all-or-nothing (unlike Reconcile's
+    per-row rescue): a half-imported list has no audit value, and re-running after a fix is cheap
+    because matching is by name.
 - **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma
   decimal). `.parse` → nil for anything unreadable; **`.parse!` distinguishes blank
   ("nothing typed", nil) from unreadable (raises)** — the batch budget-update form needs

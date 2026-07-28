@@ -90,7 +90,7 @@ ChaosRails::Application.routes.draw do
 
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
-      resources :budgets, only: %i[index edit update] do
+      resources :budgets, only: %i[index new create edit update] do
         collection do
           get :overview
         end
@@ -104,6 +104,21 @@ ChaosRails::Application.routes.draw do
       # Multi-budget forecast revisions: one shared date + note across several
       # budgets (e.g. after a budget meeting).
       resources :budget_updates, only: %i[index new create]
+
+      # Financial years. A year is built as a draft (create -> edit -> import
+      # its budgets) and switched to with the separate `activate` action, so
+      # next year can be set up without disturbing the one being paid out of.
+      resources :financial_years, only: %i[index new create edit update], param: :key do
+        member { post :activate }
+
+        # Import a year's budgets from the committee's spreadsheet:
+        # paste/upload -> preview -> apply, the shape Reconcile already uses.
+        resource :budget_import, only: %i[show], controller: "budget_imports" do
+          post :preview
+          post :apply
+          get  :template
+        end
+      end
 
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review

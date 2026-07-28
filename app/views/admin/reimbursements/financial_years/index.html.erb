@@ -1,0 +1,38 @@
+<p class="mb-3 text-gray-600">
+  Each Fringe has its own budgets, expenses and actuals. One year is active at a time — that's the
+  year submitters file claims against — and the others stay here to look back at. To set the next
+  one up: create it, import its budgets, then make it active.
+</p>
+
+<p class="mb-3">
+  <%= link_to "New financial year", new_admin_reimbursements_financial_year_path,
+              class: btn_classes(:primary, :sm) %>
+</p>
+
+<%= render CardComponent.new(title: "#{@financial_years.size} #{'financial year'.pluralize(@financial_years.size)}") do %>
+  <div class="flex flex-col gap-2">
+    <% @financial_years.each do |year| %>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-gray-200 px-3 py-2">
+        <span class="font-medium min-w-40"><%= year.label %></span>
+        <span class="text-gray-600 text-sm grow">
+          <%= year.starts_on ? l(year.starts_on, format: :long) : "no start date" %>
+          &ndash;
+          <%= year.ends_on ? l(year.ends_on, format: :long) : "no end date" %>
+        </span>
+        <% badge = { active: [ :success, "Active" ], past: [ :secondary, "Past" ],
+                     draft: [ :secondary, "Draft" ] }.fetch(year.status) %>
+        <%= render BadgeComponent.new(type: badge.first, pill: true).with_content(badge.last) %>
+        <%= link_to "Edit", edit_admin_reimbursements_financial_year_path(year.key),
+                    "aria-label": "Edit #{year.label}", class: btn_classes(:primary, :sm) %>
+        <% unless year.active? %>
+          <%# Activating changes the budget picker for every submitter, so it asks first. %>
+          <%= button_to "Make active", activate_admin_reimbursements_financial_year_path(year.key),
+                        class: btn_classes(:warning, :sm),
+                        form: { class: "inline-block",
+                                data: { turbo_confirm: "Make #{year.label} the active financial year? " \
+                                                       "Submitters will start filing claims against its budgets." } } %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

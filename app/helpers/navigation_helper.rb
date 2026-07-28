@@ -71,6 +71,7 @@ module NavigationHelper
     children << { title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" } if can? :manage, :reimbursements_finance
     children << { title: "Budget Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie" } if can? :manage, :reimbursements_finance
     children << { title: "Budget Updates", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus" } if can? :manage, :reimbursements_finance
+    children << { title: "Financial Years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days" } if can? :manage, :reimbursements_finance
     children << { title: "Build Batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" } if can? :manage, :reimbursements_finance
     children << { title: "History", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" } if can? :manage, :reimbursements_finance
     children << { title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" } if can? :manage, :reimbursements_finance

@@ -1,0 +1,79 @@
+<p class="mb-3">
+  <%= link_to "← All budgets", admin_reimbursements_budgets_path(year: selected_financial_year&.key),
+              class: "text-sm text-primary underline" %>
+</p>
+
+<%= render CardComponent.new(title: "New budget") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    For the one-off line that turns up mid-year. To set a whole year up, import the committee's
+    spreadsheet from
+    <%= link_to "Financial years", admin_reimbursements_financial_years_path,
+                class: "text-blue-700 hover:underline" %> instead.
+    <% if selected_financial_year %>
+      This budget will belong to <strong><%= selected_financial_year.label %></strong>.
+    <% end %>
+  </p>
+
+  <%= form_with url: admin_reimbursements_budgets_path(year: selected_financial_year&.key),
+                method: :post, class: "flex flex-col gap-4" do |form| %>
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= label_tag :name, "Name", class: "block text-sm font-medium" %>
+        <%= text_field_tag :name, params[:name],
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= label_tag :nominal_code, "Nominal code", class: "block text-sm font-medium" %>
+        <%= text_field_tag :nominal_code, params[:nominal_code],
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+      </div>
+      <div>
+        <%= label_tag :budget_type, "Type", class: "block text-sm font-medium" %>
+        <%= select_tag :budget_type,
+                       options_for_select(::Reimbursements::Budget::TYPES, params[:budget_type]),
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+      <div>
+        <%= label_tag :initial_budget, "Initial budget (£)", class: "block text-sm font-medium" %>
+        <%= number_field_tag :initial_budget, params[:initial_budget], step: "0.01",
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+      </div>
+      <% if @cost_centres.size > 1 %>
+        <div>
+          <%= label_tag :cost_centre_id, "Cost centre", class: "block text-sm font-medium" %>
+          <%= select_tag :cost_centre_id,
+                         options_from_collection_for_select(@cost_centres, :id, :name,
+                                                            params[:cost_centre_id]),
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+        </div>
+      <% end %>
+    </div>
+
+    <label class="inline-flex items-center gap-2 text-sm">
+      <%= check_box_tag :active, "1", params[:active].present? || params[:name].blank? %>
+      Visible to submitters
+    </label>
+
+    <fieldset aria-describedby="owner_ids_hint">
+      <legend class="block text-sm font-medium">Owners</legend>
+      <p id="owner_ids_hint" class="text-xs text-gray-500 mb-1">Tick everyone who owns this budget.</p>
+      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1">
+        <%= form.collection_check_boxes(:owner_ids, @people, :record_id,
+              ->(person) { person.name.presence || person.email },
+              { checked: Array(params[:owner_ids]) }) do |b| %>
+          <%= b.label(class: "flex items-center gap-2 text-sm") { safe_join([ b.check_box, b.text ]) } %>
+        <% end %>
+      </div>
+    </fieldset>
+
+    <div>
+      <%= label_tag :notes, "Notes", class: "block text-sm font-medium" %>
+      <%= text_area_tag :notes, params[:notes], rows: 3,
+                        class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
+    </div>
+
+    <div>
+      <%= submit_tag "Create budget", class: btn_classes(:primary) %>
+    </div>
+  <% end %>
+<% end %>

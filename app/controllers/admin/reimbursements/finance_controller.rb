@@ -10,6 +10,7 @@ module Admin
 
       skip_before_action :authorize_reimbursements!
       before_action :authorize_finance!
+      before_action :resolve_financial_year!
 
       # Injection seam for tests: the modulus checker (from the vendored Pay.UK
       # rule files in production; a fake in functional tests). Shared by every
@@ -23,7 +24,7 @@ module Admin
       # BuildBatchJob/NightlyBatchJob's own memoized +graph+).
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
-      helper_method :modulus_checker
+      helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years
 
       # A page of records for an index view. One shared page size (50) across
       # every finance list, so a future change to it is a single edit.
@@ -33,6 +34,41 @@ module Admin
 
       def authorize_finance!
         authorize! :manage, :reimbursements_finance
+      end
+
+      # --- Financial-year selector ------------------------------------------
+      # URL-as-state: ?year=fringe-2027 on any budget screen, defaulting to the
+      # active year. Resolved in a before_action rather than lazily, so the
+      # "no such year" alert is set before anything renders — and so the store
+      # is built with the year the operator actually asked for.
+
+      def resolve_financial_year!
+        requested = params[:year].presence
+        @selected_financial_year =
+          if requested.nil?
+            ::Reimbursements::FinancialYear.current
+          else
+            ::Reimbursements::FinancialYear.find_by(key: requested) || fall_back_to_active_year(requested)
+          end
+      end
+
+      # A year key that matches nothing must never quietly show a DIFFERENT
+      # year's money as though it were the requested one — say so, then fall
+      # back to the active year.
+      def fall_back_to_active_year(requested)
+        flash.now[:alert] = "There's no financial year called #{requested.inspect}. " \
+                            "Showing the active year instead."
+        ::Reimbursements::FinancialYear.current
+      end
+
+      def selected_financial_year
+        @selected_financial_year
+      end
+
+      # Every year, for the selector. Empty until the first year is created,
+      # which is the state a pre-financial-year database is in.
+      def selectable_financial_years
+        @selectable_financial_years ||= ::Reimbursements::FinancialYear.recent_first.to_a
       end
 
       def modulus_checker

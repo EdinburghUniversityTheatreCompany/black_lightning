@@ -1,0 +1,136 @@
+<%# Same frame as step 1 — see show.html.erb for why the wizard needs one. %>
+<%= turbo_frame_tag "budget_import" do %>
+<p class="mb-3">
+  <%= link_to import_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">&larr;</span> Start again
+  <% end %>
+</p>
+
+<% if flash[:alert].present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Preview: #{@financial_year.label}") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    Nothing has been written yet. Check the lines below, then confirm at the bottom.
+  </p>
+
+  <% invalid = @import.entries_in(:invalid) %>
+  <% if invalid.any? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2">
+      <p class="font-medium text-red-800">
+        <%= pluralize(invalid.size, "line") %> can't be read, so nothing can be imported yet.
+      </p>
+      <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
+        <% invalid.each do |entry| %>
+          <li><strong><%= entry.row[:name].presence || "(no name)" %></strong>: <%= entry.error %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if @import.errors.any? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+      <%= @import.errors.to_sentence %>
+    </div>
+  <% end %>
+
+  <% { create: "New budgets", revise: "Changed figures", unchanged: "Unchanged" }.each do |bucket, heading| %>
+    <% entries = @import.entries_in(bucket) %>
+    <% next if entries.empty? %>
+    <h3 class="mt-4 mb-2 font-medium"><%= heading %> (<%= entries.size %>)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Budget</th>
+            <th class="py-1 pr-4">Nominal code</th>
+            <th class="py-1 pr-4">Type</th>
+            <th class="py-1 pr-4 text-right"><%= bucket == :revise ? "Now" : "Amount" %></th>
+            <% if bucket == :revise %><th class="py-1 pr-4 text-right">Becomes</th><% end %>
+            <th class="py-1 pr-4">Owners</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% entries.each do |entry| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4"><%= entry.row[:name] %></td>
+              <td class="py-1 pr-4 font-mono">
+                <%= entry.row[:nominal_code].presence || content_tag(:span, "(none)", class: "text-amber-700") %>
+              </td>
+              <td class="py-1 pr-4"><%= entry.row[:budget_type] %></td>
+              <td class="py-1 pr-4 text-right">
+                <%= number_to_currency(bucket == :revise ? entry.budget.projected_amount : entry.row[:amount],
+                                       unit: "£") if (bucket == :revise ? entry.budget.projected_amount : entry.row[:amount]) %>
+              </td>
+              <% if bucket == :revise %>
+                <td class="py-1 pr-4 text-right font-medium"><%= number_to_currency(entry.row[:amount], unit: "£") %></td>
+              <% end %>
+              <td class="py-1 pr-4">
+                <%= entry.row[:owner_emails].join(", ") %>
+                <% if entry.unknown_owner_emails.any? %>
+                  <span class="text-amber-700">(<%= entry.unknown_owner_emails.size %> not recognised)</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if @import.absent_budgets.any? %>
+    <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      <p class="font-medium">
+        <%= pluralize(@import.absent_budgets.size, "budget") %> already in <%= @financial_year.label %>
+        <%= @import.absent_budgets.one? ? "isn't" : "aren't" %> in this sheet.
+      </p>
+      <p class="text-gray-600">
+        Nothing will happen to <%= @import.absent_budgets.one? ? "it" : "them" %> — importing never
+        deletes a budget, because its claims and history hang off it.
+        <%= @import.absent_budgets.map(&:name).to_sentence %>.
+      </p>
+    </div>
+  <% end %>
+
+  <% if @import.unknown_owner_emails.any? %>
+    <div class="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p class="font-medium">
+        <%= pluralize(@import.unknown_owner_emails.size, "owner email") %> didn't match anyone:
+        <%= @import.unknown_owner_emails.to_sentence %>.
+      </p>
+      <p>
+        The import will go ahead without <%= @import.unknown_owner_emails.one? ? "that owner" : "those owners" %>.
+        Add them on the People screen and set the owners on the budget afterwards.
+      </p>
+    </div>
+  <% end %>
+
+  <% if @import.missing_nominal_codes.any? %>
+    <p class="mt-4 text-sm text-amber-800">
+      <%= pluralize(@import.missing_nominal_codes.size, "line") %>
+      <%= @import.missing_nominal_codes.one? ? "has" : "have" %> no nominal code.
+      <%= @import.missing_nominal_codes.one? ? "It'll" : "They'll" %> import and appear under
+      "(none)" on the budget overview until you set one.
+    </p>
+  <% end %>
+
+  <%= form_with url: apply_admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+                method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
+    <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
+        previewed — including an upload, which has no file to re-send. %>
+    <%= hidden_field_tag :pasted_text, @import.to_tsv %>
+    <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
+    <%# Only the parts that are actually happening: "Import 0 new budgets and 1
+        changed figure" reads as a mistake. %>
+    <% parts = [] %>
+    <% parts << pluralize(@import.entries_in(:create).size, "new budget") if @import.entries_in(:create).any? %>
+    <% parts << pluralize(@import.revisions.size, "changed figure") if @import.revisions.any? %>
+    <%= submit_tag parts.any? ? "Import #{parts.to_sentence}" : "Nothing to import",
+                   class: btn_classes(:primary),
+                   disabled: !@import.valid? || parts.empty?,
+                   data: { disable_with: "Importing…" } %>
+    <%= link_to "Cancel", import_path, class: btn_classes(:secondary) %>
+  <% end %>
+<% end %>
+<% end %>

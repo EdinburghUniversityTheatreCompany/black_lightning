@@ -17,7 +17,7 @@ module Admin
     end
 
     teardown do
-      BaseController.store_builder = -> { ::Reimbursements.build_store }
+      BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
       BaseController.extractor_builder = -> { ::Reimbursements::Extractor.new }
     end
 
@@ -274,7 +274,7 @@ module Admin
       store.define_singleton_method(:attach_receipt!) do |*|
         raise "upload failed"
       end
-      BaseController.store_builder = -> { store }
+      BaseController.store_builder = ->(**) { store }
 
       assert_difference "::Reimbursements::Expense.count", 1 do
         post :create, params: { reimbursements_expense_form: valid_form_params }
