@@ -745,6 +745,46 @@ module Admin
         count
       end
 
+      # --- Creating one budget by hand ---------------------------------------
+
+      test "new renders the form" do
+        sign_in @user
+
+        get :new
+
+        assert_response :success
+      end
+
+      test "create makes a budget in the selected year" do
+        _, next_year = seed_two_years
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::Budget.count }, 1 do
+          post :create, params: { year: next_year.key, name: "Late addition", nominal_code: "4200",
+                                  budget_type: "Expense", initial_budget: "£1,200", active: "1",
+                                  owner_ids: [ @alice.record_id ] }
+        end
+
+        budget = ::Reimbursements::Budget.find_by(name: "Late addition")
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_equal next_year, budget.financial_year
+        assert_equal ::Reimbursements::CostCentre.default, budget.cost_centre
+        # "£1,200" must reach the decimal column parsed, not as a string AR
+        # would cast to 0.
+        assert_equal BigDecimal("1200"), budget.initial_budget
+        assert_equal [ @alice.record_id ], budget.owner_ids
+      end
+
+      test "create rejects a blank name without writing" do
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          post :create, params: { name: "", nominal_code: "4200", budget_type: "Expense" }
+        end
+
+        assert_response :unprocessable_entity
+      end
+
       # --- Financial-year selector -------------------------------------------
 
       test "index shows the selected year's budgets, not every year's" do

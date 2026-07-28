@@ -42,6 +42,31 @@ module Admin
         end
       end
 
+      # One budget line by hand. The spreadsheet import is the way a year gets
+      # set up; this is for the single line that turns up mid-year and isn't
+      # worth a re-import.
+      def new
+        @title = "New budget"
+        @people = store.people
+        @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+      end
+
+      def create
+        attrs = budget_params(::Reimbursements::Budget.new(budget_type: "Expense"))
+        if (error = budget_validation_error(attrs))
+          @title = "New budget"
+          @people = store.people
+          @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+          flash.now[:alert] = error
+          return render(:new, status: :unprocessable_entity)
+        end
+
+        budget = store.create_budget!(attrs.merge(financial_year: selected_financial_year,
+                                                  cost_centre: chosen_cost_centre))
+        redirect_to edit_admin_reimbursements_budget_path(budget.record_id),
+                    notice: "Budget created."
+      end
+
       def edit
         @title = "Budget: #{@budget.name}"
         @people = store.people
@@ -135,18 +160,26 @@ module Admin
       # +active+ (visible-to-submitters) and +owner_ids+ come from a checkbox and
       # a multi-select, so absence means "off" / "none". +initial_budget+ is only
       # sent when a valid number is given, so a blank field can't zero it.
-      def budget_params
+      def budget_params(budget = @budget)
         attrs = {
           name: params[:name].to_s.strip,
           nominal_code: params[:nominal_code].to_s.strip,
           notes: params[:notes].to_s,
-          budget_type: params[:budget_type].presence || @budget.budget_type,
+          budget_type: params[:budget_type].presence || budget.budget_type,
           active: params[:active].present?,
           owner_ids: Array(params[:owner_ids]).reject(&:blank?)
         }
         initial = parse_decimal(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?
         attrs
+      end
+
+      # Optional: with one cost centre configured there is nothing to choose,
+      # and a budget with no centre still works (the reconcile matcher treats it
+      # as belonging to the only one there is).
+      def chosen_cost_centre
+        ::Reimbursements::CostCentre.find_by(id: params[:cost_centre_id]) ||
+          ::Reimbursements::CostCentre.default
       end
 
       # The same lenient reading as the submitter form: "£1,200" and "12,50" are
