@@ -58,6 +58,20 @@ module Reimbursements
 
     def to_param = key
 
+    # :active, :past or :draft — what the year list badges each row with.
+    #
+    # A year that isn't active is NOT automatically a draft: last year has been
+    # paid out of all season, and badging it "Draft" would read as though it
+    # were still being set up. It's told apart by its start date having arrived.
+    # A year with no dates at all can only be a draft — a real past year has
+    # them.
+    def status
+      return :active if active?
+      return :past if starts_on.present? && starts_on <= Date.current
+
+      :draft
+    end
+
     # Make this the year submitters file against, moving the flag off whichever
     # year holds it. The incumbent has to be stood down FIRST — #only_one_active
     # would reject this record while another year still holds the flag — which

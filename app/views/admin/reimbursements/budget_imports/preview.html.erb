@@ -1,8 +1,14 @@
+<%# Same frame as step 1 — see show.html.erb for why the wizard needs one. %>
+<%= turbo_frame_tag "budget_import" do %>
 <p class="mb-3">
   <%= link_to import_path, class: "text-sm text-blue-700 hover:underline" do %>
     <span aria-hidden="true">&larr;</span> Start again
   <% end %>
 </p>
+
+<% if flash[:alert].present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
+<% end %>
 
 <%= render CardComponent.new(title: "Preview: #{@financial_year.label}") do %>
   <p class="mb-4 text-sm text-gray-600">
@@ -102,8 +108,10 @@
 
   <% if @import.missing_nominal_codes.any? %>
     <p class="mt-4 text-sm text-amber-800">
-      <%= pluralize(@import.missing_nominal_codes.size, "line") %> have no nominal code. They'll import
-      and appear under "(none)" on the budget overview until you set one.
+      <%= pluralize(@import.missing_nominal_codes.size, "line") %>
+      <%= @import.missing_nominal_codes.one? ? "has" : "have" %> no nominal code.
+      <%= @import.missing_nominal_codes.one? ? "It'll" : "They'll" %> import and appear under
+      "(none)" on the budget overview until you set one.
     </p>
   <% end %>
 
@@ -113,11 +121,16 @@
         previewed — including an upload, which has no file to re-send. %>
     <%= hidden_field_tag :pasted_text, @import.to_tsv %>
     <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
-    <%= submit_tag "Import #{pluralize(@import.entries_in(:create).size, 'new budget')}" \
-                   "#{@import.revisions.any? ? " and #{pluralize(@import.revisions.size, 'changed figure')}" : ''}",
+    <%# Only the parts that are actually happening: "Import 0 new budgets and 1
+        changed figure" reads as a mistake. %>
+    <% parts = [] %>
+    <% parts << pluralize(@import.entries_in(:create).size, "new budget") if @import.entries_in(:create).any? %>
+    <% parts << pluralize(@import.revisions.size, "changed figure") if @import.revisions.any? %>
+    <%= submit_tag parts.any? ? "Import #{parts.to_sentence}" : "Nothing to import",
                    class: btn_classes(:primary),
-                   disabled: !@import.valid?,
+                   disabled: !@import.valid? || parts.empty?,
                    data: { disable_with: "Importing…" } %>
     <%= link_to "Cancel", import_path, class: btn_classes(:secondary) %>
   <% end %>
+<% end %>
 <% end %>

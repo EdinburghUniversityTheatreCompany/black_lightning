@@ -88,6 +88,22 @@ module Reimbursements
       assert_equal incumbent, FinancialYear.current
     end
 
+    # --- status --------------------------------------------------------------
+
+    test "a year that is not active is past once it has started, draft before" do
+      active = FinancialYear.create!(label: "Fringe 2027", active: true)
+      # Last year has been paid out of all season — badging it "Draft" would
+      # read as though it were still being set up.
+      past = FinancialYear.create!(label: "Fringe 2026", starts_on: 1.year.ago.to_date)
+      upcoming = FinancialYear.create!(label: "Fringe 2028", starts_on: 1.year.from_now.to_date)
+      undated = FinancialYear.create!(label: "Fringe 2099")
+
+      assert_equal :active, active.status
+      assert_equal :past, past.status
+      assert_equal :draft, upcoming.status
+      assert_equal :draft, undated.status
+    end
+
     # --- ordering ------------------------------------------------------------
 
     test "recent_first puts the newest year at the top" do

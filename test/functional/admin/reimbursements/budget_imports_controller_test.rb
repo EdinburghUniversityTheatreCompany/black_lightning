@@ -56,6 +56,24 @@ module Admin
         assert_equal @year, assigns(:financial_year)
       end
 
+      # Turbo Drive REJECTS a non-redirect response to a form POST and discards
+      # it, so preview/apply would render a perfectly good page server-side that
+      # never reaches the screen. The wizard is stateless (a redirect can't
+      # carry the paste), so every step lives in one Turbo Frame instead — the
+      # same fix Reconcile uses. Only a browser catches this, hence the guard.
+      test "every wizard step renders inside the turbo frame" do
+        sign_in @user
+
+        get :show, params: { financial_year_key: @year.key }
+        assert_match(/turbo-frame id="budget_import"/, response.body)
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
+        assert_match(/turbo-frame id="budget_import"/, response.body)
+
+        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
+        assert_match(/turbo-frame id="budget_import"/, response.body)
+      end
+
       # --- Step 2: preview ---------------------------------------------------
 
       test "preview buckets the pasted sheet without writing anything" do

@@ -19,11 +19,9 @@
           &ndash;
           <%= year.ends_on ? l(year.ends_on, format: :long) : "no end date" %>
         </span>
-        <% if year.active? %>
-          <%= render BadgeComponent.new(type: :success, pill: true).with_content("Active") %>
-        <% else %>
-          <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Draft") %>
-        <% end %>
+        <% badge = { active: [ :success, "Active" ], past: [ :secondary, "Past" ],
+                     draft: [ :secondary, "Draft" ] }.fetch(year.status) %>
+        <%= render BadgeComponent.new(type: badge.first, pill: true).with_content(badge.last) %>
         <%= link_to "Edit", edit_admin_reimbursements_financial_year_path(year.key),
                     "aria-label": "Edit #{year.label}", class: btn_classes(:primary, :sm) %>
         <% unless year.active? %>

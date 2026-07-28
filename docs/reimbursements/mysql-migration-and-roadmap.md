@@ -116,6 +116,23 @@ Model:
   Fringe starts from last year's structure.
 - Cross-year reporting becomes possible (compare Fringe 2026 vs 2027 spend).
 
+### Done (2026-07-28): year setup + the budget import
+
+Shipped, and it changed one of the decisions above. **The clone action was not built.** Asked where
+next year's lines actually come from, the answer was the committee's spreadsheet — so the tool is an
+**import**, not a clone: `Reimbursements::BudgetImport` + `BudgetImportsController`
+(paste/upload → preview → apply) writing through `DatabaseStore#import_budgets!`. Re-importing a
+revised sheet is supported and logs the changed figures as forecasts under one `BudgetUpdate`
+rather than overwriting the agreed opening figure. Details and invariants are in `CLAUDE.md`.
+
+Also shipped: `FinancialYear` CRUD + draft/`activate!`, the `?year=` selector, `budgets#new/create`
+(there had been no way to create a budget in the app at all since the Airtable importer was
+deleted), and `reimbursements:financial_year_backfill`.
+
+Still open from this section: scoping the **expenses, review, actuals, batches and reconcile**
+screens to the selected year (only the budget screens are scoped today), reconcile periods within a
+year, a cost-centre selector, and cross-year reporting.
+
 ### EUSA cost-centre codes
 
 Not a table of their own. A code belongs to a cost centre, and Bedlam's codes have been stable, so
