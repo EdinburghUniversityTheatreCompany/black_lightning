@@ -6,6 +6,7 @@
 #  id         :bigint           not null, primary key
 #  active     :boolean          default(FALSE), not null
 #  ends_on    :date
+#  key        :string(255)      not null
 #  label      :string(255)      not null
 #  starts_on  :date
 #  created_at :datetime         not null
@@ -14,6 +15,7 @@
 # Indexes
 #
 #  index_reimbursements_financial_years_on_active  (active)
+#  index_reimbursements_financial_years_on_key     (key) UNIQUE
 #  index_reimbursements_financial_years_on_label   (label) UNIQUE
 #
 module Reimbursements
