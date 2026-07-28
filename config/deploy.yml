@@ -97,7 +97,10 @@ accessories:
       secret:
         - MYSQL_ROOT_PASSWORD
     directories:
-      - data:/var/lib/mysql
+      # Absolute on purpose: a relative source is expanded against the SSH
+      # session's working directory, which once landed the production database
+      # inside a Capistrano release directory.
+      - /var/lib/blacklightning/mysql:/var/lib/mysql
 #   redis:
 #     image: valkey/valkey:8
 #     host: 192.168.0.2

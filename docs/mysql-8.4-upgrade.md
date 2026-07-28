@@ -1,6 +1,45 @@
 # Production MySQL 8.0 → 8.4 upgrade
 
-**Status: not yet done.** Production still runs 8.0. This is the plan, not a record.
+**Status: DONE, 2026-07-28.** Production runs **8.4.11**, with its data directory moved
+out of the Capistrano release tree to `/var/lib/blacklightning/mysql`. Verified: all 79
+tables and 477,011 rows identical before and after. Kept as the record, and as the
+procedure if it ever has to be repeated.
+
+## What actually happened
+
+Rehearsed first against the real backup in a throwaway container: restore into 8.0,
+restart on 8.4, confirm the upgrade and that the data survived. That rehearsal also
+settled the question the env-var confusion below raised — a container booted on an
+existing data directory with a *completely different* `MYSQL_ROOT_PASSWORD` could not
+authenticate with it, while the real password still worked. The variable is inert once
+the data directory exists (the entrypoint sets `DATABASE_ALREADY_EXISTS` and skips the
+whole init branch), so a reboot cannot change or lose the password.
+
+Three things bit during the real run, all worth knowing:
+
+1. **`docker stop` never shut MySQL down cleanly.** The container carries
+   `--restart unless-stopped`, and mysqld did not finish within Docker's grace period —
+   twice ending in exit 137 (SIGKILL). What worked: `docker update --restart=no` first,
+   *then* `mysqladmin shutdown`, which exits 0 with "Shutdown complete" in the log and
+   stays down. Without the policy change, a clean shutdown is immediately undone by
+   Docker restarting the container.
+2. **The relative volume path came from a `cd` in `~deploy/.bashrc`.** Bash sources
+   `.bashrc` for non-interactive ssh too, so it set Kamal's working directory, and Kamal
+   expands relative paths against it. That line is now removed, which also moved Kamal's
+   own `.kamal` state (including env files holding secrets) out of the release tree and
+   into `/home/deploy`.
+3. **The accessory's `MYSQL_ROOT_PASSWORD` was stale** — captured when the container
+   booted three weeks earlier, before a credential rotation, so it no longer matched the
+   app's. Harmless (see above), and the reboot refreshed it.
+
+Remaining, not addressed here: stale `config/master.key` copies in
+`/srv/black_lightning/shared/` and each release directory (Capistrano leftovers — the
+Kamal deploy reads the key locally or from Bitwarden, never from the server), and the
+root filesystem sitting at 92% full.
+
+---
+
+## The original plan follows
 
 ## Why
 
