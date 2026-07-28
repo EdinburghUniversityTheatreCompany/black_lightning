@@ -5,23 +5,23 @@
 </p>
 
 <%= render CardComponent.new(title: @financial_year.label) do %>
+  <% badge, explanation = {
+       active: [ [ :success, "Active" ], "This is the year submitters are filing claims against." ],
+       past: [ [ :secondary, "Past" ],
+               "A previous year, kept for reference. Its budgets are still viewable and editable." ],
+       draft: [ [ :secondary, "Draft" ], nil ]
+     }.fetch(@financial_year.status) %>
   <p class="mb-4 text-sm">
-    <% if @financial_year.active? %>
-      <%= render BadgeComponent.new(type: :success, pill: true).with_content("Active") %>
-      <span class="text-gray-600">This is the year submitters are filing claims against.</span>
-    <% elsif @financial_year.status == :past %>
-      <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Past") %>
-      <span class="text-gray-600">
-        A previous year, kept for reference. Its budgets are still viewable and editable.
-      </span>
-    <% else %>
-      <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Draft") %>
-      <span class="text-gray-600">
+    <%= render BadgeComponent.new(type: badge.first, pill: true).with_content(badge.last) %>
+    <span class="text-gray-600">
+      <% if explanation %>
+        <%= explanation %>
+      <% else %>
         Not live yet. Set its budgets up here, then make it active from the
         <%= link_to "financial years list", admin_reimbursements_financial_years_path,
                     class: "text-blue-700 hover:underline" %>.
-      </span>
-    <% end %>
+      <% end %>
+    </span>
   </p>
 
   <%= render "form", financial_year: @financial_year,
