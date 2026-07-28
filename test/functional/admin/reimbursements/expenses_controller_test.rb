@@ -360,6 +360,19 @@ module Admin
       assert_redirected_to admin_reimbursements_expenses_path
     end
 
+    # A :base error has no field to render under, so the generic "review the
+    # problems below" banner used to be ALL the producer saw — a form that
+    # failed with no stated reason. The shared form partial lists them now.
+    test "create shows the reason a base-level rule blocked the form" do
+      sign_in @user
+      params = valid_form_params.merge(payee_name_override: "Acme Props Ltd")
+
+      post :create, params: { reimbursements_expense_form: params }
+
+      assert_response :unprocessable_entity
+      assert_includes response.body, "fill in all three: payee name, sort code, and account number"
+    end
+
     test "extract returns the extraction as json" do
       sign_in @user
 

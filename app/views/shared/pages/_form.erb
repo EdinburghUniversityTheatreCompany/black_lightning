@@ -4,6 +4,21 @@
   <div class="p-4">
     <%= f.error_notification %>
 
+    <%# error_notification is only the generic "review the problems below"
+        banner, and a :base error has no field to render underneath — so
+        without this it never reaches the user and the form looks like it
+        failed for no reason. Every form object that adds one (ExpenseForm's
+        payee and receipt rules, Opportunity, Role, OwnerEndorsement) needs
+        this to be readable. %>
+    <% base_errors = f.object.respond_to?(:errors) ? f.object.errors[:base] : [] %>
+    <% if base_errors.any? %>
+      <ul class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
+        <% base_errors.each do |base_error| %>
+          <li><%= base_error %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
     <div class="form-inputs">
       <%= yield %>
     </div>
