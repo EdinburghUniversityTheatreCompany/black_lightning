@@ -39,9 +39,8 @@ export default class extends Controller {
     this.typeChanged()
   }
 
-  // An Invoice is paid straight to the supplier, so the payee trio stops being
-  // optional there (the server enforces it; this just says so before submitting).
-  // The server renders the same two labels for the no-JS case.
+  // Says the payee trio is required on an Invoice before the submit does; the
+  // server both enforces the rule and renders the labels for the no-JS case.
   typeChanged() {
     if (!this.hasExpenseTypeTarget || !this.hasPayeeOptionalTarget) return
     const invoice = this.expenseTypeTarget.value === this.invoiceTypeValue

@@ -127,9 +127,6 @@
       </div>
     <% end %>
 
-    <%# The two types differ in WHO gets paid, which is why Invoice demands the
-        payee trio below: Reimbursement pays the submitter, Invoice pays the
-        supplier. %>
     <%= f.input :expense_type, label: "Type",
           collection: Reimbursements::Expense::SUBMITTER_TYPES, include_blank: false,
           hint: "Reimbursement pays you back for something you've already paid for. " \
