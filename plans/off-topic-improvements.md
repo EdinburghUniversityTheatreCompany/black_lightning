@@ -237,3 +237,27 @@ not the things being installed.
 **Fix:** if setup is worth attacking, the levers are caching apt lists, dropping the service
 container for the runner's preinstalled MySQL (above), and caching the 11s `bin/vite build`
 on a source hash. Setup is ~83s against ~100s of tests, so it is now roughly half the job.
+
+## VIPS-WARNING nclx noise in CI — wait for libvips 8.18
+
+Every HEIC decode prints `heifload: ignoring nclx profile` twice, straight to fd 2 (GLib's
+default handler; ruby-vips installs none of its own — its handler is commented out in the gem
+over a GIL deadlock between libvips worker threads and a blocked main thread). The
+reimbursements receipt tests decode the fixture on every run, so a CI log is full of it.
+
+Nothing is wrong: nclx is a compact video-style colour profile that essentially every iPhone
+HEIC carries, libvips ≤8.17 doesn't support it, and it decodes the image anyway. Our pipeline
+is unaffected — `ReceiptIntake#prepare` forces `colourspace(:srgb)` and `#encode` strips
+metadata, and a real decode failure raises `Vips::Error` instead (the `truncated_receipt.heic`
+path). **libvips 8.18.0 (Dec 2025) removed the warning**: `heifload` now reads nclx into CICP
+metadata and logs at `g_info`. Checked the source at v8.15.1/v8.16.0/v8.16.1/v8.17.0 — all
+four still warn. Debian trixie and ubuntu-24.04 ship 8.15–8.16, so there is no upgrade path
+short of building libvips ourselves.
+
+**Fix:** re-check when a distro we use ships libvips ≥ 8.18. Silencing it in the meantime
+(`ENV["VIPS_WARNING"] = "1"`, any value suppresses) was considered and deliberately declined
+by Mick 2026-07-28 — it would mute *all* libvips advisory warnings to hide one. If it is ever
+revisited, note the ordering trap: it must be set **above the railtie requires** in
+`config/application.rb`, not next to `require "image_processing/vips"`, because
+`active_storage/engine` eagerly requires `active_storage/analyzer/image_analyzer/vips` and
+libvips reads the variable once, in `vips_init()`.
