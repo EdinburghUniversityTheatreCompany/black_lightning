@@ -166,6 +166,56 @@ module Reimbursements
       budget
     end
 
+    # What an applied budget import did, for the confirmation screen.
+    ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, keyword_init: true)
+
+    # Applies a confirmed BudgetImport: creates the new lines, logs the revised
+    # figures as ONE budget update, and re-syncs owners on lines that already
+    # existed.
+    #
+    # All-or-nothing, unlike the reconcile wizard's per-row rescue. A half
+    # imported budget list has no audit value and no obvious repair — the
+    # operator would be left reconciling a part-built year against the
+    # spreadsheet by eye — whereas re-running the whole import after a fix is
+    # cheap, because matching is by name and a second run finds the lines it
+    # already created.
+    #
+    # Revisions go through create_budget_update! rather than rewriting
+    # initial_budget, so the spreadsheet's revision lands in the forecast
+    # history with the import named as its note.
+    def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:)
+      result = nil
+      Budget.transaction do
+        created = creates.map { |attrs| create_budget!(attrs) }
+        owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
+        update = if revisions.any?
+                   create_budget_update!(effective_date: Date.current, note: note,
+                                         created_by: created_by, forecasts: revisions)
+        end
+        result = ImportResult.new(created: created.size, revised: revisions.size,
+                                  owners_synced: owner_syncs.size, budget_update: update)
+      end
+      bust_budgets!
+      result
+    end
+
+    # One budget line. +owner_ids+ are People ids, synced after the row exists.
+    def create_budget!(attrs)
+      attrs = attrs.dup
+      owner_ids = attrs.delete(:owner_ids)
+      budget = Budget.create!(attrs)
+      budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?))
+      bust_budgets!
+      budget
+    end
+
+    def sync_budget_owners!(record_id, owner_ids)
+      budget = Budget.find(record_id)
+      budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?))
+      bust_budgets!
+      budget
+    end
+
     def budget_forecasts(budget_id)
       return [] if budget_id.blank?
 

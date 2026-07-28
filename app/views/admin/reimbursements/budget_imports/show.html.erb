@@ -1,0 +1,56 @@
+<p class="mb-3">
+  <%= link_to edit_admin_reimbursements_financial_year_path(@financial_year.key),
+              class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">&larr;</span> <%= @financial_year.label %>
+  <% end %>
+</p>
+
+<%= render CardComponent.new(title: "Import budgets into #{@financial_year.label}") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    Paste the committee's budget sheet (including its header row) or upload the .xlsx. Nothing is
+    written yet — the next screen shows exactly what would be created and what would change, and
+    you confirm from there. Re-importing a revised sheet later is fine: matching lines are updated
+    rather than duplicated, and their agreed opening figure is left alone.
+  </p>
+
+  <p class="mb-4 text-sm text-gray-600">
+    Columns read: <strong><%= ::Reimbursements::BudgetImport::TSV_HEADERS.to_sentence %></strong>.
+    Only the budget name is required.
+    <%= link_to "Download a template",
+                template_admin_reimbursements_financial_year_budget_import_path(@financial_year.key,
+                                                                                format: :csv),
+                class: "text-blue-700 hover:underline" %>.
+  </p>
+
+  <%= form_with url: preview_admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+                method: :post, multipart: true, class: "flex flex-col gap-4" do %>
+    <div>
+      <%= label_tag :cost_centre_id, "Cost centre", class: "block text-sm font-medium" %>
+      <%= select_tag :cost_centre_id,
+                     options_from_collection_for_select(cost_centres, :id, :name,
+                                                        selected_cost_centre&.id ||
+                                                          cost_centres.first&.id),
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      <p class="text-xs text-gray-500 mt-1">Which pot these budgets belong to.</p>
+    </div>
+
+    <div>
+      <%= label_tag :pasted_text, "Paste the sheet", class: "block text-sm font-medium" %>
+      <%= text_area_tag :pasted_text, params[:pasted_text], rows: 12,
+                        class: "border border-gray-300 rounded px-2 py-1 text-sm w-full font-mono",
+                        placeholder: ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t") %>
+    </div>
+
+    <div>
+      <%= label_tag :file, "…or upload an .xlsx", class: "block text-sm font-medium" %>
+      <%= file_field_tag :file, accept: ".xlsx", class: "text-sm" %>
+      <p class="text-xs text-gray-500 mt-1">
+        The first sheet's first row is read as the header. A file takes precedence over pasted text.
+      </p>
+    </div>
+
+    <div>
+      <%= submit_tag "Preview import", class: btn_classes(:primary), data: { disable_with: "Reading…" } %>
+    </div>
+  <% end %>
+<% end %>

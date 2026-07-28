@@ -110,6 +110,14 @@ ChaosRails::Application.routes.draw do
       # next year can be set up without disturbing the one being paid out of.
       resources :financial_years, only: %i[index new create edit update], param: :key do
         member { post :activate }
+
+        # Import a year's budgets from the committee's spreadsheet:
+        # paste/upload -> preview -> apply, the shape Reconcile already uses.
+        resource :budget_import, only: %i[show], controller: "budget_imports" do
+          post :preview
+          post :apply
+          get  :template
+        end
       end
 
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.

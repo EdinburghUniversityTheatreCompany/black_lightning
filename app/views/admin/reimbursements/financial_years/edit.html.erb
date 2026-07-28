@@ -23,3 +23,19 @@
                      url: admin_reimbursements_financial_year_path(@financial_year.key),
                      submit_label: "Save", show_key: false %>
 <% end %>
+
+<%= render CardComponent.new(title: "Budgets") do %>
+  <p class="mb-3 text-sm text-gray-600">
+    Set this year's budgets up from the committee's spreadsheet — paste it or upload the .xlsx, check
+    what it would do, then confirm. Re-import a revised sheet any time: matching lines are updated
+    rather than duplicated.
+  </p>
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "Import budgets",
+                admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+                class: btn_classes(:primary) %>
+    <%= link_to "View this year's budgets",
+                admin_reimbursements_budgets_path(year: @financial_year.key),
+                class: btn_classes(:secondary) %>
+  </div>
+<% end %>

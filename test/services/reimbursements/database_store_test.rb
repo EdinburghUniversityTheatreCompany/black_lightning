@@ -624,6 +624,90 @@ module Reimbursements
       assert_equal [ mine.id ], scoped_store(this_year).budget_updates.map(&:id)
     end
 
+    # --- import_budgets! -----------------------------------------------------
+
+    test "import_budgets! creates budgets stamped with the year and cost centre" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+
+      result = scoped_store(year).import_budgets!(
+        creates: [ { name: "Props", nominal_code: "4000", budget_type: "Expense",
+                     initial_budget: BigDecimal("1200"), notes: "", active: true,
+                     financial_year: year, cost_centre: cost_centre,
+                     owner_ids: [ alice.id.to_s ] } ],
+        revisions: [], owner_syncs: [], note: "Committee budget", created_by: nil
+      )
+
+      budget = Budget.find_by(name: "Props")
+      assert_equal year, budget.financial_year
+      assert_equal cost_centre, budget.cost_centre
+      assert_equal BigDecimal("1200"), budget.initial_budget
+      assert_equal [ alice.record_id ], budget.owner_ids
+      assert_equal 1, result.created
+      assert_equal 0, result.revised
+    end
+
+    test "import_budgets! logs revisions as one budget update, leaving initial_budget alone" do
+      year = FinancialYear.create!(label: "Fringe 2027", active: true)
+      budget = Budget.create!(name: "Props", nominal_code: "4000",
+                              initial_budget: BigDecimal("1000"), financial_year: year)
+
+      result = scoped_store(year).import_budgets!(
+        creates: [], revisions: [ { budget_id: budget.record_id, amount: BigDecimal("1200") } ],
+        owner_syncs: [], note: "Revised budget", created_by: nil
+      )
+
+      budget.reload
+      assert_equal BigDecimal("1000"), budget.initial_budget
+      assert_equal BigDecimal("1200"), budget.current_forecast
+      assert_equal 1, BudgetUpdate.count
+      assert_equal "Revised budget", BudgetUpdate.sole.note
+      assert_equal year, BudgetUpdate.sole.financial_year
+      assert_equal 1, result.revised
+    end
+
+    test "import_budgets! rolls the whole sheet back when one line fails" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      good = { name: "Props", nominal_code: "4000", budget_type: "Expense", active: true,
+               financial_year: year, cost_centre: nil, owner_ids: [] }
+      # A blank name fails Budget's presence validation.
+      bad = good.merge(name: "")
+
+      assert_no_difference -> { Budget.count } do
+        assert_raises(ActiveRecord::RecordInvalid) do
+          scoped_store(year).import_budgets!(creates: [ good, bad ], revisions: [],
+                                             owner_syncs: [], note: "x", created_by: nil)
+        end
+      end
+    end
+
+    test "import_budgets! writes no budget update when nothing was revised" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+
+      scoped_store(year).import_budgets!(
+        creates: [ { name: "Props", nominal_code: "4000", budget_type: "Expense", active: true,
+                     financial_year: year, cost_centre: nil, owner_ids: [] } ],
+        revisions: [], owner_syncs: [], note: "x", created_by: nil
+      )
+
+      assert_equal 0, BudgetUpdate.count
+    end
+
+    test "import_budgets! re-syncs owners on budgets that already existed" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      budget = Budget.create!(name: "Props", financial_year: year)
+
+      scoped_store(year).import_budgets!(
+        creates: [], revisions: [],
+        owner_syncs: [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ],
+        note: "x", created_by: nil
+      )
+
+      assert_equal [ alice.record_id ], budget.reload.owner_ids
+    end
+
     test "create_budget_update! stamps the store's year, not just the active one" do
       FinancialYear.create!(label: "Fringe 2026", active: true)
       draft = FinancialYear.create!(label: "Fringe 2027")

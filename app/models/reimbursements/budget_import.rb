@@ -143,8 +143,19 @@ module Reimbursements
 
     def tsv_row(row)
       [ row[:name], row[:nominal_code], row[:budget_type],
-        row[:amount]&.to_s("F"), Array(row[:owner_emails]).join("; "), row[:notes] ]
+        amount_cell(row), Array(row[:owner_emails]).join("; "), row[:notes] ]
         .map { |value| escape_cell(value) }.join("\t")
+    end
+
+    # An unreadable amount is carried on VERBATIM. The preview re-renders from
+    # this text after a blocked apply, so replacing it with a blank would hide
+    # the very cell the operator has to go and fix.
+    def amount_cell(row)
+      case row[:amount]
+      when nil then ""
+      when :unreadable then row[:raw_amount].to_s
+      else row[:amount].to_s("F")
+      end
     end
 
     ESCAPES = { "\\" => "\\\\", "\t" => "\\t", "\n" => "\\n" }.freeze
