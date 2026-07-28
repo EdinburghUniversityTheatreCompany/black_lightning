@@ -165,9 +165,9 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
         ports:
           - 3306:3306
-        # Docker waits a full interval before the FIRST probe, so a 10s interval
-        # spent ~10s idle on a server that was ready in 2. Same total patience
-        # (30s) at a finer granularity.
+        # Same 30s of patience at finer granularity, since Docker waits a full
+        # interval before the FIRST probe. Measured no net effect -- container
+        # init is dominated by the image pull, not the probe.
         options: --health-cmd="mysqladmin ping" --health-interval=3s
           --health-timeout=5s --health-retries=10
       # redis:

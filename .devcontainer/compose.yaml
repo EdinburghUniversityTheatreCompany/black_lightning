@@ -24,8 +24,8 @@ services:
 
   mysql:
     # Pinned, not `mysql:8` -- a floating major silently tracked 8.0 -> 8.4 and
-    # left dev testing a different server than production. Keep in step with
-    # ci.yml and config/deploy.yml (see docs/mysql-8.4-upgrade.md).
+    # left dev testing a different server than production. CI's `versions` job
+    # now enforces that this matches ci.yml and config/deploy.yml.
     image: mysql:8.4
     restart: unless-stopped
     environment:
