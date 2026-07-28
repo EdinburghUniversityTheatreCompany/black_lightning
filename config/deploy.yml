@@ -102,9 +102,13 @@ accessories:
     #
     # max_connections defaults to 151, each reserving per-connection buffers, for
     # a single Puma app that will never open that many.
+    # Leave the buffer pool at its 128M default. MySQL rounds this UP to a
+    # multiple of innodb_buffer_pool_chunk_size (128M), so anything between 129M
+    # and 256M silently becomes 256M -- asking for "192M" doubled the pool and
+    # cost more than performance_schema saved (measured 2026-07-28).
     cmd: >-
       --performance-schema=OFF
-      --innodb-buffer-pool-size=192M
+      --innodb-buffer-pool-size=128M
       --max-connections=60
       --slow-query-log=ON
       --long-query-time=1
