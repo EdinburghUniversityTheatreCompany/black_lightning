@@ -82,6 +82,12 @@ stats.html
 # Git worktrees for isolated feature work
 .worktrees/
 
+# Per-worktree mise overlay written by .worktree-isolate.conf's provisioning
+# script: it holds THIS checkout's dev-server port, Vite port and database-name
+# suffix. Committing it would hand one worktree's ports and database to every
+# other checkout.
+mise.local.toml
+
 # fnox secret references (public repo — collaborators may not use fnox)
 fnox.toml
 
