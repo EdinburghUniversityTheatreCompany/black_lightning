@@ -268,16 +268,16 @@ module Reimbursements
       end
     end
 
-    # An Invoice with no override trio is not a harmless gap: EffectivePayee
-    # falls back to the SUBMITTER's own bank details, so the claim would pay the
-    # producer for a bill they never paid — and review can't catch it, because
-    # that fallback satisfies its "no bank details" block just as a real payee
-    # would. Blank-but-required is checked here rather than as a presence rule on
-    # the three fields so a partly-filled trio reports the all-or-nothing message
-    # once (above) instead of both.
+    # EffectivePayee falls back to the SUBMITTER's own bank details, so an
+    # Invoice with no trio pays the producer for a bill they never paid — and
+    # review can't catch it, because that fallback satisfies its "no bank
+    # details" block just as a real payee would. Checked here rather than as a
+    # presence rule per field so a partly-filled trio reports the
+    # all-or-nothing message once (above) instead of both.
     def invoice_without_payee?
       expense_type == Expense::TYPE_INVOICE && !draft? &&
-        [ payee_name_override, sort_code_override, account_number_override ].all?(&:blank?)
+        BankDetails.overrides_missing?(payee_name_override, sort_code_override,
+                                       account_number_override)
     end
 
     def vat_soft_block

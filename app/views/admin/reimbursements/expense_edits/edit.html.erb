@@ -92,6 +92,15 @@
   <%# --- Edit form --- %>
   <%= form_with url: admin_reimbursements_expense_edit_path(@expense.record_id),
                 method: :patch, class: "mt-4 grid gap-3 sm:grid-cols-2" do %>
+    <div class="sm:col-span-2">
+      <%# All three types: From EUSA is finance's own, and this is the only place
+          a claim a producer mis-typed can be corrected. %>
+      <%= label_tag :expense_type, "Type", class: "block text-sm font-medium" %>
+      <%= select_tag :expense_type,
+                     options_for_select(Reimbursements::Expense::TYPES, @expense.expense_type),
+                     include_blank: @expense.expense_type.blank?,
+                     class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
     <div>
       <%= label_tag :amount, "Amount (GBP)", class: "block text-sm font-medium" %>
       <%= number_field_tag :amount, @expense.amount, step: 0.01, min: 0,

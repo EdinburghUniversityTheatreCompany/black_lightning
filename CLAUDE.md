@@ -266,8 +266,13 @@ survive as historical import provenance and are never written. Spec + plan in
   verifies a payee it can see (`override_block` returns early without `payee_override?`) — so
   the claim would quietly pay the producer for a bill they never paid. It is a submit-time
   block only (drafts and email-in still save incomplete), and the message names Reimbursement
-  as the type for a bill they paid themselves. The finance edit form doesn't expose
-  `expense_type` at all, so this is purely a producer-portal rule.
+  as the type for a bill they paid themselves. **The finance edit form applies the same rule**
+  (`ExpenseEditsController#expense_type_error`) but only while
+  `ReviewSupport.attention_actionable?` — Draft/Pending/Approved, where the money can still
+  move. Submitted and Paid records must stay re-typable without inventing bank details for a
+  supplier we never captured. That form is also the only place `expense_type` can be changed
+  after submission (and the only one offering From EUSA), so a mis-typed claim no longer needs
+  the producer to withdraw and resubmit.
 - **`:base` errors are rendered by `shared/pages/_form`**, not by simple_form: `f.error_notification`
   is only the generic "review the problems below" banner and has no field to hang a base error
   under. Anything added with `errors.add(:base, …)` on a form rendered through that partial is
