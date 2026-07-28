@@ -1,0 +1,15 @@
+<p class="mb-3">
+  <%= link_to admin_reimbursements_financial_years_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">&larr;</span> All financial years
+  <% end %>
+</p>
+
+<%= render CardComponent.new(title: "New financial year") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    This creates the year as a draft. Nothing changes for submitters until you make it active, so you
+    can set its budgets up at your leisure while the current year is still being paid out of.
+  </p>
+
+  <%= render "form", financial_year: @financial_year, url: admin_reimbursements_financial_years_path,
+                     submit_label: "Create financial year", show_key: true %>
+<% end %>

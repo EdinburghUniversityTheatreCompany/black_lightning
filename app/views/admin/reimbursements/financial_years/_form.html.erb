@@ -1,0 +1,46 @@
+<%# Shared by new and edit. `show_key` is true only on new: the key is the URL
+    slug, so it is settable at creation and fixed afterwards. %>
+<%= form_with model: financial_year, scope: :financial_year, url: url,
+              class: "flex flex-col gap-4" do |f| %>
+  <div>
+    <%= f.label :label, "Label", class: "block text-sm font-medium" %>
+    <%= f.text_field :label, placeholder: "e.g. Fringe 2027",
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-md" %>
+    <p class="text-xs text-gray-500 mt-1">
+      What this year is called throughout the portal. Must be unique.
+    </p>
+  </div>
+
+  <div class="flex flex-wrap gap-4">
+    <div>
+      <%= f.label :starts_on, "Starts on", class: "block text-sm font-medium" %>
+      <%= f.date_field :starts_on, class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= f.label :ends_on, "Ends on", class: "block text-sm font-medium" %>
+      <%= f.date_field :ends_on, class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+  </div>
+  <p class="text-xs text-gray-500 -mt-2">
+    Both are for reference on this screen — the active year is whichever one you've switched to,
+    not whichever one today falls inside.
+  </p>
+
+  <% if show_key %>
+    <%= render CollapsibleSectionComponent.new(title: "Advanced", html_class: "my-1") do %>
+      <div>
+        <%= f.label :key, "URL key (slug)", class: "block text-sm font-medium" %>
+        <%= f.text_field :key, placeholder: "auto-generated from the label",
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Leave blank to derive it from the label. If you set it, use lowercase letters, numbers and
+          hyphens only (it appears in links to this year and can't be changed later).
+        </p>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div>
+    <%= f.submit submit_label, class: btn_classes(:primary) %>
+  </div>
+<% end %>

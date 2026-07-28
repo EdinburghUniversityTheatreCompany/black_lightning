@@ -105,6 +105,13 @@ ChaosRails::Application.routes.draw do
       # budgets (e.g. after a budget meeting).
       resources :budget_updates, only: %i[index new create]
 
+      # Financial years. A year is built as a draft (create -> edit -> import
+      # its budgets) and switched to with the separate `activate` action, so
+      # next year can be set up without disturbing the one being paid out of.
+      resources :financial_years, only: %i[index new create edit update], param: :key do
+        member { post :activate }
+      end
+
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
       # Bulk actions over the ticked Pending expenses (static paths, declared
