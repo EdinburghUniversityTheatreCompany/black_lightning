@@ -1,7 +1,6 @@
 module Reimbursements
   ##
-  # Nightly auto-submit, ported from bedlam-bacs scripts/nightly_check.py +
-  # nightly_support.py. Runs daily via Solid Queue (config/recurring.yml) and
+  # Nightly auto-submit. Runs daily via Solid Queue (config/recurring.yml) and
   # acts per cost centre only on that centre's configured run-days
   # (CostCentre#nightly_due?, which also de-dupes so a run-day fires once).
   #
@@ -13,7 +12,7 @@ module Reimbursements
   #      issue). Any issue -> email the operator a manual-review breakdown and
   #      STOP (no batch this run).
   #   3. all clean -> email the operator a "ready to batch" alert listing the
-  #      approved expenses + total. The nightly NO LONGER auto-builds or drafts:
+  #      approved expenses + total. The nightly does NOT auto-build or draft:
   #      Build Batch is operator-initiated, so nothing is submitted here.
   # Failures go to Honeybadger + a failure email.
   #

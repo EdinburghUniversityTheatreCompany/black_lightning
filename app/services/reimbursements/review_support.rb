@@ -1,8 +1,6 @@
 module Reimbursements
   ##
-  # Pure helpers for the Review page. Ported from bedlam-bacs `review_helpers.py`
-  # (minus send_rejection_notification, which orchestrates Graph/mailer and lands
-  # with the Review UI). Nothing here touches the database.
+  # Pure helpers for the Review page. Nothing here touches the database.
   module ReviewSupport
     BACS_SAFE_PATTERN = /[^a-zA-Z0-9 \-]/
     BACS_MAX_LEN = 18
@@ -123,7 +121,7 @@ module Reimbursements
       duplicates
     end
 
-    # Whole-day gap (floor, matching Python timedelta.days) within the window.
+    # Whole-day gap (floored) within the window.
     def submitted_within?(first_time, second_time, window_days)
       return true if first_time.nil? || second_time.nil?
 

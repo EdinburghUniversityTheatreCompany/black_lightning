@@ -2,7 +2,7 @@ module Admin
   module Reimbursements
     ##
     # Finance-team management of the People registry (payee names,
-    # emails, bank details). Ports bedlam-bacs `pages/5_People.py`: a duplicate
+    # emails, bank details): a duplicate
     # name/email banner, a live modulus badge on each person's bank details,
     # inline editing of sort code / account number (with a timestamped audit
     # line appended to notes), and a Mark-verified action.
@@ -117,8 +117,7 @@ module Admin
       end
 
       # Timestamped audit line appended to the person's notes on every bank
-      # detail change, mirroring bedlam-bacs `5_People.py` (`_audit_line` /
-      # `_append_note`): existing notes are preserved, one line per change.
+      # detail change: existing notes are preserved, one line per change.
       #
       # BOTH the sort code and the account number are masked to their last 4
       # digits, matching Exports::People. The audit trail is a RECORD of a

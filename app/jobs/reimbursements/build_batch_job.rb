@@ -1,10 +1,9 @@
 module Reimbursements
   ##
-  # Interactive Build Batch, run in the background. Build Batch used to run
-  # BatchProcessor#process inline in the request — the xlsx build, every receipt
-  # upload to SharePoint, the EUSA draft and the producer emails — which could
-  # exceed the Puma/proxy timeout, and a double-click built two batches / two
-  # drafts / marked Submitted twice.
+  # Interactive Build Batch, run in the background. BatchProcessor#process — the
+  # xlsx build, every receipt upload to SharePoint, the EUSA draft and the
+  # producer emails — can exceed the Puma/proxy timeout, and run inline a
+  # double-click builds two batches / two drafts / marks Submitted twice.
   #
   # This job runs the SAME BatchProcessor#process the nightly uses, off the
   # request. Two protections stop a double-submit:
@@ -48,10 +47,10 @@ module Reimbursements
 
     def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
                 eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
-      # The controller creates the BatchAttempt row at click time and passes
-      # its id, so this run resolves EXACTLY its own row (not "the oldest
-      # building row for this cost centre", which mislabelled History when two
-      # builds raced or a prior job died). A retry re-uses the same id.
+      # The controller creates the BatchAttempt row at click time and passes its
+      # id, so this run resolves EXACTLY its own row. Resolving by "the oldest
+      # building row for this cost centre" instead mislabels History whenever two
+      # builds race or a prior job died. A retry re-uses the same id.
       attempt = attempt_id && BatchAttempt.find_by(id: attempt_id)
 
       cost_centre = CostCentre.find_by(key: cost_centre_key)

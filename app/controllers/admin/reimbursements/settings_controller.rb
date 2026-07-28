@@ -1,12 +1,11 @@
 module Admin
   module Reimbursements
     ##
-    # Per-cost-centre operational settings, porting bedlam-bacs
-    # `pages/1_Settings.py`. A cost-centre picker (#index) leads to an edit form
-    # (#edit / #update) for that cost centre's mailboxes, EUSA recipient +
-    # signature, nightly run-days and the two SharePoint destinations. Where
-    # bedlam-bacs kept this in a per-user config.toml, it now lives on the
-    # CostCentre row so it is shared and multi-cost-centre.
+    # Per-cost-centre operational settings. A cost-centre picker (#index) leads
+    # to an edit form (#edit / #update) for that cost centre's mailboxes, EUSA
+    # recipient + signature, nightly run-days and the two SharePoint
+    # destinations. These live on the CostCentre row, not per-user config, so
+    # they are shared and multi-cost-centre.
     #
     # The SharePoint destinations are chosen with a Graph-backed folder picker
     # (browse sites -> drives -> folders); "Use this folder" stores the drive +

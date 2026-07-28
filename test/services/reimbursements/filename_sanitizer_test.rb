@@ -1,8 +1,8 @@
 require "test_helper"
 
 module Reimbursements
-  # Ported from bedlam-bacs tests/test_filename_sanitizer.py. Builds the receipt
-  # filenames EUSA sees: "<YYYY-MM-DD> <budget> - <description>[ (n)].<ext>".
+  # Builds the receipt filenames EUSA sees:
+  # "<YYYY-MM-DD> <budget> - <description>[ (n)].<ext>".
   class FilenameSanitizerTest < ActiveSupport::TestCase
     # --- sanitize_component -----------------------------------------------
 

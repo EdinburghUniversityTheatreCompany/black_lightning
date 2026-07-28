@@ -81,8 +81,7 @@ module Reimbursements
     end
 
     # Graph puts the real reason (e.g. ErrorInvalidRecipients for a malformed
-    # address) in the JSON error body; surface it instead of an opaque status
-    # line. Mirrors bedlam-bacs' _raise_for_graph_error.
+    # address) in the JSON error body; surface it instead of an opaque status line.
     def graph_error_detail(response_body)
       error = JSON.parse(response_body.to_s)["error"] || {}
       [ error["code"], error["message"] ].reject(&:blank?).join(": ").presence ||

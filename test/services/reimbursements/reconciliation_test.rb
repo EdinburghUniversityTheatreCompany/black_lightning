@@ -2,8 +2,6 @@ require "test_helper"
 require "bigdecimal"
 
 module Reimbursements
-  # Ported from bedlam-bacs tests/test_reconciliation.py (parse + dedup half;
-  # the match_* fns port alongside the extended Expense/Budget POROs).
   class ReconciliationTest < ActiveSupport::TestCase
     # The pure Reconciliation matchers read the AR models' public interface
     # (effective nominal code, amounts, dates); built unpersisted.
@@ -185,7 +183,7 @@ module Reimbursements
       assert_equal bd("1234.56"), rows.first.debit
     end
 
-    # The parser no longer filters by cost centre: it is pure (no Rails), so it
+    # The parser does not filter by cost centre: it is pure (no Rails), so it
     # cannot know which codes are configured here. It hands every row back with
     # the code the export gave it, and the Rails-side attribution decides what
     # is ours, what is skipped and what needs an operator's choice.

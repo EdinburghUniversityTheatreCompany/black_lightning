@@ -1,18 +1,18 @@
 module Reimbursements
   ##
-  # Shared UK bank-detail rules for the portal forms. Sort codes are stored
-  # in the conventional dashed form ("80-22-60") — bedlam-bacs' modulus check
-  # strips the dashes itself.
+  # Shared UK bank-detail rules for the portal forms. Sort codes are stored in
+  # the conventional dashed form ("80-22-60"); the modulus check strips the
+  # dashes itself.
   module BankDetails
     SORT_CODE_HINT = "must be 6 digits, e.g. 80-22-60.".freeze
     ACCOUNT_NUMBER_HINT = "must be 8 digits.".freeze
 
     # A payee account name is a bank-account holder name, not free prose: BACS
     # itself carries 18 characters and Faster Payments 140, and the value ends up
-    # in a spreadsheet cell EUSA pays from. 255 keeps the old varchar(255) column
-    # limit as the user-visible rule (so nothing that used to be accepted is
-    # rejected now) while staying far inside the widened TEXT column once
-    # encryption inflates it (255 characters -> ~394 bytes of ciphertext).
+    # in a spreadsheet cell EUSA pays from. 255 is the pre-encryption varchar
+    # limit kept as the user-visible rule, so no name already on file is now
+    # rejected, and it stays far inside the widened TEXT column once encryption
+    # inflates it (255 characters -> ~394 bytes of ciphertext).
     PAYEE_NAME_MAX_LENGTH = 255
     PAYEE_NAME_HINT = "must be #{PAYEE_NAME_MAX_LENGTH} characters or fewer.".freeze
 

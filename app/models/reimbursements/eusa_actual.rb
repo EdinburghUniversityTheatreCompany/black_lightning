@@ -65,9 +65,9 @@ module Reimbursements
     # Which pot this ledger row belongs to, resolved at import from the export's
     # own Cost Centre column (see Admin::Reimbursements::ReconcileController).
     #
-    # This is the ONLY record of a row's cost centre. The table used to carry the
-    # exported code as a string alongside it; that column is gone, because nothing
-    # read it and two sources of the same fact can only ever disagree. The exported
+    # This is the ONLY record of a row's cost centre — deliberately not stored
+    # alongside the exported code as a string, since two sources of the same fact
+    # can only ever disagree. The exported
     # code still exists where attribution actually needs it — on the parser's
     # Reconciliation::ActualsRow — it just isn't persisted twice.
     #

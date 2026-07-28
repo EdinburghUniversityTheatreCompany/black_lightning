@@ -6,12 +6,11 @@ module Reimbursements
   # description match, is the budget appropriate, and — when the receipt itemises
   # VAT — is the ex-VAT amount consistent.
   #
-  # Ported from bedlam-bacs `ai_checker.py`. For an ordinary reimbursement the
-  # payee name is deliberately NOT checked against the receipt (members pay
-  # suppliers personally and claim it back, so a name mismatch is normal). The
-  # exception is a direct third-party payment (a payee override): there the money
-  # goes straight to a supplier, so the checker DOES verify the override name and
-  # bank details against the invoice.
+  # For an ordinary reimbursement the payee name is deliberately NOT checked
+  # against the receipt (members pay suppliers personally and claim it back, so a
+  # name mismatch is normal). The exception is a direct third-party payment (a
+  # payee override): there the money goes straight to a supplier, so the checker
+  # DOES verify the override name and bank details against the invoice.
   #
   # Never raises: any failure (no key, network, bad response) becomes an "error"
   # verdict so the Review queue keeps working. +chat_builder+ is the injection
@@ -168,21 +167,18 @@ module Reimbursements
     end
 
     # The third party's bank details are MASKED to their last four digits before
-    # they go anywhere near Gemini. Receipt extraction is opt-in per receipt behind
-    # an explicit "we're on Gemini's free tier, Google may store and human-review
-    # this" disclosure; this finance-triggered check runs on the same expense with
-    # no notice to the submitter and none at all to the third party, so it must not
-    # be the path that quietly ships a supplier's full account number to a free-tier
-    # endpoint. Masking is the same rule BankDetails.mask already applies everywhere
-    # a value is RECORDED or EXPORTED rather than used to move money — only the BACS
-    # spreadsheet EUSA pays from carries full numbers.
+    # they go anywhere near Gemini. Receipt extraction is opt-in behind an explicit
+    # "we're on Gemini's free tier, Google may store and human-review this"
+    # disclosure; this finance-triggered check runs on the same expense with no
+    # notice to the submitter and none at all to the third party, so it must not be
+    # the path that ships a supplier's full account number to a free-tier endpoint.
+    # Masking is the same rule BankDetails.mask applies everywhere a value is
+    # RECORDED or EXPORTED rather than used to move money.
     #
-    # The mismatch check survives on the masked digits: the model still compares
-    # what we hold against what the invoice prints, and any wholesale substitution
-    # (a different account entirely) or a transposition in the last four digits
-    # still fails. What it can no longer catch is a mismatch confined to the hidden
-    # digits — 80-22-60 and 81-22-60 both mask to ****2260. The modulus check
-    # (which sees the real values) covers structural errors there.
+    # The mismatch check survives on the masked digits: a wholesale substitution or
+    # a transposition in the last four still fails. What it cannot catch is a
+    # mismatch confined to the hidden digits — 80-22-60 and 81-22-60 both mask to
+    # ****2260 — which the modulus check, seeing the real values, covers.
     def masked(value)
       BankDetails.mask(value).presence || "(not overridden)"
     end

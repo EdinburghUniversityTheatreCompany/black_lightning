@@ -13,9 +13,9 @@ module Admin
         create_reimbursements_person(email: users(:member).email)
         create_reimbursements_budget(name: "Props")
         # On BaseController, never on ExpensesController, and restored afterwards: a write to
-        # the subclass shadows the parent for the rest of the process, which used to break
-        # the functional extract tests whenever both suites ran in one process. See the seam
-        # definition in Admin::Reimbursements::BaseController.
+        # the subclass shadows the parent for the rest of the process, breaking the functional
+        # extract tests whenever both suites share one process. See the seam definition in
+        # Admin::Reimbursements::BaseController.
         @original_extractor_builder = BaseController.extractor_builder
         # No Gemini in the browser test; extract just fails softly.
         BaseController.extractor_builder = -> { failing_extractor }

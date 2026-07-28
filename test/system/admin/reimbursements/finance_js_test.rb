@@ -268,10 +268,9 @@ module Admin
       end
 
       # A claim with nothing to read beside the form must not be given a column
-      # anyway. It used to get one regardless: two fifths of the card, stretched
-      # to the height of the details, holding an attach button — and since a
-      # receiptless claim always sorts into Needs attention, that empty block
-      # landed at the bottom of the queue.
+      # anyway: two fifths of the card, stretched to the height of the details,
+      # holding an attach button — and since a receiptless claim always sorts
+      # into Needs attention, that empty block lands at the bottom of the queue.
       test "a claim with no receipt is not given a receipt column at all" do
         seed_expense(status: "Pending", receipt: false)
 

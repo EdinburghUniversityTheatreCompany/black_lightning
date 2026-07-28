@@ -6,7 +6,7 @@ module Reimbursements
   # For an Invoice the submitter can override payee name + bank details so
   # EUSA pays a third party directly. The BACS row, modulus check and
   # "needs attention" use these effective values; notification emails stay
-  # with the linked person. Mirrors bedlam-bacs.
+  # with the linked person.
   module EffectivePayee
     def payee_override?
       payee_name_override.present? || sort_code_override.present? ||

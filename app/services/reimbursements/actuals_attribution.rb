@@ -2,12 +2,11 @@ module Reimbursements
   ##
   # Decides which cost centre each pasted EUSA actuals row belongs to.
   #
-  # The Reconcile wizard used to filter a paste down to ONE cost-centre code and
-  # silently drop every other row — first a hardcoded "F40", later
-  # CostCentre.default, which is no better once a second centre exists. But the
-  # export already carries a Cost Centre column per row, so nobody should have
-  # to tell it: every row lands in the centre its own code names, and a paste
-  # may span as many centres as it likes.
+  # The export carries a Cost Centre column per row, so nobody has to tell the
+  # wizard which centre a paste is for: every row lands in the centre its own
+  # code names, and a paste may span as many centres as it likes. Filtering a
+  # paste down to one code (a hardcoded "F40", or CostCentre.default) silently
+  # drops every other society's row.
   #
   # This lives on the Rails side, apart from the pure Reconciliation parser,
   # precisely because deciding needs to look codes up in the database.
@@ -18,8 +17,8 @@ module Reimbursements
   #   unrecognised_rows      the row names a code we don't have (another
   #                          society's spend in a whole-organisation export).
   #                          Skipped — but VISIBLY: the preview reports the count
-  #                          and the codes, because a silent drop is the bug
-  #                          this class exists to remove.
+  #                          and the codes, because a silent drop is what this
+  #                          class exists to prevent.
   #   blank-code rows        the export omitted the column, or left the cell
   #                          empty. These ALWAYS need an explicit operator
   #                          choice, even when only one cost centre is
@@ -56,8 +55,7 @@ module Reimbursements
       end
 
       # Blank-code rows are still waiting on a choice, so nothing may be applied
-      # yet: applying would drop them, which is the silent loss this whole
-      # change is removing.
+      # yet: applying would silently drop them.
       def blank_choice_required? = unassigned_blank_rows.any?
 
       # Every row this paste will NOT import, whatever the reason.

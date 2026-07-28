@@ -5,11 +5,10 @@ require "digest"
 module Reimbursements
   ##
   # Pure functions for reconciling EUSA "actuals" exports against expenses and
-  # budgets — no Rails dependencies, so they unit-test without a database.
-  # Ported from bedlam-bacs `reconciliation.py`. The hardcoded F40 cost-centre
-  # filter there is gone entirely: every row is parsed and carries its own code,
-  # and Reimbursements::ActualsAttribution (which can look codes up) decides
-  # which cost centre each row lands in.
+  # budgets — no Rails dependencies, so they unit-test without a database. Every
+  # row is parsed and carries its own cost-centre code; deciding which centre a
+  # row lands in belongs to Reimbursements::ActualsAttribution, which can look
+  # codes up.
   module Reconciliation
     ##
     # One row from the EUSA actuals sheet.
@@ -25,23 +24,16 @@ module Reimbursements
     #
     # +key+ identifies the pair by each leg's CONTENT plus which occurrence of
     # that content it is (0 for the first row carrying it, 1 for the next, ...),
-    # never by absolute position. Both halves matter:
+    # never by absolute position. The content digest survives the stateless
+    # wizard's re-parse on apply; the occurrence counter keeps two byte-identical
+    # pairs apart, since a paste really can contain two separate £10 accruals and
+    # their two reversals, and on a content-only key those collapse into one
+    # tickbox so ticking one "votes for" the other. A bare row index would
+    # separate them too, but moves whenever anything earlier in the paste changes.
     #
-    # * the content digest is what survives the stateless wizard's re-parse on
-    #   apply, and is unaffected by rows shifting position;
-    # * the occurrence counter is what keeps two byte-identical pairs apart. A
-    #   paste really can contain two separate £10 accruals and their two
-    #   reversals; on a content-only key those collapse into one tickbox, so
-    #   ticking one "votes for" the other and a genuine transaction is stamped
-    #   as bookkeeping noise. A bare row index would separate them too, but it
-    #   moves whenever anything earlier in the paste is added, removed or
-    #   reordered, whereas an occurrence counter only moves when a row with
-    #   IDENTICAL content is added or removed.
-    #
-    # If a key does fail to match on apply (the operator edited the textarea, or
-    # a concurrent import changed what the dedup step drops), the pair reads as
-    # unticked: both legs import as ordinary rows for a human to look at, which
-    # is the safe direction. Inventing an offset is the unrecoverable mistake.
+    # A key that fails to match on apply reads as unticked: both legs import as
+    # ordinary rows for a human to look at. Inventing an offset is the
+    # unrecoverable mistake.
     OffsetPair = Data.define(:debit_row, :credit_row, :debit_index, :credit_index,
                              :debit_occurrence, :credit_occurrence, :score) do
       def key
@@ -64,11 +56,9 @@ module Reimbursements
     #
     # EVERY row comes back, whatever cost centre it names — the parser is pure
     # (no Rails), so it cannot know which codes are configured here and must not
-    # pretend to. It used to filter to one code and silently drop the rest,
-    # which meant a whole-organisation export lost its other cost centres with
-    # nothing on screen to say so. Attribution — this centre's rows, an
-    # unrecognised code, a blank one needing an operator's choice — belongs to
-    # ActualsAttribution on the Rails side, which can actually look the codes up.
+    # pretend to. Attribution — this centre's rows, an unrecognised code, a blank
+    # one needing an operator's choice — belongs to ActualsAttribution on the
+    # Rails side, which can actually look the codes up.
     def parse_actuals_rows(text)
       text = text.to_s.strip
       return [] if text.empty?
@@ -137,12 +127,11 @@ module Reimbursements
     # Best matching expense for a debit row: nominal code equal (case-insensitive),
     # amount within £0.01 (excl-VAT preferred, else gross), and either the
     # submitted-to-EUSA date or the payment-confirmed date within 14 days of the
-    # row date. Returns the first match, or nil.
-    # Two same-amount, same-nominal-code expenses submitted around the same
-    # time are otherwise indistinguishable, so among every candidate that
-    # matches, the one whose date is CLOSEST to the row's date wins — not
-    # just whichever happens to come first in +expenses+ — narrowing (though
-    # not eliminating) which specific record a genuine tie gets attributed to.
+    # row date. Two same-amount, same-nominal-code expenses submitted around the
+    # same time are otherwise indistinguishable, so the candidate whose date is
+    # CLOSEST to the row's wins rather than whichever comes first in +expenses+,
+    # narrowing (though not eliminating) which record a genuine tie is attributed
+    # to. Returns nil if nothing matches.
     def match_debit_to_expense(row, expenses)
       candidates = expenses.filter_map do |expense|
         next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
@@ -169,38 +158,32 @@ module Reimbursements
 
     # --- offsetting pairs --------------------------------------------------
 
-    # Scoring weights, tuned against a real 309-row EUSA F40 export. The
-    # reference there matches only about half the time, and legs routinely
-    # straddle months (a September accrual released in October; one pair three
-    # months apart), so neither can be a hard filter: a genuine claim can
-    # collide by amount with an unrelated reversal, and only weighing the
-    # evidence keeps the two apart.
+    # Scoring weights, tuned against a real 309-row EUSA F40 export. The reference
+    # there matches only about half the time, and legs routinely straddle months
+    # (a September accrual released in October; one pair three months apart), so
+    # neither can be a hard filter: a genuine claim can collide by amount with an
+    # unrelated reversal, and only weighing the evidence keeps the two apart.
     #
-    # The nominal code IS a hard filter (see offset_candidates) and still
-    # scores, so the score a pair shows finance keeps its /8 scale.
+    # The nominal code IS a hard filter (see offset_candidates) and still scores,
+    # so the score a pair shows finance keeps its /8 scale.
     OFFSET_SCORE_SAME_REF = 4
     OFFSET_SCORE_SAME_NOMINAL = 2
     OFFSET_SCORE_SAME_PERIOD = 1
     OFFSET_SCORE_NARRATIVE_PREFIX = 1
     # A pair must reach this to be proposed at all. Since same nominal code is
-    # required, every candidate starts from 2 and has to find 2 more points:
-    #
-    #   * a reference match takes it to 6, or 5/4 once the date penalty bites
-    #     (ref agreement ALONE is 4 minus that penalty, so only a same-day
-    #     reference match would clear the floor by itself);
-    #   * without a reference, period + narrative agreement on the same day is
-    #     exactly 4.
-    #
-    # Anything weaker (nominal + period a fortnight apart is 2) leaves BOTH rows
-    # in the working set rather than guessing. Maximum is 8: everything
-    # agreeing, same day.
+    # required, every candidate starts from 2 and has to find 2 more points: a
+    # reference match takes it to 6, or 5/4 once the date penalty bites (ref
+    # agreement ALONE is 4 minus that penalty, so only a same-day reference match
+    # clears the floor by itself); without a reference, period + narrative
+    # agreement on the same day is exactly 4. Anything weaker (nominal + period a
+    # fortnight apart is 2) leaves BOTH rows in the working set rather than
+    # guessing. Maximum is 8: everything agreeing, same day.
     OFFSET_MIN_SCORE = 4
     # Legs this far apart or less cost 1 point, further costs 2.
     OFFSET_NEAR_DATE_DAYS = 31
-    # Narratives counted as agreeing when their normalised forms share this
-    # many leading characters. In the real export the shared-prefix length is
-    # bimodal (either 0 or 10+ characters), so anywhere in that gap behaves
-    # identically; 8 sits in the middle of it.
+    # Narratives count as agreeing when their normalised forms share this many
+    # leading characters. In the real export the shared-prefix length is bimodal
+    # (either 0 or 10+ characters), so anywhere in that gap behaves identically.
     OFFSET_NARRATIVE_PREFIX_CHARS = 8
     # EUSA's financial year, and its accounting periods 1..12, run April to March.
     FINANCIAL_YEAR_START_MONTH = 4
@@ -222,8 +205,7 @@ module Reimbursements
     # +rows+, for a caller that has already resolved each row's attribution: a
     # blank-code row an operator assigned by hand belongs to the pot they chose,
     # not to "blank". Omitted, each row's own exported code is used and a blank
-    # agrees with nothing — a conservative default, unlike the cost_centre_code
-    # argument this replaces, which defaulted to the literal "F40".
+    # agrees with nothing.
     def detect_offsetting_pairs(rows, cost_centres: nil)
       candidates = offset_candidates(rows, cost_centres || rows.map(&:cost_centre))
       occurrences = row_occurrences(rows)
@@ -289,16 +271,16 @@ module Reimbursements
           # agreement at all and pairs a cost with an unrelated income of the
           # same size: both stamped offset, the cost hidden from every rollup,
           # and the expense behind it never paid. In the real 309-row export
-          # essentially every genuine pair was same-nominal (they are
-          # accrual/reversal and re-booked journal pairs, not cross-code
-          # reclassifications), so this costs approximately nothing. Blank codes
-          # agree on nothing, so they never pair either.
+          # essentially every genuine pair was same-nominal (accrual/reversal
+          # and re-booked journal pairs, not cross-code reclassifications), so
+          # this costs approximately nothing. Blank codes agree on nothing, so
+          # they never pair either.
           next unless same_field?(row_a.nominal_code, row_b.nominal_code)
-          # Same cost centre is a hard requirement too, for the same reason and
-          # with more at stake: a paste may now span several pots, and two
-          # unrelated real transactions of the same size on the same code in
-          # two different pots would otherwise be stamped as cancelling out,
-          # hiding real spend from BOTH pots' rollups irrecoverably.
+          # Same cost centre, for the same reason and with more at stake: a
+          # paste may span several pots, and two unrelated real transactions of
+          # the same size on the same code in two different pots would otherwise
+          # be stamped as cancelling out, hiding real spend from BOTH pots'
+          # rollups irrecoverably.
           next unless same_field?(cost_centre_keys[index_a], cost_centre_keys[index_b])
           next unless same_financial_year?(row_a.date, row_b.date)
 
@@ -386,12 +368,11 @@ module Reimbursements
     def norm_amount(value)
       return "0.0" if value.nil? || value == ""
 
-      # BigDecimal (not Float) so the key is exact at every magnitude — a
-      # float round-trip collapses distinct large amounts onto one key.
-      # BigDecimal("0") renders "0.0", matching the nil/"" branch above — but
-      # BigDecimal("-0.00") renders "-0.0", so a negative-zero value (a sheet
-      # or manual entry that preserves the sign) must be normalised to the same
-      # key as an ordinary zero.
+      # BigDecimal (not Float) so the key is exact at every magnitude — a float
+      # round-trip collapses distinct large amounts onto one key. BigDecimal("0")
+      # renders "0.0", matching the nil/"" branch above, but BigDecimal("-0.00")
+      # renders "-0.0", so a negative zero must normalise to the same key as an
+      # ordinary zero.
       amount = BigDecimal(value.to_s)
       amount.zero? ? "0.0" : amount.to_s("F")
     rescue ArgumentError, TypeError

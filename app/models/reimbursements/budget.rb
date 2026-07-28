@@ -65,8 +65,8 @@ module Reimbursements
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
-    # The PORO exposed owner links as an array of People record ids; OwnerReview
-    # and the budgets UI compare them against person.record_id strings.
+    # Owner links are People record id STRINGS, because OwnerReview and the
+    # budgets UI compare them against person.record_id.
     def owner_ids
       owners.map(&:record_id)
     end

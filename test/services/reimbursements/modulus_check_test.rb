@@ -2,8 +2,8 @@ require "test_helper"
 require "tmpdir"
 
 module Reimbursements
-  # Ported from bedlam-bacs tests/test_modulus_check.py. Uses a minimal synthetic
-  # rules table to exercise the Pay.UK modulus algorithm without the real files.
+  # Uses a minimal synthetic rules table to exercise the Pay.UK modulus algorithm
+  # without the real files.
   class ModulusCheckTest < ActiveSupport::TestCase
     # Standard MOD11 weights: 7 6 5 4 3 2 7 6 5 4 3 2 1 0
     BASIC_MOD11 = ModulusCheck::Rule.new(

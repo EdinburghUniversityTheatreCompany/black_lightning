@@ -1,7 +1,7 @@
 module Reimbursements
   ##
-  # Orchestrates one BACS submission, ported from bedlam-bacs batch_processor.py.
-  # A single #process call, triggered from Build Batch, does everything:
+  # Orchestrates one BACS submission. A single #process call, triggered from
+  # Build Batch, does everything:
   #
   #   1. generate the BACS xlsx from the EFFECTIVE payee/sort/account/nominal
   #   2. read every receipt's bytes and rename them
@@ -11,26 +11,15 @@ module Reimbursements
   #   6. email producer notifications (skip anyone already notified)
   #
   # THE CARDINAL RULE: expenses are never marked Submitted unless the EUSA draft
-  # was created — a failed draft returns early with the expenses still Approved,
-  # so a rebuild is clean. Steps after the draft are best-effort — SharePoint
-  # uploads, producer emails, Batch-record flags — and their failures are
-  # collected into Result#errors without undoing a valid submission.
-  #
-  # The one exception is mark_submitted itself: an expense whose Submitted
-  # write fails is left in the SAME double-draft danger the orphan-draft guard
-  # below exists to prevent (already in the live draft, but not yet flipped out
-  # of the Approved queue), so #success reflects whether EVERY expense actually
-  # made it to Submitted, not merely whether the draft was created.
-  #
+  # was created, so a failed draft leaves them Approved and a rebuild is clean.
   # ORPHAN-DRAFT GUARD: once the draft exists a rebuild must never create a
-  # SECOND draft on the same expenses. So every post-draft step is contained
-  # here (never re-raised past the draft), the Batch-record write is retried,
-  # and if it still can't be written the expenses are marked Submitted anyway —
-  # leaving the Approved queue so a rebuild finds nothing to re-draft — while a
-  # loud error naming the live draft link is surfaced for manual repair.
+  # SECOND draft on the same expenses, so every post-draft step is contained here
+  # and never re-raised past the draft. Both rules, and the mark_submitted
+  # exception to "post-draft steps are best-effort", are spelled out at their
+  # call sites in #process.
   #
-  # It's long and API-heavy, so it's built to run from a Solid Queue job
-  # (BuildBatchJob for interactive Build Batch, NightlyBatchJob for the nightly).
+  # Long and API-heavy, so it runs from a Solid Queue job (BuildBatchJob for
+  # interactive Build Batch, NightlyBatchJob for the nightly).
   class BatchProcessor
     XLSX_CONTENT_TYPE =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
@@ -106,13 +95,11 @@ module Reimbursements
       flag_batch(result, batch, :producer_notifications_sent) if notifications_complete
 
       # Every OTHER post-draft step (SharePoint uploads, producer emails, the
-      # Batch-record flags) is genuinely best-effort: their failure is real but
-      # doesn't put the batch in an inconsistent, double-draft-risking state, so
-      # it's collected into result.errors without flipping success. A
-      # mark_submitted failure is different — that expense is still Approved
-      # despite being in the live draft, the same double-draft risk the
-      # orphan-draft guard exists to prevent — so success reflects whether
-      # EVERY expense actually made it to Submitted.
+      # Batch-record flags) is genuinely best-effort: a failure is real but
+      # doesn't leave the batch double-draft-risking, so it goes into
+      # result.errors without flipping success. A mark_submitted failure is
+      # different — that expense is still Approved despite being in the live
+      # draft — so success reflects whether EVERY expense reached Submitted.
       result.success = (submitted.size == expenses.size)
       result
     rescue StandardError => e
@@ -214,8 +201,7 @@ module Reimbursements
     def create_batch(result)
       batch = with_write_retry do |attempt|
         (attempt > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
-          # No eusa_draft_created: it is derived from draft_message_id, which is set right
-          # here, so sending the flag only gave the store something to throw away.
+          # No eusa_draft_created: it is derived from draft_message_id, set here.
           @store.create_batch!(date_sent: result.bacs_date,
                                notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
                                sharepoint_backup_url: result.bacs_sharepoint_url,

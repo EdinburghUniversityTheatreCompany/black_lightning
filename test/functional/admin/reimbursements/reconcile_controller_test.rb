@@ -143,10 +143,8 @@ module Admin
 
     # --- Step 2: preview / parse + dedup + match ---------------------------
 
-    # The cost-centre code used to fall back to a literal "F40", so with no cost
-    # centre configured a paste was still filtered as though it were the Fringe's.
-    # Now it says so instead of guessing: a guessed code would file another cost
-    # centre's ledger under this one and every rollup would be quietly wrong.
+    # Saying so beats guessing a code: a guess would file another cost centre's
+    # ledger under this one and leave every rollup quietly wrong.
     test "preview says so when no cost centre is configured, rather than assuming one" do
       sign_in @user
       ::Reimbursements::CostCentre.delete_all
@@ -680,9 +678,8 @@ module Admin
 
     # --- Per-row cost centres ----------------------------------------------
     #
-    # The wizard used to filter a paste down to ONE cost-centre code and drop
-    # every other row in silence. The export names the cost centre per row, so
-    # each row now lands where its own code says.
+    # The export names the cost centre per row, so each row lands where its own
+    # code says rather than being filtered down to one code and dropped.
 
     test "a paste spanning two cost centres imports every row under its own" do
       termtime = create_termtime_cost_centre
