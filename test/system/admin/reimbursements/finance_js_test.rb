@@ -4,8 +4,7 @@ module Admin
   module Reimbursements
     # Browser tests for the three finance-surface JS interactions that render
     # tests can't cover: the accessible needs-attention popover (open on click /
-    # close on Escape), the Fancybox receipts lightbox, and the Review page's
-    # absence of any Turbo Stream subscription.
+    # close on Escape) and the Fancybox receipts lightbox.
     #
     # Data is served by the DatabaseStore from real seeded rows; a fake modulus
     # checker keeps the tests off the gitignored Pay.UK rule files. Capybara
@@ -560,18 +559,6 @@ module Admin
 
         assert_no_selector "dialog[open]", wait: 1
         assert_selector ".swal2-container", wait: 5
-      end
-
-      # The AI verdict was the Review page's only Turbo Stream subscription, so
-      # with it gone the page must render cleanly with none at all — no orphan
-      # <turbo-cable-stream-source> pointing at a channel nothing broadcasts to.
-      test "the Review page renders with no Turbo Stream subscription" do
-        seed_expense(status: "Pending", receipt: false)
-
-        visit admin_reimbursements_review_path
-
-        assert_selector "h1", text: "Review Expenses"
-        assert_no_selector "turbo-cable-stream-source", visible: :all
       end
     end
   end

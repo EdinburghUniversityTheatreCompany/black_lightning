@@ -6,9 +6,22 @@ class RemoveAiColumnsFromReimbursementsExpenses < ActiveRecord::Migration[8.1]
   # check no code can re-run or explain, and the consent flag answers a question
   # the form no longer asks.
   #
-  # safety_assured: every reference is removed in this same change, so
-  # strong_migrations' ignored_columns dance (deploy the ignore, then deploy the
-  # drop) buys nothing here — there is no later deploy that still reads them.
+  # safety_assured, with the real hazard named rather than waved past. It is NOT
+  # "no later deploy reads these" — that much is true but is not what
+  # strong_migrations warns about. The risk is the OUTGOING release: bin/docker-
+  # entrypoint runs db:prepare when the new container boots, and Kamal keeps the
+  # previous containers serving until the new one is healthy, so for that window
+  # the old code queries a table whose columns are already gone. That old release
+  # renders review/_ai_verdict and the expense-edits AI badge, and (with
+  # SOLID_QUEUE_IN_PUMA) can still run AiCheckJob's update!(ai_check_status:) —
+  # so expect MissingAttributeError 500s on two finance pages and a few failed
+  # jobs for the length of the cutover.
+  #
+  # Accepted: the window is seconds, the two pages are used by a handful of
+  # finance people, nothing writes money, and no data is at risk. If that trade
+  # is not wanted, the alternative is two deploys — ship the code with this
+  # migration file held back, then add it — because the entrypoint couples
+  # migrating to booting the new image and they cannot be ordered otherwise.
   #
   # Explicit up/down rather than `change`, matching
   # 20260707120000_drop_orphan_google_columns_from_users: the column_exists?

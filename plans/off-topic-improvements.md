@@ -283,10 +283,28 @@ code change can't do itself, all outside the repo:
 
 1. **Revoke the Google API key.** Nothing reads `gemini_api_key` any more, but the key itself is
    still live. Revoke it in Google AI Studio, then delete the `gemini-api-key` secret from
-   Bitwarden Secrets Manager (its `fnox.toml` reference is already gone).
+   Bitwarden Secrets Manager. `fnox.toml` is gitignored, so its `REIMBURSEMENTS_GEMINI_API_KEY`
+   line was removed on this machine only — anyone else with a checkout has to delete their own
+   copy of that line, or `fnox exec` keeps doing a dead Bitwarden lookup and exporting the key
+   into their dev shell.
 2. **Drop `gemini_api_key:` from the production credentials.**
    `bin/rails credentials:edit --environment production` — the development credentials never
    held a value (they're publicly readable). Harmless if left, but it's dead secret material.
 3. **Check the public Privacy Policy.** It is a CMS `Block` row, not a file, so no grep of this
    repo can tell you whether it mentions sending receipts to Google. If it does, edit it in the
    admin CMS — it would now be describing processing that no longer happens.
+
+## The VAT soft block is the only one with no live reveal
+
+*Noticed 2026-07-31 in review of the AI removal.* `ExpenseForm` has two soft blocks. The
+large-amount one reveals itself as you type (`reimbursements_receipt_controller.js#checkAmount`
+on `input`), but the VAT one is now server-rendered only, so a producer who enters
+`12.50 / 12.50` first learns about it from a failed submit.
+
+Not a regression — the live toggle only ever fired from the extractor's `#fill`, so it never
+worked for a hand-typed claim. But with extraction gone, server-render is the *only* path, and
+the two soft blocks now behave inconsistently for no reason a user could infer.
+
+**Fix:** a `checkVat()` on the controller bound to `input->` on both amount fields, mirroring
+`checkAmount`. Three lines plus a target. Deliberately not done as part of the removal — it is
+new behaviour, not cleanup.

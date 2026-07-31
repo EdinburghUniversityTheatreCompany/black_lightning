@@ -88,13 +88,21 @@ module Reimbursements
       assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
     end
 
-    test "vat soft block also triggers when excl exceeds total" do
+    # An ex-VAT amount ABOVE the total trips the soft block too, but that state
+    # is unreachable for a submitter: amounts_valid rejects it outright. Assert
+    # the hard error is what actually governs, so nobody later "fixes" this into
+    # a soft block that lets a nonsense pair through on one tick.
+    test "excl above the total is a hard error, not merely a vat soft block" do
       form = build_form(amount_excl_vat: "20.00")
       assert_not form.valid?
-      assert form.errors[:vat_acknowledged].present?
+      assert form.errors[:amount_excl_vat].present?
+
+      acknowledged = build_form(amount_excl_vat: "20.00", vat_acknowledged: "1")
+      assert_not acknowledged.valid?, "acknowledging VAT must not clear an impossible amount pair"
+      assert acknowledged.errors[:amount_excl_vat].present?
     end
 
-    test "no vat block when vat is itemised and excl is below total" do
+    test "no vat block when excl is below total" do
       assert build_form.valid?
     end
 

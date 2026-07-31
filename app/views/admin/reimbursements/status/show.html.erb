@@ -22,8 +22,9 @@
 
 <%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-2">
-    Probe Microsoft Graph with the app's own credentials. Each check runs
-    independently, so one failure never hides the others.
+    Probe Microsoft Graph with the app's own credentials. Graph is the only
+    integration left to check; #run_checks stays an array so adding the next one
+    is a one-line change, and each probe is rescued on its own.
   </p>
   <div data-controller="busy-dim"
        data-action="turbo:submit-start->busy-dim#start turbo:submit-end->busy-dim#end">

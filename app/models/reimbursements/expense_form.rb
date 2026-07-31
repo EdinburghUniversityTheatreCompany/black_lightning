@@ -7,9 +7,8 @@ module Reimbursements
   # was filled in, and submitting the draft re-runs the full validation.
   #
   # The VAT rule is a SOFT block: when the ex-VAT amount isn't below the total,
-  # submitters must tick an acknowledgement,
-  # because the full amount then counts against their budget — but they can
-  # always submit.
+  # submitters must tick an acknowledgement, because the full amount then counts
+  # against their budget — but they can always submit.
   class ExpenseForm
     include ActiveModel::Model
 

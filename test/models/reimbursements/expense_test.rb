@@ -143,7 +143,6 @@ module Reimbursements
       assert_not create_expense(expense_type: Expense::TYPE_FROM_EUSA).editable?
     end
 
-
     test "status and expense_type are validated against the known sets" do
       assert_raises(ActiveRecord::RecordInvalid) { create_expense(status: "Bogus") }
       assert_raises(ActiveRecord::RecordInvalid) { create_expense(expense_type: "Bogus") }

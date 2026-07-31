@@ -146,6 +146,10 @@ module Reimbursements
       assert_equal "12.50", ready[:total]
       assert_not ready.key?(:draft_link), "the nightly no longer builds a draft"
       assert_empty ready[:expenses].sole[:flags], "a clean claim carries no flags"
+      # Pinned at the caller, not just in notifier_test: the Notifier renders
+      # next_run_day only when it is passed one, so dropping the kwarg here
+      # would silently lose "the next reminder is …" with every test green.
+      assert_equal "Tuesday 14 July", ready[:next_run_day]
       assert_empty mailer_calls(:batch_ready), "no draft, so no draft-ready alert"
       # Nothing is submitted: the nightly must not mutate expenses.
       assert_equal Status::APPROVED, expense.reload.status

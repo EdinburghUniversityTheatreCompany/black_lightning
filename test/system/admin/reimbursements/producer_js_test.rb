@@ -93,6 +93,36 @@ module Admin
         assert_text "change the type to Reimbursement instead"
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
       end
+
+      # With extraction gone these are the last untested behaviours the Stimulus
+      # controller still owns, and #parseAmount's comma rule is exactly the kind
+      # of thing that regresses silently: "999,99" is a decimal comma, not a
+      # thousands separator, so a naive strip read it as 99999 and demanded a
+      # confirmation the server would never have asked for.
+      test "the large-amount confirmation appears as the amount crosses the threshold" do
+        visit new_admin_reimbursements_expense_path
+
+        assert_selector "[data-reimbursements-receipt-target='largeAmountWarning']", visible: :hidden
+
+        fill_in "Amount (£, incl. VAT)", with: "1000"
+        assert_selector "[data-reimbursements-receipt-target='largeAmountWarning']", visible: :visible
+
+        fill_in "Amount (£, incl. VAT)", with: "999,99"
+        assert_selector "[data-reimbursements-receipt-target='largeAmountWarning']", visible: :hidden,
+                        wait: 2
+      end
+
+      test "the payment-reference counter tracks what EUSA will actually keep" do
+        visit new_admin_reimbursements_expense_path
+        limit = ::Reimbursements::ExpenseForm::REFERENCE_LIMIT
+
+        assert_selector "[data-reimbursements-receipt-target='referenceCounter']",
+                        text: "#{limit} of #{limit} characters left"
+
+        fill_in "Payment reference", with: "PROPS"
+        assert_selector "[data-reimbursements-receipt-target='referenceCounter']",
+                        text: "#{limit - 5} of #{limit} characters left"
+      end
     end
   end
 end

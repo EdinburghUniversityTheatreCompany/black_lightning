@@ -242,6 +242,20 @@ module Admin
         assert_empty assigns(:ready)
       end
 
+      # The AI verdict was this page's only Turbo Stream subscription. With it
+      # gone the page must carry none at all — an orphan
+      # <turbo-cable-stream-source> would open a socket onto a channel nothing
+      # ever broadcasts to.
+      test "the review page subscribes to no Turbo Stream" do
+        pending_expense
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_not_includes response.body, "turbo-cable-stream-source"
+      end
+
       # --- Bulk actions ----------------------------------------------------
 
       test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do
