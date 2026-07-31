@@ -1,5 +1,9 @@
 # Code review: reimbursements-operator-tooling
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Scope: `git diff 5c04d69c2699e3fef08e7b5d6a22f570be6f93af..HEAD` (branch `reimbursements-operator-tooling` vs its merge-base with `main`). 136 files, ~13.7k insertions. Excludes `config/credentials/production.yml.enc` (encrypted, not reviewable as text).
 
 Process: repeated multi-axis agent review passes, findings de-duplicated and appended below ranked by severity, until two consecutive passes surface nothing new.

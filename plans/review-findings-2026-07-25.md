@@ -1,5 +1,9 @@
 # Round review findings (2026-07-25)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Review of `f7521eb7..dce7a826` (63 commits, 167 files) by four parallel reviewers.
 Status key: **FIX** = must land before deploy · **DEFER** = backlog · **REJECT** = pushed back on.
 

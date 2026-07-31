@@ -275,3 +275,18 @@ therefore writes its own `categorize`, duplicating the bucket-loop shape.
 **Fix:** rename the payload key to something domain-neutral (`:match` / `:matches`) and let
 the including class name its own buckets, then have `BudgetImport` use it. Small, but it is
 the difference between a shared concern and a concern with one real user and one squatter.
+
+## Manual follow-ups after the AI removal (2026-07-31)
+
+*Noticed while removing the Gemini extraction and the finance AI checker.* Three things the
+code change can't do itself, all outside the repo:
+
+1. **Revoke the Google API key.** Nothing reads `gemini_api_key` any more, but the key itself is
+   still live. Revoke it in Google AI Studio, then delete the `gemini-api-key` secret from
+   Bitwarden Secrets Manager (its `fnox.toml` reference is already gone).
+2. **Drop `gemini_api_key:` from the production credentials.**
+   `bin/rails credentials:edit --environment production` — the development credentials never
+   held a value (they're publicly readable). Harmless if left, but it's dead secret material.
+3. **Check the public Privacy Policy.** It is a CMS `Block` row, not a file, so no grep of this
+   repo can tell you whether it mentions sending receipts to Google. If it does, edit it in the
+   admin CMS — it would now be describing processing that no longer happens.

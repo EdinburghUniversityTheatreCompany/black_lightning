@@ -1,5 +1,9 @@
 # UX Review — Reimbursements Portal (2026-07-16/17)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Four persona-based review agents walked the live app in a real browser (Playwright +
 screenshots), each judging against ten shared criteria: action clarity, state visibility,
 timing, flow continuity, terminology, error recovery, confirmation for consequential

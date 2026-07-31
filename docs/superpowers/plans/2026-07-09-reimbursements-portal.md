@@ -1,5 +1,9 @@
 # Reimbursements Portal Implementation Plan
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 > **STATUS (2026-07-09):** Tasks 1–13 implemented and committed on
 > `reimbursements-portal` (full suite green: 1851 runs, 0 failures, +105 new tests).
 > Remaining before merge: Mick's manual setup (mailbox, Entra app, fnox secrets — see

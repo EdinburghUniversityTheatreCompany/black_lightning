@@ -305,9 +305,8 @@ survive as historical import provenance and are never written. Spec + plan in
 - **An Invoice claim must carry the third-party payee trio** (`ExpenseForm#invoice_without_payee?`).
   `expense_type == TYPE_INVOICE` means EUSA pays the supplier, so blank overrides are a money
   bug, not a gap: `EffectivePayee` falls back to the **submitter's own** bank details, which
-  `ReviewSupport`'s "no bank details" block then reads as satisfied, and `AiChecker` only
-  verifies a payee it can see (`override_block` returns early without `payee_override?`) — so
-  the claim would quietly pay the producer for a bill they never paid. It is a submit-time
+  `ReviewSupport`'s "no bank details" block then reads as satisfied — so the claim would
+  quietly pay the producer for a bill they never paid. It is a submit-time
   block only (drafts and email-in still save incomplete), and the message names Reimbursement
   as the type for a bill they paid themselves. **The finance edit form applies the same rule**
   (`ExpenseEditsController#expense_type_error`) but only while
@@ -321,23 +320,36 @@ survive as historical import provenance and are never written. Spec + plan in
   under. Anything added with `errors.add(:base, …)` on a form rendered through that partial is
   visible; a form NOT using it (bare simple_form) still needs its own rendering, or the rule
   fails the submit with no stated reason.
-- **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): **opt-in per receipt**.
-  Selecting a file no longer auto-scans; the receipt form reveals a consent radio group
-  (`reimbursements_receipt_controller.js`) and only "Yes, reimburse myself" (`mode: self`)
-  or "Yes, invoice" (`mode: invoice`) posts to `ExpensesController#extract`. Self mode
-  returns merchant/amount/description/budget/reference only; **invoice mode additionally
-  returns the payee `payee_name`/`sort_code`/`account_number` printed on the invoice** and
-  prefills the third-party override trio (modulus/all-or-nothing validation unchanged). The
-  controller whitelists `%w[self invoice]` (unknown mode → 422) and strips the bank trio
-  from the JSON in self mode even if the model volunteers it. The disclosure copy states
-  we're on Gemini's free tier (Google may store/human-review). Extraction never blocks —
-  a failed or declined scan leaves a fully usable manual form. The VAT soft-block in
-  `ExpenseForm` stays a soft block.
+- **There is no AI in this portal, by decision (removed 2026-07-31).** The Gemini receipt
+  extractor (`Reimbursements::Extractor`, an opt-in prefill behind a consent radio group) and
+  the finance `AiChecker`/`AiCheckJob` verdict were both removed outright, along with
+  `PromptSafety`, the `ruby_llm` gem, the `gemini_api_key` setting and the four `ai_*` columns
+  on `reimbursements_expenses`. **Don't reintroduce it casually**: the disclosure it required
+  told producers we sent their receipts — and, on an invoice, a supplier's printed bank
+  details — to Google's *free* tier, where Google may keep a copy and have people read it.
+  The submission form is manual, which it always was underneath: consent was deliberately
+  never server-validated so the form stayed submittable with JavaScript off.
+  **The VAT soft-block in `ExpenseForm` stays a soft block**, now triggered only by the ex-VAT
+  amount not being below the total (`vat_itemised` was extractor-written and went with it).
+- **The nightly job reminds, it never gates** (`Reimbursements::NightlyBatchJob`). It submits
+  nothing and builds no batch — Build Batch is operator-initiated. Per due run-day it sends two
+  independent reminders for the default cost centre: stale **Pending** claims awaiting approval,
+  and the whole **Approved** queue ready to batch. Claims `ReviewSupport.needs_attention` flags
+  are listed inside the approved reminder *with their reasons*, never held back: the older
+  behaviour swapped the whole list for a "manual review" email, so one problem claim hid every
+  other claim from the operator. A reminder with nothing to say counts as delivered.
+  - **`record_nightly_run!` is gated on EVERY reminder having sent**, from one call site. That
+    write marks the run-day handled forever (`nightly_due?` skips it) and there is no retry
+    queue behind these alerts, so a half-sent run must be retried whole — at the cost of
+    re-sending the reminder that worked. Both reminders are always *attempted*; don't collapse
+    them into `pending_ok && approved_ok` inline, which short-circuits.
+  - Both reminders sit behind the default-cost-centre guard because expenses carry no
+    cost-centre link yet, so both queues are global and a second due centre would double-send.
 - **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
   shared mailbox via `MailboxClient` (Graph app-only auth, scoped by an
-  ApplicationAccessPolicy). It **does not run Gemini extraction** (no submitter is present
-  to consent): every inbound receipt becomes a **blank DRAFT** (subject as the description,
-  amount/budget/reference left blank) plus the "please complete it in the portal" reply.
+  ApplicationAccessPolicy). Every inbound receipt becomes a **blank DRAFT** (subject as the
+  description, amount/budget/reference left blank) plus the "please complete it in the
+  portal" reply.
   Reply-then-move is the commit point; unread = will retry.
   `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
   subcommittee) before/when the Entra client secret dies.

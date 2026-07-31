@@ -86,8 +86,9 @@ just after the cutover.
   `Budget belongs_to :cost_centre` so an expense resolves its centre via its budget; then scope the
   nightly alert, Build Batch, and Reconcile per centre. This is the `TODO(mysql)` in
   `nightly_batch_job.rb`. Required before a second cost centre (termtime BED) goes live.
-- **Quota-only fixes become moot:** the AI-check cache-bust storm, cache dogpile on a miss, and the
-  "serving stale backup data" banner all disappear when reads are local.
+- **Quota-only fixes become moot:** the cache dogpile on a miss and the "serving stale backup
+  data" banner both disappear when reads are local. (The AI-check cache-bust storm listed here
+  originally is moot twice over — the AI checker was removed on 2026-07-31.)
 - **Atomic person find-or-create.** A DB unique index on People email removes the duplicate-People
   race in `PersonLink#ensure_person!`.
 

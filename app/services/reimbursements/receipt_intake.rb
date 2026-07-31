@@ -10,10 +10,9 @@ module Reimbursements
   # Today that means HEIC/HEIF, which iOS photographs default to. Conversion to
   # JPEG happens HERE, before anything is attached, so every downstream consumer
   # sees an ordinary JPEG with no special-casing: the in-page viewer and thumbnail
-  # strip, the Gemini extractor and the finance AI check, the SharePoint receipt
-  # offload, and the receipts attached to the EUSA BACS email. Storing the HEIC
-  # and converting on read would need the same fix in each of those places, and
-  # would still hand HEIC to Gemini and to EUSA.
+  # strip, the SharePoint receipt offload, and the receipts attached to the EUSA
+  # BACS email. Storing the HEIC and converting on read would need the same fix
+  # in each of those places, and would still hand HEIC to EUSA.
   #
   # Nothing here ever raises at a caller: an unreadable photo comes back as a
   # Receipt carrying a friendly #error, which each intake path reports through

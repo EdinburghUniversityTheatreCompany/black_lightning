@@ -1,5 +1,9 @@
 # Execution plan: reimbursements-operator-tooling findings (229 items)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 ## Context
 
 The 25-round review at `plans/code-review-reimbursements-operator-tooling.md` produced 229
