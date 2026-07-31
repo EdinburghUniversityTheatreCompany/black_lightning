@@ -176,6 +176,8 @@ module Reimbursements
                    "the pending reminder is behind the same guard, so it fires once too"
       assert_equal THURSDAY, second.reload.last_nightly_run_on,
                    "the second cost centre still records its own nightly run"
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on,
+                   "and the default centre — the one that actually sent — records its own"
     end
 
     test "builds the graph client once per run even when both the pending reminder and the " \

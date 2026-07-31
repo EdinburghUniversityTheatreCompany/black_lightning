@@ -88,7 +88,7 @@ module Reimbursements
     # desynchronise the subject line from the table underneath it.
     def approved_ready(recipients:, expenses:, total:, run_date:, next_run_day: nil)
       count = expenses.size
-      flagged = expenses.count { |expense| expense[:flags].present? }
+      flagged = expenses.count { |expense| Array(expense[:flags]).any? }
       send_email(
         to: recipients,
         subject: "#{@cost_centre.subject_prefix} #{count} #{'expense'.pluralize(count)} " \

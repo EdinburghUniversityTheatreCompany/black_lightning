@@ -341,8 +341,10 @@ survive as historical import provenance and are never written. Spec + plan in
   - **`record_nightly_run!` is gated on EVERY reminder having sent**, from one call site. That
     write marks the run-day handled forever (`nightly_due?` skips it) and there is no retry
     queue behind these alerts, so a half-sent run must be retried whole — at the cost of
-    re-sending the reminder that worked. Both reminders are always *attempted*; don't collapse
-    them into `pending_ok && approved_ok` inline, which short-circuits.
+    re-sending the reminder that worked, uncapped — a multi-day Graph outage re-sends it
+    nightly, which is the intended direction (duplicates over silence). Both reminders are
+    always *attempted*: `deliver_reminders` collects them into an array and calls `.all?`
+    precisely so the calls cannot short-circuit. Don't rewrite it into a boolean expression.
   - Both reminders sit behind the default-cost-centre guard because expenses carry no
     cost-centre link yet, so both queues are global and a second due centre would double-send.
 - **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the

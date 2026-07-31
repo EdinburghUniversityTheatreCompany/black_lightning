@@ -11,14 +11,17 @@ module Reimbursements
   #   2. an approved reminder — everything in the Approved queue, ready to be
   #      built into a batch. Claims that ReviewSupport.needs_attention flags are
   #      listed with their reasons rather than replacing the reminder, so one
-  #      problem claim can no longer hide the others.
+  #      problem claim never hides the rest of the queue.
   # Either reminder is skipped when it has nothing to say. Failures go to
   # Honeybadger + a failure email.
   #
   # The run-day is recorded only when EVERY reminder this run decided to send
   # actually left the building — see #run_for. Recording it marks the day
   # handled forever (nightly_due? then skips it), and there is no retry queue
-  # behind these alerts, so a half-sent run must be retried whole.
+  # behind these alerts, so a half-sent run must be retried whole. The price is
+  # uncapped duplicates of the reminder that DID work: a multi-day Graph outage
+  # re-sends it every night. That is the intended direction — duplicates over
+  # silence — so don't "fix" it by loosening the .all? in #deliver_reminders.
   #
   # Operator recipients: the users holding the finance permission
   # (`:manage, :reimbursements_finance`), overridable with the
@@ -30,9 +33,9 @@ module Reimbursements
     queue_as :default
     # duration: set well above the default 3-minute lock TTL — this reads every
     # Approved expense across every cost centre and sends operator emails,
-    # plausibly exceeding 3 minutes; a lock expiring
-    # mid-run would let Solid Queue's sweep allow a concurrent second run past
-    # the single-flight guarantee this concurrency key exists to enforce.
+    # plausibly exceeding 3 minutes; a lock expiring mid-run would let Solid
+    # Queue's sweep allow a concurrent second run past the single-flight
+    # guarantee this concurrency key exists to enforce.
     limits_concurrency key: "reimbursements_nightly_batch", duration: 30.minutes
 
     # A Pending submission awaiting approval longer than this gets a reminder.
@@ -77,10 +80,10 @@ module Reimbursements
       handle_failure(cost_centre, e, today, dry_run)
     end
 
-    # Both reminders are ATTEMPTED even when the first fails to send, so these
-    # are two statements with the && after them: `pending && approved` would
-    # short-circuit and silently drop the approved reminder whenever Graph
-    # fluffed the pending one.
+    # Both reminders must be ATTEMPTED even when the first fails to send. The
+    # array literal is what enforces that: `a && b` would short-circuit and
+    # silently drop the approved reminder whenever Graph fluffed the pending
+    # one, so don't rewrite this into a boolean expression.
     #
     # TODO(mysql): scope both queues per cost centre via budget->cost_centre.
     # Expenses carry no cost-centre link, so BOTH the Pending and Approved
@@ -88,18 +91,27 @@ module Reimbursements
     # the same operators a duplicate of each. Until the link exists, only the
     # default cost centre reports.
     def deliver_reminders(cost_centre, dry_run:, today:)
-      unless cost_centre == default_cost_centre
-        Rails.logger.info("Nightly: #{cost_centre.key} has no cost-centre-scoped queue yet — nothing to remind about")
-        return true
-      end
+      return skip_unscoped_cost_centre(cost_centre, today) unless cost_centre == default_cost_centre
 
       expenses = store.expenses
-      pending_ok = remind_stale_pending(cost_centre, expenses.select(&:pending?),
-                                        today: today, dry_run: dry_run)
-      approved_ok = remind_approved(cost_centre,
-                                    expenses.select { |e| e.status == Status::APPROVED },
-                                    today: today, dry_run: dry_run)
-      pending_ok && approved_ok
+      [ remind_stale_pending(cost_centre, expenses.select(&:pending?),
+                             today: today, dry_run: dry_run),
+        remind_approved(cost_centre, expenses.select(&:approved?),
+                        today: today, dry_run: dry_run) ].all?
+    end
+
+    # Nothing to do for a non-default centre — but the guard rides on the
+    # DEFAULT centre's schedule, and nothing enforces that its run-days cover
+    # everyone else's. On a day only this centre is due, the whole job goes
+    # quiet while still recording the run, so say so loudly rather than at info.
+    def skip_unscoped_cost_centre(cost_centre, today)
+      if default_cost_centre.nightly_due?(today)
+        Rails.logger.info("Nightly: #{cost_centre.key} has no cost-centre-scoped queue yet — nothing to remind about")
+      else
+        Rails.logger.warn("Nightly: #{cost_centre.key} is due but #{default_cost_centre.key} is not, " \
+                          "so NO reminder goes out today — widen the default centre's run-days")
+      end
+      true
     end
 
     def default_cost_centre
@@ -153,7 +165,7 @@ module Reimbursements
 
       rows = approved_rows(approved)
       total = approved.sum { |expense| expense.amount || 0 }
-      flagged = rows.count { |row| row[:flags].any? }
+      flagged = rows.count { |row| Array(row[:flags]).any? }
       Rails.logger.info("Nightly: #{rows.size} approved expense(s) ready to batch " \
                         "(#{flagged} flagged) for #{cost_centre.key}")
       return true if dry_run
@@ -247,7 +259,16 @@ module Reimbursements
 
     # The finance operators: users granted the finance permission via the grid,
     # or a single override address for a shared finance inbox.
+    # Memoized: notify runs at least twice per job, and this is a three-table
+    # permission join each time. Global today, so one ivar for the whole run is
+    # right — revisit if recipients ever become per-cost-centre.
     def operator_emails
+      return @operator_emails if defined?(@operator_emails)
+
+      @operator_emails = compute_operator_emails
+    end
+
+    def compute_operator_emails
       override = ENV["REIMBURSEMENTS_OPERATOR_EMAIL"].presence
       return [ override ] if override
 
