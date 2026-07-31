@@ -5,19 +5,18 @@ module Admin
     ##
     # The finance-gated integration status dashboard: a page showing the last
     # nightly-run date per cost centre (a plain DB read, always shown) plus
-    # on-demand OK/fail/skip probes of Microsoft Graph and Gemini.
+    # on-demand OK/fail/skip probes of Microsoft Graph.
     class StatusControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
       # Enable the integration secrets Settings reads (env wins over credentials),
-      # restoring the prior values afterwards. Without these Graph/Gemini
-      # sit at their test-env default of "not configured".
+      # restoring the prior values afterwards. Without these Graph sits at its
+      # test-env default of "not configured".
       GRAPH_ENV = {
         "REIMBURSEMENTS_AZURE_TENANT_ID" => "tenant",
         "REIMBURSEMENTS_AZURE_CLIENT_ID" => "client",
         "REIMBURSEMENTS_AZURE_CLIENT_SECRET" => "secret"
       }.freeze
-      GEMINI_ENV = { "REIMBURSEMENTS_GEMINI_API_KEY" => "a-key" }.freeze
 
       def with_env(vars)
         original = vars.keys.index_with { |key| ENV[key] }
@@ -121,44 +120,30 @@ module Admin
       test "run reports every integration OK when the probes succeed" do
         sign_in @user
 
-        with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run }
+        with_env(GRAPH_ENV) { post :run }
 
         assert_response :success
         assert_includes response.body, "Microsoft Graph"
         assert_includes response.body, "acquired an app token"
-        assert_includes response.body, "Gemini"
-        assert_includes response.body, "API key configured"
       end
 
       test "run flags Microsoft Graph with the error message when the token probe raises" do
         StatusController.graph_builder = -> { FakeGraph.new(ok: false) }
         sign_in @user
 
-        with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run }
+        with_env(GRAPH_ENV) { post :run }
 
         assert_response :success
         assert_includes response.body, "Graph rejected the token (401)"
         # Points a non-technical finance user at IT to rotate the server credential.
         assert_includes response.body, "Contact IT"
-        # A Graph failure must not hide the other (passing) checks.
-        assert_includes response.body, "API key configured"
-      end
-
-      test "run skips Gemini when no API key is configured" do
-        sign_in @user
-
-        # Gemini env deliberately unset (test-env default), Graph configured.
-        with_env(GRAPH_ENV) { post :run }
-
-        assert_response :success
-        assert_includes response.body, "AI checks are disabled"
       end
 
       test "run skips Graph when the Azure credentials are absent" do
         sign_in @user
 
-        # Azure env deliberately unset (test-env default), Gemini configured.
-        with_env(GEMINI_ENV) { post :run }
+        # Azure env deliberately unset (the test-env default).
+        post :run
 
         assert_response :success
         assert_includes response.body, "No Azure credentials configured yet"
@@ -168,7 +153,7 @@ module Admin
         @cost_centre.update!(last_nightly_run_on: Date.new(2026, 6, 30))
         sign_in @user
 
-        with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run }
+        with_env(GRAPH_ENV) { post :run }
 
         assert_response :success
         assert_includes response.body, "2026-06-30"
@@ -177,7 +162,7 @@ module Admin
       test "run answers a turbo stream that updates the results in place" do
         sign_in @user
 
-        with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run, as: :turbo_stream }
+        with_env(GRAPH_ENV) { post :run, as: :turbo_stream }
 
         assert_response :success
         assert_includes response.media_type, "turbo-stream"

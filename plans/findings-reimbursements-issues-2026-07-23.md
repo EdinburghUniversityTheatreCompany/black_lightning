@@ -1,5 +1,9 @@
 # Reimbursements issue investigation — findings (2026-07-23)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Recovered from session `e48a6b27-9d5e-4e39-bb9f-145b19e31763` (ran 23:05–23:29 local in the
 `.claude/worktrees/reimbursements-fixes` worktree). Ten subagents investigated; only two
 results reached the coordinator before the session ended, so these are lifted verbatim from

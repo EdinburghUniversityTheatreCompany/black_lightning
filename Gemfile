@@ -40,8 +40,6 @@ gem "roo", require: false  # For reading xlsx files (membership imports)
 gem "rubyXL", require: false # Fill the EUSA BACS xlsx template in place, preserving styling (reimbursements Build Batch)
 gem "rqrcode"
 
-gem "ruby_llm" # Unified LLM API (Gemini) for reimbursements AI receipt extraction + expense checks
-
 gem "silencer"
 
 gem "active_storage_validations"

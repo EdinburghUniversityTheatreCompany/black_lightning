@@ -2,8 +2,7 @@ module Reimbursements
   ##
   # Expense domain predicates, split out of the model to keep it readable.
   # Includers provide status, expense_type, budget, amount, amount_excl_vat,
-  # description, payment_reference, receipt_files, sharepoint_receipt_urls and
-  # ai_check_status.
+  # description, payment_reference, receipt_files and sharepoint_receipt_urls.
   module ExpenseSemantics
     def pending? = status == Status::PENDING
     def draft? = status == Status::DRAFT
@@ -45,34 +44,6 @@ module Reimbursements
     def receipt_count
       attached = receipt_files.size
       attached.positive? ? attached : sharepoint_receipt_urls.size
-    end
-
-    # Whether this claim's receipts may be sent to Gemini. ONE consent covers
-    # both AI uses of the document: reading it to prefill the submission form,
-    # and sending it again later so the finance AI check can compare it against
-    # the claim. The submitter answers once, on the receipt form.
-    #
-    # Only an explicit true permits it. nil means nobody was ever asked (every
-    # claim submitted before the question existed, and every email-in claim,
-    # where no submitter is present to consent), and absent consent is a refusal:
-    # those claims are reviewed by hand, as they were before the checker existed.
-    def ai_processing_consented?
-      ai_processing_consent == true
-    end
-
-    # An explicit "No, I will fill in all the details myself", as opposed to
-    # never having been asked. Both block the check; the difference is only what
-    # the finance UI can honestly say about why.
-    def ai_processing_declined?
-      ai_processing_consent == false
-    end
-
-    # True only for a genuine pass/fail verdict — "error" means the checker
-    # itself couldn't run (e.g. a transient Gemini outage), so it must NOT
-    # count as "already checked": that would permanently lock the expense out
-    # of ever being (re)checked once the outage clears.
-    def ai_checked?
-      %w[pass fail].include?(ai_check_status)
     end
   end
 end

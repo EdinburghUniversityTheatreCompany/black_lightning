@@ -3,8 +3,8 @@ module Reimbursements
   # A file attached to an expense: a view-friendly wrapper over the receipt's
   # ActiveStorage blob. Every URL it exposes is HOST-RELATIVE (built with
   # only_path), so it is only resolvable from inside the app — anything that
-  # needs the content itself (AiChecker, BatchProcessor's SharePoint offload)
-  # must call +bytes+ rather than hand a URL to a remote fetcher.
+  # needs the content itself (BatchProcessor's SharePoint offload) must call
+  # +bytes+ rather than hand a URL to a remote fetcher.
   class Attachment
     attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
 

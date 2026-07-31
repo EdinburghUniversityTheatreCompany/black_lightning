@@ -52,7 +52,7 @@ module Reimbursements
 
     # The fixture's pixels are stored 400x260 (landscape) with metadata saying
     # rotate 90 CW, so an implementation that ignored the rotation would emit a
-    # 400x260 JPEG. Finance gets a sideways receipt and the AI check reads it
+    # 400x260 JPEG. Finance would otherwise get a sideways receipt, which reads
     # worse.
     test "EXIF orientation is applied, and not left behind to be applied twice" do
       receipt = ReceiptIntake.from_upload(heic_upload)

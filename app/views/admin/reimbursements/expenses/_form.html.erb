@@ -1,7 +1,7 @@
 <%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
-<%# Receipt-first expense form. The Stimulus controller posts the receipt to
-    the extract endpoint and prefills the fields; everything still works with
-    JavaScript disabled (plain manual form). %>
+<%# Receipt-first expense form. The Stimulus controller holds on to the picked
+    receipt across a failed submit and drives the inline warnings; everything
+    still works with JavaScript disabled (plain manual form). %>
 <%# The primary/secondary buttons and the line beneath them adapt to what the
     submit actually DOES, which depends on the claim's current status:
       - new / editing a Draft: primary submits to finance, secondary keeps it a
@@ -13,7 +13,6 @@
       html: { multipart: true,
               data: { controller: "reimbursements-receipt",
                       action: "turbo:submit-end->reimbursements-receipt#submitEnd",
-                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path,
                       reimbursements_receipt_resubmit_value: form.errors.any?,
                       reimbursements_receipt_invoice_type_value: Reimbursements::Expense::TYPE_INVOICE,
                       reimbursements_receipt_large_amount_threshold_value:
@@ -61,66 +60,16 @@
           </p>
         <% end %>
         <p class="mb-2 text-sm text-gray-600">
-          Upload the receipt or invoice first, then choose below whether we may read it with
-          AI. PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
-          have to deduct the full amount from your budget instead of the ex-VAT amount, so a
-          VAT receipt is in your own interest.
+          Upload the receipt or invoice first, then fill in the details below. PDF or photo,
+          max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we have to deduct the
+          full amount from your budget instead of the ex-VAT amount, so a VAT receipt is in
+          your own interest.
         </p>
         <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
               input_html: { multiple: true,
                             accept: Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE,
                             data: { reimbursements_receipt_target: "files",
-                                    action: "change->reimbursements-receipt#fileChanged change->reimbursements-receipt#stash" } } %>
-
-        <%# ONE consent, covering BOTH AI uses of the receipt: reading it now to
-            prefill this form, and sending it again later so the finance team's AI
-            check can compare it against the claim. Both uses are named in the copy
-            because this one answer governs both — a disclosure that mentions only
-            the prefill makes picking "No" meaningless. It says "again later"
-            rather than "twice" because an errored check is retried on each
-            Review load.
-            Hidden until a receipt is chosen (JS reveals it); with JavaScript off
-            it stays hidden and the manual form works exactly as before. Selecting
-            "self" or "invoice" is what triggers the upload to Gemini: nothing is
-            sent until the submitter picks one, and "No" makes no network call at
-            all. This is NOT a server-validated field: the manual form must always
-            be submittable (never-block invariant), so no answer at all is recorded
-            as "never asked", which blocks the check just like a refusal. %>
-        <fieldset class="mt-3 hidden rounded border border-gray-200 bg-white p-3"
-                  data-reimbursements-receipt-target="consent">
-          <legend class="px-1 text-sm font-medium">Read this receipt with AI?</legend>
-          <p class="mb-2 text-sm text-gray-600">
-            If you say yes, we send the receipt to Google Gemini: once now, to read it and
-            fill in this form, and again later, so finance can check your claim against it.
-            We use Gemini's free tier, which means Google may keep a copy and have people look
-            at it.
-          </p>
-          <p class="mb-2 text-sm text-gray-600">
-            For most receipts that isn't much of a worry. A till receipt for props or paint is
-            unremarkable. It's worth a moment's thought if the document carries personal
-            details, such as a supplier invoice printed with someone's bank details, an order
-            confirmation showing your home address, or anything medical. If you'd rather not,
-            pick "No" and type the details in yourself. Nothing else about your claim changes.
-          </p>
-          <%# The radio posts with the form (nested under the form object's
-              params), so the answer is recorded on create — a submitter who
-              picks "No" never fires an extract, so the extract POST can't be
-              what records it. Being bound to the form object also means the
-              answer survives a 422 re-render, alongside the file the Stimulus
-              controller restores. %>
-          <div class="flex flex-col gap-2">
-            <% [ [ "self", "Yes, to be reimbursed to myself" ],
-                 [ "invoice", "Yes, as an invoice paid out to the bank details listed on the invoice" ],
-                 [ "no", "No, I will fill in all the details myself" ] ].each do |value, label| %>
-              <label class="flex items-start gap-2 text-sm">
-                <%= f.radio_button :receipt_scan_consent, value, class: "mt-1",
-                      data: { reimbursements_receipt_target: "consentOption",
-                              action: "change->reimbursements-receipt#consentChanged" } %>
-                <span><%= label %></span>
-              </label>
-            <% end %>
-          </div>
-        </fieldset>
+                                    action: "change->reimbursements-receipt#stash" } } %>
 
         <p class="mt-2 text-sm text-gray-600" aria-live="polite"
            data-reimbursements-receipt-target="status"></p>
@@ -154,9 +103,9 @@
     </div>
     <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)",
           hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
-          input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amountExclVat" } } %>
+          input_html: { inputmode: "decimal" } %>
 
-    <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
+    <div role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
         This receipt doesn't itemise VAT, so we have to deduct the
@@ -166,8 +115,6 @@
       <%= f.input :vat_acknowledged, as: :boolean,
             label: "I understand, submit anyway (I'll ask for a VAT receipt next time it's possible)" %>
     </div>
-    <%= f.hidden_field :vat_itemised, data: { reimbursements_receipt_target: "vatItemised" } %>
-
     <%# Required to SUBMIT but optional for a draft. Show the required star so
         the star set matches what submit needs (they were unstarred, so a
         rushed user filled only the starred fields and hit surprise errors),
@@ -177,10 +124,10 @@
           collection: budgets.map { |b| [ b.name, b.record_id ] },
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
-          input_html: { required: false, data: { reimbursements_receipt_target: "budget" } } %>
+          input_html: { required: false } %>
 
     <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
-          input_html: { required: false, data: { reimbursements_receipt_target: "description" } } %>
+          input_html: { required: false } %>
 
     <%= f.input :payment_reference, label: "Payment reference", required: true,
           hint: "What EUSA puts on the bank transfer. Invoices usually specify one; otherwise the invoice number or a short label.",
@@ -215,15 +162,9 @@
         <strong>Invoice</strong> means, so all three are required there. Leave all three blank
         to be reimbursed yourself.
       </p>
-      <%# An invoice-mode scan prefills these from the bank details printed on
-          the invoice; the submitter still verifies them, and the modulus /
-          all-or-nothing validation is unchanged. %>
-      <%= f.input :payee_name_override, label: "Payee account name",
-            input_html: { data: { reimbursements_receipt_target: "payeeName" } } %>
-      <%= f.input :sort_code_override, label: "Payee sort code",
-            input_html: { data: { reimbursements_receipt_target: "sortCode" } } %>
-      <%= f.input :account_number_override, label: "Payee account number",
-            input_html: { data: { reimbursements_receipt_target: "accountNumber" } } %>
+      <%= f.input :payee_name_override, label: "Payee account name" %>
+      <%= f.input :sort_code_override, label: "Payee sort code" %>
+      <%= f.input :account_number_override, label: "Payee account number" %>
     </div>
   <% end %>
 <% end %>

@@ -11,10 +11,9 @@ module Reimbursements
   #   everything else left for the portal), receipts attached, reply with a
   #   portal link, Processed
   #
-  # Email-in deliberately does NOT read receipts with Gemini: there is no
-  # submitter present to consent to the upload, and the portal already asks
-  # them to complete the draft. So every inbound receipt becomes a blank draft
-  # plus the "please complete it in the portal" reply — the designed fallback.
+  # Every inbound receipt becomes a blank draft plus the "please complete it in
+  # the portal" reply — the designed fallback, since nothing here can know the
+  # amount, budget or reference.
   #
   # Failure handling: before the expense exists, a message is simply left
   # unread and retried next cycle. After the expense exists, the message is
@@ -294,9 +293,8 @@ module Reimbursements
     end
 
     # A blank DRAFT: only the receipt and the email subject (as a starting
-    # description) are known. Email-in does not read the receipt with Gemini
-    # (no submitter is present to consent), so the amount, budget and payment
-    # reference are all left for the sender to fill in. The reply asks them to
+    # description) are known: the amount, budget and payment reference are all
+    # left for the sender to fill in. The reply asks them to
     # complete and submit it in the portal, so review only ever sees confirmed
     # claims.
     def expense_attrs(message, person)

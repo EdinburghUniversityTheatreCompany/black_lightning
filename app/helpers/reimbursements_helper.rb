@@ -37,27 +37,6 @@ module ReimbursementsHelper
     reimbursements_modulus_badge(payee, checker: checker)
   end
 
-  # Maps an AI-check status to a BadgeComponent variant + display label. Keyed on
-  # the lower-cased status so "Pass"/"pass" both resolve. Unknown/blank falls
-  # through to a neutral secondary badge.
-  AI_BADGE = {
-    "pass" => { type: :success, label: "Pass" },
-    "fail" => { type: :danger, label: "Fail" },
-    "error" => { type: :warning, label: "Error" }
-  }.freeze
-
-  # A pill badge for an expense's AI check verdict, colour-coded so Pass reads
-  # green, Fail red, Error amber and an unchecked expense stays neutral grey.
-  # Used everywhere the AI status surfaces (finance table, edit page, review card)
-  # so the colours never drift apart.
-  def reimbursements_ai_badge(expense)
-    status = expense.ai_check_status.to_s.strip
-    spec = AI_BADGE[status.downcase]
-    type = spec ? spec[:type] : :secondary
-    label = spec ? spec[:label] : status.presence || "Unchecked"
-    render(BadgeComponent.new(type: type, pill: true).with_content("AI: #{label}"))
-  end
-
   # Pill badge for one Settings access-check row: OK green, FAIL red, SKIP grey
   # (not configured, so nothing to test).
   ACCESS_CHECK_BADGE = { ok: :success, fail: :danger, skip: :secondary }.freeze

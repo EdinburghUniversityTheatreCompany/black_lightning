@@ -79,30 +79,23 @@ module Reimbursements
       )
     end
 
-    # Operator: the batch couldn't auto-submit; some expenses need attention.
-    def manual_review(recipients:, issues:, unblocked_count:, run_date:, next_run_day:)
-      count = issues.size
-      send_email(
-        to: recipients,
-        subject: "#{@cost_centre.subject_prefix} Manual review needed: #{count} " \
-                 "#{'issue'.pluralize(count)} (#{run_date})",
-        template: "reimbursements/emails/manual_review",
-        assigns: { issues: issues, unblocked_count: unblocked_count, run_date: run_date,
-                   next_run_day: next_run_day }
-      )
-    end
-
-    # Operator: the Approved queue is clean and ready to batch. The nightly does
-    # not auto-build, so this only prompts the operator to open Build Batch —
-    # there's no draft link (nothing has been submitted yet).
-    def approved_ready(recipients:, expenses:, total:, run_date:)
+    # Operator: everything sitting in the Approved queue, ready to be built into
+    # a batch. Rows carrying a non-empty :flags need a look on the Review page
+    # first; they are still listed, and still counted in the total, because this
+    # is a reminder and not a gate — the nightly submits nothing either way.
+    #
+    # flagged_count is derived here rather than passed in, so a caller cannot
+    # desynchronise the subject line from the table underneath it.
+    def approved_ready(recipients:, expenses:, total:, run_date:, next_run_day: nil)
       count = expenses.size
+      flagged = expenses.count { |expense| expense[:flags].present? }
       send_email(
         to: recipients,
         subject: "#{@cost_centre.subject_prefix} #{count} #{'expense'.pluralize(count)} " \
-                 "ready to batch (#{run_date})",
+                 "ready to batch#{", #{flagged} flagged" if flagged.positive?} (#{run_date})",
         template: "reimbursements/emails/approved_ready",
-        assigns: { expenses: expenses, total: total, run_date: run_date }
+        assigns: { expenses: expenses, total: total, run_date: run_date,
+                   flagged_count: flagged, next_run_day: next_run_day }
       )
     end
 

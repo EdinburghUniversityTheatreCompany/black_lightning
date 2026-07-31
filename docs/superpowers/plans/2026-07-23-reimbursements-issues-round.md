@@ -1,5 +1,9 @@
 # Reimbursements Issues Round — Implementation Plan
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 > **For agentic workers:** This plan is executed by Opus subagents, one per track, coordinated
 > from the main session. Each track is a self-contained brief. Before starting a track, read
 > `plans/findings-reimbursements-issues-2026-07-23.md` — the section named in your track holds

@@ -79,8 +79,7 @@
            (reimbursements_reasons_popover(reasons: attention[:advisory], key: "edits-adv-#{expense.record_id}",
                                            label: "Check first", heading: "Check before approving:",
                                            badge_type: :warning,
-                                           record_label: "##{expense.auto_number}") if attention[:advisory].any?),
-           (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
+                                           record_label: "##{expense.auto_number}") if attention[:advisory].any?)
          ].compact, " ")
        end
        edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),

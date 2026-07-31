@@ -1,5 +1,9 @@
 # Reimbursements Portal: Manual Setup Guide (Mick)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Everything the app can't do itself. Companion to
 `2026-07-09-reimbursements-portal-design.md`. Nothing here contains secrets; put all
 secret *values* in Bitwarden Secrets Manager / Kamal secrets, never in this repo.
@@ -68,10 +72,11 @@ bedlam-bacs' so either can be revoked independently:
 - Scopes: `data.records:read`, `data.records:write`
 - Access: only the Bedlam Fringe 2026 base
 
-## 5. Gemini key (~0 min)
+## 5. Gemini key — ~~SKIP THIS STEP~~
 
-Reuse the bedlam-bacs `GEMINI_API_KEY`, or mint a fresh one in Google AI Studio if you
-want separate quota/revocation.
+**No longer needed (2026-07-31).** The AI extraction and the AI checker were removed, so the
+app reads no `gemini_api_key` at all. Originally: reuse the bedlam-bacs `GEMINI_API_KEY`, or
+mint a fresh one in Google AI Studio.
 
 ## 6. Hand the values over (Rails credentials)
 
@@ -91,7 +96,6 @@ reimbursements:
   azure_client_secret: "..."        # step 2.2
   azure_secret_expires_on: "2028-07-01"  # expiry you picked in step 2.2 (drives the IT-subcommittee warning email)
   airtable_pat: "..."               # step 4
-  gemini_api_key: "..."             # step 5
   alert_email: "..."                # IT subcommittee address for secret-expiry / auth-failure alerts
 ```
 

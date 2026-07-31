@@ -2,10 +2,9 @@ module Admin
   module Reimbursements
     ##
     # The finance team's review queue:
-    # Pending / Approved tabs, editable expense cards, an AI check kicked off per
-    # unchecked Pending expense on load (a background job, so the request isn't
-    # blocked), a modulus badge on the EFFECTIVE payee details, payee-override
-    # and duplicate-submission warnings, and a needs-attention partition.
+    # Pending / Approved tabs, editable expense cards, a modulus badge on the
+    # EFFECTIVE payee details, payee-override and duplicate-submission warnings,
+    # and a needs-attention partition.
     #
     # Actions: Save (write edits), Approve (auto-fill a BACS-safe payment
     # reference if blank, block without effective bank details), Reject (reason
@@ -29,8 +28,7 @@ module Admin
           format.html { load_queue }
           # The tab on screen is the tab you download. Reuses the Expenses
           # exporter, so a Review download and an Expenses download describe a
-          # claim identically. A CSV must not kick off AI checks, so it skips
-          # everything #load_queue does.
+          # claim identically. It skips everything #load_queue does.
           format.csv do
             send_export ::Reimbursements::Exports::Expenses,
                         @tab == "approved" ? @approved : @pending
@@ -182,12 +180,9 @@ module Admin
 
       private
 
-      # Everything only the on-screen queue needs: the AI checks kicked off per
-      # unchecked Pending claim, the duplicate scan, the owner-endorsement gate
-      # and the ready/attention partition.
+      # Everything only the on-screen queue needs: the duplicate scan, the
+      # owner-endorsement gate and the ready/attention partition.
       def load_queue
-        kick_ai_checks(@pending)
-
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
         @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
@@ -308,24 +303,6 @@ module Admin
 
       def bulk_reject_summary(rejected, emailed)
         "#{rejected} rejected, #{emailed} producer#{'s' unless emailed == 1} emailed."
-      end
-
-      # ai_checked? (not ai_check_status.present?) so an "error" verdict — the
-      # checker itself couldn't run, not a real pass/fail — gets retried the
-      # next time Review loads, rather than being stuck forever the moment a
-      # transient Gemini outage clears.
-      #
-      # ai_processing_consented? is the privacy gate: the check sends the receipt
-      # FILES to Gemini, exactly as receipt extraction does, so it needs the same
-      # consent — and the receipt form asks for one consent covering both. Without
-      # it (declined, or never asked, which is every pre-existing and every
-      # email-in claim) nothing is enqueued and finance reviews the claim by hand.
-      # AiChecker#check refuses independently, since the job is also reachable
-      # from a console.
-      def kick_ai_checks(expenses)
-        expenses.select { |e| e.ai_processing_consented? && !e.ai_checked? }.each do |expense|
-          ::Reimbursements::AiCheckJob.perform_later(expense.record_id)
-        end
       end
 
       # Persist the card's inline edits before a decision (Approve/Reject/

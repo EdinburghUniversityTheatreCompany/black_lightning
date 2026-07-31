@@ -1,5 +1,9 @@
 # Decisions log: reimbursements execution plan (autonomous work)
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 Scope calls made while executing `plans/execution-plan-reimbursements-operator-tooling.md`
 without stopping to ask — logged here for review in a batch rather than blocking on each one.
 

@@ -113,7 +113,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, @cost_centre.receive_mailbox
-        assert_includes response.body, "Nightly auto-submit runs on"
+        assert_includes response.body, "Nightly reminders run on"
       end
 
       test "decorative glyphs are hidden from assistive tech, not part of the link's accessible name" do

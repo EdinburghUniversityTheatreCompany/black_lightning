@@ -1,5 +1,9 @@
 # Reimbursements Portal — Design
 
+> **Historical (2026-07-31).** The Gemini receipt extraction and the finance AI checker
+> described below were **removed from the codebase entirely**. Any AI section here records
+> what was built and decided at the time; it does not describe the app as it stands.
+
 **Date:** 2026-07-09
 **Status:** Approved (Mick, 2026-07-09)
 **Target:** MVP shipped by the weekend of 2026-07-11/12, running alongside the existing Airtable form for Fringe 2026.

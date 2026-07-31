@@ -23,23 +23,6 @@ require_relative "../app/middleware/malformed_request_handler"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-# We use none of RubyLLM's acts_as_chat / acts_as_message ActiveRecord integration — both
-# call sites (Reimbursements::Extractor, Reimbursements::AiChecker) build chats through
-# RubyLLM.chat — but the gem's railtie includes ONE of its two acts_as modules into
-# ActiveRecord::Base either way, and choosing the legacy one prints a deprecation warning
-# on every single process boot: every rake task, every test run, every console.
-#
-# This has to be set HERE rather than in config/initializers/ruby_llm.rb, where the rest of
-# the RubyLLM config lives. The railtie reads the flag from an `ActiveSupport.on_load
-# :active_record` hook, and ActiveRecord::Base has already loaded (during Rails' own
-# active_record railtie initializers) by the time config/initializers/* run.
-#
-# The new module's only side effect for us is defaulting `model_registry_source` to its
-# ActiveRecord source, which is harmless: with no registry model class configured its
-# `read` returns [] (it rescues everything), so RubyLLM falls back to the bundled JSON
-# registry that our model ids already resolve from.
-RubyLLM.configure { |config| config.use_new_acts_as = true }
-
 module ChaosRails
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.

@@ -4,7 +4,7 @@ module Admin
     # Section-wide health dashboard for the reimbursements integrations, widening
     # the Settings per-cost-centre access-check into one view of the external
     # services the finance flows depend on: Microsoft Graph (email drafts +
-    # SharePoint) and Gemini (AI expense checking).
+    # SharePoint).
     #
     # The live probes are ON-DEMAND (a "Run checks" button POSTs to #run), never
     # on page load, so an idle visit doesn't wait on Microsoft. Each probe is
@@ -47,7 +47,7 @@ module Admin
       end
 
       def run_checks
-        [ graph_check, gemini_check ]
+        [ graph_check ]
       end
 
       # Acquire an app-only Graph token (see GraphClient#check_reachable).
@@ -65,18 +65,6 @@ module Admin
       def graph_skip
         Check.new(label: "Microsoft Graph", status: :skip,
                   detail: "No Azure credentials configured yet.")
-      end
-
-      # Config presence only: a live Gemini call costs a request per receipt, so
-      # the dashboard just confirms the API key is set (the AI checker degrades to
-      # an "error" verdict at call time if it later fails).
-      def gemini_check
-        if ::Reimbursements::Settings.gemini_api_key.present?
-          Check.new(label: "Gemini (AI checker)", status: :ok, detail: "API key configured.")
-        else
-          Check.new(label: "Gemini (AI checker)", status: :skip,
-                    detail: "No API key set. AI checks are disabled.")
-        end
       end
     end
   end

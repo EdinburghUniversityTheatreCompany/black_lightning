@@ -1,20 +1,24 @@
 module Reimbursements
   ##
-  # Nightly auto-submit. Runs daily via Solid Queue (config/recurring.yml) and
+  # Nightly reminders. Runs daily via Solid Queue (config/recurring.yml) and
   # acts per cost centre only on that centre's configured run-days
   # (CostCentre#nightly_due?, which also de-dupes so a run-day fires once).
   #
-  # For each due cost centre:
-  #   1. remind operators about Pending submissions stuck awaiting approval
-  #      (>PENDING_REMINDER_DAYS) — these never reach the Approved queue.
-  #   2. triage every Approved expense: ReviewSupport.needs_attention plus the
-  #      AI verdict (fail / error / unchecked / pass-with-note all count as an
-  #      issue). Any issue -> email the operator a manual-review breakdown and
-  #      STOP (no batch this run).
-  #   3. all clean -> email the operator a "ready to batch" alert listing the
-  #      approved expenses + total. The nightly does NOT auto-build or draft:
-  #      Build Batch is operator-initiated, so nothing is submitted here.
-  # Failures go to Honeybadger + a failure email.
+  # It is a REMINDER job, not a gate: it submits nothing, builds no batch and
+  # holds nothing back. For the default cost centre it sends, independently:
+  #   1. a pending reminder — Pending submissions stuck awaiting approval
+  #      (>PENDING_REMINDER_DAYS); these never reach the Approved queue.
+  #   2. an approved reminder — everything in the Approved queue, ready to be
+  #      built into a batch. Claims that ReviewSupport.needs_attention flags are
+  #      listed with their reasons rather than replacing the reminder, so one
+  #      problem claim can no longer hide the others.
+  # Either reminder is skipped when it has nothing to say. Failures go to
+  # Honeybadger + a failure email.
+  #
+  # The run-day is recorded only when EVERY reminder this run decided to send
+  # actually left the building — see #run_for. Recording it marks the day
+  # handled forever (nightly_due? then skips it), and there is no retry queue
+  # behind these alerts, so a half-sent run must be retried whole.
   #
   # Operator recipients: the users holding the finance permission
   # (`:manage, :reimbursements_finance`), overridable with the
@@ -24,9 +28,9 @@ module Reimbursements
   # run — so it can be triggered safely to preview.
   class NightlyBatchJob < Reimbursements::ApplicationJob
     queue_as :default
-    # duration: set well above the default 3-minute lock TTL — this triages
-    # every Approved expense across every cost centre plus its AI verdicts and
-    # sends operator emails, plausibly exceeding 3 minutes; a lock expiring
+    # duration: set well above the default 3-minute lock TTL — this reads every
+    # Approved expense across every cost centre and sends operator emails,
+    # plausibly exceeding 3 minutes; a lock expiring
     # mid-run would let Solid Queue's sweep allow a concurrent second run past
     # the single-flight guarantee this concurrency key exists to enforce.
     limits_concurrency key: "reimbursements_nightly_batch", duration: 30.minutes
@@ -67,27 +71,35 @@ module Reimbursements
         return
       end
 
-      expenses = store.expenses
-      remind_stale_pending(cost_centre, expenses.select(&:pending?), today: today, dry_run: dry_run)
-
-      # TODO(mysql): scope Approved expenses per cost centre via budget->cost_centre.
-      # Expenses carry no cost-centre link yet, so the Approved queue is global; if
-      # every due cost centre triaged + alerted on it they'd all fire on the same
-      # expenses. Until the link exists, only the primary/default cost centre acts
-      # on the Approved set. Advisory-only — the nightly submits nothing now.
-      return finish_no_work(cost_centre, today, dry_run) unless cost_centre == default_cost_centre
-
-      approved = expenses.select { |expense| expense.status == Status::APPROVED }
-      return finish_no_work(cost_centre, today, dry_run) if approved.empty?
-
-      issues, clean = triage(approved)
-      if issues.any?
-        handle_issues(cost_centre, issues, clean.size, today, dry_run)
-      else
-        alert_ready(cost_centre, approved, today, dry_run)
-      end
+      delivered = deliver_reminders(cost_centre, dry_run: dry_run, today: today)
+      record_run(cost_centre, today) if delivered && !dry_run
     rescue StandardError => e
       handle_failure(cost_centre, e, today, dry_run)
+    end
+
+    # Both reminders are ATTEMPTED even when the first fails to send, so these
+    # are two statements with the && after them: `pending && approved` would
+    # short-circuit and silently drop the approved reminder whenever Graph
+    # fluffed the pending one.
+    #
+    # TODO(mysql): scope both queues per cost centre via budget->cost_centre.
+    # Expenses carry no cost-centre link, so BOTH the Pending and Approved
+    # queues are global; a second due cost centre reminding on them would send
+    # the same operators a duplicate of each. Until the link exists, only the
+    # default cost centre reports.
+    def deliver_reminders(cost_centre, dry_run:, today:)
+      unless cost_centre == default_cost_centre
+        Rails.logger.info("Nightly: #{cost_centre.key} has no cost-centre-scoped queue yet — nothing to remind about")
+        return true
+      end
+
+      expenses = store.expenses
+      pending_ok = remind_stale_pending(cost_centre, expenses.select(&:pending?),
+                                        today: today, dry_run: dry_run)
+      approved_ok = remind_approved(cost_centre,
+                                    expenses.select { |e| e.status == Status::APPROVED },
+                                    today: today, dry_run: dry_run)
+      pending_ok && approved_ok
     end
 
     def default_cost_centre
@@ -96,18 +108,21 @@ module Reimbursements
 
     # --- Stale pending reminder -------------------------------------------
 
+    # Returns true when nothing needed sending or the alert went out; false only
+    # when a send was attempted and failed (see #notify). run_for gates the
+    # run-day record on it, so "nothing to say" must not read as a failure.
     def remind_stale_pending(cost_centre, pending, today:, dry_run:)
       cutoff = today.to_time(:utc) - PENDING_REMINDER_DAYS.days
       stale = pending.select { |e| e.submitted_at && e.submitted_at <= cutoff }
                      .sort_by(&:submitted_at)
-      return if stale.empty?
+      return true if stale.empty?
 
       rows = stale.map do |expense|
         { auto_number: expense.auto_number, payee_name: expense.person&.name.to_s,
           amount: format("%.2f", expense.amount || 0), age_days: pending_age_days(expense, today) }
       end
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
-      return if dry_run
+      return true if dry_run
 
       notify(cost_centre) do |emailer, to|
         emailer.pending_reminder(recipients: to, rows: rows, run_date: run_date(today),
@@ -121,104 +136,57 @@ module Reimbursements
       ((today.to_time(:utc) - expense.submitted_at) / 1.day).floor
     end
 
-    # --- Triage approved expenses -----------------------------------------
+    # --- Approved queue reminder ------------------------------------------
 
-    def triage(approved)
+    # Everything in the Approved queue, in one reminder. Claims that
+    # needs_attention flags are listed WITH their reasons rather than diverting
+    # the whole run into a separate "manual review" email: the nightly submits
+    # nothing, so holding the ready-to-batch list back over one problem claim
+    # only hid the other claims from the operator.
+    #
+    # Same return contract as #remind_stale_pending.
+    def remind_approved(cost_centre, approved, today:, dry_run:)
+      if approved.empty?
+        Rails.logger.info("Nightly: no approved expenses for #{cost_centre.key}")
+        return true
+      end
+
+      rows = approved_rows(approved)
+      total = approved.sum { |expense| expense.amount || 0 }
+      flagged = rows.count { |row| row[:flags].any? }
+      Rails.logger.info("Nightly: #{rows.size} approved expense(s) ready to batch " \
+                        "(#{flagged} flagged) for #{cost_centre.key}")
+      return true if dry_run
+
+      notify(cost_centre) do |emailer, to|
+        emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
+                               run_date: run_date(today),
+                               next_run_day: next_run_day(cost_centre, today))
+      end
+    end
+
+    # Clean first, flagged last — the same order the Review page puts them in,
+    # so the email and the screen don't disagree. What needs attention is
+    # carried by the subject line and the intro, not by table position.
+    def approved_rows(approved)
       budget_by_id = store.budgets.index_by(&:record_id)
-      issues = []
-      clean = []
-      approved.each do |expense|
-        reasons = issue_reasons(expense, budget_by_id)
-        if reasons.empty?
-          clean << expense
-        else
-          issues << { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
-                      amount: format("%.2f", expense.amount || 0), reason: reasons.join("; ") }
-        end
-      end
-      [ issues, clean ]
+      approved
+        .map { |expense| approved_row(expense, budget_by_id) }
+        .sort_by { |row| [ row[:flags].any? ? 1 : 0, row[:auto_number].to_i ] }
     end
 
-    def issue_reasons(expense, budget_by_id)
-      reasons = []
-      if ReviewSupport.needs_attention(expense, budget_by_id, modulus_checker)
-        reasons << "needs attention (no budget linked, missing bank details, receipts, or over budget)"
-      end
-      reasons.concat(ai_reasons(expense))
-      reasons
-    end
-
-    # A pass with an informational note still stops the headless path: the
-    # interactive Review UI would show it, so a human must glance at it here too.
-    def ai_reasons(expense)
-      case expense.ai_check_status
-      when "fail"
-        [ "AI review: #{expense.ai_comment.presence || 'AI flagged an issue'}" ]
-      when "error"
-        [ "AI check error during check" ]
-      when "", nil
-        # Without consent no check is coming (a refusal is final and there is no
-        # override), so don't imply one is still pending. It remains an issue: a
-        # human has to check the claim, exactly as they did before the checker.
-        expense.ai_processing_consented? ? [ "AI check not yet run" ] : [ no_consent_reason(expense) ]
-      when "pass"
-        expense.ai_comment.present? ? [ "AI note: #{expense.ai_comment}" ] : []
-      else
-        []
-      end
-    end
-
-    # Neutral phrasing on purpose: declining is a legitimate choice, so the
-    # operator alert must not read as though the claim itself is suspect.
-    def no_consent_reason(expense)
-      if expense.ai_processing_declined?
-        "no AI check: the submitter did not consent to AI processing"
-      else
-        "no AI check: no consent to AI processing recorded (check it by hand)"
-      end
+    # :flags is the real reason list (ReviewSupport.needs_attention_reasons),
+    # the same one the Review card and the CSV export show — not a canned
+    # "something needs attention" string the operator then has to go and decode.
+    # Always an Array, so the template can join it unguarded.
+    def approved_row(expense, budget_by_id)
+      { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
+        amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
+        description: expense.description.to_s,
+        flags: ReviewSupport.needs_attention_reasons(expense, budget_by_id, modulus_checker) }
     end
 
     # --- Outcomes ----------------------------------------------------------
-
-    def finish_no_work(cost_centre, today, dry_run)
-      Rails.logger.info("Nightly: no approved expenses for #{cost_centre.key}")
-      cost_centre.record_nightly_run!(today) unless dry_run
-    end
-
-    def handle_issues(cost_centre, issues, unblocked_count, today, dry_run)
-      Rails.logger.info("Nightly: #{issues.size} issue(s), #{unblocked_count} clean for #{cost_centre.key}")
-      return if dry_run
-
-      sent = notify(cost_centre) do |emailer, to|
-        emailer.manual_review(recipients: to, issues: issues, unblocked_count: unblocked_count,
-                              run_date: run_date(today), next_run_day: next_run_day(cost_centre, today))
-      end
-      record_run(cost_centre, today) if sent
-    end
-
-    # The Approved queue is clean: alert the operator that N expenses are ready
-    # to batch (they open Build Batch to create the draft). The nightly submits
-    # nothing — no BatchProcessor, no draft — so there's no draft link here.
-    def alert_ready(cost_centre, approved, today, dry_run)
-      total = approved.sum { |expense| expense.amount || 0 }
-      if dry_run
-        Rails.logger.info("Nightly [DRY RUN]: would alert #{approved.size} approved expense(s) " \
-                          "totalling £#{format('%.2f', total)} ready to batch for #{cost_centre.key}")
-        return
-      end
-
-      Rails.logger.info("Nightly: #{approved.size} approved expense(s) ready to batch for #{cost_centre.key}")
-      rows = approved.map do |expense|
-        { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
-          amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
-          description: expense.description.to_s }
-      end
-      sent = notify(cost_centre) do |emailer, to|
-        emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
-                               run_date: run_date(today))
-      end
-      record_run(cost_centre, today) if sent
-    end
 
     def handle_failure(cost_centre, error, today, dry_run)
       log_and_notify("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}", error,
@@ -237,10 +205,12 @@ module Reimbursements
     # Returns true when the alert was actually sent (or deliberately skipped —
     # no operator recipients configured is a config gap, not a delivery
     # failure, and must not block the run from being recorded), false when a
-    # send was attempted and failed. Callers that also call record_run must
-    # gate that call on this return value: recording a run whose alert
-    # silently failed to send would lose that alert forever, since
-    # nightly_due? would then treat the run-day as already handled.
+    # send was attempted and failed. run_for gates record_run on EVERY reminder
+    # returning true: recording a run whose alert silently failed to send would
+    # lose that alert forever, since nightly_due? would then treat the run-day
+    # as already handled. The cost of the conjunction is that a run where one
+    # reminder sent and the other failed re-sends the first one tomorrow — the
+    # right trade, since these alerts are deliberately at-least-once.
     def notify(cost_centre)
       recipients = operator_emails
       if recipients.empty?
