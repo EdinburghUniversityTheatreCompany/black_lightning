@@ -36,9 +36,9 @@ class Admin::StaffingDebtsController < AdminController
       flash[:success] = "The Staffing Debt has been successfully forgiven."
     else
       # I hate using nocov but I cannot force this to fail and I can see that this code will work.
-      # :nocov:
+      # simplecov:disable
       flash[:error] = "Error forgiving the Staffing Debt. The Front of House fairy has been resurrected :)"
-      # :nocov:
+      # simplecov:enable
     end
 
     respond_to do |format|

@@ -1,6 +1,6 @@
 namespace :import do
   # Might be useful one day, but probably not.
-  # :nocov:
+  # simplecov:disable
   task shows: :environment do
     Rails.logger = Logger.new("#{Rails.root}/log/import.log")
     Rails.logger.level = Logger::DEBUG
@@ -159,5 +159,5 @@ namespace :import do
 
     user
   end
-  # :nocov:
+  # simplecov:enable
 end

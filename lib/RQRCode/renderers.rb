@@ -1,5 +1,5 @@
 module RQRCode
-  # :nocov:
+  # simplecov:disable
   module Renderers
     class SVG
       class << self
@@ -65,5 +65,5 @@ module RQRCode
       end
     end
   end
-  # :nocov:
+  # simplecov:enable
 end

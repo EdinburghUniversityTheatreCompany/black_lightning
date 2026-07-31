@@ -165,13 +165,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.proposal = self
 
     # Highly unlikely situation, but you never know. I cannot deliberately cause it.
-    # :nocov:
+    # simplecov:disable
     unless save
       message = "Couldn't set the 'successful' flag on the proposal, couldn't add the team members to the show, or couldn't set the show proposal to this one. This will need to be done manually."
       Rails.logger.error message
       raise ActiveRecord::RecordNotSaved, message
     end
-    # :nocov:
+    # simplecov:enable
 
     Rails.logger.info "Created Show: #{@show.name} (#{@show.slug})"
   end

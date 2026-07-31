@@ -18,9 +18,9 @@ module Admin::DashboardHelper
       "<div class=\"alert alert-danger\"><h3>Widget Not Found</h3><p>There is no widget with the name \"#{name}\"</p></div>".html_safe
     rescue => e
       # This only happens in the case of an epic fail, and cannot be properly tested
-      # :nocov:
+      # simplecov:disable
       "<div class=\"alert alert-danger\"><h3>Error During Rendering</h3><p>There was an error rendering the widget.</p><pre>#{e.message}</pre></div>".html_safe
-      # :nocov:
+      # simplecov:enable
     end
   end
 end

@@ -141,9 +141,9 @@ class News < ApplicationRecord
 
       preview
     rescue
-      # :nocov:
+      # simplecov:disable
       "There was an error rendering a preview for this news item."
-      # :nocov:
+      # simplecov:enable
     end
   end
 end

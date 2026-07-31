@@ -1,5 +1,5 @@
 # This mailer is currently completely unused.
-# :nocov:
+# simplecov:disable
 class MembershipMailer < ApplicationMailer
   def new_member(user)
     @user = user
@@ -23,4 +23,4 @@ class MembershipMailer < ApplicationMailer
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
 end
-# :nocov:
+# simplecov:enable

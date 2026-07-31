@@ -7,10 +7,10 @@ class Constraints::ExistingSeason
       Season.select(:slug).collect(&:slug)
     else
       # This is here because of issue #123
-      # :nocov:
+      # simplecov:disable
       p "The table seasons does not exist"
       nil
-      # : nocov:
+      # simplecov:enable
     end
   end
 

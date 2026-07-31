@@ -30,7 +30,7 @@ namespace :users do
   #   end
   # end
 
-  # :nocov:
+  # simplecov:disable
   task interaction: :environment do
     all = User.all.count
     p "We have #{User.all.count} users, of which #{User.with_role(:member).count} are members"
@@ -39,7 +39,7 @@ namespace :users do
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
     p "#{phones} of users have given us their phone number."
   end
-  # :nocov:
+  # simplecov:enable
 
   task clean_up_personal_info: :environment do
     p "Cleaning up personal info.."

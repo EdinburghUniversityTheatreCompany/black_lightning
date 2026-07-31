@@ -92,7 +92,7 @@ class Tasks::Logic::MarkdownHeadingFix
       [ new_lines.join("\n"), changes, skipped, glued ]
     end
 
-    # :nocov:
+    # simplecov:disable
     # Iterate the target columns, print what would change, and (unless dry_run) write it.
     def run(dry_run: true, only: nil, max_len: MAX_HEADING_LEN, strip_all: false)
       targets = only ? TARGETS.slice(only) : TARGETS
@@ -116,7 +116,7 @@ class Tasks::Logic::MarkdownHeadingFix
       print_summary(@last_summary)
       @last_summary
     end
-    # :nocov:
+    # simplecov:enable
 
     private
 
@@ -168,7 +168,7 @@ class Tasks::Logic::MarkdownHeadingFix
       end
     end
 
-    # :nocov:
+    # simplecov:disable
     def scan_record(record, model_name, columns, max_len, strip_all, dry_run, has_updated_at, counts, glued_all)
       touched = false
       columns.each do |col|
@@ -230,6 +230,6 @@ class Tasks::Logic::MarkdownHeadingFix
       puts "  skipped (too long): #{summary[:skipped]}"
       puts "  glued '#' to review: #{summary[:glued]}"
     end
-    # :nocov:
+    # simplecov:enable
   end
 end

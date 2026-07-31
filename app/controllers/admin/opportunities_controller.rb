@@ -56,9 +56,9 @@ class Admin::OpportunitiesController < AdminController
       flash[:success] = "#{@opportunity.display_title} has been approved#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
-      # :nocov:
+      # simplecov:disable
       flash[:error] = "Could not approve #{@opportunity.display_title}"
-      # :nocov:
+      # simplecov:enable
     end
 
     respond_to do |format|
@@ -81,9 +81,9 @@ class Admin::OpportunitiesController < AdminController
       flash[:success] = "#{@opportunity.display_title} has been rejected#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
-      # :nocov:
+      # simplecov:disable
       flash[:error] = "Could not reject #{@opportunity.display_title}"
-      # :nocov:
+      # simplecov:enable
     end
 
     respond_to do |format|
@@ -100,9 +100,9 @@ class Admin::OpportunitiesController < AdminController
       flash[:success] = "#{@opportunity.display_title} has been closed and no longer appears in the public listing"
     else
       # A valid record cannot fail to close, but legacy records may carry validation errors.
-      # :nocov:
+      # simplecov:disable
       flash[:error] = "Could not close #{@opportunity.display_title}"
-      # :nocov:
+      # simplecov:enable
     end
 
     redirect_to admin_opportunity_url(@opportunity)

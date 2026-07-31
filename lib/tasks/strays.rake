@@ -2,7 +2,7 @@
 # This will very likely not work anymore after we upgraded to ActiveStorage.
 
 module Paperclip
-  # :nocov:
+  # simplecov:disable
   module Task
     def self.obtain_attachments(klass)
       klass = Paperclip.class_for(klass.to_s)
@@ -15,11 +15,11 @@ module Paperclip
       end
     end
   end
-  # :nocov:
+  # simplecov:enable
 end
 
 namespace :strays do
-  # :nocov:
+  # simplecov:disable
   task :list, [ :model ] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
@@ -118,5 +118,5 @@ namespace :strays do
       end
     end
   end
-  # :nocov:
+  # simplecov:enable
 end
