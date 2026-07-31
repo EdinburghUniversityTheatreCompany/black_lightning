@@ -11,10 +11,6 @@ class ReimbursementsHelperTest < ActionView::TestCase
     def check(_sort, _account) = @result
   end
 
-  def expense_with(status)
-    Expense.new(status: "Pending", ai_check_status: status)
-  end
-
   def person_with(sort_code: "08-99-99", account_number: "66374958")
     person = Person.new(name: "Pat Producer", email: "pat@example.com")
     person.build_payment_details(sort_code: sort_code, account_number: account_number)
@@ -91,35 +87,6 @@ class ReimbursementsHelperTest < ActionView::TestCase
     budget = Budget.new(name: "Props")
     budget.define_singleton_method(:owner_ids) { [] }
     assert_equal "", budget_owner_names(budget, {})
-  end
-
-  test "AI badge maps pass to a green success badge" do
-    html = reimbursements_ai_badge(expense_with("pass"))
-    assert_includes html, "AI: Pass"
-    assert_includes html, "text-success"
-  end
-
-  test "AI badge maps fail to a red danger badge" do
-    html = reimbursements_ai_badge(expense_with("fail"))
-    assert_includes html, "AI: Fail"
-    assert_includes html, "text-danger"
-  end
-
-  test "AI badge maps error to an amber warning badge" do
-    html = reimbursements_ai_badge(expense_with("error"))
-    assert_includes html, "AI: Error"
-    assert_includes html, "text-warning"
-  end
-
-  test "AI badge is case-insensitive" do
-    html = reimbursements_ai_badge(expense_with("Pass"))
-    assert_includes html, "text-success"
-  end
-
-  test "blank AI status renders a neutral secondary badge" do
-    html = reimbursements_ai_badge(expense_with(""))
-    assert_includes html, "text-gray-700"
-    assert_includes html, "Unchecked"
   end
 
   test "reimbursements_date formats a Date as ISO 8601" do

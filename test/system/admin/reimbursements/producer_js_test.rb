@@ -12,42 +12,7 @@ module Admin
         grant_producer_permission(users(:member))
         create_reimbursements_person(email: users(:member).email)
         create_reimbursements_budget(name: "Props")
-        # On BaseController, never on ExpensesController, and restored afterwards: a write to
-        # the subclass shadows the parent for the rest of the process, breaking the functional
-        # extract tests whenever both suites share one process. See the seam definition in
-        # Admin::Reimbursements::BaseController.
-        @original_extractor_builder = BaseController.extractor_builder
-        # No Gemini in the browser test; extract just fails softly.
-        BaseController.extractor_builder = -> { failing_extractor }
         login_as users(:member)
-      end
-
-      teardown do
-        BaseController.extractor_builder = @original_extractor_builder
-      end
-
-      def failing_extractor
-        Object.new.tap do |ext|
-          def ext.extract(**) = ::Reimbursements::Extractor::Extraction.new(error: "no gemini in test")
-        end
-      end
-
-      # A stub that reports the mode it was asked for IN the extraction it
-      # returns, so a browser test can tell WHICH mode the JS posted — a canned
-      # extraction that ignores the mode makes the two consent choices
-      # indistinguishable, and flipping the "self" radio's value to "invoice"
-      # would then silently ask Gemini for a third party's bank details. It also
-      # always volunteers the bank trio, so self mode's server-side strip is
-      # visible in the same test.
-      def mode_reporting_extractor
-        test = self
-        Object.new.tap do |ext|
-          ext.define_singleton_method(:extract) do |mode:, **|
-            test.canned_extraction(suggested_description: "scanned in #{mode} mode",
-                                   payee_name: "Acme Props Ltd", sort_code: "12-34-56",
-                                   account_number: "12345678")
-          end
-        end
       end
 
       # The form's selects are Tom Select widgets (select_controller.js), which
@@ -59,14 +24,6 @@ module Admin
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click
         wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
-      end
-
-      def canned_extraction(**overrides)
-        ::Reimbursements::Extractor::Extraction.new(
-          merchant: "Acme", total_amount: BigDecimal("42.00"), vat_amount: BigDecimal("7.00"),
-          vat_itemised: true, suggested_description: "Set timber",
-          suggested_payment_reference: "INV-1001", **overrides
-        )
       end
 
       # The whole point of the DataTransfer restore: a receipt the producer
@@ -93,56 +50,6 @@ module Admin
           "document.getElementById('reimbursements_expense_form_receipts').files.length"
         )
         assert_equal 1, still_attached, "the receipt must survive the failed submit"
-      end
-
-      # The scan is opt-in: the consent choice is hidden until a receipt is
-      # attached, and nothing is sent to Gemini until the submitter picks one.
-      test "the consent choice appears only after a receipt is attached" do
-        visit new_admin_reimbursements_expense_path
-
-        # Present in the DOM but hidden until a receipt is picked.
-        assert_selector "[data-reimbursements-receipt-target='consent']", visible: :hidden
-        assert_no_text "Read this receipt with AI?"
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-
-        assert_text "Read this receipt with AI?"
-        assert_text "We use Gemini's free tier"
-        # One consent, both uses: prefilling now AND the finance check later.
-        assert_text "so finance can check your claim against it"
-      end
-
-      test "choosing 'to be reimbursed to myself' scans in self mode, not invoice mode" do
-        BaseController.extractor_builder = -> { mode_reporting_extractor }
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        choose "Yes, to be reimbursed to myself"
-
-        assert_text "Prefilled from your receipt", wait: 5
-        # The mode the JS actually posted, echoed back through the extraction.
-        assert_equal "scanned in self mode", page.find_field("Description").value
-        assert_equal "42.0", page.find_field("Amount (£, incl. VAT)").value
-        # Self mode strips the bank trio even though this extraction volunteers it.
-        assert_empty page.find_field("Payee account name").value
-        assert_empty page.find_field("Payee sort code").value
-      end
-
-      test "choosing the invoice option scans in invoice mode and prefills the payee bank details" do
-        BaseController.extractor_builder = -> { mode_reporting_extractor }
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        choose "Yes, as an invoice paid out to the bank details listed on the invoice"
-
-        assert_text "Prefilled from your receipt", wait: 5
-        assert_equal "scanned in invoice mode", page.find_field("Description").value
-        assert_equal "Acme Props Ltd", page.find_field("Payee account name").value
-        assert_equal "12-34-56", page.find_field("Payee sort code").value
-        assert_equal "12345678", page.find_field("Payee account number").value
       end
 
       # An Invoice pays the supplier, so the payee trio stops being optional.
@@ -185,20 +92,6 @@ module Admin
         assert_text "An Invoice is paid straight to the supplier", wait: 5
         assert_text "change the type to Reimbursement instead"
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
-      end
-
-      test "choosing 'I will fill in the details myself' sends nothing to Gemini" do
-        # If this option ever hit the endpoint, the raising extractor would 500
-        # the request; the status line must instead confirm nothing was sent.
-        BaseController.extractor_builder = -> { raise "must not scan when the submitter declined" }
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        choose "No, I will fill in all the details myself"
-
-        assert_text "nothing will be sent to Google, now or later"
-        assert_empty page.find_field("Amount (£, incl. VAT)").value
       end
     end
   end

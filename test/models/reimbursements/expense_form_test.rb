@@ -12,7 +12,7 @@ module Reimbursements
       defaults = {
         amount: "12.50", amount_excl_vat: "10.42", budget_record_id: "recBud1",
         description: "Fake blood", payment_reference: "PROPS PAT",
-        receipts: [ upload ], vat_itemised: "true"
+        receipts: [ upload ]
       }
       ExpenseForm.new(defaults.merge(attrs))
     end
@@ -31,11 +31,11 @@ module Reimbursements
     end
 
     test "large-amount soft block requires acknowledgement at or above the threshold" do
-      form = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true")
+      form = build_form(amount: "1000.00", amount_excl_vat: "900.00")
       assert_not form.valid?
       assert form.errors[:large_amount_acknowledged].present?, "£1000 must ask for confirmation"
 
-      acknowledged = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true",
+      acknowledged = build_form(amount: "1000.00", amount_excl_vat: "900.00",
                                 large_amount_acknowledged: "1")
       assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
     end
@@ -77,17 +77,19 @@ module Reimbursements
       assert build_form(payment_reference: "X" * 18).valid?
     end
 
-    test "vat soft block requires acknowledgement when receipt lacks vat" do
-      form = build_form(vat_itemised: "false", amount_excl_vat: "12.50")
+    # The only trigger left: an ex-VAT amount that isn't below the total means
+    # the receipt showed no VAT breakdown, so the full amount hits the budget.
+    test "vat soft block requires acknowledgement when excl equals total" do
+      form = build_form(amount_excl_vat: "12.50")
       assert_not form.valid?
       assert form.errors[:vat_acknowledged].present?
 
-      acknowledged = build_form(vat_itemised: "false", amount_excl_vat: "12.50", vat_acknowledged: "1")
+      acknowledged = build_form(amount_excl_vat: "12.50", vat_acknowledged: "1")
       assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
     end
 
-    test "vat soft block also triggers when excl equals total" do
-      form = build_form(vat_itemised: "unknown", amount_excl_vat: "12.50")
+    test "vat soft block also triggers when excl exceeds total" do
+      form = build_form(amount_excl_vat: "20.00")
       assert_not form.valid?
       assert form.errors[:vat_acknowledged].present?
     end

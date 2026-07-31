@@ -215,10 +215,10 @@ module Reimbursements
       expense = Expense.sole
       assert_equal Status::DRAFT, expense.status
       assert_equal @person, expense.person
-      # Email-in never reads the receipt with Gemini: only the subject seeds the
-      # description; amount/budget/reference are left blank for the portal.
+      # Only the subject seeds the description; amount/budget/reference are left
+      # blank for the submitter to complete in the portal.
       assert_equal "Taxi receipt", expense.description, "the subject seeds the description"
-      assert_nil expense.amount, "no extraction: the amount is left for the portal"
+      assert_nil expense.amount, "the amount is left for the portal"
       assert_nil expense.amount_excl_vat
       assert_nil expense.budget
       assert_nil expense.payment_reference
@@ -350,39 +350,6 @@ module Reimbursements
       assert_equal 0, Expense.count, "a disallowed content type must not mint an expense"
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-    end
-
-    test "email-in never sends the receipt to Gemini" do
-      # No submitter is present to consent to the upload, so the poll job must
-      # never build or call the extractor — it just drafts a blank claim. Blow
-      # up if anything reintroduces an extraction call.
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      calls = 0
-      ::Reimbursements::Extractor.define_singleton_method(:new) { |*| calls += 1; super() }
-
-      MailboxPollJob.perform_now
-
-      assert_equal 0, calls, "the poll job must not instantiate the extractor"
-      assert_equal 1, Expense.count
-    ensure
-      ::Reimbursements::Extractor.singleton_class.send(:remove_method, :new)
-    end
-
-    # Nobody was present to consent, so the claim carries no consent at all —
-    # which is a refusal as far as the finance AI check is concerned. That check
-    # sends the receipt files to Gemini exactly as extraction would, so an
-    # email-in claim must not be checkable either; finance reviews it by hand.
-    test "an email-in claim records no consent, so it is never AI-checked either" do
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-
-      MailboxPollJob.perform_now
-
-      expense = Expense.sole
-      assert_nil expense.ai_processing_consent
-      assert_not expense.ai_processing_consented?
-
-      checker = ::Reimbursements::AiChecker.new(chat_builder: -> { raise "must not reach Gemini" })
-      assert checker.check(expense, []).skipped?
     end
 
     test "a failing message is left unread and others still process" do

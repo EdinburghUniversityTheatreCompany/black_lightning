@@ -3,17 +3,17 @@ require "test_helper"
 module Reimbursements
   class SettingsTest < ActiveSupport::TestCase
     teardown do
-      ENV.delete("REIMBURSEMENTS_GEMINI_API_KEY")
+      ENV.delete("REIMBURSEMENTS_AZURE_CLIENT_ID")
       ENV.delete("REIMBURSEMENTS_AZURE_SECRET_EXPIRES_ON")
     end
 
     test "env var overrides credentials" do
-      ENV["REIMBURSEMENTS_GEMINI_API_KEY"] = "env-key"
-      assert_equal "env-key", Settings.gemini_api_key
+      ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "env-key"
+      assert_equal "env-key", Settings.azure_client_id
     end
 
     test "falls back to credentials (absent in test env)" do
-      assert_nil Settings.gemini_api_key
+      assert_nil Settings.azure_client_id
       assert_nil Settings.alert_email
     end
 

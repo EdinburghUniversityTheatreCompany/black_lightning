@@ -37,12 +37,8 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
-      # Consented by default (the ordinary case for a claim submitted through the
-      # portal since the consent question shipped); the AI-check gate tests pass
-      # false/nil explicitly.
       def pending_expense(person: @person, budget: @budget, **attrs)
-        create_reimbursements_expense(person: person, budget: budget,
-                                      **{ ai_processing_consent: true }.merge(attrs))
+        create_reimbursements_expense(person: person, budget: budget, **attrs)
       end
 
       def attach_image_receipt(expense, tag)
@@ -244,125 +240,6 @@ module Admin
         assert_equal [ first.record_id, second.record_id ].sort,
                      assigns(:attention).map(&:record_id).sort
         assert_empty assigns(:ready)
-      end
-
-      test "kicks an AI check for each unchecked pending expense only" do
-        unchecked = pending_expense
-        pending_expense(amount: BigDecimal("99"), ai_check_status: "pass") # already checked
-        sign_in @user
-
-        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ unchecked.record_id ]) do
-          get :index
-        end
-        assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
-      end
-
-      test "re-kicks an AI check for an expense stuck on an error verdict" do
-        errored = pending_expense(ai_check_status: "error")
-        sign_in @user
-
-        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ errored.record_id ]) do
-          get :index
-        end
-      end
-
-      # The consent the receipt form asks for covers this check too, so opening
-      # the queue must not send a declined submitter's receipt to Google —
-      # otherwise picking "No" is hollow, since Review kicks the checks off
-      # automatically on load.
-      test "kicks no AI check for a claim whose submitter declined AI processing" do
-        pending_expense(ai_processing_consent: false)
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_no_enqueued_jobs only: ::Reimbursements::AiCheckJob
-      end
-
-      # Absent consent is a refusal: pre-existing claims and email-in claims were
-      # never asked, so they are reviewed by hand.
-      test "kicks no AI check for a claim with no consent recorded" do
-        pending_expense(ai_processing_consent: nil)
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_no_enqueued_jobs only: ::Reimbursements::AiCheckJob
-      end
-
-      test "still kicks an AI check for the consented claim in a mixed queue" do
-        consented = pending_expense
-        pending_expense(amount: BigDecimal("77"), ai_processing_consent: false)
-        pending_expense(amount: BigDecimal("88"), ai_processing_consent: nil)
-        sign_in @user
-
-        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ consented.record_id ]) do
-          get :index
-        end
-        assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
-      end
-
-      # A claim that will never be checked must say so plainly, instead of
-      # promising a verdict that can never arrive ("AI check running…").
-      test "the card explains a declined claim was not checked, not that a check is running" do
-        pending_expense(ai_processing_consent: false)
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_includes response.body, "did not consent to AI processing"
-        assert_not_includes response.body, "AI check running"
-      end
-
-      test "the card distinguishes a claim nobody was asked from an outright refusal" do
-        pending_expense(ai_processing_consent: nil)
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_includes response.body, "no consent to AI processing recorded"
-        assert_not_includes response.body, "AI check running"
-      end
-
-      # Neither state is a failure or a flag: a declined claim must not read as
-      # suspicious, so no warning/danger styling and no AI badge pill.
-      test "the not-checked explanation is neutral, not a failed or flagged verdict" do
-        pending_expense(ai_processing_consent: false)
-        sign_in @user
-
-        get :index
-
-        assert_not_includes response.body, "AI check flagged this"
-        assert_not_includes response.body, "AI check could not run"
-        assert_not_includes response.body, "AI: Fail"
-        assert_not_includes response.body, "AI: Error"
-      end
-
-      # Decision: verdicts already written stay. A claim checked before the gate
-      # existed still shows its verdict, however its consent column reads.
-      test "a verdict written before the gate existed is still shown" do
-        pending_expense(ai_processing_consent: nil, ai_check_status: "fail",
-                        ai_comment: "Amount doesn't match.")
-        sign_in @user
-
-        get :index
-
-        assert_includes response.body, "AI: Fail"
-        assert_includes response.body, "Amount doesn&#39;t match."
-        assert_not_includes response.body, "no consent to AI processing recorded"
-      end
-
-      test "a consented but unchecked claim still shows the running placeholder" do
-        pending_expense
-        sign_in @user
-
-        get :index
-
-        assert_includes response.body, "AI check running"
       end
 
       # --- Bulk actions ----------------------------------------------------

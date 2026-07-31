@@ -6,7 +6,7 @@ module Reimbursements
   module Settings
     KEYS = %i[
       azure_tenant_id azure_client_id azure_client_secret
-      gemini_api_key alert_email
+      alert_email
     ].freeze
 
     KEYS.each do |key|

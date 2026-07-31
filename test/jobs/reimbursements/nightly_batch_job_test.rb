@@ -31,9 +31,8 @@ module Reimbursements
       @budget ||= create_reimbursements_budget
     end
 
-    def approved_expense(ai_status: "pass", **attrs)
-      create_reimbursements_expense(person: payee, budget: budget, status: Status::APPROVED,
-                                    ai_check_status: ai_status, **attrs)
+    def approved_expense(**attrs)
+      create_reimbursements_expense(person: payee, budget: budget, status: Status::APPROVED, **attrs)
     end
 
     def pending_expense(days_ago: 5)
@@ -92,7 +91,8 @@ module Reimbursements
       reminder = mailer_calls(:pending_reminder).sole.last
       assert_equal 1, reminder[:rows].size
       assert_equal 5, reminder[:rows].first[:age_days]
-      # No approved work, so the run is still recorded (nothing else to do).
+      # The approved reminder had nothing to say, which counts as delivered, so
+      # the run is recorded.
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -104,75 +104,34 @@ module Reimbursements
       assert_empty mailer_calls(:pending_reminder)
     end
 
-    # --- Branch 3: needs-attention -> manual review and STOP --------------
+    # --- Branch 3: needs-attention is flagged, never held back ------------
 
-    test "an AI-failed approved expense triggers manual review and no batch" do
-      approved_expense(ai_status: "fail", ai_comment: "amount mismatch")
+    test "an approved expense needing attention is still listed, flagged rather than held back" do
+      # No receipt: ReviewSupport.needs_attention_reasons flags it. The nightly
+      # is a reminder, not a gate, so the claim must still reach the operator's
+      # list (and its amount must still count towards the total) — the old
+      # behaviour replaced the whole list with a "manual review" email.
+      approved_expense(receipt: false)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      review = mailer_calls(:manual_review).sole.last
-      assert_equal 1, review[:issues].size
-      assert_match(/amount mismatch/, review[:issues].first[:reason])
-      assert_empty mailer_calls(:approved_ready), "no ready alert when an expense needs attention"
+      ready = mailer_calls(:approved_ready).sole.last
+      assert_equal 1, ready[:expenses].size
+      assert_includes ready[:expenses].sole[:flags].join("; "), "receipt"
+      assert_equal "12.50", ready[:total], "a flagged claim still counts towards the total"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
-    test "an unchecked approved expense counts as an issue" do
-      # Consented, so a check genuinely is still pending (see the consent cases
-      # below for the claims where one is never coming).
-      approved_expense(ai_status: "", ai_processing_consent: true)
+    test "clean and flagged approved expenses arrive in one alert, clean first" do
+      approved_expense
+      approved_expense(receipt: false)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      review = mailer_calls(:manual_review).sole.last
-      assert_match(/not yet run/, review[:issues].first[:reason])
-      assert_empty mailer_calls(:approved_ready)
-    end
-
-    # A claim the checker is not allowed to run on still needs a human, so it
-    # still counts as an issue — but "AI check not yet run" implies one is coming.
-    # It never is: a refusal is final, and there is no override.
-    test "an unchecked expense whose submitter declined AI processing says so, not 'not yet run'" do
-      approved_expense(ai_status: "", ai_processing_consent: false)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      reason = mailer_calls(:manual_review).sole.last[:issues].first[:reason]
-      assert_match(/did not consent/, reason)
-      assert_no_match(/not yet run/, reason)
-      assert_empty mailer_calls(:approved_ready)
-    end
-
-    test "an unchecked expense with no consent recorded says so too" do
-      approved_expense(ai_status: "", ai_processing_consent: nil)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      reason = mailer_calls(:manual_review).sole.last[:issues].first[:reason]
-      assert_match(/no consent to AI processing/, reason)
-      assert_no_match(/not yet run/, reason)
-    end
-
-    test "an AI-check error counts as an issue" do
-      approved_expense(ai_status: "error")
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      review = mailer_calls(:manual_review).sole.last
-      assert_match(/AI check error/, review[:issues].first[:reason])
-      assert_empty mailer_calls(:approved_ready)
-    end
-
-    test "an AI pass with an informational note still blocks headless auto-submit" do
-      approved_expense(ai_status: "pass", ai_comment: "unusual amount for this budget")
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      review = mailer_calls(:manual_review).sole.last
-      assert_equal 1, review[:issues].size
-      assert_match(/unusual amount for this budget/, review[:issues].first[:reason])
-      assert_empty mailer_calls(:approved_ready), "a pass with a note must still stop the headless path"
+      ready = mailer_calls(:approved_ready).sole.last
+      assert_equal 2, ready[:expenses].size, "one alert covers the whole Approved queue"
+      assert_empty ready[:expenses].first[:flags]
+      assert_not_empty ready[:expenses].last[:flags], "flagged claims sort to the bottom"
     end
 
     # --- Branch 4: all clean -> ready-to-batch alert (nothing submitted) ---
@@ -186,7 +145,7 @@ module Reimbursements
       assert_equal 1, ready[:expenses].size
       assert_equal "12.50", ready[:total]
       assert_not ready.key?(:draft_link), "the nightly no longer builds a draft"
-      assert_empty mailer_calls(:manual_review)
+      assert_empty ready[:expenses].sole[:flags], "a clean claim carries no flags"
       assert_empty mailer_calls(:batch_ready), "no draft, so no draft-ready alert"
       # Nothing is submitted: the nightly must not mutate expenses.
       assert_equal Status::APPROVED, expense.reload.status
@@ -195,20 +154,22 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
-    test "a second, non-default cost centre never re-triages the (cost-centre-unscoped) Approved queue" do
-      # Expenses carry no cost-centre link yet (see the TODO(mysql) in run_for),
-      # so without this guard a second due cost centre would re-triage the same
-      # global Approved set and double-send the operator alert. It still
-      # records its own nightly run (finish_no_work), just with no email.
+    test "a second, non-default cost centre never re-reminds on the (cost-centre-unscoped) queues" do
+      # Expenses carry no cost-centre link yet (see the TODO(mysql) in
+      # deliver_reminders), so without this guard a second due cost centre would
+      # remind on the same global queues and double-send BOTH alerts to the same
+      # operators. It still records its own nightly run, just with no email.
       second = CostCentre.create!(key: "extra", name: "Second Society", eusa_code: "X99",
                                   receive_mailbox: "in@second.co.uk", send_mailbox: "send@second.co.uk")
       assert_not_equal CostCentre.default, second
       approved_expense
+      pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       assert_equal 1, mailer_calls(:approved_ready).size, "only the default cost centre's alert fires"
-      assert_empty mailer_calls(:manual_review)
+      assert_equal 1, mailer_calls(:pending_reminder).size,
+                   "the pending reminder is behind the same guard, so it fires once too"
       assert_equal THURSDAY, second.reload.last_nightly_run_on,
                    "the second cost centre still records its own nightly run"
     end
@@ -256,6 +217,43 @@ module Reimbursements
       assert_nil CostCentre.default.reload.last_nightly_run_on
     ensure
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
+    end
+
+    # Both reminders send independently, so a run can half-succeed. Recording the
+    # run-day marks it handled forever (nightly_due? then skips it) and there is
+    # no retry queue behind these alerts, so ANY failed send must block the
+    # record — at the cost of re-sending the one that worked tomorrow.
+    test "a failed pending reminder blocks recording the run, even though the approved alert sent" do
+      @notifier = FakeNotifier.new(fail_only: [ :pending_reminder ])
+      pending_expense(days_ago: 5)
+      approved_expense
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_equal 1, mailer_calls(:approved_ready).size,
+                   "the approved reminder must still be ATTEMPTED after the pending one fails"
+      assert_empty mailer_calls(:pending_reminder)
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a failed approved reminder blocks recording the run, even though the pending one sent" do
+      @notifier = FakeNotifier.new(fail_only: [ :approved_ready ])
+      pending_expense(days_ago: 5)
+      approved_expense
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_equal 1, mailer_calls(:pending_reminder).size
+      assert_empty mailer_calls(:approved_ready)
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a quiet run sends nothing and still records the run-day" do
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty @notifier.calls, "no pending and no approved work means no email at all"
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on,
+                   "a reminder with nothing to say counts as delivered"
     end
 
     test "an error raised mid-run emails failure and does not record the run (so it retries)" do

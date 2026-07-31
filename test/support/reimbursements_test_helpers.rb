@@ -1,6 +1,6 @@
 # Builders and fakes for reimbursements tests: database seed helpers for the
-# DatabaseStore-backed portal, plus fake external-service clients (Graph,
-# Gemini/RubyLLM, HTTP transport) and a fake modulus checker.
+# DatabaseStore-backed portal, plus fake external-service clients (Graph, HTTP
+# transport) and a fake modulus checker.
 module ReimbursementsTestHelpers
   # --- Database seed helpers -----------------------------------------------
   # Create the real rows the DatabaseStore serves.
@@ -118,33 +118,6 @@ module ReimbursementsTestHelpers
     end
   end
 
-  # Fake RubyLLM chat for the Gemini call sites (Extractor, AiChecker): records
-  # the schema, prompt and attachments it was asked with, then returns a canned
-  # structured response (or raises). Mirrors the fluent
-  # RubyLLM.chat.with_schema(...).ask(...) chain.
-  class FakeChat
-    Response = Struct.new(:content)
-    attr_reader :schema, :prompt, :attachments
-
-    def initialize(content: nil, error: nil)
-      @content = content
-      @error = error
-    end
-
-    def with_schema(schema)
-      @schema = schema
-      self
-    end
-
-    def ask(prompt, with: nil)
-      @prompt = prompt
-      @attachments = with
-      raise @error if @error
-
-      Response.new(@content)
-    end
-  end
-
   # Stand-in for BatchProcessor in the job tests (nightly + interactive build):
   # records each process(**kwargs) call and returns a canned Result.
   # +success: false+ drives the failure path.
@@ -172,26 +145,30 @@ module ReimbursementsTestHelpers
   # the mailbox it was built for — a shared stand-in for Notifier across
   # NightlyBatchJob/BuildBatchJob tests. +fail+ makes every send raise
   # +fail_with+ (a plain Graph outage by default; pass
-  # Reimbursements::GraphAuth::AuthError to drive the IT-escalation path).
+  # Reimbursements::GraphAuth::AuthError to drive the IT-escalation path);
+  # +fail_only+ names the alerts that should fail, leaving the rest working —
+  # the nightly sends two independent reminders per run, and whether a partly
+  # failed run is recorded is exactly what that asymmetry has to prove.
   class FakeNotifier
     attr_reader :calls, :mailbox
 
-    def initialize(mailbox: nil, fail: false, fail_with: Reimbursements::GraphAuth::Error)
+    def initialize(mailbox: nil, fail: false, fail_only: [],
+                   fail_with: Reimbursements::GraphAuth::Error)
       @mailbox = mailbox
       @fail = fail
+      @fail_only = Array(fail_only)
       @fail_with = fail_with
       @calls = []
     end
 
     def record(name, kwargs)
-      raise @fail_with, "graph down" if @fail
+      raise @fail_with, "graph down" if @fail || @fail_only.include?(name)
 
       @calls << [ name, kwargs ]
       nil
     end
 
     def pending_reminder(**k) = record(:pending_reminder, k)
-    def manual_review(**k) = record(:manual_review, k)
     def approved_ready(**k) = record(:approved_ready, k)
     def batch_ready(**k) = record(:batch_ready, k)
     def failure(**k) = record(:failure, k)

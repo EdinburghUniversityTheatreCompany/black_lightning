@@ -18,7 +18,6 @@ module Admin
 
     teardown do
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
-      BaseController.extractor_builder = -> { ::Reimbursements::Extractor.new }
     end
 
     # A dedicated role, so users holding only member/committee stay denied.
@@ -96,35 +95,9 @@ module Admin
       {
         expense_type: "Reimbursement", amount: "12.50", amount_excl_vat: "10.42",
         budget_record_id: @budget.record_id, description: "Fake blood",
-        payment_reference: "PROPS PAT", vat_itemised: "true",
+        payment_reference: "PROPS PAT",
         receipts: [ receipt_upload ]
       }
-    end
-
-    # A plain (no bank trio) extraction; overrides tune individual fields.
-    def extraction_basic(**overrides)
-      ::Reimbursements::Extractor::Extraction.new(
-        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
-        vat_itemised: true, suggested_description: "Props",
-        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS", **overrides
-      )
-    end
-
-    # An extraction that carries the payee bank trio, so the self/invoice mode
-    # tests can assert the controller gates those fields on the mode.
-    def extraction_with_bank(**overrides)
-      extraction_basic(merchant: "Acme", total_amount: BigDecimal("120.0"),
-                       vat_amount: BigDecimal("20.0"), suggested_description: "Set timber",
-                       suggested_payment_reference: "INV-1001", payee_name: "Acme Props Ltd",
-                       sort_code: "12-34-56", account_number: "12345678", **overrides)
-    end
-
-    # POST the extract endpoint in a given mode and return the parsed JSON body.
-    def extract_body(extraction, mode:)
-      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
-      post :extract, params: { mode: mode, receipts: [ receipt_upload ] }
-      assert_response :success
-      response.parsed_body
     end
 
     test "new renders the receipt-first form" do
@@ -143,23 +116,6 @@ module Admin
       assert_not_includes response.body, "In use"
     end
 
-    # The disclosure has to describe BOTH uses of the receipt, because one answer
-    # governs both: a disclosure that mentions only prefilling makes the finance
-    # check run on receipts whose submitters never agreed to that use.
-    test "new discloses both AI uses of the receipt and that declining costs nothing" do
-      sign_in @user
-
-      get :new
-
-      assert_includes response.body, "so finance can check your claim against it"
-      assert_includes response.body, "We use Gemini's free tier"
-      assert_includes response.body, "Nothing else about your claim changes."
-      # The three option labels are Mick's wording and must stay verbatim.
-      assert_includes response.body, "Yes, to be reimbursed to myself"
-      assert_includes response.body, "Yes, as an invoice paid out to the bank details listed on the invoice"
-      assert_includes response.body, "No, I will fill in all the details myself"
-    end
-
     test "create writes a pending expense with receipts and redirects" do
       sign_in @user
 
@@ -176,45 +132,9 @@ module Admin
       assert_equal 1, expense.receipt_files.count
     end
 
-    # The receipt form's consent radio governs BOTH AI uses of the receipt
-    # (prefill now, the finance check later), so the choice has to be persisted
-    # on create. It cannot be inferred from the extract POST: a submitter who
-    # picks "No" never fires one.
-    test "create records consent for each of the three receipt scan choices" do
-      sign_in @user
-
-      { "self" => true, "invoice" => true, "no" => false }.each do |choice, expected|
-        post :create, params: { reimbursements_expense_form:
-          valid_form_params.merge(receipt_scan_consent: choice, receipts: [ receipt_upload ]) }
-
-        assert_equal expected, ::Reimbursements::Expense.order(:id).last.ai_processing_consent,
-                     "receipt_scan_consent=#{choice} must persist as #{expected.inspect}"
-      end
-    end
-
-    # No radio picked at all (JavaScript off, so the choice was never revealed)
-    # is "never asked", which must stay distinguishable from a refusal.
-    test "create leaves consent nil when no scan choice was made" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form: valid_form_params }
-
-      assert_nil ::Reimbursements::Expense.order(:id).last.ai_processing_consent
-    end
-
-    # Consent is the submitter's to give, so a garbage value is not consent.
-    test "create treats an unrecognised scan choice as no consent" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form:
-        valid_form_params.merge(receipt_scan_consent: "yes-please") }
-
-      assert_nil ::Reimbursements::Expense.order(:id).last.ai_processing_consent
-    end
-
     # iOS photographs default to HEIC. The conversion happens at intake so the
     # stored blob is an ordinary JPEG for every downstream consumer (viewer,
-    # Gemini, the SharePoint offload, the receipts mailed with a BACS batch).
+    # the SharePoint offload, the receipts mailed with a BACS batch).
     test "create stores an iPhone HEIC photo as a JPEG named .jpg" do
       sign_in @user
 
@@ -286,55 +206,6 @@ module Admin
       assert_equal 0, expense.receipt_files.count
     end
 
-    test "extract rejects unusable files without calling gemini" do
-      sign_in @user
-      BaseController.extractor_builder = -> { raise "extractor must not be built" }
-
-      # An executable disguised with a .pdf filename and declared content_type:
-      # content-type filtering is based on the actual bytes (Marcel), not the
-      # declared/filename-implied type, so a mismatched-but-real PDF must NOT
-      # be what's used here to prove rejection.
-      post :extract, params: { mode: "self",
-                               receipts: [ fixture_file_upload("disguised_executable.pdf", "application/pdf") ] }
-
-      assert_response :success
-      assert_not response.parsed_body["ok"]
-    end
-
-    # A String has #size, so it clears the byte check and then reaches
-    # ReceiptContentType.allowed_upload?'s #read — an unrescued NoMethodError
-    # (500) from any authenticated producer who hand-crafts the post.
-    test "extract rejects a string receipts param instead of raising" do
-      sign_in @user
-      BaseController.extractor_builder = -> { raise "extractor must not be built" }
-
-      post :extract, params: { mode: "self", receipts: [ "not-a-file" ] }
-
-      assert_response :success
-      assert_not response.parsed_body["ok"]
-      assert_equal "no usable receipt files", response.parsed_body["error"]
-    end
-
-    test "extract rejects an unknown mode with a 422 before touching gemini" do
-      sign_in @user
-      BaseController.extractor_builder = -> { raise "extractor must not be built" }
-
-      post :extract, params: { mode: "steal", receipts: [ receipt_upload ] }
-
-      assert_response :unprocessable_entity
-      assert_not response.parsed_body["ok"]
-    end
-
-    test "extract rejects a missing mode with a 422" do
-      sign_in @user
-      BaseController.extractor_builder = -> { raise "extractor must not be built" }
-
-      post :extract, params: { receipts: [ receipt_upload ] }
-
-      assert_response :unprocessable_entity
-      assert_not response.parsed_body["ok"]
-    end
-
     test "create without a receipt re-renders and writes nothing" do
       sign_in @user
 
@@ -347,7 +218,8 @@ module Admin
 
     test "create without vat acknowledgement soft-blocks when vat not itemised" do
       sign_in @user
-      params = valid_form_params.merge(vat_itemised: "false", amount_excl_vat: "12.50")
+      # No VAT breakdown: the ex-VAT amount is not below the total.
+      params = valid_form_params.merge(amount: "12.50", amount_excl_vat: "12.50")
 
       assert_no_difference "::Reimbursements::Expense.count" do
         post :create, params: { reimbursements_expense_form: params }
@@ -394,60 +266,6 @@ module Admin
       end
       assert_redirected_to admin_reimbursements_expenses_path
       assert_equal "Acme Props Ltd", ::Reimbursements::Expense.order(:id).last.payee_name_override
-    end
-
-    test "extract returns the extraction as json" do
-      sign_in @user
-
-      body = extract_body(extraction_basic, mode: "self")
-
-      assert body["ok"]
-      assert_equal "12.5", body["total_amount"]
-      assert_equal "10.42", body["amount_excl_vat"]
-      assert_equal @budget.record_id, body["suggested_budget_record_id"]
-    end
-
-    test "extract in self mode never returns bank details, even if the model volunteers them" do
-      sign_in @user
-      # A self-mode scan must not surface payee bank details. The fake extractor
-      # supplies them anyway; the controller must strip them for self mode.
-      body = extract_body(extraction_with_bank, mode: "self")
-
-      assert body["ok"]
-      assert_not body.key?("payee_name"), "self mode must omit the payee name"
-      assert_not body.key?("sort_code"), "self mode must omit the sort code"
-      assert_not body.key?("account_number"), "self mode must omit the account number"
-    end
-
-    test "extract in invoice mode passes the printed bank details through" do
-      sign_in @user
-
-      body = extract_body(extraction_with_bank, mode: "invoice")
-
-      assert body["ok"]
-      assert_equal "Acme Props Ltd", body["payee_name"]
-      assert_equal "12-34-56", body["sort_code"]
-      assert_equal "12345678", body["account_number"]
-    end
-
-    test "extract falls back to the total when excl-VAT is the zero not-yet-known sentinel" do
-      sign_in @user
-      # vat_itemised with total == vat gives amount_excl_vat a genuine zero
-      # (not nil) -- 0 is truthy in Ruby, so a plain || wouldn't have fallen
-      # back to total_amount here.
-      body = extract_body(extraction_basic(vat_amount: BigDecimal("12.5")), mode: "self")
-
-      assert body["ok"]
-      assert_equal "12.5", body["total_amount"]
-      assert_equal "12.5", body["amount_excl_vat"]
-    end
-
-    test "extract reports failure as ok false" do
-      sign_in @user
-
-      body = extract_body(::Reimbursements::Extractor::Extraction.new(error: "no key"), mode: "self")
-
-      assert_not body["ok"]
     end
 
     test "edit finds an own expense created out-of-band (e.g. the email-in poll job)" do
@@ -680,17 +498,6 @@ module Admin
 
       assert_response :unprocessable_entity
       assert_in_delta 12.5, @expense.reload.amount, 0.001, "nothing was written"
-    end
-
-    # Returns a canned extraction regardless of input.
-    class FakeExtractor
-      def initialize(extraction)
-        @extraction = extraction
-      end
-
-      def extract(**)
-        @extraction
-      end
     end
   end
   end

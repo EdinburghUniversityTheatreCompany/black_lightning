@@ -562,16 +562,16 @@ module Admin
         assert_selector ".swal2-container", wait: 5
       end
 
-      # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
-      test "the Review page renders the AI-verdict Turbo Stream subscription" do
-        # ai_check_status present so the page doesn't kick a background AI job.
-        seed_expense(status: "Pending", receipt: false, ai_check_status: "pass")
+      # The AI verdict was the Review page's only Turbo Stream subscription, so
+      # with it gone the page must render cleanly with none at all — no orphan
+      # <turbo-cable-stream-source> pointing at a channel nothing broadcasts to.
+      test "the Review page renders with no Turbo Stream subscription" do
+        seed_expense(status: "Pending", receipt: false)
 
         visit admin_reimbursements_review_path
 
         assert_selector "h1", text: "Review Expenses"
-        # The <turbo-cable-stream-source> is an invisible custom element.
-        assert_selector "turbo-cable-stream-source[signed-stream-name]", visible: :all
+        assert_no_selector "turbo-cable-stream-source", visible: :all
       end
     end
   end

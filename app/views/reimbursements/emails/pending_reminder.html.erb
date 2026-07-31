@@ -1,12 +1,11 @@
 <p>Hi,</p>
 
 <p>
-  The automated BACS check ran on <strong><%= @run_date %></strong> and found
+  The nightly check ran on <strong><%= @run_date %></strong> and found
   <%= @rows.size %> <%= "submission".pluralize(@rows.size) %> that
   <%= @rows.size == 1 ? "has" : "have" %> been <strong>waiting for approval</strong>
-  for more than <%= @threshold_days %> days. The automated batch only acts on
-  <em>approved</em> expenses, so these need someone to approve (or reject) them on the
-  Review page before anything can happen.
+  for more than <%= @threshold_days %> days. Nothing can be batched or paid until
+  someone approves (or rejects) them on the Review page.
 </p>
 
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">

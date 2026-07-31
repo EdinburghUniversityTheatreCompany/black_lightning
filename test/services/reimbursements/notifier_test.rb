@@ -75,28 +75,28 @@ module Reimbursements
 
       notifier.pending_reminder(recipients: recipients, run_date: "9 July 2026", threshold_days: 3,
                                 rows: [ { auto_number: 7, payee_name: "Pat", amount: "12.50", age_days: 5 } ])
-      notifier.manual_review(recipients: recipients, unblocked_count: 2, run_date: "9 July 2026",
-                             next_run_day: "Tuesday 14 July",
-                             issues: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
-                                         reason: "AI review: amount mismatch" } ])
       notifier.approved_ready(recipients: recipients, total: "40.00", run_date: "9 July 2026",
+                              next_run_day: "Tuesday 14 July",
                               expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
-                                            budget_name: "Props", description: "Paint" } ])
+                                            budget_name: "Props", description: "Paint",
+                                            flags: [ "no receipt" ] } ])
       notifier.batch_ready(recipients: recipients, total: "52.50", run_date: "9 July 2026",
                            draft_link: "https://outlook.example/draft-1",
                            expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          budget_name: "Props", description: "Paint" } ])
       notifier.failure(recipients: recipients, error_text: "SharePoint down", run_date: "9 July 2026")
 
-      reminder, review, approved, ready, failure = graph.send_mails
+      reminder, approved, ready, failure = graph.send_mails
       assert_equal recipients, reminder[:to]
       assert_match(/awaiting approval/, reminder[:subject])
       assert_match "5 day", reminder[:html]
-      assert_match(/Manual review needed/, review[:subject])
-      assert_match "amount mismatch", review[:html]
-      assert_match "Tuesday 14 July", review[:html]
       # The ready-to-batch alert prompts Build Batch and carries NO draft link.
+      # A flagged claim is listed with its reason, and counted in the subject,
+      # rather than diverting the whole alert into a separate email.
       assert_match(/ready to batch/, approved[:subject])
+      assert_match(/1 flagged/, approved[:subject])
+      assert_match "no receipt", approved[:html]
+      assert_match "Tuesday 14 July", approved[:html]
       assert_match "Build Batch", approved[:html]
       assert_no_match(/outlook\.example/, approved[:html])
       assert_match(/Draft ready/, ready[:subject])
@@ -143,7 +143,7 @@ module Reimbursements
       notifier, graph = build(centre: centre)
       recipients = [ "ops@example.com" ]
       row = { auto_number: 7, payee_name: "Pat", amount: "12.50", age_days: 5,
-              budget_name: "Props", description: "Paint", reason: "AI review: amount mismatch" }
+              budget_name: "Props", description: "Paint", flags: [] }
 
       notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, amount: 12.5,
                          budget_name: "Props", description: "Paint", reason: "No receipt.")
@@ -151,8 +151,6 @@ module Reimbursements
                                      line_items: [ row ], bacs_date: Date.new(2026, 5, 13))
       notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
                                 threshold_days: 3)
-      notifier.manual_review(recipients: recipients, issues: [ row ], unblocked_count: 2,
-                             run_date: "9 July 2026", next_run_day: "Tuesday 14 July")
       notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "40.00",
                               run_date: "9 July 2026")
       notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50",
@@ -165,7 +163,7 @@ module Reimbursements
         assert_not_includes mail[:html], "Bedlam",
                             "the body of #{mail[:subject].inspect} hardcodes the Fringe cost centre"
       end
-      operator_subjects = graph.send_mails.map { |mail| mail[:subject] }.last(5)
+      operator_subjects = graph.send_mails.map { |mail| mail[:subject] }.last(4)
       assert(operator_subjects.all? { |subject| subject.start_with?("[Termtime Payments]") },
              "operator subjects must share one cost-centre-derived prefix: #{operator_subjects.inspect}")
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"

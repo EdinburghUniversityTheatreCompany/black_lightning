@@ -5,10 +5,6 @@
 #
 #  id                      :bigint           not null, primary key
 #  account_number_override :string(255)
-#  ai_check_status         :string(255)      default(""), not null
-#  ai_checked_at           :datetime
-#  ai_comment              :text(65535)
-#  ai_processing_consent   :boolean
 #  amount                  :decimal(12, 2)
 #  amount_excl_vat         :decimal(12, 2)
 #  auto_number             :integer

@@ -72,9 +72,6 @@ ChaosRails::Application.routes.draw do
     namespace :reimbursements do
       root to: redirect("/admin/reimbursements/expenses")
       resources :expenses, only: %i[index new create edit update destroy show] do
-        collection do
-          post :extract
-        end
         resources :receipts, only: %i[create destroy]
       end
       resource :payment_details, only: %i[edit update]
@@ -166,7 +163,7 @@ ChaosRails::Application.routes.draw do
       resource :export, only: :show, controller: "exports"
 
       # Integration health dashboard: a page (#show) with an on-demand "Run
-      # checks" POST (#run) that probes Graph / Gemini.
+      # checks" POST (#run) that probes Graph.
       get  "status",     to: "status#show", as: :status
       post "status/run", to: "status#run",  as: :run_status_checks
 

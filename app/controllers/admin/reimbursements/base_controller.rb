@@ -25,7 +25,6 @@ module Admin
       # subclass and the real collaborator runs instead. Two suites writing the same seam on
       # different classes therefore pass alone and fail whenever they share a process.
       #
-      # Interactive extraction retries less than the background poll job.
       # The store seam takes the financial year the request is scoped to (nil
       # here — see #selected_financial_year). A test fake that ignores scoping
       # is written as `->(**) { fake }`.
@@ -39,7 +38,6 @@ module Admin
         ->(financial_year: nil) { ::Reimbursements.build_store(financial_year: financial_year) }
 
       class_attribute :store_builder, default: DEFAULT_STORE_BUILDER
-      class_attribute :extractor_builder, default: -> { ::Reimbursements::Extractor.new(max_attempts: 2) }
       # The Graph-backed email notifier (from the cost centre's send mailbox).
       # Lives here, not just on FinanceController, because a budget owner
       # rejecting a claim (MyBudgetsController) emails the payee the same way
@@ -69,10 +67,6 @@ module Admin
       # looking at. FinanceController overrides this with the ?year= selector.
       def selected_financial_year
         nil
-      end
-
-      def extractor
-        @extractor ||= extractor_builder.call
       end
 
       def person_link

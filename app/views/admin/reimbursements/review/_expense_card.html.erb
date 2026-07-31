@@ -112,9 +112,6 @@
     </div>
   <% end %>
 
-  <%# --- AI verdict (updates live via Turbo Stream; see AiCheckJob) --- %>
-  <%= render "ai_verdict", expense: expense %>
-
   <%# --- Warnings --- %>
   <% if expense.payee_override? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>

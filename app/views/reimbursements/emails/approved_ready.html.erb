@@ -1,39 +1,54 @@
 <p>Hi,</p>
 
 <p>
-  The automated BACS check ran on <strong><%= @run_date %></strong> and
-  <strong>all <%= @expenses.size %> approved <%= "expense".pluralize(@expenses.size) %> passed</strong>:
-  both the automated readiness checks and the AI receipt review. They're ready to
-  batch.
+  The nightly check ran on <strong><%= @run_date %></strong>. There
+  <%= @expenses.size == 1 ? "is" : "are" %> <strong><%= @expenses.size %> approved
+  <%= "expense".pluralize(@expenses.size) %></strong> waiting to be built into a batch.
 </p>
+
+<% if @flagged_count.to_i.positive? %>
+  <p>
+    <%= @flagged_count %> of <%= @flagged_count == 1 ? "them needs" : "them need" %> a look on
+    the Review page first — the <strong>Needs attention</strong> column below says why. They're
+    listed here either way; nothing is being held back from you.
+  </p>
+<% end %>
 
 <p>
   Nothing has been submitted automatically. When you're ready, open
   <strong>Build Batch</strong> to create the EUSA draft, then review and send it.
 </p>
 
-<p><strong>Ready to batch:</strong></p>
+<p><strong>Approved queue:</strong></p>
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
   <thead style="background-color: #f0f0f0;">
     <tr>
       <th scope="col">#</th><th scope="col">Payee</th><th scope="col">Amount</th>
       <th scope="col">Budget</th><th scope="col">Description</th>
+      <th scope="col">Needs attention</th>
     </tr>
   </thead>
   <tbody>
     <% @expenses.each do |expense| %>
-      <tr>
+      <%# Inline style, not a class: the mailer layout ships no stylesheet, and
+          Outlook would not honour one anyway. %>
+      <tr style="<%= 'background-color: #fff4e5;' if expense[:flags].present? %>">
         <td>#<%= expense[:auto_number] %></td>
         <td><%= expense[:payee_name] %></td>
         <td><%= reimbursements_money(expense[:amount]) %></td>
         <td><%= expense[:budget_name] %></td>
         <td><%= expense[:description] %></td>
+        <td><%= reimbursements_value(expense[:flags].to_a.join("; ")) %></td>
       </tr>
     <% end %>
   </tbody>
   <tfoot style="background-color: #f0f0f0; font-weight: bold;">
-    <tr><td colspan="2">Total</td><td><%= reimbursements_money(@total) %></td><td colspan="2"></td></tr>
+    <tr><td colspan="2">Total</td><td><%= reimbursements_money(@total) %></td><td colspan="3"></td></tr>
   </tfoot>
 </table>
+
+<% if @next_run_day.present? %>
+  <p>The next reminder is <%= @next_run_day %>.</p>
+<% end %>
 
 <p>Best,<br><%= @cost_centre.automated_sign_off %></p>
