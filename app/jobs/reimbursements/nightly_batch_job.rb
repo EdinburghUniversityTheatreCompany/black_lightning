@@ -175,10 +175,9 @@ module Reimbursements
         .sort_by { |row| [ row[:flags].any? ? 1 : 0, row[:auto_number].to_i ] }
     end
 
-    # :flags is the real reason list (ReviewSupport.needs_attention_reasons),
-    # the same one the Review card and the CSV export show — not a canned
-    # "something needs attention" string the operator then has to go and decode.
-    # Always an Array, so the template can join it unguarded.
+    # :flags carries the real reasons rather than a canned "needs attention"
+    # string the operator would have to go and decode. Always an Array, never
+    # nil, so the template joins it unguarded.
     def approved_row(expense, budget_by_id)
       { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
         amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,

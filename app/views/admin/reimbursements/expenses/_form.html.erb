@@ -105,8 +105,9 @@
           hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
           input_html: { inputmode: "decimal" } %>
 
-    <div role="status" aria-live="polite"
-         class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
+    <%# Server-rendered visibility only — nothing toggles this client-side, so
+        it carries no aria-live region (there is no update to announce). %>
+    <div class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
         This receipt doesn't itemise VAT, so we have to deduct the
         <strong>full amount</strong> from your budget. With a VAT receipt we'd only
