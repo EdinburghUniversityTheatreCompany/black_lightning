@@ -308,3 +308,73 @@ the two soft blocks now behave inconsistently for no reason a user could infer.
 **Fix:** a `checkVat()` on the controller bound to `input->` on both amount fields, mirroring
 `checkAmount`. Three lines plus a target. Deliberately not done as part of the removal — it is
 new behaviour, not cleanup.
+
+## `SimpleCov.start` never loads the "rails" profile
+
+*Noticed 2026-07-31 during the simplecov 0.22 → 1.0 upgrade.* `test/test_helper.rb` has:
+
+```ruby
+SimpleCov.start do
+  "rails"
+  skip "/test/"
+  ...
+end
+```
+
+The bare `"rails"` inside the block is a no-op expression — it is not a profile load. The
+profile name has to be the *argument*: `SimpleCov.start "rails" do ... end`. So the Rails
+profile's groups (Controllers, Models, Mailers, Helpers, Libraries) and its filters have never
+been applied; coverage runs with only the two explicit `skip`s.
+
+**Fix:** move `"rails"` to the argument position and re-read the report — it changes what is
+grouped and filtered, so it is a deliberate reporting change, not a silent cleanup. Left out of
+the upgrade commit for exactly that reason. (Coverage is opt-in via `COVERAGE=1` and is not run
+by CI or hk, so nothing is gated on this today.)
+
+## `MarkdownControllerTest` asserts on `Attachment.last`
+
+*Noticed 2026-07-31 during the dependency sweep.* Two upload tests in
+`test/functional/markdown_controller_test.rb` grab `Attachment.last` and assert on its `item`.
+That assumes the attachments table holds nothing newer than the row the test just created —
+true against a schema-loaded worker database, false against a **seeded** one, where
+`Attachment.last` returns a seed row and the test fails with a `Show` where it wanted a `News`.
+
+It passes in the full suite (parallel workers get their own schema-loaded databases) and fails
+when the file is run alone in a worktree whose test DB came from `db:prepare` (which seeds).
+So it is a latent isolation bug, not a flake in the usual sense.
+
+**Fix:** capture the attachment the request created — assert on the record found by the URL the
+JSON response returns, or scope to `Attachment.where("name LIKE 'md-upload-%'").last` — rather
+than the global `.last`.
+
+## README fails the `github-readme` audit
+
+*Noticed 2026-07-31 while syncing the version table.* The `writing:github-readme` audit script
+reports the README has no **Installation**, **Usage** or **License** section, and no usage
+command in a fenced code block. The tech-stack table and the setup snippet pass.
+
+**Fix:** run the `writing:github-readme` skill over it. Deliberately not done as part of a
+dependency bump — restructuring the README is a separate, reviewable change.
+
+## Heading anchors keep a slug built from the IAL text
+
+*Noticed 2026-07-31 during the commonmarker 2.9 upgrade.* commonmarker slugifies a heading from
+its **raw** source, so `## My Heading { .text-danger }` yields
+`id="my-heading--text-danger-"` — the IAL leaks into the anchor even though `MdHelper` strips it
+from the rendered text afterwards. Pre-existing (2.8 did the same); an explicit `{ #my-anchor }`
+already overrides it, and `realign_heading_anchor` keeps the self-link consistent either way.
+
+**Fix (if wanted):** re-slugify a heading from its cleaned text after `apply_ial`. Note this
+would *change existing anchor URLs* on any page whose heading carries a class-only IAL, so it
+needs a deliberate decision about breaking inbound links, not a silent tidy-up.
+
+## Heading anchors have no accessible name after sanitising
+
+*Noticed 2026-07-31, same upgrade.* commonmarker 2.9 emits `aria-label="Link to heading '…'"`
+and `data-heading-content` on each heading self-link, but `MdHelper`'s
+`SafeListSanitizer` allow-list permits neither attribute, so both are stripped. The anchor ships
+as an empty `<a>` with no accessible name — a screen reader announces an unlabelled link.
+
+**Fix:** add `aria-label` to the sanitizer's `attributes:` list (it is inert markup, no
+injection surface beyond the existing `title`/`alt` entries). Not done during the upgrade
+because it is an a11y change, not a dependency change.
