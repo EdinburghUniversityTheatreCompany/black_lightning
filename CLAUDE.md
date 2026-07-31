@@ -371,7 +371,7 @@ survive as historical import provenance and are never written. Spec + plan in
   value object without a DB round-trip build an unpersisted AR model and pin the
   DB-computed readers per-instance (`define_singleton_method(:record_id) { … }`,
   `instance_variable_set(:@receipts, …)`, `build_payment_details`). External services
-  stay faked (FakeHttp, FakeGraphClient, FakeChat) through `class_attribute` builder
+  stay faked (FakeHttp, FakeGraphClient) through `class_attribute` builder
   seams on `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test
   helper `message` — it collides with Minitest's internal `message(msg, ending)`. A dev
   shell's fnox-exported `REIMBURSEMENTS_*` vars leak real credentials into tests — strip

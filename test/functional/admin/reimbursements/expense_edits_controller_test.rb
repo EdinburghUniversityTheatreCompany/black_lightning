@@ -341,7 +341,7 @@ module Admin
         assert_match(/[?&]status=Pending/, response.body)
       end
 
-      # --- Needs-attention reasons tooltip + AI badge ----------------------
+      # --- Needs-attention reasons tooltip ---------------------------------
 
       test "index flags a needs-attention expense with an accessible reasons popover" do
         # No receipt is an advisory (non-blocking) reason -> the amber "Check

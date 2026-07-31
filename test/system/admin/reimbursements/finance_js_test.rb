@@ -5,7 +5,7 @@ module Admin
     # Browser tests for the three finance-surface JS interactions that render
     # tests can't cover: the accessible needs-attention popover (open on click /
     # close on Escape), the Fancybox receipts lightbox, and the Review page's
-    # live-AI-verdict Turbo Stream subscription.
+    # absence of any Turbo Stream subscription.
     #
     # Data is served by the DatabaseStore from real seeded rows; a fake modulus
     # checker keeps the tests off the gitignored Pay.UK rule files. Capybara

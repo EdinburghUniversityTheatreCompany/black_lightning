@@ -92,8 +92,8 @@ module Reimbursements
     #
     # payee_name_override is the one member of the third-party override trio that
     # carries free text (sort_code_override / account_number_override are format-
-    # validated to 6 and 8 digits on every write path), and invoice-mode AI prefill
-    # reads the payee line straight off an invoice, so a long value is reachable.
+    # validated to 6 and 8 digits on every write path), so a long value typed
+    # straight off a supplier invoice is reachable.
     test "Expense round-trips a payee name override whose ciphertext exceeds 255 bytes" do
       # Low-redundancy so AR's built-in compression can't shrink it back under
       # the old limit: a repetitive 255-character string compresses to ~95 bytes.

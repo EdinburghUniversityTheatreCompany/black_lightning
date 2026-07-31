@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   Review submitted expenses before they go to EUSA. Each card shows a live modulus
-  check on the details the money will actually be paid to, the AI receipt check, and any
-  duplicate or override warnings. Fix anything that needs attention, then approve or reject.
+  check on the details the money will actually be paid to, plus any duplicate or override
+  warnings. Fix anything that needs attention, then approve or reject.
 </p>
 
 <% pending_total = @pending.sum { |e| e.amount || 0 } %>
@@ -48,7 +48,6 @@
   <% else %>
     <p class="mb-3 text-gray-600">
       <%= @pending.size %> pending, total <%= reimbursements_money(pending_total) %>.
-      AI checks run in the background and each verdict appears on its card automatically.
     </p>
 
     <div data-controller="bulk-review">

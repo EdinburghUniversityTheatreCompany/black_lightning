@@ -69,7 +69,7 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- Index: partition, flags, AI kick --------------------------------
+      # --- Index: partition, flags -----------------------------------------
 
       test "partitions pending into ready and needs-attention, and lists approved separately" do
         # Distinct amounts so these two don't incidentally look like duplicates

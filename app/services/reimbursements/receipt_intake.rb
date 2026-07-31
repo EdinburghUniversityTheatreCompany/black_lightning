@@ -35,8 +35,8 @@ module Reimbursements
     # a batch mails every receipt in it as an attachment. Rather than reject a
     # photo the producer did nothing wrong with, step the quality (and then the
     # longest edge) down until it fits. Even the last rung leaves a till receipt
-    # comfortably legible for finance and for the AI check; a typical phone
-    # photo never gets past the first.
+    # comfortably legible for finance; a typical phone photo never gets past
+    # the first.
     JPEG_ATTEMPTS = [
       { quality: 80, limit: nil },
       { quality: 70, limit: 2400 },
@@ -119,10 +119,9 @@ module Reimbursements
       end
 
       # Applies EXIF orientation (iPhone HEICs carry rotation metadata, and a
-      # sideways receipt is both annoying for finance and worse for the AI
-      # check), then flattens any transparency onto white and normalises the
-      # colourspace, because JPEG carries neither an alpha channel nor CMYK
-      # sensibly.
+      # sideways receipt is needless work for whoever reviews it), then flattens
+      # any transparency onto white and normalises the colourspace, because JPEG
+      # carries neither an alpha channel nor CMYK sensibly.
       def prepare(image)
         raise ConversionError, "#{image.width}x#{image.height} is too many pixels" if
           image.width * image.height > MAX_PIXELS
