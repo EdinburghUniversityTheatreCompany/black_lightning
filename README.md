@@ -26,7 +26,7 @@ Current key versions (kept in sync with the manifests — `Gemfile.lock`, `packa
 | JS runtime | Node | 24.13.0 |
 | JS sprinkles | Stimulus | 3.2 |
 | CSS | Tailwind | v4 |
-| Package manager (JS) | pnpm | 10.x |
+| Package manager (JS) | pnpm | 11.9.0 (pinned in `package.json`'s `packageManager`) |
 
 ## Development setup
 

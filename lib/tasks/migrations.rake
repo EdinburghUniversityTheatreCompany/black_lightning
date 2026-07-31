@@ -2,7 +2,7 @@ require "#{Rails.root}/lib/tasks/logic/migrations"
 
 namespace :migrations do
   # I don't have any better name, but this is just to fix a failed migration.
-  # :nocov:
+  # simplecov:disable
   desc "Fixes the editing deadline on proposals by defaulting to the submission deadline"
   task fix_editing_deadline: :environment do
     amount = Tasks::Logic::Migrations.fix_editing_deadline
@@ -76,5 +76,5 @@ namespace :migrations do
       p "Migrated all Answer files."
     end
   end
-  # :nocov:
+  # simplecov:enable
 end

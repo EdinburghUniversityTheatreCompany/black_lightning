@@ -52,7 +52,7 @@ module MdHelper
 
     # Pass 1: IAL at the end of a block's text.
     doc.css("p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th").each do |node|
-      last = node.children.last
+      last = ial_text_node(node)
       next unless last&.text?
       next unless (m = last.content.match(IAL_INLINE_PATTERN))
 
@@ -61,6 +61,7 @@ module MdHelper
         # "## Heading { .class }" — attributes on this block.
         apply_ial_tokens(node, m[2])
         last.content = m[1]
+        realign_heading_anchor(node)
       elsif prev&.element? && prev.name != "br"
         # "[link](url){ .class }" — attributes on the trailing inline element.
         apply_ial_tokens(prev, m[2])
@@ -81,11 +82,35 @@ module MdHelper
       next unless (m = node.text.strip.match(IAL_BLOCK_PATTERN))
 
       prev = node.previous_element
-      apply_ial_tokens(prev, m[1]) if prev
+      if prev
+        apply_ial_tokens(prev, m[1])
+        realign_heading_anchor(prev)
+      end
       node.remove
     end
 
     doc.to_html
+  end
+
+  # commonmarker >= 2.9 renders a heading's self-link AFTER the text
+  # (`<h2 id="slug">Text<a class="anchor"></a></h2>`; 2.8 put it first), so the
+  # text node carrying a trailing IAL is the second-to-last child, not the last.
+  def ial_text_node(node)
+    children = node.children
+    heading_anchor?(children.last) ? children[-2] : children.last
+  end
+
+  # An `{ #id }` IAL renames the heading commonmarker already pointed its
+  # self-link at, so the link has to follow or it dangles.
+  def realign_heading_anchor(node)
+    anchor = node.children.last
+    return unless heading_anchor?(anchor) && node["id"].present?
+
+    anchor["href"] = "##{node['id']}"
+  end
+
+  def heading_anchor?(node)
+    node&.element? && node.name == "a" && node["class"].to_s.split.include?("anchor")
   end
 
   def apply_ial_tokens(element, tokens)

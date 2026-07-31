@@ -35,9 +35,9 @@ class Admin::MaintenanceDebtsController < AdminController
       flash[:success] = "The Maintenance Debt has been successfully marked as completed."
     else
       # I hate using nocov but I cannot force this to fail and I can see that this code will work.
-      # :nocov:
+      # simplecov:disable
       flash[:error] = "Error marking Maintenance Debt completed. The Theatre Manager Fairy could not be saved :("
-      # :nocov:
+      # simplecov:enable
     end
 
     respond_to do |format|

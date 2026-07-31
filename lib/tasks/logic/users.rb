@@ -7,9 +7,9 @@ class Tasks::Logic::Users
       Rails.logger.info "#{user.name_or_email}: Cleared phone number"
 
       unless user.save
-        # :nocov:
+        # simplecov:disable
         Rails.logger.warn "WARNING: Could not save #{user.name_or_email}"
-        # :nocov:
+        # simplecov:enable
       end
     end
 

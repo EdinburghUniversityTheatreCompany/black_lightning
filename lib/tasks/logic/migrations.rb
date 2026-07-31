@@ -11,7 +11,7 @@ class Tasks::Logic::Migrations
     counter
   end
 
-  # :nocov:
+  # simplecov:disable
   def self.venue_image
     model = Venue
     attachments = [ "image" ]
@@ -86,5 +86,5 @@ class Tasks::Logic::Migrations
     puts "Copying #{source} to #{destination}"
     FileUtils.cp(source, destination)
   end
-  # :nocov:
+  # simplecov:enable
 end

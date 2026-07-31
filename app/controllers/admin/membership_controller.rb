@@ -11,7 +11,7 @@ class Admin::MembershipController < AdminController
     card = MembershipCard.find_by_card_number(search)
 
     # We're not using membership cards, but can be reactivated.
-    # :nocov:
+    # simplecov:disable
     unless card.nil?
       if card.user.nil?
         render :json, { response: "Card Not Activated" }, status: :expectation_failed
@@ -20,7 +20,7 @@ class Admin::MembershipController < AdminController
         user = card.user
       end
     end
-    # :nocov:
+    # simplecov:enable
 
     # Else, search for a user
     q = "%#{search}%"

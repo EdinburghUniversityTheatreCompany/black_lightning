@@ -110,6 +110,22 @@ class MdHelperTest < ActionView::TestCase
     assert_not_includes result, "{ #my-anchor }"
   end
 
+  # commonmarker >= 2.9 emits the heading self-link AFTER the text
+  # (`<h2 id="…">Text<a class="anchor"></a></h2>`), so the IAL no longer sits in
+  # the heading's last child and an id token has to repoint that link too.
+  test "IAL on a heading keeps the self-link pointing at the heading" do
+    result = render_markdown("## Heading { #my-anchor }")
+    assert_match(/<h2[^>]*id="my-anchor"/, result)
+    assert_includes result, 'href="#my-anchor"'
+    assert_not_includes result, 'href="#heading--my-anchor-"'
+  end
+
+  test "IAL on a heading strips the token from the rendered text" do
+    result = render_markdown("## My Heading { .text-danger }")
+    assert_match(/<h2[^>]*class="[^"]*text-danger/, result)
+    assert_match(%r{>My Heading<a[^>]*class="anchor"}, result)
+  end
+
   test "IAL block syntax without previous element is ignored safely" do
     result = render_markdown("{ .orphan }")
     assert_not_includes result, "{ .orphan }"

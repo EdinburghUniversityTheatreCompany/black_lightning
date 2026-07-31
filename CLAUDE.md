@@ -150,6 +150,20 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 - **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
 - **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
 
+## Background jobs (Solid Queue)
+
+- **`config/recurring.yml` schedules are read in `config.time_zone` ("Edinburgh"), not the
+  container's clock.** Solid Queue ≥ 1.5 appends `SolidQueue.time_zone` (resolved from
+  `config.time_zone` → `Europe/London`) to any schedule that names no zone of its own, so
+  "at 9pm every day" means 9pm *Edinburgh*. Before 1.5 it meant 9pm in the process's local
+  time, and the production container sets no `TZ`, so it meant 9pm UTC — i.e. every daily job
+  now fires an hour earlier in UTC terms through BST, and unchanged through GMT. This is the
+  reading the schedule names imply; to go back to clock time, set
+  `config.solid_queue.time_zone = nil`.
+- The queue schema is **schema-loaded, not migrated** (`db/queue_schema.rb`,
+  `migrations_paths: db/queue_migrate`). `bin/rails generate solid_queue:update` copies any new
+  gem migrations in — as of 1.6.0 it ships none, and our schema matches the gem's table set.
+
 ## Database & Migrations
 
 - **Multi-database app.** `bin/rails db:rollback` errors with "must run the namespaced task". Use `bin/rails db:rollback:primary STEP=n` (namespaces: `primary`, `queue`, `cache`).

@@ -1,7 +1,7 @@
 require "#{Rails.root}/lib/tasks/logic/debt"
 
 namespace :debt do
-  # :nocov:
+  # simplecov:disable
   desc "notifies users who have gone into debt recently or have been in debt for a while"
   # Should be run early morning not late at night.
   task notify_debtors: :environment do
@@ -23,5 +23,5 @@ namespace :debt do
 
     p "Expired outdated debt."
   end
-  # :nocov:
+  # simplecov:enable
 end

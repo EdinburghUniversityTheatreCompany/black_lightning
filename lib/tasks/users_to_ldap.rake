@@ -1,5 +1,5 @@
 namespace :users_to_ldap do
-  # :nocov:
+  # simplecov:disable
   task migrate: :environment do
     base = "cn=users,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk"
 
@@ -17,5 +17,5 @@ namespace :users_to_ldap do
       end
     end
   end
-  # :nocov:
+  # simplecov:enable
 end

@@ -1,7 +1,7 @@
 require "#{Rails.root}/lib/tasks/logic/markdown_heading_fix"
 
 namespace :markdown do
-  # :nocov:
+  # simplecov:disable
   desc "Insert the missing space after # in Markdown headings (##Foo -> ## Foo) and trim " \
        "decorative closing #s (## Foo## -> ## Foo). Dry-run by default; APPLY=1 to write. " \
        "STRIP_ALL=1 also trims a lone glued trailing # (e.g. C#). MODEL=News scopes to one " \
@@ -16,5 +16,5 @@ namespace :markdown do
 
     puts dry_run ? "\nDRY RUN — nothing written. Re-run with APPLY=1 to persist." : "\nApplied."
   end
-  # :nocov:
+  # simplecov:enable
 end

@@ -40,14 +40,14 @@ module Admin::SharedDebtHelper
     begin
       cookie_value = cookies["#{key}_query"]
       q_param ||= JSON.parse(cookie_value.gsub("=>", ":")) if cookie_value.present?
-    # :nocov:
+    # simplecov:disable
     rescue JSON::ParserError => e
       # It's not the worst thing in the world if an error happens, but logging will be useful.
       # If people start to tamper with the cookie, which I don't expect to happen,
       # and the errors become a nuisance, we can disable it.
 
       Honeybadger.notify(e)
-      # :nocov:
+      # simplecov:enable
     end
 
     q_param ||= {}
