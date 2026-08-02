@@ -2,15 +2,6 @@
   <%= get_link(User, :index, link_text: "Back to Users") %>
 <% end %>
 
-<%
-  def cached_years_active(user, cache = nil)
-    return user.years_active unless cache
-
-    years = cache[user.id] || []
-    years
-  end
-%>
-
 <% total_count = @duplicates[:same_id].size + @duplicates[:fuzzy_name_overlapping].size + @duplicates[:fuzzy_name_non_overlapping].size + @duplicates[:fuzzy_both_overlapping].size + @duplicates[:fuzzy_both_no_overlap].size %>
 
 <% if total_count == 0 %>
