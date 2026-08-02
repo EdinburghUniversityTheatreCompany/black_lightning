@@ -1,10 +1,8 @@
 require "test_helper"
 
-# config.exceptions_app is set to the routes, so an exception no controller rescued - one raised
-# in middleware, or raised while an error page was itself being rendered - comes back through the
-# routes as a fresh GET of "/<status>", carrying the exception in the Rack env. These paths used
-# to be unrouted, so every one of them fell through to the static catch-all and the visitor was
-# told the page did not exist, whatever had actually gone wrong.
+# Covers the routing half of ErrorsController: an exception no controller rescued comes back
+# through the routes as a fresh GET of "/<status>" with the exception in the Rack env, and used to
+# fall through to the static catch-all and be answered with the 404 page.
 class ErrorPagesTest < ActionDispatch::IntegrationTest
   PAGE_NOT_FOUND = "isn&#39;t the page you are looking for".freeze
 
