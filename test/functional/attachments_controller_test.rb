@@ -1,6 +1,11 @@
 require "test_helper"
 
 class AttachmentsControllerTest < ActionController::TestCase
+  FIRST_CHUNK = "the first chunk of the file".freeze
+
+  # The Accept header Chrome sends for an <img>, which is what most of these attachments are.
+  IMAGE_ACCEPT_HEADER = "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8".freeze
+
   setup do
     @editable_block = admin_editable_blocks(:public)
   end
@@ -141,5 +146,62 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal "attachment; document.txt", response.headers["Content-Disposition"]
     assert_equal "sandbox", response.headers["Content-Security-Policy"]
+  end
+
+  test "renders the 404 page when the attachment has no file" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+    attachment.file.purge
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :not_found
+    assert_match "There is no file attached.", response.body
+  end
+
+  # The response has already been given the file's Content-Type (and the headers that go with
+  # serving a file) by the time the download fails, so rendering the error page into it used to
+  # raise RespondToMismatchError on top of the original error.
+  test "renders the 404 page when the file is missing from storage" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+    attachment.file.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+    ActiveStorage::Blob.service.delete(attachment.file.key)
+
+    @request.headers["Accept"] = IMAGE_ACCEPT_HEADER
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :not_found
+    assert_equal "text/html", response.media_type
+    assert_nil response.headers["Content-Disposition"]
+    assert_nil response.headers["Content-Security-Policy"], "The sandbox CSP would have stripped the error page of its styling"
+  end
+
+  test "discards the bytes already streamed when the download fails part-way through" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+
+    with_truncated_download(attachment.file.blob.service) do
+      get :file, params: { slug: attachment.name }
+    end
+
+    assert_response :not_found
+    assert_no_match FIRST_CHUNK, response.body, "The half-served file was left on the response under the error page"
+  end
+
+  private
+
+  # Makes the storage service fail part-way through a streamed download for the duration of the
+  # block, the way S3 does when the connection drops between two of the ranged GETs it reads a
+  # blob with.
+  def with_truncated_download(service)
+    service.define_singleton_method(:download) do |key, &block|
+      next super(key, &block) if block.nil?
+
+      block.call(FIRST_CHUNK)
+      raise ActiveStorage::FileNotFoundError
+    end
+
+    yield
+  ensure
+    service.singleton_class.remove_method(:download)
   end
 end

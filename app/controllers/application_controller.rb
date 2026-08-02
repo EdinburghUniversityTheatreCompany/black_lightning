@@ -111,6 +111,8 @@ class ApplicationController < ActionController::Base
   end
 
   def render_error_page(exception, template, status_code)
+    discard_failed_response
+
     @meta = {} if @meta.nil?
     @meta["ROBOTS"] = "NOINDEX, NOFOLLOW"
 
@@ -132,6 +134,24 @@ class ApplicationController < ActionController::Base
       type.html { render template: template, status: status_code, layout: helpers.current_environment(request.fullpath) }
       type.json { render json: { error: @error_messages }, status: status_code }
       type.all  { render body: nil, status: status_code }
+    end
+  end
+
+  # Throws away whatever the failed action had already put on the response, so the error page is
+  # rendered into a clean one.
+  #
+  # An action that fails part-way through serving a file leaves the response holding that file's
+  # Content-Type and, if it streams (AttachmentsController#file), some of its bytes. respond_to
+  # above then raises RespondToMismatchError - it refuses to render when the response's media type
+  # is already set to something other than the format it negotiated - so the error page is replaced
+  # by a second, unrescued exception, and the visitor gets whatever config.exceptions_app makes of
+  # a raw 500 instead. The file-serving headers have to go too: a leftover Content-Disposition
+  # would have the browser save the error page as "photo.jpg", and the sandbox CSP would strip it
+  # of its styling.
+  def discard_failed_response
+    response.reset_body!
+    %w[Content-Type Content-Length Content-Disposition Content-Security-Policy].each do |header|
+      response.headers.delete(header)
     end
   end
 

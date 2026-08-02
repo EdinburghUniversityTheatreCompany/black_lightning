@@ -13,7 +13,10 @@ class AttachmentsController < ApplicationController
 
     authorize!(:show, @attachment)
 
-    return "There is no file attached" unless @attachment.file.attached?
+    # An attachment whose file has gone is a missing page, the same as an unknown slug. Returning
+    # a string here did not render anything - the action fell through to an implicit render of a
+    # template this controller does not have.
+    raise ActiveRecord::RecordNotFound, "There is no file attached." unless @attachment.file.attached?
 
     response.headers["Content-Type"] = @attachment.file.content_type
     response.headers["Content-Security-Policy"] = "sandbox"
@@ -33,5 +36,16 @@ class AttachmentsController < ApplicationController
         response.stream.write(chunk)
       end
     end
+    # The record says there is a file, but the storage service has no object under that key, so
+    # there is nothing to serve. Show the visitor a 404, but still report it: a blob that has gone
+    # missing from storage is data loss, not a bad request.
+  rescue ActiveStorage::FileNotFoundError => e
+    Honeybadger.notify(e, context: {
+      attachment_id: @attachment.id,
+      blob_key: @attachment.file.key,
+      blob_filename: @attachment.file.filename.to_s
+    })
+
+    report_404(e)
   end
 end
