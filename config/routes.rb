@@ -509,10 +509,11 @@ ChaosRails::Application.routes.draw do
 
 
   # Where config.exceptions_app (these routes) sends a request whose exception no controller
-  # rescued. Any 4xx/5xx matches, because Rails dispatches to "/<status>" and anything left
-  # unrouted falls through to the static catch-all below and comes back as the 404 page.
-  # via: :all because the request keeps the verb it failed on.
-  match "/:status", to: "errors#show", via: :all, as: :error, constraints: { status: /[45]\d\d/ }
+  # rescued. Any 4xx/5xx matches, because Rails dispatches to "/<status>" for whichever status it
+  # picked off the exception, and anything left unrouted falls through to the static catch-all
+  # below and comes back as the 404 page. GET only: ShowExceptions rewrites the request to a GET
+  # before re-dispatching it, whatever verb it failed on.
+  get "/:status", to: "errors#show", as: :error, constraints: { status: /[45]\d\d/ }
 
   # Use bedlamtheatre.co.uk/:slug to find a season
   get "/:id", to: "seasons#show", constraints: Constraints::ExistingSeason.new

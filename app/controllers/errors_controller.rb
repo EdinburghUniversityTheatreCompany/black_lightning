@@ -6,7 +6,6 @@
 ##
 class ErrorsController < ApplicationController
   skip_authorization_check
-  skip_forgery_protection
   skip_before_action :require_profile_completion!
 
   DEFAULT_STATUS = 500
