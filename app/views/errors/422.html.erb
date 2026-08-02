@@ -1,0 +1,11 @@
+<% error_header = "Sorry#{" #{current_user.first_name}" if current_user&.first_name.present?}, that change was rejected." %>
+
+<%= render '/errors/template', error_header: error_header do %>
+  <p>
+    Please go back, reload the page and try again. If it keeps happening, contact the IT Subcommittee at <%= mail_to @support_email, @support_email %>.
+  </p>
+
+  <p>
+    HAL is unconvinced.
+  </p>
+<% end %>
