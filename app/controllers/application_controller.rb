@@ -137,17 +137,12 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # Throws away whatever the failed action had already put on the response, so the error page is
-  # rendered into a clean one.
-  #
   # An action that fails part-way through serving a file leaves the response holding that file's
-  # Content-Type and, if it streams (AttachmentsController#file), some of its bytes. respond_to
-  # above then raises RespondToMismatchError - it refuses to render when the response's media type
-  # is already set to something other than the format it negotiated - so the error page is replaced
-  # by a second, unrescued exception, and the visitor gets whatever config.exceptions_app makes of
-  # a raw 500 instead. The file-serving headers have to go too: a leftover Content-Disposition
-  # would have the browser save the error page as "photo.jpg", and the sandbox CSP would strip it
-  # of its styling.
+  # Content-Type and, when it streams, some of its bytes. respond_to above refuses to render a
+  # format that conflicts with the response's existing media type - it raises
+  # RespondToMismatchError - so without this the error page is replaced by a second, unrescued
+  # exception. The file-serving headers go too: a leftover Content-Disposition would save the
+  # error page as "photo.jpg", and the sandbox CSP would strip it of its styling.
   def discard_failed_response
     response.reset_body!
     %w[Content-Type Content-Length Content-Disposition Content-Security-Policy].each do |header|
