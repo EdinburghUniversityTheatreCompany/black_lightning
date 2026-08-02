@@ -110,9 +110,8 @@ class MdHelperTest < ActionView::TestCase
     assert_not_includes result, "{ #my-anchor }"
   end
 
-  # commonmarker >= 2.9 emits the heading self-link AFTER the text
-  # (`<h2 id="…">Text<a class="anchor"></a></h2>`), so the IAL no longer sits in
-  # the heading's last child and an id token has to repoint that link too.
+  # Both guard MdHelper#ial_text_node / #realign_heading_anchor against
+  # commonmarker moving the heading self-link again.
   test "IAL on a heading keeps the self-link pointing at the heading" do
     result = render_markdown("## Heading { #my-anchor }")
     assert_match(/<h2[^>]*id="my-anchor"/, result)
