@@ -467,36 +467,40 @@ survive as historical import provenance and are never written. Spec + plan in
 
 Temperature / humidity / dew point charts at `/admin/climate`
 (`Admin::Climate::BaseController < AdminController`), gated by the `climate` grid permission
-(`read` to view, `manage` to configure sensors). Setup runbook:
-[docs/climate/govee-setup.md](docs/climate/govee-setup.md).
+(`read` to view, `manage` to configure sensors and import). Runbook:
+[docs/climate/csv-import.md](docs/climate/csv-import.md).
 
-- **`temperature_unit` is nullable with NO default, and that is the whole design.** Govee does
-  not document the unit of `sensorTemperature` and it is widely reported as **Fahrenheit even
-  when the app shows Celsius**. `Climate::ReadingIngest` therefore *refuses to write* for a
-  sensor whose unit no operator has verified (`/admin/climate/sensors` → Check unit). Not
-  recording is recoverable; recording Fahrenheit as Celsius is not. **Never give this column a
-  default.** Every reading also stores `raw_temperature` + the unit it was written under, so a
-  wrong answer is a backfill rather than a permanent hole.
-- **`Climate::ReadingIngest` is the only write path.** It owns unit conversion, dew point, the
-  plausibility guard (−20..50 °C, 0..100 %) and the idempotent `upsert_all`. Don't create a
-  `Climate::Reading` anywhere else.
-- **The Govee *Developer API* has no history endpoint** — it serves "now" only, so the charts
-  only cover what `Climate::SensorPollJob` has polled (every 10 min). **Govee itself does keep
-  history**, though: ~20 days on the device, and up to 2 years in the app, exportable as CSV by
-  email. So pre-activation data is recoverable by hand even though no endpoint serves it — a CSV
-  importer feeding `ReadingIngest.upsert_series!` is an open backlog item, and the ingest path is
-  already idempotent. Note the CSV carries the unit the **app** displays, which need not be the
-  unit the API reports. **An `online: false` device writes nothing**: Govee keeps serving the
-  last known value for a unit with dead batteries, which would draw a flat, fictional line. Rate
-  limit is 10,000/day per **account**, not per key.
+- **Crypt readings arrive by CSV import, NOT by polling the Govee API — and that is a
+  correctness decision, not convenience.** The Developer API has no history endpoint, and the
+  crypt's WiFi is intermittent: the sensor buffers regardless of connectivity and uploads on
+  reconnect, but a poller can only sample the present, so everything buffered during a dropout
+  is invisible to it forever. The export contains all of it. Don't reintroduce polling.
+- **The CSV header names its own unit** (`Temperature_Celsius` / `_Fahrenheit`, following what
+  the *app* displays). `Climate::CsvImport` reads it and **refuses a file whose unit it cannot
+  identify** rather than guessing — that refusal is what replaced the old per-sensor
+  verify-the-unit flow, and it is the whole defence against storing Fahrenheit as Celsius.
+- **`Climate::ReadingIngest.upsert_series!` is the only write path**, shared by the manual
+  import, the mailbox job and the outdoor poller. It owns the plausibility guard
+  (−20..50 °C, 0..100 %), the dew point, and the idempotent `upsert_all`. Re-importing an
+  overlapping export is normal and harmless.
+- **Import is one step, not a preview wizard.** No per-row decisions exist, a 2-year backfill is
+  far past what a hidden-field round trip carries, and it is the same code path the mailbox job
+  calls — so manual and automatic cannot drift.
+- **Email ingest**: `Climate::MailboxPollJob` (every 15 min) reads CSV attachments from
+  `CLIMATE_MAILBOX` over Graph. ActionMailbox is NOT installed and M365 has no inbound webhook,
+  so this reuses the existing Graph poll instead of new ingress. **Which sensor a file belongs
+  to** is matched from the subject/filename, falling back to the sole sensor; anything ambiguous
+  is left UNREAD and logged rather than guessed.
+- **Graph plumbing is shared**: top-level `GraphAuth` + `Graph::MailboxClient` + `Graph::Settings`
+  (which reads `GRAPH_*` and falls back to `REIMBURSEMENTS_AZURE_*` — one Entra app for the org,
+  so renaming would have broken every existing credential entry). `Reimbursements::MailboxClient`
+  is a thin subclass pinning the cost-centre default and its error-constant names.
 - **Outdoor data self-heals, which is why Open-Meteo won.** `OutdoorPollJob` asks for a rolling
-  `past_days` window hourly and upserts the lot, so an outage fills its own gap — there is no
-  backfill code in this feature. Attribution (CC BY 4.0) is a licence condition and is rendered
-  on the dashboard. Free tier is non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap
-  point for Met Office / METAR.
+  `past_days` window hourly and upserts the lot, so an outage fills its own gap. Attribution
+  (CC BY 4.0) is a licence condition and is rendered on the dashboard; the free tier is
+  non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point for Met Office / METAR.
 - **The outdoor sensor row is ensured by `Climate::Sensor.outdoor_source!`, not a data
   migration** — test and CI databases are schema-*loaded*, so a data migration never runs there.
-  Same trap applies to any future seed row.
 - **`Climate::SeriesQuery` must not bucket with `UNIX_TIMESTAMP`.** The mysql2 adapter doesn't
   pin the session `time_zone`, so that reads the stored value in the *server's* zone and shifts
   every bucket boundary by its offset. It uses `TIME_TO_SEC(TIME(recorded_at)) % n` instead,
@@ -506,8 +510,7 @@ Temperature / humidity / dew point charts at `/admin/climate`
 - **Charts**: `climate_charts_controller.js` lazily `import()`s Chart.js (the cytoscape/leaflet
   pattern). Chart.js is an ES module, so there is no `window.Chart`; the controller exposes its
   instances as `element.climateCharts` plus a `data-climate-charts-ready` count, which is how the
-  system tests assert the exact plotted values. Colour follows the **sensor**, not its position
-  in the current selection, so deactivating one doesn't repaint the others.
+  system tests assert the exact plotted values.
 
 ## Opportunities
 
