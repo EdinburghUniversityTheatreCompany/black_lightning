@@ -7,8 +7,9 @@ class Climate::DewPointTest < ActiveSupport::TestCase
   end
 
   test "equals the temperature at 100 percent relative humidity" do
-    # Saturated air is at its own dew point, by definition — the formula's one
-    # exactly-known fixed point, so it is the sharpest check on the coefficients.
+    # Saturated air is at its own dew point, by definition. That is the formula's
+    # one exactly-known fixed point, so it is the sharpest check on the
+    # coefficients.
     assert_in_delta 12.0, Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 100), 0.01
   end
 
@@ -25,7 +26,7 @@ class Climate::DewPointTest < ActiveSupport::TestCase
 
   test "handles sub-zero temperatures" do
     # γ = ln(0.75) + (17.625 × -5)/(243.04 - 5) = -0.65787; Td = 243.04γ/(17.625 - γ) = -8.75.
-    # These are the water coefficients throughout — below freezing the physically
+    # These are the water coefficients throughout. Below freezing the physically
     # distinct quantity is the frost point, but every weather source we compare
     # against (Open-Meteo included) reports dew point over water, so matching it
     # keeps the indoor and outdoor lines on the same scale.

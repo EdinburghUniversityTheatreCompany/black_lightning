@@ -95,7 +95,7 @@ module Climate
 
     # An explicit null wherever the series skips, so the chart BREAKS the line
     # rather than interpolating across an outage. A line drawn through missing
-    # data is not cosmetic — it is a reading of the room that never happened.
+    # data is not cosmetic. It is a reading of the room that never happened.
     def with_gaps(points)
       threshold = bucket_seconds * GAP_BUCKETS
 

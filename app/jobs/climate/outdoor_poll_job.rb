@@ -14,7 +14,7 @@ module Climate
     limits_concurrency key: "climate_outdoor_poll", duration: 5.minutes
 
     # Injection seam for tests. Takes the sensor so the source column picks the
-    # client — see Climate::OUTDOOR_SOURCES.
+    # client. See Climate::OUTDOOR_SOURCES.
     class_attribute :client_builder, default: ->(sensor) { Climate.outdoor_client_for(sensor.source) }
 
     def perform

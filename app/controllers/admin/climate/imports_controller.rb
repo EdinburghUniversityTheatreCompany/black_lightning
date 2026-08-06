@@ -5,8 +5,8 @@ module Admin
     #
     # One step, not the budget import's preview-then-apply wizard: no per-row
     # decisions exist, a two-year backfill is far past what a hidden-field round
-    # trip carries, and re-importing is harmless. The one consequential choice —
-    # which sensor — is made before the upload.
+    # trip carries, and re-importing is harmless. The one consequential choice,
+    # which sensor, is made before the upload.
     #
     # It is also the exact path the mailbox ingest calls, so the two cannot drift.
     class ImportsController < BaseController

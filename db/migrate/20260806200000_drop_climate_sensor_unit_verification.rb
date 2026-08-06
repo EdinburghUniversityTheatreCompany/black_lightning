@@ -5,13 +5,13 @@ class DropClimateSensorUnitVerification < ActiveRecord::Migration[8.1]
   # That removes the whole reason these two columns existed.
   #
   # `external_id` and `sku` go with them: they identified a device to the API,
-  # and the CSV carries no device identifier at all — the operator picks the
+  # and the CSV carries no device identifier at all, so the operator picks the
   # sensor a file belongs to.
   def change
     # safety_assured: strong_migrations blocks remove_column because running code
-    # may still select it. Nothing has ever deployed against these columns — the
-    # climate tables landed in the same unreleased series of commits — so there is
-    # no old process to break.
+    # may still select it. Nothing has ever deployed against these columns, since
+    # the climate tables landed in the same unreleased series of commits, so there
+    # is no old process to break.
     safety_assured do
       remove_column :climate_sensors, :temperature_unit, :string
       remove_column :climate_sensors, :unit_verified_at, :datetime

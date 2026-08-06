@@ -2,14 +2,14 @@ module Climate
   ##
   # Parses a Govee Home CSV export into rows for ReadingIngest.
   #
-  # A real export looks like this — note the UTF-8 BOM, the sampling prose baked
+  # A real export looks like this. Note the UTF-8 BOM, the sampling prose baked
   # into the timestamp header, and the stray space after the first comma:
   #
   #   \xEF\xBB\xBFTimestamp for sample frequency every 15 min min, Temperature_Celsius,Relative_Humidity
   #   2026-08-06 09:22:00,24.6,53.7
   #
-  # The header names its own unit — whatever the app is set to display — so this
-  # reads it rather than assuming, and REFUSES a file it cannot identify. That
+  # The header names its own unit, whatever the app is set to display, so this
+  # reads it rather than assuming and REFUSES a file it cannot identify. That
   # refusal replaced the old verify-the-unit-per-sensor flow.
   #
   # Pure parsing: no database, no dew point, no dedup. Dedup belongs to the
@@ -93,7 +93,7 @@ module Climate
       if @unit.nil?
         @errors << "The temperature column (#{headers[@temp_index].inspect}) does not say which " \
                    "unit it is in. Export again with the app set to Celsius, or rename the " \
-                   "column to include \"Celsius\" or \"Fahrenheit\" — this importer will not guess."
+                   "column to include \"Celsius\" or \"Fahrenheit\". This importer will not guess."
       end
 
       @errors.empty?

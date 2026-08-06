@@ -7,7 +7,7 @@ module Climate
   # upload screen, so the two cannot drift.
   #
   # Assumes ONE crypt sensor, because nothing in Govee's export email identifies
-  # the device — see #sensor_for for how to extend it.
+  # the device. See #sensor_for for how to extend it.
   class MailboxPollJob < ::ApplicationJob
     include ::ErrorReporting
 
@@ -55,8 +55,8 @@ module Climate
       return skip(message, "no CSV attachment") if attachments.empty?
 
       # Collected, not summed inline: #import returns nil for an attachment it
-      # could not handle, and summing that raises — which the rescue upstream
-      # would then report as a second, misleading failure.
+      # could not handle, and summing that raises, which the rescue upstream would
+      # then report as a second, misleading failure.
       results = attachments.map { |attachment| import(message, attachment) }
       return if results.any?(&:nil?)
 
@@ -76,14 +76,14 @@ module Climate
     end
 
     # Returns the number of readings written, or nil when the message could not
-    # be attributed — nil leaves the message unread for a human to sort out.
+    # be attributed. nil leaves the message unread for a human to sort out.
     def import(message, attachment)
       sensor = sensor_for(message, attachment)
       return skip(message, "could not tell which sensor it is from") if sensor.nil?
 
       # +String#dup+ first: force_encoding mutates its receiver, and Graph hands
-      # back a frozen string, so calling it directly raises FrozenError — which
-      # the per-message rescue would swallow into "left unread" forever.
+      # back a frozen string, so calling it directly raises FrozenError, which the
+      # per-message rescue would swallow into "left unread" forever.
       parsed = CsvImport.new(attachment[:bytes].to_s.dup.force_encoding(Encoding::UTF_8))
       return skip(message, parsed.errors.to_sentence) unless parsed.valid?
 
@@ -95,8 +95,8 @@ module Climate
       nil
     end
 
-    # Govee's export email identifies no device — not in the subject, not in the
-    # filename — so with several sensors there is nothing to resolve on, and one
+    # Govee's export email identifies no device, not in the subject and not in the
+    # filename. So with several sensors there is nothing to resolve on, and one
     # wall's readings filed under another is silent, plausible nonsense.
     #
     # THE EXTENSION POINT: give each sensor its own mailbox (or plus address) and

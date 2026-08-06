@@ -4,7 +4,7 @@ module Climate
   # Condensation forms at or below it, so "temperature minus dew point" is the
   # damp-risk margin this whole feature exists to watch.
   #
-  # Coefficients are Alduchov & Eskridge (1996) — max error about 0.1 °C over
+  # Coefficients are Alduchov & Eskridge (1996), max error about 0.1 °C over
   # -40..+50 °C, better than the older Tetens 17.27/237.7 pair at the cold, damp
   # end we care about.
   module DewPoint

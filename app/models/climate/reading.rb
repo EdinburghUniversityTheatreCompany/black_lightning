@@ -25,13 +25,13 @@
 module Climate
   ##
   # One sample from one sensor. Written only by Climate::ReadingIngest, which
-  # owns the unit conversion, the dew point and the plausibility guard — nothing
+  # owns the unit conversion, the dew point and the plausibility guard. Nothing
   # else should create these directly.
   class Reading < ApplicationRecord
     belongs_to :sensor, class_name: "Climate::Sensor", inverse_of: :readings
 
     validates :recorded_at, presence: true
-    # Idempotency lives in the unique index — ReadingIngest writes through
+    # Idempotency lives in the unique index. ReadingIngest writes through
     # upsert_all, which skips validation and collides there on purpose. This
     # only makes the create! path fail readably.
     validates :recorded_at, uniqueness: { scope: :sensor_id }
@@ -41,7 +41,7 @@ module Climate
     scope :chronological, -> { order(:recorded_at) }
 
     # How far the air has to cool before it condenses. Under about 3 °C is the
-    # number worth acting on — see ClimateHelper::CONDENSATION_RISK_MARGIN.
+    # number worth acting on. See ClimateHelper::CONDENSATION_RISK_MARGIN.
     def dew_point_margin
       return nil if temperature_c.nil? || dew_point_c.nil?
 

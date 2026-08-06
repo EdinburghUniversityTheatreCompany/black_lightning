@@ -13,7 +13,7 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
 
   # Strictly historical hours. A window running up to "now" would have its last
   # row dropped by the future-row guard, which is correct behaviour but makes
-  # the row arithmetic in these tests confusing — that guard has its own test in
+  # the row arithmetic in these tests confusing. That guard has its own test in
   # reading_ingest_test.rb.
   def rows(count: 4)
     from = (count + 1).hours.ago.change(min: 0)

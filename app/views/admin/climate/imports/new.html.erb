@@ -11,7 +11,7 @@
   <% else %>
     <p class="text-gray-600">
       In the Govee Home app, open the sensor, then <strong>Export Data</strong> and send the CSV to
-      yourself. Drop it here. Importing the same file twice is harmless — readings are keyed by
+      yourself. Drop it here. Importing the same file twice is harmless, because readings are keyed by
       sensor and timestamp, so an overlapping daily export just overwrites what it already covers.
     </p>
 
@@ -21,7 +21,7 @@
         <%= label_tag :sensor_id, "Which sensor is this file from?", class: "block font-semibold mb-1" %>
         <p class="text-sm text-gray-600 mb-1">
           The export does not say which device it came from, so this is the one thing worth
-          double-checking — readings land against whichever sensor is picked here.
+          double-checking, because readings land against whichever sensor is picked here.
         </p>
         <%= select_tag :sensor_id,
                        options_from_collection_for_select(@sensors, :id, :to_label, params[:sensor_id]),
@@ -54,7 +54,7 @@
       <strong>humidity</strong> column, then one row per reading. Comma or tab separated.
     </li>
     <li>
-      <strong>The temperature column must say its unit</strong> — Govee exports
+      <strong>The temperature column must say its unit.</strong> Govee exports
       <code>Temperature_Celsius</code> or <code>Temperature_Fahrenheit</code> depending on what the
       app is set to display. A file that does not say is refused rather than guessed at: guessing
       is how a year of readings ends up silently wrong by 30 degrees.
@@ -64,7 +64,7 @@
     </li>
     <li>
       Readings outside <%= Climate::ReadingIngest::PLAUSIBLE_CELSIUS %> °C or
-      <%= Climate::ReadingIngest::PLAUSIBLE_HUMIDITY %> % are skipped and reported — one bad line
+      <%= Climate::ReadingIngest::PLAUSIBLE_HUMIDITY %> % are skipped and reported, so one bad line
       does not cost you the rest of the file.
     </li>
   </ul>

@@ -46,7 +46,7 @@ module Admin
       end
 
       # Deleting takes the readings with it (dependent: :delete_all), which is
-      # why the outdoor row — the one nobody can re-import — is not deletable.
+      # why the outdoor row, the one nobody can re-import, is not deletable.
       def destroy
         if @sensor.open_meteo?
           return redirect_to(admin_climate_sensors_path,

@@ -3,8 +3,8 @@ module Climate
   # Config for the climate monitor. Only one thing needs configuring: the shared
   # mailbox Govee's scheduled export lands in. Everything else is a database row.
   #
-  # The Graph credential itself is shared and lives in Graph::Settings — the
-  # Entra app just needs an ApplicationAccessPolicy covering this mailbox too.
+  # The Graph credential itself is shared and lives in Graph::Settings. The
+  # Entra app just needs access to this mailbox too.
   module Settings
     def self.mailbox
       ENV["CLIMATE_MAILBOX"].presence || Rails.application.credentials.dig(:climate, :mailbox).presence

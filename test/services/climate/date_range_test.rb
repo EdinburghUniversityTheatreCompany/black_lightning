@@ -44,7 +44,7 @@ class Climate::DateRangeTest < ActiveSupport::TestCase
 
   test "falls back to the default and says so when a date cannot be read" do
     # Never silently render a different range as though it were the one asked
-    # for — that is how someone reads last week's damp as this week's.
+    # for. That is how someone reads last week's damp as this week's.
     range = Climate::DateRange.from_params({ from: "not-a-date", to: "" })
 
     assert_equal 7, range.days

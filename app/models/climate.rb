@@ -7,7 +7,7 @@ module Climate
 
   # The outdoor-weather seam. Swapping Open-Meteo for Met Office DataHub or the
   # NOAA METAR feed at Edinburgh Airport is one new client class answering
-  # #hourly_series, plus one entry here — no change to the job, the models or
+  # #hourly_series, plus one entry here. No change to the job, the models or
   # the dashboard.
   OUTDOOR_SOURCES = {
     Sensor::SOURCE_OPEN_METEO => -> { OpenMeteoClient.new }

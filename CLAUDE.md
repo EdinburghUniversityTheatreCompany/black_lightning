@@ -470,45 +470,47 @@ Temperature / humidity / dew point charts at `/admin/climate`
 (`read` to view, `manage` to configure sensors and import). Runbook:
 [docs/climate/csv-import.md](docs/climate/csv-import.md).
 
-- **Crypt readings arrive by CSV import, NOT by polling the Govee API — and that is a
-  correctness decision, not convenience.** The Developer API has no history endpoint, and the
+- **Crypt readings arrive by CSV import, NOT by polling the Govee API, and that is a
+  correctness decision rather than convenience.** The Developer API has no history endpoint, and the
   crypt's WiFi is intermittent: the sensor buffers regardless of connectivity and uploads on
   reconnect, but a poller can only sample the present, so everything buffered during a dropout
-  is invisible to it forever. The export contains all of it. Don't reintroduce polling.
+  stays invisible to it forever. The export contains all of it. Don't reintroduce polling.
 - **The CSV header names its own unit** (`Temperature_Celsius` / `_Fahrenheit`, following what
   the *app* displays). `Climate::CsvImport` reads it and **refuses a file whose unit it cannot
-  identify** rather than guessing — that refusal is what replaced the old per-sensor
-  verify-the-unit flow, and it is the whole defence against storing Fahrenheit as Celsius.
+  identify** rather than guessing. That refusal replaced the old per-sensor verify-the-unit
+  flow, and it is the whole defence against storing Fahrenheit as Celsius.
 - **`Climate::ReadingIngest.upsert_series!` is the only write path**, shared by the manual
   import, the mailbox job and the outdoor poller. It owns the plausibility guard
-  (−20..50 °C, 0..100 %), the dew point, and the idempotent `upsert_all`. Re-importing an
+  (-20..50 °C, 0..100 %), the dew point, and the idempotent `upsert_all`. Re-importing an
   overlapping export is normal and harmless.
 - **Import is one step, not a preview wizard.** No per-row decisions exist, a 2-year backfill is
   far past what a hidden-field round trip carries, and it is the same code path the mailbox job
-  calls — so manual and automatic cannot drift.
+  calls, so manual and automatic cannot drift.
 - **Email ingest**: `Climate::MailboxPollJob` (every 15 min) reads CSV attachments from
   `CLIMATE_MAILBOX` over Graph. ActionMailbox is NOT installed and M365 has no inbound webhook,
   so this reuses the existing Graph poll instead of new ingress. **Which sensor a file belongs
-  to** is matched from the subject/filename, falling back to the sole sensor; anything ambiguous
-  is left UNREAD and logged rather than guessed.
+  to** falls back to the sole sensor, and anything ambiguous is left UNREAD and logged rather
+  than guessed.
 - **Graph plumbing is shared**: top-level `GraphAuth` + `Graph::MailboxClient` + `Graph::Settings`
-  (which reads `GRAPH_*` and falls back to `REIMBURSEMENTS_AZURE_*` — one Entra app for the org,
-  so renaming would have broken every existing credential entry). `Reimbursements::MailboxClient`
-  is a thin subclass pinning the cost-centre default and its error-constant names.
+  (which reads `GRAPH_*` and falls back to `REIMBURSEMENTS_AZURE_*`, because there is one Entra
+  app for the org and renaming would have broken every existing credential entry).
+  `Reimbursements::MailboxClient` is a thin subclass pinning the cost-centre default and its
+  error-constant names.
 - **Outdoor data self-heals, which is why Open-Meteo won.** `OutdoorPollJob` asks for a rolling
   `past_days` window hourly and upserts the lot, so an outage fills its own gap. Attribution
-  (CC BY 4.0) is a licence condition and is rendered on the dashboard; the free tier is
+  (CC BY 4.0) is a licence condition and is rendered on the dashboard, and the free tier is
   non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point for Met Office / METAR.
 - **The outdoor sensor row is ensured by `Climate::Sensor.outdoor_source!`, not a data
-  migration** — test and CI databases are schema-*loaded*, so a data migration never runs there.
+  migration**, because test and CI databases are schema-*loaded*, so a data migration never
+  runs there.
 - **`Climate::SeriesQuery` must not bucket with `UNIX_TIMESTAMP`.** The mysql2 adapter doesn't
   pin the session `time_zone`, so that reads the stored value in the *server's* zone and shifts
   every bucket boundary by its offset. It uses `TIME_TO_SEC(TIME(recorded_at)) % n` instead,
   keyed off a frozen allow-list. It also inserts explicit `null` points across a gap so Chart.js
-  **breaks** the line — an interpolated line through missing data reads as a measurement that
-  never happened.
+  **breaks** the line, because an interpolated line through missing data reads as a measurement
+  that never happened.
 - **Charts**: `climate_charts_controller.js` lazily `import()`s Chart.js (the cytoscape/leaflet
-  pattern). Chart.js is an ES module, so there is no `window.Chart`; the controller exposes its
+  pattern). Chart.js is an ES module, so there is no `window.Chart`. The controller exposes its
   instances as `element.climateCharts` plus a `data-climate-charts-ready` count, which is how the
   system tests assert the exact plotted values.
 

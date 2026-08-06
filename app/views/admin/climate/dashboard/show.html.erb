@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   Temperature, relative humidity and dew point in the crypt, against outside conditions.
   Condensation forms on any surface at or below the dew point, so the number to watch is the
-  <strong>margin</strong> — how far the air has to cool before it starts wetting the walls.
+  <strong>margin</strong>, i.e. how far the air has to cool before it starts wetting the walls.
   Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C is worth acting on.
 </p>
 
@@ -68,7 +68,7 @@
 <%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
   <ul class="list-disc pl-5 space-y-2 text-gray-700">
     <li>
-      Crypt readings arrive by importing a CSV export from the Govee app — the device records to
+      Crypt readings arrive by importing a CSV export from the Govee app. The device records to
       its own buffer whether or not it has WiFi, so an export is complete even when the crypt has
       been offline. Import a fresh one whenever you want the charts brought up to date.
     </li>

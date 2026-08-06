@@ -4,7 +4,7 @@ module Climate
   #
   # An unusable range is clamped and SAID SO (the controller flashes it) rather
   # than silently rendering a different range as though it were the one asked
-  # for — as the reimbursements year selector does when it falls back.
+  # for, as the reimbursements year selector does when it falls back.
   class DateRange
     DEFAULT_DAYS = 7
     MAX_DAYS = 366

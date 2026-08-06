@@ -7,20 +7,20 @@
 .DESCRIPTION
   Creates the Exchange service principal pointer, a management scope per access
   level, and the role assignments. Then verifies, and tells you what to do by
-  hand afterwards — the two manual steps are deliberate, see NOTES.
+  hand afterwards. The two manual steps are deliberate, see NOTES.
 
   Set the variables as environment variables and run it, or pass them as
   parameters. Supports -WhatIf.
 
 .PARAMETER SendReceiveMailboxes
-  Mailboxes the app must read AND send from — reimbursements (it replies to
-  producers and creates EUSA drafts). Gets "Application Mail Full Access".
+  Mailboxes the app must read AND send from: reimbursements, which replies to
+  producers and creates EUSA drafts. Gets "Application Mail Full Access".
 
   Listing a mailbox that does not exist yet is free: a management scope is a
   filter, so it matches nothing until the mailbox appears, then starts working.
 
 .PARAMETER ReadOnlyMailboxes
-  Mailboxes the app only reads and files — climate CSV exports. Gets
+  Mailboxes the app only reads and files, i.e. climate CSV exports. Gets
   "Application Mail.ReadWrite": read, mark read, move. No send.
 
 .EXAMPLE
@@ -36,15 +36,15 @@
   Two steps are NOT automated, on purpose:
 
   1. Revoking the tenant-wide Mail.* consent in Entra. This is the step that
-     makes the scoping real — RBAC and Entra permissions are a UNION, so a
+     makes the scoping real, because RBAC and Entra permissions are a UNION: a
      scoped grant does nothing while the unscoped one still exists. It is also
      the only irreversible-feeling step, so it wants a human who has just read
      the verification output.
 
   2. Removing the old Application Access Policy.
 
-  Get the IDs from Entra > Enterprise applications, NOT App registrations —
-  the Object ID differs between those pages and the wrong one fails.
+  Get the IDs from Entra > Enterprise applications, NOT App registrations. The
+  Object ID differs between those pages and the wrong one fails.
 
   Needs Organization Management in Exchange Online.
 #>
@@ -99,7 +99,7 @@ function Sync-RoleAssignment([string] $Name, [string] $Role, [string] $Scope) {
   if ($PSCmdlet.ShouldProcess($Name, "New-ManagementRoleAssignment -Role '$Role' -CustomResourceScope '$Scope'")) {
     New-ManagementRoleAssignment -Name $Name -App $ServicePrincipalObjectId `
                                  -Role $Role -CustomResourceScope $Scope -ErrorAction Stop | Out-Null
-    # Confirmed rather than assumed: Exchange Online cmdlets do not always
+    # Confirmed rather than assumed. Exchange Online cmdlets do not always
     # honour $ErrorActionPreference, so a failure can otherwise scroll past
     # under a success message.
     if (-not (Get-ManagementRoleAssignment -Identity $Name -ErrorAction SilentlyContinue)) {
@@ -119,14 +119,14 @@ if (Get-ServicePrincipal -Identity $AppId -ErrorAction SilentlyContinue) {
                          -DisplayName $DisplayName -ErrorAction Stop | Out-Null
   } catch {
     # Overwhelmingly the ObjectId came off the App registrations blade. That page
-    # shows the application object, which is a DIFFERENT object from the service
+    # shows the application object, which is a different object from the service
     # principal Exchange wants.
     throw @"
 $($_.Exception.Message)
 
 ObjectId '$ServicePrincipalObjectId' is not a service principal in this tenant.
 It is almost certainly the App registration's Object ID. Exchange needs the
-SERVICE PRINCIPAL object id — Entra > Enterprise applications > your app >
+SERVICE PRINCIPAL object id, from Entra > Enterprise applications > your app >
 Overview > Object ID. Or:
 
   Connect-MgGraph -Scopes Application.Read.All
@@ -175,7 +175,7 @@ foreach ($mailbox in ($SendReceiveMailboxes + $ReadOnlyMailboxes)) {
 Write-Host @"
 
 Check InScope is True above, then pick any UNRELATED mailbox and confirm it comes
-back False — that proves the scoping bites, rather than merely that the grant exists:
+back False. That proves the scoping bites, rather than merely that the grant exists:
 
   Test-ServicePrincipalAuthorization -Identity $AppId -Resource someone.else@example.com | Format-Table
 
@@ -183,9 +183,9 @@ Then, by hand:
 
   1. Entra > Enterprise applications > $DisplayName > Permissions.
      Revoke ONLY Mail.ReadWrite and Mail.Send.
-     KEEP Sites.* / Files.* — the BACS upload needs them and RBAC cannot express
-     them. Until you do this the app keeps its unscoped access and none of the
-     above has any effect.
+     KEEP Sites.* / Files.*, because the BACS upload needs them and RBAC cannot
+     express them. Until you do this the app keeps its unscoped access and none
+     of the above has any effect.
 
   2. Remove the old policy:
        Get-ApplicationAccessPolicy | Where-Object { `$_.AppId -eq '$AppId' }

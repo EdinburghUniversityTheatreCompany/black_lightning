@@ -50,8 +50,8 @@ export default class extends Controller {
     ].filter(Boolean)
 
     // Chart.js is an ES module, so there is no window.Chart. These are the
-    // handles for checking what was actually plotted — from the browser tests,
-    // and from the console when a live page looks wrong.
+    // handles for checking what was actually plotted, from the browser tests and
+    // from the console when a live page looks wrong.
     this.element.climateCharts = this.#charts
     this.element.dataset.climateChartsReady = String(this.#charts.length)
   }

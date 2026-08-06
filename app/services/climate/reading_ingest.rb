@@ -3,9 +3,9 @@ module Climate
   # The single write path into climate_readings: the plausibility guard, the dew
   # point and the idempotent upsert. Nothing else should create a Reading.
   #
-  # Both feeds arrive as a whole window of already-timestamped rows — a CSV
-  # export indoors, an hourly forecast window outdoors — so re-sending an
-  # overlapping window is the normal case, not an error.
+  # Both feeds arrive as a whole window of already-timestamped rows: a CSV export
+  # indoors, an hourly forecast window outdoors. So re-sending an overlapping
+  # window is the normal case, not an error.
   class ReadingIngest
     # An Edinburgh basement reaches neither bound, so anything outside is a
     # mis-read column or a broken sensor rather than weather.
@@ -21,8 +21,8 @@ module Climate
 
     # +rows+: [{ recorded_at:, temperature_c:, relative_humidity:, dew_point_c:,
     #            raw_temperature:, raw_temperature_unit: }]
-    # dew_point_c and the raw pair are optional — dew point is computed when
-    # absent, and the raw pair defaults to the Celsius value.
+    # dew_point_c and the raw pair are optional. Dew point is computed when absent,
+    # and the raw pair defaults to the Celsius value.
     #
     # One bad row is skipped rather than failing the batch: a single unreadable
     # line in a 2,000-row export must not cost the other 1,999.
@@ -34,7 +34,7 @@ module Climate
 
       records = Array(rows).filter_map do |row|
         recorded_at = row[:recorded_at]
-        # Bare `next`, never `next(counter += 1)` — that returns the assignment's
+        # Bare `next`, never `next(counter += 1)`. That returns the assignment's
         # Integer, which filter_map then keeps as though it were a record.
         if recorded_at.nil?
           skipped += 1
@@ -87,16 +87,16 @@ module Climate
         temperature_c: celsius, relative_humidity: humidity,
         dew_point_c: row[:dew_point_c] ||
           DewPoint.celsius(temperature_c: celsius, relative_humidity: humidity),
-        # What the source actually said, before any conversion — so a column
-        # misread as the wrong unit stays correctable from the stored value.
+        # What the source actually said, before any conversion, so a column misread
+        # as the wrong unit stays correctable from the stored value.
         raw_temperature: row[:raw_temperature] || celsius,
         raw_temperature_unit: row[:raw_temperature_unit] || "C",
         created_at: now, updated_at: now }
     end
     private_class_method :row_for
 
-    # MySQL ignores upsert_all's unique_by: — it collides on whatever unique
-    # index the row hits, so that index must exist before the first import.
+    # MySQL ignores upsert_all's unique_by:. It collides on whatever unique index
+    # the row hits, so that index must exist before the first import.
     def self.write(records)
       return 0 if records.empty?
 

@@ -202,7 +202,7 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   end
 
   test "never imports against the outdoor feed" do
-    # It is the only sensor here, but it is not a Govee one — a crypt file
+    # It is the only sensor here, but it is not a Govee one, and a crypt file
     # landing on the comparison line would corrupt it.
     outdoor = outdoor_climate_sensor
     fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },

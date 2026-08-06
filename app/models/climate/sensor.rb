@@ -89,7 +89,7 @@ module Climate
 
     def stale_after = STALE_AFTER.fetch(source, DEFAULT_STALE_AFTER)
 
-    # No readings at all counts as stale — same story for the operator.
+    # No readings at all counts as stale, which is the same story for the operator.
     def stale?(now = Time.current)
       latest_reading.nil? || latest_reading.recorded_at < now - stale_after
     end

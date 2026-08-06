@@ -97,7 +97,7 @@ class Climate::SensorTest < ActiveSupport::TestCase
   end
 
   test "outdoor_source! leaves an operator's corrected coordinates alone" do
-    # find_or_create_by only assigns on create — otherwise the hourly poll job
+    # find_or_create_by only assigns on create. Otherwise the hourly poll job
     # would silently revert a corrected location on every run.
     Climate::Sensor.outdoor_source!.update!(latitude: 55.9500, display_name: "Outside (roof)")
 

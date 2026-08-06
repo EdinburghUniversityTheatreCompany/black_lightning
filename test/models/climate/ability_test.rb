@@ -64,7 +64,7 @@ class Climate::AbilityTest < ActiveSupport::TestCase
 
   test "the sensor models are kept out of the permission grid" do
     # They are managed only through the climate pages, so a CRUD row for them in
-    # the grid would be meaningless — the same rule as the reimbursements models.
+    # the grid would be meaningless, the same rule as the reimbursements models.
     controller = Admin::PermissionsController.new
     controller.send(:set_models_and_roles)
     models = controller.instance_variable_get(:@models)

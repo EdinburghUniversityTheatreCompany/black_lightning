@@ -1,5 +1,5 @@
 <%#
-  The current reading as real HTML rather than pixels on a canvas — so the one
+  The current reading as real HTML rather than pixels on a canvas, so the one
   question that actually matters ("is the crypt damp right now?") never depends
   on the chart being readable, and screen readers get it directly.
 %>
@@ -40,11 +40,11 @@
     </dl>
 
     <p class="mt-2 mb-0 text-sm <%= climate_condensation_risk?(margin) ? 'text-red-700 font-semibold' : 'text-gray-600' %>">
-      <%= climate_margin(margin) %> above the dew point<%= " — condensation risk" if climate_condensation_risk?(margin) %>
+      <%= climate_margin(margin) %> above the dew point<%= " (condensation risk)" if climate_condensation_risk?(margin) %>
     </p>
 
     <p class="mt-1 mb-0 text-xs <%= state == :stale ? 'text-amber-800 font-semibold' : 'text-gray-500' %>">
-      Updated <%= climate_last_seen(sensor) %><%= " — expected every #{distance_of_time_in_words(sensor.stale_after)}" if state == :stale %>
+      Updated <%= climate_last_seen(sensor) %><%= ", expected every #{distance_of_time_in_words(sensor.stale_after)}" if state == :stale %>
     </p>
   <% end %>
 </div>

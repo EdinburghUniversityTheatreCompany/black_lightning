@@ -66,7 +66,7 @@ module Admin
 
       test "says so when a requested range had to be clamped" do
         # Never silently render a different range as though it were the one
-        # asked for — that is how last week's damp gets read as this week's.
+        # asked for. That is how last week's damp gets read as this week's.
         get :show, params: { from: "2026-08-06", to: "2026-08-01" }
 
         assert_response :success
