@@ -3,6 +3,8 @@
 # outdoor weather). External services are always faked through the +http:+ or
 # builder seams — this suite has no mocking library.
 module ClimateTestHelpers
+  include HoneybadgerTestHelpers
+
   # --- Database seed helpers -------------------------------------------------
 
   def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,

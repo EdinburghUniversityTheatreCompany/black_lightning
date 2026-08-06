@@ -2,6 +2,11 @@
 # DatabaseStore-backed portal, plus fake external-service clients (Graph, HTTP
 # transport) and a fake modulus checker.
 module ReimbursementsTestHelpers
+  # capture_honeybadger_notices moved to test/support/honeybadger_test_helpers.rb
+  # when the climate suite needed it too; included here so every existing test
+  # keeps calling it unqualified.
+  include HoneybadgerTestHelpers
+
   # --- Database seed helpers -----------------------------------------------
   # Create the real rows the DatabaseStore serves.
 
@@ -70,18 +75,6 @@ module ReimbursementsTestHelpers
     disposition = response.headers["Content-Disposition"]
     assert_match(/attachment/, disposition)
     assert_match(/reimbursements-#{slug}-\d{4}-\d{2}-\d{2}\.csv/, disposition)
-  end
-
-  # No mocking library in this suite: swap Honeybadger.notify for a recorder
-  # for the duration of the block, then restore the original method.
-  def capture_honeybadger_notices
-    notices = []
-    original = Honeybadger.method(:notify)
-    Honeybadger.define_singleton_method(:notify) { |error, **opts| notices << [ error, opts ] }
-    yield
-    notices
-  ensure
-    Honeybadger.define_singleton_method(:notify, original)
   end
 
   # Grants the finance grid permission (:manage, :reimbursements_finance) to a
