@@ -19,6 +19,7 @@ seed_files = %w[
   media
   debts
   reimbursements
+  climate
 ]
 
 seed_files.each do |file|

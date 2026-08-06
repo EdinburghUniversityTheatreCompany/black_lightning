@@ -378,3 +378,55 @@ as an empty `<a>` with no accessible name — a screen reader announces an unlab
 **Fix:** add `aria-label` to the sanitizer's `attributes:` list (it is inert markup, no
 injection surface beyond the existing `title`/`alt` entries). Not done during the upgrade
 because it is an a11y change, not a dependency change.
+
+## A shared `Settings::Base` for the ENV-then-credentials pattern
+
+*Noticed 2026-08-06 while building the climate monitor.* `Climate::Settings` and
+`Reimbursements::Settings` are now the same shape twice: a `KEYS` list, a
+`define_singleton_method` loop, and a private `raw_value` reading
+`ENV["PREFIX_#{KEY}"].presence || credentials.dig(:namespace, key).presence`. A third subsystem
+would make it three.
+
+**Fix:** extract a `Settings::Base` that takes the ENV prefix and credentials namespace, leaving
+each module to declare only its keys and its derived predicates. Small enough that jscpd doesn't
+currently catch it, which is exactly why it will drift.
+
+## The Open-Meteo forecast tail is fetched and then discarded
+
+*Noticed 2026-08-06.* `OutdoorPollJob` requests `forecast_days=1` purely for self-heal margin, and
+`ReadingIngest.upsert_series!` drops every row dated in the future so predictions are never drawn
+as observations.
+
+**Fix (if wanted):** keep those rows behind a flag and render them as a distinct dashed *forecast*
+segment past "now". Genuinely useful for "should the dehumidifier run tonight" — but it must be
+visually unmistakable, which is why it wasn't done as a silent extension of the existing line.
+
+## No retention or rollup policy for `climate_readings`
+
+*Noticed 2026-08-06.* At ten-minute polling the table grows about 52k rows per sensor per year,
+which MySQL will not notice for years. There is no pruning job and, deliberately, no plan to add
+one — year-on-year comparison is the point of keeping it.
+
+**Fix (eventually):** if the table ever passes a few million rows, add a rollup table of hourly
+(or daily) aggregates for long ranges rather than deleting history. `SeriesQuery`'s bucketing is
+already the shape a rollup would take, so it would be a swap of the source table, not a rewrite.
+
+## A dew-point-margin alert would be the point of all this
+
+*Noticed 2026-08-06.* The dashboard shows the condensation-risk margin, but somebody has to look
+at it. The damage from crypt damp happens over days, and nobody watches a chart for days.
+
+**Fix:** a job that emails when a sensor's margin stays under `ClimateHelper::CONDENSATION_RISK_MARGIN`
+for N consecutive hours. Deliberately out of scope for the first cut (Mick asked for the charts),
+but this dashboard is really a prerequisite for it — the readings and the margin already exist.
+
+## `Admin::SidebarComponent#active_item?` is a bare prefix match
+
+*Noticed 2026-08-06, and it has now forced the same workaround twice.* `active_item?` is
+`@current_path.start_with?(item[:path])`, so a parent path lights up whenever a child is open.
+The reimbursements "My Claims" entry carries a comment about it, and the climate section is
+limited to a single sidebar entry for the same reason — `/admin/climate` would light up while on
+`/admin/climate/sensors`.
+
+**Fix:** an `exact: true` option on a navbar item, matching on equality instead. Both existing
+call sites could then say what they mean rather than working around it.

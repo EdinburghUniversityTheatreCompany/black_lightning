@@ -6,7 +6,7 @@
 #  id                           :integer          not null, primary key
 #  converted_from_staffing_debt :boolean          default(FALSE), not null
 #  due_by                       :date
-#  state                        :integer          default("normal")
+#  state                        :integer          default(0)
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  maintenance_credit_id        :bigint

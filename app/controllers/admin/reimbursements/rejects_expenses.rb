@@ -8,7 +8,7 @@ module Admin
     # failure never blocks the rejection (the operator/owner follows up).
     module RejectsExpenses
       extend ActiveSupport::Concern
-      include ::Reimbursements::ErrorReporting
+      include ::ErrorReporting
 
       private
 

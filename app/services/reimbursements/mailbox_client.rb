@@ -22,7 +22,7 @@ module Reimbursements
     def initialize(mailbox: CostCentre.default&.receive_mailbox, settings: Settings, http: nil, clock: nil)
       @mailbox = mailbox
       @settings = settings
-      @http = http || HttpTransport
+      @http = http || ::HttpTransport
       @clock = clock || -> { Time.current }
       @folder_ids = {}
     end

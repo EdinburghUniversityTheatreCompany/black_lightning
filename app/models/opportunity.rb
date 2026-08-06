@@ -7,12 +7,12 @@
 #  apply_url         :string(255)
 #  approved          :boolean
 #  author            :string(255)
-#  compensation_type :integer          default("tbc"), not null
+#  compensation_type :integer          default(4), not null
 #  contact_email     :string(255)
 #  dates             :string(255)
 #  description       :text(16777215)
-#  email_visibility  :integer          default("no_one"), not null
-#  experience_level  :integer          default("any"), not null
+#  email_visibility  :integer          default(0), not null
+#  experience_level  :integer          default(0), not null
 #  expiry_date       :date
 #  location          :string(255)
 #  project           :string(255)

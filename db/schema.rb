@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -288,6 +288,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["child_id"], name: "index_children_techies_on_child_id"
     t.index ["techie_id"], name: "index_children_techies_on_techie_id"
+  end
+
+  create_table "climate_readings", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "dew_point_c", precision: 5, scale: 2
+    t.decimal "raw_temperature", precision: 7, scale: 2
+    t.string "raw_temperature_unit", limit: 1
+    t.datetime "recorded_at", null: false
+    t.decimal "relative_humidity", precision: 5, scale: 2
+    t.bigint "sensor_id", null: false
+    t.decimal "temperature_c", precision: 5, scale: 2
+    t.datetime "updated_at", null: false
+    t.index ["sensor_id", "recorded_at"], name: "index_climate_readings_on_sensor_id_and_recorded_at", unique: true
+  end
+
+  create_table "climate_sensors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.boolean "active", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "display_name", null: false
+    t.string "external_id"
+    t.string "last_error", limit: 500
+    t.datetime "last_polled_at"
+    t.decimal "latitude", precision: 9, scale: 6
+    t.string "location"
+    t.decimal "longitude", precision: 9, scale: 6
+    t.string "placement", default: "indoor", null: false
+    t.integer "position", default: 0, null: false
+    t.string "sku"
+    t.string "source", default: "govee", null: false
+    t.string "temperature_unit"
+    t.datetime "unit_verified_at"
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_climate_sensors_on_active"
+    t.index ["source", "external_id"], name: "index_climate_sensors_on_source_and_external_id", unique: true
   end
 
   create_table "companies", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -1124,6 +1158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
   add_foreign_key "admin_maintenance_debts", "maintenance_credits"
   add_foreign_key "cached_duplicates", "users", column: "user1_id"
   add_foreign_key "cached_duplicates", "users", column: "user2_id"
+  add_foreign_key "climate_readings", "climate_sensors", column: "sensor_id", on_delete: :cascade
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "events", "companies"
   add_foreign_key "maintenance_credits", "users"

@@ -5,7 +5,7 @@ module Reimbursements
   # BuildBatchJob all need. CredentialsCheckJob doesn't touch the store, but
   # inheriting the unused seam costs nothing.
   class ApplicationJob < ::ApplicationJob
-    include ErrorReporting
+    include ::ErrorReporting
 
     class_attribute :store_builder, default: -> { Reimbursements.build_store }
 

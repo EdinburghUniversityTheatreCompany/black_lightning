@@ -463,6 +463,48 @@ survive as historical import provenance and are never written. Spec + plan in
   parameter on the producer form, so a submitter can't pick the internal type to dodge the
   receipt rule.
 
+## Crypt climate monitor
+
+Temperature / humidity / dew point charts at `/admin/climate`
+(`Admin::Climate::BaseController < AdminController`), gated by the `climate` grid permission
+(`read` to view, `manage` to configure sensors). Setup runbook:
+[docs/climate/govee-setup.md](docs/climate/govee-setup.md).
+
+- **`temperature_unit` is nullable with NO default, and that is the whole design.** Govee does
+  not document the unit of `sensorTemperature` and it is widely reported as **Fahrenheit even
+  when the app shows Celsius**. `Climate::ReadingIngest` therefore *refuses to write* for a
+  sensor whose unit no operator has verified (`/admin/climate/sensors` → Check unit). Not
+  recording is recoverable; recording Fahrenheit as Celsius is not. **Never give this column a
+  default.** Every reading also stores `raw_temperature` + the unit it was written under, so a
+  wrong answer is a backfill rather than a permanent hole.
+- **`Climate::ReadingIngest` is the only write path.** It owns unit conversion, dew point, the
+  plausibility guard (−20..50 °C, 0..100 %) and the idempotent `upsert_all`. Don't create a
+  `Climate::Reading` anywhere else.
+- **The Govee API has no history endpoint** — it serves "now" only. The charts' history is
+  exactly what `Climate::SensorPollJob` has polled (every 10 min); nothing before a sensor was
+  activated can ever be recovered. **An `online: false` device writes nothing**: Govee keeps
+  serving the last known value for a unit with dead batteries, which would draw a flat,
+  fictional line. Rate limit is 10,000/day per **account**, not per key.
+- **Outdoor data self-heals, which is why Open-Meteo won.** `OutdoorPollJob` asks for a rolling
+  `past_days` window hourly and upserts the lot, so an outage fills its own gap — there is no
+  backfill code in this feature. Attribution (CC BY 4.0) is a licence condition and is rendered
+  on the dashboard. Free tier is non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap
+  point for Met Office / METAR.
+- **The outdoor sensor row is ensured by `Climate::Sensor.outdoor_source!`, not a data
+  migration** — test and CI databases are schema-*loaded*, so a data migration never runs there.
+  Same trap applies to any future seed row.
+- **`Climate::SeriesQuery` must not bucket with `UNIX_TIMESTAMP`.** The mysql2 adapter doesn't
+  pin the session `time_zone`, so that reads the stored value in the *server's* zone and shifts
+  every bucket boundary by its offset. It uses `TIME_TO_SEC(TIME(recorded_at)) % n` instead,
+  keyed off a frozen allow-list. It also inserts explicit `null` points across a gap so Chart.js
+  **breaks** the line — an interpolated line through missing data reads as a measurement that
+  never happened.
+- **Charts**: `climate_charts_controller.js` lazily `import()`s Chart.js (the cytoscape/leaflet
+  pattern). Chart.js is an ES module, so there is no `window.Chart`; the controller exposes its
+  instances as `element.climateCharts` plus a `data-climate-charts-ready` count, which is how the
+  system tests assert the exact plotted values. Colour follows the **sensor**, not its position
+  in the current selection, so deactivating one doesn't repaint the others.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
