@@ -42,7 +42,7 @@ module Reimbursements
 
     def initialize(settings: Settings, http: nil, clock: nil)
       @settings = settings
-      @http = http || HttpTransport
+      @http = http || ::HttpTransport
       @clock = clock || -> { Time.current }
     end
 
