@@ -37,6 +37,8 @@ module Climate
     # for the create! path (test builders, a console session) so those get a
     # readable error instead of RecordNotUnique.
     validates :recorded_at, uniqueness: { scope: :sensor_id }
+    # "C" or "F" — the unit believed at write time, not a free-text field.
+    validates :raw_temperature_unit, length: { maximum: 1 }, allow_nil: true
 
     scope :between, ->(from, to) { where(recorded_at: from..to) }
     scope :chronological, -> { order(:recorded_at) }

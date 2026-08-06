@@ -67,9 +67,23 @@ class Climate::SensorTest < ActiveSupport::TestCase
   test "the same govee device cannot be registered twice" do
     create_climate_sensor(external_id: "AA:BB:CC:DD:EE:FF")
 
+    duplicate = Climate::Sensor.new(display_name: "Duplicate", source: Climate::Sensor::SOURCE_GOVEE,
+                                    external_id: "AA:BB:CC:DD:EE:FF", sku: "H5179")
+
+    assert_not duplicate.valid?
+    assert duplicate.errors[:external_id].present?
+  end
+
+  test "the database refuses a duplicate device even past the validator" do
+    # The validator is for a readable error; the unique index is the guarantee,
+    # and Discover depends on it holding under a double-submitted form.
+    create_climate_sensor(external_id: "AA:BB:CC:DD:EE:FF")
+
     assert_raises(ActiveRecord::RecordNotUnique) do
-      Climate::Sensor.create!(display_name: "Duplicate", source: Climate::Sensor::SOURCE_GOVEE,
-                              external_id: "AA:BB:CC:DD:EE:FF", sku: "H5179")
+      Climate::Sensor.insert!({ display_name: "Duplicate", source: Climate::Sensor::SOURCE_GOVEE,
+                                external_id: "AA:BB:CC:DD:EE:FF", sku: "H5179",
+                                placement: Climate::Sensor::PLACEMENT_INDOOR, active: false,
+                                position: 0, created_at: Time.current, updated_at: Time.current })
     end
   end
 

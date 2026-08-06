@@ -54,10 +54,19 @@ module Climate
 
     validates :display_name, presence: true, length: { maximum: 255 }
     validates :location, length: { maximum: 255 }, allow_nil: true
-    validates :source, inclusion: { in: SOURCES }
-    validates :placement, inclusion: { in: PLACEMENTS }
-    validates :temperature_unit, inclusion: { in: UNITS }, allow_nil: true
+    validates :source, inclusion: { in: SOURCES }, length: { maximum: 255 }
+    validates :placement, inclusion: { in: PLACEMENTS }, length: { maximum: 255 }
+    validates :temperature_unit, inclusion: { in: UNITS }, length: { maximum: 255 }, allow_nil: true
     validates :external_id, presence: true, if: :govee?
+    validates :external_id, length: { maximum: 255 }, allow_nil: true
+    # Discover upserts on this pair, so it must not register a device twice. The
+    # database index is the real guarantee; this gives the create! path a
+    # readable error instead of RecordNotUnique.
+    validates :external_id, uniqueness: { scope: :source }, allow_nil: true
+    validates :sku, length: { maximum: 255 }, allow_nil: true
+    # Truncated to fit by the poll jobs; validated so a hand-set value can't
+    # silently overflow the column.
+    validates :last_error, length: { maximum: 500 }, allow_nil: true
     validates :latitude, :longitude, presence: true, if: :open_meteo?
     validates :latitude, numericality: { in: -90..90 }, allow_nil: true
     validates :longitude, numericality: { in: -180..180 }, allow_nil: true
