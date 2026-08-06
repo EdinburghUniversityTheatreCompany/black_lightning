@@ -1,144 +1,118 @@
-# Scoping the Graph app to its mailboxes (RBAC for Applications)
+# Scoping the Graph app to its mailboxes
 
-The app talks to Microsoft Graph with **app-only** (client-credentials) auth through one Entra app
-registration, shared by two features:
+One Entra app registration serves two features, with app-only (client-credentials) auth:
 
-| Feature | Mailbox | What it does |
+| Feature | Mailbox | Needs |
 |---|---|---|
-| Reimbursements | `reimbursements@bedlamfringe.co.uk` | reads receipts, replies, marks read, moves, creates EUSA drafts, **uploads to SharePoint** |
-| Climate | `climatesensors@bedlamtheatre.co.uk` | reads Govee CSV exports, marks read, moves |
+| Reimbursements | `reimbursements@bedlamfringe.co.uk` (+ `@bedlamtheatre.co.uk` when termtime lands) | read, reply, mark read, move, create drafts, **and SharePoint upload** |
+| Climate | `climatesensors@bedlamtheatre.co.uk` | read, mark read, move |
 
 Graph **application** permissions are tenant-wide by default — consenting `Mail.ReadWrite` lets the
-app read every mailbox in the tenant. Something has to narrow that. Historically that was an
+app read every mailbox in the organisation. Something has to narrow that. That used to be an
 `ApplicationAccessPolicy`; Microsoft is retiring those in favour of
 [RBAC for Applications](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac).
 
-## Read this before you start
+Run [`graph-mailbox-rbac.ps1`](graph-mailbox-rbac.ps1) — it takes everything as environment
+variables or parameters and supports `-WhatIf`. Read the two traps below first.
 
-**RBAC and Entra permissions are a UNION, not an intersection.** A resource-scoped `Mail.ReadWrite`
-in Exchange RBAC does nothing at all while the same permission is still consented tenant-wide in
-Entra — the app keeps its unscoped access and the scoping is decorative. Removing the Entra mail
-consent is not optional cleanup; it is the step that makes this work.
+## Trap 1: RBAC and Entra permissions are a UNION
 
-**RBAC for Applications covers Exchange only.** It has roles for mail, calendar, contacts and EWS —
-nothing for SharePoint. The reimbursements BACS upload uses `/sites` and `/drives`, so its
-`Sites.*`/`Files.*` consent must **stay** in Entra. Only remove the `Mail.*` ones.
+A resource-scoped `Mail.ReadWrite` in Exchange does **nothing at all** while the same permission is
+still consented tenant-wide in Entra. The app keeps its unscoped access and your careful scoping is
+decorative.
 
-**Nothing changes in the application.** No new secret, no new app registration, no config change
-beyond `CLIMATE_MAILBOX`.
+So revoking the Entra mail consent isn't cleanup you do afterwards — **it's the step that makes the
+whole thing work.** The script won't do it for you, deliberately: it's the one action worth taking
+with the verification output in front of you.
 
-You need **Organization Management** in Exchange Online and **Exchange Administrator** in Entra.
+## Trap 2: RBAC covers Exchange only
 
-## The two IDs, and the usual mistake
+There are roles for mail, calendar, contacts and EWS. There's nothing for SharePoint, and the
+reimbursements BACS upload uses `/sites` and `/drives`.
 
-`New-ServicePrincipal` wants IDs from **Entra → Enterprise applications**, *not* App registrations —
-the Object ID differs between the two pages and the App registrations one will not work.
+So when you revoke consent, take out **only** `Mail.ReadWrite` and `Mail.Send`. **Keep `Sites.*`
+and `Files.*`** — revoke those by accident and batch uploads break, which you won't notice until
+someone builds a batch.
 
-- `-AppId` — the Application (client) ID
-- `-ObjectId` — the **service principal** object ID from the Enterprise applications page
+## Running it
+
+Get the two IDs from **Entra → Enterprise applications**, not App registrations. The Object ID
+differs between those pages and the App registrations one won't work.
 
 ```powershell
 Connect-ExchangeOnline
-# Or, to read them without clicking about:
-#   Get-MgServicePrincipal -Filter "AppId eq '<app-id>'" | Select-Object Id, AppId, DisplayName
+
+$env:BL_GRAPH_APP_ID       = "<Application (client) ID>"
+$env:BL_GRAPH_SP_OBJECT_ID = "<Object ID, from Enterprise applications>"
+
+# Reimbursements replies to producers and creates EUSA drafts, so it needs send.
+# Listing the termtime address now costs nothing — a scope is a filter, so it
+# simply matches nothing until that mailbox exists, then starts working.
+$env:BL_SEND_RECEIVE_MAILBOXES = "reimbursements@bedlamfringe.co.uk,reimbursements@bedlamtheatre.co.uk"
+
+# Climate only reads and files. No send.
+$env:BL_READ_ONLY_MAILBOXES    = "climatesensors@bedlamtheatre.co.uk"
+
+./docs/graph-mailbox-rbac.ps1 -WhatIf   # look at what it would do
+./docs/graph-mailbox-rbac.ps1           # do it
 ```
 
-## 1. Register the service principal pointer in Exchange
+It's idempotent: an existing scope gets its filter updated, an existing assignment is left alone.
+Re-run it when you add a mailbox.
 
-```powershell
-New-ServicePrincipal -AppId <application-client-id> `
-                     -ObjectId <service-principal-object-id> `
-                     -DisplayName "Black Lightning"
+You need **Organization Management** in Exchange Online.
+
+### Where the reimbursements addresses come from
+
+They're a database value, not a constant — `Reimbursements::CostCentre#receive_mailbox` and
+`#send_mailbox`, editable in the portal's Settings screen. To read what production actually uses:
+
+```
+kamal app exec -i 'bin/rails runner "Reimbursements::CostCentre.all.each { |c| puts [c.key, c.receive_mailbox, c.send_mailbox].join(%q( | )) }"'
 ```
 
-## 2. Create a scope per mailbox
+## Verifying
 
-Least privilege: reimbursements needs to send, climate does not. Two scopes keeps that honest.
-
-```powershell
-New-ManagementScope -Name "BL Reimbursements Mailbox" `
-  -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'reimbursements@bedlamfringe.co.uk'"
-
-New-ManagementScope -Name "BL Climate Mailbox" `
-  -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'climatesensors@bedlamtheatre.co.uk'"
-```
-
-If you would rather manage membership than edit filters as mailboxes are added, point a scope at a
-mail-enabled security group instead — note it takes the group's **distinguished name**
-(`Get-Group <name> | Select-Object DistinguishedName`), and **nested groups are not evaluated**:
+The script does this at the end, but the check that matters is the negative one:
 
 ```powershell
-New-ManagementScope -Name "BL Graph Mailboxes" `
-  -RecipientRestrictionFilter "MemberOfGroup -eq 'CN=…,OU=…,DC=…'"
-```
-
-## 3. Assign the roles
-
-```powershell
-# Reimbursements: read + write + send. "Application Mail Full Access" is
-# Mail.ReadWrite + Mail.Send in one role.
-New-ManagementRoleAssignment -Name "BL Reimbursements Mail" `
-  -App <service-principal-object-id> `
-  -Role "Application Mail Full Access" `
-  -CustomResourceScope "BL Reimbursements Mailbox"
-
-# Climate: read, mark read, move. No send.
-New-ManagementRoleAssignment -Name "BL Climate Mail" `
-  -App <service-principal-object-id> `
-  -Role "Application Mail.ReadWrite" `
-  -CustomResourceScope "BL Climate Mailbox"
-```
-
-## 4. Verify BEFORE removing anything
-
-`Test-ServicePrincipalAuthorization` bypasses the permission cache, so it answers immediately.
-`InScope` is the column that matters.
-
-```powershell
-Test-ServicePrincipalAuthorization -Identity "Black Lightning" `
+# Should be InScope True
+Test-ServicePrincipalAuthorization -Identity $env:BL_GRAPH_APP_ID `
   -Resource climatesensors@bedlamtheatre.co.uk | Format-Table
 
-Test-ServicePrincipalAuthorization -Identity "Black Lightning" `
-  -Resource reimbursements@bedlamfringe.co.uk | Format-Table
-
-# And confirm the scoping actually bites — this should come back InScope False:
-Test-ServicePrincipalAuthorization -Identity "Black Lightning" `
-  -Resource <some-other-mailbox> | Format-Table
+# Should be InScope False — this is what proves the scoping bites,
+# rather than merely that the grant exists
+Test-ServicePrincipalAuthorization -Identity $env:BL_GRAPH_APP_ID `
+  -Resource someone.else@bedlamtheatre.co.uk | Format-Table
 ```
 
-Until step 5, the app has both its old Entra grant and the new RBAC grant, and access is their
-union — so **nothing breaks while you set this up**. That is why verification comes first.
+`Test-ServicePrincipalAuthorization` bypasses the permission cache, so it answers immediately. The
+running app doesn't — allow **30 minutes to 2 hours** after any change.
 
-## 5. Remove the tenant-wide mail consent in Entra
+Nothing breaks while you're setting this up: until you revoke the Entra consent, the app has both
+the old grant and the new one, and access is their union. That's exactly why verification comes
+before removal.
 
-Entra → Enterprise applications → *Black Lightning* → Permissions. Revoke **only**:
+## Then, by hand
 
-- `Mail.ReadWrite`
-- `Mail.Send`
+1. **Entra → Enterprise applications → Black Lightning → Permissions.** Revoke `Mail.ReadWrite` and
+   `Mail.Send`. Keep `Sites.*` / `Files.*`.
+2. Remove the old policy:
+   ```powershell
+   Get-ApplicationAccessPolicy | Where-Object { $_.AppId -eq $env:BL_GRAPH_APP_ID }
+   Remove-ApplicationAccessPolicy -Identity <identity>
+   ```
 
-**Keep** `Sites.*` / `Files.*` — the BACS upload needs them and RBAC cannot express them.
+## Confirming both features still work
 
-This is the step that makes the scoping real. Allow 30 minutes to 2 hours for the permission cache
-to turn over (`Test-ServicePrincipalAuthorization` bypasses it; the running app does not).
-
-## 6. Remove the old Application Access Policy
-
-```powershell
-Get-ApplicationAccessPolicy | Where-Object { $_.AppId -eq "<application-client-id>" }
-Remove-ApplicationAccessPolicy -Identity <policy-identity>
-```
-
-## 7. Confirm both features still work
-
-- **Reimbursements**: email a receipt to `reimbursements@bedlamfringe.co.uk` and check a Draft
-  expense appears with the reply sent (`Reimbursements::MailboxPollJob`, every 5 minutes).
-- **Climate**: send a Govee export to `climatesensors@bedlamtheatre.co.uk` and check the readings
-  land (`Climate::MailboxPollJob`, every 15 minutes). Also confirm the BACS SharePoint upload still
-  works, since that is the permission most easily revoked by accident.
+- **Reimbursements** — email a receipt in and check a Draft expense appears with the reply sent
+  (`Reimbursements::MailboxPollJob`, every 5 minutes). Then build a batch, to exercise the
+  SharePoint upload you deliberately didn't revoke.
+- **Climate** — send a Govee export to the climate mailbox and check the readings land
+  (`Climate::MailboxPollJob`, every 15 minutes).
 
 ## If it breaks
 
-Symptom is `ErrorAccessDenied` / a Graph 403, surfacing in the app as
-`GraphAuth::AuthError` → a Honeybadger alert and, for reimbursements, an email to the IT
-subcommittee. Re-consenting `Mail.ReadWrite` + `Mail.Send` in Entra restores the old behaviour
-immediately (unscoped, but working) while you re-check the RBAC assignment.
+A Graph 403 surfaces as `GraphAuth::AuthError`: a Honeybadger alert, plus an email to the IT
+subcommittee on the reimbursements side. Re-consenting `Mail.ReadWrite` + `Mail.Send` in Entra puts
+things back immediately — unscoped, but working — while you re-check the assignment.
