@@ -88,19 +88,25 @@ function Sync-ManagementScope([string] $Name, [string[]] $Addresses) {
   } elseif ($PSCmdlet.ShouldProcess($Name, "New-ManagementScope -RecipientRestrictionFilter `"$filter`"")) {
     New-ManagementScope -Name $Name -RecipientRestrictionFilter $filter | Out-Null
   }
-  Write-Host "  scope: $Name -> $filter"
+  Write-Host "  scope: $Name -> $filter" -ForegroundColor Green
 }
 
 function Sync-RoleAssignment([string] $Name, [string] $Role, [string] $Scope) {
   if (Get-ManagementRoleAssignment -Identity $Name -ErrorAction SilentlyContinue) {
-    Write-Host "Assignment '$Name' already exists; leaving it alone." -ForegroundColor Yellow
+    Write-Host "  assignment: $Name already exists; left alone." -ForegroundColor Yellow
     return
   }
   if ($PSCmdlet.ShouldProcess($Name, "New-ManagementRoleAssignment -Role '$Role' -CustomResourceScope '$Scope'")) {
     New-ManagementRoleAssignment -Name $Name -App $ServicePrincipalObjectId `
-                                 -Role $Role -CustomResourceScope $Scope | Out-Null
+                                 -Role $Role -CustomResourceScope $Scope -ErrorAction Stop | Out-Null
+    # Confirmed rather than assumed: Exchange Online cmdlets do not always
+    # honour $ErrorActionPreference, so a failure can otherwise scroll past
+    # under a success message.
+    if (-not (Get-ManagementRoleAssignment -Identity $Name -ErrorAction SilentlyContinue)) {
+      throw "Role assignment '$Name' did not get created."
+    }
+    Write-Host "  assignment: $Name ($Role over $Scope)" -ForegroundColor Green
   }
-  Write-Host "  assignment: $Name ($Role over $Scope)"
 }
 
 # --- 1. The Exchange pointer to the Entra service principal -----------------
@@ -108,8 +114,33 @@ function Sync-RoleAssignment([string] $Name, [string] $Role, [string] $Scope) {
 if (Get-ServicePrincipal -Identity $AppId -ErrorAction SilentlyContinue) {
   Write-Host "Service principal already registered in Exchange." -ForegroundColor Yellow
 } elseif ($PSCmdlet.ShouldProcess($DisplayName, "New-ServicePrincipal -AppId $AppId")) {
-  New-ServicePrincipal -AppId $AppId -ObjectId $ServicePrincipalObjectId -DisplayName $DisplayName | Out-Null
-  Write-Host "Registered service principal '$DisplayName'."
+  try {
+    New-ServicePrincipal -AppId $AppId -ObjectId $ServicePrincipalObjectId `
+                         -DisplayName $DisplayName -ErrorAction Stop | Out-Null
+  } catch {
+    # Overwhelmingly the ObjectId came off the App registrations blade. That page
+    # shows the application object, which is a DIFFERENT object from the service
+    # principal Exchange wants.
+    throw @"
+$($_.Exception.Message)
+
+ObjectId '$ServicePrincipalObjectId' is not a service principal in this tenant.
+It is almost certainly the App registration's Object ID. Exchange needs the
+SERVICE PRINCIPAL object id — Entra > Enterprise applications > your app >
+Overview > Object ID. Or:
+
+  Connect-MgGraph -Scopes Application.Read.All
+  (Get-MgServicePrincipal -Filter "AppId eq '$AppId'").Id
+
+Then re-run with BL_GRAPH_SP_OBJECT_ID set to that value. Scopes already created
+are reused, so re-running is safe.
+"@
+  }
+
+  if (-not (Get-ServicePrincipal -Identity $AppId -ErrorAction SilentlyContinue)) {
+    throw "Service principal for $AppId still not present in Exchange after New-ServicePrincipal."
+  }
+  Write-Host "Registered service principal '$DisplayName'." -ForegroundColor Green
 }
 
 # --- 2 & 3. A scope and an assignment per access level ----------------------
