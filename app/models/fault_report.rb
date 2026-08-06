@@ -6,8 +6,8 @@
 #  id             :integer          not null, primary key
 #  description    :text(16777215)
 #  item           :string(255)
-#  severity       :integer          default("annoying")
-#  status         :integer          default("reported")
+#  severity       :integer          default(0)
+#  status         :integer          default(0)
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
 #  fixed_by_id    :integer

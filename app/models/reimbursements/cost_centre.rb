@@ -10,7 +10,7 @@
 #  key                           :string(255)      not null
 #  last_nightly_run_on           :date
 #  name                          :string(255)      not null
-#  nightly_run_days              :string(255)      default([2, 4]), not null
+#  nightly_run_days              :string(255)      default("[2,4]"), not null
 #  receive_mailbox               :string(255)      not null
 #  send_mailbox                  :string(255)      not null
 #  sharepoint_site_url           :string(255)
