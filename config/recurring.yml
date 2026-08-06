@@ -55,3 +55,10 @@ climate_outdoor_poll:
   class: Climate::OutdoorPollJob
   queue: default
   schedule: every hour
+
+# Ingests Govee CSV exports emailed to the shared climate mailbox. No-ops when
+# no mailbox is configured, so an environment without one is simply quiet.
+climate_mailbox_poll:
+  class: Climate::MailboxPollJob
+  queue: default
+  schedule: every 15 minutes

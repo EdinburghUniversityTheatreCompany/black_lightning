@@ -16,7 +16,7 @@ module Reimbursements
   #                       Settings picker addresses each cost centre's configured
   #                       site by URL (see #get_site).
   class GraphClient
-    include GraphAuth
+    include ::GraphAuth
 
     # Attachments under this size are inlined into the draft's create payload;
     # larger ones need a per-attachment upload session (Graph's documented cap).
@@ -96,7 +96,7 @@ module Reimbursements
       message = graph_request(:get, "/users/#{mailbox}/messages/#{message_id}", params: { "$select" => "isDraft" })
       message["isDraft"] == true
     rescue StandardError
-      # Not just GraphAuth::Error: a genuine network-level outage (timeout,
+      # Not just ::GraphAuth::Error: a genuine network-level outage (timeout,
       # DNS failure, TLS error) raises a raw transport exception that never
       # reaches graph_request's own status check, and must fail closed here
       # exactly like a 404/permissions error would.
@@ -129,7 +129,7 @@ module Reimbursements
     # tells an operator it is safe to delete the only local copy.
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
       refuse_outbound!("SharePoint upload of #{filename}")
-      raise GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
+      raise ::GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
 
       # Sanitise path separators, then percent-encode the filename segment so
       # spaces/parens/&c. don't blow up URI() ("bad URI (is not URI?)"). Only the
@@ -218,7 +218,7 @@ module Reimbursements
     def refuse_outbound!(description)
       return if @settings.outbound_enabled?
 
-      raise GraphAuth::OutboundSuppressedError,
+      raise ::GraphAuth::OutboundSuppressedError,
             "Reimbursements refused an outbound Graph side effect in #{Rails.env}: #{description}. " \
             "Set REIMBURSEMENTS_ENABLE_OUTBOUND to opt in (only against a throwaway tenant)."
     end
@@ -275,7 +275,7 @@ module Reimbursements
         headers = { "Content-Length" => chunk.bytesize.to_s,
                     "Content-Range" => "bytes #{start}-#{finish}/#{total}" }
         status, body = @http.call(:put, URI(upload_url), headers, chunk)
-        raise GraphAuth::Error, "chunk upload failed (#{status})" unless (200..299).cover?(status)
+        raise ::GraphAuth::Error, "chunk upload failed (#{status})" unless (200..299).cover?(status)
 
         last = body.blank? ? last : JSON.parse(body)
       end

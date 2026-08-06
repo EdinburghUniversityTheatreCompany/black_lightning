@@ -211,7 +211,7 @@ module Reimbursements
     end
 
     test "a Graph credential failure escalates to the IT subcommittee, not an ordinary error email" do
-      @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
+      @notifier = FakeNotifier.new(fail: true, fail_with: ::GraphAuth::AuthError)
       approved_expense
 
       assert_emails 1 do

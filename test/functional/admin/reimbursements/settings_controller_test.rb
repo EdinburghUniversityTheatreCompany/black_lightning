@@ -24,27 +24,27 @@ module Admin
 
         def check_mailbox(address)
           @mailbox_calls << address
-          raise ::Reimbursements::GraphAuth::AuthError, "Graph rejected the token (403)" unless @mailbox_ok
+          raise ::GraphAuth::AuthError, "Graph rejected the token (403)" unless @mailbox_ok
 
           true
         end
 
         def get_site(site_url)
           @site_calls << site_url
-          raise ::Reimbursements::GraphAuth::Error, "site not granted (403)" if @fail_get_site
+          raise ::GraphAuth::Error, "site not granted (403)" if @fail_get_site
 
           Site.new(id: "site-1", name: "Finance Site", web_url: site_url)
         end
 
         def list_drives(site_id)
-          raise ::Reimbursements::GraphAuth::Error, "drives unreachable (403)" if @fail_list_drives
+          raise ::GraphAuth::Error, "drives unreachable (403)" if @fail_list_drives
 
           [ Drive.new(id: "drive-#{site_id}", name: "Documents") ]
         end
 
         def list_folder_contents(drive_id:, item_id: nil)
           @folder_calls << [ drive_id, item_id ]
-          raise ::Reimbursements::GraphAuth::Error, "folder unreachable (403)" if @fail_list_folder_contents
+          raise ::GraphAuth::Error, "folder unreachable (403)" if @fail_list_folder_contents
 
           [ Item.new(id: "folder-A", name: "BACS", folder: true, web_url: "https://sp/a"),
             Item.new(id: "file-x", name: "notes.txt", folder: false, web_url: "https://sp/x") ]
@@ -298,7 +298,7 @@ module Admin
       test "a folder_id that doesn't resolve under the verified drive is refused" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         @graph.define_singleton_method(:list_folder_contents) do |**|
-          raise ::Reimbursements::GraphAuth::Error, "not found (404)"
+          raise ::GraphAuth::Error, "not found (404)"
         end
         sign_in @user
 

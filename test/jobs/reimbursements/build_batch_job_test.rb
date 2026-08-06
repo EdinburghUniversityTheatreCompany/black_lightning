@@ -116,7 +116,7 @@ module Reimbursements
     end
 
     test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do
-      @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
+      @notifier = FakeNotifier.new(fail: true, fail_with: ::GraphAuth::AuthError)
       approved_expense
 
       assert_emails 1 do
@@ -131,7 +131,7 @@ module Reimbursements
 
     test "a Graph credential failure inside the batch build itself also escalates to IT" do
       @processor = FakeProcessor.new
-      @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
+      @processor.define_singleton_method(:process) { |**| raise ::GraphAuth::AuthError, "token expired" }
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       approved_expense
 
@@ -198,7 +198,7 @@ module Reimbursements
 
     test "a Graph credential failure resolves the attempt to failed" do
       @processor = FakeProcessor.new
-      @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
+      @processor.define_singleton_method(:process) { |**| raise ::GraphAuth::AuthError, "token expired" }
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       attempt = click_time_attempt
       approved_expense

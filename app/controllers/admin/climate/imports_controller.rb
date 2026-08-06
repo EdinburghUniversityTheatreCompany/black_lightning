@@ -45,7 +45,7 @@ module Admin
       end
 
       def import_text
-        return uploaded_file.read.force_encoding(Encoding::UTF_8) if uploaded_file
+        return uploaded_file.read.dup.force_encoding(Encoding::UTF_8) if uploaded_file
 
         params[:pasted_text].to_s
       end
