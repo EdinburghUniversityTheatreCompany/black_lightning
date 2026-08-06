@@ -20,7 +20,7 @@
 #
 # Foreign Keys
 #
-#  fk_rails_...  (sensor_id => climate_sensors.id)
+#  fk_rails_...  (sensor_id => climate_sensors.id) ON DELETE => cascade
 #
 module Climate
   ##
@@ -31,6 +31,12 @@ module Climate
     belongs_to :sensor, class_name: "Climate::Sensor", inverse_of: :readings
 
     validates :recorded_at, presence: true
+    # The unique index is what makes polling idempotent and is enforced there,
+    # not here — ReadingIngest writes through upsert_all, which skips validation
+    # entirely and lets the index collide on purpose. This mirrors the constraint
+    # for the create! path (test builders, a console session) so those get a
+    # readable error instead of RecordNotUnique.
+    validates :recorded_at, uniqueness: { scope: :sensor_id }
 
     scope :between, ->(from, to) { where(recorded_at: from..to) }
     scope :chronological, -> { order(:recorded_at) }

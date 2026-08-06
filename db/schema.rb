@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_140200) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -1158,7 +1158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140200) do
   add_foreign_key "admin_maintenance_debts", "maintenance_credits"
   add_foreign_key "cached_duplicates", "users", column: "user1_id"
   add_foreign_key "cached_duplicates", "users", column: "user2_id"
-  add_foreign_key "climate_readings", "climate_sensors", column: "sensor_id"
+  add_foreign_key "climate_readings", "climate_sensors", column: "sensor_id", on_delete: :cascade
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "events", "companies"
   add_foreign_key "maintenance_credits", "users"

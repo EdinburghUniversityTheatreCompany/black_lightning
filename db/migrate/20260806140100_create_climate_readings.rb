@@ -11,8 +11,11 @@ class CreateClimateReadings < ActiveRecord::Migration[8.1]
       # index: false because the composite unique index below leads with
       # sensor_id and serves as its prefix — a second index on sensor_id alone
       # would be dead weight on the most-written table in the app.
+      # on_delete: :cascade matches the model's dependent: :delete_all. An
+      # orphaned reading has no meaning — it is a temperature from nowhere —
+      # and keeping the two layers aligned is what database_consistency checks.
       t.references :sensor, null: false, index: false,
-                            foreign_key: { to_table: :climate_sensors }
+                            foreign_key: { to_table: :climate_sensors, on_delete: :cascade }
 
       t.datetime :recorded_at, null: false
 
@@ -27,14 +30,19 @@ class CreateClimateReadings < ActiveRecord::Migration[8.1]
       t.string :raw_temperature_unit, limit: 1 # "C" | "F"
 
       t.timestamps
-    end
 
-    # Polling is idempotent through this index: Govee readings are floored to a
-    # fixed bucket and the outdoor window is re-upserted wholesale every hour,
-    # so a retried job, a manual poll and a double-fired schedule all collide
-    # here instead of duplicating. It must exist before the first poll runs —
-    # MySQL's upsert has no way to name a target index, it collides on whatever
-    # unique index is there.
-    add_index :climate_readings, %i[sensor_id recorded_at], unique: true
+      # Polling is idempotent through this index: Govee readings are floored to
+      # a fixed bucket and the outdoor window is re-upserted wholesale every
+      # hour, so a retried job, a manual poll and a double-fired schedule all
+      # collide here instead of duplicating. It must exist before the first poll
+      # runs — MySQL's upsert has no way to name a target index, it collides on
+      # whatever unique index is there.
+      #
+      # Declared inside create_table, not as a separate add_index, so the
+      # migration is actually reversible: a separate add_index reverses as a
+      # remove_index BEFORE the drop_table, and MySQL refuses to drop an index a
+      # foreign key still needs.
+      t.index %i[sensor_id recorded_at], unique: true
+    end
   end
 end
