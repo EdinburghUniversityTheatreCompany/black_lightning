@@ -40,6 +40,7 @@ require_relative "support/fake_http"
 require_relative "support/import_cache_test_helpers"
 require_relative "support/team_membership_test_helpers"
 require_relative "support/reimbursements_test_helpers"
+require_relative "support/climate_test_helpers"
 require_relative "support/rake_task_test_helpers"
 
 
