@@ -1,32 +1,28 @@
 module Climate
   ##
   # Dew point from temperature + relative humidity, by the Magnus formula.
-  #
-  # This is the number the crypt monitor exists for: condensation forms on any
-  # surface at or below the dew point, so "temperature minus dew point" is the
-  # damp-risk margin, and a dew point tracking the air temperature means the
-  # room is at saturation.
+  # Condensation forms at or below it, so "temperature minus dew point" is the
+  # damp-risk margin this whole feature exists to watch.
   #
   # Coefficients are Alduchov & Eskridge (1996) — max error about 0.1 °C over
-  # -40..+50 °C, better than the older Tetens 17.27/237.7 pair for the cold,
-  # damp end we actually care about.
+  # -40..+50 °C, better than the older Tetens 17.27/237.7 pair at the cold, damp
+  # end we care about.
   module DewPoint
     A = 17.625
     B = 243.04 # °C
 
     # γ = ln(RH/100) + (A·T)/(B+T);  Td = (B·γ)/(A−γ)
     #
-    # Returns nil rather than a number for anything unusable, because the
-    # callers write straight into a decimal column: ln(0) is -Infinity, which
-    # would cast to a silently wrong stored value instead of raising.
+    # nil for anything unusable, because callers write straight into a decimal
+    # column: ln(0) is -Infinity, which casts to a silently wrong value.
     def self.celsius(temperature_c:, relative_humidity:)
       return nil if temperature_c.nil? || relative_humidity.nil?
 
       humidity = relative_humidity.to_f
       return nil unless humidity.positive?
 
-      # A sensor reading above 100 % is miscalibrated, not supersaturated air.
-      # Clamping keeps the guarantee every consumer relies on: Td <= T.
+      # Above 100 % is miscalibration, not supersaturated air. Clamping keeps
+      # the guarantee every consumer relies on: Td <= T.
       humidity = 100.0 if humidity > 100.0
 
       temperature = temperature_c.to_f

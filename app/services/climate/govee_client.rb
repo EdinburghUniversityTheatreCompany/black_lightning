@@ -1,17 +1,14 @@
 module Climate
   ##
-  # The Govee Developer API v2 (https://openapi.api.govee.com), used to list the
-  # thermo-hygrometers on the account and read their current state.
+  # The Govee Developer API v2 (https://openapi.api.govee.com). Two properties
+  # of it shape the whole feature:
   #
-  # Two things about this API shape the whole feature:
-  #
-  # 1. There is NO history endpoint. It serves "now" and nothing else, which is
-  #    why climate_readings has to be accumulated by a poll job.
-  # 2. The unit of +sensorTemperature+ is undocumented and is widely reported as
-  #    Fahrenheit even where the app displays Celsius. This client therefore
-  #    returns the number VERBATIM as +raw_temperature+ and converts nothing —
-  #    the conversion belongs to ReadingIngest, which knows the operator-verified
-  #    unit for that particular sensor.
+  # 1. There is NO history endpoint — it serves "now", which is why
+  #    climate_readings has to be accumulated by a poll job.
+  # 2. The unit of +sensorTemperature+ is undocumented and widely reported as
+  #    Fahrenheit even where the app shows Celsius, so this client returns the
+  #    number VERBATIM and converts nothing. Conversion belongs to ReadingIngest,
+  #    which knows the operator-verified unit for that sensor.
   class GoveeClient
     BASE_URL = "https://openapi.api.govee.com".freeze
     DEVICES_PATH = "/router/api/v1/user/devices".freeze
@@ -28,8 +25,7 @@ module Climate
     class Error < StandardError; end
     # No API key at all — a configuration problem, not a service failure.
     class ConfigurationError < Error; end
-    # 401/403: the key is wrong or revoked. Shared across every sensor, so the
-    # caller should abandon the whole cycle rather than retry per device.
+    # Shared across every sensor, so the caller abandons the whole cycle.
     class AuthError < Error; end
     # 429, or the daily cap exhausted.
     class RateLimitedError < Error; end
@@ -49,8 +45,7 @@ module Climate
       @rate_limit_remaining = nil
     end
 
-    # Every thermometer on the account. Lights, plugs and humidifiers on the
-    # same account are filtered out here so they can never be polled as sensors.
+    # Filtered here so the lights on the same account are never polled as sensors.
     def devices
       body = request(:get, DEVICES_PATH)
 
@@ -71,7 +66,7 @@ module Climate
       State.new(
         raw_temperature: numeric(capability_value(capabilities, TEMPERATURE_INSTANCE)),
         relative_humidity: numeric(capability_value(capabilities, HUMIDITY_INSTANCE)),
-        # Absent means present-and-reporting: only an explicit false is offline.
+        # Absent means reporting; only an explicit false is offline.
         online: capability_value(capabilities, ONLINE_INSTANCE) != false,
         fetched_at: @clock.call
       )
@@ -125,9 +120,8 @@ module Climate
       capability.dig("state", "value")
     end
 
-    # Readings arrive as a bare number, but some firmware nests humidity under
-    # currentHumidity. Anything else is treated as absent rather than coerced —
-    # a wrong number here becomes stored history.
+    # Some firmware nests humidity under currentHumidity. Anything else is read
+    # as absent rather than coerced — a wrong number here becomes history.
     def numeric(value)
       case value
       when Numeric then value.to_f

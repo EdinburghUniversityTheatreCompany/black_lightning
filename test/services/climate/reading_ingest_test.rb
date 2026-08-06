@@ -31,8 +31,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "converts a fahrenheit sensor's raw value to celsius" do
-    # This is the whole point of the unit column: 53.6 F is 12 C, and storing
-    # 53.6 as a Celsius crypt temperature would be nonsense that never recovers.
+    # 53.6 F is 12 C; storing 53.6 as a crypt temperature never recovers.
     sensor = create_climate_sensor(temperature_unit: Climate::Sensor::UNIT_FAHRENHEIT)
 
     Climate::ReadingIngest.record_govee!(sensor: sensor, raw_temperature: 53.6, relative_humidity: 78)
@@ -41,8 +40,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "stores the raw value and the unit it was written under" do
-    # The reversibility guarantee: a wrong temperature_unit becomes a backfill
-    # from raw_temperature rather than a permanent hole in the history.
+    # The reversibility guarantee: a wrong unit becomes a backfill.
     sensor = create_climate_sensor(temperature_unit: Climate::Sensor::UNIT_FAHRENHEIT)
 
     Climate::ReadingIngest.record_govee!(sensor: sensor, raw_temperature: 53.6, relative_humidity: 78)
@@ -61,8 +59,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "refuses to write for a sensor whose unit has not been verified" do
-    # The primary defence. Writing nothing is recoverable; writing Fahrenheit as
-    # Celsius is not.
+    # Writing nothing is recoverable; writing Fahrenheit as Celsius is not.
     sensor = create_climate_sensor(temperature_unit: nil)
 
     assert_raises(Climate::ReadingIngest::UnverifiedUnitError) do
@@ -113,8 +110,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   # --- plausibility guard ----------------------------------------------------
 
   test "rejects a temperature above the plausible range" do
-    # The second net under the unit rule: a 20 C crypt read as Fahrenheit lands
-    # at 68 C, which is not a temperature any Edinburgh basement reaches.
+    # A 20 C crypt read as Fahrenheit lands at 68 C.
     sensor = create_climate_sensor
 
     assert_raises(Climate::ReadingIngest::ImplausibleReading) do
@@ -159,8 +155,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "a fahrenheit sensor is judged on the converted value, not the raw one" do
-    # 120 F is 48.9 C — inside the range. Guarding the raw number would reject a
-    # perfectly good reading.
+    # 120 F is 48.9 C — in range. Guarding the raw number would reject it.
     sensor = create_climate_sensor(temperature_unit: Climate::Sensor::UNIT_FAHRENHEIT)
 
     Climate::ReadingIngest.record_govee!(sensor: sensor, raw_temperature: 120.0, relative_humidity: 40)
@@ -187,8 +182,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "re-upserting an overlapping window leaves the row count unchanged" do
-    # This IS the self-healing property: the hourly poll re-sends the last two
-    # days every time, and must not multiply rows.
+    # The self-healing property: the hourly poll re-sends the last two days.
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows)
 
@@ -198,8 +192,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "re-upserting refreshes a corrected value" do
-    # Open-Meteo revises recent hours as observations land, so the second pass
-    # must overwrite rather than be dropped.
+    # Open-Meteo revises recent hours, so the second pass must overwrite.
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows(count: 1))
     Climate::ReadingIngest.upsert_series!(sensor: sensor,
@@ -228,8 +221,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "drops rows dated in the future" do
-    # forecast_days=1 is requested only for self-heal margin; storing the
-    # forecast tail would draw predictions as though they were observations.
+    # Storing the forecast tail would draw predictions as observations.
     sensor = outdoor_climate_sensor
     rows = [ { recorded_at: 1.hour.ago, temperature_c: 15.0, relative_humidity: 70.0, dew_point_c: 9.0 },
              { recorded_at: 3.hours.from_now, temperature_c: 16.0, relative_humidity: 72.0, dew_point_c: 10.0 } ]
@@ -240,7 +232,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "skips an implausible outdoor row without losing the rest of the window" do
-    # One bad row from a weather API must not cost us the other 71.
+    # One bad row must not cost us the other 71.
     sensor = outdoor_climate_sensor
     rows = outdoor_rows(count: 3)
     rows[1] = rows[1].merge(temperature_c: 900.0)

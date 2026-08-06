@@ -2,20 +2,16 @@ module Climate
   ##
   # The outdoor comparison line, from Open-Meteo's free forecast API.
   #
-  # This is the outdoor-weather SEAM: anything that answers #hourly_series with
-  # the same row shape can replace it (Met Office DataHub, NOAA METAR at EGPH),
-  # which is why the sensor's source column resolves the client rather than the
-  # callers naming this class. See Climate::OUTDOOR_SOURCES.
+  # The outdoor-weather SEAM: anything answering #hourly_series with the same row
+  # shape can replace it (Met Office DataHub, NOAA METAR at EGPH), which is why
+  # sensor.source resolves the client. See Climate::OUTDOOR_SOURCES.
   #
-  # Free tier: no API key, 10k calls/day, CC BY 4.0 attribution required,
-  # NON-COMMERCIAL use only. Bedlam is a student theatre, so that is fine — but
-  # it is a licence condition, not a courtesy, hence ATTRIBUTION below being
-  # rendered on the dashboard.
+  # Free tier: no key, 10k calls/day, CC BY 4.0 attribution REQUIRED (a licence
+  # condition, hence ATTRIBUTION rendered on the dashboard), non-commercial only.
   #
-  # The reason this beat the alternatives is +past_days+: every call re-serves
-  # the last N days, so the hourly poll upserts a rolling window and any outage
-  # gap fills itself on the next successful call. There is no backfill code
-  # anywhere in this feature because of that one parameter.
+  # What beat the alternatives is +past_days+: every call re-serves the last N
+  # days, so the hourly poll upserts a rolling window and an outage gap fills
+  # itself. There is no backfill code in this feature because of that parameter.
   class OpenMeteoClient
     BASE_URL = "https://api.open-meteo.com/v1/forecast".freeze
     ATTRIBUTION = "Weather data by Open-Meteo.com".freeze
@@ -52,8 +48,7 @@ module Climate
         latitude: latitude, longitude: longitude,
         hourly: HOURLY_VARIABLES.join(","),
         past_days: past_days, forecast_days: forecast_days,
-        # Ask for our own zone so the timestamps line up with the Govee readings
-        # without a conversion step.
+        # Our own zone, so timestamps line up with the Govee readings.
         timezone: Time.zone.tzinfo.name
       )
 
@@ -84,9 +79,8 @@ module Climate
       times.each_with_index.filter_map do |time, index|
         temperature = temperatures[index]
         humidity = humidities[index]
-        # A row missing either driving reading is dropped: a stored row of nils
-        # would draw as a gap anyway, but would also block the self-healing
-        # re-upsert from ever filling it in.
+        # A stored row of nils would draw as a gap anyway, and would block the
+        # self-healing re-upsert from ever filling it in.
         next if time.blank? || temperature.nil? || humidity.nil?
 
         { recorded_at: Time.zone.parse(time),
@@ -96,8 +90,7 @@ module Climate
       end
     end
 
-    # Open-Meteo supplies dew point directly; falling back to our own formula
-    # keeps a row usable if it ever stops.
+    # Supplied directly; the fallback keeps a row usable if that ever stops.
     def dew_point(reported, temperature, humidity)
       return reported.to_f unless reported.nil?
 

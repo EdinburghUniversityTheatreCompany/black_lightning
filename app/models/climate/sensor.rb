@@ -44,9 +44,8 @@ module Climate
     UNIT_FAHRENHEIT = "fahrenheit".freeze
     UNITS = [ UNIT_CELSIUS, UNIT_FAHRENHEIT ].freeze
 
-    # How long a sensor may go unheard-from before the dashboard flags it. Both
-    # are roughly three missed polls: long enough that one failed cycle isn't
-    # alarming, short enough that a dead sensor is obvious within the hour.
+    # Roughly three missed polls each: one failed cycle isn't alarming, but a
+    # dead sensor should be obvious within the hour.
     STALE_AFTER = { SOURCE_GOVEE => 35.minutes, SOURCE_OPEN_METEO => 3.hours }.freeze
     DEFAULT_STALE_AFTER = 1.hour
 
@@ -59,13 +58,10 @@ module Climate
     validates :temperature_unit, inclusion: { in: UNITS }, length: { maximum: 255 }, allow_nil: true
     validates :external_id, presence: true, if: :govee?
     validates :external_id, length: { maximum: 255 }, allow_nil: true
-    # Discover upserts on this pair, so it must not register a device twice. The
-    # database index is the real guarantee; this gives the create! path a
-    # readable error instead of RecordNotUnique.
+    # The index is the real guarantee Discover relies on; this only makes the
+    # create! path fail readably instead of with RecordNotUnique.
     validates :external_id, uniqueness: { scope: :source }, allow_nil: true
     validates :sku, length: { maximum: 255 }, allow_nil: true
-    # Truncated to fit by the poll jobs; validated so a hand-set value can't
-    # silently overflow the column.
     validates :last_error, length: { maximum: 500 }, allow_nil: true
     validates :latitude, :longitude, presence: true, if: :open_meteo?
     validates :latitude, numericality: { in: -90..90 }, allow_nil: true
@@ -75,25 +71,20 @@ module Climate
     scope :govee, -> { where(source: SOURCE_GOVEE) }
     scope :open_meteo, -> { where(source: SOURCE_OPEN_METEO) }
     scope :outdoor, -> { where(placement: PLACEMENT_OUTDOOR) }
-    # Indoor first, then the outdoor comparison line — the reading order of the
-    # chart legend and the tile row.
+    # Indoor sensors first, then the outdoor comparison line.
     scope :in_display_order, -> { order(Arel.sql("placement = 'outdoor'"), :position, :id) }
 
-    # The outdoor comparison line. There is exactly one, it needs no discovery
-    # step, and it is ensured here rather than seeded by a data migration:
-    # test and CI databases are schema-LOADED, not migrated, so a data migration
-    # would leave every environment except production without the row. The
-    # outdoor poll job calls this before every run.
+    # Ensured here rather than seeded by a data migration: test and CI databases
+    # are schema-LOADED, so a data migration would leave every environment
+    # except production without the row. The outdoor poll job calls this first.
     #
-    # find_or_create_by only assigns on create, so an operator who corrects the
-    # coordinates keeps their correction.
+    # find_or_create_by only assigns on create, so a corrected location survives.
     def self.outdoor_source!
       find_or_create_by!(source: SOURCE_OPEN_METEO, external_id: nil) do |sensor|
         sensor.placement = PLACEMENT_OUTDOOR
         sensor.display_name = "Outside (Open-Meteo)"
         sensor.location = "Bedlam Theatre, Edinburgh"
-        # Bedlam Theatre, 11b Bristo Place, EH1 1EZ. Open-Meteo snaps to its own
-        # ~1 km grid, so these only have to pick the right cell.
+        # Open-Meteo snaps to a ~1 km grid, so these only have to pick the cell.
         sensor.latitude = 55.9467
         sensor.longitude = -3.1903
         # Nothing to verify — Open-Meteo documents and returns Celsius.
@@ -108,8 +99,8 @@ module Climate
     def open_meteo? = source == SOURCE_OPEN_METEO
     def outdoor? = placement == PLACEMENT_OUTDOOR
 
-    # The gate on the whole ingest path. A sensor whose unit nobody has confirmed
-    # writes nothing at all — see Climate::ReadingIngest.
+    # The gate on the whole ingest path: an unconfirmed unit writes nothing at
+    # all — see Climate::ReadingIngest.
     def unit_verified? = temperature_unit.present?
 
     def fahrenheit? = temperature_unit == UNIT_FAHRENHEIT
@@ -122,8 +113,7 @@ module Climate
 
     def stale_after = STALE_AFTER.fetch(source, DEFAULT_STALE_AFTER)
 
-    # A sensor with no readings at all counts as stale: on the dashboard that is
-    # the same "you are not getting data from this" story, and it needs saying.
+    # No readings at all counts as stale — same story for the operator.
     def stale?(now = Time.current)
       latest_reading.nil? || latest_reading.recorded_at < now - stale_after
     end

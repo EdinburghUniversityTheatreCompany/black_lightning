@@ -1,11 +1,10 @@
 module Climate
   ##
-  # Turns stored readings into the chart payload: one series per sensor, each a
-  # list of points bucketed to a resolution that suits the requested span.
+  # The chart payload: one series per sensor, bucketed to suit the span.
   #
-  # A year of ten-minute readings is 52,560 points per sensor. Bucketing takes
-  # that to 365, which is what keeps the page a fixed ~25 KB regardless of range
-  # and is why the payload can be embedded in the HTML rather than fetched.
+  # A year of ten-minute readings is 52,560 points per sensor; bucketing takes
+  # that to 365, which is what keeps the payload small enough to embed in the
+  # HTML rather than fetch.
   class SeriesQuery
     # Bucket width by span. Each keeps a series under about 800 points.
     HOUR = 3_600
@@ -57,10 +56,9 @@ module Climate
 
     private
 
-    # Colour follows the SENSOR, not its position in the current selection —
-    # deactivating one sensor must not repaint the others. Ranking by id across
-    # every sensor (not just the ones on screen) is stable under exactly the
-    # operation that filters this list.
+    # Colour follows the SENSOR, not its position in the selection, so
+    # deactivating one must not repaint the others. Ranking by id across ALL
+    # sensors is stable under exactly the operation that filters this list.
     def color_index(sensor)
       @all_ids ||= Sensor.order(:id).pluck(:id)
       @all_ids.index(sensor.id) || 0
@@ -95,10 +93,9 @@ module Climate
 
     def round(value) = value&.to_f&.round(2)
 
-    # Insert an explicit null wherever the series skips more than a few buckets,
-    # so the chart BREAKS the line instead of interpolating straight across a
-    # two-day sensor outage. On a damp chart a line drawn through missing data is
-    # not a cosmetic problem — it is a reading of the room that never happened.
+    # An explicit null wherever the series skips, so the chart BREAKS the line
+    # rather than interpolating across an outage. A line drawn through missing
+    # data is not cosmetic — it is a reading of the room that never happened.
     def with_gaps(points)
       threshold = bucket_seconds * GAP_BUCKETS
 

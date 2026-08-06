@@ -7,13 +7,10 @@ module Admin
     class BaseController < AdminController
       before_action :authorize_climate_read!
 
-      # Injection seam for functional tests (this suite has no mocking library).
-      #
-      # Written on THIS class and nowhere else. class_attribute's writer defines
-      # a singleton reader on whatever receives it, so writing to a SUBCLASS
-      # would shadow this default permanently for the rest of the process — a
-      # later assignment here would then be invisible to that subclass and the
-      # real client would run instead. A test must restore it in teardown.
+      # Test seam, written on THIS class and nowhere else. class_attribute's
+      # writer defines a singleton on whatever receives it, so a SUBCLASS
+      # assignment shadows this default for the rest of the process and a later
+      # assignment here becomes invisible. Tests must restore it in teardown.
       class_attribute :govee_client_builder, default: -> { ::Climate::GoveeClient.new }
 
       private

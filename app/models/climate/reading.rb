@@ -31,20 +31,17 @@ module Climate
     belongs_to :sensor, class_name: "Climate::Sensor", inverse_of: :readings
 
     validates :recorded_at, presence: true
-    # The unique index is what makes polling idempotent and is enforced there,
-    # not here — ReadingIngest writes through upsert_all, which skips validation
-    # entirely and lets the index collide on purpose. This mirrors the constraint
-    # for the create! path (test builders, a console session) so those get a
-    # readable error instead of RecordNotUnique.
+    # Idempotency lives in the unique index — ReadingIngest writes through
+    # upsert_all, which skips validation and collides there on purpose. This
+    # only makes the create! path fail readably.
     validates :recorded_at, uniqueness: { scope: :sensor_id }
-    # "C" or "F" — the unit believed at write time, not a free-text field.
     validates :raw_temperature_unit, length: { maximum: 1 }, allow_nil: true
 
     scope :between, ->(from, to) { where(recorded_at: from..to) }
     scope :chronological, -> { order(:recorded_at) }
 
-    # The damp-risk margin: how far the air has to cool before it condenses.
-    # Under about 3 °C in the crypt is the number worth acting on.
+    # How far the air has to cool before it condenses. Under about 3 °C is the
+    # number worth acting on — see ClimateHelper::CONDENSATION_RISK_MARGIN.
     def dew_point_margin
       return nil if temperature_c.nil? || dew_point_c.nil?
 

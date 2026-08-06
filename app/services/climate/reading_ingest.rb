@@ -1,25 +1,20 @@
 module Climate
   ##
-  # The single write path into climate_readings. Everything that turns an API
-  # response into a stored row goes through here: unit conversion, dew point,
-  # the plausibility guard and the idempotent upsert.
-  #
-  # Nothing else should create a Climate::Reading — the conversion rules are the
-  # reason this history is trustworthy.
+  # The single write path into climate_readings: unit conversion, dew point,
+  # the plausibility guard and the idempotent upsert. Nothing else should create
+  # a Climate::Reading.
   class ReadingIngest
-    # Govee reports no timestamp of its own, so we assign one, floored to a
-    # fixed bucket. That is what gives the unique index on
-    # (sensor_id, recorded_at) something real to enforce: a retried job, a manual
-    # poll and a double-fired schedule all collide into one row.
+    # Govee sends no timestamp, so we assign one, floored to a fixed bucket —
+    # which is what gives the unique index something to enforce when a retried
+    # job, a manual poll and a double-fired schedule all land together.
     BUCKET_SECONDS = 600
 
-    # The second net under the unverified-unit rule. An Edinburgh basement does
-    # not reach these values, so anything outside is a unit or firmware fault.
+    # The second net under the unverified-unit rule; an Edinburgh basement
+    # reaches neither bound.
     #
-    # Worth being honest about the reach: a true crypt temperature above ~10 °C
-    # misread as Fahrenheit lands above 50 and is caught (12 -> 53.6, 20 -> 68),
-    # but below ~10 °C true it slips through. A real second net over most of the
-    # operating range, NOT a substitute for the unit gate.
+    # Its reach, honestly: a true temperature above ~10 °C misread as Fahrenheit
+    # lands above 50 and is caught (12 -> 53.6, 20 -> 68), but below ~10 °C it
+    # slips through. Not a substitute for the unit gate.
     PLAUSIBLE_CELSIUS = (-20.0..50.0)
     PLAUSIBLE_HUMIDITY = (0.0..100.0)
 
@@ -31,8 +26,8 @@ module Climate
       Time.zone.at((time.to_i / seconds) * seconds)
     end
 
-    # One Govee reading. +raw_temperature+ is verbatim from the API, in whatever
-    # unit the operator verified for this sensor.
+    # +raw_temperature+ is verbatim from the API, in whatever unit the operator
+    # verified for this sensor.
     def self.record_govee!(sensor:, raw_temperature:, relative_humidity:, at: Time.current)
       unless sensor.unit_verified?
         raise UnverifiedUnitError,
@@ -50,9 +45,9 @@ module Climate
                       raw_temperature_unit: sensor.fahrenheit? ? "F" : "C") ])
     end
 
-    # A whole outdoor window, already in Celsius and already timestamped.
-    # Re-sent in full on every poll, which is how an outage gap self-heals — so
-    # this must upsert, and a single bad row must not cost the rest of the batch.
+    # A whole outdoor window, already Celsius and already timestamped. Re-sent in
+    # full every poll — that is how a gap self-heals — so this must upsert, and
+    # one bad row must not cost the rest of the batch.
     def self.upsert_series!(sensor:, rows:)
       now = Time.current
 
@@ -108,9 +103,8 @@ module Climate
     end
     private_class_method :row_for
 
-    # The one write. upsert_all collides on the unique (sensor_id, recorded_at)
-    # index — note MySQL ignores unique_by:, it uses whatever unique index the
-    # row hits, which is why that index has to exist before the first poll.
+    # MySQL ignores upsert_all's unique_by: — it collides on whatever unique
+    # index the row hits, so that index must exist before the first poll.
     def self.write(records)
       return 0 if records.empty?
 

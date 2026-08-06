@@ -8,8 +8,8 @@ class CreateClimateSensors < ActiveRecord::Migration[8.1]
       t.string :source, null: false, default: "govee"      # govee | open_meteo
       t.string :placement, null: false, default: "indoor"  # indoor | outdoor
 
-      # Govee's own device identifier (a MAC-like string) and model code.
-      # Null for a weather feed, which is located by lat/lon instead.
+      # Govee's own device id and model code. Null for a weather feed, which is
+      # located by lat/lon instead.
       t.string :external_id
       t.string :sku
 
@@ -19,13 +19,13 @@ class CreateClimateSensors < ActiveRecord::Migration[8.1]
       # DELIBERATELY nullable with no default. Govee does not document the unit
       # of sensorTemperature and it is widely reported as Fahrenheit even when
       # the app shows Celsius, so the ingest path refuses to write until an
-      # operator has confirmed it against the device display. Defaulting this to
-      # "celsius" would be the silent-corruption bug, not a convenience.
+      # operator confirms it against the device. A "celsius" default here would
+      # BE the silent-corruption bug.
       t.string :temperature_unit
       t.datetime :unit_verified_at
 
-      # Also deliberately false: a freshly discovered sensor must be reviewed
-      # (named, placed, unit-verified) before it starts writing history.
+      # Also deliberately false: a discovered sensor is reviewed before it
+      # starts writing history.
       t.boolean :active, null: false, default: false
 
       t.decimal :latitude, precision: 9, scale: 6   # outdoor sources only
@@ -39,8 +39,8 @@ class CreateClimateSensors < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    # Discovery upserts on this pair, so re-running it must not duplicate a
-    # known device. Both columns are needed: external_id is null for open_meteo.
+    # Discovery matches on this pair so a re-run can't duplicate a known device.
+    # Scoped by source because external_id is null for a weather feed.
     add_index :climate_sensors, %i[source external_id], unique: true
     add_index :climate_sensors, :active
   end

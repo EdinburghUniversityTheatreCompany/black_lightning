@@ -59,8 +59,7 @@ class Climate::GoveeClientTest < ActiveSupport::TestCase
   end
 
   test "ignores devices that are not thermometers" do
-    # The same Govee account drives the theatre's lights; those must never turn
-    # up as sensors to be polled.
+    # The same account drives the theatre's lights.
     light = { sku: "H6199", device: "11:22:33:44:55:66", deviceName: "Foyer strip",
               type: "devices.types.light", capabilities: [] }
     client, = build_client([ [ 200, devices_body(extra_devices: [ light ]) ] ])
@@ -120,8 +119,8 @@ class Climate::GoveeClientTest < ActiveSupport::TestCase
   end
 
   test "reports a device Govee says is offline" do
-    # The batteries-dead case: Govee keeps serving the last known value forever,
-    # so this flag is the only thing that stops us writing a flat fake line.
+    # Batteries-dead: Govee serves the last value forever, so this flag is the
+    # only thing stopping a flat fake line.
     client, = build_client([ [ 200, state_body(online: false) ] ])
 
     assert_not client.state(sku: "H5179", external_id: "AA:BB:CC:DD:EE:FF").online
@@ -203,8 +202,7 @@ class Climate::GoveeClientTest < ActiveSupport::TestCase
   # --- rate limit ------------------------------------------------------------
 
   test "reads the remaining daily budget from the response headers" do
-    # The 10,000/day cap is per Govee ACCOUNT, not per key, so if this key is
-    # ever shared with another integration we need to see it coming.
+    # The cap is per ACCOUNT, so a shared key needs to be seen coming.
     client, = build_client([ [ 200, devices_body, { "x-ratelimit-remaining" => "8123" } ] ])
 
     client.devices

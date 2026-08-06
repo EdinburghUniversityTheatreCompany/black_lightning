@@ -9,10 +9,9 @@ export default class extends Controller {
   static targets = ["temperature", "humidity", "dewPoint", "empty"]
   static values = { series: Array }
 
-  // Categorical slots, assigned in fixed order and never cycled. Validated for
-  // the light surface: worst adjacent CVD ΔE 9.1, worst adjacent normal-vision
-  // ΔE 19.6. Three of them fall below 3:1 contrast, which is why every series
-  // also carries an end-of-line direct label — colour is never the only cue.
+  // Fixed order, never cycled. Validated for the light surface: worst adjacent
+  // CVD ΔE 9.1, normal-vision ΔE 19.6. Three slots fall below 3:1 contrast,
+  // which is why every series also carries an end-of-line direct label.
   static PALETTE = [
     "#2a78d6", // blue
     "#eb6834", // orange
@@ -41,8 +40,7 @@ export default class extends Controller {
 
     Chart.register(LineController, LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend, Filler)
 
-    // Turbo can disconnect us mid-import; without this the charts are built
-    // onto canvases that are already detached.
+    // Turbo can disconnect us mid-import, onto detached canvases.
     if (!this.element.isConnected) return
 
     this.#charts = [
@@ -51,16 +49,15 @@ export default class extends Controller {
       this.#build(Chart, this.dewPointTarget, "dew_point", "Dew point (°C)", "°C"),
     ].filter(Boolean)
 
-    // Chart.js is an ES module here, so there is no window.Chart to inspect.
-    // These two are the handles for checking what was actually plotted — from
-    // the browser tests, and from the console when a live page looks wrong.
+    // Chart.js is an ES module, so there is no window.Chart. These are the
+    // handles for checking what was actually plotted — from the browser tests,
+    // and from the console when a live page looks wrong.
     this.element.climateCharts = this.#charts
     this.element.dataset.climateChartsReady = String(this.#charts.length)
   }
 
   disconnect() {
-    // Without this every Turbo navigation back to the page leaks a canvas and
-    // its listeners.
+    // Or every Turbo navigation back leaks a canvas and its listeners.
     this.#charts.forEach((chart) => chart.destroy())
     this.#charts = []
     delete this.element.climateCharts
@@ -85,8 +82,7 @@ export default class extends Controller {
       data: series.points.map((point) => ({ x: point.t, y: point[measure] })),
       borderColor: this.#color(series),
       backgroundColor: this.#color(series),
-      // Second cue for the outdoor reference line, so it reads apart from the
-      // indoor sensors without relying on hue.
+      // Second cue for the outdoor line, so it reads apart without relying on hue.
       borderDash: series.outdoor ? [6, 4] : [],
       borderWidth: 2,
       pointRadius: 0,
@@ -110,8 +106,7 @@ export default class extends Controller {
         maintainAspectRatio: false,
         animation: this.#reducedMotion ? false : undefined,
         interaction: { mode: "index", intersect: false },
-        // Right padding is set by the end-label plugin, which measures the
-        // labels rather than guessing a width that a longer sensor name clips.
+        // Right padding is measured by the end-label plugin below.
         layout: { padding: { right: 0 } },
         scales: {
           x: {
@@ -139,8 +134,7 @@ export default class extends Controller {
     })
   }
 
-  // Hovering one chart shows the same instant on all three — the whole point of
-  // stacking them is reading temperature, humidity and dew point together.
+  // The point of stacking them is reading all three at the same instant.
   #syncHover(source, elements) {
     if (this.#syncing) return
     this.#syncing = true
@@ -160,9 +154,7 @@ export default class extends Controller {
     }
   }
 
-  // Direct labels at the end of each line. Required relief for the palette
-  // slots that fall below 3:1 against the surface, and the fastest way to read
-  // which line is which without crossing to the legend.
+  // Required relief for the palette slots below 3:1 against the surface.
   #endLabelPlugin() {
     const FONT = "600 11px system-ui, sans-serif"
     const GAP = 6
@@ -182,8 +174,7 @@ export default class extends Controller {
     return {
       id: "climateEndLabels",
 
-      // Measure the labels and reserve exactly that much gutter. A fixed
-      // padding clips the moment someone names a sensor something long.
+      // Measured, not guessed: a fixed padding clips a longer sensor name.
       beforeLayout(chart) {
         const ctx = chart.ctx
         ctx.save()

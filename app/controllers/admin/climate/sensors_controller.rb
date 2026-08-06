@@ -18,8 +18,7 @@ module Admin
       end
 
       def update
-        # Stamp the verification time whenever the unit is being set or changed,
-        # so the dashboard can say when someone last confirmed it.
+        # So the dashboard can say when someone last confirmed it.
         if sensor_params[:temperature_unit].present? &&
            sensor_params[:temperature_unit] != @sensor.temperature_unit
           @sensor.unit_verified_at = Time.current
@@ -33,10 +32,8 @@ module Admin
         end
       end
 
-      # Reads the real device list off the Govee account and adds any
-      # thermometer we don't already know about. New rows arrive INACTIVE and
-      # unit-unverified: a sensor must be reviewed before it starts writing
-      # history. Nobody ever hand-types a MAC-like device id.
+      # New rows arrive INACTIVE and unit-unverified: a sensor is reviewed
+      # before it starts writing history, and nobody hand-types a device id.
       def discover
         devices = govee_client.devices
         added = devices.count { |device| register(device) }
@@ -48,9 +45,8 @@ module Admin
                     alert: "Could not reach Govee: #{e.message}"
       end
 
-      # The Fahrenheit question, put to the operator in the only terms that can
-      # settle it: here is the raw number, here is what it means under each
-      # reading, go and look at the device.
+      # The Fahrenheit question in the only terms that can settle it: the raw
+      # number, what it means each way, go and look at the device.
       def check_unit
         state = govee_client.state(sku: @sensor.sku, external_id: @sensor.external_id)
         @raw = state.raw_temperature
@@ -74,9 +70,8 @@ module Admin
         @sensor = ::Climate::Sensor.find(params[:id])
       end
 
-      # Only the operator-owned fields. external_id, sku and source are set by
-      # discovery and must not be editable — a changed device id would silently
-      # re-point a sensor's whole history at a different unit.
+      # external_id, sku and source come from discovery and must NOT be
+      # editable: a changed device id re-points a sensor's whole history.
       def sensor_params
         params.require(:climate_sensor)
               .permit(:display_name, :location, :active, :temperature_unit, :position)
