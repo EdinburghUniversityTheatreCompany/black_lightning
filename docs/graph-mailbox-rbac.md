@@ -4,7 +4,7 @@ One Entra app registration serves two features, with app-only (client-credential
 
 | Feature | Mailbox | Needs |
 |---|---|---|
-| Reimbursements | `reimbursements@bedlamfringe.co.uk` (plus `@bedlamtheatre.co.uk` when termtime lands) | read, reply, mark read, move, create drafts, **and SharePoint upload** |
+| Reimbursements | its cost centre's **receive** and **send** mailboxes, which are different addresses | read, reply, mark read, move, create and delete drafts, **and SharePoint upload** |
 | Climate | `climatesensors@bedlamtheatre.co.uk` | read, mark read, move |
 
 Graph **application** permissions are tenant-wide by default. Consenting `Mail.ReadWrite` lets the
@@ -46,10 +46,10 @@ Connect-ExchangeOnline
 $env:BL_GRAPH_APP_ID       = "<Application (client) ID>"
 $env:BL_GRAPH_SP_OBJECT_ID = "<Object ID, from Enterprise applications>"
 
-# Reimbursements replies to producers and creates EUSA drafts, so it needs send.
-# Listing the termtime address now costs nothing: a scope is a filter, so it
-# matches nothing until that mailbox exists, then starts working.
-$env:BL_SEND_RECEIVE_MAILBOXES = "reimbursements@bedlamfringe.co.uk,reimbursements@bedlamtheatre.co.uk"
+# From `bin/rails graph:mailboxes`. Do not type this from memory: the receive
+# and send addresses differ. Listing a mailbox that does not exist yet costs
+# nothing, since a scope is a filter that matches nothing until it appears.
+$env:BL_SEND_RECEIVE_MAILBOXES = "reimbursements@bedlamfringe.co.uk,finance@bedlamfringe.co.uk,reimbursements@bedlamtheatre.co.uk"
 
 # Climate only reads and files. No send.
 $env:BL_READ_ONLY_MAILBOXES    = "climatesensors@bedlamtheatre.co.uk"
@@ -61,14 +61,21 @@ $env:BL_READ_ONLY_MAILBOXES    = "climatesensors@bedlamtheatre.co.uk"
 It's idempotent: an existing scope gets its filter updated, an existing assignment is left alone.
 Re-run it when you add a mailbox. You need **Organization Management** in Exchange Online.
 
-### Where the reimbursements addresses come from
+### Get the mailbox list from the app, never from memory
 
-They're a database value, not a constant: `Reimbursements::CostCentre#receive_mailbox` and
-`#send_mailbox`, editable in the portal's Settings screen. To read what production actually uses:
+**A cost centre's send address is a separate column from its receive address, and on the live
+system they differ.** Scoping only the receive mailbox passes every check and then 403s on
+`sendMail`, which is exactly what happened on 2026-08-06.
+
+So don't type the list. Ask the app:
 
 ```
-kamal app exec -i 'bin/rails runner "Reimbursements::CostCentre.all.each { |c| puts [c.key, c.receive_mailbox, c.send_mailbox].join(%q( | )) }"'
+kamal app exec -i 'bin/rails graph:mailboxes'
 ```
+
+It prints the `$env:` assignments to paste straight in. Both reimbursements mailboxes need
+**Mail Full Access**, not `Mail.ReadWrite`: the receive mailbox replies (which needs `Mail.Send`)
+and the send mailbox creates, reads back and deletes drafts (which needs `Mail.ReadWrite`).
 
 ## Verifying
 
