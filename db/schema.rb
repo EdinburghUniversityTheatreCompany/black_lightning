@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -307,7 +307,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
     t.boolean "active", default: false, null: false
     t.datetime "created_at", null: false
     t.string "display_name", null: false
-    t.string "external_id"
     t.string "last_error", limit: 500
     t.datetime "last_polled_at"
     t.decimal "latitude", precision: 9, scale: 6
@@ -315,13 +314,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
     t.decimal "longitude", precision: 9, scale: 6
     t.string "placement", default: "indoor", null: false
     t.integer "position", default: 0, null: false
-    t.string "sku"
     t.string "source", default: "govee", null: false
-    t.string "temperature_unit"
-    t.datetime "unit_verified_at"
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_climate_sensors_on_active"
-    t.index ["source", "external_id"], name: "index_climate_sensors_on_source_and_external_id", unique: true
   end
 
   create_table "companies", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|

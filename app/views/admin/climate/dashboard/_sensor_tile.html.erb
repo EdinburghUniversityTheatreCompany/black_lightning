@@ -21,12 +21,7 @@
     <% end %>
   </div>
 
-  <% if state == :unverified %>
-    <p class="mt-2 mb-2 text-sm text-amber-800">
-      Not recording — the temperature unit has not been verified.
-    </p>
-    <%= link_to "Verify", admin_climate_sensors_path, class: btn_classes(:warning, :sm) if can?(:manage, :climate) %>
-  <% elsif reading.nil? %>
+  <% if reading.nil? %>
     <p class="mt-2 mb-0 text-sm text-gray-600">No readings yet.</p>
   <% else %>
     <dl class="mt-2 mb-0 grid grid-cols-3 gap-2">

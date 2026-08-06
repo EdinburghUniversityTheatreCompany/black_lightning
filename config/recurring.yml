@@ -43,23 +43,14 @@ reimbursements_nightly_batch:
   queue: default
   schedule: at 9pm every day
 
-# The crypt climate monitor's history IS these two jobs — the Govee API has no
-# history endpoint, so anything not polled is lost for good.
-#
-# Ten minutes matches how often the H5179's cloud state actually refreshes;
-# polling faster would burn twice the quota to store the same value, and the
-# 10,000/day cap is per Govee ACCOUNT rather than per key.
-climate_sensor_poll:
-  class: Climate::SensorPollJob
-  queue: default
-  schedule: every 10 minutes
 
-# Hourly, matching Open-Meteo's resolution. Each run re-fetches a rolling
-# multi-day window and upserts it, so an outage backfills itself.
+# The crypt climate monitor's outdoor comparison line. Hourly, matching
+# Open-Meteo's resolution; each run re-fetches a rolling multi-day window and
+# upserts it, so an outage backfills itself. Indoor readings arrive by CSV
+# import, not by polling.
 #
-# Both of these use interval schedules, which are zone-agnostic — the
-# config.time_zone ("Edinburgh") resolution noted in CLAUDE.md would only bite
-# if someone later added a clock-time climate job (a daily digest, say).
+# An interval schedule is zone-agnostic — the config.time_zone ("Edinburgh")
+# resolution noted in CLAUDE.md would only bite on a clock-time climate job.
 climate_outdoor_poll:
   class: Climate::OutdoorPollJob
   queue: default

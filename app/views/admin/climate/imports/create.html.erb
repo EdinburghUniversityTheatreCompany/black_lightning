@@ -1,0 +1,66 @@
+<p class="mb-3">
+  <%= link_to "← Back to the charts", admin_climate_dashboard_path, class: "text-sm text-primary underline" %>
+</p>
+
+<%= render CardComponent.new(title: "Imported into #{@sensor.display_name}") do %>
+  <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+    <div>
+      <dt class="text-xs text-gray-500">Readings stored</dt>
+      <dd class="text-2xl font-semibold mb-0"><%= number_with_delimiter(@result.written) %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500">Unit in the file</dt>
+      <dd class="text-2xl font-semibold mb-0">
+        <%= @import.unit == Climate::CsvImport::UNIT_CELSIUS ? "°C" : "°F" %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500">Skipped</dt>
+      <dd class="text-2xl font-semibold mb-0"><%= number_with_delimiter(@result.skipped + @import.skipped.size) %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500">Dated in the future</dt>
+      <dd class="text-2xl font-semibold mb-0"><%= number_with_delimiter(@result.future) %></dd>
+    </div>
+  </dl>
+
+  <% if @result.range %>
+    <p class="mb-2">
+      Covering <strong><%= l @result.range.begin, format: :long %></strong>
+      to <strong><%= l @result.range.end, format: :long %></strong>.
+    </p>
+  <% end %>
+
+  <% if @import.unit == Climate::CsvImport::UNIT_FAHRENHEIT %>
+    <p class="mb-2 text-gray-700">
+      The file was in Fahrenheit, so every reading was converted to Celsius. The original values
+      are stored alongside, so this stays correctable if the header ever lies.
+    </p>
+  <% end %>
+
+  <p class="text-sm text-gray-600 mb-0">
+    Re-importing a file that overlaps this one is safe — readings are keyed by sensor and
+    timestamp, so an overlap overwrites rather than duplicates.
+  </p>
+<% end %>
+
+<% if @import.skipped.any? %>
+  <%= render CardComponent.new(title: "Lines that could not be read", variant: :warning, html_class: "mt-4") do %>
+    <p class="text-gray-700">
+      These were left out. Everything else imported.
+    </p>
+    <ul class="list-disc pl-5 font-mono text-xs space-y-1">
+      <% @import.skipped.first(25).each do |line| %>
+        <li><%= line %></li>
+      <% end %>
+    </ul>
+    <% if @import.skipped.size > 25 %>
+      <p class="text-sm text-gray-600 mb-0">…and <%= @import.skipped.size - 25 %> more.</p>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mt-4">
+  <%= link_to "View the charts", admin_climate_dashboard_path, class: btn_classes(:primary) %>
+  <%= link_to "Import another", new_admin_climate_import_path, class: btn_classes(:secondary) %>
+</div>

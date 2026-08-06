@@ -33,18 +33,11 @@ module ClimateHelper
     "#{time_ago_in_words(sensor.latest_reading.recorded_at)} ago"
   end
 
-  # The tile's state, which drives both its styling and what it says. Ordered by
-  # urgency: an unverified unit means the sensor is not recording at all, which
-  # matters more than any reading being old.
   def climate_tile_state(sensor)
-    return :unverified if sensor.govee? && !sensor.unit_verified?
-    return :stale if sensor.stale?
-
-    :ok
+    sensor.stale? ? :stale : :ok
   end
 
   CLIMATE_TILE_CLASSES = {
-    unverified: "border-amber-400 bg-amber-50",
     stale: "border-amber-300 bg-amber-50/50",
     ok: "border-gray-200 bg-white"
   }.freeze

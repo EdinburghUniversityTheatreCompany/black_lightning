@@ -72,10 +72,8 @@ ChaosRails::Application.routes.draw do
     # sensors, against outdoor conditions. Gated by the :climate grid permission.
     namespace :climate do
       root to: "dashboard#show", as: :dashboard
-      resources :sensors, only: %i[index edit update] do
-        collection { post :discover }
-        member { post :check_unit }
-      end
+      resources :sensors, only: %i[index new create edit update destroy]
+      resource :import, only: %i[new create], controller: "imports"
     end
 
     # Producer-facing reimbursements portal (backed by the reimbursements_* MySQL tables).

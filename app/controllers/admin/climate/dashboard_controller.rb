@@ -11,7 +11,6 @@ module Admin
         flash.now[:notice] = @range.notice if @range.notice.present?
 
         @series = ::Climate::SeriesQuery.new(sensors: @sensors, range: @range).series
-        @unverified = ::Climate::Sensor.govee.where(temperature_unit: nil).to_a
 
         respond_to do |format|
           format.html

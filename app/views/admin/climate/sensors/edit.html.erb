@@ -3,38 +3,12 @@
 </p>
 
 <%= render CardComponent.new(title: @sensor.display_name) do %>
-  <%= simple_form_for @sensor, url: admin_climate_sensor_path(@sensor), method: :patch,
-                      as: :climate_sensor do |f| %>
-    <%= f.error_notification %>
-
-    <%= f.input :display_name, label: "Name" %>
-    <%= f.input :location, label: "Location", hint: "Where in the building this sensor sits, e.g. \"Crypt, north wall\"." %>
-    <%= f.input :position, label: "Order", hint: "Lower numbers appear first on the dashboard." %>
-
-    <% if @sensor.govee? %>
-      <%= f.input :temperature_unit,
-                  collection: Climate::Sensor::UNITS.map { |unit| [ unit.capitalize, unit ] },
-                  include_blank: "Not verified",
-                  label: "Temperature unit",
-                  hint: "The unit Govee's API reports for THIS sensor — not the one the app displays. " \
-                        "Govee does not document it and it is often Fahrenheit even where the app shows " \
-                        "Celsius, so use Check unit rather than guessing. Nothing is recorded while this is blank." %>
-    <% end %>
-
-    <%= f.input :active, as: :boolean, label: "Active",
-                hint: "Inactive sensors are not polled and do not appear on the dashboard." %>
-
-    <div class="mt-3">
-      <%= f.submit "Save", class: btn_classes(:primary) %>
-      <%= link_to "Cancel", admin_climate_sensors_path, class: btn_classes(:secondary) %>
-    </div>
+  <% if @sensor.open_meteo? %>
+    <p class="text-gray-600">
+      The outdoor feed. Its coordinates are set in code and it is refreshed hourly; only its name,
+      ordering and whether it appears on the dashboard are editable here.
+    </p>
   <% end %>
-<% end %>
 
-<% if @sensor.govee? %>
-  <p class="mt-3 text-sm text-gray-600">
-    Device <code><%= @sensor.external_id %></code> (<%= @sensor.sku %>). The device id and model come
-    from Govee and cannot be edited here — changing them would silently re-point this sensor's whole
-    history at a different device.
-  </p>
+  <%= render "form", url: admin_climate_sensor_path(@sensor), method: :patch, submit_label: "Save" %>
 <% end %>
