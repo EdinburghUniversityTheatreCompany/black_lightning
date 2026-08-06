@@ -86,23 +86,9 @@ naming the device.
 
 ### On the Entra app
 
-**No new app registration is needed.** The existing reimbursements app already holds the
-application permission this uses (`Mail.ReadWrite` — it replies, marks read and moves on the
-reimbursements mailbox), so there is no new API permission and no new admin consent.
-
-What does change is the Exchange-side scoping. Graph *application* permissions are tenant-wide by
-default; the app is narrowed to specific mailboxes by an `ApplicationAccessPolicy`. Two ways to
-add the climate mailbox:
-
-- **Preferred** — scope the policy to a **mail-enabled security group** (the only group type
-  `-PolicyScopeGroupId` accepts) and put both mailboxes in it. Adding a third mailbox later is
-  then a group membership change, not a policy change.
-- Or add a second `New-ApplicationAccessPolicy` for the same `-AppId`. Policies for one app are
-  **additive**, so this works — it is just more to keep track of.
-
-Worth knowing: Microsoft is retiring Application Access Policies in favour of
-[RBAC for Applications in Exchange Online](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac),
-which is now the recommended way to scope an app to specific mailboxes.
+**No new app registration and no new admin consent.** The existing app already holds the
+permission this needs (`Mail.ReadWrite`). Only the Exchange-side *scoping* has to grow to cover the
+climate mailbox — see [docs/graph-mailbox-rbac.md](../graph-mailbox-rbac.md) for the walkthrough.
 
 ## Reading the dashboard
 
