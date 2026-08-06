@@ -1,0 +1,55 @@
+<%#
+  The current reading as real HTML rather than pixels on a canvas — so the one
+  question that actually matters ("is the crypt damp right now?") never depends
+  on the chart being readable, and screen readers get it directly.
+%>
+<%
+  state = climate_tile_state(sensor)
+  reading = sensor.latest_reading
+  margin = reading&.dew_point_margin
+%>
+<div class="rounded border p-3 <%= climate_tile_classes(state) %>">
+  <div class="flex items-start justify-between gap-2">
+    <div>
+      <h3 class="font-semibold text-base mb-0"><%= sensor.display_name %></h3>
+      <% if sensor.location.present? %>
+        <p class="text-xs text-gray-500 mb-0"><%= sensor.location %></p>
+      <% end %>
+    </div>
+    <% if sensor.outdoor? %>
+      <span class="text-xs rounded bg-gray-100 text-gray-600 px-2 py-1">Outside</span>
+    <% end %>
+  </div>
+
+  <% if state == :unverified %>
+    <p class="mt-2 mb-2 text-sm text-amber-800">
+      Not recording — the temperature unit has not been verified.
+    </p>
+    <%= link_to "Verify", admin_climate_sensors_path, class: btn_classes(:warning, :sm) if can?(:manage, :climate) %>
+  <% elsif reading.nil? %>
+    <p class="mt-2 mb-0 text-sm text-gray-600">No readings yet.</p>
+  <% else %>
+    <dl class="mt-2 mb-0 grid grid-cols-3 gap-2">
+      <div>
+        <dt class="text-xs text-gray-500">Temperature</dt>
+        <dd class="text-lg font-semibold mb-0"><%= climate_temperature(reading.temperature_c) %></dd>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500">Humidity</dt>
+        <dd class="text-lg font-semibold mb-0"><%= climate_humidity(reading.relative_humidity) %></dd>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500">Dew point</dt>
+        <dd class="text-lg font-semibold mb-0"><%= climate_temperature(reading.dew_point_c) %></dd>
+      </div>
+    </dl>
+
+    <p class="mt-2 mb-0 text-sm <%= climate_condensation_risk?(margin) ? 'text-red-700 font-semibold' : 'text-gray-600' %>">
+      <%= climate_margin(margin) %> above the dew point<%= " — condensation risk" if climate_condensation_risk?(margin) %>
+    </p>
+
+    <p class="mt-1 mb-0 text-xs <%= state == :stale ? 'text-amber-800 font-semibold' : 'text-gray-500' %>">
+      Updated <%= climate_last_seen(sensor) %><%= " — expected every #{distance_of_time_in_words(sensor.stale_after)}" if state == :stale %>
+    </p>
+  <% end %>
+</div>

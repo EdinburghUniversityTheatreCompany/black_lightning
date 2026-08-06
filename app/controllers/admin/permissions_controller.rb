@@ -78,6 +78,9 @@ class Admin::PermissionsController < AdminController
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },
+      # :manage matches any action in CanCan, so granting manage implies read.
+      "climate" => { "read" => "View the climate monitor (crypt temperature / humidity charts)",
+                     "manage" => "Configure climate sensors (discover devices, verify units)" },
       "User" => { "view_shows_and_bio" => "View the public part of the user profile (Bio, avatar, and shows)" },
       "Event" => { "add_non_members" => "Add non-members to events, mainly for archiving purposes" }
     }
@@ -86,7 +89,8 @@ class Admin::PermissionsController < AdminController
                   Reimbursements::Person, Reimbursements::PaymentDetails, Reimbursements::Budget,
                   Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
                   Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
-                  Reimbursements::FinancialYear, Reimbursements::CostCentre ]).uniq
+                  Reimbursements::FinancialYear, Reimbursements::CostCentre,
+                  Climate::Sensor, Climate::Reading ]).uniq
 
     role_exclude = Admin::Permission::EXCLUDED_ROLES
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all.left_joins(:permissions).group(:id).order("COUNT(admin_permissions.id) DESC")

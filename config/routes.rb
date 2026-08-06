@@ -68,6 +68,16 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get "", to: "dashboard#index"
 
+    # Crypt climate monitor: temperature/humidity/dew point charts from the Govee
+    # sensors, against outdoor conditions. Gated by the :climate grid permission.
+    namespace :climate do
+      root to: "dashboard#show", as: :dashboard
+      resources :sensors, only: %i[index edit update] do
+        collection { post :discover }
+        member { post :check_unit }
+      end
+    end
+
     # Producer-facing reimbursements portal (backed by the reimbursements_* MySQL tables).
     namespace :reimbursements do
       root to: redirect("/admin/reimbursements/expenses")

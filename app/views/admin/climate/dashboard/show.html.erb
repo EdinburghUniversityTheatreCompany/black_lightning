@@ -1,0 +1,106 @@
+<p class="mb-3 text-gray-600">
+  Temperature, relative humidity and dew point in the crypt, against outside conditions.
+  Condensation forms on any surface at or below the dew point, so the number to watch is the
+  <strong>margin</strong> — how far the air has to cool before it starts wetting the walls.
+  Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C is worth acting on.
+</p>
+
+<% if @unverified.any? && can?(:manage, :climate) %>
+  <div class="mb-4 rounded border border-amber-400 bg-amber-50 p-3">
+    <p class="mb-2">
+      <strong><%= pluralize(@unverified.size, "sensor") %></strong>
+      <%= @unverified.size == 1 ? "has" : "have" %> no verified temperature unit, so
+      <%= @unverified.size == 1 ? "it is" : "they are" %> recording nothing.
+      Govee does not document whether it reports Celsius or Fahrenheit, and guessing wrong would
+      store years of unusable readings.
+    </p>
+    <%= link_to "Verify them", admin_climate_sensors_path, class: btn_classes(:warning, :sm) %>
+  </div>
+<% end %>
+
+<%= render CardComponent.new(title: "Now", html_class: "mb-4") do |card| %>
+  <% card.with_tools do %>
+    <%= link_to "Sensors", admin_climate_sensors_path, class: btn_classes(:secondary, :sm) if can?(:manage, :climate) %>
+  <% end %>
+
+  <% if @sensors.empty? %>
+    <p class="text-gray-600 mb-0">
+      No active sensors yet.
+      <%= link_to "Discover the Govee devices", admin_climate_sensors_path, class: "text-primary underline" if can?(:manage, :climate) %>
+    </p>
+  <% else %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      <%= render partial: "sensor_tile", collection: @sensors, as: :sensor %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "History") do |card| %>
+  <% card.with_tools do %>
+    <%= link_to "View as data", admin_climate_dashboard_path(@range.to_param.merge(format: :json)),
+                class: btn_classes(:secondary, :sm) %>
+  <% end %>
+
+  <%= form_with url: admin_climate_dashboard_path, method: :get, data: { turbo: false },
+                class: "flex flex-wrap items-end gap-3 mb-4" do |f| %>
+    <div>
+      <%= f.label :from, "From", class: "block text-sm text-gray-600" %>
+      <%= f.date_field :from, value: @range.from.iso8601, class: "form-control" %>
+    </div>
+    <div>
+      <%= f.label :to, "To", class: "block text-sm text-gray-600" %>
+      <%= f.date_field :to, value: @range.to.iso8601, class: "form-control" %>
+    </div>
+    <%= f.submit "Show", class: btn_classes(:primary) %>
+
+    <div class="flex flex-wrap gap-2 items-center ml-auto">
+      <% climate_range_presets.each do |label, dates| %>
+        <%= link_to label, admin_climate_dashboard_path(dates), class: btn_classes(:secondary, :sm) %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div data-controller="climate-charts"
+       data-climate-charts-series-value="<%= @series.to_json %>">
+    <% if @series.none? { |series| series[:points].any? } %>
+      <p class="text-gray-600">
+        No readings in this range yet. The sensors are polled every ten minutes and outside
+        conditions every hour, so the first points appear shortly after a sensor is activated.
+      </p>
+    <% else %>
+      <div class="relative h-64 mb-6"><canvas data-climate-charts-target="temperature"></canvas></div>
+      <div class="relative h-64 mb-6"><canvas data-climate-charts-target="humidity"></canvas></div>
+      <div class="relative h-64"><canvas data-climate-charts-target="dewPoint"></canvas></div>
+    <% end %>
+  </div>
+<% end %>
+
+<%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
+  <ul class="list-disc pl-5 space-y-2 text-gray-700">
+    <li>
+      The Govee sensors are read every ten minutes. That API serves only the current reading and
+      keeps no history, so this page's history is exactly what has been polled — nothing from
+      before a sensor was activated can be recovered.
+    </li>
+    <li>
+      A <strong>break in a line</strong> is missing data, not a flat reading. Lines are deliberately
+      not drawn across a gap, because a straight line through an outage would look like a
+      measurement of the room that never happened.
+    </li>
+    <li>
+      A sensor Govee reports as offline records nothing. Its last known value would otherwise be
+      served indefinitely and draw a perfectly flat, entirely fictional line.
+    </li>
+    <li>
+      Long ranges are averaged into wider buckets (hourly, then six-hourly, then daily) so a year
+      of readings stays legible.
+    </li>
+    <li>
+      Outside conditions come from
+      <%= link_to Climate::OpenMeteoClient::ATTRIBUTION, Climate::OpenMeteoClient::ATTRIBUTION_URL,
+                  class: "text-primary underline", rel: "noopener", target: "_blank" %>
+      (<%= Climate::OpenMeteoClient::LICENCE %>), modelled for Bedlam's own location and shown as a
+      dashed line.
+    </li>
+  </ul>
+<% end %>

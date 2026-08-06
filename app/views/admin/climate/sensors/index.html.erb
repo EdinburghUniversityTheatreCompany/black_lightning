@@ -1,0 +1,61 @@
+<p class="mb-3">
+  <%= link_to "← Back to the charts", admin_climate_dashboard_path, class: "text-sm text-primary underline" %>
+</p>
+
+<p class="mb-3 text-gray-600">
+  Govee sensors are added by <strong>Discover</strong>, which reads the device list off the Govee
+  account — device ids are never typed by hand. A new sensor arrives inactive and unverified, and
+  records nothing until someone confirms which unit its temperature is reported in.
+</p>
+
+<%= render CardComponent.new(title: "Sensors", flush: true) do |card| %>
+  <% card.with_tools do %>
+    <%= button_to "Discover Govee devices", discover_admin_climate_sensors_path,
+                  class: btn_classes(:primary, :sm) %>
+  <% end %>
+
+  <div class="table-scroll">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Location</th>
+          <th scope="col">Source</th>
+          <th scope="col">Unit</th>
+          <th scope="col">Active</th>
+          <th scope="col">Last polled</th>
+          <th scope="col">Last error</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @sensors.each do |sensor| %>
+          <tr>
+            <td><%= sensor.display_name %></td>
+            <td><%= sensor.location.presence || "—" %></td>
+            <td>
+              <%= sensor.govee? ? "Govee #{sensor.sku}" : "Open-Meteo" %>
+            </td>
+            <td>
+              <% if sensor.unit_verified? %>
+                <%= sensor.temperature_unit.capitalize %>
+              <% else %>
+                <span class="text-amber-800 font-semibold">Not verified</span>
+              <% end %>
+            </td>
+            <td><%= sensor.active? ? "Yes" : "No" %></td>
+            <td><%= sensor.last_polled_at ? "#{time_ago_in_words(sensor.last_polled_at)} ago" : "Never" %></td>
+            <td class="text-sm text-gray-600"><%= sensor.last_error.presence || "—" %></td>
+            <td class="text-right whitespace-nowrap">
+              <% if sensor.govee? %>
+                <%= button_to "Check unit", check_unit_admin_climate_sensor_path(sensor),
+                              class: btn_classes(:secondary, :sm), form: { class: "inline-block" } %>
+              <% end %>
+              <%= link_to "Edit", edit_admin_climate_sensor_path(sensor), class: btn_classes(:secondary, :sm) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

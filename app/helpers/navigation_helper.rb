@@ -81,6 +81,14 @@ module NavigationHelper
     children << { title: "Export Workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
+    # Building — the crypt climate monitor. Deliberately ONE entry, not a second
+    # for /admin/climate/sensors: active_item? is a start_with? prefix match, so
+    # the two would light up together (the same trap the My Claims note above
+    # describes). Sensors is reached by a button on the dashboard.
+    children = []
+    children << { title: "Crypt Climate", path: admin_climate_dashboard_path, fa_icon: "fa-droplet" } if can? :read, :climate
+    navbar_categories << { title: "Building", children: children, fa_icon: "fa-building-columns" }
+
     # Opportunities
     children = []
     children << { title: "Opportunities", path: admin_opportunities_path, fa_icon: "fa-lightbulb" }                                    if can? :index, Opportunity
