@@ -3,15 +3,14 @@
 </p>
 
 <p class="mb-3 text-gray-600">
-  Govee sensors are added by <strong>Discover</strong>, which reads the device list off the Govee
-  account — device ids are never typed by hand. A new sensor arrives inactive and unverified, and
-  records nothing until someone confirms which unit its temperature is reported in.
+  One row per thing that produces readings. Govee sensors are fed by importing a CSV export; the
+  outdoor line is fetched automatically every hour and needs nothing from you.
 </p>
 
 <%= render CardComponent.new(title: "Sensors", flush: true) do |card| %>
   <% card.with_tools do %>
-    <%= button_to "Discover Govee devices", discover_admin_climate_sensors_path,
-                  class: btn_classes(:primary, :sm) %>
+    <%= link_to "Import readings", new_admin_climate_import_path, class: btn_classes(:primary, :sm) %>
+    <%= link_to "Add sensor", new_admin_climate_sensor_path, class: btn_classes(:secondary, :sm) %>
   <% end %>
 
   <div class="table-scroll">
@@ -20,10 +19,10 @@
         <tr>
           <th scope="col">Name</th>
           <th scope="col">Location</th>
-          <th scope="col">Source</th>
-          <th scope="col">Unit</th>
+          <th scope="col">Fed by</th>
           <th scope="col">Active</th>
-          <th scope="col">Last polled</th>
+          <th scope="col" class="text-right">Readings</th>
+          <th scope="col">Latest reading</th>
           <th scope="col">Last error</th>
           <th scope="col"></th>
         </tr>
@@ -33,25 +32,24 @@
           <tr>
             <td><%= sensor.display_name %></td>
             <td><%= sensor.location.presence || "—" %></td>
+            <td><%= sensor.open_meteo? ? "Open-Meteo (hourly)" : "CSV import" %></td>
+            <td><%= sensor.active? ? "Yes" : "No" %></td>
+            <td class="text-right"><%= number_with_delimiter(sensor.readings.count) %></td>
             <td>
-              <%= sensor.govee? ? "Govee #{sensor.sku}" : "Open-Meteo" %>
-            </td>
-            <td>
-              <% if sensor.unit_verified? %>
-                <%= sensor.temperature_unit.capitalize %>
+              <% if sensor.latest_reading %>
+                <%= time_ago_in_words(sensor.latest_reading.recorded_at) %> ago
               <% else %>
-                <span class="text-amber-800 font-semibold">Not verified</span>
+                None yet
               <% end %>
             </td>
-            <td><%= sensor.active? ? "Yes" : "No" %></td>
-            <td><%= sensor.last_polled_at ? "#{time_ago_in_words(sensor.last_polled_at)} ago" : "Never" %></td>
             <td class="text-sm text-gray-600"><%= sensor.last_error.presence || "—" %></td>
             <td class="text-right whitespace-nowrap">
-              <% if sensor.govee? %>
-                <%= button_to "Check unit", check_unit_admin_climate_sensor_path(sensor),
-                              class: btn_classes(:secondary, :sm), form: { class: "inline-block" } %>
-              <% end %>
               <%= link_to "Edit", edit_admin_climate_sensor_path(sensor), class: btn_classes(:secondary, :sm) %>
+              <% unless sensor.open_meteo? %>
+                <%= button_to "Delete", admin_climate_sensor_path(sensor), method: :delete,
+                              class: btn_classes(:danger, :sm), form: { class: "inline-block" },
+                              data: { turbo_confirm: "Delete #{sensor.display_name} and all #{sensor.readings.count} of its readings? This cannot be undone." } %>
+              <% end %>
             </td>
           </tr>
         <% end %>

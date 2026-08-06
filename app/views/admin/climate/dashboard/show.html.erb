@@ -5,28 +5,18 @@
   Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C is worth acting on.
 </p>
 
-<% if @unverified.any? && can?(:manage, :climate) %>
-  <div class="mb-4 rounded border border-amber-400 bg-amber-50 p-3">
-    <p class="mb-2">
-      <strong><%= pluralize(@unverified.size, "sensor") %></strong>
-      <%= @unverified.size == 1 ? "has" : "have" %> no verified temperature unit, so
-      <%= @unverified.size == 1 ? "it is" : "they are" %> recording nothing.
-      Govee does not document whether it reports Celsius or Fahrenheit, and guessing wrong would
-      store years of unusable readings.
-    </p>
-    <%= link_to "Verify them", admin_climate_sensors_path, class: btn_classes(:warning, :sm) %>
-  </div>
-<% end %>
-
 <%= render CardComponent.new(title: "Now", html_class: "mb-4") do |card| %>
   <% card.with_tools do %>
-    <%= link_to "Sensors", admin_climate_sensors_path, class: btn_classes(:secondary, :sm) if can?(:manage, :climate) %>
+    <% if can?(:manage, :climate) %>
+      <%= link_to "Import readings", new_admin_climate_import_path, class: btn_classes(:primary, :sm) %>
+      <%= link_to "Sensors", admin_climate_sensors_path, class: btn_classes(:secondary, :sm) %>
+    <% end %>
   <% end %>
 
   <% if @sensors.empty? %>
     <p class="text-gray-600 mb-0">
       No active sensors yet.
-      <%= link_to "Discover the Govee devices", admin_climate_sensors_path, class: "text-primary underline" if can?(:manage, :climate) %>
+      <%= link_to "Add one", new_admin_climate_sensor_path, class: "text-primary underline" if can?(:manage, :climate) %>
     </p>
   <% else %>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -64,8 +54,8 @@
        data-climate-charts-series-value="<%= @series.to_json %>">
     <% if @series.none? { |series| series[:points].any? } %>
       <p class="text-gray-600">
-        No readings in this range yet. The sensors are polled every ten minutes and outside
-        conditions every hour, so the first points appear shortly after a sensor is activated.
+        No readings in this range yet. Outside conditions are fetched hourly; crypt readings
+        appear once you import a CSV export for this period.
       </p>
     <% else %>
       <div class="relative h-64 mb-6"><canvas data-climate-charts-target="temperature"></canvas></div>
@@ -78,9 +68,9 @@
 <%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
   <ul class="list-disc pl-5 space-y-2 text-gray-700">
     <li>
-      The Govee sensors are read every ten minutes. That API serves only the current reading and
-      keeps no history, so this page's history is exactly what has been polled — nothing from
-      before a sensor was activated can be recovered.
+      Crypt readings arrive by importing a CSV export from the Govee app — the device records to
+      its own buffer whether or not it has WiFi, so an export is complete even when the crypt has
+      been offline. Import a fresh one whenever you want the charts brought up to date.
     </li>
     <li>
       A <strong>break in a line</strong> is missing data, not a flat reading. Lines are deliberately
@@ -88,8 +78,8 @@
       measurement of the room that never happened.
     </li>
     <li>
-      A sensor Govee reports as offline records nothing. Its last known value would otherwise be
-      served indefinitely and draw a perfectly flat, entirely fictional line.
+      The device holds about 20 days of readings before overwriting them, so export at least that
+      often if the crypt has a period worth keeping.
     </li>
     <li>
       Long ranges are averaged into wider buckets (hourly, then six-hourly, then daily) so a year

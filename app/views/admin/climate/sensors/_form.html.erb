@@ -1,0 +1,16 @@
+<%= simple_form_for @sensor, url: url, method: method, as: :climate_sensor do |f| %>
+  <%= f.error_notification %>
+
+  <%= f.input :display_name, label: "Name",
+              hint: "What it is called on the dashboard and in the import picker." %>
+  <%= f.input :location, label: "Location",
+              hint: "Where in the building it sits, e.g. \"Crypt, north wall\"." %>
+  <%= f.input :position, label: "Order", hint: "Lower numbers appear first on the dashboard." %>
+  <%= f.input :active, as: :boolean, label: "Active",
+              hint: "Inactive sensors keep their readings but are left off the dashboard." %>
+
+  <div class="mt-3">
+    <%= f.submit submit_label, class: btn_classes(:primary) %>
+    <%= link_to "Cancel", admin_climate_sensors_path, class: btn_classes(:secondary) %>
+  </div>
+<% end %>

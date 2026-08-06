@@ -431,7 +431,13 @@ limited to a single sidebar entry for the same reason — `/admin/climate` would
 **Fix:** an `exact: true` option on a navbar item, matching on equality instead. Both existing
 call sites could then say what they mean rather than working around it.
 
-## Import the Govee CSV export to backfill sensor history
+## DONE — Import the Govee CSV export to backfill sensor history
+
+*Done 2026-08-06: `Climate::CsvImport` + `/admin/climate/import` + `Climate::MailboxPollJob`.
+The API poller was removed entirely rather than kept alongside — see CLAUDE.md for why polling
+is lossy in a building with intermittent WiFi. Original note follows.*
+
+## (superseded) Import the Govee CSV export to backfill sensor history
 
 *Noticed 2026-08-06, correcting an overstatement in the climate work.* The Govee **Developer API**
 has no history endpoint, which is true and is why `SensorPollJob` exists — but the earlier note that
@@ -447,3 +453,36 @@ Two gotchas for whoever builds it: the CSV carries whatever unit the **app** is 
 which need not match what the API reports (so the importer must ask, not assume — same trap as
 `temperature_unit`); and the on-device 20-day buffer rolls over, so an export is worth taking
 before a period of interest ages out.
+
+
+## Vendor-file parsers are a separate family from the sheet importers
+
+*Noticed 2026-08-06 while adding the climate CSV import.* The app now has two distinct kinds of
+import and it is worth naming the split before someone "unifies" them:
+
+- **Sheet importers** (budget, membership, user, show-crew) share `ImportParsing` (paste-TSV +
+  roo-xlsx, fuzzy header matching) and a preview→apply wizard, because a human makes per-row
+  decisions.
+- **Vendor-file parsers** — `Reimbursements::Reconciliation.parse_actuals_rows` (EUSA's Sage
+  export) and `Climate::CsvImport` (Govee's) — parse a fixed third-party format with stdlib CSV,
+  own their delimiter sniffing and quirks, and have no per-row decisions to make.
+
+Both vendor parsers hand-roll their CSV reading, which looks like duplication but mostly is not:
+each one exists to cope with a different vendor's specific mess (Govee's BOM and prose header;
+Sage's British dates and debit/credit columns).
+
+**Fix (if it ever earns it):** a small shared `DelimitedFile` helper for the genuinely common
+part — BOM strip, delimiter sniff, header-index lookup — leaving the vendor quirks in each parser.
+Not worth doing for two callers; worth doing at three.
+
+## The climate mailbox ingest is unverified end to end
+
+*Noticed 2026-08-06.* `Climate::MailboxPollJob` is unit-tested against a fake mailbox, but has
+never run against real Graph: it needs a mailbox, an `ApplicationAccessPolicy` covering it, and
+Govee's scheduled export pointed at it.
+
+The sensor-matching rule in particular is a guess at what Govee's export email looks like — it
+matches a sensor name in the subject or attachment filename. **Check a real export email before
+trusting it.** If Govee's subject line turns out not to name the device, the fix is probably a
+per-sensor `import_match` column (what Govee calls it, as distinct from what we call it) rather
+than a cleverer heuristic.

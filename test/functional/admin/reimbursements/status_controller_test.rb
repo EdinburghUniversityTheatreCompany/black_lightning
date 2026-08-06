@@ -34,7 +34,7 @@ module Admin
         end
 
         def check_reachable
-          raise ::Reimbursements::GraphAuth::AuthError, "Graph rejected the token (401)" unless @ok
+          raise ::GraphAuth::AuthError, "Graph rejected the token (401)" unless @ok
 
           true
         end

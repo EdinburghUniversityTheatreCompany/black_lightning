@@ -80,7 +80,7 @@ class Admin::PermissionsController < AdminController
       "reports" => { "read" => "Read Reports" },
       # :manage matches any action in CanCan, so granting manage implies read.
       "climate" => { "read" => "View the climate monitor (crypt temperature / humidity charts)",
-                     "manage" => "Configure climate sensors (discover devices, verify units)" },
+                     "manage" => "Configure climate sensors and import readings" },
       "User" => { "view_shows_and_bio" => "View the public part of the user profile (Bio, avatar, and shows)" },
       "Event" => { "add_non_members" => "Add non-members to events, mainly for archiving purposes" }
     }

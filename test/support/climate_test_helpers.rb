@@ -9,25 +9,16 @@ module ClimateTestHelpers
 
   def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,
                             placement: Climate::Sensor::PLACEMENT_INDOOR,
-                            external_id: nil, sku: "H5179",
-                            temperature_unit: Climate::Sensor::UNIT_CELSIUS,
                             active: true, location: nil, position: 0,
                             latitude: nil, longitude: nil)
-    external_id ||= "AA:BB:CC:DD:#{format('%02X', rand(256))}:#{format('%02X', rand(256))}" if source == Climate::Sensor::SOURCE_GOVEE
-
     Climate::Sensor.create!(
       display_name: display_name, source: source, placement: placement,
-      external_id: external_id, sku: (sku if source == Climate::Sensor::SOURCE_GOVEE),
-      temperature_unit: temperature_unit,
-      unit_verified_at: (Time.current if temperature_unit.present?),
       active: active, location: location, position: position,
       latitude: latitude, longitude: longitude
     )
   end
 
-  # The one outdoor row, through the same ensure the poll job uses. Never build
-  # a second: the unique index on (source, external_id) allows only one row with
-  # a nil external_id.
+  # The one outdoor row, through the same ensure the poll job uses.
   def outdoor_climate_sensor = Climate::Sensor.outdoor_source!
 
   def create_climate_reading(sensor:, recorded_at: Time.current, temperature_c: 12.0,
@@ -67,36 +58,6 @@ module ClimateTestHelpers
   end
 
   # --- Fake external clients -------------------------------------------------
-
-  # Stands in for Climate::GoveeClient. Queue devices and per-device states;
-  # raise by queueing an Exception, the same convention as FakeHttp.
-  class FakeGovee
-    attr_reader :state_calls, :device_calls
-    attr_accessor :rate_limit_remaining
-
-    def initialize(devices: [], states: {})
-      @devices = devices
-      @states = states
-      @state_calls = []
-      @device_calls = 0
-      @rate_limit_remaining = 9_000
-    end
-
-    def devices
-      @device_calls += 1
-      raise @devices if @devices.is_a?(Exception)
-
-      @devices
-    end
-
-    def state(sku:, external_id:)
-      @state_calls << { sku: sku, external_id: external_id }
-      result = @states.fetch(external_id) { raise "FakeGovee has no state queued for #{external_id}" }
-      raise result if result.is_a?(Exception)
-
-      result
-    end
-  end
 
   # Stands in for Climate::OpenMeteoClient.
   class FakeOutdoorSource

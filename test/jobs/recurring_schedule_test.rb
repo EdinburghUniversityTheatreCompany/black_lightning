@@ -22,8 +22,10 @@ class RecurringScheduleTest < ActiveSupport::TestCase
     end
   end
 
-  test "the climate pollers are scheduled" do
-    assert_equal "Climate::SensorPollJob", SCHEDULE.dig("climate_sensor_poll", "class")
+  test "the outdoor climate poller is scheduled" do
+    # There is deliberately no indoor poller: crypt readings arrive by CSV
+    # import, so nothing recurring feeds them.
     assert_equal "Climate::OutdoorPollJob", SCHEDULE.dig("climate_outdoor_poll", "class")
+    assert_nil SCHEDULE["climate_sensor_poll"]
   end
 end

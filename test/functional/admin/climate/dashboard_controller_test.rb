@@ -95,14 +95,6 @@ module Admin
         assert_match "88", response.body
       end
 
-      test "flags a sensor whose unit is unverified" do
-        create_climate_sensor(temperature_unit: nil)
-
-        get :show
-
-        assert_equal 1, assigns(:unverified).size
-      end
-
       test "serves the same series as json" do
         sensor = create_climate_sensor
         create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)

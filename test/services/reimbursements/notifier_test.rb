@@ -173,7 +173,7 @@ module Reimbursements
       notifier, graph = build
       graph.fail_send = true
 
-      assert_raises(Reimbursements::GraphAuth::Error) do
+      assert_raises(::GraphAuth::Error) do
         notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
       end
     end

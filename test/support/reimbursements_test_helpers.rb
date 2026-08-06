@@ -138,7 +138,7 @@ module ReimbursementsTestHelpers
   # the mailbox it was built for — a shared stand-in for Notifier across
   # NightlyBatchJob/BuildBatchJob tests. +fail+ makes every send raise
   # +fail_with+ (a plain Graph outage by default; pass
-  # Reimbursements::GraphAuth::AuthError to drive the IT-escalation path);
+  # ::GraphAuth::AuthError to drive the IT-escalation path);
   # +fail_only+ names the alerts that should fail, leaving the rest working —
   # the nightly sends two independent reminders per run, and whether a partly
   # failed run is recorded is exactly what that asymmetry has to prove.
@@ -146,7 +146,7 @@ module ReimbursementsTestHelpers
     attr_reader :calls, :mailbox
 
     def initialize(mailbox: nil, fail: false, fail_only: [],
-                   fail_with: Reimbursements::GraphAuth::Error)
+                   fail_with: ::GraphAuth::Error)
       @mailbox = mailbox
       @fail = fail
       @fail_only = Array(fail_only)
@@ -200,15 +200,15 @@ module ReimbursementsTestHelpers
     end
 
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
-      raise Reimbursements::GraphAuth::Error, "SharePoint down" if fail_uploads
-      raise Reimbursements::GraphAuth::Error, "SharePoint down for #{filename}" if Array(fail_upload_for).include?(filename)
+      raise ::GraphAuth::Error, "SharePoint down" if fail_uploads
+      raise ::GraphAuth::Error, "SharePoint down for #{filename}" if Array(fail_upload_for).include?(filename)
 
       @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
       "https://sp.example/#{folder_id}/#{filename}"
     end
 
     def create_draft(mailbox:, to:, subject:, html:, attachments:)
-      raise Reimbursements::GraphAuth::Error, "draft failed" if fail_draft
+      raise ::GraphAuth::Error, "draft failed" if fail_draft
 
       @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
                    attachments: attachments.map(&:filename) }
@@ -217,16 +217,16 @@ module ReimbursementsTestHelpers
     end
 
     def delete_message(mailbox:, message_id:)
-      raise Reimbursements::GraphAuth::Error, "delete failed" if fail_delete_message
+      raise ::GraphAuth::Error, "delete failed" if fail_delete_message
 
       @deleted_messages << { mailbox: mailbox, message_id: message_id }
       nil
     end
 
     def send_mail(mailbox:, to:, subject:, html:)
-      raise Reimbursements::GraphAuth::Error, "send failed" if fail_send
+      raise ::GraphAuth::Error, "send failed" if fail_send
       if (Array(to) & Array(fail_send_to)).any?
-        raise Reimbursements::GraphAuth::Error, "send failed for #{to.inspect}"
+        raise ::GraphAuth::Error, "send failed for #{to.inspect}"
       end
 
       @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html }
