@@ -74,8 +74,26 @@ and choose again.
 - `/admin/climate` shows a tile per sensor with plausible crypt values — roughly 8–16 °C and high
   humidity — and the charts fill in as readings accumulate.
 
-There is no backfill for indoor data. The Govee API serves only the current reading and keeps no
-history, so the charts start from the moment a sensor is activated.
+## Historical data: the API has none, but Govee does
+
+The **Developer API** used here has no history endpoint — `/device/state` returns the current
+reading and nothing else — so the charts only fill in from the moment a sensor is activated.
+
+**The history itself is not lost, though.** Govee keeps it in two places:
+
+- **On the device**: about 20 days of readings, which is also the window the app graphs live.
+- **In the app**: up to **2 years**, exportable as **CSV, delivered by email**. In Govee Home,
+  open the sensor → its graph / settings → **Export Data**, enter an email address.
+
+So if the crypt sensors have been running for a while, that history is recoverable — just not
+programmatically. Nothing in this app imports it yet; a CSV importer feeding
+`Climate::ReadingIngest.upsert_series!` would be a small piece of work, and the ingest path is
+already idempotent, so a re-import cannot duplicate rows. Worth doing before the on-device 20-day
+buffer rolls over if there is a period you care about.
+
+One catch that matters as much here as anywhere: the CSV carries whatever unit the **app** is set
+to display, which is not necessarily the unit the API reports. Check the column header before
+importing.
 
 ## Outdoor data
 

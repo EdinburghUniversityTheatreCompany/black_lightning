@@ -430,3 +430,20 @@ limited to a single sidebar entry for the same reason — `/admin/climate` would
 
 **Fix:** an `exact: true` option on a navbar item, matching on equality instead. Both existing
 call sites could then say what they mean rather than working around it.
+
+## Import the Govee CSV export to backfill sensor history
+
+*Noticed 2026-08-06, correcting an overstatement in the climate work.* The Govee **Developer API**
+has no history endpoint, which is true and is why `SensorPollJob` exists — but the earlier note that
+pre-activation data "can never be recovered" was wrong. Govee keeps ~20 days on the device and up to
+**2 years in the app**, exportable as **CSV by email** (Govee Home → sensor → Export Data).
+
+**Fix:** a paste-or-upload importer feeding `Climate::ReadingIngest.upsert_series!`, following the
+`Reimbursements::BudgetImport` shape (preview then apply, via the shared `ImportParsing` concern).
+The ingest path is already idempotent, so a re-import cannot duplicate rows, and `raw_temperature`
+gives the same reversibility the poller has.
+
+Two gotchas for whoever builds it: the CSV carries whatever unit the **app** is set to display,
+which need not match what the API reports (so the importer must ask, not assume — same trap as
+`temperature_unit`); and the on-device 20-day buffer rolls over, so an export is worth taking
+before a period of interest ages out.

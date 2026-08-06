@@ -290,7 +290,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
     t.index ["techie_id"], name: "index_children_techies_on_techie_id"
   end
 
-  create_table "climate_readings", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "climate_readings", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "dew_point_c", precision: 5, scale: 2
     t.decimal "raw_temperature", precision: 7, scale: 2
@@ -303,7 +303,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140100) do
     t.index ["sensor_id", "recorded_at"], name: "index_climate_readings_on_sensor_id_and_recorded_at", unique: true
   end
 
-  create_table "climate_sensors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "climate_sensors", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.boolean "active", default: false, null: false
     t.datetime "created_at", null: false
     t.string "display_name", null: false

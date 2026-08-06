@@ -480,11 +480,15 @@ Temperature / humidity / dew point charts at `/admin/climate`
 - **`Climate::ReadingIngest` is the only write path.** It owns unit conversion, dew point, the
   plausibility guard (−20..50 °C, 0..100 %) and the idempotent `upsert_all`. Don't create a
   `Climate::Reading` anywhere else.
-- **The Govee API has no history endpoint** — it serves "now" only. The charts' history is
-  exactly what `Climate::SensorPollJob` has polled (every 10 min); nothing before a sensor was
-  activated can ever be recovered. **An `online: false` device writes nothing**: Govee keeps
-  serving the last known value for a unit with dead batteries, which would draw a flat,
-  fictional line. Rate limit is 10,000/day per **account**, not per key.
+- **The Govee *Developer API* has no history endpoint** — it serves "now" only, so the charts
+  only cover what `Climate::SensorPollJob` has polled (every 10 min). **Govee itself does keep
+  history**, though: ~20 days on the device, and up to 2 years in the app, exportable as CSV by
+  email. So pre-activation data is recoverable by hand even though no endpoint serves it — a CSV
+  importer feeding `ReadingIngest.upsert_series!` is an open backlog item, and the ingest path is
+  already idempotent. Note the CSV carries the unit the **app** displays, which need not be the
+  unit the API reports. **An `online: false` device writes nothing**: Govee keeps serving the
+  last known value for a unit with dead batteries, which would draw a flat, fictional line. Rate
+  limit is 10,000/day per **account**, not per key.
 - **Outdoor data self-heals, which is why Open-Meteo won.** `OutdoorPollJob` asks for a rolling
   `past_days` window hourly and upserts the lot, so an outage fills its own gap — there is no
   backfill code in this feature. Attribution (CC BY 4.0) is a licence condition and is rendered
