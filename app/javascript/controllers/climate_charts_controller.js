@@ -110,8 +110,9 @@ export default class extends Controller {
         maintainAspectRatio: false,
         animation: this.#reducedMotion ? false : undefined,
         interaction: { mode: "index", intersect: false },
-        // Room on the right for the end-of-line labels.
-        layout: { padding: { right: 84 } },
+        // Right padding is set by the end-label plugin, which measures the
+        // labels rather than guessing a width that a longer sensor name clips.
+        layout: { padding: { right: 0 } },
         scales: {
           x: {
             type: "time",
@@ -163,12 +164,45 @@ export default class extends Controller {
   // slots that fall below 3:1 against the surface, and the fastest way to read
   // which line is which without crossing to the legend.
   #endLabelPlugin() {
+    const FONT = "600 11px system-ui, sans-serif"
+    const GAP = 6
+    // Past this the labels eat the plot. Longer names are ellipsised instead.
+    const MAX_WIDTH = 150
+
+    const fit = (ctx, text) => {
+      if (ctx.measureText(text).width <= MAX_WIDTH) return text
+
+      let truncated = text
+      while (truncated.length > 1 && ctx.measureText(`${truncated}…`).width > MAX_WIDTH) {
+        truncated = truncated.slice(0, -1)
+      }
+      return `${truncated}…`
+    }
+
     return {
       id: "climateEndLabels",
+
+      // Measure the labels and reserve exactly that much gutter. A fixed
+      // padding clips the moment someone names a sensor something long.
+      beforeLayout(chart) {
+        const ctx = chart.ctx
+        ctx.save()
+        ctx.font = FONT
+        const widest = chart.data.datasets.reduce(
+          (max, dataset, index) =>
+            chart.getDatasetMeta(index).hidden
+              ? max
+              : Math.max(max, ctx.measureText(fit(ctx, dataset.label)).width),
+          0,
+        )
+        ctx.restore()
+        chart.options.layout.padding.right = Math.ceil(widest) + GAP * 2
+      },
+
       afterDatasetsDraw(chart) {
         const { ctx } = chart
         ctx.save()
-        ctx.font = "600 11px system-ui, sans-serif"
+        ctx.font = FONT
         ctx.textBaseline = "middle"
 
         chart.data.datasets.forEach((dataset, index) => {
@@ -179,7 +213,7 @@ export default class extends Controller {
           if (!last) return
 
           ctx.fillStyle = dataset.borderColor
-          ctx.fillText(dataset.label, last.x + 6, last.y)
+          ctx.fillText(fit(ctx, dataset.label), last.x + GAP, last.y)
         })
         ctx.restore()
       },
