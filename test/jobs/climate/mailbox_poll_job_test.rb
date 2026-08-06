@@ -90,32 +90,9 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     assert_equal [ [ "1", :processed ] ], fake.processed
   end
 
-  test "matches the sensor named in the subject when there are several" do
-    north = create_climate_sensor(display_name: "Crypt north")
-    south = create_climate_sensor(display_name: "Crypt south")
-    use_mailbox(FakeMailbox.new(messages: { "1" => "Export for Crypt south" },
-                                attachments: { "1" => [ csv_attachment ] }))
-
-    Climate::MailboxPollJob.perform_now
-
-    assert_equal 2, south.readings.count
-    assert_equal 0, north.readings.count
-  end
-
-  test "matches the sensor named in the attachment filename" do
-    north = create_climate_sensor(display_name: "Crypt north")
-    create_climate_sensor(display_name: "Crypt south")
-    use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
-                                attachments: { "1" => [ csv_attachment(filename: "Crypt north 2026-08.csv") ] }))
-
-    Climate::MailboxPollJob.perform_now
-
-    assert_equal 2, north.readings.count
-  end
-
-  test "leaves a message unread when it cannot tell which of several sensors it is" do
-    # Guessing here would attribute one wall's readings to another — silent,
-    # plausible-looking nonsense. Waiting for a human is the safe direction.
+  test "leaves a message unread when more than one sensor exists" do
+    # Govee's email identifies no device, so with two sensors there is nothing
+    # to resolve on. Guessing would file one wall's readings under another.
     north = create_climate_sensor(display_name: "Crypt north")
     south = create_climate_sensor(display_name: "Crypt south")
     fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
@@ -128,15 +105,32 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     assert_equal 0, south.readings.count
   end
 
-  test "leaves a message unread when two sensor names both match" do
-    create_climate_sensor(display_name: "Crypt")
+  test "reports the ambiguity rather than letting mail pile up unnoticed" do
+    Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
     create_climate_sensor(display_name: "Crypt north")
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Export for Crypt north" },
-                                       attachments: { "1" => [ csv_attachment ] }))
+    create_climate_sensor(display_name: "Crypt south")
+    use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
+                                attachments: { "1" => [ csv_attachment ] }))
 
-    Climate::MailboxPollJob.perform_now
+    notices = capture_honeybadger_notices { Climate::MailboxPollJob.perform_now }
 
-    assert_empty fake.read
+    assert_equal 1, notices.size
+  end
+
+  test "the ambiguity alert is sent once a day, not once a cycle" do
+    Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
+    create_climate_sensor(display_name: "Crypt north")
+    create_climate_sensor(display_name: "Crypt south")
+
+    notices = capture_honeybadger_notices do
+      3.times do
+        use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
+                                    attachments: { "1" => [ csv_attachment ] }))
+        Climate::MailboxPollJob.perform_now
+      end
+    end
+
+    assert_equal 1, notices.size
   end
 
   test "leaves a message with no CSV attachment unread" do
@@ -208,8 +202,10 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   end
 
   test "never imports against the outdoor feed" do
+    # It is the only sensor here, but it is not a Govee one — a crypt file
+    # landing on the comparison line would corrupt it.
     outdoor = outdoor_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Export for #{outdoor.display_name}" },
+    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
                                        attachments: { "1" => [ csv_attachment ] }))
 
     Climate::MailboxPollJob.perform_now

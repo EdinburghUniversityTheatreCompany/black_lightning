@@ -1,13 +1,11 @@
 module Climate
   ##
   # The single write path into climate_readings: the plausibility guard, the dew
-  # point and the idempotent upsert. Nothing else should create a
-  # Climate::Reading.
+  # point and the idempotent upsert. Nothing else should create a Reading.
   #
   # Both feeds arrive as a whole window of already-timestamped rows — a CSV
-  # export for the crypt sensors, an hourly forecast window for outdoors — so
-  # there is one method, and re-sending an overlapping window is the normal case
-  # rather than an error.
+  # export indoors, an hourly forecast window outdoors — so re-sending an
+  # overlapping window is the normal case, not an error.
   class ReadingIngest
     # An Edinburgh basement reaches neither bound, so anything outside is a
     # mis-read column or a broken sensor rather than weather.

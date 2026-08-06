@@ -1,9 +1,8 @@
 module Admin
   module Climate
     ##
-    # Sensor configuration. Sensors are created by hand: the Govee CSV export
-    # carries no device identifier, only timestamps and readings, so nothing can
-    # discover them and the operator says which sensor a file belongs to.
+    # Sensors are created by hand: the CSV export carries no device identifier,
+    # so nothing can discover them.
     class SensorsController < BaseController
       before_action :authorize_climate_manage!, except: :index
       before_action :find_sensor, only: %i[edit update destroy]

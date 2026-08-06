@@ -6,18 +6,17 @@ module Climate
   # It calls exactly the same CsvImport + ReadingIngest path as the manual
   # upload screen, so the two cannot drift.
   #
-  # WHICH SENSOR a file belongs to is the hard part: the CSV carries no device
-  # identifier. The rule is deliberately conservative — match a sensor whose
-  # display name appears in the subject or the attachment filename, and if
-  # exactly one Govee sensor exists overall, use it. Anything ambiguous is left
-  # UNREAD and reported rather than guessed at, because attributing the north
-  # wall's readings to the south wall is silent, plausible-looking nonsense.
+  # Assumes ONE crypt sensor, because nothing in Govee's export email identifies
+  # the device — see #sensor_for for how to extend it.
   class MailboxPollJob < ::ApplicationJob
     include ::ErrorReporting
 
     queue_as :default
     limits_concurrency key: "climate_mailbox_poll", duration: 10.minutes
 
+    ConfigurationError = Class.new(StandardError)
+
+    AMBIGUOUS_ALERT_KEY = "climate_mailbox_ambiguous_sensor".freeze
     CSV_EXTENSIONS = %w[.csv .txt].freeze
     CSV_CONTENT_TYPES = %w[text/csv application/csv text/plain].freeze
 
@@ -41,8 +40,7 @@ module Climate
 
     private
 
-    # One bad message must not stop the others being ingested. Leaving it unread
-    # is the retry: the next cycle picks it up again.
+    # Leaving it unread IS the retry: the next cycle picks it up again.
     def process_safely(mailbox, message)
       process(mailbox, message)
     rescue ::GraphAuth::AuthError
@@ -56,12 +54,16 @@ module Climate
       attachments = csv_attachments(mailbox, message)
       return skip(message, "no CSV attachment") if attachments.empty?
 
-      imported = attachments.sum { |attachment| import(message, attachment) }
-      return if imported.nil?
+      # Collected, not summed inline: #import returns nil for an attachment it
+      # could not handle, and summing that raises — which the rescue upstream
+      # would then report as a second, misleading failure.
+      results = attachments.map { |attachment| import(message, attachment) }
+      return if results.any?(&:nil?)
 
-      # Marking read is the commit point: an unread message is retried, and the
-      # import itself is idempotent, so a crash between here and the move costs
-      # nothing worse than a duplicate no-op next cycle.
+      imported = results.sum
+
+      # The commit point. The import is idempotent, so a crash before this costs
+      # nothing worse than a repeated no-op next cycle.
       mailbox.mark_read_and_move(message.id, :processed)
       Rails.logger.info("[climate] imported #{imported} readings from #{message.subject.inspect}")
     end
@@ -93,18 +95,33 @@ module Climate
       nil
     end
 
-    def sensor_for(message, attachment)
+    # Govee's export email identifies no device — not in the subject, not in the
+    # filename — so with several sensors there is nothing to resolve on, and one
+    # wall's readings filed under another is silent, plausible nonsense.
+    #
+    # THE EXTENSION POINT: give each sensor its own mailbox (or plus address) and
+    # resolve on the recipient, or add a per-sensor match string if Govee ever
+    # names the device. Only this method changes.
+    def sensor_for(_message, _attachment)
       candidates = Sensor.govee.to_a
-      return nil if candidates.empty?
+      return candidates.first if candidates.one?
 
-      haystack = "#{message.subject} #{attachment[:filename]}".downcase
-      named = candidates.select { |sensor| haystack.include?(sensor.display_name.downcase) }
-      return named.first if named.one?
-      return nil if named.many?
+      warn_ambiguous if candidates.many?
+      nil
+    end
 
-      # No name matched. With a single sensor there is nothing to confuse it
-      # with; with several, guessing would be worse than waiting.
-      candidates.one? ? candidates.first : nil
+    # Otherwise unattributable mail piles up unread with nobody the wiser.
+    # Deduped to once a day: it is a configuration state, not an incident.
+    def warn_ambiguous
+      return unless Rails.cache.write(AMBIGUOUS_ALERT_KEY, true, expires_in: 1.day, unless_exist: true)
+
+      error = ConfigurationError.new(
+        "#{Sensor.govee.count} climate sensors exist, and a Govee export names none of them, " \
+        "so emailed readings cannot be attributed. Import them by hand, or see " \
+        "Climate::MailboxPollJob#sensor_for."
+      )
+      log_and_notify("[climate] emailed export cannot be attributed", error,
+                     context: { source: "climate_mailbox_poll" })
     end
   end
 end

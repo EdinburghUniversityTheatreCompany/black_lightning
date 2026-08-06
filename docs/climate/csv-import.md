@@ -73,12 +73,36 @@ using the same parser as the manual upload. To switch it on:
 
 Unset, the job logs and returns — an environment without a mailbox is simply quiet.
 
-**Which sensor an emailed file belongs to** is the one genuinely awkward part, because the CSV
-carries no device identifier. The job matches a sensor whose name appears in the subject or the
-attachment filename, and falls back to the only sensor when there is just one. Anything ambiguous
-is **left unread and logged** rather than guessed, so it waits for a human instead of attributing
-one wall's readings to another. Name each sensor to match what Govee calls it and this resolves
-itself.
+### One sensor, for now
+
+Nothing in Govee's export email identifies the device — not the subject, not the attachment
+filename. So the job assumes **one** crypt sensor and imports against it.
+
+With more than one it leaves the message unread and raises an alert (once a day, not once a
+cycle), rather than filing one wall's readings under another. To support several later, the only
+method that changes is `Climate::MailboxPollJob#sensor_for`: give each sensor its own mailbox or
+plus address and resolve on the recipient, or add a per-sensor match string if Govee ever starts
+naming the device.
+
+### On the Entra app
+
+**No new app registration is needed.** The existing reimbursements app already holds the
+application permission this uses (`Mail.ReadWrite` — it replies, marks read and moves on the
+reimbursements mailbox), so there is no new API permission and no new admin consent.
+
+What does change is the Exchange-side scoping. Graph *application* permissions are tenant-wide by
+default; the app is narrowed to specific mailboxes by an `ApplicationAccessPolicy`. Two ways to
+add the climate mailbox:
+
+- **Preferred** — scope the policy to a **mail-enabled security group** (the only group type
+  `-PolicyScopeGroupId` accepts) and put both mailboxes in it. Adding a third mailbox later is
+  then a group membership change, not a policy change.
+- Or add a second `New-ApplicationAccessPolicy` for the same `-AppId`. Policies for one app are
+  **additive**, so this works — it is just more to keep track of.
+
+Worth knowing: Microsoft is retiring Application Access Policies in favour of
+[RBAC for Applications in Exchange Online](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac),
+which is now the recommended way to scope an app to specific mailboxes.
 
 ## Reading the dashboard
 

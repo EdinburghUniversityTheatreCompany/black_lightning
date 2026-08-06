@@ -3,15 +3,12 @@ module Admin
     ##
     # Importing a Govee CSV export.
     #
-    # Deliberately one step rather than the preview-then-apply wizard the budget
-    # import uses. There are no per-row decisions to make, a two-year backfill is
-    # tens of thousands of rows (far past what a hidden-field round trip can
-    # carry), and re-importing is harmless because the unique index dedups. The
-    # one consequential choice — which sensor the file belongs to — is made
-    # before the upload, not after.
+    # One step, not the budget import's preview-then-apply wizard: no per-row
+    # decisions exist, a two-year backfill is far past what a hidden-field round
+    # trip carries, and re-importing is harmless. The one consequential choice —
+    # which sensor — is made before the upload.
     #
-    # This is also the exact path an automated mailbox ingest calls, so the
-    # manual and automatic routes cannot drift.
+    # It is also the exact path the mailbox ingest calls, so the two cannot drift.
     class ImportsController < BaseController
       before_action :authorize_climate_manage!
 

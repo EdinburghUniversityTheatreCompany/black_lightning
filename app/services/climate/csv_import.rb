@@ -8,15 +8,12 @@ module Climate
   #   \xEF\xBB\xBFTimestamp for sample frequency every 15 min min, Temperature_Celsius,Relative_Humidity
   #   2026-08-06 09:22:00,24.6,53.7
   #
-  # The header names its own unit, which is what replaced the old
-  # verify-the-unit-per-sensor flow: the export uses whatever unit the app is
-  # set to display, and this reads it rather than assuming. A file whose unit
-  # cannot be identified is REFUSED, never guessed — guessing is precisely how
-  # you end up with a year of Fahrenheit stored as Celsius.
+  # The header names its own unit — whatever the app is set to display — so this
+  # reads it rather than assuming, and REFUSES a file it cannot identify. That
+  # refusal replaced the old verify-the-unit-per-sensor flow.
   #
-  # Pure parsing: no database, no dew point, no dedup. Dedup is the unique index
-  # on (sensor_id, recorded_at), which is why re-importing an overlapping daily
-  # export is harmless.
+  # Pure parsing: no database, no dew point, no dedup. Dedup belongs to the
+  # unique index, which is why re-importing an overlapping export is harmless.
   class CsvImport
     UNIT_CELSIUS = "C".freeze
     UNIT_FAHRENHEIT = "F".freeze
@@ -63,8 +60,7 @@ module Climate
       headers = table.shift.to_a.map { |cell| cell.to_s.strip }
       return unless locate_columns(headers)
 
-      # +2: one for the header line, one because CSV rows are zero-based — so
-      # the number reported is the line an operator sees in a text editor.
+      # +2 so the reported number is the line an operator sees in an editor.
       table.each_with_index { |row, index| read_row(row, index + 2) }
       @errors << "That file has headers but no readings." if @rows.empty? && @errors.empty?
       @rows.sort_by! { |row| row[:recorded_at] }
