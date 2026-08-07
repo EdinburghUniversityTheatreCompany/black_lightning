@@ -11,12 +11,24 @@
               class: btn_classes(:secondary, :sm) %>
 </div>
 
+<%
+  # Rendered inside each alert so the operator can clear it once handled,
+  # rather than waiting out the seven-day window with a red banner on screen.
+  dismiss_button = lambda do |attempt|
+    next unless attempt.dismissable?
+
+    button_to "Dismiss", dismiss_admin_reimbursements_batch_attempt_path(attempt),
+              method: :post, class: btn_classes(:secondary, :sm),
+              form: { class: "inline-block mt-2" }
+  end
+%>
 <% @batch_attempts.each do |attempt| %>
   <% if attempt.stale? %>
     <%= render AlertComponent.new(type: :warning) do %>
       A batch build for <%= attempt.cost_centre.name %> started
       <%= time_ago_in_words(attempt.created_at) %> ago and hasn't finished; it has likely
       failed without reporting back. Check the job queue (or ask IT) before rebuilding.
+      <%= dismiss_button.call(attempt) %>
     <% end %>
   <% elsif attempt.building? %>
     <%= render AlertComponent.new(type: :info) do %>
@@ -37,12 +49,14 @@
           <li><%= message %></li>
         <% end %>
       </ul>
+      <%= dismiss_button.call(attempt) %>
     <% end %>
   <% elsif attempt.nothing_to_build? %>
     <%= render AlertComponent.new(type: :info) do %>
       The batch build for <%= attempt.cost_centre.name %> on
       <%= reimbursements_date(attempt.created_at.to_date) %> found no Approved expenses.
       Nothing was built. (A build just before it probably already submitted them.)
+      <%= dismiss_button.call(attempt) %>
     <% end %>
   <% elsif attempt.completed? %>
     <%= render AlertComponent.new(type: :warning) do %>
@@ -56,6 +70,7 @@
           <li><%= message %></li>
         <% end %>
       </ul>
+      <%= dismiss_button.call(attempt) %>
     <% end %>
   <% end %>
 <% end %>

@@ -5,6 +5,8 @@
 #
 #  id                 :bigint           not null, primary key
 #  bacs_date          :date
+#  dismissed_at       :datetime
+#  dismissed_by_email :string(255)
 #  error_messages     :text(65535)
 #  status             :string(255)      default("building"), not null
 #  triggered_by_email :string(255)
@@ -15,6 +17,7 @@
 #
 # Indexes
 #
+#  idx_batch_attempts_on_cost_centre_and_dismissed        (cost_centre_id,dismissed_at)
 #  idx_on_cost_centre_id_status_4ce6fe61ad                (cost_centre_id,status)
 #  index_reimbursements_batch_attempts_on_cost_centre_id  (cost_centre_id)
 #
@@ -49,9 +52,12 @@ module Reimbursements
     # the Batch row itself, and "nothing_to_build" is the benign, expected
     # outcome of a serialised double-click — surfacing it for days would be
     # pure noise, so it's recorded but not alerted on.
+    # The trailing where applies to the whole OR, giving
+    # "(building OR failed OR completed-with-warnings) AND not dismissed".
     scope :needing_attention, lambda {
       where(status: %w[building failed])
         .or(where(status: "completed").where.not(error_messages: [ nil, "" ]))
+        .where(dismissed_at: nil)
     }
     scope :recent_first, -> { order(created_at: :desc) }
 
@@ -63,6 +69,20 @@ module Reimbursements
     def stale?
       building? && created_at < STALE_AFTER.ago
     end
+
+    def dismissed? = dismissed_at.present?
+
+    # An operator saying "I have dealt with this", not a correction of the
+    # record: the row keeps its status, its errors and its batch_record_id, so
+    # a dismissed attempt still reads as a failure in the audit trail.
+    def dismiss!(email: nil)
+      update!(dismissed_at: Time.current, dismissed_by_email: email.presence)
+    end
+
+    # A build still running resolves itself within minutes, so offering to hide
+    # it would only invite hiding something live. Everything else is waiting on
+    # a human and should be clearable once they have acted.
+    def dismissable? = !(building? && !stale?)
 
     def resolve!(status:, error_messages: nil, batch_record_id: nil)
       update!(status: status, error_messages: error_messages.presence,

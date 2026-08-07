@@ -176,6 +176,10 @@ ChaosRails::Application.routes.draw do
       post "status/run", to: "status#run",  as: :run_status_checks
 
       # Finance-team Build Batch (new/create) + History (index/show/reopen).
+      # Clearing a build-attempt banner from History once it has been handled.
+      resources :batch_attempts, only: [] do
+        member { post :dismiss }
+      end
       resources :batches, only: %i[index show new create] do
         member { post :reopen }
       end

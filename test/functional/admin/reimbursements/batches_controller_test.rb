@@ -389,6 +389,41 @@ module Admin
         assert_match(/already Paid/, flash[:alert])
         assert ::Reimbursements::Batch.exists?(@batch.id)
       end
+
+      test "History offers a Dismiss button on a failed build" do
+        sign_in @user
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               status: "failed", error_messages: "boom")
+
+        get :index
+
+        assert_response :success
+        assert_match(/Dismiss/, response.body)
+      end
+
+      test "History offers no Dismiss on a build still running" do
+        sign_in @user
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default)
+
+        get :index
+
+        assert_response :success
+        assert_no_match(/Dismiss/, response.body)
+      end
+
+      test "a dismissed failure is gone from History" do
+        sign_in @user
+        attempt = ::Reimbursements::BatchAttempt.create!(
+          cost_centre: ::Reimbursements::CostCentre.default,
+          status: "failed", error_messages: "a distinctive failure message"
+        )
+        attempt.dismiss!
+
+        get :index
+
+        assert_response :success
+        assert_no_match(/a distinctive failure message/, response.body)
+      end
     end
   end
 end

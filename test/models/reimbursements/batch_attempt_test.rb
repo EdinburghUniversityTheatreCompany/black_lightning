@@ -57,5 +57,58 @@ module Reimbursements
       # not surfaced as a lingering alert.
       assert_not_includes attention, noop
     end
+
+    test "a dismissed attempt drops out of needing_attention" do
+      failed = build_attempt(status: "failed", error_messages: "boom")
+
+      assert_includes BatchAttempt.needing_attention, failed
+
+      failed.dismiss!(email: "finance@example.com")
+
+      assert_not_includes BatchAttempt.needing_attention, failed
+    end
+
+    test "dismissing hides the alert without editing the record" do
+      # The row is the audit trail of what was attempted, and one carrying a
+      # batch_record_id is the only pointer to a draft that may still exist.
+      failed = build_attempt(status: "failed", error_messages: "boom",
+                             batch_record_id: "recBat9")
+      failed.dismiss!(email: "finance@example.com")
+      failed.reload
+
+      assert_predicate failed, :dismissed?
+      assert_predicate failed, :failed?
+      assert_equal "boom", failed.error_messages
+      assert_equal "recBat9", failed.batch_record_id
+      assert_equal "finance@example.com", failed.dismissed_by_email
+    end
+
+    test "dismissing does not disturb another attempt's alert" do
+      first = build_attempt(status: "failed", error_messages: "boom")
+      second = build_attempt(status: "failed", error_messages: "also boom")
+
+      first.dismiss!
+
+      assert_not_includes BatchAttempt.needing_attention, first
+      assert_includes BatchAttempt.needing_attention, second
+    end
+
+    test "a build still running is not dismissable, but a stale one is" do
+      # Offering to hide a live build only invites hiding something in flight;
+      # once it is stale it is waiting on a human and should be clearable.
+      running = build_attempt
+
+      assert_not running.dismissable?
+
+      travel_to (BatchAttempt::STALE_AFTER + 1.minute).from_now do
+        assert_predicate running, :dismissable?
+      end
+    end
+
+    test "failed, no-op and completed attempts are all dismissable" do
+      assert_predicate build_attempt(status: "failed", error_messages: "boom"), :dismissable?
+      assert_predicate build_attempt(status: "nothing_to_build"), :dismissable?
+      assert_predicate build_attempt(status: "completed", error_messages: "partial"), :dismissable?
+    end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -670,10 +670,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.string "batch_record_id"
     t.bigint "cost_centre_id", null: false
     t.datetime "created_at", null: false
+    t.datetime "dismissed_at"
+    t.string "dismissed_by_email"
     t.text "error_messages"
     t.string "status", default: "building", null: false
     t.string "triggered_by_email"
     t.datetime "updated_at", null: false
+    t.index ["cost_centre_id", "dismissed_at"], name: "idx_batch_attempts_on_cost_centre_and_dismissed"
     t.index ["cost_centre_id", "status"], name: "idx_on_cost_centre_id_status_4ce6fe61ad"
     t.index ["cost_centre_id"], name: "index_reimbursements_batch_attempts_on_cost_centre_id"
   end
