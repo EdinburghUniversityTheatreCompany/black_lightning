@@ -41,7 +41,7 @@ module Climate
     scope :chronological, -> { order(:recorded_at) }
 
     # How far the air has to cool before it condenses. Under about 3 °C is the
-    # number worth acting on. See ClimateHelper::CONDENSATION_RISK_MARGIN.
+    # number worth acting on. See Climate::CONDENSATION_RISK_MARGIN.
     def dew_point_margin
       return nil if temperature_c.nil? || dew_point_c.nil?
 

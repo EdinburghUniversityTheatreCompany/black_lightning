@@ -2,7 +2,7 @@
   Temperature, relative humidity and dew point in the crypt, compared with outside. Condensation
   forms on any surface at or below the dew point of the air touching it, so the walls need to sit a
   few degrees above the crypt's dew point to keep mould off them.
-  <strong>Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C of margin is worth acting on</strong>,
+  <strong>Under <%= number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 0) %> °C of margin is worth acting on</strong>,
   which is roughly 80% humidity at the surface and where mould starts to grow.
 </p>
 

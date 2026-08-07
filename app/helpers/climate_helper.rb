@@ -1,9 +1,4 @@
 module ClimateHelper
-  # Below this many degrees between the air temperature and its dew point,
-  # condensation is a live risk rather than a theoretical one. This is the
-  # number the crypt monitor exists to watch.
-  CONDENSATION_RISK_MARGIN = 3.0
-
   def climate_temperature(value)
     return "—" if value.blank?
 
@@ -23,7 +18,7 @@ module ClimateHelper
   end
 
   def climate_condensation_risk?(margin)
-    margin.present? && margin < CONDENSATION_RISK_MARGIN
+    margin.present? && margin < Climate::CONDENSATION_RISK_MARGIN
   end
 
   # "4 minutes ago", or an explicit nudge when there is nothing at all.
