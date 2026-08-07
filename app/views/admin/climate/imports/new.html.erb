@@ -10,9 +10,14 @@
     </p>
   <% else %>
     <p class="text-gray-600">
-      In the Govee Home app, open the sensor, then <strong>Export Data</strong> and send the CSV to
-      yourself. Drop it here. Importing the same file twice is harmless, because readings are keyed by
-      sensor and timestamp, so an overlapping daily export just overwrites what it already covers.
+      <strong>The crypt sensors have no WiFi.</strong> They're reachable over Bluetooth from the
+      dressing room, so open the Govee Home app there and wait for it to connect. Once it has, open
+      the sensor, choose <strong>Export Data</strong> and send the CSV to yourself.
+    </p>
+
+    <p class="text-gray-600">
+      Drop the file here. Importing the same one twice is harmless, because readings are keyed by
+      sensor and timestamp, so an overlapping export just overwrites what it already covers.
     </p>
 
     <%= form_with url: admin_climate_import_path, method: :post, multipart: true,

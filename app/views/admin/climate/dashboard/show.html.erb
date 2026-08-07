@@ -68,9 +68,10 @@
 <%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
   <ul class="list-disc pl-5 space-y-2 text-gray-700">
     <li>
-      Crypt readings arrive by importing a CSV export from the Govee app. The device records to
-      its own buffer whether or not it has WiFi, so an export is complete even when the crypt has
-      been offline. Import a fresh one whenever you want the charts brought up to date.
+      Crypt readings arrive by importing a CSV export from the Govee app. The sensors have no
+      WiFi, so they record to their own buffer and hand it over by Bluetooth: stand in the
+      dressing room with the app open and wait for it to connect. The export is complete either
+      way, so nothing is lost by leaving it a while.
     </li>
     <li>
       A <strong>break in a line</strong> is missing data, not a flat reading. Lines are deliberately
@@ -78,8 +79,8 @@
       measurement of the room that never happened.
     </li>
     <li>
-      The device holds about 20 days of readings before overwriting them, so export at least that
-      often if the crypt has a period worth keeping.
+      Each sensor holds about 20 days of readings before overwriting them, so sync and export at
+      least that often if the crypt has a period worth keeping.
     </li>
     <li>
       Long ranges are averaged into wider buckets (hourly, then six-hourly, then daily) so a year

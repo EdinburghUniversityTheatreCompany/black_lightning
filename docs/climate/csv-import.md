@@ -8,8 +8,10 @@ deliberate choice, not a shortcut. See *Why not the API* below.
 
 ## The quick version
 
-1. Govee Home, open the sensor, **Export Data**, enter an email address. A CSV arrives.
-2. `/admin/climate`, then **Import readings**. Pick the sensor and drop the file in.
+1. Stand in the **dressing room** with the Govee Home app open and wait for it to connect. The
+   crypt sensors have no WiFi, so Bluetooth from there is how you reach them.
+2. Open the sensor, **Export Data**, enter an email address. A CSV arrives.
+3. `/admin/climate`, then **Import readings**. Pick the sensor and drop the file in.
 
 Re-importing an overlapping file is harmless. Readings are keyed by sensor and timestamp, so an
 overlap overwrites rather than duplicates.
@@ -55,10 +57,13 @@ the file.
 
 ## Timing
 
-The device holds **about 20 days** before overwriting. The app keeps **up to 2 years**. An
-occasional export is enough, but if the crypt has a period worth keeping, export within 20 days of
-it. You can drain the buffer over Bluetooth by standing next to the sensor with the app open, so
-you don't need WiFi at all.
+Each sensor holds **about 20 days** before overwriting. Once synced, the app keeps **up to 2
+years**. An occasional export is enough, but if the crypt has a period worth keeping, sync within
+20 days of it.
+
+Syncing means getting within Bluetooth range: the dressing room works. Open the Govee Home app and
+wait for it to connect. There's no WiFi involved at any point, which is also why the readings
+survive the crypt being offline for weeks.
 
 ## Automating it (optional)
 
