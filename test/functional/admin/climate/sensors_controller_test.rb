@@ -116,6 +116,15 @@ module Admin
         assert_equal ::Climate::Sensor::SOURCE_GOVEE, sensor.reload.source
       end
 
+      test "a manager can tick a sensor as being in the crypt" do
+        sensor = create_climate_sensor
+
+        patch :update, params: { id: sensor.id,
+                                 climate_sensor: { display_name: sensor.display_name, in_crypt: "1" } }
+
+        assert_predicate sensor.reload, :in_crypt?
+      end
+
       test "a read-only user cannot edit a sensor" do
         sensor = create_climate_sensor
         sign_in_read_only

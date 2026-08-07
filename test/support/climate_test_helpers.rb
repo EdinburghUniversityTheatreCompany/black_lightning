@@ -10,11 +10,11 @@ module ClimateTestHelpers
   def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,
                             placement: Climate::Sensor::PLACEMENT_INDOOR,
                             active: true, location: nil, position: 0,
-                            latitude: nil, longitude: nil)
+                            latitude: nil, longitude: nil, in_crypt: false)
     Climate::Sensor.create!(
       display_name: display_name, source: source, placement: placement,
       active: active, location: location, position: position,
-      latitude: latitude, longitude: longitude
+      latitude: latitude, longitude: longitude, in_crypt: in_crypt
     )
   end
 

@@ -21,6 +21,7 @@
           <th scope="col">Location</th>
           <th scope="col">Fed by</th>
           <th scope="col">Active</th>
+          <th scope="col">In crypt</th>
           <th scope="col" class="text-right">Readings</th>
           <th scope="col">Latest reading</th>
           <th scope="col">Last error</th>
@@ -34,6 +35,7 @@
             <td><%= sensor.location.presence || "—" %></td>
             <td><%= sensor.open_meteo? ? "Open-Meteo (hourly)" : "CSV import" %></td>
             <td><%= sensor.active? ? "Yes" : "No" %></td>
+            <td><%= sensor.in_crypt? ? "Yes" : "No" %></td>
             <td class="text-right"><%= number_with_delimiter(sensor.readings.count) %></td>
             <td>
               <% if sensor.latest_reading %>

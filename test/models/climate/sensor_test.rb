@@ -106,4 +106,26 @@ class Climate::SensorTest < ActiveSupport::TestCase
     assert_in_delta 55.9500, reloaded.latitude.to_f, 0.0001
     assert_equal "Outside (roof)", reloaded.display_name
   end
+
+  test "the outdoor feed cannot be marked as being in the crypt" do
+    sensor = outdoor_climate_sensor
+    sensor.in_crypt = true
+
+    assert_not sensor.valid?
+    assert sensor.errors[:in_crypt].present?
+  end
+
+  test "an indoor sensor can be marked as being in the crypt" do
+    sensor = create_climate_sensor(in_crypt: true)
+
+    assert_predicate sensor, :valid?
+    assert_predicate sensor, :in_crypt?
+  end
+
+  test "the in_crypt scope returns only the ticked sensors" do
+    crypt = create_climate_sensor(display_name: "Crypt", in_crypt: true)
+    create_climate_sensor(display_name: "Dressing room", in_crypt: false)
+
+    assert_equal [ crypt.id ], Climate::Sensor.in_crypt.pluck(:id)
+  end
 end
