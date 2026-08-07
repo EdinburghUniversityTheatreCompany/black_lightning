@@ -14,13 +14,11 @@ module Climate
     limits_concurrency key: "climate_outdoor_poll", duration: 5.minutes
 
     # How far behind the outdoor line has to fall before a failure is worth
-    # reporting. Open-Meteo's free tier sheds load with the odd 503, and because
-    # every call re-serves the past_days window the next successful poll repairs
-    # whatever the failed ones missed — so a single failure has cost us nothing
-    # yet and paging on it is pure noise. What actually matters is the feed being
-    # DOWN: no fresh reading for a day, which no amount of self-healing explains.
-    # Every failure is still logged and written to the sensor's last_error, which
-    # is what the dashboard's staleness badge reads.
+    # reporting. Open-Meteo's free tier sheds load with the odd 503, and by the
+    # self-heal above a failure costs nothing until it outlasts the window — so
+    # only a feed that is actually DOWN is Honeybadger's business. Quieter
+    # failures still reach last_error, which the dashboard's staleness badge
+    # reads on its own tighter window (Sensor::STALE_AFTER).
     REPORT_FAILURE_AFTER = 1.day
 
     # Injection seam for tests. Takes the sensor so the source column picks the
