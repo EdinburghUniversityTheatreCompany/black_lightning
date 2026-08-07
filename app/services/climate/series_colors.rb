@@ -8,10 +8,12 @@ module Climate
   # together. Ranking by id across ALL sensors is stable under exactly the
   # operation that filters those lists.
   class SeriesColors
-    def initialize
-      @ids = Sensor.order(:id).pluck(:id)
-    end
+    # Lazy: a SeriesColors that is never asked for an index (e.g. a
+    # zero-sensor SeriesQuery) must not query the database at all.
+    def index_for(sensor) = ids.index(sensor.id) || 0
 
-    def index_for(sensor) = @ids.index(sensor.id) || 0
+    private
+
+    def ids = @ids ||= Sensor.order(:id).pluck(:id)
   end
 end

@@ -187,7 +187,15 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
   end
 
   test "asks the database nothing when there are no sensors" do
-    assert_empty Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")).series
+    query_count = 0
+    callback = ->(*) { query_count += 1 }
+
+    result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")).series
+    end
+
+    assert_empty result
+    assert_equal 0, query_count
   end
 
   test "each point carries the spread as well as the mean" do
