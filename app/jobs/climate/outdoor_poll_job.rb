@@ -13,6 +13,16 @@ module Climate
     queue_as :default
     limits_concurrency key: "climate_outdoor_poll", duration: 5.minutes
 
+    # How far behind the outdoor line has to fall before a failure is worth
+    # reporting. Open-Meteo's free tier sheds load with the odd 503, and because
+    # every call re-serves the past_days window the next successful poll repairs
+    # whatever the failed ones missed — so a single failure has cost us nothing
+    # yet and paging on it is pure noise. What actually matters is the feed being
+    # DOWN: no fresh reading for a day, which no amount of self-healing explains.
+    # Every failure is still logged and written to the sensor's last_error, which
+    # is what the dashboard's staleness badge reads.
+    REPORT_FAILURE_AFTER = 1.day
+
     # Injection seam for tests. Takes the sensor so the source column picks the
     # client. See Climate::OUTDOOR_SOURCES.
     class_attribute :client_builder, default: ->(sensor) { Climate.outdoor_client_for(sensor.source) }
@@ -31,8 +41,24 @@ module Climate
       poll(sensor)
     rescue => e
       sensor.update_columns(last_polled_at: Time.current, last_error: e.message.to_s.truncate(500))
-      log_and_notify("[climate] outdoor poll failed for #{sensor.display_name}: #{e.message}", e,
-                     context: { source: "climate_outdoor_poll", sensor_id: sensor.id })
+      record_failure(sensor, e)
+    end
+
+    def record_failure(sensor, error)
+      message = "[climate] outdoor poll failed for #{sensor.display_name}: #{error.message}"
+      latest = sensor.latest_reading
+
+      return Rails.logger.warn(message) unless missing_for_a_day?(latest)
+
+      log_and_notify(message, error,
+                     context: { source: "climate_outdoor_poll", sensor_id: sensor.id,
+                                latest_reading_at: latest&.recorded_at })
+    end
+
+    # Never having had a reading counts: the feed is no less missing for the
+    # sensor being new.
+    def missing_for_a_day?(latest)
+      latest.nil? || latest.recorded_at < REPORT_FAILURE_AFTER.ago
     end
 
     def poll(sensor)

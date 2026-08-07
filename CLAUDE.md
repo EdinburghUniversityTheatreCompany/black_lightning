@@ -500,6 +500,12 @@ Temperature / humidity / dew point charts at `/admin/climate`
   `past_days` window hourly and upserts the lot, so an outage fills its own gap. Attribution
   (CC BY 4.0) is a licence condition and is rendered on the dashboard, and the free tier is
   non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point for Met Office / METAR.
+  - **That self-healing is also why a failed poll only reaches Honeybadger once the line has
+    been missing for a day** (`OutdoorPollJob::REPORT_FAILURE_AFTER`). The free tier sheds load
+    with the odd 503, and the next successful poll re-serves the window, so a single failure has
+    cost nothing yet — reporting it is noise. Every failure is still logged and written to
+    `last_error`, which is what the dashboard's staleness badge reads (a tighter 3h window, per
+    `Sensor::STALE_AFTER`). Never having had a reading counts as missing.
 - **The outdoor sensor row is ensured by `Climate::Sensor.outdoor_source!`, not a data
   migration**, because test and CI databases are schema-*loaded*, so a data migration never
   runs there.

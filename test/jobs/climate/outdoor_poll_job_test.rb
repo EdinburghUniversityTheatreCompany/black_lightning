@@ -85,14 +85,47 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
     assert_nil sensor.last_error
   end
 
-  test "a fetch failure is reported and recorded, not raised" do
-    outdoor_climate_sensor
+  test "a fetch failure is recorded, not raised" do
+    sensor = outdoor_climate_sensor
+    create_climate_reading(sensor: sensor, recorded_at: 1.hour.ago)
     use_source(ClimateTestHelpers::FakeOutdoorSource.new(rows: Climate::OpenMeteoClient::Error.new("502")))
+
+    Climate::OutdoorPollJob.perform_now
+
+    assert_match(/502/, sensor.reload.last_error)
+  end
+
+  test "a failure is not reported while the outdoor line is still current" do
+    # Open-Meteo's free tier sheds load with the odd 503 and the next successful
+    # poll re-serves the window, so one failure is nothing to wake anybody for.
+    sensor = outdoor_climate_sensor
+    create_climate_reading(sensor: sensor, recorded_at: 1.hour.ago)
+    use_source(ClimateTestHelpers::FakeOutdoorSource.new(rows: Climate::OpenMeteoClient::Error.new("503")))
+
+    notices = capture_honeybadger_notices { Climate::OutdoorPollJob.perform_now }
+
+    assert_empty notices
+  end
+
+  test "a failure is reported once the outdoor line has been missing for a day" do
+    sensor = outdoor_climate_sensor
+    create_climate_reading(sensor: sensor, recorded_at: 25.hours.ago)
+    use_source(ClimateTestHelpers::FakeOutdoorSource.new(rows: Climate::OpenMeteoClient::Error.new("503")))
 
     notices = capture_honeybadger_notices { Climate::OutdoorPollJob.perform_now }
 
     assert_equal 1, notices.size
-    assert_match(/502/, outdoor_climate_sensor.reload.last_error)
+    assert_in_delta 25.hours.ago.to_i,
+                    notices.first.last[:context][:latest_reading_at].to_i, 5
+  end
+
+  test "a failure is reported when the sensor has never had a reading" do
+    outdoor_climate_sensor
+    use_source(ClimateTestHelpers::FakeOutdoorSource.new(rows: Climate::OpenMeteoClient::Error.new("503")))
+
+    notices = capture_honeybadger_notices { Climate::OutdoorPollJob.perform_now }
+
+    assert_equal 1, notices.size
   end
 
   test "skips an outdoor sensor that has been deactivated" do
