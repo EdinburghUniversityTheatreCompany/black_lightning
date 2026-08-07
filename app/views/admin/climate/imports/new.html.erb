@@ -9,15 +9,22 @@
       <%= link_to "Add one first", new_admin_climate_sensor_path, class: "text-primary underline" %>.
     <% end %>
   <% else %>
-    <p class="text-gray-600">
-      <strong>The crypt sensors have no WiFi.</strong> They're reachable over Bluetooth from the
-      dressing room, so open the Govee Home app there and wait for it to connect. Once it has, open
-      the sensor, choose <strong>Export Data</strong> and send the CSV to yourself.
+    <p class="text-gray-600 mb-3">
+      The crypt is out of Wi-Fi range, so the sensors hand their readings over by Bluetooth. Stand
+      in the dressing room with the Govee Home app open and wait for it to connect, then open the
+      sensor and choose <strong>Export Data</strong>.
     </p>
 
-    <p class="text-gray-600">
-      Drop the file here. Importing the same one twice is harmless, because readings are keyed by
-      sensor and timestamp, so an overlapping export just overwrites what it already covers.
+    <p class="text-gray-600 mb-4">
+      <% if Climate::Settings.mailbox.present? %>
+        A daily report already goes to <code><%= Climate::Settings.mailbox %></code> and imports
+        itself, so you only need this page to backfill a gap or to pull something in sooner. Either
+        way, importing
+      <% else %>
+        Importing
+      <% end %>
+      the same file twice is harmless: readings are keyed by sensor and timestamp, so an overlap
+      overwrites rather than duplicates.
     </p>
 
     <%= form_with url: admin_climate_import_path, method: :post, multipart: true,
@@ -25,8 +32,8 @@
       <div>
         <%= label_tag :sensor_id, "Which sensor is this file from?", class: "block font-semibold mb-1" %>
         <p class="text-sm text-gray-600 mb-1">
-          The export does not say which device it came from, so this is the one thing worth
-          double-checking, because readings land against whichever sensor is picked here.
+          The export doesn't say which device it came from, so this is worth double-checking.
+          Readings land against whichever sensor is picked here.
         </p>
         <%= select_tag :sensor_id,
                        options_from_collection_for_select(@sensors, :id, :to_label, params[:sensor_id]),
@@ -61,16 +68,14 @@
     <li>
       <strong>The temperature column must say its unit.</strong> Govee exports
       <code>Temperature_Celsius</code> or <code>Temperature_Fahrenheit</code> depending on what the
-      app is set to display. A file that does not say is refused rather than guessed at: guessing
-      is how a year of readings ends up silently wrong by 30 degrees.
+      app displays. A file that doesn't say is refused.
     </li>
     <li>
       Timestamps are read as Edinburgh local time, matching what the app exports.
     </li>
     <li>
       Readings outside <%= Climate::ReadingIngest::PLAUSIBLE_CELSIUS %> °C or
-      <%= Climate::ReadingIngest::PLAUSIBLE_HUMIDITY %> % are skipped and reported, so one bad line
-      does not cost you the rest of the file.
+      <%= Climate::ReadingIngest::PLAUSIBLE_HUMIDITY %> % are skipped and reported.
     </li>
   </ul>
 <% end %>

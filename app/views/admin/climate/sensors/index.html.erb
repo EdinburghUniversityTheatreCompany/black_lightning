@@ -3,8 +3,8 @@
 </p>
 
 <p class="mb-3 text-gray-600">
-  One row per thing that produces readings. Govee sensors are fed by importing a CSV export; the
-  outdoor line is fetched automatically every hour and needs nothing from you.
+  One row per thing that produces readings. Govee sensors are fed by CSV import<%= ", automatically from the daily email or by hand" if Climate::Settings.mailbox.present? %>.
+  The outdoor line is fetched hourly and needs nothing from you.
 </p>
 
 <%= render CardComponent.new(title: "Sensors", flush: true) do |card| %>

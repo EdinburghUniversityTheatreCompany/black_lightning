@@ -132,6 +132,34 @@ module Admin
 
         assert_match(/Open-Meteo/, response.body)
       end
+
+      test "mentions the daily email only when a climate mailbox is configured" do
+        # The copy claims a report arrives automatically. That is a lie in an
+        # environment with no mailbox set, and it would render a blank address.
+        original = ENV.fetch("CLIMATE_MAILBOX", nil)
+        ENV["CLIMATE_MAILBOX"] = "climatesensors@example.com"
+
+        get :show
+
+        assert_match "climatesensors@example.com", response.body
+        assert_match(/daily report/i, response.body)
+
+        ENV.delete("CLIMATE_MAILBOX")
+        get :show
+
+        assert_no_match(/daily report/i, response.body)
+        assert_match(/out of Wi-Fi range/i, response.body)
+      ensure
+        original.nil? ? ENV.delete("CLIMATE_MAILBOX") : ENV["CLIMATE_MAILBOX"] = original
+      end
+
+      test "explains that the margin is measured against the air, not the walls" do
+        # Every threshold in this copy is stated against a number we do not
+        # measure, so the caveat has to survive future edits.
+        get :show
+
+        assert_match(/not the walls/i, response.body)
+      end
     end
   end
 end

@@ -1,8 +1,9 @@
 <p class="mb-3 text-gray-600">
-  Temperature, relative humidity and dew point in the crypt, against outside conditions.
-  Condensation forms on any surface at or below the dew point, so the number to watch is the
-  <strong>margin</strong>, i.e. how far the air has to cool before it starts wetting the walls.
-  Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C is worth acting on.
+  Temperature, relative humidity and dew point in the crypt, compared with outside. Condensation
+  forms on any surface at or below the dew point of the air touching it, so the walls need to sit a
+  few degrees above the crypt's dew point to keep mould off them.
+  <strong>Under <%= number_with_precision(ClimateHelper::CONDENSATION_RISK_MARGIN, precision: 0) %> °C of margin is worth acting on</strong>,
+  which is roughly 80% humidity at the surface and where mould starts to grow.
 </p>
 
 <%= render CardComponent.new(title: "Now", html_class: "mb-4") do |card| %>
@@ -54,8 +55,8 @@
        data-climate-charts-series-value="<%= @series.to_json %>">
     <% if @series.none? { |series| series[:points].any? } %>
       <p class="text-gray-600">
-        No readings in this range yet. Outside conditions are fetched hourly; crypt readings
-        appear once you import a CSV export for this period.
+        No readings in this range yet. Outside conditions are fetched hourly; sensor readings
+        appear once a CSV export covering this period has been imported<%= ", either by you or by the daily email" if Climate::Settings.mailbox.present? %>.
       </p>
     <% else %>
       <div class="relative h-64 mb-6"><canvas data-climate-charts-target="temperature"></canvas></div>
@@ -68,19 +69,39 @@
 <%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
   <ul class="list-disc pl-5 space-y-2 text-gray-700">
     <li>
-      Crypt readings arrive by importing a CSV export from the Govee app. The sensors have no
-      WiFi, so they record to their own buffer and hand it over by Bluetooth: stand in the
-      dressing room with the app open and wait for it to connect. The export is complete either
-      way, so nothing is lost by leaving it a while.
+      <strong>How readings get here.</strong> Sensor readings arrive as a CSV export from the Govee
+      app.
+      <% if Climate::Settings.mailbox.present? %>
+        A scheduled daily report goes to <code><%= Climate::Settings.mailbox %></code> and this site
+        imports it on its own. <strong>That report is only ever as fresh as the last Bluetooth
+        sync, though.</strong>
+      <% end %>
+      The crypt is out of Wi-Fi range, so the sensors can't reach Govee's cloud by themselves:
+      stand in the dressing room with the app open and wait for it to connect.
+      <%= "If nobody does, the daily email keeps arriving with nothing new in it." if Climate::Settings.mailbox.present? %>
     </li>
     <li>
-      A <strong>break in a line</strong> is missing data, not a flat reading. Lines are deliberately
-      not drawn across a gap, because a straight line through an outage would look like a
-      measurement of the room that never happened.
+      <strong>The margin here is measured against the air, not the walls.</strong> It's the crypt's
+      air temperature minus its dew point. The walls are underground and colder than the air, so the
+      real margin at the wall is smaller than the number shown. Treat it as optimistic until
+      something measures a wall directly.
     </li>
     <li>
-      Each sensor holds about 20 days of readings before overwriting them, so sync and export at
-      least that often if the crypt has a period worth keeping.
+      <strong>When to open up.</strong> Compare the outside dew point with the temperature of the
+      crypt walls, not the humidity figures. If the outside dew point is comfortably below the wall
+      temperature, ventilating dries the crypt out. If it's above, you're pumping in air that will
+      condense on cold stone, however dry it feels outside. A warm muggy day is the worst time to
+      air out a basement, and a cold crisp one is the best. Relative humidity can't be compared
+      between two places at different temperatures, but dew point can. That's what the third chart
+      is for.
+    </li>
+    <li>
+      <strong>A break in a line is missing data</strong>, not a flat reading. Lines are deliberately
+      not drawn across a gap, because that would imply readings that aren't there.
+    </li>
+    <li>
+      Each sensor keeps about 20 days of readings before overwriting them, so sync at least that
+      often.
     </li>
     <li>
       Long ranges are averaged into wider buckets (hourly, then six-hourly, then daily) so a year
