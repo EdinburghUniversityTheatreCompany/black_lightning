@@ -69,8 +69,6 @@ module Reimbursements
     end
 
     test "dismissing hides the alert without editing the record" do
-      # The row is the audit trail of what was attempted, and one carrying a
-      # batch_record_id is the only pointer to a draft that may still exist.
       failed = build_attempt(status: "failed", error_messages: "boom",
                              batch_record_id: "recBat9")
       failed.dismiss!(email: "finance@example.com")
@@ -93,22 +91,20 @@ module Reimbursements
       assert_includes BatchAttempt.needing_attention, second
     end
 
-    test "a build still running is not dismissable, but a stale one is" do
-      # Offering to hide a live build only invites hiding something in flight;
-      # once it is stale it is waiting on a human and should be clearable.
+    test "a build still running is not dismissible, but a stale one is" do
       running = build_attempt
 
-      assert_not running.dismissable?
+      assert_not running.dismissible?
 
       travel_to (BatchAttempt::STALE_AFTER + 1.minute).from_now do
-        assert_predicate running, :dismissable?
+        assert_predicate running, :dismissible?
       end
     end
 
-    test "failed, no-op and completed attempts are all dismissable" do
-      assert_predicate build_attempt(status: "failed", error_messages: "boom"), :dismissable?
-      assert_predicate build_attempt(status: "nothing_to_build"), :dismissable?
-      assert_predicate build_attempt(status: "completed", error_messages: "partial"), :dismissable?
+    test "failed, no-op and completed attempts are all dismissible" do
+      assert_predicate build_attempt(status: "failed", error_messages: "boom"), :dismissible?
+      assert_predicate build_attempt(status: "nothing_to_build"), :dismissible?
+      assert_predicate build_attempt(status: "completed", error_messages: "partial"), :dismissible?
     end
   end
 end

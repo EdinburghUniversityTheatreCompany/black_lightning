@@ -72,17 +72,14 @@ module Reimbursements
 
     def dismissed? = dismissed_at.present?
 
-    # An operator saying "I have dealt with this", not a correction of the
-    # record: the row keeps its status, its errors and its batch_record_id, so
-    # a dismissed attempt still reads as a failure in the audit trail.
+    # Hides the alert only. See the migration for why this flags, not deletes.
     def dismiss!(email: nil)
       update!(dismissed_at: Time.current, dismissed_by_email: email.presence)
     end
 
-    # A build still running resolves itself within minutes, so offering to hide
-    # it would only invite hiding something live. Everything else is waiting on
-    # a human and should be clearable once they have acted.
-    def dismissable? = !(building? && !stale?)
+    # A running build resolves itself within minutes, so offering to hide it
+    # would only invite hiding something live.
+    def dismissible? = !(building? && !stale?)
 
     def resolve!(status:, error_messages: nil, batch_record_id: nil)
       update!(status: status, error_messages: error_messages.presence,

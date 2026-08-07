@@ -12,10 +12,10 @@
 </div>
 
 <%
-  # Rendered inside each alert so the operator can clear it once handled,
-  # rather than waiting out the seven-day window with a red banner on screen.
+  # So an operator can clear a handled alert instead of waiting out the
+  # seven-day window with a red banner on screen.
   dismiss_button = lambda do |attempt|
-    next unless attempt.dismissable?
+    next unless attempt.dismissible?
 
     button_to "Dismiss", dismiss_admin_reimbursements_batch_attempt_path(attempt),
               method: :post, class: btn_classes(:secondary, :sm),

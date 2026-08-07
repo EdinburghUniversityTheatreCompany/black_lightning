@@ -4,10 +4,10 @@
 
 <%= render CardComponent.new(title: "Import a Govee export") do %>
   <% if @sensors.empty? %>
-    <p class="text-gray-600">
+    <%= render AlertComponent.new(type: :info) do %>
       There are no sensors to import against yet.
       <%= link_to "Add one first", new_admin_climate_sensor_path, class: "text-primary underline" %>.
-    </p>
+    <% end %>
   <% else %>
     <p class="text-gray-600">
       <strong>The crypt sensors have no WiFi.</strong> They're reachable over Bluetooth from the
