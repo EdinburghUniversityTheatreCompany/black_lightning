@@ -36,6 +36,26 @@ export function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
+// pointRadius: 0 draws nothing at a point and lets the connecting line carry
+// the ink instead — but a point with a null (or missing) neighbour on BOTH
+// sides has no line touching it either, so radius 0 there means the reading
+// draws as nothing at all. That is reachable now that a genuine two-point
+// series can be its own isolated island either side of a real gap (see
+// Climate::Buckets#gap_threshold's two-point fallback). Scriptable pointRadius
+// gives just that point a visible dot while every point inside a normal,
+// connected run stays radius 0.
+export function pointRadiusUnlessIsolated(radius = 3) {
+  const hasY = (point) => point && point.y !== null && point.y !== undefined
+
+  return (context) => {
+    const data = context.dataset?.data
+    if (!data || !hasY(data[context.dataIndex])) return 0
+
+    const isolated = !hasY(data[context.dataIndex - 1]) && !hasY(data[context.dataIndex + 1])
+    return isolated ? radius : 0
+  }
+}
+
 // Chart.js is imported lazily, matching techie_graph_controller and
 // map_controller, so no other admin page pays for it.
 export async function loadChartJs({ bars = false } = {}) {

@@ -154,20 +154,15 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
 
   test "breaks the line with a null point across an outage" do
     # Without this the chart draws a straight line through the missing hours,
-    # which reads as a measurement of the room that never happened. The
-    # 09:50 -> 10:00 baseline pair establishes the sensor's own ten-minute
-    # cadence, so the 8-hour jump to 18:00 reads as an outage rather than
-    # this sensor simply reporting every 8 hours — see
-    # Climate::Buckets#gap_threshold.
+    # which reads as a measurement of the room that never happened.
     sensor = create_climate_sensor
-    create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 09:50"))
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 10:00"))
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 18:00"))
 
     points = series_for(sensor, from: "2026-08-05", to: "2026-08-06").first[:points]
 
-    assert_equal 4, points.size
-    assert_nil points[2][:temperature]
+    assert_equal 3, points.size
+    assert_nil points[1][:temperature]
   end
 
   test "draws the outdoor line unbroken on the 24-hour view despite its hourly cadence" do

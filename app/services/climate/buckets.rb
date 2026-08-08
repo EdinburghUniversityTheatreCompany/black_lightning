@@ -35,6 +35,17 @@ module Climate
     # A break longer than this many buckets is drawn as a gap rather than a line.
     GAP_BUCKETS = 3
 
+    # A series is never treated as reporting less often than a day, however
+    # sparse it looks in THIS window: a narrow ?from=/?to= can clip a
+    # hand-synced sensor's dense runs down to a couple of far-apart points,
+    # and without a ceiling that reads as "this sensor normally reports every
+    # few days," stretching the outage tolerance arbitrarily far. A day is
+    # not an arbitrary pick — it is RESOLUTIONS' own widest bucket, the
+    # coarsest interval any chart on this dashboard already treats as
+    # meaningful. Applied to the CADENCE (see #gap_threshold), not the final
+    # threshold, so GAP_BUCKETS still multiplies a bounded number.
+    MAX_CADENCE_SECONDS = RESOLUTIONS.last[:seconds]
+
     RAW_SECONDS = RESOLUTIONS.first[:seconds]
 
     attr_reader :seconds
@@ -76,17 +87,25 @@ module Climate
     # the 24-hour chart buckets at ten minutes; a threshold built from the
     # bucket width alone would flag the gap after every single outdoor point
     # as its own outage, breaking the line into isolated, invisible dots
-    # (pointRadius is 0).
+    # (pointRadius is 0 — see the JS side's pointRadiusUnlessIsolated for the
+    # matching fix to a single isolated point being invisible too).
     #
-    # The MINIMUM consecutive delta in the series is the estimate: an outage
-    # only ever WIDENS a gap, so it can inflate the minimum's competitors but
+    # The MINIMUM consecutive delta is the estimate, but only when there are
+    # at least two of them to compare: an outage only ever WIDENS a gap, so
+    # among three or more points it can inflate the minimum's competitors but
     # can never pull the minimum itself down below the series' true cadence.
-    # Floored at the bucket width, since two distinct buckets can never be
-    # closer together than the bucket itself.
+    # With only one delta to go on (0 or 1 points return none, exactly 2
+    # points return exactly one) there is nothing to compare it against — a
+    # single 30-hour gap is indistinguishable from "this reports every 30
+    # hours," so treating that lone delta as the cadence would make the
+    # threshold 3x itself and NEVER exceeded, and a real two-day outage would
+    # render as an unbroken line. The honest fallback there is the chart's
+    # own bucket width, same as before this series-aware threshold existed.
     def gap_threshold(points)
-      cadence = points.each_cons(2).map { |(a, b)| b[:t] - a[:t] }.min || seconds
+      deltas = points.each_cons(2).map { |(a, b)| b[:t] - a[:t] }
+      cadence = deltas.size >= 2 ? deltas.min : seconds
 
-      [ cadence, seconds ].max * GAP_BUCKETS
+      cadence.clamp(seconds, MAX_CADENCE_SECONDS) * GAP_BUCKETS
     end
   end
 end
