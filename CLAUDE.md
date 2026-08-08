@@ -475,6 +475,10 @@ Temperature / humidity / dew point charts at `/admin/climate`
   crypt's WiFi is intermittent: the sensor buffers regardless of connectivity and uploads on
   reconnect, but a poller can only sample the present, so everything buffered during a dropout
   stays invisible to it forever. The export contains all of it. Don't reintroduce polling.
+  The **dressing room access point** (installed early August 2026) gives the crypt sensors an
+  intermittent WiFi path, so they upload to Govee's cloud without anyone standing there with the
+  app open. That does not change any of the above: the connection still drops, the sensor's own
+  buffer is still what survives the gap, and the API still has no history endpoint.
 - **The CSV header names its own unit** (`Temperature_Celsius` / `_Fahrenheit`, following what
   the *app* displays). `Climate::CsvImport` reads it and **refuses a file whose unit it cannot
   identify** rather than guessing. That refusal replaced the old per-sensor verify-the-unit
@@ -519,6 +523,31 @@ Temperature / humidity / dew point charts at `/admin/climate`
   pattern). Chart.js is an ES module, so there is no `window.Chart`. The controller exposes its
   instances as `element.climateCharts` plus a `data-climate-charts-ready` count, which is how the
   system tests assert the exact plotted values.
+- **Which sensors are "the crypt" is stored, not inferred** (`Climate::Sensor#in_crypt`). `placement`
+  separates indoor from outdoor, but a dressing-room sensor is indoor too and would poison a
+  crypt-only worst case. Only ticked sensors feed the risk and ventilation charts; the raw history
+  charts still show every active sensor.
+- **The margin chart aggregates with `MIN(temperature_c - dew_point_c)` per row, then takes the
+  worst of them.** NOT `MIN(temperature_c) - MAX(dew_point_c)`, which takes its two figures from
+  different instants and invents a crypt that never existed, and not `AVG`, because a daily mean
+  margin can sit at 5 °C while every night touched 1. `Climate::MarginSeries` has a test that
+  fails under either wrong form.
+- **`Climate::RiskSummary` counts against hours that HAVE readings**, never hours in the range: the
+  sensors sync over an intermittent access point and routinely miss days, so "41 of 720 hours" reads
+  as 6% of a month when it means 8% of the six days covered. A coverage gap also **breaks** a
+  continuous spell, the same principle as not drawing a line across missing data.
+- **`Climate::VentilationSeries`'s worst case is the single coldest crypt sensor**, resolved once
+  from the lowest mean temperature over the range, not a composite of the lowest temperature and
+  highest dew point across sensors. A chart whose two lines came from different sensors cannot be
+  read for the gap between them, and that gap is the first thing anyone reads. It is a projection
+  over `SeriesQuery`, not new SQL, so it aggregates with `AVG` deliberately: it is read for the
+  present, and `MarginSeries` owns the historical worst case.
+- **Bucketing and sensor colours live in `Climate::Buckets` and `Climate::SeriesColors`**, shared by
+  all four chart payloads. A margin line bucketed differently from the temperature line above it
+  would be unreadable next to it, and a sensor must be the same colour on every chart.
+- **Shared Chart.js machinery is in `app/javascript/lib/climate_chart.js`.** Four chart controllers
+  and `jscpd` gating at threshold 0 means the palette, the lazy import and the end-label plugin
+  cannot be copied per controller.
 
 ## Opportunities
 

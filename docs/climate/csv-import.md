@@ -1,15 +1,17 @@
 # Crypt climate monitor: getting readings in
 
 The monitor (`/admin/climate`) charts temperature, relative humidity and dew point from the Govee
-sensors in the crypt, against outside conditions.
+sensors in the crypt, against outside conditions, and turns those readings into a condensation-risk
+chart and a ventilation comparison.
 
 **Crypt readings arrive as CSV exports from the Govee app. There's no API polling.** That's a
 deliberate choice, not a shortcut. See *Why not the API* below.
 
 ## The quick version
 
-1. Stand in the **dressing room** with the Govee Home app open and wait for it to connect. The
-   crypt sensors have no WiFi, so Bluetooth from there is how you reach them.
+1. Open the Govee Home app. The sensors upload to Govee's cloud over the dressing room access
+   point (installed early August 2026), so you no longer have to be in the building. If one looks
+   stuck, stand in the **dressing room** and let it sync over Bluetooth.
 2. Open the sensor, **Export Data**, enter an email address. A CSV arrives.
 3. `/admin/climate`, then **Import readings**. Pick the sensor and drop the file in.
 
@@ -58,12 +60,14 @@ the file.
 ## Timing
 
 Each sensor holds **about 20 days** before overwriting. Once synced, the app keeps **up to 2
-years**. An occasional export is enough, but if the crypt has a period worth keeping, sync within
-20 days of it.
+years**. An occasional export is enough, but if the crypt has a period worth keeping, get it
+synced within 20 days of it.
 
-Syncing means getting within Bluetooth range: the dressing room works. Open the Govee Home app and
-wait for it to connect. There's no WiFi involved at any point, which is also why the readings
-survive the crypt being offline for weeks.
+The dressing room access point usually does that for you. It drops in and out, which is fine: a
+sensor records to its own buffer regardless and uploads the backlog when it reconnects, so the
+readings survive the crypt being offline for weeks. **20 days is the limit on that.** If the
+access point has been down longer, the oldest readings are already gone, and getting within
+Bluetooth range in the dressing room only recovers what is left.
 
 ## Automating it (optional)
 
@@ -92,7 +96,8 @@ naming the device.
 
 The number that matters is the **dew-point margin**: air temperature minus dew point, i.e. how far
 the air has to cool before it condenses on a surface. Under about 3 °C is worth acting on, and the
-tile turns red there.
+tile turns red there. The Condensation risk chart plots this over time, using the worst margin in
+each bucket rather than the average, since condensation is a worst-case event.
 
 A **break in a line** is missing data, not a flat reading. Lines are deliberately not drawn across
 a gap, because a straight line through an outage reads as a measurement that never happened.
