@@ -34,6 +34,7 @@ export default class extends Controller {
   #build(Chart) {
     const canvas = this.canvasTarget
     const title = "Margin above dew point (°C)"
+    const scales = timeScaleOptions({ title, unit: "°C" })
 
     canvas.setAttribute("role", "img")
     canvas.setAttribute("aria-label", seriesAriaLabel({
@@ -65,7 +66,18 @@ export default class extends Controller {
         animation: reducedMotion() ? false : undefined,
         interaction: { mode: "index", intersect: false },
         layout: { padding: { right: 0 } },
-        scales: timeScaleOptions({ title, unit: "°C" }),
+        scales: {
+          ...scales,
+          y: {
+            ...scales.y,
+            // A margin chart has to show the threshold it is measured against.
+            // Left to auto-scale, a flat night gives a y-axis a few hundredths
+            // of a degree wide: the shaded risk band falls off-screen entirely
+            // and sensor noise reads as a cliff. suggestedMin only widens the
+            // range, so a genuinely large margin still fits.
+            suggestedMin: 0,
+          },
+        },
         plugins: legendAndTooltip({ unit: "°C" }),
       },
     })

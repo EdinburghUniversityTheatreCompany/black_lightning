@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import {
-  chartOptions, colorFor, endLabelPlugin, loadChartJs, seriesAriaLabel, withAlpha,
+  chartOptions, colorFor, endLabelPlugin, loadChartJs, pointRadiusUnlessIsolated,
+  seriesAriaLabel, withAlpha,
 } from "../lib/climate_chart"
 
 // Crypt temperature, crypt dew point and outdoor dew point on one °C axis, so
@@ -66,7 +67,8 @@ export default class extends Controller {
             backgroundColor: color,
             borderDash: style.borderDash,
             borderWidth: style.borderWidth,
-            pointRadius: 0,
+            // See climate_charts_controller for why this isn't a plain 0.
+            pointRadius: pointRadiusUnlessIsolated(),
             pointHoverRadius: 5,
             tension: 0.2,
           }

@@ -44,7 +44,14 @@ module Climate
     # coarsest interval any chart on this dashboard already treats as
     # meaningful. Applied to the CADENCE (see #gap_threshold), not the final
     # threshold, so GAP_BUCKETS still multiplies a bounded number.
-    MAX_CADENCE_SECONDS = RESOLUTIONS.last[:seconds]
+    #
+    # Computed with #max rather than RESOLUTIONS.last: #initialize's `find`
+    # only works because RESOLUTIONS happens to be ordered by max_days, and
+    # this cap must stay the widest bucket even if that ordering ever
+    # changes — RESOLUTIONS.last would silently pick a smaller ceiling then,
+    # and #gap_threshold's clamp(seconds, MAX_CADENCE_SECONDS) raises
+    # ArgumentError outright once the max dips below the min.
+    MAX_CADENCE_SECONDS = RESOLUTIONS.map { |r| r[:seconds] }.max
 
     RAW_SECONDS = RESOLUTIONS.first[:seconds]
 
