@@ -22,5 +22,16 @@
         <div class="relative h-64"><canvas data-climate-margin-chart-target="canvas"></canvas></div>
       </div>
     <% end %>
+
+    <% if risk.any? { |summary| summary[:days].any? } %>
+      <p class="mt-6 mb-2 text-sm text-gray-600">
+        Hours at risk per day. A day with no bar had readings and stayed clear; a day with no
+        column at all had no readings.
+      </p>
+      <div data-controller="climate-risk-bars"
+           data-climate-risk-bars-summaries-value="<%= risk.to_json %>">
+        <div class="relative h-48"><canvas data-climate-risk-bars-target="canvas"></canvas></div>
+      </div>
+    <% end %>
   <% end %>
 <% end %>
