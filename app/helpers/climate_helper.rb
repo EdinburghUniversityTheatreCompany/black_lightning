@@ -48,4 +48,16 @@ module ClimateHelper
     { "24 hours" => 1, "7 days" => 7, "30 days" => 30, "90 days" => 90, "1 year" => 365 }
       .transform_values { |days| { from: (today - (days - 1).days).iso8601, to: today.iso8601 } }
   end
+
+  # Carries the ventilation selection through every link that changes the
+  # range, so picking a sensor and then changing the dates does not silently
+  # reset which sensor is on screen.
+  #
+  # The default is left OUT of the URL, the same way DateRange leaves the
+  # default range out: a clean link keeps meaning "recent, coldest sensor".
+  def climate_link_params(range_params, selected_key)
+    return range_params if selected_key.blank? || selected_key == Climate::VentilationSeries::WORST
+
+    range_params.merge(crypt: selected_key)
+  end
 end

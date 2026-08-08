@@ -28,12 +28,14 @@
 
 <%= render CardComponent.new(title: "History") do |card| %>
   <% card.with_tools do %>
-    <%= link_to "View as data", admin_climate_dashboard_path(@range.to_param.merge(format: :json)),
+    <%= link_to "View as data",
+                admin_climate_dashboard_path(climate_link_params(@range.to_param, @ventilation.selected_key).merge(format: :json)),
                 class: btn_classes(:secondary, :sm) %>
   <% end %>
 
   <%= form_with url: admin_climate_dashboard_path, method: :get, data: { turbo: false },
                 class: "flex flex-wrap items-end gap-3 mb-4" do |f| %>
+    <%= hidden_field_tag :crypt, @ventilation.selected_key unless @ventilation.selected_key == Climate::VentilationSeries::WORST %>
     <div>
       <%= f.label :from, "From", class: "block text-sm text-gray-600" %>
       <%= f.date_field :from, value: @range.from.iso8601, class: "form-control" %>
@@ -46,13 +48,15 @@
 
     <div class="flex flex-wrap gap-2 items-center ml-auto">
       <% climate_range_presets.each do |label, dates| %>
-        <%= link_to label, admin_climate_dashboard_path(dates), class: btn_classes(:secondary, :sm) %>
+        <%= link_to label, admin_climate_dashboard_path(climate_link_params(dates, @ventilation.selected_key)),
+                    class: btn_classes(:secondary, :sm) %>
       <% end %>
     </div>
   <% end %>
 
   <div data-controller="climate-charts"
-       data-climate-charts-series-value="<%= @series.to_json %>">
+       data-climate-charts-series-value="<%= @series.to_json %>"
+       data-climate-charts-banded-value="<%= @banded %>">
     <% if @series.none? { |series| series[:points].any? } %>
       <p class="text-gray-600">
         No readings in this range yet. Outside conditions are fetched hourly; sensor readings

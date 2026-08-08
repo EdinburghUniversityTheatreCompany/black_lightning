@@ -160,6 +160,60 @@ module Admin
 
         assert_match(/not the walls/i, response.body)
       end
+
+      test "the json payload carries the margin, risk and ventilation series" do
+        sensor = create_climate_sensor(in_crypt: true)
+        outdoor_climate_sensor
+        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
+
+        get :show, format: :json
+        payload = response.parsed_body
+
+        assert payload.key?("margin")
+        assert payload.key?("risk")
+        assert payload.key?("ventilation")
+        assert_equal "worst", payload.dig("ventilation", "selected")
+      end
+
+      test "the crypt parameter selects which sensor the ventilation chart shows" do
+        north = create_climate_sensor(display_name: "North", in_crypt: true)
+        south = create_climate_sensor(display_name: "South", in_crypt: true)
+        create_climate_reading(sensor: north, recorded_at: 2.hours.ago, temperature_c: 9.0)
+        create_climate_reading(sensor: south, recorded_at: 2.hours.ago, temperature_c: 16.0)
+
+        get :show, format: :json, params: { crypt: south.id.to_s }
+
+        assert_equal south.id.to_s, response.parsed_body.dig("ventilation", "selected")
+      end
+
+      test "an unknown crypt parameter falls back and says so" do
+        create_climate_sensor(in_crypt: true)
+
+        get :show, params: { crypt: "haddock" }
+
+        assert_response :success
+        # As with the date-range clamp above: the layout serialises flash.now
+        # into the SweetAlert payload (merging :notice into :success) and
+        # discards it, so the rendered body is where the message survives,
+        # not a bare flash.now[:notice] read after the request completes.
+        assert_match(/not marked as being in the crypt/i, response.body)
+      end
+
+      test "renders with no sensor marked as being in the crypt" do
+        create_climate_sensor(in_crypt: false)
+
+        get :show
+
+        assert_response :success
+      end
+
+      test "renders with a crypt sensor that has no readings" do
+        create_climate_sensor(in_crypt: true)
+
+        get :show
+
+        assert_response :success
+      end
     end
   end
 end
