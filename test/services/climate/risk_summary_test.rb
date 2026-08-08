@@ -117,6 +117,14 @@ class Climate::RiskSummaryTest < ActiveSupport::TestCase
     assert_empty summary[:days]
   end
 
+  test "carries the sensor's own colour index so the bars match its line" do
+    sensor = create_climate_sensor(in_crypt: true)
+
+    expected = Climate::SeriesColors.new.index_for(sensor)
+
+    assert_equal expected, summary_for(sensor, from: "2026-08-01", to: "2026-08-07")[:color_index]
+  end
+
   test "keeps each sensor's figures separate" do
     north = create_climate_sensor(display_name: "North", in_crypt: true)
     south = create_climate_sensor(display_name: "South", in_crypt: true)

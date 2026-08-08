@@ -18,9 +18,10 @@ module Climate
       @sensors = Array(sensors)
       @range = range
       @threshold = threshold
+      @colors = SeriesColors.new
     end
 
-    # -> [{ id:, name:, hours_with_readings:, hours_at_risk:,
+    # -> [{ id:, name:, color_index:, hours_with_readings:, hours_at_risk:,
     #       longest_spell_hours:, longest_spell_ended_at:,
     #       days: [{ date:, hours_with_readings:, at_risk_hours: }] }]
     def summaries
@@ -59,6 +60,7 @@ module Climate
       spell = longest_spell(hours)
 
       { id: sensor.id, name: sensor.display_name,
+        color_index: @colors.index_for(sensor),
         hours_with_readings: hours.size,
         hours_at_risk: hours.count { |(_hour, margin)| at_risk?(margin) },
         longest_spell_hours: spell[:hours],
