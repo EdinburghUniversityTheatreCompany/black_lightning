@@ -244,9 +244,19 @@ module Admin
         assert_match(/Crypt north/, response.body)
       end
 
-      test "says the outside line is missing when the feed has no readings" do
+      test "says the outside line is missing when there is no outdoor sensor" do
         sensor = create_climate_sensor(in_crypt: true)
         create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
+
+        get :show
+
+        assert_match(/outside line is missing/, response.body)
+      end
+
+      test "says the outside line is missing when the outdoor sensor has no readings in range" do
+        sensor = create_climate_sensor(in_crypt: true)
+        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
+        outdoor_climate_sensor
 
         get :show
 
