@@ -1,3 +1,11 @@
+GIT
+  remote: https://github.com/mickzijdel/rubocop-mick.git
+  revision: ce4ca7d44ff0c7f2c3686dbcf389e7c6cb6dca2b
+  specs:
+    rubocop-mick (0.1.0)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.72)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -694,6 +702,7 @@ DEPENDENCIES
   roo
   rqrcode
   rubocop-faker
+  rubocop-mick!
   rubocop-minitest
   rubocop-rails-omakase
   rubocop-view_component
