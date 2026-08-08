@@ -43,12 +43,19 @@ module Admin
       end
 
       # chart_index: 0 temperature, 1 humidity, 2 dew point.
+      #
+      # Excludes band datasets: once a range is banded (see
+      # climate_charts_controller.js's #band), the min and max band datasets
+      # share the SAME label as the line they shade, so a bare label match
+      # can return the band's max line instead of the actual plotted line —
+      # legend and tooltip already carry their own "!dataset.band" filter for
+      # the same reason (see legendAndTooltip in lib/climate_chart.js).
       def plotted(chart_index, label)
         evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector("[data-controller='climate-charts']")
             const chart = root.climateCharts[#{chart_index}]
-            const set = chart.data.datasets.find(d => d.label === #{label.to_json})
+            const set = chart.data.datasets.find(d => d.label === #{label.to_json} && !d.band)
             return set ? set.data.map(p => p.y) : null
           })()
         JS
@@ -95,9 +102,12 @@ module Admin
         visit admin_climate_dashboard_path
         wait_for_charts
 
+        # Band datasets carry no borderDash at all (they are filled shading,
+        # not a stroke), so they have to be excluded here the same way
+        # #plotted excludes them by label.
         dashes = evaluate_script(<<~JS)
           document.querySelector("[data-controller='climate-charts']").climateCharts[0]
-            .data.datasets.map(d => ({ label: d.label, dash: d.borderDash.length }))
+            .data.datasets.filter(d => !d.band).map(d => ({ label: d.label, dash: d.borderDash.length }))
         JS
 
         assert_operator dashes.find { |d| d["label"] == @outdoor.display_name }["dash"], :>, 0
@@ -107,12 +117,15 @@ module Admin
       test "lines break across a gap rather than interpolating through it" do
         # spanGaps false plus the server's explicit null points is what stops a
         # two-day outage being drawn as a straight, entirely invented line.
+        # Band datasets bring their own (also-false) spanGaps, so they are
+        # excluded here to keep this assertion about the two actual lines,
+        # not however many band datasets this range happens to add.
         visit admin_climate_dashboard_path
         wait_for_charts
 
         span_gaps = evaluate_script(<<~JS)
           document.querySelector("[data-controller='climate-charts']").climateCharts[0]
-            .data.datasets.map(d => d.spanGaps)
+            .data.datasets.filter(d => !d.band).map(d => d.spanGaps)
         JS
 
         assert_equal [ false, false ], span_gaps
