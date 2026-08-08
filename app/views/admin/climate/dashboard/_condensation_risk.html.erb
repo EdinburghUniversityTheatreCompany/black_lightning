@@ -1,0 +1,26 @@
+<%= render CardComponent.new(title: "Condensation risk", html_class: "mb-4") do %>
+  <% if crypt_sensors.empty? %>
+    <p class="text-gray-600 mb-0">
+      No sensors are marked as being in the crypt.
+      <%= link_to "Tick one on the sensor list", admin_climate_sensors_path, class: "text-primary underline" %>
+      to see how close it came to condensing.
+    </p>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      How far the crypt's air stayed from its own dew point — the lower the line, the closer it
+      came to condensing. Each point is the <strong>worst</strong> margin in its bucket, not the
+      average, because condensation is a worst-case event. Measured against the air; the walls are
+      colder, so the real margin at the stone is smaller than this.
+    </p>
+
+    <%= render "risk_figures", summaries: risk %>
+
+    <% if margin_series.any? { |series| series[:points].any? } %>
+      <div data-controller="climate-margin-chart"
+           data-climate-margin-chart-series-value="<%= margin_series.to_json %>"
+           data-climate-margin-chart-threshold-value="<%= Climate::CONDENSATION_RISK_MARGIN %>">
+        <div class="relative h-64"><canvas data-climate-margin-chart-target="canvas"></canvas></div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

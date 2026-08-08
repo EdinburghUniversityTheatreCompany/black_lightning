@@ -60,4 +60,31 @@ module ClimateHelper
 
     range_params.merge(crypt: selected_key)
   end
+
+  # The at-risk figures as a sentence, because the question that matters must
+  # not depend on a chart rendering — the same reason the Now tiles are HTML.
+  #
+  # The denominator is hours WITH READINGS. "41 of 720 hours" would read as 6%
+  # of a month when the hand-synced sensor covered six days of it.
+  def climate_risk_sentence(summary)
+    return "No readings in this range." if summary[:hours_with_readings].zero?
+
+    threshold = number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 1)
+    covered = pluralize(summary[:hours_with_readings], "hour")
+
+    return "None of the #{covered} with readings came under #{threshold} °C of margin." if summary[:hours_at_risk].zero?
+
+    percentage = (100.0 * summary[:hours_at_risk] / summary[:hours_with_readings]).round
+    [ "#{summary[:hours_at_risk]} of the #{covered} with readings (#{percentage}%) " \
+      "were under #{threshold} °C of margin.",
+      climate_spell_sentence(summary) ].compact_blank.join(" ")
+  end
+
+  def climate_spell_sentence(summary)
+    return nil if summary[:longest_spell_hours].to_i.zero?
+
+    ended = summary[:longest_spell_ended_at]
+    "The longest unbroken spell was #{pluralize(summary[:longest_spell_hours], 'hour')}" \
+      "#{", ending #{ended.strftime('%-d %B %Y, %H:%M')}" if ended}."
+  end
 end

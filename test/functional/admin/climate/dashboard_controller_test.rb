@@ -214,6 +214,25 @@ module Admin
 
         assert_response :success
       end
+
+      test "shows the at-risk figures for a crypt sensor" do
+        sensor = create_climate_sensor(display_name: "Crypt north", in_crypt: true)
+        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago,
+                               temperature_c: 12.0, dew_point_c: 11.0)
+
+        get :show
+
+        assert_match(/Crypt north/, response.body)
+        assert_match(/hours? with readings/, response.body)
+      end
+
+      test "prompts for a crypt sensor when none is ticked" do
+        create_climate_sensor(in_crypt: false)
+
+        get :show
+
+        assert_match(/No sensors are marked as being in the crypt/, response.body)
+      end
     end
   end
 end
