@@ -58,7 +58,7 @@ module Climate
     # rather than interpolating across an outage. A line drawn through missing
     # data is not cosmetic. It is a reading of the room that never happened.
     def with_gaps(points, keys:)
-      threshold = seconds * GAP_BUCKETS
+      threshold = gap_threshold(points)
       blank = keys.index_with(nil)
 
       points.each_with_object([]) do |current, result|
@@ -66,6 +66,27 @@ module Climate
         result << blank.merge(t: previous[:t] + seconds) if previous && (current[:t] - previous[:t]) > threshold
         result << current
       end.map { |entry| entry.merge(t: entry[:t].iso8601) }
+    end
+
+    private
+
+    # How far apart two readings can sit before it counts as an outage rather
+    # than normal sampling — derived from how THIS series actually reports,
+    # not from the chart's own bucket width. Open-Meteo reports hourly while
+    # the 24-hour chart buckets at ten minutes; a threshold built from the
+    # bucket width alone would flag the gap after every single outdoor point
+    # as its own outage, breaking the line into isolated, invisible dots
+    # (pointRadius is 0).
+    #
+    # The MINIMUM consecutive delta in the series is the estimate: an outage
+    # only ever WIDENS a gap, so it can inflate the minimum's competitors but
+    # can never pull the minimum itself down below the series' true cadence.
+    # Floored at the bucket width, since two distinct buckets can never be
+    # closer together than the bucket itself.
+    def gap_threshold(points)
+      cadence = points.each_cons(2).map { |(a, b)| b[:t] - a[:t] }.min || seconds
+
+      [ cadence, seconds ].max * GAP_BUCKETS
     end
   end
 end

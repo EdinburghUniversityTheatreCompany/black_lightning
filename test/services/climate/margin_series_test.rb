@@ -48,14 +48,19 @@ class Climate::MarginSeriesTest < ActiveSupport::TestCase
   end
 
   test "breaks the line across a gap rather than drawing through it" do
+    # The 11:00 -> 12:00 baseline pair establishes the sensor's own hourly
+    # cadence at this bucket width, so the 8-hour jump to 20:00 reads as a
+    # real outage rather than this sensor simply reporting every 8 hours —
+    # see Climate::Buckets#gap_threshold.
     sensor = create_climate_sensor(in_crypt: true)
+    create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 11:00"))
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 12:00"))
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 20:00"))
 
     points = series_for(sensor, from: "2026-07-25", to: "2026-08-06").first[:points]
 
-    assert_equal 3, points.size
-    assert_nil points[1][:margin]
+    assert_equal 4, points.size
+    assert_nil points[2][:margin]
   end
 
   test "skips a reading with no dew point rather than treating it as zero" do
