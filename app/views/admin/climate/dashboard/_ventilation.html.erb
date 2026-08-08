@@ -38,7 +38,7 @@
       <p class="text-gray-600 mb-0">No readings in this range yet.</p>
     <% end %>
 
-    <%# Only worth saying once something actually rendered — with no points at
+    <%# Only worth saying once something actually rendered. With no points at
         all, "No readings in this range yet." above already says it, and
         pairing that with "only the crypt is shown" would be contradictory. %>
     <% if has_points && ventilation.series.none? { |line| line[:key] == "outdoor_dew_point" && line[:points].any? } %>

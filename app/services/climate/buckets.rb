@@ -37,7 +37,7 @@ module Climate
 
     # A series is never treated as reporting less often than a day, however
     # sparse it looks in THIS window: a narrow ?from=/?to= can clip a
-    # hand-synced sensor's dense runs down to a couple of far-apart points,
+    # sensor's dense runs down to a couple of far-apart points,
     # and without a ceiling that reads as "this sensor normally reports every
     # few days," stretching the outage tolerance arbitrarily far. A day is
     # not an arbitrary pick — it is RESOLUTIONS' own widest bucket, the

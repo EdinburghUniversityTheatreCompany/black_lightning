@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
-  Temperature, relative humidity and dew point in the crypt, compared with outside. Condensation
-  forms on any surface at or below the dew point of the air touching it, so the walls need to sit a
-  few degrees above the crypt's dew point to keep mould off them.
+  How close the crypt is to condensing, and whether opening it up would help. Condensation forms
+  on any surface at or below the dew point of the air touching it, so the walls need to sit a few
+  degrees above the crypt's dew point to keep mould off them.
   <strong>Under <%= number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 0) %> °C of margin is worth acting on</strong>,
   which is roughly 80% humidity at the surface and where mould starts to grow.
 </p>
@@ -80,13 +80,14 @@
       <strong>How readings get here.</strong> Sensor readings arrive as a CSV export from the Govee
       app.
       <% if Climate::Settings.mailbox.present? %>
-        A scheduled daily report goes to <code><%= Climate::Settings.mailbox %></code> and this site
-        imports it on its own. <strong>That report is only ever as fresh as the last Bluetooth
-        sync, though.</strong>
+        A scheduled daily report goes to <code><%= Climate::Settings.mailbox %></code> and this
+        site imports it on its own.
       <% end %>
-      The crypt is out of Wi-Fi range, so the sensors can't reach Govee's cloud by themselves:
-      stand in the dressing room with the app open and wait for it to connect.
-      <%= "If nobody does, the daily email keeps arriving with nothing new in it." if Climate::Settings.mailbox.present? %>
+      Since the dressing room access point went in at the start of August 2026 the sensors reach
+      Govee's cloud by themselves, so <strong>you don't have to go down and sync them by hand any
+      more</strong>. That connection drops in and out, but a sensor records to its own buffer
+      either way and uploads the backlog once it is back on, so a dropout delays readings rather
+      than losing them.
     </li>
     <li>
       <strong>The margin here is measured against the air, not the walls.</strong> It's the crypt's
@@ -95,21 +96,37 @@
       something measures a wall directly.
     </li>
     <li>
-      <strong>When to open up.</strong> Compare the outside dew point with the temperature of the
-      crypt walls, not the humidity figures. If the outside dew point is comfortably below the wall
-      temperature, ventilating dries the crypt out. If it's above, you're pumping in air that will
-      condense on cold stone, however dry it feels outside. A warm muggy day is the worst time to
-      air out a basement, and a cold crisp one is the best. Relative humidity can't be compared
-      between two places at different temperatures, but dew point can. That's what the third chart
-      is for.
+      <strong>When to open up.</strong> That's what the Ventilation chart is for. Compare the
+      outside dew point with the crypt: below the crypt's own dew point, ventilating dries the
+      place out; above the crypt's temperature, you're pumping in air that will condense on cold
+      stone, however dry it feels outside. A warm muggy day is the worst time to air out a
+      basement, and a cold crisp one is the best. Relative humidity can't be compared between two
+      places at different temperatures, but dew point can.
+    </li>
+    <li>
+      <strong>The risk chart plots the worst point in each bucket, not the average.</strong> Past a
+      couple of days the readings are grouped into wider buckets, and a daily average margin can
+      sit at a comfortable 5 °C while every night touched 1. Condensation is a worst-case event, so
+      that chart shows the worst case.
+    </li>
+    <li>
+      <strong>Hours at risk are counted against hours that have readings</strong>, never against
+      hours in the range. The sensors sync over an intermittent access point and routinely miss
+      days, so a range denominator would report a damp week as a quiet month.
+    </li>
+    <li>
+      <strong>Which sensors count as "the crypt" is a checkbox</strong> on each sensor. Only ticked
+      sensors appear in the risk and ventilation charts; the history charts below show everything.
     </li>
     <li>
       <strong>A break in a line is missing data</strong>, not a flat reading. Lines are deliberately
       not drawn across a gap, because that would imply readings that aren't there.
     </li>
     <li>
-      Each sensor keeps about 20 days of readings before overwriting them, so sync at least that
-      often.
+      Each sensor only holds about 20 days before it starts overwriting the oldest readings. That
+      is the real deadline on a Wi-Fi outage: under 20 days the backlog still arrives intact, over
+      it and the earliest readings are gone. If the access point has been down that long, open the
+      Govee Home app next to a sensor and let it sync over Bluetooth.
     </li>
     <li>
       Long ranges are averaged into wider buckets (hourly, then six-hourly, then daily) so a year

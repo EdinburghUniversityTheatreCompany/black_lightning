@@ -148,7 +148,7 @@ module Admin
         get :show
 
         assert_no_match(/daily report/i, response.body)
-        assert_match(/out of Wi-Fi range/i, response.body)
+        assert_match(/dressing room access point/i, response.body)
       ensure
         original.nil? ? ENV.delete("CLIMATE_MAILBOX") : ENV["CLIMATE_MAILBOX"] = original
       end

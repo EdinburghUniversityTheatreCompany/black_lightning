@@ -8,7 +8,7 @@ module Climate
   # risk, the longest unbroken spell, and a per-day tally for the bars.
   #
   # The denominator is hours that HAVE readings, never hours in the range. The
-  # sensors are hand-synced over Bluetooth and routinely miss days, so
+  # sensors sync over an intermittent access point and routinely miss days, so
   # "41 of 720 hours" reads as 6% of a month when it may be 8% of the six days
   # actually covered.
   class RiskSummary
