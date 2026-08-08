@@ -28,6 +28,8 @@
 
 <%= render "condensation_risk", crypt_sensors: @crypt_sensors, risk: @risk, margin_series: @margin_series %>
 
+<%= render "ventilation", ventilation: @ventilation %>
+
 <%= render CardComponent.new(title: "History") do |card| %>
   <% card.with_tools do %>
     <%= link_to "View as data",

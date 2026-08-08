@@ -71,6 +71,24 @@ export function timeScaleOptions({ title, unit }) {
   }
 }
 
+// The Chart.js `options` object every line chart on this page shares:
+// responsive sizing, reduced-motion, synced hover/tooltip, end-label padding,
+// and the axis/legend defaults. Extracted because it is otherwise identical
+// token-for-token across controllers, which jscpd's zero-duplication gate
+// rejects outright.
+export function chartOptions({ title, unit, extra = {} }) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: reducedMotion() ? false : undefined,
+    interaction: { mode: "index", intersect: false },
+    layout: { padding: { right: 0 } },
+    scales: timeScaleOptions({ title, unit }),
+    plugins: legendAndTooltip({ unit }),
+    ...extra,
+  }
+}
+
 export function legendAndTooltip({ unit }) {
   return {
     legend: {
