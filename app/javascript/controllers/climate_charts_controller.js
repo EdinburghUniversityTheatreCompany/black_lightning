@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import {
   colorFor, withAlpha, endLabelPlugin, legendAndTooltip, loadChartJs,
-  reducedMotion, seriesAriaLabel, timeScaleOptions,
+  pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
 // Three stacked time-series charts (temperature, relative humidity, dew point)
@@ -60,7 +60,10 @@ export default class extends Controller {
         // Second cue for the outdoor line, so it reads apart without relying on hue.
         borderDash: series.outdoor ? [6, 4] : [],
         borderWidth: 2,
-        pointRadius: 0,
+        // Radius 0 normally — the line carries the ink — except for a real
+        // point with no drawn neighbour on either side, which a plain 0
+        // would render as nothing at all. See pointRadiusUnlessIsolated.
+        pointRadius: pointRadiusUnlessIsolated(),
         pointHoverRadius: 5,
         tension: 0.2,
       }

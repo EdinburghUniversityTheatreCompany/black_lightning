@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import {
-  colorFor, endLabelPlugin, legendAndTooltip, loadChartJs, reducedMotion,
-  seriesAriaLabel, timeScaleOptions,
+  colorFor, endLabelPlugin, legendAndTooltip, loadChartJs,
+  pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
 // How close the crypt came to condensing: one line per crypt sensor, plotting
@@ -52,7 +52,8 @@ export default class extends Controller {
           borderColor: colorFor(series.color_index),
           backgroundColor: colorFor(series.color_index),
           borderWidth: 2,
-          pointRadius: 0,
+          // See climate_charts_controller for why this isn't a plain 0.
+          pointRadius: pointRadiusUnlessIsolated(),
           pointHoverRadius: 5,
           tension: 0.2,
         })),
