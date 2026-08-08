@@ -233,6 +233,25 @@ module Admin
 
         assert_match(/No sensors are marked as being in the crypt/, response.body)
       end
+
+      test "offers every crypt sensor in the ventilation picker" do
+        north = create_climate_sensor(display_name: "Crypt north", in_crypt: true)
+        create_climate_reading(sensor: north, recorded_at: 2.hours.ago)
+
+        get :show
+
+        assert_match(/Coldest crypt sensor/, response.body)
+        assert_match(/Crypt north/, response.body)
+      end
+
+      test "says the outside line is missing when the feed has no readings" do
+        sensor = create_climate_sensor(in_crypt: true)
+        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
+
+        get :show
+
+        assert_match(/outside line is missing/, response.body)
+      end
     end
   end
 end
