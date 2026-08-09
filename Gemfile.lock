@@ -214,7 +214,7 @@ GEM
       raabro (~> 1.4)
     globalid (1.4.0)
       activesupport (>= 6.1)
-    herb (0.10.2-x86_64-linux-gnu)
+    herb (0.10.3-x86_64-linux-gnu)
     highline (3.0.1)
     honeybadger (6.9.1)
       logger
