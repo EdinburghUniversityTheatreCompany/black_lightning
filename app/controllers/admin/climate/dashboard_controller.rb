@@ -1,12 +1,9 @@
 module Admin
   module Climate
     ##
-    # The dashboard: current-reading tiles, the condensation-risk view (margin
-    # chart, at-risk figures, per-day bars), the ventilation comparison, and
-    # the three raw history charts.
-    #
-    # Answer first, evidence second — the derived views are what somebody
-    # actually needs, and the raw lines are there to check them against.
+    # Answer first, evidence second: the condensation-risk and ventilation
+    # views render above the raw history charts, which exist to check them
+    # against.
     class DashboardController < BaseController
       def show
         @title = "Crypt Climate"

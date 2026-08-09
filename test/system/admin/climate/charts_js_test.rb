@@ -44,12 +44,9 @@ module Admin
 
       # chart_index: 0 temperature, 1 humidity, 2 dew point.
       #
-      # Excludes band datasets: once a range is banded (see
-      # climate_charts_controller.js's #band), the min and max band datasets
-      # share the SAME label as the line they shade, so a bare label match
-      # can return the band's max line instead of the actual plotted line —
-      # legend and tooltip already carry their own "!dataset.band" filter for
-      # the same reason (see legendAndTooltip in lib/climate_chart.js).
+      # Excludes band datasets: once a range is banded, the min and max band
+      # datasets share the SAME label as the line they shade, so a bare label
+      # match can return the band's max line instead of the actual plotted line.
       def plotted(chart_index, label)
         evaluate_script(<<~JS)
           (() => {

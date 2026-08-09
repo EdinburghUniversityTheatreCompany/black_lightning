@@ -1,8 +1,4 @@
-<%#
-  The at-risk figures as text rather than pixels on a canvas, so the question
-  that matters never depends on the chart rendering, and screen readers get it
-  directly. Same reasoning as the Now tiles.
-%>
+<%# Text, not just pixels on a canvas: same reasoning as the Now tiles. %>
 <ul class="list-none pl-0 mb-4 space-y-1">
   <% summaries.each do |summary| %>
     <li class="text-sm">

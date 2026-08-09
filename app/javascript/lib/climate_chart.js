@@ -1,10 +1,8 @@
-// Shared machinery for the climate dashboard's charts: the palette, the lazy
-// Chart.js import, the end-of-line labels, and the axis/legend defaults.
+// Shared machinery for the climate dashboard's four chart controllers.
 //
-// Extracted because there are four chart controllers on this page and jscpd
-// gates duplication at zero — but also because a sensor has to be the same
-// colour and the same shape on every one of them, or they cannot be read
-// together.
+// Extracted because jscpd gates duplication at zero — but also because a
+// sensor has to be the same colour and the same shape on every chart, or they
+// cannot be read together.
 
 // Fixed order, never cycled. Validated for the light surface: worst adjacent
 // CVD ΔE 9.1, normal-vision ΔE 19.6. Three slots fall below 3:1 contrast,
@@ -36,14 +34,10 @@ export function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
-// pointRadius: 0 draws nothing at a point and lets the connecting line carry
-// the ink instead — but a point with a null (or missing) neighbour on BOTH
-// sides has no line touching it either, so radius 0 there means the reading
-// draws as nothing at all. That is reachable now that a genuine two-point
-// series can be its own isolated island either side of a real gap (see
-// Climate::Buckets#gap_threshold's two-point fallback). Scriptable pointRadius
-// gives just that point a visible dot while every point inside a normal,
-// connected run stays radius 0.
+// pointRadius: 0 lets the connecting line carry the ink — but a point with no
+// line on either side (a genuine two-point series can be its own isolated
+// island around a real gap; see Buckets#gap_threshold's two-point fallback)
+// then draws as nothing at all. This gives just that point a visible dot.
 export function pointRadiusUnlessIsolated(radius = 3) {
   const hasY = (point) => point && point.y !== null && point.y !== undefined
 
@@ -91,11 +85,7 @@ export function timeScaleOptions({ title, unit }) {
   }
 }
 
-// The Chart.js `options` object every line chart on this page shares:
-// responsive sizing, reduced-motion, synced hover/tooltip, end-label padding,
-// and the axis/legend defaults. Extracted because it is otherwise identical
-// token-for-token across controllers, which jscpd's zero-duplication gate
-// rejects outright.
+// The `options` object every line chart on this page shares.
 export function chartOptions({ title, unit, extra = {} }) {
   return {
     responsive: true,

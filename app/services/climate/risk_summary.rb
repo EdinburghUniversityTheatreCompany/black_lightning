@@ -35,10 +35,9 @@ module Climate
     # One query for every sensor and every figure below: the three counts and
     # the bars all have to agree, so they all come off the same rows.
     #
-    # Written as literal Arel.sql calls, not built by interpolating a
-    # constant: Brakeman flags an interpolated Arel.sql argument as a possible
-    # SQL injection even when, as here, it can only ever come from a frozen
-    # constant. See Climate::SeriesQuery for the same pattern.
+    # Arel.sql args are literals, not interpolated: Brakeman flags
+    # interpolation as a possible injection even from a frozen constant (see
+    # Climate::SeriesQuery for the same pattern).
     def hourly_margins
       return {} if @sensors.empty?
 

@@ -70,11 +70,11 @@ export default class extends Controller {
           ...scales,
           y: {
             ...scales.y,
-            // A margin chart has to show the threshold it is measured against.
-            // Left to auto-scale, a flat night gives a y-axis a few hundredths
-            // of a degree wide: the shaded risk band falls off-screen entirely
-            // and sensor noise reads as a cliff. suggestedMin only widens the
-            // range, so a genuinely large margin still fits.
+            // Auto-scaled, a flat night gives the y-axis a few hundredths of a
+            // degree of range: the risk band falls off-screen and sensor noise
+            // reads as a cliff. suggestedMin only widens the range, so a
+            // genuinely large margin still fits — unlike the shared axis
+            // options, this chart has to show the threshold it's measured against.
             suggestedMin: 0,
           },
         },

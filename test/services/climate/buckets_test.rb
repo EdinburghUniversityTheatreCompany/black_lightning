@@ -52,10 +52,7 @@ class Climate::BucketsTest < ActiveSupport::TestCase
   # With only one delta to compare it has nothing else, so the estimate falls
   # back to the chart's own bucket width rather than the lone observed gap —
   # otherwise the gap and the "cadence" derived from it would be the same
-  # number and a real outage could never exceed its own threshold. This is
-  # the fallback the test above exercises implicitly; this one states it on
-  # its own terms, with a gap that a (deliberately wrong) single-delta
-  # estimate would let through.
+  # number and a real outage could never exceed its own threshold.
   test "with only two points, falls back to the bucket width rather than treating the lone gap as the cadence" do
     subject = buckets(from: "2026-08-05", to: "2026-08-06") # 600s bucket
     points = [

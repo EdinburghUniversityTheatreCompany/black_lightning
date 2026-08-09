@@ -34,10 +34,9 @@ module Climate
 
     private
 
-    # Written as a literal Arel.sql call, not built by interpolating a
-    # constant: Brakeman flags an interpolated Arel.sql argument as a
-    # possible SQL injection even when, as here, it can only ever come from a
-    # frozen constant. See Climate::SeriesQuery#aggregates for the same rule.
+    # Arel.sql arg is a literal, not interpolated: Brakeman flags interpolation
+    # as a possible injection even from a frozen constant (see
+    # Climate::SeriesQuery#aggregates).
     def bucketed_rows
       return {} if @sensors.empty?
 

@@ -48,9 +48,8 @@ module Admin
         evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector(#{selector.to_json})
-            // A band dataset shares its line's label (see charts_js_test.rb's
-            // #plotted), so exclude it even though none of this file's charts
-            // build one today — a future band here would silently break this.
+            // A band dataset shares its line's label — exclude it even though
+            // none of this file's charts build one today (see charts_js_test.rb).
             const set = root.climateCharts[0].data.datasets.find(d => d.label === #{label.to_json} && !d.band)
             return set ? set.data.map(p => p.y) : null
           })()
@@ -71,13 +70,11 @@ module Admin
         assert_in_delta 4.0, values.max, 0.001
       end
 
-      # The shaded risk band is drawn by a canvas plugin, not a dataset, so it
-      # cannot be read off plotted points the way the margin line above is.
-      # Chart.js keeps the plugins a chart was actually built with on
-      # chart.config.plugins (see node_modules/chart.js/dist/chart.js's Config
-      # class) — asserting the band plugin is really wired into the built
-      # chart, with the threshold value the server sent, is the closest a
-      # browser test gets to "the shaded band renders" without reading pixels.
+      # The shaded risk band is a canvas plugin, not a dataset, so it can't be
+      # read off plotted points the way the margin line above is. Asserting the
+      # plugin is wired into chart.config.plugins with the server's threshold
+      # is the closest a browser test gets to "the band renders" without
+      # reading pixels.
       test "the margin chart's risk band is wired in with the server's threshold" do
         visit admin_climate_dashboard_path
         assert_selector "[data-climate-margin-chart-ready='1']"
@@ -147,13 +144,9 @@ module Admin
 
       # --- the min-max band: present once buckets widen, absent at raw ------
       #
-      # Climate::SeriesQuery#aggregated? / Climate::Buckets#aggregated? is
-      # false while a bucket holds at most one reading (a chart bucketed at
-      # raw ten-minute resolution), and true once bucketing starts averaging
-      # more than one reading per point. A band drawn at raw resolution would
-      # be a zero-width artefact; earlier tasks only proved this server-side
-      # (see Climate::SeriesQuery), because nothing before this task read
-      # what Chart.js actually received.
+      # A band drawn at raw (one-reading-per-bucket) resolution would be a
+      # zero-width artefact. Buckets#aggregated? guards this server-side, but
+      # nothing before this test read what Chart.js actually received.
       test "the min-max band appears once buckets widen, and is absent at raw resolution" do
         ::Climate::Reading.delete_all
         day = Date.parse("2026-08-05")
@@ -184,25 +177,18 @@ module Admin
 
       # --- regression: the outdoor line must draw on the 24-hour view -------
       #
-      # Production bug: on the 24-hour view the outdoor line never drew, on
-      # any chart, while the crypt line drew fine. Cause: Climate::Buckets
-      # #with_gaps derived its gap threshold from the CHART's bucket width
-      # (600s at 24h resolution) rather than the SERIES' own cadence.
-      # Open-Meteo reports hourly, so every consecutive pair of real outdoor
-      # points was 3600s apart — over the 1800s threshold (600 * GAP_BUCKETS)
-      # — and an explicit null got inserted after every single real point.
-      # With spanGaps: false and pointRadius: 0 that leaves no two adjacent
-      # real values anywhere in the dataset, so nothing was drawable: not a
-      # missing dataset (that would already fail a "dataset exists" check),
-      # not a wrong point count (still 2x the real count, nulls included) —
-      # only an adjacency check on the actual plotted values catches it.
-      #
-      # Fixed: the threshold is now derived from the series' own observed
-      # cadence (Buckets#gap_threshold), clamped so it can never be smaller
-      # than the chart's own bucket width. Needs >= 3 outdoor points so the
-      # cadence is measured from two real deltas rather than falling back to
-      # the two-point/single-delta case, which still uses the bucket width
-      # (see Buckets#gap_threshold and BucketsTest's two-point fallback test).
+      # Production bug: the outdoor line never drew on the 24-hour view, on
+      # any chart, while the crypt line drew fine. Cause: Buckets#with_gaps
+      # derived its gap threshold from the CHART's bucket width (600s) rather
+      # than the SERIES' own cadence, so every real 3600s-apart Open-Meteo
+      # pair exceeded the 1800s threshold and got a null inserted between
+      # them — no two adjacent real values survived anywhere. Neither a
+      # "dataset exists" check nor a point-count check would have caught it
+      # (still 2x the real count, nulls included); only an adjacency check on
+      # the actual plotted values does. Fixed by deriving the threshold from
+      # the series' own cadence (Buckets#gap_threshold), clamped to never go
+      # below the chart's bucket width. >= 3 outdoor points here so the
+      # cadence comes from two real deltas, not the two-point fallback.
       test "the outdoor line draws a run of adjacent points on the 24-hour view" do
         ::Climate::Reading.delete_all
         day = Date.parse("2026-08-05")

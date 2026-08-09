@@ -49,10 +49,6 @@ module ClimateHelper
       .transform_values { |days| { from: (today - (days - 1).days).iso8601, to: today.iso8601 } }
   end
 
-  # Carries the ventilation selection through every link that changes the
-  # range, so picking a sensor and then changing the dates does not silently
-  # reset which sensor is on screen.
-  #
   # The default is left OUT of the URL, the same way DateRange leaves the
   # default range out: a clean link keeps meaning "recent, coldest sensor".
   def climate_link_params(range_params, selected_key)
@@ -61,11 +57,9 @@ module ClimateHelper
     range_params.merge(crypt: selected_key)
   end
 
-  # The at-risk figures as a sentence, because the question that matters must
-  # not depend on a chart rendering: the same reason the Now tiles are HTML.
-  #
-  # The denominator is hours WITH READINGS. "41 of 720 hours" would read as 6%
-  # of a month when the sensor only covered six days of it.
+  # The denominator is hours WITH READINGS, never hours in the range. "41 of
+  # 720 hours" would read as 6% of a month when the sensor only covered six
+  # days of it.
   def climate_risk_sentence(summary)
     return "No readings in this range." if summary[:hours_with_readings].zero?
 

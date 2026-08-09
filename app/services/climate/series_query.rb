@@ -42,9 +42,8 @@ module Climate
     # condenses on a wall.
     #
     # Written as literal Arel.sql calls, not built by interpolating
-    # MEASURES.values: Brakeman flags an interpolated Arel.sql argument as a
-    # possible SQL injection even when, as here, it can only ever come from a
-    # frozen constant.
+    # MEASURES.values: Brakeman flags interpolation into Arel.sql as a
+    # possible injection even from a frozen constant.
     def aggregates
       [ Arel.sql("AVG(temperature_c)"), Arel.sql("MIN(temperature_c)"), Arel.sql("MAX(temperature_c)"),
         Arel.sql("AVG(relative_humidity)"), Arel.sql("MIN(relative_humidity)"), Arel.sql("MAX(relative_humidity)"),
