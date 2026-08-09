@@ -117,18 +117,18 @@ module Admin
       test "lines break across a gap rather than interpolating through it" do
         # spanGaps false plus the server's explicit null points is what stops a
         # two-day outage being drawn as a straight, entirely invented line.
-        # Band datasets bring their own (also-false) spanGaps, so they are
-        # excluded here to keep this assertion about the two actual lines,
-        # not however many band datasets this range happens to add.
+        # Band datasets carry the same (also-false) spanGaps for the same
+        # reason, so every dataset is asserted here, not just the two lines.
         visit admin_climate_dashboard_path
         wait_for_charts
 
         span_gaps = evaluate_script(<<~JS)
           document.querySelector("[data-controller='climate-charts']").climateCharts[0]
-            .data.datasets.filter(d => !d.band).map(d => d.spanGaps)
+            .data.datasets.map(d => d.spanGaps)
         JS
 
-        assert_equal [ false, false ], span_gaps
+        assert_operator span_gaps.length, :>, 0
+        assert_equal [ false ] * span_gaps.length, span_gaps
       end
 
       test "the current readings are real text, not only pixels on a canvas" do

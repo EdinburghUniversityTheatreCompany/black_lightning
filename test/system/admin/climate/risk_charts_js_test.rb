@@ -26,13 +26,19 @@ module Admin
       end
 
       # Deliberately distinct values per sensor and per measure, so a chart
-      # plotting the wrong series or the wrong column cannot pass. The crypt
-      # margin is a flat 2.0 °C, under the 3.0 threshold.
+      # plotting the wrong series or the wrong column cannot pass.
+      #
+      # The crypt margin is 2.0 °C for the first four hours and 4.0 °C for the
+      # last two, so the at-risk count is a strict SUBSET of the hours covered.
+      # A flat at-risk margin would leave the two indistinguishable, and a bars
+      # chart reading hours_with_readings instead of at_risk_hours would pass.
       def seed_readings
         base = 6.hours.ago.change(min: 0)
         12.times do |index|
+          clear = index >= 8 # the last two hourly buckets sit above the threshold
           create_climate_reading(sensor: @crypt, recorded_at: base + (index * 30).minutes,
-                                 temperature_c: 11.0, relative_humidity: 85.0, dew_point_c: 9.0)
+                                 temperature_c: clear ? 13.0 : 11.0, relative_humidity: 85.0,
+                                 dew_point_c: 9.0)
           create_climate_reading(sensor: @outdoor, recorded_at: base + (index * 30).minutes,
                                  temperature_c: 17.0, relative_humidity: 65.0, dew_point_c: 6.0)
         end
@@ -42,7 +48,10 @@ module Admin
         evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector(#{selector.to_json})
-            const set = root.climateCharts[0].data.datasets.find(d => d.label === #{label.to_json})
+            // A band dataset shares its line's label (see charts_js_test.rb's
+            // #plotted), so exclude it even though none of this file's charts
+            // build one today — a future band here would silently break this.
+            const set = root.climateCharts[0].data.datasets.find(d => d.label === #{label.to_json} && !d.band)
             return set ? set.data.map(p => p.y) : null
           })()
         JS
@@ -55,7 +64,11 @@ module Admin
         values = plotted("[data-controller='climate-margin-chart']", "Crypt north").compact
 
         assert_predicate values, :any?
-        values.each { |value| assert_in_delta 2.0, value, 0.001 }
+        # 2.0 and 4.0 are the seeded margins; 11.0 and 13.0 are the temperatures
+        # they were derived from, so a chart plotting the wrong column misses by
+        # a wide margin rather than by a rounding error.
+        assert_in_delta 2.0, values.min, 0.001
+        assert_in_delta 4.0, values.max, 0.001
       end
 
       # The shaded risk band is drawn by a canvas plugin, not a dataset, so it
@@ -85,11 +98,10 @@ module Admin
         assert_text(/hours? with readings/)
       end
 
-      # Every hour in the seeded 6-hour span sits at a flat 2.0 °C margin,
-      # under the 3.0 °C threshold, so every hourly bucket the sensor covered
-      # counts as at risk. That is the same total the risk sentence above
-      # states as text — this proves the JS bars reflect the same numbers, not
-      # merely that a canvas exists.
+      # Four of the six seeded hours sit under the 3.0 °C threshold and two sit
+      # above it, so the bars must total FOUR. Six would mean the chart is
+      # plotting hours_with_readings, which is the payload key next to the one
+      # it wants and would be invisible against a uniformly at-risk seed.
       test "the per-day bars draw the hours at risk" do
         visit admin_climate_dashboard_path
         assert_selector "[data-climate-risk-bars-ready='1']"
@@ -103,7 +115,7 @@ module Admin
           })()
         JS
 
-        assert_equal [ 6 ], totals
+        assert_equal [ 4 ], totals
       end
 
       test "plots all three ventilation lines on one axis" do
@@ -218,11 +230,12 @@ module Admin
             .find((d) => d.label === #{@outdoor.display_name.to_json}).data.map((p) => p.y)
         JS
 
-        adjacent_real_pair = outdoor_y.each_cons(2).any? { |a, b| !a.nil? && !b.nil? }
-
-        assert adjacent_real_pair,
-               "expected two adjacent plotted outdoor points with no null between them, " \
-               "so Chart.js has a line segment to draw; got #{outdoor_y.inspect}"
+        # Every seeded hour survives, with no null anywhere: asserting the whole
+        # series rather than "some adjacent pair exists" also rejects a partial
+        # regression that breaks only part of the line.
+        assert_equal [ 17.0 ] * 5, outdoor_y,
+                     "expected five adjacent plotted outdoor points with no null between them, " \
+                     "so Chart.js has a line segment to draw; got #{outdoor_y.inspect}"
       end
     end
   end
