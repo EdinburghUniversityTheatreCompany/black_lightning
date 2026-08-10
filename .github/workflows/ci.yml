@@ -111,11 +111,12 @@ jobs:
       - name: Lint JavaScript code for consistent style
         run: pnpm lint
 
-  # Guard against toolchain drift: Ruby/Node are pinned in several places (mise.toml is the
-  # source of truth; .ruby-version/.node-version feed CI + setup-ruby/-node; the prod Dockerfile
-  # bakes them into the image). This is the bug that let the prod image ship Node 22 while
-  # everything else ran 24 — fail CI if they ever diverge again. Mirrors the hk `versions`
-  # step (hk.pkl) so pre-commit and CI agree; keep both in sync by hand.
+  # Toolchain + service versions are pinned in several files at once (mise.toml, the
+  # .<lang>-version files, the Dockerfile ARGs, and the config/deploy.yml + devcontainer
+  # `image:` tags) because different consumers read different ones, and nothing makes them
+  # agree — the bug that let the prod image ship Node 22 while everything else ran 24.
+  # Mirrors the hk `versions` + `dockerfile-node-style` steps so the gates can't drift.
+  # Reads files only, so it needs no toolchain: the cheapest job in this workflow.
   versions:
     runs-on: ubuntu-latest
     permissions:
@@ -127,29 +128,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Toolchain versions are consistent
+      - name: Toolchain and service versions agree across files
+        run: bash scripts/check_version_sync.sh
+
+      - name: Prod Dockerfile still derives the Node major from .node-version
+        # Repo-local, on top of the shared gate: this Dockerfile has no static Node pin
+        # because it derives the major at build time, so the standard's check has nothing
+        # to compare. Keep it that way.
         run: |
           fail=0
-          ruby_file=$(tr -d '[:space:]' < .ruby-version)
-          node_file=$(tr -d '[:space:]' < .node-version)
-          ruby_mise=$(sed -n 's/^ruby[[:space:]]*=[^"]*"\([^"]*\)".*/\1/p' mise.toml)
-          node_mise=$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)
-          ruby_docker=$(sed -n 's/^ARG RUBY_VERSION=//p' Dockerfile | tr -d '[:space:]')
-          echo "ruby -> .ruby-version=$ruby_file mise.toml=$ruby_mise Dockerfile=$ruby_docker"
-          echo "node -> .node-version=$node_file mise.toml=$node_mise (Dockerfile derives major)"
-          [ "$ruby_file" = "$ruby_mise" ] || { echo "::error::mise.toml ruby ($ruby_mise) != .ruby-version ($ruby_file)"; fail=1; }
-          [ "$ruby_file" = "$ruby_docker" ] || { echo "::error::Dockerfile ARG RUBY_VERSION ($ruby_docker) != .ruby-version ($ruby_file)"; fail=1; }
-          [ "$node_file" = "$node_mise" ] || { echo "::error::mise.toml node ($node_mise) != .node-version ($node_file)"; fail=1; }
           grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo "::error::prod Dockerfile must derive the Node major from .node-version, not hardcode it"; fail=1; }
           ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo "::error::remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version"; fail=1; }
-          mysql_pat='s/^[[:space:]]*image:[[:space:]]*mysql:\([0-9][0-9.]*\).*/\1/p'
-          mysql_prod=$(sed -n "$mysql_pat" config/deploy.yml)
-          mysql_ci=$(sed -n "$mysql_pat" .github/workflows/ci.yml)
-          mysql_dev=$(sed -n "$mysql_pat" .devcontainer/compose.yaml)
-          echo "mysql -> deploy.yml=$mysql_prod ci.yml=$mysql_ci devcontainer=$mysql_dev"
-          [ -n "$mysql_prod" ] && [ -n "$mysql_ci" ] && [ -n "$mysql_dev" ] || { echo "::error::could not read a mysql version from all three of config/deploy.yml, .github/workflows/ci.yml, .devcontainer/compose.yaml"; fail=1; }
-          [ "$mysql_prod" = "$mysql_ci" ] || { echo "::error::ci.yml mysql ($mysql_ci) != config/deploy.yml ($mysql_prod) — CI must test the server production runs; see docs/mysql-8.4-upgrade.md"; fail=1; }
-          [ "$mysql_prod" = "$mysql_dev" ] || { echo "::error::.devcontainer/compose.yaml mysql ($mysql_dev) != config/deploy.yml ($mysql_prod); see docs/mysql-8.4-upgrade.md"; fail=1; }
           exit $fail
 
   test:

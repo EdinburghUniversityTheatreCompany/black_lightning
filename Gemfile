@@ -91,6 +91,7 @@ group :development, :test do
   gem "rubocop-faker"
   gem "rubocop-view_component", require: false
   gem "rubocop-minitest", require: false
+  gem "rubocop-mick", github: "mickzijdel/rubocop-mick", require: false
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
