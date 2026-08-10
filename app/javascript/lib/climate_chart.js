@@ -110,6 +110,24 @@ export function legendAndTooltip({ unit }) {
         // legend and offers the reader a toggle that half-erases a chart.
         filter: (item, data) => !data.datasets[item.datasetIndex].band,
       },
+      // A band dataset shares its line's label but keeps its own
+      // datasetIndex, so Chart.js's default onClick (which toggles only the
+      // clicked datasetIndex) hides the line and leaves its shaded band
+      // floating with no line and no end label. Toggle every dataset that
+      // shares the clicked label instead.
+      onClick(_event, legendItem, legend) {
+        const chart = legend.chart
+        const label = chart.data.datasets[legendItem.datasetIndex].label
+        const visible = chart.isDatasetVisible(legendItem.datasetIndex)
+
+        chart.data.datasets.forEach((dataset, index) => {
+          if (dataset.label !== label) return
+          if (visible) chart.hide(index)
+          else chart.show(index)
+        })
+
+        legendItem.hidden = visible
+      },
     },
     tooltip: {
       filter: (item) => !item.dataset.band,

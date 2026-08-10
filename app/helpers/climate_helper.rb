@@ -63,7 +63,7 @@ module ClimateHelper
   def climate_risk_sentence(summary)
     return "No readings in this range." if summary[:hours_with_readings].zero?
 
-    threshold = number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 1)
+    threshold = number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 0)
     covered = pluralize(summary[:hours_with_readings], "hour")
 
     return "None of the #{covered} with readings came under #{threshold} °C of margin." if summary[:hours_at_risk].zero?

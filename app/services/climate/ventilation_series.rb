@@ -38,7 +38,11 @@ module Climate
     def selected_key = resolved[:key]
 
     # -> [{ key:, label:, style:, color_index:, points: [{ t:, value: }] }]
-    def series
+    def series = @series ||= build_series
+
+    private
+
+    def build_series
       return [] if sensor.nil?
 
       raw = SeriesQuery.new(sensors: [ sensor, @outdoor_sensor ].compact, range: @range).series
@@ -51,8 +55,6 @@ module Climate
         outdoor && line("outdoor_dew_point", "Outside dew point", outdoor, :dew_point, "dashed")
       ].compact
     end
-
-    private
 
     def line(key, label, source, measure, style)
       { key: key, label: label, style: style, color_index: source[:color_index],

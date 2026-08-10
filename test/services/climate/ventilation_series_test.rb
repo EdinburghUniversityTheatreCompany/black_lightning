@@ -100,6 +100,25 @@ class Climate::VentilationSeriesTest < ActiveSupport::TestCase
     assert_empty subject.series
   end
 
+  test "memoizes series so a second call issues no further queries" do
+    crypt = create_climate_sensor(display_name: "Crypt", in_crypt: true)
+    create_climate_reading(sensor: crypt, recorded_at: Time.zone.parse("2026-08-05 12:00"))
+    create_climate_reading(sensor: @outdoor, recorded_at: Time.zone.parse("2026-08-05 12:00"))
+
+    subject = build([ crypt ])
+    subject.series
+
+    query_count = 0
+    callback = ->(*) { query_count += 1 }
+
+    result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      subject.series
+    end
+
+    assert_equal subject.series, result
+    assert_equal 0, query_count
+  end
+
   test "offers the worst case plus every crypt sensor" do
     north = create_climate_sensor(display_name: "North", in_crypt: true)
     south = create_climate_sensor(display_name: "South", in_crypt: true)

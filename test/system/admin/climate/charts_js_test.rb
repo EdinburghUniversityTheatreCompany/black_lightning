@@ -163,6 +163,36 @@ module Admin
         assert_no_selector "[data-climate-charts-ready]"
       end
 
+      # The dashboard's default range is 7 days, which is already banded (see
+      # Buckets::RESOLUTIONS), so every test above already exercises band
+      # datasets without setting banded up explicitly.
+      test "hiding a sensor via the legend also hides its shaded band" do
+        visit admin_climate_dashboard_path
+        wait_for_charts
+
+        hidden_before, hidden_after = evaluate_script(<<~JS)
+          (() => {
+            const chart = document.querySelector("[data-controller='climate-charts']").climateCharts[0]
+            const label = "Crypt north"
+            const item = chart.legend.legendItems.find(i => i.text === label)
+            const indexesForLabel = () => chart.data.datasets
+              .map((dataset, index) => (dataset.label === label ? index : null))
+              .filter(index => index !== null)
+
+            const before = indexesForLabel().map(index => Boolean(chart.getDatasetMeta(index).hidden))
+            chart.options.plugins.legend.onClick({}, item, chart.legend)
+            const after = indexesForLabel().map(index => Boolean(chart.getDatasetMeta(index).hidden))
+            return [before, after]
+          })()
+        JS
+
+        # Three datasets share the "Crypt north" label while banded: the line
+        # plus its max/min band. Before the fix only the line (one of the
+        # three) toggled, leaving the band shaded with no line and no label.
+        assert_equal [ false, false, false ], hidden_before
+        assert_equal [ true, true, true ], hidden_after
+      end
+
       test "says so when there is nothing to plot yet" do
         ::Climate::Reading.delete_all
 
