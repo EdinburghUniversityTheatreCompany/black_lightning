@@ -27,10 +27,10 @@ module Reimbursements
       @graph = graph || GraphClient.new
     end
 
-    # The three producer methods take +greeting_name+ already derived by the
-    # call site (GreetingName.for), keeping the person lookup out of the render
-    # path and this boundary ActiveRecord-free. NB the +payee_name+ keys inside
-    # the operator-alert row hashes below are a different thing: still full names.
+    # Both producer methods take +greeting_name+ already derived by the call
+    # site (GreetingName.for), keeping the person lookup out of the render path
+    # and this boundary ActiveRecord-free. NB the +payee_name+ keys inside the
+    # operator-alert row hashes below are a different thing: still full names.
 
     # Producer: their expense was rejected on Review reject.
     def rejection(to:, greeting_name:, auto_number:, amount:, budget_name:, description:, reason:)
@@ -43,18 +43,10 @@ module Reimbursements
       )
     end
 
-    # Payee: "you've been paid" once EUSA's actuals confirm payment (Reconcile apply).
-    def payment_confirmation(to:, greeting_name:, expenses:)
-      count = Array(expenses).size
-      send_email(
-        to: to,
-        subject: "EUSA has paid your expense#{'s' if count > 1}",
-        template: "reimbursements/emails/payment_confirmation",
-        assigns: { greeting_name: greeting_name, expenses: Array(expenses) }
-      )
-    end
-
-    # Producer: one notification per payee for a processed BACS batch.
+    # Producer: one notification per payee for a processed BACS batch. This is
+    # the ONLY payment-side email a producer gets: Reconcile deliberately sends
+    # no "EUSA has paid you" follow-up, because the actuals export it runs off
+    # arrives weeks after the money did (see ReconcileController).
     def producer_notification(to:, greeting_name:, line_items:, bacs_date:, total:)
       count = line_items.size
       send_email(

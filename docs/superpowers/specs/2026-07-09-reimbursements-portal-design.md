@@ -141,5 +141,7 @@ Minitest per BL conventions (webmock-stubbed HTTP for Airtable/Gemini/Graph; fac
 ## Related quick wins (separate from this build, logged in bedlam-bacs `plans/off-topic-improvements.md`)
 
 - Add VAT-itemisation check to bedlam-bacs' AI checker prompt (covers Airtable-form submissions).
-- "You've been paid" email at Reconcile time.
+- ~~"You've been paid" email at Reconcile time.~~ Built, then removed on 2026-08-12: the actuals
+  export lands weeks after the money does, so the note told producers something they knew. See
+  the Reconcile bullet in CLAUDE.md before reviving this.
 - Duplicate-submission warning (same amount + merchant within 30 days) at review.

@@ -371,8 +371,8 @@ survive as historical import provenance and are never written. Spec + plan in
   subcommittee) before/when the Entra client secret dies.
 - **Every producer email greets by FIRST name through `Reimbursements::GreetingName.for`**
   — the one derivation, because the two surfaces are written differently and must not
-  drift: the `Notifier`'s three producer templates (rejection, payment_confirmation,
-  producer_notification) are ERB, while `MailboxPollJob`'s replies are plain-Ruby
+  drift: the `Notifier`'s two producer templates (rejection, producer_notification)
+  are ERB, while `MailboxPollJob`'s replies are plain-Ruby
   heredocs. It prefers the **linked `User#first_name`**, then the leading word of
   `Person#name`, then `"there"` — the last because `PersonLink` stores the user's *email*
   as the person name when they have no full name, so a bare split would open with "Hi
@@ -420,6 +420,13 @@ survive as historical import provenance and are never written. Spec + plan in
   period `03` → 3). **Bank details in an export are masked to their last four digits**
   via `BankDetails.mask` (also used by the People notes audit line); only the BACS
   spreadsheet EUSA pays from carries full numbers.
+- **Reconcile emails nobody, by decision (removed 2026-08-12).** Marking an expense Paid there
+  used to send the producer a "EUSA has paid your expense" note (`Notifier#payment_confirmation`
+  plus its template, both gone). Reconciliation runs off EUSA's monthly actuals export, which
+  lands weeks after the BACS run it confirms, so the note reached people who had spent the money
+  already. The one payment-side email a producer gets is `producer_notification`, sent when
+  their claim goes into a batch. Paid is a bookkeeping state here, not an event to announce, so
+  don't wire a notification onto it again.
 - **EUSA actuals — offsetting pairs + conversion.**
   `Reconciliation.detect_offsetting_pairs` finds the accrual/reversal legs that cancel out
   in a pasted export. **The governing asymmetry for every judgement call here**: a false

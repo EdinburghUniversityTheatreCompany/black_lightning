@@ -6,7 +6,7 @@
   column names. Debits are matched to Submitted or Paid expenses, credits to income budgets,
   both within that row's cost centre. Rows that cancel each other out are proposed as
   offsetting pairs for you to confirm. When you're happy, apply the reconciliation to save
-  everything, mark the matched expenses Paid, and email the producers.
+  everything and mark the matched expenses Paid. Nobody is emailed.
 </p>
 
 <% if flash.now[:alert].present? %>
@@ -278,8 +278,7 @@
                       If you untick this pair:
                       <% if untick_expense %>
                         its debit matches expense #<%= untick_expense.auto_number %>
-                        (<%= untick_expense.effective_payee_name %>), which would be marked Paid
-                        and its producer emailed.
+                        (<%= untick_expense.effective_payee_name %>), which would be marked Paid.
                       <% end %>
                       <% if untick_budget %>
                         Its credit would be logged against the
@@ -306,15 +305,15 @@
         </p>
       <% else %>
         <p class="mb-3 text-gray-600">
-          Applying will create the EUSA Actuals records, mark the
-          <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
+          Applying will create the EUSA Actuals records and mark the
+          <%= pluralize(@matched_debits.size, "matched expense") %> Paid.
           <% if @offset_pair_consequences.values.any? { |c| c[:expense] } %>
             Any offsetting pair you untick above is matched as well, so it can add to that count:
             the pairs flagged in orange say which expense each one would pay.
           <% end %>
         </p>
         <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
-                       data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
+                       data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid." } %>
       <% end %>
     <% end %>
   <% end %>

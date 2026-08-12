@@ -13,8 +13,15 @@ module Admin
     #                row's cost centre.
     #   3. apply   — create EUSA Actuals records, link them to the matched
     #                expense/budget, cross-link the offsetting pairs the
-    #                operator left ticked, mark matched expenses Paid, and email
-    #                the producers "you've been paid".
+    #                operator left ticked, and mark matched expenses Paid.
+    #
+    # NOTHING IS EMAILED TO THE PRODUCER HERE. Reconciliation runs off EUSA's
+    # monthly actuals export, which lands weeks after the BACS run it confirms —
+    # by then the money is already in the producer's account, and a "you've been
+    # paid" note arrives as news they had long ago. The producer's one
+    # notification is Notifier#producer_notification, sent when their claim goes
+    # into a batch (BatchProcessor). Paid here is a bookkeeping state, not an
+    # event to announce.
     #
     # PER-ROW COST CENTRES: a paste may span as many centres as it likes, each
     # row landing in the centre its own Cost Centre column names. Filtering a
@@ -145,7 +152,6 @@ module Admin
 
         committed_pairs, committed_debits, committed_credits, committed_unmatched =
           apply_reconciliation(new_entries, applied_pairs, matched_debits, matched_credits, unmatched)
-        notify_paid_producers(committed_debits)
 
         @offsets_linked = committed_pairs.size
         @expenses_paid = committed_debits.size
@@ -245,15 +251,14 @@ module Admin
       #
       # Both matches are SCOPED TO THE ROW'S COST CENTRE. Without that, a
       # termtime debit of the same amount and nominal code could mark a Fringe
-      # expense Paid and email its producer "EUSA has paid you" — money attributed
-      # to the wrong pot plus a claim that cannot be un-sent. A row that finds no
-      # expense in its own cost centre simply lists as unmatched, which a human
-      # can see and fix.
+      # expense Paid, attributing the money to the wrong pot and closing a claim
+      # nobody has actually paid. A row that finds no expense in its own cost
+      # centre simply lists as unmatched, which a human can see and fix.
       #
       # Expenses already reconciled are excluded so a later or overlapping EUSA
-      # export can never re-match, re-pay, or re-email a producer for an expense
-      # that's already been paid — the dedup only catches an identical row, so a
-      # row that differs slightly would otherwise slip through.
+      # export can never re-match or re-pay an expense that's already been paid —
+      # the dedup only catches an identical row, so a row that differs slightly
+      # would otherwise slip through.
       def build_matches(entries)
         remaining = matchable_expenses
         income_budgets = income_budgets_pool
@@ -326,7 +331,7 @@ module Admin
       # a second centre exists the ambiguity is real, so we stop guessing: the
       # unattributed expense drops out of matching and its rows list as unmatched
       # until someone gives its budget a cost centre. Guessing instead would pay
-      # a claim out of the wrong pot and email the producer about it.
+      # a claim out of the wrong pot.
       def in_cost_centre?(record_cost_centre_id, cost_centre)
         return record_cost_centre_id == cost_centre.id if record_cost_centre_id
 
@@ -338,8 +343,8 @@ module Admin
       #
       # The "will mark N matched expenses Paid" count is computed from the
       # UNPAIRED rows only, but apply hands an unticked pair's legs back to the
-      # ordinary matching, so it can pay (and email) expenses the confirmation
-      # never mentioned. Naming the specific expense per pair is more use than a
+      # ordinary matching, so it can pay expenses the confirmation never
+      # mentioned. Naming the specific expense per pair is more use than a
       # corrected total: it tells the operator what THIS tick is deciding,
       # before they submit, and stays right however many pairs they untick.
       #
@@ -375,23 +380,22 @@ module Admin
 
       # An expense counts as already reconciled if an imported actual links to it
       # or a payment has been confirmed against it — either means "already paid",
-      # so it must not be matched (and paid + emailed) a second time.
+      # so it must not be matched (and paid) a second time.
       def already_reconciled?(expense, reconciled_ids)
         reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
-      # Each row's write sequence is rescued independently, so one row's
-      # failure can't abort the whole paste — the rest of the batch still
-      # commits, and (critically) notify_paid_producers below still runs for
-      # every row that did commit. Without this, an exception on row k used to
-      # 500 the whole request before any "you've been paid" email went out,
-      # and since apply is idempotent-by-design (already_reconciled? excludes
-      # anything already linked), a retry could never re-send those emails —
-      # they'd be lost permanently even though rows 1..k-1 were genuinely paid.
+      # Each row's write sequence is rescued independently, so one row's failure
+      # can't abort the whole paste: the rest of the batch still commits, and the
+      # operator gets a report naming the row that failed. Without this, an
+      # exception on row k used to 500 the whole request after rows 1..k-1 had
+      # already committed — a partly-applied paste with nothing on screen saying
+      # so, which re-pasting can't clarify either, because apply is
+      # idempotent-by-design (already_reconciled? excludes anything already
+      # linked) so the committed rows just read as "already imported".
       # Returns [committed_pairs, committed_debits, committed_credits,
       # committed_unmatched] — each the subset that actually made it through, so
-      # the caller's summary counts (and the producer-notification list) never
-      # claim more happened than really did.
+      # the caller's summary counts never claim more happened than really did.
       def apply_reconciliation(entries, pairs, matched_debits, matched_credits, unmatched)
         imported_at = Time.current
 
@@ -451,31 +455,6 @@ module Admin
         log_and_notify("Reimbursements: reconciliation row failed for #{subject} — #{error.message}", error,
                        context: { source: "reimbursements_reconciliation_apply", subject: subject })
         (@reconciliation_errors ||= []) << "#{subject}: #{error.message}"
-      end
-
-      # One "you've been paid" email per producer, covering all of their newly
-      # paid expenses. Producers with no linked person or no email are skipped.
-      #
-      # Sent through Graph (from the cost centre's send mailbox), inline: Apply is
-      # already a synchronous, API-heavy operator action. A send failure for one
-      # producer is rescued + logged so it never breaks the reconciliation or the
-      # remaining producers' emails.
-      def notify_paid_producers(matched_debits)
-        matched_debits.group_by { |_entry, expense| expense.person }.each do |person, pairs|
-          next if person.nil? || person.email.blank?
-
-          expenses = pairs.map { |_entry, expense| expense }
-          begin
-            notifier.payment_confirmation(
-              to: person.email,
-              greeting_name: ::Reimbursements::GreetingName.for(person),
-              expenses: expenses
-            )
-          rescue StandardError => e
-            log_and_notify("Reimbursements: payment email failed for #{person.email} — #{e.message}", e,
-                           context: { source: "reimbursements_payment_email", payee: person.email })
-          end
-        end
       end
 
       # The EUSA period (from the row) is the scoping key, so source_month is

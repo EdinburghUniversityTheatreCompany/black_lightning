@@ -4,8 +4,6 @@ module Reimbursements
   class NotifierTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    PaidExpense = Struct.new(:description, :amount, :auto_number, keyword_init: true)
-
     MAILBOX = "send@bedlamfringe.co.uk".freeze
 
     def cost_centre(name: "Bedlam Fringe 2026")
@@ -33,24 +31,6 @@ module Reimbursements
       assert_match "Receipt is missing the VAT breakdown.", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "Props", mail[:html]
-    end
-
-    test "payment_confirmation addresses the payee and pluralises the subject" do
-      notifier, graph = build
-      expenses = [ PaidExpense.new(description: "Props", amount: 5, auto_number: 1),
-                   PaidExpense.new(description: "Set", amount: 8, auto_number: 2) ]
-
-      notifier.payment_confirmation(to: "alice@example.com", greeting_name: "Alice",
-                                    expenses: expenses)
-
-      mail = graph.send_mails.sole
-      assert_equal [ "alice@example.com" ], mail[:to]
-      assert_equal "EUSA has paid your expenses", mail[:subject]
-      assert_match "The Bedlam Fringe 2026 finance team", mail[:html],
-                   "the sign-off must be the cost centre's name, not a hardcoded one"
-      assert_match "Hi Alice,", mail[:html]
-      assert_match "Props", mail[:html]
-      assert_match "Set", mail[:html]
     end
 
     test "producer_notification lists the payee's expenses and totals" do
@@ -135,9 +115,7 @@ module Reimbursements
     # subject or sign-off may hardcode "Bedlam Fringe" — a termtime claimant
     # must never be emailed about a Fringe expense. Everything is driven off
     # the cost centre threaded into Notifier, so a second centre gets correct
-    # copy the moment its row exists. payment_confirmation is covered by its own
-    # sign-off assertion below rather than this sweep: its body still carries one
-    # literal "Bedlam Fringe" in a thank-you line Mick is removing separately.
+    # copy the moment its row exists.
     test "every subject and sign-off comes from the cost centre, never a literal Bedlam" do
       centre = cost_centre(name: "Termtime Payments")
       notifier, graph = build(centre: centre)

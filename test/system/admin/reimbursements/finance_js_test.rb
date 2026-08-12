@@ -321,6 +321,7 @@ module Admin
         click_on "Parse and match"
         assert_text "Step 3: Apply reconciliation", wait: 5
         assert_text "Unmatched rows (1)"
+        assert_text "Nobody is emailed"
       end
 
       # (d2) Two byte-identical offsetting pairs must be two independently

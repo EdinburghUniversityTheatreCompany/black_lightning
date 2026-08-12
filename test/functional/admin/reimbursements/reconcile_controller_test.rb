@@ -72,8 +72,10 @@ module Admin
         submitted_to_eusa_date: Date.new(2026, 5, 10), receipt: false
       )
 
-      # "You've been paid" emails go through the Graph notifier; inject a real
-      # Notifier over a recording FakeGraphClient so tests assert the send.
+      # Reconcile deliberately emails NOBODY (see the controller's header): a
+      # real Notifier over a recording FakeGraphClient so the "no email" test
+      # below is a genuine assertion, and a regression records here instead of
+      # reaching Graph.
       @graph = FakeGraphClient.new
       ReconcileController.notifier_builder =
         ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
@@ -166,6 +168,9 @@ module Admin
       assert_equal @expense.record_id, expense.record_id
       assert_equal BigDecimal("123.45"), row.debit
       assert_empty assigns(:unmatched_rows)
+      # The operator is told what Apply does, and it does not include emailing.
+      assert_match(/Nobody is emailed/, response.body)
+      assert_no_match(/email those producers/, response.body)
     end
 
     test "preview matches a credit row to an income budget" do
@@ -282,16 +287,15 @@ module Admin
 
     # --- Step 3: apply -----------------------------------------------------
 
-    test "apply creates actuals, links them, flips the expense to Paid, and emails" do
+    test "apply creates actuals, links them, and flips the expense to Paid without emailing" do
       sign_in @user
 
       post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
-      mail = @graph.send_mails.sole
-      assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
-      assert_equal [ "alice@example.com" ], mail[:to]
-      assert_match(/EUSA has paid/, mail[:subject])
-      assert_match "Hi Alice,", mail[:html], "Alice Producer is greeted by first name only"
+      # Reconciliation runs weeks after the BACS run, so a "you've been paid"
+      # note reaches a producer who was paid long ago. Nothing is sent.
+      assert_empty @graph.send_mails, "marking an expense Paid must not email the producer"
+      assert_match(/Nobody was emailed/, response.body, "and the apply page says so")
 
       assert_response :success
       # One EUSA Actuals row created, then linked to the expense.
@@ -304,12 +308,11 @@ module Admin
       assert_equal 1, assigns(:expenses_paid)
     end
 
-    test "apply links a matched credit to its budget without emailing" do
+    test "apply links a matched credit to its budget" do
       sign_in @user
 
       post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
 
-      assert_empty @graph.send_mails
       assert_response :success
       assert_equal [ @income.record_id ], ::Reimbursements::EusaActual.sole.linked_budget_ids
       assert_equal 1, assigns(:credits_linked)
@@ -322,42 +325,18 @@ module Admin
         pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
       }
 
-      assert_empty @graph.send_mails
       assert_response :success
       assert_equal 1, assigns(:unmatched_saved)
       assert_equal 0, assigns(:expenses_paid)
       assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
     end
 
-    test "apply skips a producer with no email" do
-      @person.update!(email: nil)
-      sign_in @user
-
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_empty @graph.send_mails
-      assert_response :success
-      assert_equal 1, assigns(:expenses_paid)
-    end
-
-    test "a Graph send failure does not break the reconciliation" do
-      @graph.fail_send = true
-      sign_in @user
-
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :success
-      # The expense is still marked Paid even though the notification send failed.
-      assert_equal ::Reimbursements::Status::PAID, @expense.reload.status
-      assert_equal 1, assigns(:expenses_paid)
-    end
-
-    test "an already-reconciled expense is not re-matched or re-emailed by a later paste" do
+    test "an already-reconciled expense is not re-matched by a later paste" do
       # @expense was already paid in an earlier period and linked to an imported
       # actual. A later/overlapping export carries a near-identical row (same
       # nominal/amount, matching date, but a slightly different narrative) so the
       # per-period dedup does NOT skip it. The re-pay guard must exclude the
-      # already-linked expense so it can't be re-matched, re-paid, or re-emailed.
+      # already-linked expense so it can't be re-matched or re-paid.
       @expense.update!(status: ::Reimbursements::Status::PAID)
       create_reimbursements_actual(nominal_code: "439999", period: "02",
                                    narrative: "Alice Producer OLD",
@@ -369,7 +348,6 @@ module Admin
       }
 
       assert_response :success
-      assert_empty @graph.send_mails, "must not re-email a producer for an already-reconciled expense"
       assert_equal 0, assigns(:expenses_paid)
       assert_equal 1, assigns(:unmatched_saved)
       # The expense itself is left untouched — no second flip-to-Paid write.
@@ -393,10 +371,9 @@ module Admin
       }
 
       assert_response :success
-      # @expense committed fully (Paid + emailed); second_expense's failure
-      # didn't abort it, and doesn't leave a silent "all good" report either.
+      # @expense committed fully (Paid); second_expense's failure didn't abort
+      # it, and doesn't leave a silent "all good" report either.
       assert_equal 1, assigns(:expenses_paid)
-      assert_equal [ "alice@example.com" ], @graph.send_mails.sole[:to]
       assert_equal ::Reimbursements::Status::PAID, @expense.reload.status
       assert_equal ::Reimbursements::Status::SUBMITTED, second_expense.reload.status
       assert_match(/expense #.*blip/i, assigns(:reconciliation_errors).sole)
@@ -511,7 +488,6 @@ module Admin
       assert_equal ::Reimbursements::Status::SUBMITTED, lookalike.reload.status
       assert_nil lookalike.payment_confirmed_date
       assert_equal 0, assigns(:expenses_paid)
-      assert_empty @graph.send_mails
     end
 
     # Unticking hands the legs back to the ordinary matcher, so a leg that does
@@ -547,7 +523,7 @@ module Admin
     #
     # preview counts matched expenses over the UNPAIRED rows only, while apply
     # hands an unticked pair's legs back to the ordinary matching and can pay
-    # (and email) expenses the confirmation never mentioned. Each pair therefore
+    # expenses the confirmation never mentioned. Each pair therefore
     # states what unticking it would cost.
 
     def lookalike_expense
@@ -764,7 +740,6 @@ module Admin
       assert_equal 0, ::Reimbursements::EusaActual.count,
                    "importing the attributed rows and losing the rest is the silent drop this prevents"
       assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
-      assert_empty @graph.send_mails
       assert_match(/no cost centre of their own/, response.body)
     end
 
@@ -839,7 +814,7 @@ module Admin
 
       assert_response :success
       assert_empty assigns(:matched_debits),
-                   "a Fringe debit must not pay (and email about) a termtime claim"
+                   "a Fringe debit must not pay a termtime claim"
       assert_equal 1, assigns(:unmatched_rows).size
     end
 
