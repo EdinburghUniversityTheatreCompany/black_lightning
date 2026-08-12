@@ -3,7 +3,7 @@
 <p>Dear <%= @user.first_name %>,</p>
 
 <p>
-  Your opportunity "<%= @opportunity.title %>" is expiring in 3 days
+  Your opportunity "<%= @opportunity.display_title %>" is expiring in 3 days
   (on <%= l @opportunity.expiry_date, format: :long %>).
 </p>
 

@@ -35,6 +35,20 @@ class OpportunityMailerTest < ActionMailer::TestCase
     assert_includes text_body, opportunity.title
   end
 
+  test "expiry_reminder names a title-less posting by its display title" do
+    # title is optional (Opportunity#has_display_title accepts a company + project instead), so a
+    # reminder reading the raw column addressed the producer about their opportunity "".
+    opportunity = opportunities(:internal_project_opportunity)
+    assert_nil opportunity.title, "fixture must have no title for this to test anything"
+
+    email = OpportunityMailer.expiry_reminder(opportunity)
+
+    assert_includes email.subject, opportunity.display_title
+    assert_includes email.html_part.body.to_s, opportunity.display_title
+    assert_includes email.text_part.body.to_s, opportunity.display_title
+    assert_not_includes email.subject, 'opportunity ""'
+  end
+
   test "expiry_reminder HTML body includes edit link" do
     opportunity = opportunities(:expiring_soon_opportunity)
 

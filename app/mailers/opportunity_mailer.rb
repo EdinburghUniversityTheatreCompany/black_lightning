@@ -5,7 +5,7 @@ class OpportunityMailer < ApplicationMailer
 
     mail(
       to: email_address_with_name(@user.email, @user.full_name),
-      subject: "Your opportunity \"#{opportunity.title}\" expires in 3 days"
+      subject: "Your opportunity \"#{opportunity.display_title}\" expires in 3 days"
     )
   end
 
