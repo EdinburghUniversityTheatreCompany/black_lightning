@@ -70,7 +70,7 @@ module Admin
       # in code. Letting a form set them would allow a second "outdoor" feed
       # that nothing polls.
       def sensor_params
-        params.require(:climate_sensor).permit(:display_name, :location, :active, :position)
+        params.require(:climate_sensor).permit(:display_name, :location, :active, :position, :in_crypt)
       end
     end
   end

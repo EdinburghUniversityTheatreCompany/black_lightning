@@ -165,6 +165,34 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
     assert_nil points[1][:temperature]
   end
 
+  test "draws the outdoor line unbroken on the 24-hour view despite its hourly cadence" do
+    # The reported bug: Open-Meteo reports hourly, but the 24-hour view
+    # buckets at ten minutes (600s). A gap threshold built from the bucket
+    # width alone (600 * 3 = 1800s) is narrower than the 3600s gap between
+    # any two consecutive hourly readings, so a null was inserted after
+    # EVERY outdoor point — with spanGaps: false and pointRadius: 0 that
+    # drew nothing at all, even though the legend and end-of-line label
+    # still rendered from the (empty-looking) series.
+    sensor = outdoor_climate_sensor
+    24.times { |hour| create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 00:00") + hour.hours) }
+
+    points = series_for(sensor, from: "2026-08-05", to: "2026-08-06").first[:points]
+
+    assert_equal 24, points.size
+    assert(points.none? { |point| point[:temperature].nil? })
+  end
+
+  test "still breaks the outdoor line on the 24-hour view across a genuine outage" do
+    sensor = outdoor_climate_sensor
+    [ 0, 1, 2, 9, 10, 11 ].each do |hour|
+      create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 00:00") + hour.hours)
+    end
+
+    points = series_for(sensor, from: "2026-08-05", to: "2026-08-06").first[:points]
+
+    assert_includes points.map { |point| point[:temperature] }, nil
+  end
+
   test "does not break the line across an ordinary consecutive gap" do
     sensor = create_climate_sensor
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 10:00"))
@@ -187,6 +215,33 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
   end
 
   test "asks the database nothing when there are no sensors" do
-    assert_empty Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")).series
+    query_count = 0
+    callback = ->(*) { query_count += 1 }
+
+    result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")).series
+    end
+
+    assert_empty result
+    assert_equal 0, query_count
+  end
+
+  test "each point carries the spread as well as the mean" do
+    sensor = create_climate_sensor
+    create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 12:00"),
+                           temperature_c: 10.0, relative_humidity: 80.0, dew_point_c: 7.0)
+    create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 12:30"),
+                           temperature_c: 14.0, relative_humidity: 80.0, dew_point_c: 7.0)
+
+    point = series_for(sensor, from: "2026-07-25", to: "2026-08-06").first[:points].first
+
+    assert_in_delta 12.0, point[:temperature], 0.001
+    assert_in_delta 10.0, point[:temperature_min], 0.001
+    assert_in_delta 14.0, point[:temperature_max], 0.001
+  end
+
+  test "reports whether the buckets are wide enough for a spread to mean anything" do
+    assert_not_predicate Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")), :aggregated?
+    assert_predicate Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-07-25", to: "2026-08-06")), :aggregated?
   end
 end

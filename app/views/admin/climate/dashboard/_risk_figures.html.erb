@@ -1,0 +1,11 @@
+<%# Text, not just pixels on a canvas: same reasoning as the Now tiles. %>
+<ul class="list-none pl-0 mb-4 space-y-1">
+  <% summaries.each do |summary| %>
+    <li class="text-sm">
+      <strong><%= summary[:name] %>.</strong>
+      <span class="<%= summary[:hours_at_risk].positive? ? 'text-red-700' : 'text-gray-600' %>">
+        <%= climate_risk_sentence(summary) %>
+      </span>
+    </li>
+  <% end %>
+</ul>

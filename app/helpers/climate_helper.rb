@@ -1,9 +1,4 @@
 module ClimateHelper
-  # Below this many degrees between the air temperature and its dew point,
-  # condensation is a live risk rather than a theoretical one. This is the
-  # number the crypt monitor exists to watch.
-  CONDENSATION_RISK_MARGIN = 3.0
-
   def climate_temperature(value)
     return "—" if value.blank?
 
@@ -23,7 +18,7 @@ module ClimateHelper
   end
 
   def climate_condensation_risk?(margin)
-    margin.present? && margin < CONDENSATION_RISK_MARGIN
+    margin.present? && margin < Climate::CONDENSATION_RISK_MARGIN
   end
 
   # "4 minutes ago", or an explicit nudge when there is nothing at all.
@@ -52,5 +47,38 @@ module ClimateHelper
     today = Date.current
     { "24 hours" => 1, "7 days" => 7, "30 days" => 30, "90 days" => 90, "1 year" => 365 }
       .transform_values { |days| { from: (today - (days - 1).days).iso8601, to: today.iso8601 } }
+  end
+
+  # The default is left OUT of the URL, the same way DateRange leaves the
+  # default range out: a clean link keeps meaning "recent, coldest sensor".
+  def climate_link_params(range_params, selected_key)
+    return range_params if selected_key.blank? || selected_key == Climate::VentilationSeries::WORST
+
+    range_params.merge(crypt: selected_key)
+  end
+
+  # The denominator is hours WITH READINGS, never hours in the range. "41 of
+  # 720 hours" would read as 6% of a month when the sensor only covered six
+  # days of it.
+  def climate_risk_sentence(summary)
+    return "No readings in this range." if summary[:hours_with_readings].zero?
+
+    threshold = number_with_precision(Climate::CONDENSATION_RISK_MARGIN, precision: 0)
+    covered = pluralize(summary[:hours_with_readings], "hour")
+
+    return "None of the #{covered} with readings came under #{threshold} °C of margin." if summary[:hours_at_risk].zero?
+
+    percentage = (100.0 * summary[:hours_at_risk] / summary[:hours_with_readings]).round
+    [ "#{summary[:hours_at_risk]} of the #{covered} with readings (#{percentage}%) " \
+      "were under #{threshold} °C of margin.",
+      climate_spell_sentence(summary) ].compact_blank.join(" ")
+  end
+
+  def climate_spell_sentence(summary)
+    return nil if summary[:longest_spell_hours].to_i.zero?
+
+    ended = summary[:longest_spell_ended_at]
+    "The longest unbroken spell was #{pluralize(summary[:longest_spell_hours], 'hour')}" \
+      "#{", ending #{ended.strftime('%-d %B %Y, %H:%M')}" if ended}."
   end
 end

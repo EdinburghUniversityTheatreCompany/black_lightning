@@ -43,12 +43,16 @@ module Admin
       end
 
       # chart_index: 0 temperature, 1 humidity, 2 dew point.
+      #
+      # Excludes band datasets: once a range is banded, the min and max band
+      # datasets share the SAME label as the line they shade, so a bare label
+      # match can return the band's max line instead of the actual plotted line.
       def plotted(chart_index, label)
         evaluate_script(<<~JS)
           (() => {
             const root = document.querySelector("[data-controller='climate-charts']")
             const chart = root.climateCharts[#{chart_index}]
-            const set = chart.data.datasets.find(d => d.label === #{label.to_json})
+            const set = chart.data.datasets.find(d => d.label === #{label.to_json} && !d.band)
             return set ? set.data.map(p => p.y) : null
           })()
         JS
@@ -95,9 +99,12 @@ module Admin
         visit admin_climate_dashboard_path
         wait_for_charts
 
+        # Band datasets carry no borderDash at all (they are filled shading,
+        # not a stroke), so they have to be excluded here the same way
+        # #plotted excludes them by label.
         dashes = evaluate_script(<<~JS)
           document.querySelector("[data-controller='climate-charts']").climateCharts[0]
-            .data.datasets.map(d => ({ label: d.label, dash: d.borderDash.length }))
+            .data.datasets.filter(d => !d.band).map(d => ({ label: d.label, dash: d.borderDash.length }))
         JS
 
         assert_operator dashes.find { |d| d["label"] == @outdoor.display_name }["dash"], :>, 0
@@ -107,6 +114,8 @@ module Admin
       test "lines break across a gap rather than interpolating through it" do
         # spanGaps false plus the server's explicit null points is what stops a
         # two-day outage being drawn as a straight, entirely invented line.
+        # Band datasets carry the same (also-false) spanGaps for the same
+        # reason, so every dataset is asserted here, not just the two lines.
         visit admin_climate_dashboard_path
         wait_for_charts
 
@@ -115,7 +124,8 @@ module Admin
             .data.datasets.map(d => d.spanGaps)
         JS
 
-        assert_equal [ false, false ], span_gaps
+        assert_operator span_gaps.length, :>, 0
+        assert_equal [ false ] * span_gaps.length, span_gaps
       end
 
       test "the current readings are real text, not only pixels on a canvas" do
@@ -151,6 +161,36 @@ module Admin
         visit admin_path
 
         assert_no_selector "[data-climate-charts-ready]"
+      end
+
+      # The dashboard's default range is 7 days, which is already banded (see
+      # Buckets::RESOLUTIONS), so every test above already exercises band
+      # datasets without setting banded up explicitly.
+      test "hiding a sensor via the legend also hides its shaded band" do
+        visit admin_climate_dashboard_path
+        wait_for_charts
+
+        hidden_before, hidden_after = evaluate_script(<<~JS)
+          (() => {
+            const chart = document.querySelector("[data-controller='climate-charts']").climateCharts[0]
+            const label = "Crypt north"
+            const item = chart.legend.legendItems.find(i => i.text === label)
+            const indexesForLabel = () => chart.data.datasets
+              .map((dataset, index) => (dataset.label === label ? index : null))
+              .filter(index => index !== null)
+
+            const before = indexesForLabel().map(index => Boolean(chart.getDatasetMeta(index).hidden))
+            chart.options.plugins.legend.onClick({}, item, chart.legend)
+            const after = indexesForLabel().map(index => Boolean(chart.getDatasetMeta(index).hidden))
+            return [before, after]
+          })()
+        JS
+
+        # Three datasets share the "Crypt north" label while banded: the line
+        # plus its max/min band. Before the fix only the line (one of the
+        # three) toggled, leaving the band shaded with no line and no label.
+        assert_equal [ false, false, false ], hidden_before
+        assert_equal [ true, true, true ], hidden_after
       end
 
       test "says so when there is nothing to plot yet" do

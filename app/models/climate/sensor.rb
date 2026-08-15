@@ -6,6 +6,7 @@
 #  id             :bigint           not null, primary key
 #  active         :boolean          default(FALSE), not null
 #  display_name   :string(255)      not null
+#  in_crypt       :boolean          default(FALSE), not null
 #  last_error     :string(500)
 #  last_polled_at :datetime
 #  latitude       :decimal(9, 6)
@@ -51,6 +52,7 @@ module Climate
     validates :latitude, :longitude, presence: true, if: :open_meteo?
     validates :latitude, numericality: { in: -90..90 }, allow_nil: true
     validates :longitude, numericality: { in: -180..180 }, allow_nil: true
+    validate :outdoor_feed_is_not_in_the_crypt
 
     scope :active, -> { where(active: true) }
     scope :govee, -> { where(source: SOURCE_GOVEE) }
@@ -58,6 +60,8 @@ module Climate
     scope :outdoor, -> { where(placement: PLACEMENT_OUTDOOR) }
     # Indoor sensors first, then the outdoor comparison line.
     scope :in_display_order, -> { order(Arel.sql("placement = 'outdoor'"), :position, :id) }
+    # Which sensors the condensation-risk and ventilation charts read.
+    scope :in_crypt, -> { where(in_crypt: true) }
 
     # Ensured here rather than seeded by a data migration: test and CI databases
     # are schema-LOADED, so a data migration would leave every environment
@@ -95,5 +99,13 @@ module Climate
     end
 
     def to_label = display_name
+
+    private
+
+    # The Open-Meteo row models the air outside the building. Letting it be
+    # ticked would put the outdoor line into the crypt's own worst case.
+    def outdoor_feed_is_not_in_the_crypt
+      errors.add(:in_crypt, "cannot be set on the outdoor feed") if in_crypt? && outdoor?
+    end
   end
 end

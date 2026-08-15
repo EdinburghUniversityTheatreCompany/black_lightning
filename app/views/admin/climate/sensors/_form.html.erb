@@ -8,6 +8,8 @@
   <%= f.input :position, label: "Order", hint: "Lower numbers appear first on the dashboard." %>
   <%= f.input :active, as: :boolean, label: "Active",
               hint: "Inactive sensors keep their readings but are left off the dashboard." %>
+  <%= f.input :in_crypt, as: :boolean, label: "In the crypt",
+              hint: "Include this sensor in the condensation-risk and ventilation charts." %>
 
   <div class="mt-3">
     <%= f.submit submit_label, class: btn_classes(:primary) %>

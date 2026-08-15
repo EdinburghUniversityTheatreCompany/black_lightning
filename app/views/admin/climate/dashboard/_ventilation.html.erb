@@ -1,0 +1,51 @@
+<%= render CardComponent.new(title: "Ventilation", html_class: "mb-4") do %>
+  <% if ventilation.sensor.nil? %>
+    <p class="text-gray-600 mb-0">
+      No sensors are marked as being in the crypt.
+      <%= link_to "Tick one on the sensor list", admin_climate_sensors_path, class: "text-primary underline" %>
+      to compare it with the air outside.
+    </p>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      All three lines are °C, which is the point: relative humidity can't be compared between two
+      places at different temperatures, but dew point can. <strong>Outside dew point below the
+      crypt's own dew point</strong> means the air out there is drier in absolute terms, so opening
+      up dries the crypt. <strong>Outside dew point above the crypt's temperature</strong> means
+      you'd be pumping in air that condenses on cold stone, however dry the day feels. And the
+      walls are colder than the air shown here, so treat the temperature line as optimistic.
+    </p>
+
+    <%= form_with url: admin_climate_dashboard_path, method: :get, data: { turbo: false },
+                  class: "flex flex-wrap items-end gap-3 mb-4" do |f| %>
+      <%= hidden_field_tag :from, @range.from.iso8601 %>
+      <%= hidden_field_tag :to, @range.to.iso8601 %>
+      <div>
+        <%= label_tag :crypt, "Crypt sensor", class: "block text-sm text-gray-600" %>
+        <%= select_tag :crypt, options_for_select(ventilation.options, ventilation.selected_key),
+                       class: "form-control" %>
+      </div>
+      <%= f.submit "Show", class: btn_classes(:secondary) %>
+    <% end %>
+
+    <% has_points = ventilation.series.any? { |line| line[:points].any? } %>
+
+    <% if has_points %>
+      <div data-controller="climate-ventilation-chart"
+           data-climate-ventilation-chart-series-value="<%= ventilation.series.to_json %>">
+        <div class="relative h-64"><canvas data-climate-ventilation-chart-target="canvas"></canvas></div>
+      </div>
+    <% else %>
+      <p class="text-gray-600 mb-0">No readings in this range yet.</p>
+    <% end %>
+
+    <%# Only worth saying once something actually rendered. With no points at
+        all, "No readings in this range yet." above already says it, and
+        pairing that with "only the crypt is shown" would be contradictory. %>
+    <% if has_points && ventilation.series.none? { |line| line[:key] == "outdoor_dew_point" && line[:points].any? } %>
+      <p class="mt-3 mb-0 text-sm text-amber-800">
+        The outside line is missing, so only the crypt is shown. Outside conditions are fetched
+        hourly and fill their own gaps on the next successful poll.
+      </p>
+    <% end %>
+  <% end %>
+<% end %>
