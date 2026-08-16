@@ -166,7 +166,7 @@ GEM
     connection_pool (3.0.2)
     crass (1.0.7)
     csv (3.3.6)
-    database_consistency (3.0.8)
+    database_consistency (3.0.9)
       activerecord (>= 3.2)
     date (3.5.1)
     debride (1.15.2)
