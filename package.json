@@ -12,7 +12,7 @@
     "@milkdown/preset-commonmark": "^7.21.3",
     "@milkdown/preset-gfm": "^7.21.3",
     "@milkdown/prose": "7.21.3",
-    "@milkdown/utils": "^7.21.3",
+    "@milkdown/utils": "^7.22.0",
     "@popperjs/core": "^2.11.8",
     "@rails/activestorage": "^8.1.300",
     "@stimulus-components/rails-nested-form": "^5.0.0",
