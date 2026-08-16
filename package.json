@@ -7,7 +7,7 @@
     "@milkdown/core": "^7.21.3",
     "@milkdown/plugin-clipboard": "^7.21.3",
     "@milkdown/plugin-history": "^7.21.3",
-    "@milkdown/plugin-listener": "^7.21.3",
+    "@milkdown/plugin-listener": "^7.22.0",
     "@milkdown/plugin-upload": "^7.21.3",
     "@milkdown/preset-commonmark": "^7.21.3",
     "@milkdown/preset-gfm": "^7.21.3",
