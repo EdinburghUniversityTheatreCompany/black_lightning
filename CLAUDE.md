@@ -558,34 +558,19 @@ Temperature / humidity / dew point charts at `/admin/climate`
 
 ## Pretix ticket widget
 
-Shown two ways: inline on a show page (`shared/_pretix_widget`, when `event.pretix_shown?`) and
-in the home page's Buy Tickets modal (`shared/_pretix_modal` + `pretix_modal_controller.js`).
+Inline on a show page (`shared/_pretix_widget`) and in the home page's Buy Tickets modal
+(`shared/_pretix_modal` + `pretix_modal_controller.js`). All URLs come from `PretixHelper`.
 
-- **Every URL comes from `PretixHelper`** (`SHOP_URL`, mirrored by the `baseUrl` default in
-  `pretix_modal_controller.js`). **Both the widget script and its stylesheet are served by the
-  shop's own domain, never by pretix.eu** — `https://pretix.eu/widget/v1.en.css` 301s to a
-  trailing-slash URL that 404s, and the widget bundle injects no stylesheet of its own, so a page
-  pointing there renders the widget as unstyled text. That was live for months and looked
-  intermittent only because **Turbo does not remove stylesheets from `<head>` across visits**: a
-  Turbo visit from a show page left *its* copy of the widget CSS behind, so the modal was styled
-  or not depending on how you arrived. The show page's vendored copy (off a since-retired CDN) is
-  gone for the same reason — two sources of one stylesheet drift.
-- **The shop origin must be in `style-src` AND `style-src-elem`.** Browsers enforce
-  `style-src-elem` separately for `<link>` elements, so missing it costs the widget all of its
-  styling exactly as silently as the 404 did. `content_security_policy_test.rb` pins both, plus
-  `script-src` / `frame-src` (the checkout iframe) / `connect-src`.
-- **Building a widget destroys its element.** pretix replaces `<pretix-widget>` with a rendered
-  `div.pretix-widget-wrapper`, copying the attributes across — so setting `event` on what's left
-  is writing to markup nothing reads, and a modal reusing one element shows the *first* show
-  clicked under every later show's title. The controller creates a fresh element per open and
-  calls `window.PretixWidget.buildWidgets()` (which only picks up unbuilt elements; on the very
-  first open the script does it itself on load). A test where the script never loads cannot tell
-  the two apart — `test/system/pretix_modal_test.rb` stubs the replacement for that reason.
-- **The modal `<dialog>` is a flex column so only its body scrolls.** Swapping the event list for
-  a product list makes the content several screens tall and pretix scrolls its own widget into
-  view, which used to carry the Close button off the top of a phone screen. The `display: flex`
-  rule is scoped to `[open]` — unscoped it beats the UA's `dialog:not([open]) { display: none }`
-  and leaves the modal permanently on screen.
+- **The widget's script and stylesheet come from the shop domain, never pretix.eu** —
+  `pretix.eu/widget/v1.en.css` 404s and the bundle injects no CSS of its own, so pointing there
+  renders the widget unstyled. The shop origin must be in **both** `style-src` and
+  `style-src-elem` (browsers enforce them separately for `<link>`); `content_security_policy_test`
+  pins that.
+- **Building a widget destroys its element**: pretix replaces `<pretix-widget>` with its own
+  wrapper div, so `event` can only be set once. The modal creates a fresh element per open and
+  calls `window.PretixWidget.buildWidgets()`, or every open after the first shows the first show.
+- The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
+  `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
 
 ## Opportunities
 
