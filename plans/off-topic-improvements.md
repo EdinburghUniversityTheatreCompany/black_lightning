@@ -485,3 +485,28 @@ The sensor-matching rule in particular is a guess at what Govee's export email l
 a real export email before trusting it.** If Govee's subject line turns out not to name the device, the fix is probably a
 per-sensor `import_match` column (what Govee calls it, as distinct from what we call it) rather
 than a cleverer heuristic.
+
+## The Buy Tickets buttons rely on not being inside a form
+
+*Noticed 2026-08-17 while fixing the pretix modal.* Both Buy Tickets buttons —
+`tag.button` in `static/home.html.erb` and the `<button>` in `shared/_carousel.html.erb` —
+omit `type="button"`, so they default to `type="submit"`. Nothing breaks today because
+neither the home page's What's On grid nor the carousel caption sits inside a `<form>`, but
+the day either does, clicking Buy Tickets will open the modal *and* submit the surrounding
+form, navigating away from it.
+
+**Fix:** add `type: "button"` / `type="button"`. Worth a sweep for other action-only buttons
+in public views while in there.
+
+## The pretix modal dialog is driven by two controllers at once
+
+*Noticed 2026-08-17.* `shared/_pretix_modal.html.erb`'s `<dialog>` declares
+`data-controller="modal"` (for `close` / `backdropClose`) while carrying
+`data-pretix-modal-target="…"` attributes belonging to the `pretix-modal` controller on an
+ancestor. It works, and the split is defensible — the generic dialog behaviour genuinely is
+generic — but reading the partial gives no hint that `showModal()` is called from a *different*
+controller than the one named on the element.
+
+**Fix (if it earns it):** either fold open/close into `pretix-modal`, or use a Stimulus outlet
+so the relationship is declared rather than implied. Not urgent; the backdrop-close path is
+covered by the modal system test.
