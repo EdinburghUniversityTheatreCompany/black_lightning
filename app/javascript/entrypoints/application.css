@@ -117,11 +117,23 @@ footer a,
 dialog.pretix-modal {
   width: 100%;
   max-width: min(640px, 95vw);
+  max-height: 90dvh;
   padding: 0;
   border: none;
   border-radius: 0.5rem;
   margin: auto;
+  overflow: hidden;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Scoped to [open] so it does not beat the UA's `dialog:not([open]) { display: none }` and
+   leave the modal permanently on screen. The header is pinned and only the body scrolls:
+   swapping the widget's event list for a product list makes the content several screens tall,
+   and pretix scrolls its own widget into view — which used to carry the Close button off the
+   top of the phone with it, leaving no visible way out of the modal. */
+dialog.pretix-modal[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 dialog.pretix-modal::backdrop {
@@ -130,6 +142,7 @@ dialog.pretix-modal::backdrop {
 
 .pretix-modal-header {
   @apply bg-primary text-white px-4 py-3 flex items-center justify-between;
+  flex: 0 0 auto;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.5rem 0.5rem 0 0;
 }
@@ -155,6 +168,10 @@ dialog.pretix-modal::backdrop {
 }
 
 .pretix-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1.25rem;
 }
 

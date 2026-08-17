@@ -1,15 +1,18 @@
 <%# locals: (event:) -%>
 
 <% content_for :head do %>
-   <%= stylesheet_link_tag "pretix-widget" %>
-   <script type="text/javascript" src="https://tickets.bedlamtheatre.co.uk/widget/v1.en.js" async></script><%# herb:disable html-require-script-nonce %>
+   <%# Both assets come from the shop itself — see PretixHelper. The stylesheet used to be a
+       vendored copy taken off a CDN that has since been retired, which froze it at whatever
+       the widget's markup looked like in early 2026. %>
+   <%= stylesheet_link_tag pretix_widget_stylesheet_url %>
+   <script type="text/javascript" src="<%= pretix_widget_script_url %>" async></script><%# herb:disable html-require-script-nonce %>
 <% end %>
 
-<pretix-widget event="https://tickets.bedlamtheatre.co.uk/<%= event.pretix_slug %>/" style="<%= event.pretix_view %>"></pretix-widget>
+<pretix-widget event="<%= pretix_event_url(event) %>" list-type="<%= event.pretix_view %>"></pretix-widget>
 <noscript>
    <div class="pretix-widget">
         <div class="pretix-widget-info-message">
-            JavaScript is disabled in your browser. To access our ticket shop without JavaScript, please <a target="_blank" rel="noopener" href="https://tickets.bedlamtheatre.co.uk/<%= event.pretix_slug %>/">click here</a>.
+            JavaScript is disabled in your browser. To access our ticket shop without JavaScript, please <a target="_blank" rel="noopener" href="<%= pretix_event_url(event) %>">click here</a>.
         </div>
     </div>
 </noscript>

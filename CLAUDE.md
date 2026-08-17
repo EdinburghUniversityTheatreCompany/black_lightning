@@ -556,6 +556,37 @@ Temperature / humidity / dew point charts at `/admin/climate`
   and `jscpd` gating at threshold 0 means the palette, the lazy import and the end-label plugin
   cannot be copied per controller.
 
+## Pretix ticket widget
+
+Shown two ways: inline on a show page (`shared/_pretix_widget`, when `event.pretix_shown?`) and
+in the home page's Buy Tickets modal (`shared/_pretix_modal` + `pretix_modal_controller.js`).
+
+- **Every URL comes from `PretixHelper`** (`SHOP_URL`, mirrored by the `baseUrl` default in
+  `pretix_modal_controller.js`). **Both the widget script and its stylesheet are served by the
+  shop's own domain, never by pretix.eu** — `https://pretix.eu/widget/v1.en.css` 301s to a
+  trailing-slash URL that 404s, and the widget bundle injects no stylesheet of its own, so a page
+  pointing there renders the widget as unstyled text. That was live for months and looked
+  intermittent only because **Turbo does not remove stylesheets from `<head>` across visits**: a
+  Turbo visit from a show page left *its* copy of the widget CSS behind, so the modal was styled
+  or not depending on how you arrived. The show page's vendored copy (off a since-retired CDN) is
+  gone for the same reason — two sources of one stylesheet drift.
+- **The shop origin must be in `style-src` AND `style-src-elem`.** Browsers enforce
+  `style-src-elem` separately for `<link>` elements, so missing it costs the widget all of its
+  styling exactly as silently as the 404 did. `content_security_policy_test.rb` pins both, plus
+  `script-src` / `frame-src` (the checkout iframe) / `connect-src`.
+- **Building a widget destroys its element.** pretix replaces `<pretix-widget>` with a rendered
+  `div.pretix-widget-wrapper`, copying the attributes across — so setting `event` on what's left
+  is writing to markup nothing reads, and a modal reusing one element shows the *first* show
+  clicked under every later show's title. The controller creates a fresh element per open and
+  calls `window.PretixWidget.buildWidgets()` (which only picks up unbuilt elements; on the very
+  first open the script does it itself on load). A test where the script never loads cannot tell
+  the two apart — `test/system/pretix_modal_test.rb` stubs the replacement for that reason.
+- **The modal `<dialog>` is a flex column so only its body scrolls.** Swapping the event list for
+  a product list makes the content several screens tall and pretix scrolls its own widget into
+  view, which used to carry the Close button off the top of a phone screen. The `display: flex`
+  rule is scoped to `[open]` — unscoped it beats the UA's `dialog:not([open]) { display: none }`
+  and leaves the modal permanently on screen.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
