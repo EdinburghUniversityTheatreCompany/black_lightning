@@ -125,6 +125,15 @@ class User < ApplicationRecord
   belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
              optional: true, inverse_of: :user
 
+  # Deleting an account is how an erasure request is served here, and it has to
+  # reach the bank details the account was linked to: the association above
+  # only nullifies, so without this the sort code and account number outlived
+  # the account indefinitely. The payee row and its claims stay — they are the
+  # society's financial records, kept because they have to be — and only the
+  # part that can move money goes. Bank details that are merely UNUSED are a
+  # separate, gentler sweep (Reimbursements::BankDetailsRetention).
+  before_destroy :erase_reimbursements_bank_details
+
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
   has_one  :membership_card, dependent: :destroy
@@ -941,6 +950,15 @@ class User < ApplicationRecord
   end
 
   private
+
+  # PersonLink resolves a user to a payee by the stored link FIRST and then by
+  # email, so erasure has to follow both — an email-matched payee that was never
+  # id-linked is exactly the case of someone who has not claimed in a long time.
+  def erase_reimbursements_bank_details
+    person = reimbursements_person ||
+             Reimbursements::Person.find_by(email: email.to_s.presence)
+    person&.payment_details&.destroy!
+  end
 
   def ensure_calendar_token
     self.calendar_token ||= SecureRandom.base58(24)

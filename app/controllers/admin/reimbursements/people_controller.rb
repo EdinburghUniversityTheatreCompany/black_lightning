@@ -126,13 +126,12 @@ module Admin
       # an account. (The `notes` column is encrypted at rest, but the visible
       # copy has to stay masked too.)
       def appended_notes(sort_code, account_number)
-        timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M UTC")
         actor = "#{current_user.name_or_email} (##{current_user.id})"
-        audit_line = "[#{timestamp}] Bank details updated: " \
-                     "sort code #{::Reimbursements::BankDetails.mask(sort_code)}, " \
-                     "account #{::Reimbursements::BankDetails.mask(account_number)} by #{actor}"
-        existing = @person.notes.to_s
-        existing.strip.empty? ? audit_line : "#{existing.rstrip}\n#{audit_line}"
+        ::Reimbursements::PaymentDetails.append_note(
+          @person.notes,
+          "Bank details updated: sort code #{::Reimbursements::BankDetails.mask(sort_code)}, " \
+          "account #{::Reimbursements::BankDetails.mask(account_number)} by #{actor}"
+        )
       end
     end
   end
