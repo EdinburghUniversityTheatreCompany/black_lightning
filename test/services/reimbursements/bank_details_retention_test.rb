@@ -63,6 +63,22 @@ module Reimbursements
       end
     end
 
+    # The asymmetry that decides every judgement call here: wrongly reading a
+    # claim as finished wipes details that are about to be paid, irreversibly,
+    # while wrongly reading one as live just keeps them a while longer. So a
+    # status this code does not recognise — a legacy row, a status added to the
+    # app later — has to block, not wave through. Status has an inclusion
+    # validation, but update_column and the pre-migration Airtable rows both
+    # go around it.
+    test "an unrecognised status blocks clearing rather than being waved through" do
+      person = backdate!(payee(name: "Legacy Lou", email: "lou@example.com"), LONG_AGO)
+      expense = claim(person, status: Status::PAID, ago: LONG_AGO)
+      expense.update_column(:status, "Awaiting Treasurer")
+
+      assert_equal 0, BankDetailsRetention.erase_stale!
+      assert_equal "66374958", person.reload.account_number
+    end
+
     test "a rejected claim does not keep details alive" do
       person = backdate!(payee(name: "Rejected Rae", email: "rae@example.com"), LONG_AGO)
       claim(person, status: Status::REJECTED, ago: LONG_AGO)

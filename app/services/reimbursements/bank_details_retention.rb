@@ -15,16 +15,28 @@ module Reimbursements
   class BankDetailsRetention
     RETENTION_PERIOD = 6.months
 
-    # Statuses where money may still move into the account on file. Derived by
-    # subtraction on purpose: a status added later counts as live until someone
-    # decides otherwise, which is the safe direction — the failure mode of the
-    # other default is clearing the details of a claim about to be paid.
-    LIVE_STATUSES = (Status.all - [ Status::PAID, Status::REJECTED ]).freeze
+    # The only two statuses that mean no money will move into the account on
+    # file. Stated as the TERMINAL set rather than the live one, so anything
+    # unrecognised — a legacy row, a status added to the app later, a value
+    # written past the inclusion validation by update_column — counts as live
+    # and blocks the clearing.
+    #
+    # That asymmetry decides every judgement call in this class: wrongly reading
+    # a claim as finished wipes details that are about to be paid, and there is
+    # no undo (the columns are encrypted with no plaintext behind them), while
+    # wrongly reading one as live merely keeps them a while longer.
+    TERMINAL_STATUSES = [ Status::PAID, Status::REJECTED ].freeze
 
     class << self
       # Clears every stale payee's details; returns how many were cleared.
       def erase_stale!(as_of: Time.current)
-        stale(as_of: as_of).each { |details| erase!(details) }.size
+        cleared = stale(as_of: as_of).each { |details| erase!(details) }
+        # Named in the log, because the per-row note is only findable by someone
+        # who already suspects a payee was cleared. Names, never digits.
+        cleared.each do |details|
+          Rails.logger.info("Reimbursements bank-details retention: cleared #{details.person&.name}")
+        end
+        cleared.size
       end
 
       def stale(as_of: Time.current)
@@ -41,7 +53,7 @@ module Reimbursements
 
         person = details.person
         return false if person.nil?
-        return false if person.expenses.any? { |expense| LIVE_STATUSES.include?(expense.status) }
+        return false if person.expenses.any? { |expense| !TERMINAL_STATUSES.include?(expense.status) }
 
         last_activity(details, person) < cutoff
       end
