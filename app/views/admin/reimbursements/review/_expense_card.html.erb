@@ -117,8 +117,10 @@
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
       (not the submitter <%= expense.person&.name %>), paying
-      <%= expense.effective_sort_code.presence || "-" %> /
-      <%= expense.effective_account_number.presence || "-" %>.
+      <%= render Admin::Reimbursements::BankDetailsComponent.new(
+            sort_code: expense.effective_sort_code,
+            account_number: expense.effective_account_number,
+            payee: expense.effective_payee_name) %>.
       Confirm these match the invoice before approving.
     <% end %></div>
   <% end %>

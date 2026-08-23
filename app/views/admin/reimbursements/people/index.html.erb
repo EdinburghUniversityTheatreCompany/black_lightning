@@ -46,24 +46,36 @@
 
           <div class="border-t border-gray-200 px-3 py-3">
             <% error_id = "bank_details_error_#{person.record_id}" if editing && @edit_error.present? %>
+            <%# The fields hold the REAL values — they have to, or the operator
+                could not correct a typo — so they are hidden the way a password
+                is rather than masked, which would invite saving "****4958" as an
+                account number. bank_details_controller toggles both at once. %>
             <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
-                          class: "flex flex-wrap items-end gap-3" do %>
+                          class: "flex flex-wrap items-end gap-3",
+                          data: { controller: "bank-details" } do %>
               <div>
                 <%= label_tag "sort_code_#{person.record_id}", "Sort code", class: "block text-sm font-medium" %>
                 <%= text_field_tag :sort_code, editing ? @edit_sort_code : person.sort_code,
                                    id: "sort_code_#{person.record_id}",
-                                   placeholder: "80-22-60",
+                                   placeholder: "80-22-60", autocomplete: "off",
                                    "aria-describedby": error_id, "aria-invalid": error_id.present?,
+                                   data: { "bank-details-target": "field" },
                                    class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
               </div>
               <div>
                 <%= label_tag "account_number_#{person.record_id}", "Account number", class: "block text-sm font-medium" %>
                 <%= text_field_tag :account_number, editing ? @edit_account_number : person.account_number,
                                    id: "account_number_#{person.record_id}",
-                                   placeholder: "12345678",
+                                   placeholder: "12345678", autocomplete: "off",
                                    "aria-describedby": error_id, "aria-invalid": error_id.present?,
+                                   data: { "bank-details-target": "field" },
                                    class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
               </div>
+              <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
+                      aria-pressed="false"
+                      aria-label="Reveal bank details for <%= person.name.presence || "this person" %>"
+                      data-bank-details-target="toggle"
+                      data-action="bank-details#toggle">Reveal</button>
               <%= submit_tag "Save bank details", "aria-label": "Save bank details for #{person.name.presence || 'this person'}",
                              class: btn_classes(:primary, :sm) %>
             <% end %>

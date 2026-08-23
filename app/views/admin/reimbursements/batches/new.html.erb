@@ -18,8 +18,7 @@
           <tr>
             <th scope="col" class="py-1 pr-3">#</th>
             <th scope="col" class="py-1 pr-3">Payee</th>
-            <th scope="col" class="py-1 pr-3">Sort code</th>
-            <th scope="col" class="py-1 pr-3">Account</th>
+            <th scope="col" class="py-1 pr-3">Bank details</th>
             <th scope="col" class="py-1 pr-3 text-right">Amount</th>
             <th scope="col" class="py-1 pr-3">Nominal</th>
             <th scope="col" class="py-1 pr-3">Budget</th>
@@ -37,8 +36,14 @@
                   <%= render BadgeComponent.new(type: :warning, pill: true).with_content("→ third party") %>
                 <% end %>
               </td>
-              <td class="py-1 pr-3 font-mono"><%= expense.effective_sort_code %></td>
-              <td class="py-1 pr-3 font-mono"><%= expense.effective_account_number %></td>
+              <%# Masked by default: this table is the one screen that would
+                  otherwise print every payee's account number on page load. %>
+              <td class="py-1 pr-3">
+                <%= render Admin::Reimbursements::BankDetailsComponent.new(
+                      sort_code: expense.effective_sort_code,
+                      account_number: expense.effective_account_number,
+                      payee: expense.effective_payee_name) %>
+              </td>
               <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
               <td class="py-1 pr-3"><%= expense.budget&.name %></td>
