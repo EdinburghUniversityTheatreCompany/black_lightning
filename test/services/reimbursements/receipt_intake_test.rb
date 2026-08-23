@@ -112,7 +112,7 @@ module Reimbursements
       assert_equal PDF_MAGIC, receipt.bytes
     end
 
-    test "an ordinary photo is untouched by the conversion path" do
+    test "an ordinary photo keeps its name and format through the strip" do
       png = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png"))
 
       receipt = ReceiptIntake.from_upload(upload(png, "receipt.png", "image/png"))
@@ -120,7 +120,113 @@ module Reimbursements
       assert receipt.ok?, receipt.error
       assert_equal "receipt.png", receipt.filename
       assert_equal "image/png", receipt.content_type
-      assert_equal png, receipt.bytes, "a PNG must not be re-encoded"
+      assert_equal "pngload_buffer", Vips::Image.new_from_buffer(receipt.bytes, "").get("vips-loader"),
+                   "a PNG receipt must stay a PNG — a screenshot of an invoice is lossless text"
+    end
+
+    # --- Metadata stripping --------------------------------------------------
+    # A phone photograph of a receipt carries the coordinates it was taken at,
+    # which for a producer is their home. Those bytes go on to SharePoint and
+    # out as an email attachment to EUSA, so the tags come off at intake --
+    # the one gate every receipt passes through.
+
+    GPS_LATITUDE = "55/1 56/1 44/1".freeze
+
+    # Built rather than committed, so the test can assert the tag is actually
+    # THERE before claiming the intake removed it: a fixture that quietly lost
+    # its EXIF would leave this passing vacuously forever.
+    def photo_with_gps(saver, **opts)
+      image = Vips::Image.black(64, 48).add(128).cast(:uchar).bandjoin([ 128, 128 ])
+      image = image.mutate { |m| m.set_type!(GObject::GSTR_TYPE, "exif-ifd3-GPSLatitude", GPS_LATITUDE) }
+      image.public_send(saver, **opts)
+    end
+
+    def metadata_fields(bytes)
+      Vips::Image.new_from_buffer(bytes, "").get_fields.grep(/exif|xmp|iptc|orientation/i)
+    end
+
+    {
+      "image/jpeg" => [ :jpegsave_buffer, "receipt.jpg", "jpegload_buffer" ],
+      "image/png" => [ :pngsave_buffer, "receipt.png", "pngload_buffer" ],
+      "image/webp" => [ :webpsave_buffer, "receipt.webp", "webpload_buffer" ]
+    }.each do |content_type, (saver, filename, loader)|
+      test "a #{content_type} receipt loses its EXIF, GPS and all, keeping its format" do
+        bytes = photo_with_gps(saver)
+        assert_includes metadata_fields(bytes).join(","), "GPS",
+                        "precondition: the built #{content_type} must actually carry a GPS tag"
+
+        receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: filename, declared_type: content_type)
+
+        assert receipt.ok?, receipt.error
+        assert_equal content_type, receipt.content_type
+        assert_equal filename, receipt.filename
+        assert_equal loader, Vips::Image.new_from_buffer(receipt.bytes, "").get("vips-loader"),
+                     "the format must survive the strip"
+        assert_empty metadata_fields(receipt.bytes),
+                     "no EXIF/XMP/IPTC may survive: GPS can hide in any of them"
+        assert_not receipt.bytes.include?(GPS_LATITUDE),
+                   "the coordinates must be gone from the bytes, not merely unindexed"
+      end
+    end
+
+    test "stripping leaves the receipt itself readable at its original size" do
+      bytes = photo_with_gps(:jpegsave_buffer, Q: 95)
+
+      receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: "receipt.jpg", declared_type: "image/jpeg")
+      image = Vips::Image.new_from_buffer(receipt.bytes, "")
+
+      assert_equal [ 64, 48 ], [ image.width, image.height ], "a strip must not resize a receipt that fits"
+      assert_in_delta 128, image.getpoint(10, 10).first, 6, "the pixels must still be the receipt"
+    end
+
+    # The same rule the HEIC path follows: bake the rotation into the pixels
+    # BEFORE dropping the tag that describes it, or the receipt comes out
+    # sideways for whoever reviews it.
+    test "a sideways JPEG is turned upright before its orientation tag is dropped" do
+      image = Vips::Image.black(80, 40).add(128).cast(:uchar).bandjoin([ 128, 128 ])
+      image = image.mutate { |m| m.set_type!(GObject::GINT_TYPE, "orientation", 6) }
+      bytes = image.jpegsave_buffer(Q: 90)
+
+      receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: "receipt.jpg", declared_type: "image/jpeg")
+      stripped = Vips::Image.new_from_buffer(receipt.bytes, "")
+
+      assert_equal [ 40, 80 ], [ stripped.width, stripped.height ], "should come out upright"
+      assert_empty metadata_fields(receipt.bytes)
+    end
+
+    # Re-encoding can GROW a file (a phone's Q60 JPEG re-saved at Q90 does), and
+    # nothing oversized may be let through: a batch mails every receipt as an
+    # attachment.
+    test "a photo that grows past the cap while being stripped is stepped down until it fits" do
+      bytes = photo_with_gps(:jpegsave_buffer, Q: 95)
+
+      with_max_receipt_bytes(bytes.bytesize) do
+        receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: "receipt.jpg", declared_type: "image/jpeg")
+
+        assert receipt.ok?, receipt.error
+        assert_operator receipt.bytes.bytesize, :<=, bytes.bytesize
+        assert_empty metadata_fields(receipt.bytes)
+      end
+    end
+
+    # A truncated photo must reach the submitter as a validation error, never a
+    # 500 -- the same contract the HEIC path already keeps.
+    test "a corrupt JPEG is rejected with a friendly message instead of raising" do
+      truncated = photo_with_gps(:jpegsave_buffer).byteslice(0, 40)
+
+      receipt = ReceiptIntake.from_bytes(bytes: truncated, filename: "IMG_7.jpg", declared_type: "image/jpeg")
+
+      assert_not receipt.ok?
+      assert_nil receipt.bytes
+    end
+
+    test "a PDF is not put through the stripper at all" do
+      pdf = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.pdf"))
+
+      receipt = ReceiptIntake.from_bytes(bytes: pdf, filename: "invoice.pdf", declared_type: "application/pdf")
+
+      assert receipt.ok?, receipt.error
+      assert_equal pdf, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
     end
 
     test "an oversized upload is rejected from its declared size, before anything is read" do
