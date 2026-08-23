@@ -41,10 +41,11 @@ occurrence*, so they sort into the ordinary chronological pool as "this Friday" 
 it like any other event. There is no residency strip, no exclusion list, no branch anywhere that
 names them.
 
-**`Season` is excluded from the event pool.** Seasons are `Event` subclasses spanning a whole
-term with no weekday value, so they would read as "on today" every day and pin themselves to slot
-1 forever — the Improverts bug arriving by a second route. A season is a container, not a
-performance. The pool is `Show` and `Workshop` only.
+**Every event type is in the pool, seasons included.** A `Season` is normally a festival — a
+short run, and exactly the sort of thing the box office should be advertising — not a term-long
+container. Excluding the type would drop the content the screen most wants. There is no type
+filter and no duration rule anywhere in the pool: the single lever for an unusually long run is
+`performance_weekdays`, which is the same lever the Improverts use.
 
 **Anything running today sorts to the front of the pool.** So `/display/next/1` is automatically
 tonight's show whenever there is one, and simply the next show otherwise. There is no separate
@@ -56,11 +57,10 @@ Repeating a poster is strictly better than a dark screen, and it keeps the playl
 **No curtain times anywhere.** The schema has none — `start_date` and `end_date` are dates. The
 screen will not print a time it cannot source. Adding one is a separate change (see Out of scope).
 
-**"On this day" needs its own scope, not `Event.on_date`.** The existing scope compares month and
-day within a single year, so a run from December into January matches nothing — precisely the
-Christmas show you would most want on the screen in December. `on_date` is used by the archives
-controller and an admin form and is left alone; the display gets a scope that handles the year
-boundary.
+**"On this day" reuses `Event.on_date`.** That scope compares month and day within a single
+year, so a run crossing new year would match in neither month. Bedlam does not programme across
+the new year, so the gap is theoretical, and a second scope kept in step with the first costs more
+than it saves.
 
 **Real artwork is a hard requirement for "on this day".** `Event#fetch_image` *attaches a
 generated placeholder* when nothing is uploaded, so checking for an image after calling it passes
@@ -115,9 +115,7 @@ end
 board and the credits page.
 
 ```ruby
-POOL_TYPES = %w[Show Workshop].freeze   # deliberately not Season
-
-Event.current.where(type: POOL_TYPES)
+Event.current
      .includes(image_attachment: :blob)
      .to_a
      .select { |e| e.next_occurrence(on).present? }
@@ -126,6 +124,7 @@ Event.current.where(type: POOL_TYPES)
 
 Sorting happens in Ruby, not SQL. The pool is a handful of rows and the weekday logic does not
 belong in a query. An event whose remaining run contains none of its performance days drops out.
+Shows, workshops and festivals all flow through unfiltered.
 
 Slot *n* renders `pool[(n - 1) % pool.size]`.
 
@@ -182,17 +181,17 @@ team member. Type sizes to fit rather than overflowing — casts run large.
 material is at its most striking. The guards, all applied in the query:
 
 ```ruby
-Event.ran_on_day_of_year(Date.current)
-     .where(is_public: true, type: Display::EventPool::POOL_TYPES)
+Event.on_date(Date.current)
+     .where(is_public: true)
      .where("end_date < ?", 1.year.ago.to_date)     # not this season's show
-     .where("DATEDIFF(end_date, start_date) <= 60") # not a residency or season
+     .where("DATEDIFF(end_date, start_date) <= 60") # not a residency or a term-long run
      .joins(:image_attachment)                      # real artwork, not the placeholder
-     .order(:start_date)
+     .reorder(:start_date)
      .first
 ```
 
-`ran_on_day_of_year` compares `MONTH*100 + DAY` and handles a run that wraps the new year by
-testing `md >= start_md OR md <= end_md` in that case.
+`reorder`, not `order`: `Event` carries `default_scope -> { order("end_date DESC") }`, so `order`
+would append to it and the "oldest match" would silently be the one ending latest.
 
 ## QR codes
 
@@ -234,9 +233,8 @@ Beyond that:
   contains no matching day, and a `from` before `start_date`.
 - Pool ordering: an event on today sorts ahead of an earlier-starting one that is not.
 - Slot wrap-around: four events across six slots yields 1,2,3,4,1,2.
-- `Season` never enters the pool.
-- Each On This Day guard rejects its case, and `ran_on_day_of_year` matches a December-to-January
-  run in both months.
+- A `Season` sorts into the pool like any other event.
+- Each On This Day guard rejects its case.
 - One `vischeck` pass on the real layouts at 1920x1080.
 
 ## Out of scope
