@@ -337,7 +337,7 @@ module Admin
       assert_select "img[src=?]", receipt.preview_url
       # The pane is present but closed, and its frame carries no src yet.
       assert_select "div#receipt-pane-#{@expense.record_id}[hidden]"
-      assert_select "iframe[data-src=?]", receipt.inline_url
+      assert_select "iframe[data-src=?]", receipt.url
       assert_select "iframe[src]", 0
     end
 

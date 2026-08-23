@@ -813,7 +813,7 @@ module Admin
         first, second = expense.receipts
         assert_match(/<img[^>]+src="#{Regexp.escape(first.preview_url)}"/, response.body)
         assert_match(/<img[^>]+src="#{Regexp.escape(second.preview_url)}"/, response.body)
-        assert_match %r{/rails/active_storage/representations/}, first.preview_url
+        assert_match %r{^/admin/reimbursements/expenses/\d+/receipts/\d+/thumbnail$}, first.preview_url
       end
 
       # Request 2: the receipt opens in the page. The only remaining new-tab link
@@ -825,13 +825,13 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         receipt = expense.receipts.first
-        assert_match(/<iframe[^>]+data-src="#{Regexp.escape(receipt.inline_url)}"/, response.body)
+        assert_match(/<iframe[^>]+data-src="#{Regexp.escape(receipt.url)}"/, response.body)
         assert_match(/<iframe[^>]+title="Receipt: a\.pdf"/, response.body)
         # The thumbnails are buttons, and the only receipt link that still opens a
         # tab is the explicitly labelled fallback inside the pane.
         assert_select "button[data-action='receipt-viewer#show']", 2
         new_tab_links = css_select("a[target=_blank]")
-                        .select { |link| link["href"].to_s.include?("active_storage") }
+                        .select { |link| link["href"].to_s.match?(%r{/receipts/\d+/inline\z}) }
         assert_equal 2, new_tab_links.size, "only the per-receipt new-tab fallback may remain"
         new_tab_links.each { |link| assert_match(/\AOpen [ab]\.pdf in a new tab\z/, link["aria-label"]) }
       end
@@ -869,7 +869,7 @@ module Admin
         removed = expense.receipt_files.find { |file| file.filename.to_s == "a.pdf" }
         sign_in @user
 
-        delete :remove_receipt, params: { id: expense.record_id, attachment_id: removed.signed_id }
+        delete :remove_receipt, params: { id: expense.record_id, attachment_id: removed.blob_id.to_s }
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
         assert_equal [ "b.pdf" ], expense.reload.receipt_files.map { |file| file.filename.to_s }

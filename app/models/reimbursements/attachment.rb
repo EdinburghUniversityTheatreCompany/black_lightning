@@ -2,21 +2,21 @@ module Reimbursements
   ##
   # A file attached to an expense: a view-friendly wrapper over the receipt's
   # ActiveStorage blob. Every URL it exposes is HOST-RELATIVE (built with
-  # only_path), so it is only resolvable from inside the app — anything that
-  # needs the content itself (BatchProcessor's SharePoint offload) must call
-  # +bytes+ rather than hand a URL to a remote fetcher.
+  # only_path) AND permission-checked, pointing at
+  # Admin::Reimbursements::ReceiptFilesController — anything that needs the
+  # content itself (BatchProcessor's SharePoint offload) must call +bytes+
+  # rather than hand a URL to a remote fetcher, which has no session.
   class Attachment
     attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
 
     def initialize(attachment_id:, filename:, url:, size_bytes: 0, content_type: "",
-                   thumbnail_url: nil, inline_url: nil, download_url: nil, blob: nil)
+                   thumbnail_url: nil, download_url: nil, blob: nil)
       @attachment_id = attachment_id
       @filename = filename
       @url = url
       @size_bytes = size_bytes
       @content_type = content_type
       @thumbnail_url = thumbnail_url
-      @inline_url = inline_url
       @download_url = download_url
       @blob = blob
     end
@@ -55,19 +55,9 @@ module Reimbursements
       image? || pdf?
     end
 
-    # The URL to point an in-page <img>/<iframe> at: the same bytes as +url+,
-    # but proxied through the app with an explicit inline disposition. Two
-    # reasons not to reuse +url+: it redirects to the storage host (so the frame
-    # navigates cross-origin, which the app's CSP frame-src does not allow), and
-    # it leaves the disposition unset. Falls back to +url+ for wrappers built
-    # without one.
-    def inline_url
-      @inline_url.presence || url
-    end
-
-    # The URL that always saves the file rather than displaying it. The HTML
-    # download attribute would not do: browsers ignore it cross-origin, and in
-    # production +url+ redirects to the storage host.
+    # The URL that always saves the file rather than displaying it, as opposed
+    # to +url+, which displays it in place. The HTML download attribute would
+    # not do the job on its own: browsers ignore it cross-origin.
     def download_url
       @download_url.presence || url
     end
