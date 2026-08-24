@@ -186,8 +186,10 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match "Cast", response.body
     assert_match "Company", response.body
-    assert_match actor.user_name, response.body
-    assert_match crew_member.user_name, response.body
+    # Faker names contain apostrophes ("Otha O'Reilly"), which reach the body
+    # HTML-escaped -- match the escaped form or this passes or fails by luck.
+    assert_match ERB::Util.html_escape(actor.user_name), response.body
+    assert_match ERB::Util.html_escape(crew_member.user_name), response.body
   end
 
   # Substitutes for Step 7 of the task brief (open /display/get-involved in a
@@ -234,6 +236,25 @@ class Display::PagesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match(/What&#39;s On|What's On/, response.body)
+  end
+
+  test "credits names itself as a cast list in both the tonight and next-show cases" do
+    Event.delete_all
+    show = FactoryBot.create(:show, is_public: true, name: "Tonight Show",
+                                    start_date: Date.current, end_date: Date.current + 1)
+    FactoryBot.create(:team_member, teamwork: show, position: "Director")
+
+    get :credits
+
+    assert_response :success
+    assert_match "Tonight&#39;s Credits", response.body
+
+    show.update!(start_date: Date.current + 5, end_date: Date.current + 6)
+
+    get :credits
+
+    assert_response :success
+    assert_match "Next Show&#39;s Credits", response.body
   end
 
   private

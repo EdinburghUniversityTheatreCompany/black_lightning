@@ -14,7 +14,7 @@
   </ul>
 
   <div class="mt-8 flex items-center gap-8">
-    <%= display_qr_code("#{request.base_url}#{news_index_path}", css_class: "h-40 w-40") %>
+    <%= display_qr_code("#{request.base_url}#{news_index_path}", css_class: "h-40 w-40", label: "Scan to read the latest news") %>
     <p class="text-4xl text-neutral-300">Scan to read the latest news</p>
   </div>
 </div>
