@@ -327,6 +327,16 @@ class Event < ApplicationRecord
     (from..[ from + 6, end_date ].min).find { |date| performance_wdays.include?(date.wday) }
   end
 
+  # Form-facing accessor. simple_form check_boxes hand back an array of strings
+  # (with a leading "" from their hidden field); the column stores them joined.
+  def performance_wdays_list
+    performance_wdays.map(&:to_s)
+  end
+
+  def performance_wdays_list=(values)
+    self.performance_weekdays = Array(values).reject(&:blank?).join(",")
+  end
+
   # Returns a list of the all authors for every event.
   def self.author_name_list
     Rails.cache.fetch(AUTHOR_NAME_LIST_CACHE_KEY, expires_in: 12.hours) do

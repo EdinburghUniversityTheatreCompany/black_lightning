@@ -424,6 +424,32 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
   end
 
+  test "updating a show stores the ticked performance days" do
+    show = FactoryBot.create(:show, is_public: true)
+
+    patch :update, params: { id: show.to_param, show: { performance_wdays_list: [ "", "5" ] } }
+
+    assert_equal "5", show.reload.performance_weekdays
+  end
+
+  # Substitutes for manually loading the edit page in a browser: confirms the
+  # "Performance days" checkboxes actually render on the form, with a translation
+  # for the new label and all seven days present.
+  test "edit form renders the performance days checkboxes" do
+    show = FactoryBot.create(:show, is_public: true)
+
+    get :edit, params: { id: show.to_param }
+    assert_response :success
+
+    assert_match "Performance days", response.body
+    assert_no_match "Translation missing", response.body
+
+    Date::DAYNAMES.each_with_index do |name, wday|
+      assert_match %(id="show_performance_wdays_list_#{wday}"), response.body
+      assert_match name, response.body
+    end
+  end
+
   private
 
   def team_members_attributes(users)

@@ -59,6 +59,7 @@ class Admin::GenericEventsController < AdminController
       :maintenance_debt_start, :staffing_debt_start,
       :maintenance_debt_amount, :staffing_debt_amount,
       event_tag_ids: [],
+      performance_wdays_list: [],
       pictures_attributes: [ :id, :_destroy, :description, :image, :access_level, picture_tag_ids: [] ],
       team_members_attributes: [ :id, :_destroy, :position, :user, :user_id, :proposal, :display_order ],
       attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, attachment_tag_ids: [] ],

@@ -446,4 +446,25 @@ class EventTest < ActionView::TestCase
 
     assert_equal [ 1, 5 ], event.performance_wdays
   end
+
+  test "performance_wdays_list reads the stored days as strings for the form" do
+    event = FactoryBot.build(:show, performance_weekdays: "1,5")
+
+    assert_equal %w[1 5], event.performance_wdays_list
+  end
+
+  test "performance_wdays_list= joins the checkbox values and drops the blank" do
+    event = FactoryBot.build(:show)
+    # simple_form check_boxes always post a leading "" from their hidden field.
+    event.performance_wdays_list = [ "", "5", "1" ]
+
+    assert_equal "1,5", event.performance_weekdays
+  end
+
+  test "performance_wdays_list= with nothing ticked clears the column" do
+    event = FactoryBot.build(:show, performance_weekdays: "5")
+    event.performance_wdays_list = [ "" ]
+
+    assert_nil event.performance_weekdays
+  end
 end
