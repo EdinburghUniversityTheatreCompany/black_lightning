@@ -85,6 +85,21 @@ module DisplayHelper
     sanitize(display_block(name, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
+  # Poster titles are sized by length rather than truncated: naming the show is
+  # the page's whole job, so a long title steps down instead of being cut off.
+  # Two lines at the top size is fine -- the text block is anchored to the bottom
+  # of the page, so a taller title grows up into the artwork rather than pushing
+  # the dates and price off screen.
+  TITLE_SIZES = { 22 => "text-8xl", 46 => "text-7xl", 80 => "text-6xl" }.freeze
+  SMALLEST_TITLE_SIZE = "text-5xl".freeze
+
+  def display_title_size(title)
+    length = title.to_s.length
+    TITLE_SIZES.each { |max_length, size| return size if length <= max_length }
+
+    SMALLEST_TITLE_SIZE
+  end
+
   def display_plain_text(markdown, length:)
     text = CGI.unescapeHTML(strip_tags(render_markdown(markdown)).to_s).squish
 
