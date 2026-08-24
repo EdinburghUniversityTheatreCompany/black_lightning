@@ -57,6 +57,19 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match "Bedlam Theatre", response.body
   end
 
+  # Substitutes for manually opening the page in a browser (Step 8 of the
+  # task brief): confirms the What's On panel, not the Identity fallback, is
+  # what actually renders when there is an upcoming event.
+  test "whats_on renders the What's On board, not the identity card, when there is an upcoming event" do
+    show = FactoryBot.create(:show, is_public: true, start_date: Date.current + 1, end_date: Date.current + 2)
+
+    get :whats_on
+
+    assert_response :success
+    assert_match "What's On", response.body
+    assert_match show.name, response.body
+  end
+
   private
 
   # delete_all in child-first order: several of these associations are declared

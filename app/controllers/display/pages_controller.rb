@@ -7,7 +7,10 @@ class Display::PagesController < ApplicationController
   before_action :set_display_headers
 
   def whats_on
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::WhatsOn.new,
+      Display::Panels::Identity.new
+    )
   end
 
   def next_event
