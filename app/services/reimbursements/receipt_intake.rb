@@ -7,12 +7,19 @@ module Reimbursements
   # see ReceiptContentType), and normalises anything we accept but don't want to
   # store as it arrived.
   #
-  # Today that means HEIC/HEIF, which iOS photographs default to. Conversion to
-  # JPEG happens HERE, before anything is attached, so every downstream consumer
-  # sees an ordinary JPEG with no special-casing: the in-page viewer and thumbnail
-  # strip, the SharePoint receipt offload, and the receipts attached to the EUSA
-  # BACS email. Storing the HEIC and converting on read would need the same fix
-  # in each of those places, and would still hand HEIC to EUSA.
+  # Normalising means two things, both done HERE because this is the one gate
+  # every intake path passes through (the submission form, the finance/review
+  # uploads, the mailbox poll):
+  #
+  # * HEIC/HEIF, which iOS photographs default to, is converted to JPEG before
+  #   anything is attached, so no downstream consumer needs special-casing — the
+  #   viewer, the SharePoint offload, the receipts on the EUSA BACS email.
+  #   Converting on read would need the same fix in each, and would still hand
+  #   HEIC to EUSA.
+  #
+  # * EVERY raster receipt has its metadata stripped. A phone photograph carries
+  #   the coordinates it was taken at — for a producer, usually their home — and
+  #   those exact bytes go on to SharePoint and out to EUSA.
   #
   # Nothing here ever raises at a caller: an unreadable photo comes back as a
   # Receipt carrying a friendly #error, which each intake path reports through
@@ -41,6 +48,33 @@ module Reimbursements
       { quality: 80, limit: nil },
       { quality: 70, limit: 2400 },
       { quality: 60, limit: 1600 }
+    ].freeze
+
+    # Stripped in place, KEEPING the format: a PNG screenshot of an invoice is
+    # lossless text, and pushing it through JPEG would be a visible loss.
+    STRIPPED_SAVERS = {
+      "image/jpeg" => :jpegsave_buffer,
+      "image/png" => :pngsave_buffer,
+      "image/webp" => :webpsave_buffer
+    }.freeze
+
+    # Re-encoding to drop metadata can GROW a file (a phone's Q60 JPEG saved
+    # back at Q90 does), so the cap ladder applies here too. Starts HIGHER than
+    # JPEG_ATTEMPTS: that path encodes a fresh capture, this one re-encodes what
+    # the producer already compressed, so rung one has to be indistinguishable.
+    LOSSY_STRIP_ATTEMPTS = [
+      { quality: 90, limit: nil },
+      { quality: 80, limit: nil },
+      { quality: 75, limit: 2400 },
+      { quality: 70, limit: 1600 }
+    ].freeze
+
+    # PNG is lossless, so the only lever is the longest edge. Repeating the
+    # quality rungs would re-encode identical bytes before the one that helps.
+    LOSSLESS_STRIP_ATTEMPTS = [
+      { limit: nil },
+      { limit: 2400 },
+      { limit: 1600 }
     ].freeze
 
     # Decompression guard: HEIC packs so well that a file inside the 5 MB cap
@@ -77,7 +111,11 @@ module Reimbursements
         return rejected(filename, too_large_message(filename)) if bytes.to_s.bytesize > max_bytes
 
         type = ReceiptContentType.sniff(bytes: bytes, filename: filename, declared_type: declared_type)
-        if ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(type)
+        if STRIPPED_SAVERS.key?(type)
+          strip_metadata(bytes: bytes, filename: filename, type: type)
+        elsif ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(type)
+          # PDFs only, byte-for-byte: EUSA should hold the supplier's invoice
+          # exactly as issued, and a document carries no location tag.
           Receipt.new(filename: filename.to_s, content_type: type, bytes: bytes, error: nil)
         elsif ExpenseForm::CONVERTED_RECEIPT_TYPES.include?(type)
           to_jpeg(bytes: bytes, filename: filename)
@@ -90,53 +128,101 @@ module Reimbursements
 
       def max_bytes = ExpenseForm::MAX_RECEIPT_BYTES
 
+      # Orientation is baked into the pixels first: the tag describing it is
+      # about to be dropped with everything else, and the receipt would then
+      # come out sideways for whoever reviews it.
+      #
+      # Re-encoded rather than having its EXIF segment excised, because only a
+      # re-encode is provably complete: coordinates sit in EXIF GPS tags, in
+      # XMP, in a vendor MakerNote, or in the embedded EXIF thumbnail (itself a
+      # small copy of the photo). Excising named segments leaves the rest.
+      def strip_metadata(bytes:, filename:, type:)
+        name = filename.to_s
+        image = prepare(Vips::Image.new_from_buffer(bytes.to_s, ""))
+        image = flatten_for_jpeg(image) if type == JPEG_CONTENT_TYPE
+
+        data = encode_within_cap(image, saver: STRIPPED_SAVERS.fetch(type), attempts: strip_attempts(type))
+        return rejected(name, over_cap_message(filename)) if data.nil?
+
+        Receipt.new(filename: name, content_type: type, bytes: data, error: nil)
+      rescue StandardError => e
+        unreadable(name, filename, e)
+      end
+
+      def strip_attempts(type)
+        type == "image/png" ? LOSSLESS_STRIP_ATTEMPTS : LOSSY_STRIP_ATTEMPTS
+      end
+
       # Convert a HEIC/HEIF photo to JPEG, renaming it to match: the filename
       # ends up in the BACS email and in SharePoint, so it must not claim to be
       # something the bytes aren't.
       def to_jpeg(bytes:, filename:)
         name = jpeg_filename(filename)
-        image = prepare(Vips::Image.new_from_buffer(bytes.to_s, ""))
+        image = flatten_for_jpeg(prepare(Vips::Image.new_from_buffer(bytes.to_s, "")))
 
-        JPEG_ATTEMPTS.each do |attempt|
-          data = encode(image, **attempt)
-          next if data.bytesize > max_bytes
+        data = encode_within_cap(image, saver: :jpegsave_buffer, attempts: JPEG_ATTEMPTS)
+        return rejected(name, over_cap_message(filename, from_heic: true)) if data.nil?
 
-          return Receipt.new(filename: name, content_type: JPEG_CONTENT_TYPE, bytes: data, error: nil)
-        end
-
-        rejected(name, "#{display_name(filename)} is still over 5 MB once converted from a HEIC photo " \
-                       "to a JPEG. Please save it as a smaller JPEG or PDF and try again.")
+        Receipt.new(filename: name, content_type: JPEG_CONTENT_TYPE, bytes: data, error: nil)
       rescue StandardError => e
-        # Includes Vips::Error, which is also what a libvips built WITHOUT HEIF
-        # support raises ("class heifload not found") — log the message so that
-        # environment problem is diagnosable rather than looking like a stream
-        # of damaged uploads.
-        Rails.logger.error("Reimbursements receipt HEIC conversion failed for " \
-                           "#{filename.inspect}: #{e.class}: #{e.message}")
+        unreadable(name, filename, e)
+      end
+
+      # Every way libvips can fail to produce an image: a truncated upload, and
+      # also a libvips built WITHOUT HEIF support ("class heifload not found").
+      # Logged so that environment problem stays diagnosable rather than looking
+      # like a stream of damaged uploads.
+      def unreadable(name, filename, error)
+        Rails.logger.error("Reimbursements receipt processing failed for " \
+                           "#{filename.inspect}: #{error.class}: #{error.message}")
         rejected(name, "We couldn't read #{display_name(filename)}. It may be damaged, or your " \
                        "device saved it in a format we can't open. Please save it as a JPEG or " \
                        "PDF and try again.")
       end
 
-      # Applies EXIF orientation (iPhone HEICs carry rotation metadata, and a
-      # sideways receipt is needless work for whoever reviews it), then flattens
-      # any transparency onto white and normalises the colourspace, because JPEG
-      # carries neither an alpha channel nor CMYK sensibly.
+      def over_cap_message(filename, from_heic: false)
+        converted = from_heic ? " once converted from a HEIC photo to a JPEG" : ""
+        "#{display_name(filename)} is still over 5 MB#{converted}. Please save it as a smaller " \
+          "JPEG or PDF and try again."
+      end
+
+      # Walk the ladder until an encoding fits under the cap; nil when none does.
+      def encode_within_cap(image, saver:, attempts:)
+        attempts.each do |attempt|
+          data = encode(image, saver: saver, **attempt)
+          return data if data.bytesize <= max_bytes
+        end
+        nil
+      end
+
+      # Applies EXIF orientation, for every format: the tag is about to be
+      # stripped along with the rest, and a sideways receipt is needless work.
       def prepare(image)
         raise ConversionError, "#{image.width}x#{image.height} is too many pixels" if
           image.width * image.height > MAX_PIXELS
 
-        image = image.autorot
+        image.autorot
+      end
+
+      # JPEG targets only: it carries neither an alpha channel nor CMYK
+      # sensibly. Flattening a transparent PNG/WEBP screenshot onto white would
+      # be a visible change to a receipt, made for no reason.
+      def flatten_for_jpeg(image)
         image = image.flatten(background: 255) if image.has_alpha?
         image.colourspace(:srgb)
       end
 
-      # strip: true drops the metadata, including the orientation tag we have
-      # just baked into the pixels — leaving it would make every viewer rotate
-      # the receipt a second time.
-      def encode(image, quality:, limit:)
+      # strip: true drops the metadata, including the orientation tag just baked
+      # into the pixels — leaving it makes every viewer rotate the receipt
+      # twice. +quality+ is absent for PNG: Q: reaches pngsave only when it is
+      # also quantising to a palette, which would be real loss smuggled in
+      # under a metadata strip.
+      def encode(image, saver:, limit:, quality: nil)
         candidate = limit ? image.thumbnail_image(limit, height: limit, size: :down) : image
-        candidate.jpegsave_buffer(Q: quality, strip: true, optimize_coding: true)
+        options = { strip: true }
+        options[:Q] = quality if quality
+        options[:optimize_coding] = true if saver == :jpegsave_buffer
+        candidate.public_send(saver, **options)
       end
 
       # IMG_1234.HEIC -> IMG_1234.jpg. Any other image extension is replaced too

@@ -124,9 +124,18 @@ module Reimbursements
       self[:sharepoint_receipt_urls].to_s.split("\n").map(&:strip).compact_blank
     end
 
-    # Attached files wrapped back into the Attachment PORO. attachment_id is
-    # the blob signed id (opaque, stable enough for remove-receipt round
-    # trips); URLs are path-only so no host configuration is needed.
+    # Attached files wrapped back into the Attachment PORO.
+    #
+    # Every URL points at Admin::Reimbursements::ReceiptFilesController, which
+    # re-checks who is asking, and never at ActiveStorage's own routes, which
+    # are unauthenticated and permanent by design. attachment_id is therefore
+    # the BLOB ID rather than the blob's signed id: the signed id is a bearer
+    # token for those routes, so emitting one in the markup — which the remove
+    # button did — would leave the permanent link this replaced. A bare id is
+    # useless without a session, and the controller only ever resolves it
+    # within the claim in the URL.
+    #
+    # URLs are path-only, so no host configuration is needed.
     def receipts
       @receipts ||= receipt_files.map { |file| self.class.wrap_receipt(file) }
     end
@@ -138,19 +147,15 @@ module Reimbursements
 
     def self.wrap_receipt(file)
       helpers = Rails.application.routes.url_helpers
+      ids = [ file.record_id.to_s, file.blob_id.to_s ]
       Attachment.new(
-        attachment_id: file.signed_id,
+        attachment_id: file.blob_id.to_s,
         filename: file.filename.to_s,
-        url: helpers.rails_blob_path(file, only_path: true),
+        url: helpers.inline_admin_reimbursements_expense_receipt_path(*ids),
         size_bytes: file.byte_size,
         content_type: file.content_type.to_s,
-        thumbnail_url: (helpers.rails_representation_path(
-          file.representation(resize_to_limit: [ 512, 512 ]), only_path: true
-        ) if file.representable?),
-        # Proxied (not redirected) and explicitly inline, so the in-page viewer's
-        # <img>/<iframe> stays same-origin and renders instead of downloading.
-        inline_url: helpers.rails_storage_proxy_path(file, only_path: true, disposition: "inline"),
-        download_url: helpers.rails_blob_path(file, only_path: true, disposition: "attachment"),
+        thumbnail_url: (helpers.thumbnail_admin_reimbursements_expense_receipt_path(*ids) if file.representable?),
+        download_url: helpers.download_admin_reimbursements_expense_receipt_path(*ids),
         blob: file.blob
       )
     end

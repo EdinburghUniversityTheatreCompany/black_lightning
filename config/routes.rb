@@ -80,7 +80,16 @@ ChaosRails::Application.routes.draw do
     namespace :reimbursements do
       root to: redirect("/admin/reimbursements/expenses")
       resources :expenses, only: %i[index new create edit update destroy show] do
-        resources :receipts, only: %i[create destroy]
+        resources :receipts, only: %i[create destroy] do
+          # The receipt bytes themselves, served by the app rather than over
+          # ActiveStorage's own routes, so the permission that gates a claim
+          # gates its receipt. See ReceiptFilesController.
+          member do
+            get :inline, to: "receipt_files#inline", as: :inline
+            get :download, to: "receipt_files#download", as: :download
+            get :thumbnail, to: "receipt_files#thumbnail", as: :thumbnail
+          end
+        end
       end
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]

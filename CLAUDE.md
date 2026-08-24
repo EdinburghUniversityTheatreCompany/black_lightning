@@ -420,6 +420,37 @@ survive as historical import provenance and are never written. Spec + plan in
   period `03` → 3). **Bank details in an export are masked to their last four digits**
   via `BankDetails.mask` (also used by the People notes audit line); only the BACS
   spreadsheet EUSA pays from carries full numbers.
+- **Receipts are served by the app, never over ActiveStorage's routes**
+  (`Admin::Reimbursements::ReceiptFilesController`). Those routes are
+  unauthenticated and permanent by design, and a receipt carries a home address, so
+  a link would have worked forever for anyone who came by it. `Attachment#attachment_id`
+  is therefore the **blob id, not the signed id** — the signed id is a bearer token for
+  those routes and must never reach the markup; `remove_receipt!` matches on the same id.
+  Streamed rather than redirected (the viewer's `<img>`/`<iframe>` must stay same-origin
+  under the CSP, and Chrome's PDF viewer wants byte ranges) and cached `private`.
+  Visibility is the union of finance, the submitter, and the budget's owners; anything
+  else 404s rather than 403s.
+- **`ReceiptIntake` strips metadata from every raster receipt**, re-encoding in the
+  same format rather than excising the EXIF segment: coordinates hide in EXIF GPS, XMP,
+  MakerNotes and the embedded thumbnail, so only a re-encode is provably complete. PDFs
+  pass through byte-for-byte. A side effect worth knowing: Marcel falls back to the
+  filename when the magic bytes match nothing, so bytes that merely claim to be a PNG
+  now have to decode as an image and are rejected if they don't.
+- **Bank details are cleared after six months without a claim**
+  (`Reimbursements::BankDetailsRetention`, nightly). **`TERMINAL_STATUSES` is stated as
+  the terminal set, not the live one, on purpose**: an unrecognised status counts as live
+  and blocks the clearing, because reading a claim as finished when it isn't wipes details
+  about to be paid with no undo. Deleting a `User` destroys the linked payee's
+  `PaymentDetails` outright (`User#erase_reimbursements_bank_details`, following the stored
+  link *then* the email, as `PersonLink` does) — the Person and their claims stay, being
+  financial records. Preview with `reimbursements:bank_details_retention_preview` before
+  trusting a rule change; there is no rake entry point for the sweep itself.
+- **On-screen bank details are masked until revealed**
+  (`Admin::Reimbursements::BankDetailsComponent`). A **disclosure** control, not an access
+  control — the full pair is in the markup behind the toggle, and everyone on those screens
+  is entitled to it. The People registry is the exception: its fields hold the real values
+  so they can be edited, so they are `type="password"` toggled to text — masking the value
+  would invite saving `****4958` as an account number.
 - **Reconcile emails nobody, by decision (removed 2026-08-12).** Marking an expense Paid there
   used to send the producer a "EUSA has paid your expense" note (`Notifier#payment_confirmation`
   plus its template, both gone). Reconciliation runs off EUSA's monthly actuals export, which

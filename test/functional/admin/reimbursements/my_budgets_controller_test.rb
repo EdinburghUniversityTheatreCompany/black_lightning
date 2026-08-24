@@ -65,7 +65,7 @@ module Admin
         assert_select "div[data-controller='fancybox receipt-viewer']"
         assert_select "button[aria-controls=?][aria-expanded='false']", pane_id
         assert_select "div##{pane_id}[hidden]"
-        assert_select "iframe[data-src=?]", @pending.receipts.sole.inline_url
+        assert_select "iframe[data-src=?]", @pending.receipts.sole.url
         assert_select "iframe[src]", 0
       end
 

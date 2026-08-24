@@ -184,16 +184,20 @@ module Admin
         assert_no_selector "##{pane}"
         assert_equal [ nil, nil ], frame_sources(pane)
 
+        # A receipt URL identifies the file by id, not by name, so the wrapper's
+        # own URL is what says which of the two was actually fetched.
+        first, second = expense.reload.receipts
+
         find("button[aria-label='View receipt 1 of 2, first.pdf']").click
 
         assert_selector "##{pane}", visible: true
         first_src, second_src = frame_sources(pane)
-        assert_match(/first\.pdf/, first_src.to_s, "opening loads the receipt asked for")
+        assert_equal first.url, first_src, "opening loads the receipt asked for"
         assert_nil second_src, "the other receipt stays unfetched until it is asked for"
 
         find("button[aria-label='View receipt 2 of 2, second.pdf']").click
 
-        assert_match(/second\.pdf/, frame_sources(pane).last.to_s)
+        assert_equal second.url, frame_sources(pane).last
         assert_equal "true", find("button[aria-label='View receipt 2 of 2, second.pdf']")["aria-expanded"]
         assert_equal "false", find("button[aria-label='View receipt 1 of 2, first.pdf']")["aria-expanded"]
 
@@ -560,6 +564,49 @@ module Admin
 
         assert_no_selector "dialog[open]", wait: 1
         assert_selector ".swal2-container", wait: 5
+      end
+
+      # --- Bank-detail masking ------------------------------------------------
+
+      # Build Batch is the screen that would otherwise show every payee's account
+      # number on load. Masked, revealed on a deliberate click, and hidden again.
+      test "bank details on Build Batch are masked until revealed" do
+        ::Reimbursements::CostCentre.default.update!(
+          sharepoint_receipts_drive_id: "drvR", sharepoint_receipts_folder_id: "fldR",
+          sharepoint_bacs_drive_id: "drvB", sharepoint_bacs_folder_id: "fldB"
+        )
+        seed_expense(status: "Approved")
+
+        visit new_admin_reimbursements_batch_path
+
+        value = "[data-bank-details-target='value']"
+        assert_selector value, text: "****9999 / ****4958"
+        assert_no_text "66374958"
+
+        click_button "Reveal"
+
+        assert_selector value, text: "08-99-99 / 66374958"
+        assert_selector "button[aria-pressed='true']", text: "Hide"
+
+        click_button "Hide"
+
+        assert_selector value, text: "****9999 / ****4958"
+        assert_no_text "66374958"
+      end
+
+      # The People registry's fields hold the real values so they can be edited,
+      # so they are hidden the way a password is rather than masked.
+      test "the People registry hides bank details in the edit fields until revealed" do
+        visit admin_reimbursements_people_path
+        find("summary", text: "Pat Producer").click
+
+        field = find_field("Account number", type: :password, visible: :all)
+        assert_equal "66374958", field.value, "the field must hold the real value to be editable"
+
+        click_button "Reveal"
+
+        assert_selector "input#account_number_#{@person.record_id}[type='text']"
+        assert_equal "66374958", find_field("Account number").value
       end
     end
   end

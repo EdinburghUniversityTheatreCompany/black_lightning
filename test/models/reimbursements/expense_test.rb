@@ -4,6 +4,12 @@ module Reimbursements
   # The AR Expense must keep the Airtable-era PORO's interface: string ids,
   # the receipts wrapper, completion checks and the effective money path.
   class ExpenseTest < ActiveSupport::TestCase
+    # NOT `include Rails.application.routes.url_helpers`: Minitest collects every
+    # method whose name starts with "test_", and the route set defines
+    # test_access_admin_reimbursements_setting_path — which would run as a test
+    # and fail on its missing :key.
+    def routes = Rails.application.routes.url_helpers
+
     def create_expense(**attrs)
       Expense.create!(status: Status::PENDING, description: "Gaffer tape", **attrs)
     end
@@ -41,7 +47,7 @@ module Reimbursements
       assert_equal "receipt.pdf", receipt.filename
       assert_equal "application/pdf", receipt.content_type
       assert receipt.attachment_id.present?
-      assert_match %r{/rails/active_storage/blobs/}, receipt.url
+      assert_match %r{^/admin/reimbursements/expenses/\d+/receipts/\d+/inline$}, receipt.url
       assert_not receipt.image?
     end
 
@@ -54,16 +60,36 @@ module Reimbursements
                                    content_type: "application/pdf")
 
       receipt = expense.receipts.sole
+      blob_id = expense.receipt_files.sole.blob_id
       assert receipt.pdf?
       assert receipt.previewable?, "a PDF must offer a thumbnail preview"
-      assert_match %r{/rails/active_storage/representations/}, receipt.preview_url
       assert receipt.inline_viewable?, "a PDF renders in the browser's own viewer"
-      # Proxied + inline so the <iframe> stays same-origin and is not downloaded.
-      assert_match %r{/rails/active_storage/blobs/proxy/}, receipt.inline_url
-      assert_match(/disposition=inline/, receipt.inline_url)
+      assert_equal routes.thumbnail_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
+                   receipt.preview_url
+      # Same-origin, so the <iframe> renders it rather than downloading it, and
+      # permission-checked, which ActiveStorage's own routes are not.
+      assert_equal routes.inline_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id), receipt.url
       # The viewer's Download link must save the file even for a type the browser
-      # would happily display, and even when the URL redirects to the storage host.
-      assert_match(/disposition=attachment/, receipt.download_url)
+      # would happily display.
+      assert_equal routes.download_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
+                   receipt.download_url
+    end
+
+    # The signed id is a bearer token for ActiveStorage's permanent,
+    # unauthenticated routes. Emitting one anywhere in the markup would leave
+    # exactly the link ReceiptFilesController exists to replace.
+    test "a receipt is identified by its blob id, never by a signed id" do
+      expense = create_expense
+      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
+                                   content_type: "application/pdf")
+      file = expense.receipt_files.sole
+
+      receipt = expense.receipts.sole
+      assert_equal file.blob_id.to_s, receipt.attachment_id
+      [ receipt.url, receipt.download_url, receipt.preview_url ].each do |url|
+        assert_not url.include?(file.signed_id), "a signed id leaked into #{url}"
+        assert_not url.start_with?("/rails/active_storage")
+      end
     end
 
     # Sheet music and Office documents are in Attachment::ALLOWED_CONTENT_TYPES

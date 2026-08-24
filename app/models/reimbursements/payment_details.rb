@@ -61,5 +61,15 @@ module Reimbursements
     def bank_details?
       sort_code.present? && account_number.present?
     end
+
+    # Append one timestamped line to a notes audit trail, preserving what is
+    # already there. Lives here, next to the column, because two callers write
+    # it — the People page on every bank-detail change, and
+    # BankDetailsRetention when it clears one — and a trail whose lines were
+    # formatted two different ways would be markedly worse to read.
+    def self.append_note(existing, line, at: Time.current)
+      stamped = "[#{at.utc.strftime('%Y-%m-%d %H:%M UTC')}] #{line}"
+      existing.to_s.strip.empty? ? stamped : "#{existing.to_s.rstrip}\n#{stamped}"
+    end
   end
 end

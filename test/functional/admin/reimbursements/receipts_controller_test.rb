@@ -25,10 +25,12 @@ module Admin
         expense
       end
 
-      # The route/param identifier of an attached receipt: the blob signed id
-      # the Attachment wrapper exposes as attachment_id.
+      # The route/param identifier of an attached receipt: the blob id the
+      # Attachment wrapper exposes as attachment_id. NOT the signed id — that is
+      # a bearer token for ActiveStorage's unauthenticated routes and is
+      # deliberately never put in front of a browser.
       def receipt_id(expense, filename)
-        expense.receipt_files.reload.find { |file| file.filename.to_s == filename }.signed_id
+        expense.receipt_files.reload.find { |file| file.filename.to_s == filename }.blob_id.to_s
       end
 
       test "removes a receipt from an own pending expense" do

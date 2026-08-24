@@ -77,6 +77,22 @@ module Admin
                         "default EUSA subject is prefilled"
       end
 
+      # Build Batch is the one screen that would otherwise print every payee's
+      # account number the moment it loads — a page an operator has open while
+      # screen-sharing or sitting in an open-plan office.
+      test "new masks bank details, keeping the full pair only behind the reveal" do
+        one_approved
+        sign_in @user
+
+        get :new
+
+        assert_no_match(/>[^<]*66374958/, response.body,
+                        "the account number must not be rendered as visible text")
+        assert_includes response.body, "****4958"
+        assert_select "[data-bank-details-target='value'][data-revealed=?]", "08-99-99 / 66374958"
+        assert_select "button[aria-label='Reveal bank details for Alice Producer']"
+      end
+
       test "new redirects with an alert when no cost centre is configured" do
         ::Reimbursements::CostCentre.destroy_all
         sign_in @user

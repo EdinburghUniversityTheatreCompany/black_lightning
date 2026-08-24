@@ -109,14 +109,14 @@
               <%# Still fancybox-bound, so the image can also be opened full screen. %>
               <%= link_to receipt.url, class: "block",
                           data: { fancybox: group, caption: receipt.filename } do %>
-                <img data-src="<%= receipt.inline_url %>" alt="Receipt: <%= receipt.filename %>"
+                <img data-src="<%= receipt.url %>" alt="Receipt: <%= receipt.filename %>"
                      class="mx-auto max-h-[70vh] w-auto rounded bg-gray-50 object-contain"
                      data-action="error->receipt-viewer#imageFailed">
               <% end %>
             <% elsif receipt.pdf? %>
               <%# The browser's own PDF viewer, pointed at a same-origin inline
                   URL. No pdf.js: a large dependency for no gain here. %>
-              <iframe data-src="<%= receipt.inline_url %>" class="h-[70vh] w-full rounded bg-gray-50"
+              <iframe data-src="<%= receipt.url %>" class="h-[70vh] w-full rounded bg-gray-50"
                       title="Receipt: <%= receipt.filename %>"></iframe>
             <% else %>
               <p class="mb-0 text-sm text-gray-600">
@@ -130,7 +130,7 @@
           <p class="mb-0 mt-2 flex flex-wrap items-baseline gap-x-3 text-sm">
             <span class="truncate text-gray-600"><%= receipt.filename %></span>
             <% if receipt.inline_viewable? %>
-              <%= link_to "Open in a new tab", receipt.inline_url, target: "_blank", rel: "noopener",
+              <%= link_to "Open in a new tab", receipt.url, target: "_blank", rel: "noopener",
                           "aria-label": "Open #{receipt.filename} in a new tab",
                           class: "text-primary underline" %>
             <% end %>

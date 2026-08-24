@@ -1,0 +1,17 @@
+<% if blank_details? %>
+  <span class="font-mono text-gray-500">-</span>
+<% else %>
+  <span class="inline-flex items-baseline gap-2" data-controller="bank-details">
+    <span class="font-mono" data-bank-details-target="value"
+          data-masked="<%= masked %>" data-revealed="<%= revealed %>"><%= masked %></span>
+    <%# aria-pressed rather than changing the label: the button's accessible name
+        stays stable while its state changes, which is what a screen reader user
+        needs to follow a toggle. %>
+    <button type="button"
+            class="cursor-pointer text-xs text-primary underline"
+            aria-pressed="false"
+            aria-label="Reveal <%= toggle_label %>"
+            data-bank-details-target="toggle"
+            data-action="bank-details#toggle">Reveal</button>
+  </span>
+<% end %>

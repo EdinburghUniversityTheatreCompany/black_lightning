@@ -315,10 +315,14 @@ module Reimbursements
     end
 
     # Refuses to leave a non-draft receipt-less (drafts don't require one).
-    # attachment_id is the blob signed id the Attachment wrapper exposes.
+    # attachment_id is the BLOB ID the Attachment wrapper exposes — not the
+    # blob's signed id, which is a bearer token for ActiveStorage's permanent,
+    # unauthenticated routes and so is never put in front of a browser (see
+    # Expense.wrap_receipt). Matching is scoped to this expense's own files, so
+    # a bare id from elsewhere resolves to nothing.
     def remove_receipt!(expense_record_id, attachment_id)
       expense = Expense.find(expense_record_id)
-      target = expense.receipt_files.find { |file| file.signed_id == attachment_id }
+      target = expense.receipt_files.find { |file| file.blob_id.to_s == attachment_id.to_s }
       return bust_expenses! if target.nil?
 
       raise LastReceiptError if !expense.draft? && expense.receipt_files.one?

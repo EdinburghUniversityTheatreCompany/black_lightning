@@ -197,8 +197,11 @@ module Reimbursements
       assert_equal [ [ "msgBlank", :rejected ] ], @mailbox.moves
     end
 
+    # Real PNG bytes, not a stand-in string: an inline image now has to survive
+    # ReceiptIntake's metadata strip, which decodes it.
     test "processes a pasted-in-body receipt (inline image)" do
-      pasted = { filename: "pasted-receipt.png", content_type: "image/png", bytes: "BIGPNG" }
+      pasted = { filename: "pasted-receipt.png", content_type: "image/png",
+                 bytes: File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png")) }
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ pasted ] })
 
       MailboxPollJob.perform_now

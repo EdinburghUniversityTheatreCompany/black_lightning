@@ -31,6 +31,13 @@ reimbursements_owner_endorsement_digest:
   queue: default
   schedule: at 7am every day
 
+# Storage limitation: clears the bank details of payees who have not claimed in
+# six months. No-ops on nights with nothing to clear, so a daily trigger is safe.
+reimbursements_bank_details_retention:
+  class: Reimbursements::BankDetailsRetentionJob
+  queue: default
+  schedule: at 3am every day
+
 reimbursements_mailbox_poll:
   class: Reimbursements::MailboxPollJob
   queue: default
