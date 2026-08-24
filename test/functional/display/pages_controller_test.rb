@@ -42,6 +42,16 @@ class Display::PagesControllerTest < ActionController::TestCase
     end
   end
 
+  # The logo is the screen's signature, and it is the whole of the identity
+  # card: a panel that loses it is a wall-mounted page with no owner on it.
+  test "every display page carries the Bedlam logo" do
+    PAGES.each do |action, params|
+      get action, params: params
+
+      assert_match "bedlam-logo", response.body, "#{action} #{params} rendered without the logo"
+    end
+  end
+
   test "display pages are not cached and not indexed" do
     get :whats_on
 
@@ -128,7 +138,7 @@ class Display::PagesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match event.name, response.body
-    assert_no_match(/<img/, response.body)
+    assert_no_match(/object-cover/, response.body)
   end
 
   test "on_this_day still renders when the archive event's artwork is missing from storage" do
@@ -144,7 +154,7 @@ class Display::PagesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match event.name, response.body
-    assert_no_match(/<img/, response.body)
+    assert_no_match(/object-cover/, response.body)
   end
 
   # Substitutes for Step 7 of the task brief (open /display/news in a browser):

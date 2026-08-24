@@ -6,12 +6,19 @@
     <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover opacity-70", alt: "" %>
   <% end %>
 
+  <%# The logo sits over the artwork, so it carries its own scrim: a white
+      wordmark on a pale poster would otherwise disappear. %>
+  <div class="absolute inset-x-0 top-0 flex justify-end bg-gradient-to-b from-black/70 to-transparent px-16 pb-24 pt-10">
+    <%= display_logo %>
+  </div>
+
   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-16 pt-48">
-    <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-primary">
+    <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">
       On this day, <%= pluralize(years_ago, "year") %> ago
     </p>
 
-    <h1 class="truncate text-8xl font-bold leading-none text-white"><%= event.name %></h1>
+    <%# leading-descender, not leading-none -- see display.css. %>
+    <h1 class="truncate text-8xl font-bold leading-descender text-white"><%= event.name %></h1>
 
     <% if event.author.present? %>
       <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>

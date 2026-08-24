@@ -1,13 +1,16 @@
 <%# locals: (opportunities:) %>
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
-  <h1 class="mb-10 text-7xl font-bold tracking-tight text-primary">Get Involved</h1>
+  <div class="mb-10 flex items-center justify-between gap-10">
+    <h1 class="text-7xl font-bold tracking-tight text-display-accent">Get Involved</h1>
+    <%= display_logo %>
+  </div>
 
-  <ul class="flex flex-1 flex-col divide-y divide-neutral-800">
+  <ul class="flex flex-1 flex-col justify-center divide-y divide-neutral-800">
     <% opportunities.each do |opportunity| %>
       <li class="py-5">
-        <p class="truncate text-5xl font-bold text-white"><%= opportunity.display_title %></p>
+        <p class="truncate text-5xl font-bold leading-descender text-white"><%= opportunity.display_title %></p>
         <% if opportunity.roles.any? %>
-          <p class="mt-2 truncate text-3xl text-neutral-400">
+          <p class="mt-2 truncate text-3xl leading-descender text-neutral-400">
             <%= opportunity.roles.map(&:position).join(" · ") %>
           </p>
         <% end %>

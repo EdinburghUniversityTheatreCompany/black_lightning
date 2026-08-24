@@ -1,15 +1,21 @@
 <%# locals: (events:, on:) %>
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
-  <h1 class="mb-10 text-7xl font-bold tracking-tight text-primary">What's On</h1>
+  <div class="mb-10 flex items-center justify-between gap-10">
+    <h1 class="text-7xl font-bold tracking-tight text-display-accent">What's On</h1>
+    <%= display_logo %>
+  </div>
 
+  <%# Equal-height rows filling the frame, rather than a short block pinned to
+      the top of a 1080-tall screen with the bottom half empty -- which is what
+      five events on an eight-row board used to look like on a wall. %>
   <ul class="flex flex-1 flex-col divide-y divide-neutral-800">
     <% events.each do |event| %>
-      <li class="flex items-baseline gap-10 py-4">
+      <li class="flex flex-1 items-center gap-10 py-3">
         <span class="w-[26rem] shrink-0 text-4xl font-semibold text-neutral-300">
           <%= display_when(event, on: on) %>
         </span>
-        <span class="min-w-0 flex-1 truncate text-5xl font-bold text-white"><%= event.name %></span>
-        <span class="w-64 shrink-0 truncate text-right text-3xl text-neutral-400"><%= event.price %></span>
+        <span class="min-w-0 flex-1 truncate text-5xl font-bold leading-descender text-white"><%= event.name %></span>
+        <span class="w-64 shrink-0 truncate text-right text-3xl leading-descender text-neutral-400"><%= event.price %></span>
       </li>
     <% end %>
   </ul>

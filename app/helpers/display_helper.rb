@@ -23,6 +23,13 @@ module DisplayHelper
     occurrence ? occurrence.strftime("%a %-d %b") : display_date_range(event)
   end
 
+  # The white wordmark with the red arch -- the only logo asset that reads on
+  # this screen's black. Kept small on the content panels: the show is the
+  # message, the logo is the signature.
+  def display_logo(css_class: "h-14 w-auto")
+    image_tag("bedlam-logo_single-line-white-for-red.png", class: css_class, alt: "Bedlam Theatre")
+  end
+
   QR_MODULE_SIZE = 4
 
   # Inline SVG, so the page makes no external request and nothing has to be
