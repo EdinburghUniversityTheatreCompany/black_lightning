@@ -574,6 +574,39 @@ Inline on a show page (`shared/_pretix_widget`) and in the home page's Buy Ticke
 - The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
   `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
 
+## Box office display (Anthias)
+
+Public unauthenticated pages under `/display` for the box office screen, plus `/display` itself,
+which lists the playlist for whoever sets up the Pi. `Display::PagesController` resolves one panel
+per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
+
+- **Anthias plays a fixed playlist of these URLs forever, unattended.** A page that renders nothing
+  is not a blank page for a moment, it is a blank screen in the box office until somebody notices
+  and reconfigures the Pi. `Chain` appends the query-less `Panels::Identity` itself so a chain
+  cannot resolve to nothing, **the empty-database test in
+  `test/functional/display/pages_controller_test.rb` is the feature**, and anything that can raise
+  mid-render is rescued for the same reason (`display_image_url` returns nil on a blob missing from
+  storage rather than 500ing the screen).
+- **Blank `performance_weekdays` means every day of the run, and no duration rule may stand in for
+  it.** A year-long Improverts event with no weekdays set is `on_today?` daily and prints
+  "Sep 1 - Jun 30", the exact string `display_when` exists to avoid; a duration filter would instead
+  drop a three-week Fringe run that genuinely is on every night.
+- **The display layout must not load `application.css`** — its unlayered `h1`-`h6` rules beat the
+  Tailwind utilities sizing this screen. `display.css` imports `tailwind-base.css` only and owns the
+  two display-scoped tokens: `--color-display-accent` (`text-primary` is 2.9:1 on black) and
+  `--leading-descender`, which every `truncate` here must be paired with or `overflow: hidden` slices
+  the descenders flat.
+- **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
+  real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
+  join; on its own it outer-joins and silently drops the guard.
+- **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
+  here can say "7.30pm" without a migration.
+
+### Deployment
+
+On merge, set the Improverts event's `performance_weekdays` to Friday in the admin, and do the same
+for any other intermittent long-running event — see the blank-weekdays trap above.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.

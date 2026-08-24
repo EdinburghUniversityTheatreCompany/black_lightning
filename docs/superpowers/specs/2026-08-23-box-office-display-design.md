@@ -173,7 +173,12 @@ crops cleanly to 1080p. Carries name, author, tagline, dates, price, and a QR co
 event `on_today?`, the page renders in **tonight mode**: a `TONIGHT` eyebrow and the content
 warnings, which currently appear nowhere but the show page.
 
-**What's On.** The upcoming pool as a board: date, name, venue, price. Eight rows.
+**What's On.** The upcoming pool as a board: date, name, price. Eight rows.
+
+*Venue was specified here and deliberately dropped in implementation.* Nearly everything on this
+board is at Bedlam, so the column would be one repeated word across every row, and 1920px does not
+have a spare column to spend on it once the date, the title and the price are set large enough to
+read from across the room. If Bedlam ever programmes elsewhere regularly, put it back.
 
 **Tonight's credits.** Tonight's show, else the next show. `TeamMember.ordered`, split into Cast
 and Company by the existing `TeamMember#cast?`. Available only when the event has at least one
