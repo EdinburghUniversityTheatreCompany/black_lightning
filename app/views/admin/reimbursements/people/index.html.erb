@@ -46,10 +46,9 @@
 
           <div class="border-t border-gray-200 px-3 py-3">
             <% error_id = "bank_details_error_#{person.record_id}" if editing && @edit_error.present? %>
-            <%# The fields hold the REAL values — they have to, or the operator
-                could not correct a typo — so they are hidden the way a password
-                is rather than masked, which would invite saving "****4958" as an
-                account number. bank_details_controller toggles both at once. %>
+            <%# The fields hold the REAL values — the operator is here to correct
+                a typo — so they are hidden as a password rather than masked,
+                which would invite saving "****4958" as an account number. %>
             <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
                           class: "flex flex-wrap items-end gap-3",
                           data: { controller: "bank-details" } do %>

@@ -2,30 +2,20 @@ module Admin
   module Reimbursements
     ##
     # The receipt bytes, served by the app so that the permission gating a claim
-    # gates its receipt too.
+    # gates its receipt too. NOT over ActiveStorage's own routes, which Rails
+    # documents as "publicly accessible by default... hard to guess, but
+    # permanent by design" — and a receipt carries a home address. The signed id
+    # that unlocks those routes is no longer emitted (see Expense.wrap_receipt).
     #
-    # Receipts used to be linked over ActiveStorage's own routes, which Rails
-    # documents plainly: "All Active Storage controllers are publicly accessible
-    # by default. The generated URLs are hard to guess, but permanent by
-    # design." A receipt here is a photograph of a till receipt or a supplier's
-    # invoice — someone's home address, often their name and card digits — so a
-    # link that works forever, for anyone who comes by it, signed in or not, is
-    # the wrong shape. Rails' own answer to that is this: an authenticated
-    # controller. The blob's signed id is no longer emitted anywhere, so there
-    # is no longer a permanent token to leak (see Expense.wrap_receipt).
-    #
-    # Streamed rather than redirected to the storage host, for three reasons:
-    # the in-page viewer's <img>/<iframe> must stay same-origin under the app's
-    # CSP; a redirect would hand the browser a presigned URL that outlives the
-    # check we just made; and byte-range requests keep the browser's native PDF
-    # viewer happy. Receipts are capped at 5 MB (ExpenseForm::MAX_RECEIPT_BYTES)
-    # and the audience is a handful of people, so proxying costs little.
+    # Streamed rather than redirected to the storage host: the viewer's
+    # <img>/<iframe> must stay same-origin under the app's CSP, a redirect would
+    # hand over a presigned URL outliving the check just made, and byte ranges
+    # keep the browser's native PDF viewer happy.
     class ReceiptFilesController < BaseController
       include ActiveStorage::Streaming
 
-      # BaseController's producer gate is too narrow here: finance and budget
-      # owners both legitimately read receipts, and a finance user need not hold
-      # the producer portal permission at all. #authorize_receipt! is the union.
+      # BaseController's producer gate is too narrow: a finance user need not
+      # hold the portal permission at all. #authorize_receipt! is the union.
       skip_before_action :authorize_reimbursements!
       before_action :authorize_receipt!
 
@@ -39,10 +29,9 @@ module Admin
         representation = @file.representation(resize_to_limit: THUMBNAIL_LIMIT).processed
         serve { send_blob_stream representation, disposition: "inline" }
       rescue StandardError => e
-        # A malformed PDF only fails when its first page is actually rendered,
-        # long after a successful upload. The receipt viewer already falls back
-        # to a document icon when a thumbnail doesn't load, so 404 into that
-        # rather than turning a cosmetic preview into an error page.
+        # A malformed PDF only fails when its first page is rendered, long after
+        # a successful upload. The viewer already falls back to a document icon
+        # when a thumbnail doesn't load, so 404 into that.
         Rails.logger.warn("Reimbursements receipt thumbnail failed for expense " \
                           "#{params[:expense_id]} receipt #{params[:id]}: #{e.class}: #{e.message}")
         head :not_found
@@ -61,10 +50,8 @@ module Admin
         end
       end
 
-      # Cached, but PRIVATELY: a receipt is readable only by the few people
-      # #visible_to_current_user? admits, so no shared cache between here and
-      # them may keep a copy. (ActiveStorage's own proxy sets public, which is
-      # right for the world-readable files it assumes and wrong for these.)
+      # PRIVATE caching: no shared cache may keep a copy. (ActiveStorage's own
+      # proxy sets public, right for the world-readable files it assumes.)
       def serve
         expires_in 5.minutes, public: false
         yield
@@ -80,13 +67,10 @@ module Admin
         raise ActiveRecord::RecordNotFound unless @file
       end
 
-      # The three places a receipt is already shown on screen, and no more: the
-      # finance surfaces (Review, expense edit, exports), the submitter's own
-      # claim pages, and a budget owner's My Budgets queue — where checking the
-      # receipt is the whole point of the endorsement they are being asked for.
-      #
-      # Not visible reads as "no such receipt" rather than "forbidden", so a
-      # 404 doesn't confirm which claims exist to someone probing for them.
+      # The places a receipt is already shown on screen, and no more. A budget
+      # owner is here because checking the receipt is the point of the
+      # endorsement they are asked for. Not visible raises RecordNotFound rather
+      # than denying access, so a 404 doesn't confirm which claims exist.
       def visible_to_current_user?(expense)
         return true if can?(:manage, :reimbursements_finance)
         return false unless can?(:access, :reimbursements)

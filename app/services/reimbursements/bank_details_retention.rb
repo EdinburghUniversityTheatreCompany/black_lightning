@@ -1,38 +1,30 @@
 module Reimbursements
   ##
-  # Clears bank details the portal has no remaining reason to hold.
+  # Clears bank details the portal has no remaining reason to hold: they are
+  # collected to pay a claim, and after RETENTION_PERIOD without one an account
+  # number on file is only a liability.
   #
-  # A sort code and account number are collected for one purpose: to pay a
-  # claim. Once a payee has not filed one for RETENTION_PERIOD there is no
-  # purpose left, and an account number sitting on file is only a liability —
-  # the storage-limitation half of what the encryption-at-rest work started.
-  #
-  # What is emphatically NOT touched: the Person, their expenses, or the
-  # existing audit trail in +notes+. Those are the society's financial records,
-  # kept because they have to be; it is the part that can move money that goes.
-  # An erasure request is a different thing and takes the whole PaymentDetails
-  # row with it (see User#erase_reimbursements_bank_details).
+  # NOT touched: the Person, their expenses, or the existing +notes+ trail —
+  # financial records the society has to keep. An erasure request is a different
+  # thing and takes the whole row (see User#erase_reimbursements_bank_details).
   class BankDetailsRetention
     RETENTION_PERIOD = 6.months
 
-    # The only two statuses that mean no money will move into the account on
-    # file. Stated as the TERMINAL set rather than the live one, so anything
-    # unrecognised — a legacy row, a status added to the app later, a value
-    # written past the inclusion validation by update_column — counts as live
-    # and blocks the clearing.
-    #
-    # That asymmetry decides every judgement call in this class: wrongly reading
-    # a claim as finished wipes details that are about to be paid, and there is
-    # no undo (the columns are encrypted with no plaintext behind them), while
-    # wrongly reading one as live merely keeps them a while longer.
+    # Stated as the TERMINAL set rather than the live one, so anything
+    # unrecognised — a legacy row, a status added later, a value written past
+    # the inclusion validation by update_column — counts as live and blocks the
+    # clearing. That asymmetry decides every judgement call here: reading a
+    # claim as finished when it isn't wipes details about to be paid with no
+    # undo (encrypted, no plaintext behind them); the other way round merely
+    # keeps them a while longer.
     TERMINAL_STATUSES = [ Status::PAID, Status::REJECTED ].freeze
 
     class << self
       # Clears every stale payee's details; returns how many were cleared.
       def erase_stale!(as_of: Time.current)
         cleared = stale(as_of: as_of).each { |details| erase!(details) }
-        # Named in the log, because the per-row note is only findable by someone
-        # who already suspects a payee was cleared. Names, never digits.
+        # Named in the log: the per-row note is only findable by someone who
+        # already suspects a payee was cleared. Names, never digits.
         cleared.each do |details|
           Rails.logger.info("Reimbursements bank-details retention: cleared #{details.person&.name}")
         end
@@ -42,9 +34,8 @@ module Reimbursements
       def stale(as_of: Time.current)
         cutoff = as_of - RETENTION_PERIOD
         # "Has a sort code on file" cannot be a WHERE clause: the columns are
-        # encrypted non-deterministically, so the ciphertext differs per row and
-        # per write. It is read per record instead — the payee registry is a few
-        # dozen rows, and this runs once a night.
+        # encrypted non-deterministically. Read per record instead — the
+        # registry is a few dozen rows and this runs once a night.
         PaymentDetails.includes(person: :expenses).select { |details| stale?(details, cutoff) }
       end
 
@@ -70,9 +61,9 @@ module Reimbursements
 
       private
 
-      # The details' own timestamp counts alongside the claims, so details
-      # entered (or re-verified by finance) recently are current even when the
-      # last claim is old — and details entered and never used still age out.
+      # The details' own timestamp counts alongside the claims: details
+      # re-verified by finance are current even when the last claim is old, and
+      # details entered and never used still age out.
       def last_activity(details, person)
         [ details.updated_at, *person.expenses.map(&:updated_at) ].compact.max
       end

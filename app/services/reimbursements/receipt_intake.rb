@@ -7,22 +7,19 @@ module Reimbursements
   # see ReceiptContentType), and normalises anything we accept but don't want to
   # store as it arrived.
   #
-  # Normalising means two things:
+  # Normalising means two things, both done HERE because this is the one gate
+  # every intake path passes through (the submission form, the finance/review
+  # uploads, the mailbox poll):
   #
-  # * HEIC/HEIF, which iOS photographs default to, is converted to JPEG. That
-  #   happens HERE, before anything is attached, so every downstream consumer
-  #   sees an ordinary JPEG with no special-casing: the in-page viewer and
-  #   thumbnail strip, the SharePoint receipt offload, and the receipts attached
-  #   to the EUSA BACS email. Storing the HEIC and converting on read would need
-  #   the same fix in each of those places, and would still hand HEIC to EUSA.
+  # * HEIC/HEIF, which iOS photographs default to, is converted to JPEG before
+  #   anything is attached, so no downstream consumer needs special-casing — the
+  #   viewer, the SharePoint offload, the receipts on the EUSA BACS email.
+  #   Converting on read would need the same fix in each, and would still hand
+  #   HEIC to EUSA.
   #
   # * EVERY raster receipt has its metadata stripped. A phone photograph carries
-  #   the coordinates it was taken at, which for a producer is usually their
-  #   home, and those exact bytes go on to SharePoint and out as an email
-  #   attachment to EUSA. The strip belongs at this gate for the same reason the
-  #   conversion does: it is the one place every intake path passes through
-  #   (the submission form, the finance/review uploads, the mailbox poll).
-  #   Anything already re-encoded on the HEIC path is stripped by that save.
+  #   the coordinates it was taken at — for a producer, usually their home — and
+  #   those exact bytes go on to SharePoint and out to EUSA.
   #
   # Nothing here ever raises at a caller: an unreadable photo comes back as a
   # Receipt carrying a friendly #error, which each intake path reports through
@@ -53,21 +50,18 @@ module Reimbursements
       { quality: 60, limit: 1600 }
     ].freeze
 
-    # The formats whose metadata is stripped in place, keeping the format. A PNG
-    # screenshot of an invoice must stay a PNG: it is lossless text, and pushing
-    # it through JPEG to save a few bytes would be the one visible cost of this.
+    # Stripped in place, KEEPING the format: a PNG screenshot of an invoice is
+    # lossless text, and pushing it through JPEG would be a visible loss.
     STRIPPED_SAVERS = {
       "image/jpeg" => :jpegsave_buffer,
       "image/png" => :pngsave_buffer,
       "image/webp" => :webpsave_buffer
     }.freeze
 
-    # Re-encoding to drop the metadata can GROW a file — a phone's Q60 JPEG
-    # saved back out at Q90 does — so the cap ladder applies here too. It starts
-    # HIGHER than JPEG_ATTEMPTS on purpose: that path encodes a fresh capture for
-    # the first time, whereas this one re-encodes something the producer already
-    # compressed, so the first rung is chosen to be visually indistinguishable
-    # rather than small. Nearly every receipt stops there.
+    # Re-encoding to drop metadata can GROW a file (a phone's Q60 JPEG saved
+    # back at Q90 does), so the cap ladder applies here too. Starts HIGHER than
+    # JPEG_ATTEMPTS: that path encodes a fresh capture, this one re-encodes what
+    # the producer already compressed, so rung one has to be indistinguishable.
     LOSSY_STRIP_ATTEMPTS = [
       { quality: 90, limit: nil },
       { quality: 80, limit: nil },
@@ -75,9 +69,8 @@ module Reimbursements
       { quality: 70, limit: 1600 }
     ].freeze
 
-    # PNG has no quality knob — it is lossless, so the only lever is the longest
-    # edge. Repeating the quality rungs here would just re-encode identical bytes
-    # three times before the first rung that can actually help.
+    # PNG is lossless, so the only lever is the longest edge. Repeating the
+    # quality rungs would re-encode identical bytes before the one that helps.
     LOSSLESS_STRIP_ATTEMPTS = [
       { limit: nil },
       { limit: 2400 },
@@ -121,9 +114,8 @@ module Reimbursements
         if STRIPPED_SAVERS.key?(type)
           strip_metadata(bytes: bytes, filename: filename, type: type)
         elsif ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(type)
-          # PDFs only. Left byte-for-byte: finance and EUSA should hold the
-          # supplier's invoice exactly as it was issued, and a PDF is a document
-          # rather than a camera output — there is no location tag to remove.
+          # PDFs only, byte-for-byte: EUSA should hold the supplier's invoice
+          # exactly as issued, and a document carries no location tag.
           Receipt.new(filename: filename.to_s, content_type: type, bytes: bytes, error: nil)
         elsif ExpenseForm::CONVERTED_RECEIPT_TYPES.include?(type)
           to_jpeg(bytes: bytes, filename: filename)
@@ -136,17 +128,14 @@ module Reimbursements
 
       def max_bytes = ExpenseForm::MAX_RECEIPT_BYTES
 
-      # Drop the metadata from a raster receipt, keeping its format, its name and
-      # its content type. The orientation is baked into the pixels first: the tag
-      # that described it is about to be dropped with everything else, and
-      # without that the receipt would come out sideways for whoever reviews it.
+      # Orientation is baked into the pixels first: the tag describing it is
+      # about to be dropped with everything else, and the receipt would then
+      # come out sideways for whoever reviews it.
       #
-      # The image is re-encoded rather than having its EXIF segment excised,
-      # because a re-encode is the only version of this that is provably
-      # complete. Coordinates can sit in EXIF GPS tags, inside XMP, inside a
-      # vendor MakerNote, or inside the embedded EXIF thumbnail — which is
-      # itself a small copy of the photo. Dropping the segments I happened to
-      # think of would leave the ones I did not.
+      # Re-encoded rather than having its EXIF segment excised, because only a
+      # re-encode is provably complete: coordinates sit in EXIF GPS tags, in
+      # XMP, in a vendor MakerNote, or in the embedded EXIF thumbnail (itself a
+      # small copy of the photo). Excising named segments leaves the rest.
       def strip_metadata(bytes:, filename:, type:)
         name = filename.to_s
         image = prepare(Vips::Image.new_from_buffer(bytes.to_s, ""))
@@ -179,11 +168,10 @@ module Reimbursements
         unreadable(name, filename, e)
       end
 
-      # One rejection for every way libvips can fail to produce an image: a
-      # truncated or damaged upload, and also a libvips built WITHOUT HEIF
-      # support ("class heifload not found"). The message is logged so that
-      # environment problem stays diagnosable rather than looking like a stream
-      # of damaged uploads.
+      # Every way libvips can fail to produce an image: a truncated upload, and
+      # also a libvips built WITHOUT HEIF support ("class heifload not found").
+      # Logged so that environment problem stays diagnosable rather than looking
+      # like a stream of damaged uploads.
       def unreadable(name, filename, error)
         Rails.logger.error("Reimbursements receipt processing failed for " \
                            "#{filename.inspect}: #{error.class}: #{error.message}")
@@ -207,9 +195,8 @@ module Reimbursements
         nil
       end
 
-      # Applies EXIF orientation — iPhone HEICs carry rotation metadata, and a
-      # sideways receipt is needless work for whoever reviews it. Done for every
-      # format, because the tag is about to be stripped along with the rest.
+      # Applies EXIF orientation, for every format: the tag is about to be
+      # stripped along with the rest, and a sideways receipt is needless work.
       def prepare(image)
         raise ConversionError, "#{image.width}x#{image.height} is too many pixels" if
           image.width * image.height > MAX_PIXELS
@@ -217,23 +204,19 @@ module Reimbursements
         image.autorot
       end
 
-      # Only for a JPEG target: it carries neither an alpha channel nor CMYK
-      # sensibly. PNG and WEBP keep their bands as they arrived — flattening a
-      # transparent screenshot onto white here would be a visible change to a
-      # receipt, made for no reason, since neither format needs it.
+      # JPEG targets only: it carries neither an alpha channel nor CMYK
+      # sensibly. Flattening a transparent PNG/WEBP screenshot onto white would
+      # be a visible change to a receipt, made for no reason.
       def flatten_for_jpeg(image)
         image = image.flatten(background: 255) if image.has_alpha?
         image.colourspace(:srgb)
       end
 
-      # strip: true drops the metadata, including the orientation tag we have
-      # just baked into the pixels — leaving it would make every viewer rotate
-      # the receipt a second time.
-      #
-      # +quality+ is absent for PNG, which has no such knob (see
-      # LOSSLESS_STRIP_ATTEMPTS); passing Q: to pngsave_buffer would be ignored
-      # unless it were also quantising to a palette, which would be a real
-      # quality loss smuggled in under a metadata strip.
+      # strip: true drops the metadata, including the orientation tag just baked
+      # into the pixels — leaving it makes every viewer rotate the receipt
+      # twice. +quality+ is absent for PNG: Q: reaches pngsave only when it is
+      # also quantising to a palette, which would be real loss smuggled in
+      # under a metadata strip.
       def encode(image, saver:, limit:, quality: nil)
         candidate = limit ? image.thumbnail_image(limit, height: limit, size: :down) : image
         options = { strip: true }
