@@ -24,6 +24,7 @@
 #  maintenance_debt_start  :date
 #  members_only_text       :text(16777215)
 #  name                    :string(255)
+#  performance_weekdays    :string(255)
 #  pretix_shown            :boolean
 #  pretix_slug_override    :string(255)
 #  pretix_view             :string(255)
@@ -81,6 +82,7 @@ class Event < ApplicationRecord
   validates :pretix_slug_override, length: { maximum: 255 }
   validates :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }
+  validates :performance_weekdays, length: { maximum: 255 }
   include TimeHelper
   include ApplicationHelper
   include AttachmentItem
@@ -134,6 +136,16 @@ class Event < ApplicationRecord
 
   # Normalizatios
   normalizes :name, :tagline, :slug, :author, :price, with: ->(value) { value&.strip }
+
+  # Stored as sorted, comma-separated Date#wday integers. Deliberately does NOT
+  # coerce with to_i: "abc".to_i is 0, which would silently mean Sunday. Junk is
+  # kept intact so the validation below can reject it.
+  normalizes :performance_weekdays, with: ->(value) {
+    parts = value.to_s.split(",").map(&:strip).reject(&:blank?).uniq.sort
+    parts.empty? ? nil : parts.join(",")
+  }
+
+  validate :performance_weekdays_are_day_numbers
 
   # Scopes #
 
@@ -289,6 +301,32 @@ class Event < ApplicationRecord
     pretix_slug_override.presence || slug
   end
 
+  # The days of the week this event actually performs, as Date#wday integers
+  # (0 = Sunday). Empty means it plays every day of its run.
+  def performance_wdays
+    performance_weekdays.to_s.split(",").map(&:to_i)
+  end
+
+  def on_today?(date = Date.current)
+    return false if start_date.nil? || end_date.nil?
+    return false unless (start_date..end_date).cover?(date)
+
+    performance_wdays.empty? || performance_wdays.include?(date.wday)
+  end
+
+  # The next date this event actually plays, on or after +from+; nil if it never
+  # plays again. Weekdays repeat, so the answer is always within 7 days of the
+  # search start -- there is no need to walk a year-long run.
+  def next_occurrence(from = Date.current)
+    return nil if start_date.nil? || end_date.nil?
+
+    from = [ from, start_date ].max
+    return nil if from > end_date
+    return from if performance_wdays.empty?
+
+    (from..[ from + 6, end_date ].min).find { |date| performance_wdays.include?(date.wday) }
+  end
+
   # Returns a list of the all authors for every event.
   def self.author_name_list
     Rails.cache.fetch(AUTHOR_NAME_LIST_CACHE_KEY, expires_in: 12.hours) do
@@ -358,5 +396,12 @@ class Event < ApplicationRecord
     return unless company.present?
 
     company.destroy if !company.reviewed? && company.opportunities.none? && company.events.none?
+  end
+
+  def performance_weekdays_are_day_numbers
+    return if performance_weekdays.blank?
+    return if performance_weekdays.split(",").all? { |part| part.match?(/\A[0-6]\z/) }
+
+    errors.add(:performance_weekdays, "must be day numbers from 0 (Sunday) to 6 (Saturday)")
   end
 end
