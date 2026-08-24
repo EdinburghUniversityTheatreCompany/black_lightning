@@ -432,6 +432,20 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal "5", show.reload.performance_weekdays
   end
 
+  # SortableJS only reorders elements that are DIRECT children of the element it
+  # was created on, so the drag handles silently stop working if the team-member
+  # rows are ever nested one level deeper than the "sortable" controller.
+  test "edit form nests the sortable team member rows directly inside the sortable controller" do
+    show = FactoryBot.create(:show, team_member_count: 2)
+
+    get :edit, params: { id: show.to_param }
+    assert_response :success
+
+    assert_select "[data-controller~=sortable]", 1
+    assert_select "[data-controller~=sortable] > [data-sortable-item]", 2,
+                  "team member rows must be direct children of the sortable controller"
+  end
+
   # Substitutes for manually loading the edit page in a browser: confirms the
   # "Performance days" checkboxes actually render on the form, with a translation
   # for the new label and all seven days present.
