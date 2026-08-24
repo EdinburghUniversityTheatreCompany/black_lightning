@@ -201,6 +201,41 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match opportunity.display_title, response.body
   end
 
+  test "get_involved shows the site's own empty-state copy when nothing is open, with links stripped" do
+    OpportunityRole.delete_all
+    Opportunity.delete_all
+    Admin::EditableBlock.create!(
+      name: Display::Panels::GetInvolved::EMPTY_STATE_BLOCK, admin_page: false,
+      content: "There are no opportunities listed right now. Check back soon, " \
+               "or [submit your own](/get_involved/opportunities/new)."
+    )
+
+    get :get_involved
+
+    assert_response :success
+    assert_match "Get Involved", response.body
+    assert_match "There are no opportunities listed right now", response.body
+    assert_match "submit your own", response.body
+    # A link is meaningless on a screen nobody can touch -- the QR is the call
+    # to action, so the anchor goes and its words stay.
+    assert_no_match %r{<a[^>]*get_involved/opportunities/new}, response.body
+    # It kept its own identity rather than becoming a second What's On slide.
+    assert_no_match(/What&#39;s On|What's On/, response.body)
+  end
+
+  test "get_involved still falls through when nothing is open and no copy exists" do
+    OpportunityRole.delete_all
+    Opportunity.delete_all
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 2)
+
+    assert_not Admin::EditableBlock.exists?(name: Display::Panels::GetInvolved::EMPTY_STATE_BLOCK)
+
+    get :get_involved
+
+    assert_response :success
+    assert_match(/What&#39;s On|What's On/, response.body)
+  end
+
   private
 
   # delete_all in child-first order: several of these associations are declared

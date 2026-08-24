@@ -73,6 +73,18 @@ module DisplayHelper
   # "[text](https://...)" on a wall-mounted screen. Render it, strip the tags,
   # and undo the sanitizer's entity escaping -- truncate escapes again on the way
   # out, so leaving them would print "&amp;".
+  # An editable block, rendered for the screen. The site's blocks carry markdown
+  # links ("submit your own"), which mean nothing where nobody can touch them --
+  # the QR beside this is the call to action, so keep the words and drop the
+  # anchors.
+  #
+  # The `false` matches what the home page widget passes: display_block only
+  # writes when the stored admin_page differs, and the Pi re-fetches this page
+  # every few seconds forever, so a write here would never stop.
+  def display_block_text(name)
+    sanitize(display_block(name, false), tags: %w[p br strong em ul ol li], attributes: [])
+  end
+
   def display_plain_text(markdown, length:)
     text = CGI.unescapeHTML(strip_tags(render_markdown(markdown)).to_s).squish
 
