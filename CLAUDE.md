@@ -145,7 +145,9 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 
 ## Dev Server
 
-- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
+- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). **Start one yourself when you need it** (a screenshot, a visual check, driving the real app) — this overrides the global "ask the user first" default. Check the port is free first (`ss -ltn | grep ":${PORT:-3000}"`) and run it in the background.
+- **A provisioned worktree gets its own ports** — `PORT` and `VITE_RUBY_PORT` come from a gitignored `mise.local.toml` (see `.worktree-isolate.conf`), so a worktree's server never fights the main checkout's :3000. Run `bin/dev` from the worktree directory or you will start a second server on the wrong port against the wrong database.
+- **Stop `bin/dev` before `bin/rails test:system`** — a running dev server makes ~57 unrelated system tests fail, and the failures point nowhere near the cause.
 - **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
 - **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
 - **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
