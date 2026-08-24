@@ -9,9 +9,10 @@
   </p>
 <% end %>
 
-<% data_controllers = sortable ? "nested-form sortable" : "nested-form" %>
-<div data-controller="<%= data_controllers %>">
-  <div class="<%= container_class %> mb-3">
+<%# The sortable controller must sit on the element the rows are DIRECT children of:
+    SortableJS only reorders direct children of the element it is created on. %>
+<div data-controller="nested-form">
+  <%= content_tag :div, class: "#{container_class} mb-3", data: (sortable ? { controller: "sortable" } : {}) do %>
     <%= f.simple_fields_for(*[ association_name, collection ].compact) do |nested_f| %>
       <% wrapper_data = { new_record: nested_f.object.new_record? } %>
       <% wrapper_data[:sortable_item] = true if sortable %>
@@ -22,7 +23,7 @@
     <% end %>
 
     <div data-nested-form-target="target" class="hidden"></div>
-  </div>
+  <% end %>
 
   <template data-nested-form-target="template">
     <% association_class = f.object.class.reflect_on_association(association_name).klass %>
