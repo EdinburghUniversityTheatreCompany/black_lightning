@@ -32,33 +32,31 @@ module DisplayHelper
 
   QR_MODULE_SIZE = 4
 
-  # Inline SVG, so the page makes no external request and nothing has to be
-  # added to the CSP.
+  # A raster PNG rather than inline SVG, and that is not a style preference.
+  # The SVG version rendered as a blank square on the Anthias player while
+  # looking correct in a desktop browser, and survived being given an explicit
+  # intrinsic size, so the cause is something about that engine's SVG support
+  # rather than one fixable attribute. An <img> has no such failure mode.
+  # img_src already allows :data, so this asks nothing of the CSP and still
+  # makes no external request.
   #
-  # standalone: false is what makes this inlineable -- standalone: true prefixes
-  # an <?xml?> declaration, which an HTML parser swallows as a bogus comment.
-  # It also omits the <svg> wrapper, so we supply one with a viewBox and let CSS
-  # size it.
-  def display_qr_code(url, css_class: "h-64 w-64", label: "Scan to book")
-    qr = RQRCode::QRCode.new(url, level: :m)
-    extent = qr.modules.length * QR_MODULE_SIZE
-    body = qr.as_svg(module_size: QR_MODULE_SIZE, standalone: false, use_path: true,
-                     color: "000000", fill: "ffffff")
+  # Encoding costs about 15ms and the code for a given URL never changes, while
+  # the Pi re-fetches these pages every few seconds forever -- so the encoded
+  # image is cached and only the tag is rebuilt per request.
+  def self.qr_cache_key(url)
+    [ "display/qr", QR_MODULE_SIZE, url ]
+  end
 
-    # width/height are not redundant with the viewBox. Sized by CSS alone, an
-    # <svg> inside a flex container is given its box by the utilities but has no
-    # intrinsic size, and older engines than a desktop browser then scale the
-    # contents to nothing -- a correctly sized, entirely blank square, which is
-    # exactly how these rendered on the Anthias player while looking right on a
-    # laptop. shrink-0 stops the flex row squeezing it for the same reason.
-    tag.svg(body.html_safe, # rubocop:disable Rails/OutputSafety
-            xmlns: "http://www.w3.org/2000/svg",
-            viewBox: "0 0 #{extent} #{extent}",
-            width: extent,
-            height: extent,
-            class: "shrink-0 #{css_class}",
-            role: "img",
-            "aria-label": label)
+  def display_qr_code(url, css_class: "h-64 w-64", label: "Scan to book")
+    encoded = Rails.cache.fetch(DisplayHelper.qr_cache_key(url), expires_in: 1.week) do
+      qr = RQRCode::QRCode.new(url, level: :m)
+      Base64.strict_encode64(
+        RQRCode::Renderers::PNG.render(qr, unit: QR_MODULE_SIZE * 2, offset: QR_MODULE_SIZE * 4)
+      )
+    end
+
+    image_tag "data:image/png;base64,#{encoded}",
+              class: "shrink-0 #{css_class}", alt: label, loading: "eager"
   end
 
   def display_booking_url(event)

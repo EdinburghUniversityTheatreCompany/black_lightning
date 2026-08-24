@@ -37,13 +37,6 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
   end
 
-  test "display_qr_code renders an inline svg with no xml declaration" do
-    svg = display_qr_code("https://example.com")
-
-    assert_match(/\A<svg /, svg)
-    assert_no_match(/<\?xml/, svg)
-    assert_match(/viewbox=/i, svg)
-  end
 
   test "display_booking_url points at the pretix shop when tickets are shown" do
     event = FactoryBot.build(:show, slug: "the-crucible", is_public: true, pretix_shown: true, pretix_slug_override: nil)
@@ -105,22 +98,39 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # Anthias renders these pages in an older engine than a desktop browser. An
-  # <svg> with a viewBox but no width/height is sized purely by CSS, and inside
-  # a flex container several engines then compute the content's intrinsic size
-  # as zero -- a correctly sized, completely blank square.
-  test "display_qr_code carries explicit width and height matching its viewBox" do
-    svg = display_qr_code("https://example.com")
+  # Inline SVG rendered as a blank square on the Anthias player while looking
+  # correct in a desktop browser, and survived an attempt to fix its intrinsic
+  # sizing. A raster image has no such failure mode, and img-src already allows
+  # data: so this needs nothing from the CSP.
+  test "display_qr_code renders a PNG data URI, not an svg" do
+    html = display_qr_code("https://example.com")
 
-    extent = svg[/viewBox="0 0 (\d+) \d+"/, 1]
-    assert extent.present?, "expected a viewBox"
-    assert_match(/width="#{extent}"/, svg)
-    assert_match(/height="#{extent}"/, svg)
+    assert_match(/<img[^>]+src="data:image\/png;base64,[A-Za-z0-9+\/=]+"/, html)
+    assert_no_match(/<svg/, html)
+  end
+
+  # The Pi re-fetches these pages every few seconds, forever, and a QR for a
+  # given URL never changes.
+  test "display_qr_code caches the encoded image by url" do
+    url = "https://example.com/cache-me"
+    Rails.cache.delete(DisplayHelper.qr_cache_key(url))
+
+    first = display_qr_code(url)
+
+    assert Rails.cache.exist?(DisplayHelper.qr_cache_key(url)), "expected the encoded PNG to be cached"
+    assert_equal first, display_qr_code(url), "a cache hit must produce identical markup"
+  end
+
+  test "two different urls do not share a cached image" do
+    one = display_qr_code("https://example.com/one")
+    two = display_qr_code("https://example.com/two")
+
+    assert_not_equal one, two
   end
 
   test "display_qr_code labels itself for what the caller is asking people to scan" do
-    assert_match(/aria-label="Scan to book"/, display_qr_code("https://example.com"))
-    assert_match(/aria-label="Scan to read the news"/,
+    assert_match(/alt="Scan to book"/, display_qr_code("https://example.com"))
+    assert_match(/alt="Scan to read the news"/,
                  display_qr_code("https://example.com", label: "Scan to read the news"))
   end
 end

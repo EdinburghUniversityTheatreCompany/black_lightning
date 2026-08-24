@@ -57,4 +57,17 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
 
     assert_equal 1, Display::Panels::News.new.locals[:articles].size
   end
+  # The budget is what keeps the QR code on screen, so it has to count each
+  # item's date line as well as its headline.
+  test "four one-line headlines fit, and a wrapping headline costs one of them" do
+    4.times { |i| headline("Short headline #{i}", (i + 1).days.ago) }
+
+    assert_equal 4, Display::Panels::News.new.locals[:articles].size
+
+    ::News.delete_all
+    headline("A" * 110, 1.day.ago)
+    3.times { |i| headline("Short headline #{i}", (i + 2).days.ago) }
+
+    assert_operator Display::Panels::News.new.locals[:articles].size, :<, 4
+  end
 end

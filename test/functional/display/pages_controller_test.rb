@@ -110,17 +110,17 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match(/Tonight/, response.body)
   end
 
-  # Substitutes for the "scan the QR with a phone" half of Step 8: confirms
-  # the booking QR is inlined as an <svg> (no external image request, no
-  # bogus <?xml comment for the HTML parser to choke on).
-  test "next_event renders the booking QR as an inline svg with no xml declaration" do
+  # Substitutes for the "scan the QR with a phone" half of Step 8: confirms the
+  # booking QR is inlined as a data-URI PNG, so it makes no external request and
+  # cannot hit whatever SVG limitation left it blank on the Anthias player.
+  test "next_event inlines the booking QR as a data-uri png" do
     FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1)
 
     get :next_event, params: { slot: "1" }
 
     assert_response :success
-    assert_match(/<svg /, response.body)
-    assert_no_match(/<\?xml/, response.body)
+    assert_match(%r{src="data:image/png;base64,[A-Za-z0-9+/=]+"}, response.body)
+    assert_no_match(/<svg /, response.body)
   end
 
   # The chain guarantees a panel is *selected*; nothing guarantees it renders,
