@@ -86,4 +86,22 @@ class DisplayHelperTest < ActionView::TestCase
     assert_operator text.length, :<=, 60
     assert_match(/\.\.\.\z/, text)
   end
+
+  # A long title must step down a size rather than be cut off -- the poster
+  # page's whole job is naming the show.
+  test "display_title_size steps down as the title gets longer" do
+    short = display_title_size("The Crucible")
+    medium = display_title_size("Richard O'Brien's The Rocky Horror Show")
+    long = display_title_size("A" * 120)
+
+    assert_equal "text-8xl", short
+    assert_not_equal short, medium, "a title that cannot fit one line should step down"
+    assert_not_equal medium, long, "a very long title should step down again"
+  end
+
+  test "display_title_size never returns a truncating class" do
+    %w[Short Medium\ length\ title].each do |title|
+      assert_no_match(/truncate/, display_title_size(title))
+    end
+  end
 end

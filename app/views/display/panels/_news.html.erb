@@ -1,14 +1,20 @@
-<%# locals: (article:) %>
-<div class="relative flex h-full w-full flex-col justify-center bg-neutral-950 px-24 py-16">
+<%# locals: (articles:) %>
+<div class="relative flex h-full w-full flex-col bg-neutral-950 px-24 py-16">
   <%= display_logo(css_class: "absolute right-24 top-12 h-14 w-auto") %>
 
-  <p class="mb-8 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Latest News</p>
+  <p class="mb-10 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Latest News</p>
 
-  <h1 class="text-8xl font-bold leading-tight text-white"><%= article.title %></h1>
+  <ul class="flex flex-1 flex-col gap-10">
+    <% articles.each do |article| %>
+      <li>
+        <h2 class="text-5xl font-bold leading-descender text-white"><%= article.title %></h2>
+        <p class="mt-3 text-3xl text-neutral-500"><%= article.publish_date&.strftime("%-d %B %Y") %></p>
+      </li>
+    <% end %>
+  </ul>
 
-  <p class="mt-10 max-w-6xl text-4xl leading-relaxed text-neutral-300">
-    <%= display_plain_text(article.body, length: 320) %>
-  </p>
-
-  <p class="mt-12 text-3xl text-neutral-500"><%= article.publish_date&.strftime("%-d %B %Y") %></p>
+  <div class="mt-8 flex items-center gap-8">
+    <%= display_qr_code("#{request.base_url}#{news_index_path}", css_class: "h-40 w-40") %>
+    <p class="text-4xl text-neutral-300">Scan to read the latest news</p>
+  </div>
 </div>
