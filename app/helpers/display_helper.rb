@@ -49,7 +49,27 @@ module DisplayHelper
   def display_booking_url(event)
     return pretix_event_url(event) if event.pretix_shown?
 
-    "#{request.base_url}#{polymorphic_path(event)}"
+    "#{request.base_url}#{event_page_path(event)}"
+  end
+
+  # Show, Workshop and Season each have a public show route; a bare Event does
+  # not (`resources :events` is index-only), and polymorphic_path would raise
+  # mid-render -- which on this screen means a blank box office, not a 500 page
+  # somebody sees. The events listing is the honest fallback.
+  def event_page_path(event)
+    polymorphic_path(event)
+  rescue NoMethodError, ActionController::UrlGenerationError
+    events_path
+  end
+
+  # The news body is markdown, and truncating the raw source puts "##", "**" and
+  # "[text](https://...)" on a wall-mounted screen. Render it, strip the tags,
+  # and undo the sanitizer's entity escaping -- truncate escapes again on the way
+  # out, so leaving them would print "&amp;".
+  def display_plain_text(markdown, length:)
+    text = CGI.unescapeHTML(strip_tags(render_markdown(markdown)).to_s).squish
+
+    truncate(text, length: length, separator: " ")
   end
 
   # The 1920x1200 variant, not slideshow_image_url's 960x500 -- this is a 1080p

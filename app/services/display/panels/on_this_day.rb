@@ -36,8 +36,13 @@ module Display
                       .where("DATEDIFF(end_date, start_date) <= ?", MAX_RUN_DAYS)
                       # fetch_image attaches a generated placeholder, so "has
                       # artwork" has to be asked of the database, before anything
-                      # calls it.
+                      # calls it. joins is what asks: eager_load on its own would
+                      # LEFT OUTER JOIN and let artwork-less events through.
+                      # Together they inner-join the attachment (the guard) and
+                      # outer-join the blob (the preload), so the partial does not
+                      # re-query for the variant.
                       .joins(:image_attachment)
+                      .eager_load(image_attachment: :blob)
                       # reorder, not order: Event's default_scope is end_date DESC,
                       # so order would append and "oldest" would mean something else.
                       .reorder(:start_date)

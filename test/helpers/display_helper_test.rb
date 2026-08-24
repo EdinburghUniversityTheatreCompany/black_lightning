@@ -3,6 +3,7 @@ require "test_helper"
 class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
   include PretixHelper
+  include MdHelper
 
   test "display_date_range collapses a single day" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 3))
@@ -48,5 +49,41 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.build(:show, slug: "the-crucible", is_public: true, pretix_shown: true, pretix_slug_override: nil)
 
     assert_equal "https://tickets.bedlamtheatre.co.uk/the-crucible/", display_booking_url(event)
+  end
+
+  test "event_page_path uses the subclass route" do
+    show = FactoryBot.create(:show, slug: "the-crucible")
+
+    assert_equal "/shows/the-crucible", event_page_path(show)
+  end
+
+  # resources :events is index-only, so polymorphic_path would raise -- and a
+  # raise while rendering this screen is a blank box office, not a 500 page.
+  test "event_page_path falls back to the listing for an event with no show route" do
+    event = Event.new(id: 1, slug: "mystery")
+
+    assert_equal events_path, event_page_path(event)
+  end
+
+  test "display_plain_text renders the markdown away instead of printing its source" do
+    body = "## A heading\n\nSome **bold** text with a [link](https://example.com).\n"
+
+    text = display_plain_text(body, length: 320)
+
+    assert_equal "A heading Some bold text with a link.", text
+    assert_no_match(/[#*\[\]]|https:/, text)
+  end
+
+  test "display_plain_text escapes exactly once" do
+    text = display_plain_text("Gilbert & Sullivan", length: 320)
+
+    assert_equal "Gilbert &amp; Sullivan", text
+  end
+
+  test "display_plain_text truncates" do
+    text = display_plain_text(("word " * 200), length: 60)
+
+    assert_operator text.length, :<=, 60
+    assert_match(/\.\.\.\z/, text)
   end
 end

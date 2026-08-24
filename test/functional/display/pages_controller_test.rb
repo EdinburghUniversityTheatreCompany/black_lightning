@@ -23,7 +23,11 @@ class Display::PagesControllerTest < ActionController::TestCase
 
       assert_response :success, "#{action} #{params} did not render"
       assert response.body.present?, "#{action} #{params} rendered a blank body"
-      assert_match "Bedlam", response.body, "#{action} #{params} rendered nothing recognisable"
+      # Not "Bedlam": the layout's <title>Bedlam Theatre</title> satisfies that on
+      # its own, so the assertion would pass with the identity partial rendering
+      # nothing at all. The website address comes only from _identity.html.erb.
+      assert_match "bedlamtheatre.co.uk", response.body,
+                   "#{action} #{params} fell through to something other than the identity card"
     end
   end
 
