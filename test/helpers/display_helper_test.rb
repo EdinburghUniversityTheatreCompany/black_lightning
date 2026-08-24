@@ -104,4 +104,23 @@ class DisplayHelperTest < ActionView::TestCase
       assert_no_match(/truncate/, display_title_size(title))
     end
   end
+
+  # Anthias renders these pages in an older engine than a desktop browser. An
+  # <svg> with a viewBox but no width/height is sized purely by CSS, and inside
+  # a flex container several engines then compute the content's intrinsic size
+  # as zero -- a correctly sized, completely blank square.
+  test "display_qr_code carries explicit width and height matching its viewBox" do
+    svg = display_qr_code("https://example.com")
+
+    extent = svg[/viewBox="0 0 (\d+) \d+"/, 1]
+    assert extent.present?, "expected a viewBox"
+    assert_match(/width="#{extent}"/, svg)
+    assert_match(/height="#{extent}"/, svg)
+  end
+
+  test "display_qr_code labels itself for what the caller is asking people to scan" do
+    assert_match(/aria-label="Scan to book"/, display_qr_code("https://example.com"))
+    assert_match(/aria-label="Scan to read the news"/,
+                 display_qr_code("https://example.com", label: "Scan to read the news"))
+  end
 end

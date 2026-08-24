@@ -39,18 +39,26 @@ module DisplayHelper
   # an <?xml?> declaration, which an HTML parser swallows as a bogus comment.
   # It also omits the <svg> wrapper, so we supply one with a viewBox and let CSS
   # size it.
-  def display_qr_code(url, css_class: "h-64 w-64")
+  def display_qr_code(url, css_class: "h-64 w-64", label: "Scan to book")
     qr = RQRCode::QRCode.new(url, level: :m)
     extent = qr.modules.length * QR_MODULE_SIZE
     body = qr.as_svg(module_size: QR_MODULE_SIZE, standalone: false, use_path: true,
                      color: "000000", fill: "ffffff")
 
+    # width/height are not redundant with the viewBox. Sized by CSS alone, an
+    # <svg> inside a flex container is given its box by the utilities but has no
+    # intrinsic size, and older engines than a desktop browser then scale the
+    # contents to nothing -- a correctly sized, entirely blank square, which is
+    # exactly how these rendered on the Anthias player while looking right on a
+    # laptop. shrink-0 stops the flex row squeezing it for the same reason.
     tag.svg(body.html_safe, # rubocop:disable Rails/OutputSafety
             xmlns: "http://www.w3.org/2000/svg",
             viewBox: "0 0 #{extent} #{extent}",
-            class: css_class,
+            width: extent,
+            height: extent,
+            class: "shrink-0 #{css_class}",
             role: "img",
-            "aria-label": "Scan to book")
+            "aria-label": label)
   end
 
   def display_booking_url(event)

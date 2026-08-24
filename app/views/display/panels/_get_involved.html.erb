@@ -27,7 +27,7 @@
   <% end %>
 
   <div class="mt-8 flex items-center gap-8">
-    <%= display_qr_code("#{request.base_url}#{get_involved_opportunities_path}", css_class: "h-40 w-40") %>
+    <%= display_qr_code("#{request.base_url}#{get_involved_opportunities_path}", css_class: "h-40 w-40", label: "Scan to see opportunities") %>
     <p class="text-4xl text-neutral-300">
       <%= opportunities.any? ? "Scan for the full list and to apply" : "Scan to submit an opportunity" %>
     </p>
