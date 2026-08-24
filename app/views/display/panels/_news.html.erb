@@ -1,0 +1,15 @@
+<%# locals: (article:) %>
+<div class="flex h-full w-full flex-col justify-center bg-neutral-950 px-24 py-16">
+  <p class="mb-8 text-4xl font-bold uppercase tracking-[0.3em] text-primary">Latest News</p>
+
+  <h1 class="text-8xl font-bold leading-tight text-white"><%= article.title %></h1>
+
+  <p class="mt-10 max-w-6xl text-4xl leading-relaxed text-neutral-300">
+    <%# The body is markdown, not HTML. Truncating the raw source is good enough
+        for a headline card and avoids rendering markdown on a screen nobody
+        can scroll. %>
+    <%= truncate(article.body.to_s, length: 320, separator: " ") %>
+  </p>
+
+  <p class="mt-12 text-3xl text-neutral-500"><%= article.publish_date&.strftime("%-d %B %Y") %></p>
+</div>

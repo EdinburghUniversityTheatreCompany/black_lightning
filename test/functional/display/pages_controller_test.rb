@@ -109,6 +109,30 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match(/<\?xml/, response.body)
   end
 
+  # Substitutes for Step 7 of the task brief (open /display/news in a browser):
+  # confirms the News panel, not the Identity fallback, renders when a
+  # published item exists.
+  test "news renders the latest published item's title" do
+    News.delete_all
+    article = FactoryBot.create(:news, show_public: true, publish_date: 1.day.ago, title: "Bedlam Wins Award")
+
+    get :news
+
+    assert_response :success
+    assert_match article.title, response.body
+  end
+
+  # Substitutes for Step 7 of the task brief (open /display/get-involved in a
+  # browser): confirms the Get Involved panel, not a fallback further down
+  # the chain, renders when an active opportunity exists.
+  test "get_involved renders an active opportunity's display title" do
+    get :get_involved
+
+    assert_response :success
+    opportunity = opportunities(:active_opportunity)
+    assert_match opportunity.display_title, response.body
+  end
+
   private
 
   # delete_all in child-first order: several of these associations are declared

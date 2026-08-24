@@ -9,6 +9,7 @@ class Display::PagesController < ApplicationController
   def whats_on
     render_chain(
       Display::Panels::WhatsOn.new,
+      Display::Panels::News.new,
       Display::Panels::Identity.new
     )
   end
@@ -16,6 +17,7 @@ class Display::PagesController < ApplicationController
   def next_event
     render_chain(
       Display::Panels::NextEvent.new(params[:slot].to_i),
+      Display::Panels::News.new,
       Display::Panels::Identity.new
     )
   end
@@ -25,11 +27,21 @@ class Display::PagesController < ApplicationController
   end
 
   def get_involved
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::GetInvolved.new,
+      Display::Panels::WhatsOn.new,
+      Display::Panels::News.new,
+      Display::Panels::Identity.new
+    )
   end
 
   def news
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::News.new,
+      Display::Panels::WhatsOn.new,
+      Display::Panels::GetInvolved.new,
+      Display::Panels::Identity.new
+    )
   end
 
   def on_this_day
