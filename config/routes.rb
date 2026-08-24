@@ -33,6 +33,20 @@ ChaosRails::Application.routes.draw do
     end
   end
 
+  # The box office display screen (Anthias). Public and unauthenticated: it
+  # shows only what is already public on the site. Anthias plays a fixed
+  # playlist of these URLs forever, so each one falls back through a chain of
+  # panels and can never render blank.
+  namespace :display do
+    root to: "setup#show"
+
+    get "whats-on",        to: "pages#whats_on",     as: :whats_on
+    get "next/:slot",      to: "pages#next_event",   as: :next_event, constraints: { slot: /[1-6]/ }
+    get "tonight-credits", to: "pages#credits",      as: :credits
+    get "get-involved",    to: "pages#get_involved", as: :get_involved
+    get "news",            to: "pages#news",         as: :news
+    get "on-this-day",     to: "pages#on_this_day",  as: :on_this_day
+  end
 
   resource :profile_completion, only: [ :show, :update ]
 

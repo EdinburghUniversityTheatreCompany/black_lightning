@@ -1,0 +1,48 @@
+<%# locals: (event:, tonight:, on:) %>
+<div class="relative h-full w-full overflow-hidden bg-neutral-950">
+  <%# nil when the blob has gone missing from storage. Degrading to the text
+      over black beats a 500 on an unattended screen. %>
+  <% if (image_url = display_image_url(event)) %>
+    <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover", alt: "" %>
+  <% end %>
+
+  <%# The logo sits over the artwork, so it carries its own scrim: a white
+      wordmark on a pale poster would otherwise disappear. %>
+  <div class="absolute inset-x-0 top-0 flex justify-end bg-gradient-to-b from-black/70 to-transparent px-16 pb-24 pt-10">
+    <%= display_logo %>
+  </div>
+
+  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-14 pt-48">
+    <div class="flex items-end gap-14">
+      <div class="min-w-0 flex-1">
+        <% if tonight %>
+          <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Tonight</p>
+        <% end %>
+
+        <%# leading-descender, not leading-none -- see display.css. %>
+        <h1 class="truncate text-8xl font-bold leading-descender text-white"><%= event.name %></h1>
+
+        <% if event.author.present? %>
+          <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>
+        <% end %>
+
+        <p class="mt-8 text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
+
+        <% if event.price.present? %>
+          <p class="mt-3 text-4xl text-neutral-300"><%= event.price %></p>
+        <% end %>
+
+        <% if tonight && event.content_warnings.present? %>
+          <p class="mt-8 max-w-5xl text-3xl leading-snug text-amber-300">
+            Content warnings: <%= truncate(event.content_warnings.to_s, length: 180) %>
+          </p>
+        <% end %>
+      </div>
+
+      <div class="shrink-0 text-center">
+        <%= display_qr_code(display_booking_url(event)) %>
+        <p class="mt-4 text-2xl uppercase tracking-widest text-neutral-200">Book</p>
+      </div>
+    </div>
+  </div>
+</div>

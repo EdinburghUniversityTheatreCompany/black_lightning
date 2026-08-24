@@ -1,0 +1,25 @@
+<%# locals: (opportunities:) %>
+<div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
+  <div class="mb-10 flex items-center justify-between gap-10">
+    <h1 class="text-7xl font-bold tracking-tight text-display-accent">Get Involved</h1>
+    <%= display_logo %>
+  </div>
+
+  <ul class="flex flex-1 flex-col justify-center divide-y divide-neutral-800">
+    <% opportunities.each do |opportunity| %>
+      <li class="py-5">
+        <p class="truncate text-5xl font-bold leading-descender text-white"><%= opportunity.display_title %></p>
+        <% if opportunity.roles.any? %>
+          <p class="mt-2 truncate text-3xl leading-descender text-neutral-400">
+            <%= opportunity.roles.map(&:position).join(" · ") %>
+          </p>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+
+  <div class="mt-8 flex items-center gap-8">
+    <%= display_qr_code("#{request.base_url}#{get_involved_opportunities_path}", css_class: "h-40 w-40") %>
+    <p class="text-4xl text-neutral-300">Scan for the full list and to apply</p>
+  </div>
+</div>

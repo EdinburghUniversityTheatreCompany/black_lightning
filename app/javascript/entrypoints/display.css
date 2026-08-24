@@ -1,0 +1,25 @@
+/* The box office display screen.
+ *
+ * Deliberately does NOT import application.css: that file carries unlayered
+ * h1-h6 rules (lines 31 and 37) that beat Tailwind utilities, and every size on
+ * this screen is set to be read from across a room. */
+@import "../styles/tailwind-base.css";
+
+/* This entrypoint is loaded by layouts/display.html.erb and nothing else, so a
+ * token defined here is scoped to the box office screen. */
+@theme {
+  /* --color-primary (#ba0204) is the site-wide brand token and is used on light
+   * backgrounds everywhere else, so it must not change. On this screen's black
+   * it manages 2.9:1 -- fine on a monitor, unreadable across a box office.
+   * Same hue and saturation, lightness raised from 37% to 58%: 5.2:1 against
+   * neutral-950, and still unmistakably Bedlam red. */
+  --color-display-accent: #fd2b2d;
+
+  /* Tailwind's `truncate` sets overflow:hidden, and the line box the size
+   * utilities ship with is shorter than this font's content area (measured at
+   * ~1.36em, ascent + descent), so every g, j, p, q and y is sliced flat. The
+   * single-line clamp is wanted -- a wrapped title breaks these layouts -- so
+   * every truncating element on this screen pairs `truncate` with
+   * `leading-descender` instead, which is just wide enough to hold them. */
+  --leading-descender: 1.4;
+}

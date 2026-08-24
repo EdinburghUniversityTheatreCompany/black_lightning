@@ -145,7 +145,9 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 
 ## Dev Server
 
-- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
+- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). **Start one yourself when you need it** (a screenshot, a visual check, driving the real app) — this overrides the global "ask the user first" default. Check the port is free first (`ss -ltn | grep ":${PORT:-3000}"`) and run it in the background.
+- **A provisioned worktree gets its own ports** — `PORT` and `VITE_RUBY_PORT` come from a gitignored `mise.local.toml` (see `.worktree-isolate.conf`), so a worktree's server never fights the main checkout's :3000. Run `bin/dev` from the worktree directory or you will start a second server on the wrong port against the wrong database.
+- **Stop `bin/dev` before `bin/rails test:system`** — a running dev server makes ~57 unrelated system tests fail, and the failures point nowhere near the cause.
 - **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
 - **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
 - **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
@@ -602,6 +604,39 @@ Inline on a show page (`shared/_pretix_widget`) and in the home page's Buy Ticke
   calls `window.PretixWidget.buildWidgets()`, or every open after the first shows the first show.
 - The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
   `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
+
+## Box office display (Anthias)
+
+Public unauthenticated pages under `/display` for the box office screen, plus `/display` itself,
+which lists the playlist for whoever sets up the Pi. `Display::PagesController` resolves one panel
+per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
+
+- **Anthias plays a fixed playlist of these URLs forever, unattended.** A page that renders nothing
+  is not a blank page for a moment, it is a blank screen in the box office until somebody notices
+  and reconfigures the Pi. `Chain` appends the query-less `Panels::Identity` itself so a chain
+  cannot resolve to nothing, **the empty-database test in
+  `test/functional/display/pages_controller_test.rb` is the feature**, and anything that can raise
+  mid-render is rescued for the same reason (`display_image_url` returns nil on a blob missing from
+  storage rather than 500ing the screen).
+- **Blank `performance_weekdays` means every day of the run, and no duration rule may stand in for
+  it.** A year-long Improverts event with no weekdays set is `on_today?` daily and prints
+  "Sep 1 - Jun 30", the exact string `display_when` exists to avoid; a duration filter would instead
+  drop a three-week Fringe run that genuinely is on every night.
+- **The display layout must not load `application.css`** — its unlayered `h1`-`h6` rules beat the
+  Tailwind utilities sizing this screen. `display.css` imports `tailwind-base.css` only and owns the
+  two display-scoped tokens: `--color-display-accent` (`text-primary` is 2.9:1 on black) and
+  `--leading-descender`, which every `truncate` here must be paired with or `overflow: hidden` slices
+  the descenders flat.
+- **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
+  real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
+  join; on its own it outer-joins and silently drops the guard.
+- **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
+  here can say "7.30pm" without a migration.
+
+### Deployment
+
+On merge, set the Improverts event's `performance_weekdays` to Friday in the admin, and do the same
+for any other intermittent long-running event — see the blank-weekdays trap above.
 
 ## Opportunities
 

@@ -18,6 +18,7 @@
 #  maintenance_debt_start  :date
 #  members_only_text       :text(16777215)
 #  name                    :string(255)
+#  performance_weekdays    :string(255)
 #  pretix_shown            :boolean
 #  pretix_slug_override    :string(255)
 #  pretix_view             :string(255)

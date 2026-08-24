@@ -377,4 +377,94 @@ class EventTest < ActionView::TestCase
 
     assert_no_difference("Company.count") { event.destroy }
   end
+
+  # --- performance days -------------------------------------------------
+
+  test "on_today? is true every day of the run when no performance days are set" do
+    event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2, is_public: true)
+
+    assert event.on_today?
+    assert event.on_today?(Date.current + 1)
+    assert_not event.on_today?(Date.current + 3)
+  end
+
+  test "on_today? is only true on the listed performance days" do
+    friday = Date.current.next_occurring(:friday)
+    event = FactoryBot.create(:show, start_date: friday - 30, end_date: friday + 30,
+                                     is_public: true, performance_weekdays: "5")
+
+    assert event.on_today?(friday)
+    assert_not event.on_today?(friday + 1)
+  end
+
+  test "next_occurrence returns the next matching day inside the run" do
+    friday = Date.current.next_occurring(:friday)
+    event = FactoryBot.create(:show, start_date: friday - 30, end_date: friday + 30,
+                                     is_public: true, performance_weekdays: "5")
+
+    assert_equal friday, event.next_occurrence(friday - 3)
+  end
+
+  test "next_occurrence is the start date when the run has not begun" do
+    event = FactoryBot.create(:show, start_date: Date.current + 10, end_date: Date.current + 12, is_public: true)
+
+    assert_equal Date.current + 10, event.next_occurrence
+  end
+
+  test "next_occurrence is nil when the remaining run holds no performance day" do
+    friday = Date.current.next_occurring(:friday)
+    # Saturday to Thursday: no Friday is left in the range.
+    event = FactoryBot.create(:show, start_date: friday + 1, end_date: friday + 6,
+                                     is_public: true, performance_weekdays: "5")
+
+    assert_nil event.next_occurrence(friday + 1)
+  end
+
+  test "next_occurrence is nil once the run has ended" do
+    event = FactoryBot.create(:show, start_date: Date.current - 10, end_date: Date.current - 5, is_public: true)
+
+    assert_nil event.next_occurrence
+  end
+
+  test "performance_weekdays normalises to a sorted deduped list and blanks to nil" do
+    event = FactoryBot.build(:show, performance_weekdays: " 5, 1 ,5 ")
+    assert_equal "1,5", event.performance_weekdays
+
+    event.performance_weekdays = ""
+    assert_nil event.performance_weekdays
+  end
+
+  test "performance_weekdays rejects day numbers outside 0..6" do
+    event = FactoryBot.build(:show, performance_weekdays: "7")
+
+    assert_not event.valid?
+    assert event.errors[:performance_weekdays].present?
+  end
+
+  test "performance_wdays reads the stored list as integers" do
+    event = FactoryBot.build(:show, performance_weekdays: "1,5")
+
+    assert_equal [ 1, 5 ], event.performance_wdays
+  end
+
+  test "performance_wdays_list reads the stored days as strings for the form" do
+    event = FactoryBot.build(:show, performance_weekdays: "1,5")
+
+    assert_equal %w[1 5], event.performance_wdays_list
+  end
+
+  test "performance_wdays_list= joins the checkbox values and drops the blank" do
+    event = FactoryBot.build(:show)
+    # simple_form check_boxes always post a leading "" from their hidden field.
+    event.performance_wdays_list = [ "", "5", "1" ]
+
+    assert_equal "1,5", event.performance_weekdays
+  end
+
+  test "performance_wdays_list= with nothing ticked clears the column" do
+    event = FactoryBot.build(:show, performance_weekdays: "5")
+    event.performance_wdays_list = [ "" ]
+
+    assert_nil event.performance_weekdays
+  end
 end
