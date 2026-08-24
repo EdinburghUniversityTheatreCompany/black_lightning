@@ -7,7 +7,7 @@ module Display
       # newsletter title long enough to wrap crowds out the ones below it. That
       # is the deliberate trade: the alternative is an ellipsis through a
       # headline, and a half-read headline tells you less than no headline.
-      MAX_ITEMS = 5
+      MAX_ITEMS = 4
       MAX_LINES = 8
       CHARS_PER_LINE = 55
 
@@ -35,7 +35,10 @@ module Display
         lines = 0
 
         candidates.take_while.with_index do |article, index|
-          lines += title_lines(article)
+          # Each item costs its headline's lines PLUS one for its date. Counting
+          # headline lines alone is what let four items pass the budget and then
+          # push the QR code off the bottom of the screen.
+          lines += title_lines(article) + 1
           # However long it is, the newest headline is always shown -- an empty
           # slide is worse than a full one.
           index.zero? || lines <= MAX_LINES
