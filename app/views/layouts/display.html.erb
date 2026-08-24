@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bedlam Theatre</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <%= vite_client_tag %>
+  <%= vite_stylesheet_tag "display.css", "data-turbo-track": "reload" %>
+</head>
+<%# No JavaScript entrypoint on purpose: this screen has no interaction, and
+    the application bundle would pull in Stimulus controllers it cannot use. %>
+<body class="overflow-hidden bg-neutral-950 text-white">
+  <main class="h-screen w-screen overflow-hidden">
+    <%= yield %>
+  </main>
+</body>
+</html>

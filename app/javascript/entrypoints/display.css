@@ -1,0 +1,6 @@
+/* The box office display screen.
+ *
+ * Deliberately does NOT import application.css: that file carries unlayered
+ * h1-h6 rules (lines 31 and 37) that beat Tailwind utilities, and every size on
+ * this screen is set to be read from across a room. */
+@import "../styles/tailwind-base.css";
