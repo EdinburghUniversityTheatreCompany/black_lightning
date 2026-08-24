@@ -2,6 +2,7 @@ require "test_helper"
 
 class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
+  include PretixHelper
 
   test "display_date_range collapses a single day" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 3))
@@ -33,5 +34,19 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
 
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
+  end
+
+  test "display_qr_code renders an inline svg with no xml declaration" do
+    svg = display_qr_code("https://example.com")
+
+    assert_match(/\A<svg /, svg)
+    assert_no_match(/<\?xml/, svg)
+    assert_match(/viewbox=/i, svg)
+  end
+
+  test "display_booking_url points at the pretix shop when tickets are shown" do
+    event = FactoryBot.build(:show, slug: "the-crucible", pretix_shown: true, pretix_slug_override: nil)
+
+    assert_equal "https://tickets.bedlamtheatre.co.uk/the-crucible/", display_booking_url(event)
   end
 end

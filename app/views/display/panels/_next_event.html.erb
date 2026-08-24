@@ -1,0 +1,37 @@
+<%# locals: (event:, tonight:, on:) %>
+<div class="relative h-full w-full overflow-hidden bg-neutral-950">
+  <%= image_tag display_image_url(event), class: "absolute inset-0 h-full w-full object-cover", alt: "" %>
+
+  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-14 pt-48">
+    <div class="flex items-end gap-14">
+      <div class="min-w-0 flex-1">
+        <% if tonight %>
+          <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-primary">Tonight</p>
+        <% end %>
+
+        <h1 class="truncate text-8xl font-bold leading-none text-white"><%= event.name %></h1>
+
+        <% if event.author.present? %>
+          <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>
+        <% end %>
+
+        <p class="mt-8 text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
+
+        <% if event.price.present? %>
+          <p class="mt-3 text-4xl text-neutral-300"><%= event.price %></p>
+        <% end %>
+
+        <% if tonight && event.content_warnings.present? %>
+          <p class="mt-8 max-w-5xl text-3xl leading-snug text-amber-300">
+            Content warnings: <%= truncate(event.content_warnings.to_s, length: 180) %>
+          </p>
+        <% end %>
+      </div>
+
+      <div class="shrink-0 text-center">
+        <%= display_qr_code(display_booking_url(event)) %>
+        <p class="mt-4 text-2xl uppercase tracking-widest text-neutral-200">Book</p>
+      </div>
+    </div>
+  </div>
+</div>

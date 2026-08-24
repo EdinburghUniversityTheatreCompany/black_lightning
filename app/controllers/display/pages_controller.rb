@@ -9,12 +9,17 @@ class Display::PagesController < ApplicationController
   def whats_on
     render_chain(
       Display::Panels::WhatsOn.new,
+      Display::Panels::NextEvent.new(1),
       Display::Panels::Identity.new
     )
   end
 
   def next_event
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::NextEvent.new(params[:slot].to_i),
+      Display::Panels::WhatsOn.new,
+      Display::Panels::Identity.new
+    )
   end
 
   def credits

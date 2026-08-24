@@ -70,6 +70,45 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match show.name, response.body
   end
 
+  # Substitutes for Step 8 of the task brief (open /display/next/1 in a browser
+  # and scan the QR with a phone): confirms slot 1 renders in tonight mode --
+  # eyebrow plus content warnings -- for an event running today, and out of
+  # tonight mode for one that is not.
+  test "next_event slot 1 renders tonight mode for an event running today" do
+    event = FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1,
+                                      content_warnings: "Loud noises")
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_match event.name, response.body
+    assert_match "Tonight", response.body
+    assert_match "Loud noises", response.body
+  end
+
+  test "next_event slot 1 does not render tonight mode for an event not running today" do
+    event = FactoryBot.create(:show, is_public: true, start_date: Date.current + 3, end_date: Date.current + 4)
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_match event.name, response.body
+    assert_no_match(/Tonight/, response.body)
+  end
+
+  # Substitutes for the "scan the QR with a phone" half of Step 8: confirms
+  # the booking QR is inlined as an <svg> (no external image request, no
+  # bogus <?xml comment for the HTML parser to choke on).
+  test "next_event renders the booking QR as an inline svg with no xml declaration" do
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1)
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_match(/<svg /, response.body)
+    assert_no_match(/<\?xml/, response.body)
+  end
+
   private
 
   # delete_all in child-first order: several of these associations are declared
