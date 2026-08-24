@@ -17,7 +17,7 @@ class Display::Panels::GetInvolvedTest < ActiveSupport::TestCase
     panel = Display::Panels::GetInvolved.new
 
     assert panel.available?
-    assert_operator panel.locals[:opportunities].size, :<=, 5
+    assert_equal 5, panel.locals[:opportunities].size
     assert panel.locals[:opportunities].all?(&:active?), "every listed opportunity should be active"
   end
 end
