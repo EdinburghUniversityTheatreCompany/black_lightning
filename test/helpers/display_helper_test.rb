@@ -45,7 +45,7 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
   test "display_booking_url points at the pretix shop when tickets are shown" do
-    event = FactoryBot.build(:show, slug: "the-crucible", pretix_shown: true, pretix_slug_override: nil)
+    event = FactoryBot.build(:show, slug: "the-crucible", is_public: true, pretix_shown: true, pretix_slug_override: nil)
 
     assert_equal "https://tickets.bedlamtheatre.co.uk/the-crucible/", display_booking_url(event)
   end
