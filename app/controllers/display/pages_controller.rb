@@ -50,7 +50,12 @@ class Display::PagesController < ApplicationController
   end
 
   def on_this_day
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::OnThisDay.new,
+      Display::Panels::News.new,
+      Display::Panels::WhatsOn.new,
+      Display::Panels::Identity.new
+    )
   end
 
   private

@@ -1,0 +1,18 @@
+<%# locals: (event:, years_ago:) %>
+<div class="relative h-full w-full overflow-hidden bg-neutral-950">
+  <%= image_tag display_image_url(event), class: "absolute inset-0 h-full w-full object-cover opacity-70", alt: "" %>
+
+  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-16 pt-48">
+    <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-primary">
+      On this day, <%= pluralize(years_ago, "year") %> ago
+    </p>
+
+    <h1 class="truncate text-8xl font-bold leading-none text-white"><%= event.name %></h1>
+
+    <% if event.author.present? %>
+      <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>
+    <% end %>
+
+    <p class="mt-6 text-4xl text-neutral-400"><%= display_date_range(event) %></p>
+  </div>
+</div>
