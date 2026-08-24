@@ -38,6 +38,8 @@ ChaosRails::Application.routes.draw do
   # playlist of these URLs forever, so each one falls back through a chain of
   # panels and can never render blank.
   namespace :display do
+    root to: "setup#show"
+
     get "whats-on",        to: "pages#whats_on",     as: :whats_on
     get "next/:slot",      to: "pages#next_event",   as: :next_event, constraints: { slot: /[1-6]/ }
     get "tonight-credits", to: "pages#credits",      as: :credits

@@ -1,0 +1,24 @@
+<% @title = "Box office display setup" %>
+
+<h1>Box office display setup</h1>
+
+<p>
+  Add each of these as a web-page asset in Anthias, in this order. They can stay
+  in the playlist permanently: every page falls back to something else when it
+  has nothing of its own to show, so none of them can go blank.
+</p>
+
+<table class="table">
+  <thead>
+    <tr><th>URL</th><th>Duration</th><th>What it shows</th></tr>
+  </thead>
+  <tbody>
+    <% @playlist.each do |entry| %>
+      <tr>
+        <td><code><%= request.base_url %><%= entry[:path] %></code></td>
+        <td><%= entry[:seconds] %>s</td>
+        <td><%= entry[:note] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
