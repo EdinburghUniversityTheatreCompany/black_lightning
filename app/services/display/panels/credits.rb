@@ -25,6 +25,10 @@ module Display
         @pool ||= Display::EventPool.upcoming(on: @on)
       end
 
+      # The pool already sorts events running today to the front, so find and
+      # first agree whenever anything is on tonight. Written out anyway: this
+      # page is "tonight's credits", and it should say so at the point it picks
+      # rather than lean on an ordering rule defined in another file.
       def event
         return @event if defined?(@event)
 

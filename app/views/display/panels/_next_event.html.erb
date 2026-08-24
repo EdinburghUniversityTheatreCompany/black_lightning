@@ -1,6 +1,10 @@
 <%# locals: (event:, tonight:, on:) %>
 <div class="relative h-full w-full overflow-hidden bg-neutral-950">
-  <%= image_tag display_image_url(event), class: "absolute inset-0 h-full w-full object-cover", alt: "" %>
+  <%# nil when the blob has gone missing from storage. Degrading to the text
+      over black beats a 500 on an unattended screen. %>
+  <% if (image_url = display_image_url(event)) %>
+    <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover", alt: "" %>
+  <% end %>
 
   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-14 pt-48">
     <div class="flex items-end gap-14">

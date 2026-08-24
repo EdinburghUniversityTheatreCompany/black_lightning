@@ -56,9 +56,18 @@ module DisplayHelper
   # screen and the smaller one visibly upscales.
   #
   # fetch_image attaches a generated placeholder when nothing is uploaded, so
-  # this always returns something. That is a write on a read path, but it is
-  # idempotent and matches what the public event pages already do.
+  # this normally always returns something. That is a write on a read path, but
+  # it is idempotent and matches what the public event pages already do.
+  #
+  # Returns nil when the blob row exists but its object is gone from storage.
+  # The panel chain guarantees a panel is *selected*; this is the only render
+  # step that reaches the network, so it is the one place the never-blank
+  # guarantee could still fail -- and an unattended screen would then show a 500
+  # for as long as that event is in the pool. Callers must guard the image_tag
+  # and degrade to text over black.
   def display_image_url(event)
     rails_representation_url(event.fetch_image.variant(large_display_variant).processed, only_path: true)
+  rescue ActiveStorage::FileNotFoundError
+    nil
   end
 end

@@ -19,7 +19,12 @@ module Display
            .includes(image_attachment: :blob)
            .to_a
            .select { |event| event.next_occurrence(on).present? }
-           .sort_by { |event| [ event.on_today?(on) ? 0 : 1, event.next_occurrence(on) ] }
+           # start_date and id are tiebreakers, not decoration: sort_by is not
+           # stable and every event running today shares [0, today], so without a
+           # total order the six slot pages -- fetched minutes apart, each
+           # re-sorting independently -- can show the same show twice and skip
+           # another. During the Fringe that is the normal state.
+           .sort_by { |event| [ event.on_today?(on) ? 0 : 1, event.next_occurrence(on), event.start_date, event.id ] }
     end
 
     # Slot numbers are 1-based and wrap: six slots against four events shows

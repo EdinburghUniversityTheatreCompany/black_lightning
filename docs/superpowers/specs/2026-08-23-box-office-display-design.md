@@ -132,6 +132,7 @@ Slot *n* renders `pool[(n - 1) % pool.size]`.
 
 A panel is a PORO in `app/services/display/panels/` answering three questions: `available?`,
 `partial`, `locals`. `Display::Chain` takes an ordered list and returns the first available one.
+It appends `Identity` itself, so no caller can leave a chain unterminated.
 
 ```mermaid
 flowchart TD
@@ -145,16 +146,21 @@ flowchart TD
     H --> I["cannot fail: no query"]
 ```
 
-The chains:
+The chains (`Identity` is appended to each by `Chain`, so it is not written out):
 
 | URL | Panel chain |
 |-----|-------------|
-| `/display/next/1` … `/6` | NextEvent(slot) -> WhatsOn -> News -> Identity |
-| `/display/whats-on` | WhatsOn -> NextEvent(1) -> News -> Identity |
-| `/display/tonight-credits` | Credits -> NextEvent(1) -> WhatsOn -> Identity |
-| `/display/get-involved` | GetInvolved -> WhatsOn -> News -> Identity |
-| `/display/news` | News -> WhatsOn -> GetInvolved -> Identity |
-| `/display/on-this-day` | OnThisDay -> News -> WhatsOn -> Identity |
+| `/display/next/1` … `/6` | NextEvent(slot) -> News |
+| `/display/whats-on` | WhatsOn -> News |
+| `/display/tonight-credits` | Credits -> NextEvent(1) |
+| `/display/get-involved` | GetInvolved -> WhatsOn -> News |
+| `/display/news` | News -> WhatsOn -> GetInvolved |
+| `/display/on-this-day` | OnThisDay -> News -> WhatsOn |
+
+**A rung whose availability condition is implied by the rung above it is dead and is left out.**
+`WhatsOn`, `NextEvent(slot)` and `Credits` are all available exactly when the event pool is
+non-empty, so `NextEvent -> WhatsOn` and `Credits -> NextEvent(1) -> WhatsOn` can never reach that
+third rung -- it only costs a wasted `EventPool.upcoming` query on the path where the pool is empty.
 
 `Identity` renders the Bedlam mark and the website address. It runs no query and is therefore the
 one panel that is always available.

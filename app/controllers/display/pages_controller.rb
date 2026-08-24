@@ -9,25 +9,21 @@ class Display::PagesController < ApplicationController
   def whats_on
     render_chain(
       Display::Panels::WhatsOn.new,
-      Display::Panels::News.new,
-      Display::Panels::Identity.new
+      Display::Panels::News.new
     )
   end
 
   def next_event
     render_chain(
       Display::Panels::NextEvent.new(params[:slot].to_i),
-      Display::Panels::News.new,
-      Display::Panels::Identity.new
+      Display::Panels::News.new
     )
   end
 
   def credits
     render_chain(
       Display::Panels::Credits.new,
-      Display::Panels::NextEvent.new(1),
-      Display::Panels::WhatsOn.new,
-      Display::Panels::Identity.new
+      Display::Panels::NextEvent.new(1)
     )
   end
 
@@ -35,8 +31,7 @@ class Display::PagesController < ApplicationController
     render_chain(
       Display::Panels::GetInvolved.new,
       Display::Panels::WhatsOn.new,
-      Display::Panels::News.new,
-      Display::Panels::Identity.new
+      Display::Panels::News.new
     )
   end
 
@@ -44,8 +39,7 @@ class Display::PagesController < ApplicationController
     render_chain(
       Display::Panels::News.new,
       Display::Panels::WhatsOn.new,
-      Display::Panels::GetInvolved.new,
-      Display::Panels::Identity.new
+      Display::Panels::GetInvolved.new
     )
   end
 
@@ -53,8 +47,7 @@ class Display::PagesController < ApplicationController
     render_chain(
       Display::Panels::OnThisDay.new,
       Display::Panels::News.new,
-      Display::Panels::WhatsOn.new,
-      Display::Panels::Identity.new
+      Display::Panels::WhatsOn.new
     )
   end
 

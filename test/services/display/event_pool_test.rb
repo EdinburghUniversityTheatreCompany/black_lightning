@@ -18,6 +18,28 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_includes pool.map(&:id), weekly.id
   end
 
+  # sort_by is not stable and every event running today shares the key
+  # [0, today], so without the start_date/id tiebreakers the six slot pages --
+  # each of which re-sorts independently, minutes apart -- can show the same
+  # show twice and skip another. During the Fringe that is the normal state.
+  test "events running today keep one total order across repeated calls" do
+    Event.delete_all
+
+    later_start = FactoryBot.create(:show, name: "Later start", is_public: true,
+                                           start_date: Date.current, end_date: Date.current + 4)
+    earlier_start = FactoryBot.create(:show, name: "Earlier start", is_public: true,
+                                             start_date: Date.current - 3, end_date: Date.current + 4)
+    same_start = FactoryBot.create(:show, name: "Same start", is_public: true,
+                                          start_date: Date.current - 3, end_date: Date.current + 2)
+
+    # The key implies: all three are on today, so start_date ascending, then id.
+    by_key = [ earlier_start, same_start ].sort_by(&:id).map(&:id) + [ later_start.id ]
+
+    5.times do
+      assert_equal by_key, Display::EventPool.upcoming.map(&:id)
+    end
+  end
+
   test "the pool orders by next occurrence, not by start date" do
     soon  = FactoryBot.create(:show, is_public: true, start_date: Date.current + 2, end_date: Date.current + 3)
     later = FactoryBot.create(:show, is_public: true, start_date: Date.current + 9, end_date: Date.current + 10)

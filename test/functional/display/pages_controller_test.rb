@@ -109,6 +109,40 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match(/<\?xml/, response.body)
   end
 
+  # The chain guarantees a panel is *selected*; nothing guarantees it renders,
+  # and the artwork variant is the only render step that reaches storage. A blob
+  # row whose object has gone missing used to 500 the slot page -- on an
+  # unattended screen, for as long as that event stayed in the pool.
+  test "next_event still renders when the event's artwork is missing from storage" do
+    Event.delete_all
+    event = FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1)
+    event.image.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png",
+                       content_type: "image/png")
+    ActiveStorage::Blob.service.delete(event.image.blob.key)
+
+    get :next_event, params: { slot: "1" }
+
+    assert_response :success
+    assert_match event.name, response.body
+    assert_no_match(/<img/, response.body)
+  end
+
+  test "on_this_day still renders when the archive event's artwork is missing from storage" do
+    Event.delete_all
+    event = FactoryBot.create(:show, is_public: true,
+                                     start_date: Date.current - 20.years,
+                                     end_date: Date.current - 20.years + 2)
+    event.image.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png",
+                       content_type: "image/png")
+    ActiveStorage::Blob.service.delete(event.image.blob.key)
+
+    get :on_this_day
+
+    assert_response :success
+    assert_match event.name, response.body
+    assert_no_match(/<img/, response.body)
+  end
+
   # Substitutes for Step 7 of the task brief (open /display/news in a browser):
   # confirms the News panel, not the Identity fallback, renders when a
   # published item exists.
