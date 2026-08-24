@@ -122,6 +122,26 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match article.title, response.body
   end
 
+  # Substitutes for Step 7 of the task brief (open /display/tonight-credits in
+  # a browser and confirm nothing overflows a 1080-tall viewport): confirms
+  # the Credits panel, not a fallback further down the chain, renders a cast
+  # member under Cast and a crew member under Company. The overflow behaviour
+  # itself cannot be asserted from a request test -- that still needs the
+  # visual pass.
+  test "credits renders a cast member and a crew member under their headings" do
+    show = FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 1)
+    actor = FactoryBot.create(:team_member, teamwork: show, position: "Actor (Abigail)")
+    crew_member = FactoryBot.create(:team_member, teamwork: show, position: "Lighting Designer")
+
+    get :credits
+
+    assert_response :success
+    assert_match "Cast", response.body
+    assert_match "Company", response.body
+    assert_match actor.user_name, response.body
+    assert_match crew_member.user_name, response.body
+  end
+
   # Substitutes for Step 7 of the task brief (open /display/get-involved in a
   # browser): confirms the Get Involved panel, not a fallback further down
   # the chain, renders when an active opportunity exists.

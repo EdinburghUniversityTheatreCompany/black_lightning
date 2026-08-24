@@ -23,7 +23,12 @@ class Display::PagesController < ApplicationController
   end
 
   def credits
-    render_chain(Display::Panels::Identity.new)
+    render_chain(
+      Display::Panels::Credits.new,
+      Display::Panels::NextEvent.new(1),
+      Display::Panels::WhatsOn.new,
+      Display::Panels::Identity.new
+    )
   end
 
   def get_involved
