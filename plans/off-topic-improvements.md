@@ -510,3 +510,21 @@ controller than the one named on the element.
 **Fix (if it earns it):** either fold open/close into `pretix-modal`, or use a Stimulus outlet
 so the relationship is declared rather than implied. Not urgent; the backdrop-close path is
 covered by the modal system test.
+
+## The Active Storage representations override drops upstream's strict-loading blob scope
+
+*Noticed 2026-08-24.* `ActiveStorage::Representations::RedirectController` (our override)
+subclasses `ActiveStorage::BaseController` and includes `ActiveStorage::SetBlob` directly,
+rather than subclassing upstream's `ActiveStorage::Representations::BaseController`. That
+skips upstream's `blob_scope` override, which is `ActiveStorage::Blob.scope_for_strict_loading`
+— a guard against a lazily-loaded association firing inside a hot image route.
+
+It also skipped upstream's `InvalidSignature` rescue, which is what turned a forged variation
+key into a 500 (fixed 2026-08-24); the strict-loading scope is the other half of the same
+divergence and is still missing.
+
+**Fix (if it earns it):** subclass `ActiveStorage::Representations::BaseController` and move
+the Vips/LoadError handling to a `rescue_from`, since upstream does the processing in a
+`before_action` where a method-level `rescue` cannot reach it. The Honeybadger context call
+then needs re-ordering too — it has to run *before* `set_representation`, which is where the
+image backend actually runs. Low value on its own; worth doing next time this file is opened.
