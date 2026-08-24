@@ -528,3 +528,23 @@ the Vips/LoadError handling to a `rescue_from`, since upstream does the processi
 `before_action` where a method-level `rescue` cannot reach it. The Honeybadger context call
 then needs re-ordering too — it has to run *before* `set_representation`, which is where the
 image backend actually runs. Low value on its own; worth doing next time this file is opened.
+
+## `sortable_controller`'s reindex counts rows that are on their way out
+
+*Noticed 2026-08-24.* `#updateOrder` (`app/javascript/controllers/sortable_controller.js`)
+renumbers every `[data-sortable-item]` in the container from 0, including rows the user has
+already removed. `stimulus-rails-nested-form` removes a *new* row from the DOM but only hides a
+*persisted* one and ticks its `_destroy`, so a form where a persisted row was removed and the
+rest reordered writes display orders with a gap where the doomed row sat. Harmless today —
+`TeamMember`'s ordering only reads the relative order, and `OpportunityRole#ordering` likewise —
+but it means the stored numbers aren't the contiguous sequence they look like.
+
+Related: a row added with "Add" gets no `display_order` at all until something is dragged
+(`TeamMember`'s scope sorts `ISNULL(display_order)` last, so it lands at the bottom, which is
+the sensible place). Both would be fixed by having the controller skip
+`[data-sortable-item]` whose `_destroy` input is `"true"`, and by reindexing on the
+`nested-form` add/remove events as well as on drag end.
+
+**Fix (if it earns it):** small, self-contained, and testable only at the JS level — there is no
+JS unit-test harness in this repo, and SortableJS's native HTML5 drag-and-drop is not drivable
+from Selenium, which is why the drag fix landed with a structural assertion instead.
