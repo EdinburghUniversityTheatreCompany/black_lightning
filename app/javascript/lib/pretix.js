@@ -51,9 +51,8 @@ export function loadPretix(baseUrl) {
   return loading
 }
 
-// Fills `container` with a widget for `eventUrl`, replacing whatever was there. Resolves with
-// whether a widget was actually built; it never rejects, since no caller is in a position to
-// handle a failure better than the shop link put in its place.
+// Resolves with whether a widget was actually built, and never rejects: no caller is in a
+// position to handle a failure better than the shop link put in its place.
 //
 // A fresh element every time is not tidiness: building a widget *replaces* the <pretix-widget>
 // element with pretix's own markup, so an element can only ever be configured once. Turbo's
