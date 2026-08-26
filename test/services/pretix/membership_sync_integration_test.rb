@@ -90,7 +90,8 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
   test "writes nothing when the gate is closed, and says so rather than reporting success" do
     http = FakeHttp.new([ page([ customer_row ]), page([]) ])
     closed = Pretix::MembershipSync.new(
-      client: Pretix::Client.new(token: "t", http: http, settings: WritingSettings.new(false))
+      client: Pretix::Client.new(token: "t", http: http, settings: WritingSettings.new(false),
+                                 sleeper: ->(_seconds) { })
     )
 
     assert_equal :suppressed, closed.sync_user(@user)
@@ -132,7 +133,8 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
 
   def sync(http)
     Pretix::MembershipSync.new(
-      client: Pretix::Client.new(token: "t", http: http, settings: WritingSettings.new(true))
+      client: Pretix::Client.new(token: "t", http: http, settings: WritingSettings.new(true),
+                                 sleeper: ->(_seconds) { })
     )
   end
 
