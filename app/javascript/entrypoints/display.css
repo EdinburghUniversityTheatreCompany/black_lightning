@@ -75,9 +75,20 @@
    * board used to read as a half-empty wall -- and grows past it when they are
    * many, which is the case the scroll exists for. */
   min-height: 100%;
-  /* The duration comes from the panel, which paces it by how many events there
-   * are; the fallback only matters if the inline style is ever dropped. */
-  animation: display-marquee var(--display-marquee-duration, 26s) ease-in-out infinite;
+  /* One fixed duration, so the speed varies with the distance rather than the
+   * other way round. That is the only pacing a fixed Anthias slot can take: a
+   * constant speed would make a long board need a longer slot than a short one,
+   * and since the playlist holds a single number, the slot would have to cover
+   * the worst case and every ordinary board would sit there for twice as long
+   * as it needed. This way the pass always finishes inside the slot, whatever
+   * is on the board.
+   *
+   * The distance is the OVERFLOW, not the list: twelve short titles overflow by
+   * ~310px and twelve wrapping ones by ~1030px, so the same 18s is a 23px/s
+   * drift in the first case and a 75px/s roll in the second -- both readable,
+   * for very different lists. Pacing this per event instead had the common case
+   * crawling at 16px/s, near six seconds a row. */
+  animation: display-marquee 18s ease-in-out infinite;
 }
 
 @keyframes display-marquee {

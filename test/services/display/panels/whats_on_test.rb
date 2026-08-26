@@ -27,32 +27,17 @@ class Display::Panels::WhatsOnTest < ActiveSupport::TestCase
     assert_equal 12, Display::Panels::WhatsOn::ROWS
   end
 
-  # The board scrolls its overflow past instead of truncating titles, so the
-  # Anthias slot has to be long enough for a full pass -- otherwise the tail of
-  # the list is never on screen at all.
-  test "the Anthias slot is long enough for a full pass of a full board" do
-    Event.delete_all
-    Display::Panels::WhatsOn::ROWS.times do |i|
-      FactoryBot.create(:show, is_public: true,
-                               start_date: Date.current + i + 1, end_date: Date.current + i + 2)
-    end
-
-    full_board = Display::Panels::WhatsOn.new.locals[:scroll_seconds]
+  # A pass takes one fixed duration however long the board is, so the Anthias
+  # slot is a constant too -- but the two are written down in different files
+  # and a slot shorter than a pass would cut the scroll off before the bottom of
+  # the list was ever on screen.
+  test "the Anthias slot covers a full pass of the marquee" do
     slot = Display::SetupController.playlist.find { |e| e[:path] == "/display/whats-on" }
+    css = Rails.root.join("app/javascript/entrypoints/display.css").read
+    pass_seconds = css[/animation:\s*display-marquee\s+(\d+(?:\.\d+)?)s/, 1]
 
-    assert_equal full_board, Display::Panels::WhatsOn.max_scroll_seconds
-    assert_operator slot[:seconds], :>=, full_board,
+    assert pass_seconds, "could not find the marquee's duration in display.css"
+    assert_operator slot[:seconds], :>=, pass_seconds.to_f,
                     "the playlist would cut the scroll off before the last event was shown"
-  end
-
-  test "a shorter board takes proportionally less time to scroll" do
-    Event.delete_all
-    3.times do |i|
-      FactoryBot.create(:show, is_public: true,
-                               start_date: Date.current + i + 1, end_date: Date.current + i + 2)
-    end
-
-    assert_operator Display::Panels::WhatsOn.new.locals[:scroll_seconds], :<,
-                    Display::Panels::WhatsOn.max_scroll_seconds
   end
 end

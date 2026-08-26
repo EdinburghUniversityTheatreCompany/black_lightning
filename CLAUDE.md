@@ -637,9 +637,14 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   as a blank square. **The `17.25rem` in that variable is the panel's header, footer and padding
   summed by hand**, which is why `_whats_on.html.erb` pins them (`h-18`, `h-9`) instead of letting
   content size them.
-- **The Anthias slot for What's On must be at least `WhatsOn.max_scroll_seconds`**, or the pass is
-  cut off before the bottom of the list is ever on screen. `SetupController::PAGES` reads it from
-  the panel so the two cannot disagree; a test asserts it.
+- **The marquee's pass is ONE fixed duration, so the speed varies with the distance.** That is the
+  only pacing a fixed Anthias slot can take: constant speed would make a long board need a longer
+  slot than a short one, and since the playlist holds a single number the slot would have to cover
+  the worst case, leaving every ordinary board sitting there twice as long as it needed. The
+  distance is the *overflow*, not the list — twelve short titles overflow by ~310px and twelve
+  wrapping ones by ~1030px. Don't pace it per event: that had the common case crawling at 16px/s,
+  near six seconds a row. A test asserts the slot still covers the pass, reading the duration out
+  of `display.css`.
 - **`Display::Panels::News`'s budget is in measured pixels, not guessed characters.** Every constant
   maps to one Tailwind class in `_news.html.erb` and was measured in Chrome; `CHARS_PER_LINE = 68`
   sits between the 76 characters a mixed-case headline fits and the 66 an all-caps one does. It was

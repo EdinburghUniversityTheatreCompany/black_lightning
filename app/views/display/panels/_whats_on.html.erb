@@ -1,4 +1,4 @@
-<%# locals: (events:, on:, scroll_seconds:) %>
+<%# locals: (events:, on:) %>
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
   <%# The header and footer carry pinned heights (h-18, h-9) rather than being
       sized by their content, because display.css subtracts them from 100vh to
@@ -14,8 +14,7 @@
         five events on an eight-row board used to look like on a wall. `grow`
         rather than `flex-1`: flex-1 sets a zero basis, so a two-line title would
         be squeezed back onto one. %>
-    <ul class="display-marquee__track flex flex-col divide-y divide-neutral-800"
-        style="--display-marquee-duration: <%= scroll_seconds %>s">
+    <ul class="display-marquee__track flex flex-col divide-y divide-neutral-800">
       <% events.each do |event| %>
         <li class="flex grow items-center gap-10 py-4">
           <span class="w-[26rem] shrink-0 truncate text-4xl font-semibold leading-descender text-neutral-300">

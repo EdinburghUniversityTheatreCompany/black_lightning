@@ -311,14 +311,14 @@ class Display::PagesControllerTest < ActionController::TestCase
   end
 
   # The scroll is pure CSS -- the display layout loads no JavaScript -- so the
-  # markup has to carry the box, the track and the pass duration, or the board
-  # silently stops scrolling and the tail of the list is never seen.
-  test "whats_on renders the marquee with a pass duration" do
+  # markup has to carry both the clipping box and the track inside it, or the
+  # board silently stops scrolling and the tail of the list is never seen.
+  test "whats_on renders the marquee box and its track" do
     FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 2)
 
     get :whats_on
 
-    assert_select ".display-marquee .display-marquee__track[style*=?]", "--display-marquee-duration:"
+    assert_select ".display-marquee .display-marquee__track ul, .display-marquee ul.display-marquee__track"
   end
 
   # The line budget in Display::Panels::News decides how many headlines to
