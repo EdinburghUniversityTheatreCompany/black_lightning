@@ -97,6 +97,24 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     assert_empty http.requests.select { |request| [ :post, :patch ].include?(request.method) }
   end
 
+  test "matches a customer whose claim predates the sms.ed.ac.uk email rewrite" do
+    # pretix stores the email claim from the member's FIRST login, and 30 live
+    # customers still carry the @sms form that User.normalizes rewrites. Merely
+    # downcasing here found no User and silently denied them member pricing.
+    student = FactoryBot.create(:user, email: "s1234567@sms.ed.ac.uk")
+    student.add_role :member
+    assert_equal "s1234567@ed.ac.uk", student.reload.email, "the model rewrites the domain on save"
+
+    http = FakeHttp.new([
+      page([ { "identifier" => CUSTOMER, "email" => "s1234567@sms.ed.ac.uk",
+               "external_identifier" => "s1234567@sms.ed.ac.uk" } ]),
+      page([]),
+      [ 201, membership_row(id: 31).to_json ]
+    ])
+
+    assert_equal :created, sync(http).sync_user(student)
+  end
+
   test "a native pretix account carrying no SSO identity is left alone" do
     http = FakeHttp.new([ page([ customer_row.merge("external_identifier" => nil) ]) ])
 

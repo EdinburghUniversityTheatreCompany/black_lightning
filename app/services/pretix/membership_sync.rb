@@ -162,7 +162,14 @@ module Pretix
         nil
       end
 
-      def normalize(email) = email.to_s.strip.downcase.presence
+      # Delegates to User's own +normalizes :email+ rather than restating it.
+      # That rule rewrites sNNNNNNN@sms.ed.ac.uk to @ed.ac.uk, and pretix stores
+      # whatever the email claim said at FIRST login — 30 live customers still
+      # carry the @sms form. Merely downcasing here looked them up under an
+      # address no User has, so each resolved to :no_user and was silently
+      # denied member pricing forever, in the direction that writes nothing and
+      # therefore never complains.
+      def normalize(email) = User.normalize_value_for(:email, email).presence
 
       private
 
