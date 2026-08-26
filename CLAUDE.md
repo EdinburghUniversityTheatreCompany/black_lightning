@@ -617,8 +617,13 @@ roles by `Pretix::MembershipSync`. Full detail in [docs/pretix/membership-sync.m
   triggers only make it immediate. `Role#archive` removes members with `users.clear` — `delete_all`,
   which fires **no association callbacks** — so the annual de-membering is invisible to any hook and
   needs its explicit enqueue. Don't replace the reconcile with callbacks.
-- **The SSO identity claim is `email`, not `sub`**, so customers join on email. Switching the claim
-  re-hashes every pretix `identifier` and orphans all 686 accounts — a one-way door.
+- **Never read memberships from one whole-shop list.** pretix pages them with no unique tiebreaker
+  and no `ordering` parameter, so `LIMIT`/`OFFSET` repeats and drops rows — a live fetch returned
+  838 rows holding 626 distinct ids. A member whose row vanished looks like one with none, so the
+  reconcile would mint another every night. Read per customer.
+- **The SSO identity claim is `email`, not `sub`**, so customers join on email, normalized through
+  `User.normalize_value_for` (it rewrites `@sms.ed.ac.uk`). Switching the claim re-hashes every
+  pretix `identifier` and orphans all 686 accounts — a one-way door.
 - **Memberships cannot be deleted and customers cannot be pre-created.** Revoke with
   `PATCH date_end`; creating a customer over the API breaks that member's next SSO login with
   "email address is already used for a different account".

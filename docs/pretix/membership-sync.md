@@ -108,8 +108,9 @@ than minting a new membership.
 keeps it clear of anything ever on sale while still expiring on its own within two years if the
 sync dies. The three weeks are slack for the manual September rollover.
 
-The reconcile refreshes `date_end` only when it falls below 18 months out, so most nights it
-writes nothing.
+The reconcile refreshes `date_end` only when it is both under 18 months out **and** different from
+the target, so most nights it writes nothing. The 18-month test alone does not achieve that — see
+[Reconcile algorithm](#reconcile-algorithm).
 
 **`date_end` when not a member** is set to now. Losing the role means losing member pricing
 immediately — no grace period — which matches the website, where an archived role stops being a
@@ -211,11 +212,23 @@ if `date_end` is already past.
 step-0 backfill, or a date set by hand — is left alone, because pulling it back is the revoking
 direction and the safety bias runs the other way.
 
-**Pagination is not stable under writes.** pretix orders memberships by `-date_end`, so a patched
-record jumps to the front of the list and shifts every later page — a fetch-then-patch pass can
-skip records if anything writes concurrently. Fetch the full list before writing, and re-fetch and
-repeat until a pass finds nothing to do. This bit us during the step-0 backfill: a run reported
-"89 patched, 0 failed" while 16 records were still stale.
+**Never read memberships from one whole-shop list.** pretix orders them by
+`-date_end, -date_start, membership_type` with **no unique tiebreaker**, and the endpoint accepts
+no `ordering` parameter to add one. Under `LIMIT`/`OFFSET` that silently repeats some rows and
+drops others: measured against the live shop, one fetch returned **838 rows holding only 626
+distinct ids**, with three of one customer's ten memberships absent — including their live one.
+Read per customer (`?customer=<identifier>`) instead, and only for customers that resolve to a
+`User`.
+
+This is not a tidiness point. A member whose only membership fell out of the list looks like a
+member with none, so the reconcile mints another — **every night, unbounded**. The preview task
+made the same mistake first and reported 130 creations where the truth was 71; the other 59 were
+people who already had a membership. It failed in the reassuring direction, which is worse than
+not running at all.
+
+The step-0 backfill made it markedly worse by giving 198 rows an identical `date_end`, and that
+run reported "89 patched, 0 failed" while 16 records were still stale. Writes shift the pages too,
+which is why `reconcile_all` re-fetches and repeats until a pass finds nothing to do.
 
 **Duplicates are real**: 198 live memberships across 125 customers before the first reconcile.
 They are double-activations, not allowance top-ups — `max_usages` is null, so one membership
@@ -255,8 +268,11 @@ grant themselves a membership.
 
 ## Open items
 
-- Production member counts were never obtained (`kamal app exec` is blocked by the permission
-  classifier), so "members who logged in but never activated" is still unquantified. 125 customers
-  activated for 25/26, against roughly 175 members in each of the previous two cohorts.
+- **Roughly 280 of the 473 members have never logged into pretix**, so they have no customer record
+  for a membership to attach to and the sync cannot reach them. pretix will not let customers be
+  pre-created, so each needs one shop login before member pricing works — after which it is
+  automatic and takes about a minute. Worth saying out loud in whatever announcement ships with
+  this. Measured 2026-08-26: of 642 resolvable customers, 71 would be created, 117 extended, 5
+  deduplicated.
 - The email-change orphaning above has no mitigation. Warning on email change, or reconciling
   orphaned customers by matching a former email, would both work; neither is specified here.
