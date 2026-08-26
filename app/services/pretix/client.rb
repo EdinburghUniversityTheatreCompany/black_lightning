@@ -30,17 +30,45 @@ module Pretix
     # rather than fail.
     MAX_PAGES = 500
 
+    # pretix Hosted allows 360 requests per minute per organizer, and answers a
+    # 429 with a Retry-After header. Their docs are explicit that a client which
+    # keeps bursting after a 429 may have its API access disabled, so this is a
+    # requirement rather than a nicety.
+    #
+    # Paced a little under the limit to leave headroom for anything else using
+    # the same organizer token. The reconcile makes roughly one request per
+    # customer, so ~660 requests take a couple of minutes rather than arriving
+    # in a burst. This only surfaced in production: from a developer machine the
+    # round trip to pretix.eu is slow enough to stay under the limit by accident,
+    # while from the app container it is not.
+    MAX_REQUESTS_PER_MINUTE = 300
+    MIN_REQUEST_INTERVAL = 60.0 / MAX_REQUESTS_PER_MINUTE
+
+    THROTTLED_STATUS = 429
+
+    # Retried rather than raised, because the reconcile has no resume point: a
+    # run that died halfway would leave the shop half-synced with no record of
+    # where it stopped.
+    MAX_THROTTLE_RETRIES = 5
+
+    # Used when a 429 arrives without a parseable Retry-After.
+    DEFAULT_RETRY_AFTER = 30
+
     # Every argument is defaulted: the membership sync builds a bare
     # Pretix::Client.new. +http+ is the transport seam (see HttpTransport) and
     # +settings+ the writes gate, both injected the way GraphClient and
     # Climate::OpenMeteoClient take theirs, so a test substitutes a plain fake
     # per instance rather than mutating anything this parallelising suite shares.
+    # +sleeper+ is a seam so tests exercise the pacing and the throttle retry
+    # without actually waiting.
     def initialize(organizer: Settings::ORGANIZER, token: Settings.api_token,
-                   http: HttpTransport, settings: Settings)
+                   http: HttpTransport, settings: Settings, sleeper: ->(seconds) { sleep(seconds) })
       @organizer = organizer
       @token = token
       @http = http
       @settings = settings
+      @sleeper = sleeper
+      @last_request_finished_at = nil
     end
 
     # Every customer for the organizer, following pagination to the end.
@@ -124,10 +152,49 @@ module Pretix
       raise AuthError, "no pretix API token is configured" if @token.blank?
 
       uri = build_uri(path, params)
-      status, response_body = @http.call(http_method, uri, headers, body&.to_json)
+      status, response_body, response_headers = send_paced(http_method, uri, body)
+
+      MAX_THROTTLE_RETRIES.times do
+        break unless status == THROTTLED_STATUS
+
+        @sleeper.call(retry_after(response_headers, response_body))
+        status, response_body, response_headers = send_paced(http_method, uri, body)
+      end
 
       check!(http_method, uri, status, response_body)
       parse(response_body, uri)
+    end
+
+    # Keeps successive requests at least MIN_REQUEST_INTERVAL apart. Measured
+    # from the END of the previous request, so a slow response — which has
+    # already spent the interval on the wire — is not made to wait again.
+    def send_paced(http_method, uri, body)
+      wait = pacing_delay
+      @sleeper.call(wait) if wait.positive?
+
+      result = @http.call(http_method, uri, headers, body&.to_json)
+      @last_request_finished_at = monotonic_now
+      result
+    end
+
+    def pacing_delay
+      return 0 if @last_request_finished_at.nil?
+
+      MIN_REQUEST_INTERVAL - (monotonic_now - @last_request_finished_at)
+    end
+
+    def monotonic_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    # pretix sends Retry-After on a 429. The body's "Expected available in N
+    # seconds" is read only as a fallback, since the header is the contract.
+    def retry_after(response_headers, response_body)
+      header = response_headers.is_a?(Hash) ? response_headers["retry-after"] : nil
+      seconds = header.to_s[/\d+/] || response_body.to_s[/available in (\d+) second/, 1]
+      # A second of slack: waiting exactly the stated window occasionally lands
+      # back inside it and burns a retry.
+      return DEFAULT_RETRY_AFTER if seconds.blank?
+
+      (seconds.to_i + 1).clamp(1, 300)
     end
 
     # Every message here is built from the method, the path, the status and the

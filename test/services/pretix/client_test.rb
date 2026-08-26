@@ -13,10 +13,73 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     end
   end
 
+  # --- rate limiting ---------------------------------------------------------
+  #
+  # pretix Hosted allows 360 requests/minute per organizer and answers a 429 with
+  # Retry-After. Their docs say a client that keeps bursting after one may have
+  # its API access disabled, so honouring this is a requirement. It only shows up
+  # in production: from a developer machine the round trip to pretix.eu is slow
+  # enough to stay under the limit by accident.
+
+  test "a throttled request is retried after the Retry-After the server asked for" do
+    client, waits, http = recording_client([
+      [ 429, { detail: "Request was throttled." }.to_json, { "retry-after" => "17" } ],
+      empty_page
+    ])
+
+    assert_empty client.customers
+    assert_equal 2, http.requests.size, "the request must actually be retried"
+    assert_includes waits, 18, "17 from the header, plus a second of slack"
+  end
+
+  test "a 429 with no Retry-After still waits rather than hammering" do
+    client, waits, = recording_client([ [ 429, "no body at all" ], empty_page ])
+
+    assert_empty client.customers
+    assert_includes waits, Pretix::Client::DEFAULT_RETRY_AFTER
+  end
+
+  test "the wait falls back to the body when the header is missing" do
+    throttled = { detail: "Request was throttled. Expected available in 42 seconds." }.to_json
+    client, waits, = recording_client([ [ 429, throttled ], empty_page ])
+
+    client.customers
+
+    assert_includes waits, 43
+  end
+
+  test "an unrelenting throttle eventually raises instead of retrying forever" do
+    client, = recording_client(Array.new(Pretix::Client::MAX_THROTTLE_RETRIES + 1) { [ 429, "throttled" ] })
+
+    assert_raises(Pretix::Client::Error) { client.customers }
+  end
+
+  test "successive requests are paced apart, so a reconcile cannot burst" do
+    client, waits, = recording_client(Array.new(3) { empty_page })
+
+    3.times { client.customers }
+
+    assert_equal 2, waits.size, "the first request waits for nothing; each later one is paced"
+    waits.each { |wait| assert_operator wait, :<=, Pretix::Client::MIN_REQUEST_INTERVAL }
+  end
+
+  # Returns the client, the seconds it was asked to sleep, and the fake transport.
+  def recording_client(responses)
+    waits = []
+    http = FakeHttp.new(responses)
+    client = Pretix::Client.new(token: TOKEN, http: http, settings: FakeSettings.new(false),
+                                sleeper: ->(seconds) { waits << seconds })
+    [ client, waits, http ]
+  end
+
+  def empty_page = [ 200, { "count" => 0, "next" => nil, "results" => [] }.to_json ]
+
   def build_client(responses, organizer: "eutc", token: TOKEN, writes: false)
     http = FakeHttp.new(responses)
+    # No-op sleeper: the pacing and throttle-retry waits are real seconds, and
+    # this suite must not spend them.
     client = Pretix::Client.new(organizer: organizer, token: token, http: http,
-                                settings: FakeSettings.new(writes))
+                                settings: FakeSettings.new(writes), sleeper: ->(_seconds) { })
     [ client, http ]
   end
 
