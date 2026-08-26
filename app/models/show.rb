@@ -8,6 +8,7 @@
 #  id                      :integer          not null, primary key
 #  author                  :string(255)
 #  content_warnings        :text(16777215)
+#  digital_programme_url   :string(255)
 #  end_date                :date
 #  image_content_type      :string(255)
 #  image_file_name         :string(255)

@@ -309,6 +309,37 @@ class EventTest < ActionView::TestCase
     assert event.valid?
   end
 
+  # Digital programme link
+
+  test "accepts a blank digital programme link" do
+    [ nil, "" ].each do |blank|
+      event = FactoryBot.build(:event, digital_programme_url: blank)
+      assert event.valid?, "Expected #{blank.inspect} to be allowed"
+    end
+  end
+
+  test "accepts an http or https digital programme link" do
+    [ "https://example.com/programme.pdf", "http://example.com/programme" ].each do |url|
+      event = FactoryBot.build(:event, digital_programme_url: url)
+      assert event.valid?, "Expected #{url.inspect} to be valid"
+    end
+  end
+
+  # The value is encoded straight into a QR code on the box office screen, where
+  # a scheme-less string opens nothing at all, and rendered as an anchor on the
+  # public page, where "javascript:" would be an anchor that runs.
+  test "rejects a digital programme link with no scheme or a dangerous one" do
+    [ "example.com/programme", "www.example.com", "javascript:alert(1)", "ftp://example.com",
+      "https://",
+      # \A on its own would pass this: the scheme that got checked is not the
+      # one on the line that ends up in the markup.
+      "https://ok.example.com\njavascript:alert(1)" ].each do |url|
+      event = FactoryBot.build(:event, digital_programme_url: url)
+      assert_not event.valid?, "Expected #{url.inspect} to be invalid"
+      assert event.errors[:digital_programme_url].any?, "Expected errors for #{url.inspect}"
+    end
+  end
+
   # Company association via company_name virtual field
 
   test "company_name returns the associated company name" do

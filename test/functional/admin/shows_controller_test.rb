@@ -154,6 +154,34 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
+  # The field is only useful if it survives the round trip -- it has to be
+  # permitted on the controller, and the edit form has to offer it at all.
+  test "should update the digital programme link, and offer it on the edit form" do
+    @show = FactoryBot.create(:show)
+    attributes = FactoryBot.attributes_for(:show, digital_programme_url: "https://example.com/programme.pdf")
+
+    put :update, params: { id: @show, show: attributes }
+
+    assert_empty assigns(:show).errors.full_messages, "There are errors on the show"
+    assert_equal "https://example.com/programme.pdf", @show.reload.digital_programme_url
+
+    get :edit, params: { id: @show }
+
+    assert_response :success
+    assert_match "show_digital_programme_url", response.body
+    assert_match "https://example.com/programme.pdf", response.body
+  end
+
+  test "a digital programme link with no scheme is rejected rather than saved" do
+    @show = FactoryBot.create(:show, digital_programme_url: nil)
+    attributes = FactoryBot.attributes_for(:show, digital_programme_url: "example.com/programme")
+
+    put :update, params: { id: @show, show: attributes }
+
+    assert_predicate assigns(:show).errors[:digital_programme_url], :any?
+    assert_nil @show.reload.digital_programme_url
+  end
+
   test "should update show without new debtors" do
     @show = FactoryBot.create(:show, team_member_count: 1)
 

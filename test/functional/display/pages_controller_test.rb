@@ -304,6 +304,41 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_match "Next Show&#39;s Credits", response.body
   end
 
+  test "credits carries a QR to the digital programme when the show has one" do
+    Event.delete_all
+    show = FactoryBot.create(:show, is_public: true, name: "Programmed Show",
+                                    start_date: Date.current, end_date: Date.current + 1,
+                                    digital_programme_url: "https://example.com/programme.pdf")
+    FactoryBot.create(:team_member, teamwork: show, position: "Director")
+
+    get :credits
+
+    assert_response :success
+    assert_match "Scan for the digital programme", response.body
+    # The image is a data URI, so the URL never appears in the markup -- assert
+    # on the cache entry the helper encoded instead.
+    assert Rails.cache.exist?(DisplayHelper.qr_cache_key("https://example.com/programme.pdf")),
+           "expected the QR to be encoded for the programme link"
+  end
+
+  # Most shows never link a programme, and a QR footer that vanishes for them
+  # reads as a broken slide -- so it falls back to the show's own page.
+  test "credits falls back to a QR for the event page when no programme is linked" do
+    Event.delete_all
+    show = FactoryBot.create(:show, is_public: true, name: "Bare Show", slug: "bare-show",
+                                    start_date: Date.current, end_date: Date.current + 1,
+                                    digital_programme_url: nil)
+    FactoryBot.create(:team_member, teamwork: show, position: "Director")
+
+    get :credits
+
+    assert_response :success
+    assert_match "Scan for more about this show", response.body
+    assert_no_match "Scan for the digital programme", response.body
+    assert Rails.cache.exist?(DisplayHelper.qr_cache_key("http://test.host/shows/bare-show")),
+           "expected the QR to fall back to the event page"
+  end
+
   private
 
   # delete_all in child-first order: several of these associations are declared

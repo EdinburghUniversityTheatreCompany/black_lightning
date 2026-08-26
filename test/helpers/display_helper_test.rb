@@ -5,6 +5,26 @@ class DisplayHelperTest < ActionView::TestCase
   include PretixHelper
   include MdHelper
 
+  # The two fits, written out again rather than called through the helper, so the
+  # sweep below compares the layout it chose against an independent reading.
+  def side_by_side_size(cast, crew)
+    qr = cast <= crew
+    DisplayHelper::CREDITS_ROW_STRIDES.find { |_, stride|
+      [ cast * stride + (qr ? DisplayHelper::CREDITS_QR_HEIGHT : 0),
+        crew * stride + (qr ? 0 : DisplayHelper::CREDITS_QR_HEIGHT) ].max <= DisplayHelper::CREDITS_LIST_HEIGHT
+    }&.first
+  end
+
+  def flowed_size(cast, crew)
+    sections = [ cast, crew ].count(&:positive?)
+    headings = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
+               (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
+    room = DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT
+    DisplayHelper::CREDITS_ROW_STRIDES.find { |_, stride|
+      ((headings + (cast + crew) * stride) / 2.0).ceil <= room
+    }&.first
+  end
+
   test "display_date_range collapses a single day" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 3))
 
@@ -42,6 +62,20 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.build(:show, slug: "the-crucible", is_public: true, pretix_shown: true, pretix_slug_override: nil)
 
     assert_equal "https://tickets.bedlamtheatre.co.uk/the-crucible/", display_booking_url(event)
+  end
+
+  test "display_programme_url uses the linked programme when there is one" do
+    event = FactoryBot.build(:show, digital_programme_url: "https://example.com/programme.pdf")
+
+    assert_equal "https://example.com/programme.pdf", display_programme_url(event)
+  end
+
+  # A footer that appears for one show and vanishes for the next reads as a
+  # broken slide from across the room, so the code always resolves to something.
+  test "display_programme_url falls back to the event's own page" do
+    show = FactoryBot.create(:show, slug: "the-crucible", digital_programme_url: nil)
+
+    assert_equal "http://test.host/shows/the-crucible", display_programme_url(show)
   end
 
   test "event_page_path uses the subclass route" do
@@ -96,6 +130,132 @@ class DisplayHelperTest < ActionView::TestCase
     %w[Short Medium\ length\ title].each do |title|
       assert_no_match(/truncate/, display_title_size(title))
     end
+  end
+
+  # The QR lands in the column with room to spare, which for a normal show is
+  # the cast -- putting it bottom left.
+  test "display_credits_layout puts the QR under the shorter list" do
+    assert display_credits_layout(8, 12)[:qr_in_cast_column], "8 cast against 12 crew should carry it left"
+    assert display_credits_layout(12, 12)[:qr_in_cast_column], "an even split should still go left"
+  end
+
+  test "display_credits_layout leaves a normal show side by side at the largest size" do
+    layout = display_credits_layout(8, 12)
+
+    assert_equal :side_by_side, layout[:mode]
+    assert_equal "text-5xl", layout[:name_size]
+  end
+
+  # Cast beside Company is the clearer read, so it is what a show gets unless
+  # flowing actually buys bigger names.
+  test "display_credits_layout keeps a balanced show side by side" do
+    [ [ 1, 2 ], [ 8, 12 ], [ 10, 10 ], [ 12, 12 ], [ 18, 18 ] ].each do |cast, crew|
+      assert_equal :side_by_side, display_credits_layout(cast, crew)[:mode],
+                   "#{cast} cast / #{crew} crew is balanced enough to stay in two lists"
+    end
+  end
+
+  # Side by side sizes off the LONGER list, so a lopsided show wastes a whole
+  # column and shrinks every name to fit the other one into half the screen.
+  test "display_credits_layout flows a lopsided show, and the names get bigger for it" do
+    { [ 3, 18 ] => "text-4xl", [ 18, 2 ] => "text-5xl", [ 16, 3 ] => "text-5xl",
+      [ 5, 14 ] => "text-5xl", [ 0, 15 ] => "text-5xl" }.each do |(cast, crew), expected|
+      layout = display_credits_layout(cast, crew)
+
+      assert_equal :flowed, layout[:mode], "#{cast} cast / #{crew} crew wastes a column side by side"
+      assert_equal expected, layout[:name_size], "#{cast} cast / #{crew} crew"
+    end
+  end
+
+  # The whole reason for choosing between them: whichever it picks has to be the
+  # one that can print the names bigger.
+  test "display_credits_layout never picks the layout with the smaller type" do
+    sizes = DisplayHelper::CREDITS_ROW_STRIDES.keys
+
+    (0..20).each do |cast|
+      (0..20).each do |crew|
+        chosen = display_credits_layout(cast, crew)
+        other = chosen[:mode] == :flowed ? side_by_side_size(cast, crew) : flowed_size(cast, crew)
+
+        next if other.nil?
+
+        assert_operator sizes.index(chosen[:name_size]), :<=, sizes.index(other),
+                        "#{cast} cast / #{crew} crew took #{chosen[:mode]} at #{chosen[:name_size]}, " \
+                        "when the other layout would have printed #{other}"
+      end
+    end
+  end
+
+  # The point of the pixel arithmetic: whichever column carries the QR has to fit
+  # its names AND the code, or the code goes off the bottom of a screen nobody is
+  # watching. An 18-name cast fits text-2xl on its own and does not once the QR
+  # is under it.
+  test "display_credits_layout never picks a size the QR does not fit at" do
+    (0..18).each do |cast|
+      (0..18).each do |crew|
+        layout = display_credits_layout(cast, crew)
+        stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(layout[:name_size])
+        qr = DisplayHelper::CREDITS_QR_HEIGHT
+
+        if layout[:mode] == :flowed
+          sections = [ cast, crew ].count(&:positive?)
+          headings = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
+                     (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
+          needed = ((headings + (cast + crew) * stride) / 2.0).ceil
+
+          assert_operator needed, :<=, DisplayHelper::CREDITS_COLUMN_HEIGHT - qr,
+                          "#{cast} cast / #{crew} crew flowed at #{layout[:name_size]} leaves no room for the QR"
+        else
+          tallest = [ cast * stride + (layout[:qr_in_cast_column] ? qr : 0),
+                      crew * stride + (layout[:qr_in_cast_column] ? 0 : qr) ].max
+
+          assert_operator tallest, :<=, DisplayHelper::CREDITS_LIST_HEIGHT,
+                          "#{cast} cast / #{crew} crew at #{layout[:name_size]} overflows by " \
+                          "#{tallest - DisplayHelper::CREDITS_LIST_HEIGHT}px"
+        end
+      end
+    end
+  end
+
+  # A long enough name wraps, and a company bigger than the scale can serve
+  # overflows outright -- neither of which row arithmetic can see coming. The cap
+  # is the unconditional guarantee underneath it: the column carrying the QR is
+  # never allowed the QR's own height, whatever the names do, so the list loses
+  # its tail rather than the code being pushed off the screen.
+  test "display_credits_layout always reserves the QR's height from the list it sits under" do
+    [ [ 4, 9 ], [ 18, 18 ], [ 40, 40 ] ].each do |cast, crew|
+      layout = display_credits_layout(cast, crew)
+
+      assert_equal :side_by_side, layout[:mode], "#{cast}/#{crew} was expected to stay in two lists"
+
+      carrying, other = layout.values_at(:cast_list_height, :crew_list_height)
+      carrying, other = other, carrying unless layout[:qr_in_cast_column]
+
+      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, carrying,
+                   "#{cast}/#{crew}: the column under the QR must give up its height"
+      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT, other,
+                   "#{cast}/#{crew}: the other column keeps its full height"
+    end
+  end
+
+  # The flowed layout takes the QR off the top of what it has to fill, rather
+  # than under one column, because a balanced flow leaves neither column spare.
+  test "display_credits_layout takes the QR's height out of the flow" do
+    layout = display_credits_layout(3, 18)
+
+    assert_equal :flowed, layout[:mode]
+    assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, layout[:flow_height]
+  end
+
+  # Past the scale it shrinks as far as it can rather than clipping from a size
+  # that never fitted.
+  test "display_credits_layout falls to the smallest size for a company beyond the screen" do
+    assert_equal DisplayHelper::CREDITS_ROW_STRIDES.keys.last, display_credits_layout(30, 30)[:name_size]
+  end
+
+  test "display_credits_layout anchors to the top only once the names stop fitting" do
+    assert_equal "content-center", display_credits_layout(4, 6)[:block_position]
+    assert_equal "content-start", display_credits_layout(30, 30)[:block_position]
   end
 
   # Inline SVG rendered as a blank square on the Anthias player while looking

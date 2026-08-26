@@ -32,6 +32,9 @@
 
 <%= f.input :price %>
 
+<%= f.input :digital_programme_url,
+      hint: 'Full link to the online programme for this show, including https://. It is shown on the event page and as a QR code on the box office screen — leave blank and the screen falls back to a QR for this event page.' %>
+
 <% unless f.object.is_a? Season %>
   <% if f.object.persisted? %>
     <%= f.association :season, collection: f.object.simultaneous_seasons, label_method: :name %>
