@@ -4,7 +4,14 @@ Member ticket prices in the pretix shop are gated behind a pretix **membership**
 specifies how that membership is driven from the website's `member` role instead of from a
 product the member has to remember to buy.
 
-Status: specified, not yet built. The one-off data fix in [Rollout](#rollout) step 0 is done.
+Status: built and tested, not yet merged or deployed. `Pretix::Settings`, `Pretix::Client`,
+`Pretix::MembershipSync`, `Pretix::ReconcileMembershipsJob` and `Pretix::SyncMembershipJob`, with
+the three triggers wired. The one-off data fix in [Rollout](#rollout) step 0 is done in production.
+
+**Verified against the live API**, not only against fakes: both filter names on the memberships
+endpoint, `PATCH date_end` (the 198-record backfill), and `POST` creation — the last by creating a
+membership whose dates were already in the past, so the production payload was exercised without
+ever granting an entitlement.
 
 ## Why
 
@@ -194,8 +201,15 @@ for each customer with an external_identifier:
         expire(canonical)
 ```
 
-`extend` is a no-op unless `date_end` is under 18 months out. `expire` is a no-op if `date_end` is
-already in the past. Both keep the nightly run near-silent.
+`extend` requires **both** that `date_end` is under 18 months out **and** that it differs from the
+target. The 18-month test alone does not keep the run quiet: the horizon sits 13–24 months out, so
+from roughly March onward every membership is permanently inside the window while its target value
+has not moved, and the rule as first written re-PATCHed the same date nightly. `expire` is a no-op
+if `date_end` is already past.
+
+`date_end` is never **shortened** for an entitled member. A record ending beyond the target — the
+step-0 backfill, or a date set by hand — is left alone, because pulling it back is the revoking
+direction and the safety bias runs the other way.
 
 **Pagination is not stable under writes.** pretix orders memberships by `-date_end`, so a patched
 record jumps to the front of the list and shifts every later page — a fetch-then-patch pass can
@@ -224,6 +238,20 @@ grant themselves a membership.
    locks themselves out of SSO.
 4. September rollover, unchanged for whoever runs it — archive `member`, import the new list. The
    reconcile expires everyone on archive and restores them as the import lands.
+
+## Things the build settled that the spec had not
+
+- **`sync_user` checks `external_identifier` too, not just the email match.** pretix's only customer
+  filter is email, and 189 native accounts exist carrying no `external_identifier`. Matching on the
+  customer's own `email` field would grant a membership to an account the reconcile — which keys on
+  `external_identifier` — could never find again, so the two paths would disagree by construction.
+- **The re-fetch loop is capped at 5 passes**, stopping as soon as a pass writes nothing, and
+  `reconcile_all` returns `passes:` so a job log shows whether it converged. `ReconcileMembershipsJob`
+  warns when it hits the cap, because that is the tell that the pagination hazard is biting.
+- **Write counts accumulate across passes; read-only counts are the last pass's snapshot.** Summing
+  the latter would double-count the same customer on every pass.
+- `users.email` is uniquely indexed, so an email resolves to exactly one `User` — no ambiguity
+  branch is needed there. `date_start` ties are broken by membership id, for determinism.
 
 ## Open items
 
