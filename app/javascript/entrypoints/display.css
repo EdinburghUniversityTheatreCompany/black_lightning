@@ -5,6 +5,19 @@
  * this screen is set to be read from across a room. */
 @import "../styles/tailwind-base.css";
 
+/* theme.css names "Source Sans Pro" in --font-sans but nothing ever loaded it,
+ * so this screen rendered in whatever system-ui resolved to -- one font in a
+ * developer's browser, another on the Pi. Self-hosted rather than Google Fonts:
+ * the box office is a kiosk that must not depend on an external request. Latin
+ * subsets only, at the three weights this screen actually uses (400, 600, 700).
+ *
+ * Scoped to this entrypoint on purpose. The rest of the site is falling back
+ * too, but fixing that changes the look of every page and is not this branch's
+ * job -- see plans/off-topic-improvements.md. */
+@import "@fontsource/source-sans-pro/latin-400.css";
+@import "@fontsource/source-sans-pro/latin-600.css";
+@import "@fontsource/source-sans-pro/latin-700.css";
+
 /* This entrypoint is loaded by layouts/display.html.erb and nothing else, so a
  * token defined here is scoped to the box office screen. */
 @theme {

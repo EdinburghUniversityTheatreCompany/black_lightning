@@ -11,6 +11,9 @@ importers:
       '@fancyapps/ui':
         specifier: ^6.1.14
         version: 6.1.14
+      '@fontsource/source-sans-pro':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fortawesome/fontawesome-free':
         specifier: 7.3.1
         version: 7.3.1
@@ -191,6 +194,9 @@ packages:
 
   '@fancyapps/ui@6.1.14':
     resolution: {integrity: sha512-cBV73XXHrc0qMca+PJJ6qay3xweIgsoYse13rGRstgUs0xA5WAv1tgbSzPCIOOjiLs2S2jiVFJxyszgvgyfxMg==}
+
+  '@fontsource/source-sans-pro@5.3.0':
+    resolution: {integrity: sha512-nd96qXI4stbyRPNEygS2cNhMkAc1kkW9+ORmIOK0oelPTyiitRPk/+9+HUuUYuEjwRRkK/+Gat2J9/NMJest/A==}
 
   '@fortawesome/fontawesome-free@7.3.1':
     resolution: {integrity: sha512-wmglKKPDIkgV3aWlZzWECCPoGIkYCulzBwxG9+w7rc5BGapZ6cPMpoPOT8k36J0Ni7PPX6c/rsoMWfS4d1MUMg==}
@@ -1790,6 +1796,8 @@ snapshots:
       levn: 0.4.1
 
   '@fancyapps/ui@6.1.14': {}
+
+  '@fontsource/source-sans-pro@5.3.0': {}
 
   '@fortawesome/fontawesome-free@7.3.1': {}
 
