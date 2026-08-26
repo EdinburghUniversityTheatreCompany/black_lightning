@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "csv"
+
 namespace :pretix do
   desc "Report every write the membership reconcile WOULD make, without making any"
   task membership_reconcile_preview: :environment do
@@ -19,6 +21,13 @@ namespace :pretix do
     client = Pretix::Client.new
     customers = client.customers
     lookup.prepare(customers.filter_map { |c| Pretix::MembershipSync.external_email(c) }.uniq)
+
+    # OUTPUT_CSV writes the full post-run roster: one row per customer, saying
+    # whether they will hold a live type-225 membership once the reconcile has
+    # run. pretix has no organizer-wide membership list in its control panel —
+    # memberships are only visible one customer at a time — so this file is the
+    # only way to see who ends up entitled.
+    roster = ENV["OUTPUT_CSV"] ? [] : nil
 
     now = Time.zone.now
     seen = []
@@ -54,13 +63,42 @@ namespace :pretix do
       plan = Pretix::MembershipSync.plan_for(entitled: status, memberships: mine, now: now)
       counts[plan.outcome] += 1
 
+      roster&.push(roster_row(customer, email, status, plan, mine, now))
+
       label = "#{customer["identifier"]}  #{email}"
       creates << label if plan.creation
       extensions << label if plan.canonical_patch && status
       revokes << "#{label}  (#{plan.patches.size} membership(s))" if plan.patches.any? && !status
     end
 
+    write_roster(roster)
     report(customers, seen.sum, lookup, counts, creates, revokes, extensions)
+  end
+
+  # What this customer will hold once the reconcile has run. Derived from the
+  # plan rather than re-deciding, so the file cannot disagree with the run.
+  def roster_row(customer, email, entitled, plan, memberships, now)
+    holds_live = memberships.any? { |m| Pretix::MembershipSync.parse_time(m["date_end"])&.> now }
+    after = if plan.creation then true
+    elsif !entitled then false
+    else holds_live || plan.canonical_patch.present?
+    end
+
+    { identifier: customer["identifier"], email: email, member: entitled,
+      action: plan.outcome, holds_membership_now: holds_live, holds_membership_after: after }
+  end
+
+  def write_roster(roster)
+    return if roster.nil?
+
+    path = ENV.fetch("OUTPUT_CSV")
+    CSV.open(path, "w") do |csv|
+      csv << roster.first.keys
+      roster.each { |row| csv << row.values }
+    end
+    puts "roster of #{roster.size} customers written to #{path}"
+    puts "  will hold a live membership after the run: #{roster.count { |r| r[:holds_membership_after] }}"
+    puts
   end
 
   ##
@@ -80,7 +118,19 @@ namespace :pretix do
       Pretix::MembershipSync.entitled?(user)
     end
 
-    def entitled_count = @users.values.count { |user| Pretix::MembershipSync.entitled?(user) }
+    def matched_entitled_count = @users.values.count { |user| Pretix::MembershipSync.entitled?(user) }
+
+    # Every member on the website, whether or not they have a pretix account.
+    # Counted through the roles rather than rolify's with_role so that it reads
+    # the same case-insensitively-matched set the sync's entitlement rule does:
+    # the production roles are named "Member" and "Life Member".
+    def total_entitled_count
+      role_ids = Role.where("LOWER(TRIM(name)) IN (?)", Pretix::MembershipSync::ENTITLING_ROLES).pluck(:id)
+      return 0 if role_ids.empty?
+
+      User.joins(:roles).where(roles: { id: role_ids }).distinct.count
+    end
+
     def source = "this database"
   end
 
@@ -99,9 +149,19 @@ namespace :pretix do
       end.to_h
     end
 
-    def prepare(_emails) = nil
+    # Remembers which of the file's users a pretix customer actually resolved to,
+    # so the two counts below mean the same things they do for DatabaseLookup.
+    def prepare(emails)
+      @matched_emails = emails.to_set
+    end
+
     def status_for(email) = @statuses[email]
-    def entitled_count = @statuses.values.count(true)
+
+    def matched_entitled_count
+      @statuses.count { |email, entitled| entitled && @matched_emails.include?(email) }
+    end
+
+    def total_entitled_count = @statuses.values.count(true)
     def source = "USERS_FILE (#{@statuses.size} users)"
   end
 
@@ -112,7 +172,11 @@ namespace :pretix do
     puts rule
     puts "entitlement source: #{lookup.source}"
     puts "pretix customers: #{customers.size}   type-225 memberships read: #{membership_count}"
-    puts "website members (member / life member): #{lookup.entitled_count}"
+    total = lookup.total_entitled_count
+    matched = lookup.matched_entitled_count
+    puts "website members (member / life member): #{total}"
+    puts "  ...of whom have EVER logged into pretix: #{matched}"
+    puts "  ...who therefore cannot be reached at all: #{total - matched} (they must log in once)"
     puts
     puts "OUTCOMES"
     counts.sort_by { |_, n| -n }.each { |outcome, n| puts "  #{outcome.to_s.ljust(16)} #{n}" }
