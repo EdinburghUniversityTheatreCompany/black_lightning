@@ -76,15 +76,22 @@ module Pretix
       return :no_customer if user.blank? || user.email.blank?
 
       guarded(user.email) do
-        customer = @client.customer_by_email(user.email)
+        linked = @client.customer(user.pretix_customer_identifier)
+        customer = linked.presence || @client.customer_by_email(user.email)
         next skipped(:no_customer) if customer.blank?
-        # An SSO customer carries the member's email in external_identifier. One
-        # that does not is a native pretix account, not this person's SSO
-        # identity, and granting it a membership would attach member pricing to
-        # an account we cannot recognise again from the reconcile's side.
-        next skipped(:no_identifier) unless external_email(customer) == normalize(user.email)
+        # Only enforced when we found them by email. A customer reached through
+        # the stored link IS this person by construction — that is the whole
+        # point of storing it — and demanding the emails still agree would undo
+        # the link the moment someone changed address, which is the case it
+        # exists for.
+        if linked.blank? && external_email(customer) != normalize(user.email)
+          next skipped(:no_identifier)
+        end
 
         identifier = customer["identifier"]
+        # Reached by email, so the stored link was either absent or no longer
+        # resolves. Either way this is the customer to point at from now on.
+        remember_link(user, identifier) if linked.blank?
         apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
               customer: identifier)
       end.outcome
@@ -110,6 +117,27 @@ module Pretix
 
       totals.merge(passes: passes)
     end
+
+    private
+
+    # Called only when the customer was reached by EMAIL, which means the stored
+    # link was blank or no longer resolves — so a stale link is re-pointed rather
+    # than leaving that person paying two lookups forever. A link that still
+    # resolves is never touched, which is what stops the handful of people
+    # holding two pretix accounts (an @sms.ed.ac.uk one and its rewritten
+    # @ed.ac.uk twin) flip-flopping between them on every run.
+    def remember_link(user, identifier)
+      return if identifier.blank? || user.pretix_customer_identifier == identifier
+
+      user.update_column(:pretix_customer_identifier, identifier)
+    rescue ActiveRecord::RecordNotUnique
+      # Another user already claims this customer. Leaving this one unlinked is
+      # the safe direction: it keeps matching by email, exactly as it did before
+      # this column existed.
+      nil
+    end
+
+    public
 
     class << self
       # The address this customer is matched to a User by.
@@ -255,9 +283,10 @@ module Pretix
       counts = blank_counts
       customers = @client.customers
       users = users_by_email(customers)
+      linked_users = users_by_link(customers)
 
       customers.each do |customer|
-        result = reconcile_customer(customer, users)
+        result = reconcile_customer(customer, users, linked_users)
         counts[result.outcome] += 1
         counts[:duplicates_expired] += result.duplicates_expired
       end
@@ -265,16 +294,30 @@ module Pretix
       counts
     end
 
-    def reconcile_customer(customer, users)
+    def reconcile_customer(customer, users, linked_users)
+      identifier = customer["identifier"]
+      # The stored link wins over the email, so a member who has changed address
+      # since their first login is still recognised.
+      user = linked_users[identifier]
       email = external_email(customer)
-      return skipped(:no_identifier) if email.blank?
 
-      # A customer only exists once its owner has logged into pretix, so an
-      # unrecognised one is normal rather than an error — and writing nothing
-      # for it is also the safe direction, since we cannot ask about a role we
-      # cannot find the holder of.
-      user = users[email]
-      return skipped(:no_user) if user.nil?
+      if user.nil?
+        return skipped(:no_identifier) if email.blank?
+
+        # A customer only exists once its owner has logged into pretix, so an
+        # unrecognised one is normal rather than an error — and writing nothing
+        # for it is also the safe direction, since we cannot ask about a role we
+        # cannot find the holder of.
+        user = users[email]
+        return skipped(:no_user) if user.nil?
+
+        # Only when the stored link is absent or points at a customer that is
+        # not in this run's list at all — i.e. genuinely stale. Without that
+        # check, someone holding two pretix accounts would be re-linked to
+        # whichever the loop reached second, every single run.
+        stored = user.pretix_customer_identifier
+        remember_link(user, identifier) if stored.blank? || !linked_users.key?(stored)
+      end
 
       # Fetched per customer, NOT sliced out of one list of every membership.
       # pretix orders memberships by -date_end, -date_start, membership_type with
@@ -286,7 +329,6 @@ module Pretix
       # like a member with none, so the reconcile would mint another every single
       # night. This costs one request per customer and is the only way to be sure
       # we have all of somebody's rows.
-      identifier = customer["identifier"]
       apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
             customer: identifier)
     end
@@ -301,6 +343,17 @@ module Pretix
 
       # users.email is uniquely indexed, so one email resolves to one User.
       User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
+    end
+
+    # One query for the stored links, so the reconcile never asks pretix for a
+    # customer it already holds in the list it just fetched.
+    def users_by_link(customers)
+      identifiers = customers.filter_map { |customer| customer["identifier"].presence }
+      return {} if identifiers.empty?
+
+      User.includes(:roles)
+          .where(pretix_customer_identifier: identifiers)
+          .index_by(&:pretix_customer_identifier)
     end
 
     def fetch_memberships(customer: nil)
