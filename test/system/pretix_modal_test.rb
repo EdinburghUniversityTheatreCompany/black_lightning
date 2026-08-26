@@ -11,6 +11,7 @@ require "application_system_test_case"
 class PretixModalTest < ApplicationSystemTestCase
   FAKE_PRETIX = <<~JS.freeze
     window.PretixWidget = {
+      widget_data: {},
       buildWidgets() {
         document.querySelectorAll("pretix-widget").forEach((element) => {
           const wrapper = document.createElement("div")
@@ -74,6 +75,22 @@ class PretixModalTest < ApplicationSystemTestCase
     assert_selector ".pretix-modal-close", visible: true
     assert page.evaluate_script("document.querySelector('.pretix-modal-close').getBoundingClientRect().top >= 0"),
            "the Close button was scrolled out of the viewport"
+  end
+
+  test "reopening a show whose widget could not be built retries rather than reshowing an empty dialog" do
+    visit_home_with_fake_pretix
+    # The shop is unreachable: with no stand-in the controller goes looking for the real script,
+    # and the URL it was pointed at 404s.
+    page.execute_script("delete window.PretixWidget")
+
+    buy_tickets_for(@rocky)
+    assert_selector "#pretix-modal", text: "could not be loaded"
+    close_modal
+
+    page.execute_script(FAKE_PRETIX)
+    buy_tickets_for(@rocky)
+
+    assert_selector "#pretix-modal", text: "tickets for #{shop_url_for(@rocky)}"
   end
 
   private

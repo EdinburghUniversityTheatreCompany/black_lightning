@@ -1,11 +1,10 @@
 require "test_helper"
 
 class PretixHelperTest < ActionView::TestCase
-  test "the widget assets are served by the shop, not by pretix.eu" do
+  test "the widget stylesheet is served by the shop, not by pretix.eu" do
     # pretix.eu has no widget stylesheet at all: /widget/v1.en.css there 301s to a trailing-slash
     # URL that 404s, so a page pointing at it renders the widget with no styling whatsoever.
     assert_equal "https://tickets.bedlamtheatre.co.uk/widget/v1.css", pretix_widget_stylesheet_url
-    assert_equal "https://tickets.bedlamtheatre.co.uk/widget/v1.en.js", pretix_widget_script_url
   end
 
   test "pretix_event_url points at the event's shop page with a trailing slash" do

@@ -24,7 +24,7 @@ Rails.application.configure do
 
     # style-src-elem is enforced separately by browsers for <link> and <style> elements.
     # Needed for the pretix widget stylesheet: linked by shared/_pretix_widget on a show page,
-    # injected dynamically by pretix_modal_controller in the Buy Tickets modal.
+    # injected dynamically by javascript/lib/pretix.js in the Buy Tickets modal.
     policy.style_src_elem :self, :unsafe_inline, "https://tickets.bedlamtheatre.co.uk"
 
     # :self is required for the reimbursements receipt viewer, which frames a
