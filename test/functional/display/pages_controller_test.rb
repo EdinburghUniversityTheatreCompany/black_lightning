@@ -320,4 +320,22 @@ class Display::PagesControllerTest < ActionController::TestCase
 
     assert_select ".display-marquee .display-marquee__track[style*=?]", "--display-marquee-duration:"
   end
+
+  # The line budget in Display::Panels::News decides how many headlines to
+  # print; this is what stops a wrong answer pushing the QR code -- the only
+  # thing on the slide anybody can act on -- off the bottom of the screen.
+  test "news clips an over-long list rather than displacing the QR code" do
+    3.times do |i|
+      FactoryBot.create(:news, show_public: true, publish_date: (i + 1).days.ago,
+                               title: "Headline #{i}")
+    end
+
+    get :news
+
+    assert_select "ul" do |lists|
+      classes = lists.first["class"].to_s.split
+      assert_includes classes, "overflow-hidden"
+      assert_includes classes, "min-h-0", "without min-h-0 a flex child refuses to shrink and overflows anyway"
+    end
+  end
 end
