@@ -225,6 +225,24 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match(/What&#39;s On|What's On/, response.body)
   end
 
+  # The panel renders for whoever is signed in on the device that fetched it,
+  # and the sanitizer strips the Edit button's anchor but keeps its word.
+  test "get_involved never renders the editable block's edit control" do
+    OpportunityRole.delete_all
+    Opportunity.delete_all
+    Admin::EditableBlock.create!(
+      name: Display::Panels::GetInvolved::EMPTY_STATE_BLOCK, admin_page: false,
+      content: "There are no opportunities listed right now."
+    )
+    sign_in users(:admin)
+
+    get :get_involved
+
+    assert_response :success
+    assert_match "There are no opportunities listed right now", response.body
+    assert_no_match(/\bEdit\b/, response.body)
+  end
+
   test "get_involved still falls through when nothing is open and no copy exists" do
     OpportunityRole.delete_all
     Opportunity.delete_all

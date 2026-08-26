@@ -84,11 +84,13 @@ module DisplayHelper
   # the QR beside this is the call to action, so keep the words and drop the
   # anchors.
   #
-  # The `false` matches what the home page widget passes: display_block only
-  # writes when the stored admin_page differs, and the Pi re-fetches this page
-  # every few seconds forever, so a write here would never stop.
+  # The first `false` matches what the home page widget passes: display_block
+  # only writes when the stored admin_page differs, and the Pi re-fetches this
+  # page every few seconds forever, so a write here would never stop. The second
+  # drops the block's Edit button -- the sanitizer strips its anchor but keeps
+  # the word, so an admin browsing the screen leaves a bare "Edit" in the copy.
   def display_block_text(name)
-    sanitize(display_block(name, false), tags: %w[p br strong em ul ol li], attributes: [])
+    sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
   # Poster titles are sized by length rather than truncated: naming the show is
