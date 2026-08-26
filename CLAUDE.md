@@ -591,17 +591,33 @@ Temperature / humidity / dew point charts at `/admin/climate`
 
 ## Pretix ticket widget
 
-Inline on a show page (`shared/_pretix_widget`) and in the home page's Buy Tickets modal
-(`shared/_pretix_modal` + `pretix_modal_controller.js`). All URLs come from `PretixHelper`.
+Inline on a show page (`shared/_pretix_widget` + `pretix_widget_controller.js`) and in the home
+page's Buy Tickets modal (`shared/_pretix_modal` + `pretix_modal_controller.js`), both building
+through `javascript/lib/pretix.js`. All URLs come from `PretixHelper`.
 
-- **The widget's script and stylesheet come from the shop domain, never pretix.eu** —
+- **Nothing may be left to pretix's own bootstrap, which is why the script is not a `<script>`
+  tag.** Its bundle builds every `<pretix-widget>` on the page once, when it runs, and watches
+  nothing afterwards. Turbo appends a head script *before* swapping the body in, so that build
+  can land on the outgoing page — and on every later visit Turbo keeps the identical tag and
+  never re-runs it, so no widget was built again until a full reload. `lib/pretix.js` loads the
+  script itself, switches the self-build off through `pretixWidgetCallback`, and calls
+  `buildWidgets()` once the element is in place.
+- **Readiness is `window.PretixWidget.buildWidgets`, not `window.PretixWidget`** — the bundle
+  assigns that object near its start and the builder at its very end, so a script that throws
+  halfway leaves an object behind that can never build anything.
+- **Building a widget destroys its element**: pretix replaces `<pretix-widget>` with its own
+  wrapper div, so `event` can only be set once. Both surfaces render an empty container and drop
+  a fresh element in per build, or the modal shows the first show clicked and a Turbo restore
+  serves the spent markup back as a widget that does nothing.
+- **Each build leaks**: pretix keeps every widget in a private list with no teardown, so the
+  controller skips Turbo's cached-preview render (`data-turbo-preview`) rather than building
+  twice per restore visit.
+- **The widget's stylesheet comes from the shop domain, never pretix.eu** —
   `pretix.eu/widget/v1.en.css` 404s and the bundle injects no CSS of its own, so pointing there
   renders the widget unstyled. The shop origin must be in **both** `style-src` and
   `style-src-elem` (browsers enforce them separately for `<link>`); `content_security_policy_test`
-  pins that.
-- **Building a widget destroys its element**: pretix replaces `<pretix-widget>` with its own
-  wrapper div, so `event` can only be set once. The modal creates a fresh element per open and
-  calls `window.PretixWidget.buildWidgets()`, or every open after the first shows the first show.
+  pins that. `widget/v1.*` and `widget/v2.*` are byte-identical on our shop — v1 already serves
+  the current widget, so "upgrade to v2" is not a fix for anything.
 - The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
   `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
 

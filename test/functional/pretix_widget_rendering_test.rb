@@ -19,13 +19,25 @@ class PretixWidgetRenderingTest < ActionController::TestCase
     assert_no_match(/pretix\.eu/, response.body)
   end
 
-  test "the widget is pointed at the shop with list-type, not an invalid inline style" do
+  test "the widget container is pointed at the shop with list-type, not an invalid inline style" do
     show = FactoryBot.create(:show, is_public: true, pretix_shown: true, pretix_view: "week")
 
     get :show, params: { id: show }
 
-    assert_select "pretix-widget[event=?][list-type=?]",
-                  "https://tickets.bedlamtheatre.co.uk/#{show.pretix_slug}/", "week"
+    assert_select "[data-controller=?][data-pretix-widget-event-url-value=?][data-pretix-widget-list-type-value=?]",
+                  "pretix-widget", "https://tickets.bedlamtheatre.co.uk/#{show.pretix_slug}/", "week"
+  end
+
+  test "the page ships an empty container and no widget script of its own" do
+    show = FactoryBot.create(:show, is_public: true, pretix_shown: true)
+
+    get :show, params: { id: show }
+
+    # A <script> here is loaded by Turbo on the way in — before the body it is meant to build a
+    # widget in exists, and never again on a later visit, because Turbo keeps the identical tag.
+    # The controller loads it instead, so that only our code decides when a widget gets built.
+    assert_no_match(/widget\/v1\.en\.js/, response.body)
+    assert_select "pretix-widget", false
   end
 
   test "a show with pretix switched off renders no widget and loads none of its assets" do
@@ -33,7 +45,7 @@ class PretixWidgetRenderingTest < ActionController::TestCase
 
     get :show, params: { id: show }
 
-    assert_select "pretix-widget", false
+    assert_select "[data-controller=?]", "pretix-widget", false
     assert_no_match STYLESHEET, response.body
   end
 end
