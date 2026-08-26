@@ -167,6 +167,32 @@ module Pretix
         user.roles.any? { |role| ENTITLING_ROLES.include?(role.name.to_s.downcase.strip) }
       end
 
+      # THE resolution, as plan_for is THE decision. The nightly reconcile and
+      # the dry-run preview both go through it, so a preview cannot predict a
+      # different run from the one that happens — which it silently did once the
+      # stored link arrived and only the reconcile knew about it.
+      def user_for(customer, by_email:, by_link:)
+        by_link[customer["identifier"]] || by_email[external_email(customer)]
+      end
+
+      # One query each, so neither caller looks a user up per customer.
+      def users_by_email(customers)
+        emails = customers.filter_map { |customer| external_email(customer) }.uniq
+        return {} if emails.empty?
+
+        # users.email is uniquely indexed, so one email resolves to one User.
+        User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
+      end
+
+      def users_by_link(customers)
+        identifiers = customers.filter_map { |customer| customer["identifier"].presence }
+        return {} if identifiers.empty?
+
+        User.includes(:roles)
+            .where(pretix_customer_identifier: identifiers)
+            .index_by(&:pretix_customer_identifier)
+      end
+
       # THE decision. Pure — no API, no ActiveRecord — so both callers reach it
       # with nothing but facts, and it is unit-testable on its own.
       def plan_for(entitled:, memberships:, now: Time.zone.now)
@@ -275,7 +301,8 @@ module Pretix
       end
     end
 
-    delegate :entitled?, :plan_for, :external_email, :normalize, to: :class
+    delegate :entitled?, :plan_for, :external_email, :normalize,
+             :user_for, :users_by_email, :users_by_link, to: :class
 
     private
 
@@ -298,7 +325,7 @@ module Pretix
       identifier = customer["identifier"]
       # The stored link wins over the email, so a member who has changed address
       # since their first login is still recognised.
-      user = linked_users[identifier]
+      user = user_for(customer, by_email: users, by_link: linked_users)
       email = external_email(customer)
 
       if user.nil?
@@ -308,13 +335,15 @@ module Pretix
         # unrecognised one is normal rather than an error — and writing nothing
         # for it is also the safe direction, since we cannot ask about a role we
         # cannot find the holder of.
-        user = users[email]
-        return skipped(:no_user) if user.nil?
+        return skipped(:no_user)
+      end
 
-        # Only when the stored link is absent or points at a customer that is
-        # not in this run's list at all — i.e. genuinely stale. Without that
-        # check, someone holding two pretix accounts would be re-linked to
-        # whichever the loop reached second, every single run.
+      # Reached by email rather than by the stored link. Re-point that link only
+      # when it is absent or names a customer not in this run's list at all —
+      # i.e. genuinely stale. Without the check, someone holding two pretix
+      # accounts would be re-linked to whichever the loop reached second, every
+      # single run.
+      unless linked_users.key?(identifier)
         stored = user.pretix_customer_identifier
         remember_link(user, identifier) if stored.blank? || !linked_users.key?(stored)
       end
@@ -337,24 +366,7 @@ module Pretix
 
     # One query for every customer we might touch, roles preloaded, so the
     # entitlement rule can be the same one sync_user uses.
-    def users_by_email(customers)
-      emails = customers.filter_map { |customer| external_email(customer) }.uniq
-      return {} if emails.empty?
 
-      # users.email is uniquely indexed, so one email resolves to one User.
-      User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
-    end
-
-    # One query for the stored links, so the reconcile never asks pretix for a
-    # customer it already holds in the list it just fetched.
-    def users_by_link(customers)
-      identifiers = customers.filter_map { |customer| customer["identifier"].presence }
-      return {} if identifiers.empty?
-
-      User.includes(:roles)
-          .where(pretix_customer_identifier: identifiers)
-          .index_by(&:pretix_customer_identifier)
-    end
 
     def fetch_memberships(customer: nil)
       @client.memberships(customer: customer, membership_type: Settings::MEMBERSHIP_TYPE_ID)
