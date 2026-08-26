@@ -632,6 +632,10 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   join; on its own it outer-joins and silently drops the guard.
 - **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
   here can say "7.30pm" without a migration.
+- **The archive slide moves on one place every time it is rendered** (`Display::Rotation`, a cached
+  cursor keyed by date). Anthias comes back to that one URL every few minutes, so picking the oldest
+  match every time showed a single frame from open to close. A cache that cannot answer falls back to
+  a random pick rather than standing still.
 - **The credits QR always resolves to something** — `Event#digital_programme_url` when set, the
   event's own page otherwise. A footer that appears for one show and vanishes for the next reads
   as a broken slide, and the caption names whichever it got.

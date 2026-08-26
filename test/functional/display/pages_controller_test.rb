@@ -1,6 +1,12 @@
 require "test_helper"
 
 class Display::PagesControllerTest < ActionController::TestCase
+  setup do
+    # The archive slide's cursor is cache state, which no transaction rolls
+    # back: without this, where the last test left it decides what this one sees.
+    Rails.cache.clear
+  end
+
   # Anthias plays a fixed playlist of URLs forever, so a page that renders
   # nothing is not a blank page for a moment -- it is a blank screen in the box
   # office until somebody notices and reconfigures the Pi. Every route has to
@@ -157,6 +163,29 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match(/object-cover/, response.body)
   end
 
+  # The screen fetches this URL again every few minutes, all day.
+  test "on_this_day shows a different archive show on each fetch" do
+    Event.delete_all
+    names = 3.times.map do |index|
+      # Subtracting years rather than rebuilding the date: on 29 February,
+      # Date.new(year - 5, 2, 29) raises. A two-day run for the same reason --
+      # it still covers today when the start slips back to the 28th.
+      start_date = Date.current - (5 + index).years
+      FactoryBot.create(:show, is_public: true, attach_image: true, name: "Archive Show #{index}",
+                               start_date: start_date, end_date: start_date + 2).name
+    end
+
+    rendered = names.size.times.map do
+      get :on_this_day
+
+      assert_response :success
+      names.find { |name| response.body.include?(name) }
+    end
+
+    assert_equal names.sort, rendered.compact.sort,
+                 "the archive slide did not work through its matches: #{rendered.inspect}"
+  end
+
   # Substitutes for Step 7 of the task brief (open /display/news in a browser):
   # confirms the News panel, not the Identity fallback, renders when a
   # published item exists.
@@ -223,6 +252,24 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_no_match %r{<a[^>]*get_involved/opportunities/new}, response.body
     # It kept its own identity rather than becoming a second What's On slide.
     assert_no_match(/What&#39;s On|What's On/, response.body)
+  end
+
+  # The panel renders for whoever is signed in on the device that fetched it,
+  # and the sanitizer strips the Edit button's anchor but keeps its word.
+  test "get_involved never renders the editable block's edit control" do
+    OpportunityRole.delete_all
+    Opportunity.delete_all
+    Admin::EditableBlock.create!(
+      name: Display::Panels::GetInvolved::EMPTY_STATE_BLOCK, admin_page: false,
+      content: "There are no opportunities listed right now."
+    )
+    sign_in users(:admin)
+
+    get :get_involved
+
+    assert_response :success
+    assert_match "There are no opportunities listed right now", response.body
+    assert_no_match(/\bEdit\b/, response.body)
   end
 
   test "get_involved still falls through when nothing is open and no copy exists" do
