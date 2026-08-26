@@ -18,12 +18,10 @@ namespace :pretix do
 
     client = Pretix::Client.new
     customers = client.customers
-    memberships = client.memberships(membership_type: Pretix::Settings::MEMBERSHIP_TYPE_ID)
-                        .group_by { |membership| membership["customer"] }
-
     lookup.prepare(customers.filter_map { |c| Pretix::MembershipSync.external_email(c) }.uniq)
 
     now = Time.zone.now
+    seen = []
     counts = Hash.new(0)
     creates = []
     revokes = []
@@ -45,8 +43,15 @@ namespace :pretix do
         next
       end
 
-      plan = Pretix::MembershipSync.plan_for(entitled: status, memberships: memberships[customer["identifier"]] || [],
-                                             now: now)
+      # Read per customer, exactly as the reconcile does. Slicing one whole-shop
+      # membership list is what this preview did first, and it was wrong: pretix
+      # pages that list with no unique tiebreaker, so it repeats and drops rows —
+      # which inflated "would create" with people who already have a membership.
+      # A preview that lies in the reassuring direction is worse than none.
+      mine = client.memberships(customer: customer["identifier"],
+                                membership_type: Pretix::Settings::MEMBERSHIP_TYPE_ID)
+      seen << mine.size
+      plan = Pretix::MembershipSync.plan_for(entitled: status, memberships: mine, now: now)
       counts[plan.outcome] += 1
 
       label = "#{customer["identifier"]}  #{email}"
@@ -55,7 +60,7 @@ namespace :pretix do
       revokes << "#{label}  (#{plan.patches.size} membership(s))" if plan.patches.any? && !status
     end
 
-    report(customers, memberships, lookup, counts, creates, revokes, extensions)
+    report(customers, seen.sum, lookup, counts, creates, revokes, extensions)
   end
 
   ##
@@ -100,13 +105,13 @@ namespace :pretix do
     def source = "USERS_FILE (#{@statuses.size} users)"
   end
 
-  def report(customers, memberships, lookup, counts, creates, revokes, extensions)
+  def report(customers, membership_count, lookup, counts, creates, revokes, extensions)
     rule = "=" * 72
     puts rule
     puts "PRETIX MEMBERSHIP RECONCILE — PREVIEW ONLY, NOTHING WAS WRITTEN"
     puts rule
     puts "entitlement source: #{lookup.source}"
-    puts "pretix customers: #{customers.size}   type-225 memberships: #{memberships.values.sum(&:size)}"
+    puts "pretix customers: #{customers.size}   type-225 memberships read: #{membership_count}"
     puts "website members (member / life member): #{lookup.entitled_count}"
     puts
     puts "OUTCOMES"
