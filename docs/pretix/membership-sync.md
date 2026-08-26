@@ -64,6 +64,20 @@ pretix's side. See [Triggers](#triggers).
 
 `allow_parallel_usage: false` is deliberate: one discounted seat per member per performance.
 
+### Writes are gated to production
+
+`Pretix::Settings.writes_enabled?` is true in production and otherwise only with
+`PRETIX_ENABLE_WRITES` set. Reads stay live everywhere so this document's spike scripts and any
+future dashboard keep working, but **there is one pretix organizer and no staging copy of it**:
+a developer running the reconcile against their own database — which holds a different, older set
+of member roles — would expire real members' pricing on the first pass. `Client` raises
+`WritesSuppressedError` rather than silently no-opping, so a suppressed write is visible instead
+of looking like success.
+
+The token itself comes from `PRETIX_API_TOKEN` (fnox in development) or credentials under
+`pretix:`. Development credentials are publicly readable in this repo, so the real token must
+never go there.
+
 ## The model: one membership, forever
 
 Each person gets **exactly one** membership record, created the first time they are a member and
