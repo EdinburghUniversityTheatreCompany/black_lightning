@@ -290,4 +290,34 @@ class Display::PagesControllerTest < ActionController::TestCase
     Opportunity.delete_all
     News.delete_all
   end
+
+  # Naming the show is the What's On board's whole job, so its titles wrap and
+  # the overflow scrolls past. A `truncate` back on the title span would put
+  # "The Rocky Horror Picture Show by Richard O..." on a box office wall.
+  test "whats_on lets show titles wrap instead of truncating them" do
+    FactoryBot.create(:show, is_public: true, name: "The Rocky Horror Picture Show by Richard O'Brien",
+                             start_date: Date.current, end_date: Date.current + 2)
+
+    get :whats_on
+
+    assert_select ".display-marquee__track li" do
+      assert_select "span:nth-child(2)" do |titles|
+        titles.each do |title|
+          assert_not_includes title["class"].to_s.split, "truncate",
+                              "show titles must wrap, not truncate"
+        end
+      end
+    end
+  end
+
+  # The scroll is pure CSS -- the display layout loads no JavaScript -- so the
+  # markup has to carry the box, the track and the pass duration, or the board
+  # silently stops scrolling and the tail of the list is never seen.
+  test "whats_on renders the marquee with a pass duration" do
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 2)
+
+    get :whats_on
+
+    assert_select ".display-marquee .display-marquee__track[style*=?]", "--display-marquee-duration:"
+  end
 end
