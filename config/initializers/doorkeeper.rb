@@ -417,7 +417,21 @@ Doorkeeper.configure do
   #
   #   Rails.logger.info(context.pre_auth.inspect)
   # end
-  #
+
+  # Signing in to the pretix shop goes through here, and it is the only moment
+  # we learn a member has a pretix customer account at all — pretix creates one
+  # on first login and offers no webhook to say so. Deferred, because on that
+  # first login pretix has not finished the token exchange yet and the customer
+  # does not exist when this fires. Immediacy only; the nightly reconcile is
+  # what actually keeps the two in step.
+  after_successful_authorization do |controller, _context|
+    user = controller.send(:current_user)
+    if user.present? && Pretix::Settings.configured?
+      Pretix::SyncMembershipJob.set(wait: Pretix::SyncMembershipJob::FIRST_LOGIN_DELAY)
+                               .perform_later(user.id)
+    end
+  end
+
   # after_successful_authorization do |controller, context|
   #   controller.session[:logout_urls] <<
   #     Doorkeeper::Application
