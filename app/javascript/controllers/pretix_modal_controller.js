@@ -1,8 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-
-const STYLESHEET_PATH = "widget/v1.css"
-const SCRIPT_PATH = "widget/v1.en.js"
-const SCRIPT_ID = "pretix-widget-script"
+import { buildWidget } from "../lib/pretix"
 
 // Opens the pretix ticket widget in a dialog, loading pretix's assets on first use.
 //
@@ -20,50 +17,21 @@ export default class extends Controller {
 
   open({ params: { slug, name } }) {
     if (this.hasTitleTarget && name) this.titleTarget.textContent = name
-    this.#loadPretixAssets()
-    this.#buildWidget(`${this.baseUrlValue}${slug}/`)
-    this.dialogTarget.showModal()
-  }
 
-  // pretix replaces the <pretix-widget> element with its own rendered markup as soon as it
-  // builds it, so the element can only be configured once — setting `event` on what it leaves
-  // behind is writing to markup nothing reads, and every later open would keep showing the
-  // first show. Drop in a fresh element instead and ask pretix to build that.
-  #buildWidget(eventUrl) {
-    if (this.#eventUrl === eventUrl) {
+    const eventUrl = `${this.baseUrlValue}${slug}/`
+    if (eventUrl === this.#eventUrl) {
       this.widgetContainerTarget.scrollTop = 0
-      return
-    }
-    this.#eventUrl = eventUrl
-
-    const widget = document.createElement("pretix-widget")
-    widget.setAttribute("event", eventUrl)
-    widget.setAttribute("list-type", this.listTypeValue)
-    this.widgetContainerTarget.replaceChildren(widget)
-    this.widgetContainerTarget.scrollTop = 0
-
-    // On the first open the script is still loading and builds this widget itself once ready;
-    // after that nothing watches the DOM, so new elements have to be announced.
-    window.PretixWidget?.buildWidgets()
-  }
-
-  #loadPretixAssets() {
-    const stylesheetUrl = `${this.baseUrlValue}${STYLESHEET_PATH}`
-    // A show page adds the same stylesheet and script, and Turbo keeps head elements across
-    // visits — so match on what is actually loaded rather than on our own markers alone.
-    if (!document.querySelector(`link[href="${stylesheetUrl}"]`)) {
-      const link = document.createElement("link")
-      link.rel = "stylesheet"
-      link.href = stylesheetUrl
-      document.head.appendChild(link)
+    } else {
+      // The show is only remembered once its widget is actually up: a build that failed has to
+      // be retried on the next open, not answered with the empty dialog it left behind.
+      this.#eventUrl = null
+      buildWidget(this.widgetContainerTarget, {
+        baseUrl: this.baseUrlValue,
+        eventUrl,
+        listType: this.listTypeValue
+      }).then((built) => { if (built) this.#eventUrl = eventUrl })
     }
 
-    if (window.PretixWidget || document.getElementById(SCRIPT_ID)) return
-
-    const script = document.createElement("script")
-    script.id = SCRIPT_ID
-    script.src = `${this.baseUrlValue}${SCRIPT_PATH}`
-    script.async = true
-    document.head.appendChild(script)
+    this.dialogTarget.showModal()
   }
 }

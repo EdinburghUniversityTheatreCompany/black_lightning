@@ -1,3 +1,11 @@
+/* Source Sans 3, not the Source Sans Pro this file used to name: same typeface,
+ * renamed upstream, but Pro ships no weight 500 and `font-medium` is the
+ * most-used weight in this codebase. Self-hosted so no page depends on an
+ * external request. The non-latin subsets carry a unicode-range and are
+ * declared but never downloaded. */
+@import "@fontsource-variable/source-sans-3/wght.css";
+@import "@fontsource-variable/source-sans-3/wght-italic.css";
+
 @theme {
   --color-primary: #ba0204;
   --color-primary-dark: #8a0103;
@@ -8,7 +16,7 @@
   --color-warning: #92400e;
   --color-success: #166534;
   --color-info: #1e40af;
-  --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer components {

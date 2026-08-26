@@ -9,10 +9,9 @@ module Display
       # headline, and a half-read headline tells you less than no headline.
       MAX_ITEMS = 4
 
-      # The budget is in pixels of the 1080-tall box office screen, measured
-      # against the partial rather than guessed at. Every figure below is one
-      # Tailwind class in display/panels/_news.html.erb; change a class and
-      # re-measure, because nothing checks these at runtime.
+      # Pixels of the 1080-tall screen. Every figure below is one Tailwind class
+      # in display/panels/_news.html.erb; change a class and re-measure, because
+      # nothing checks these at runtime.
       #
       #   1080 - py-16 top+bottom (128) - the "Latest News" label and its mb-10
       #   (40 + 40) - the QR block and its mt-8 (160 + 32) = 680.
@@ -24,17 +23,13 @@ module Display
       # gap-8, charged between items and not after the last one.
       GAP_PX = 32
 
-      # Measured in Chrome against the real headlines, at text-5xl bold in Source
-      # Sans Pro across the 1728px the list actually has: 76 characters fit on a
-      # line in the mixed case these titles are written in, and 66 in the
-      # all-caps worst case. This sits between the two, so it reads the real
-      # headline lengths (113, 96, 68, 41) as exactly the 2, 2, 1, 1 lines they
-      # render as, while leaving margin for a wider-than-average title.
-      #
-      # It used to be 55, which is where "EUTC Week 14 Newsletter - GM4, Rocky
-      # Horror Murder Mystery, ..." was charged three lines for the two it takes
-      # and pushed two perfectly readable headlines off a slide with 372px of
-      # empty space on it.
+      # Measured in Chrome across the 1728px the list has, at text-5xl bold: 76
+      # characters fit on a line in the mixed case these headlines are written
+      # in, 66 in an all-caps worst case. Sitting between the two reads the real
+      # headline lengths as the lines they actually render as, with margin for a
+      # wider-than-average title. Setting it too low is not a safe error: it
+      # charges a headline for lines that are never drawn and drops the ones
+      # below it.
       CHARS_PER_LINE = 68
 
       def available?
