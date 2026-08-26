@@ -14,6 +14,7 @@
 #  id                      :integer          not null, primary key
 #  author                  :string(255)
 #  content_warnings        :text(16777215)
+#  digital_programme_url   :string(255)
 #  end_date                :date
 #  image_content_type      :string(255)
 #  image_file_name         :string(255)
@@ -83,6 +84,19 @@ class Event < ApplicationRecord
   validates :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }
   validates :performance_weekdays, length: { maximum: 255 }
+  validates :digital_programme_url, length: { maximum: 255 }
+  # A scheme is required rather than merely encouraged: this value is rendered
+  # as an anchor on the public page and encoded straight into a QR code on the
+  # box office screen, and a bare "bedlamtheatre.co.uk/programme" resolves as a
+  # relative path in the first case and as nothing at all in the second. Only
+  # http(s), so a "javascript:" paste cannot become a link on a public page.
+  #
+  # Anchored at BOTH ends, and no whitespace anywhere: Ruby's \A alone still
+  # admits a newline and whatever follows it, which is how a scheme that passed
+  # the check smuggles one that did not into an href.
+  validates :digital_programme_url, format: {
+    with: %r{\Ahttps?://\S+\z}i, message: "must be a full http:// or https:// link"
+  }, allow_blank: true
   include TimeHelper
   include ApplicationHelper
   include AttachmentItem

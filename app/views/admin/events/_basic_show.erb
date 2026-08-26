@@ -23,6 +23,7 @@
   slug:           event.slug,
   'ID' =>         (can?(:manage, event) ? event.id : nil),
   'SparkSeat Slug' => (event.spark_seat_slug.presence),
+  'Digital Programme' => (link_to(event.digital_programme_url, event.digital_programme_url, target: '_blank', rel: 'noopener') if event.digital_programme_url.present?),
   tagline:        event.tagline.presence || 'No tagline',
   'Date(s)' =>    event.date_range(true),
   venue:          event.venue.present? ? link_to(event.venue.name, admin_events_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',

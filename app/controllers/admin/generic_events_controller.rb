@@ -55,7 +55,7 @@ class Admin::GenericEventsController < AdminController
       :pretix_slug_override, :pretix_shown, :pretix_view, :content_warnings,
       :author, :venue, :venue_id, :season, :season_id,
       :is_public, :image, :proposal, :proposal_id,
-      :start_date, :end_date, :price, :spark_seat_slug,
+      :start_date, :end_date, :price, :spark_seat_slug, :digital_programme_url,
       :maintenance_debt_start, :staffing_debt_start,
       :maintenance_debt_amount, :staffing_debt_amount,
       event_tag_ids: [],

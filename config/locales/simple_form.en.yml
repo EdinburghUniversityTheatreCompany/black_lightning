@@ -32,6 +32,7 @@ en:
         date: "Date"
         dates: "Dates"
         description: "Description"
+        digital_programme_url: "Digital Programme Link"
         draft: "Draft"
         debt: "Debt"
         due_by: "Due By"
