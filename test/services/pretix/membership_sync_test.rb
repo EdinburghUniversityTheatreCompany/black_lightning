@@ -383,6 +383,43 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 0, counts[:no_user]
   end
 
+  # user_for is THE resolution, as plan_for is THE decision: the nightly
+  # reconcile and the dry-run preview both go through it, so a preview cannot
+  # predict a different run from the one that happens.
+
+  test "user_for prefers the stored link over the email" do
+    linked = FactoryBot.create(:user, email: "linked@example.com")
+    emailed = FactoryBot.create(:user, email: "shared@example.com")
+    customer = customer_hash("shared@example.com", identifier: "cust-x")
+
+    resolved = Pretix::MembershipSync.user_for(customer,
+                                               by_email: { "shared@example.com" => emailed },
+                                               by_link: { "cust-x" => linked })
+
+    assert_equal linked, resolved
+  end
+
+  test "user_for falls back to the email when nothing is linked" do
+    emailed = FactoryBot.create(:user, email: "shared@example.com")
+    customer = customer_hash("shared@example.com", identifier: "cust-x")
+
+    resolved = Pretix::MembershipSync.user_for(customer,
+                                               by_email: { "shared@example.com" => emailed },
+                                               by_link: {})
+
+    assert_equal emailed, resolved
+  end
+
+  test "user_for resolves a customer with no email at all, through its link" do
+    # An anonymized customer keeps neither email nor external_identifier, so the
+    # link is the only handle left. The preview classifies on the same order.
+    linked = FactoryBot.create(:user, email: "linked@example.com")
+    customer = { "identifier" => "cust-x", "email" => nil, "external_identifier" => nil }
+
+    assert_equal linked, Pretix::MembershipSync.user_for(customer, by_email: {}, by_link: { "cust-x" => linked })
+    assert_nil Pretix::MembershipSync.user_for(customer, by_email: {}, by_link: {})
+  end
+
   # --- reconcile_all ---------------------------------------------------------
 
   test "reads memberships per customer, never from one list of the whole shop" do

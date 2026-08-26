@@ -20,7 +20,7 @@ namespace :pretix do
 
     client = Pretix::Client.new
     customers = client.customers
-    lookup.prepare(customers.filter_map { |c| Pretix::MembershipSync.external_email(c) }.uniq)
+    lookup.prepare(customers)
 
     # OUTPUT_CSV writes the full post-run roster: one row per customer, saying
     # whether they will hold a live type-225 membership once the reconcile has
@@ -37,18 +37,17 @@ namespace :pretix do
     extensions = []
 
     customers.each do |customer|
+      # Resolve BEFORE looking at the email, in that order, because that is the
+      # order the reconcile uses: a customer reached by its stored link is
+      # recognised even when its email tells us nothing.
+      status = lookup.status_for(customer)
       email = Pretix::MembershipSync.external_email(customer)
-      if email.blank?
-        counts[:no_identifier] += 1
-        next
-      end
 
-      status = lookup.status_for(email)
       if status.nil?
-        # No User at all. The reconcile writes nothing here — this is the
-        # safety bias, and it is why the preview must distinguish "unknown"
-        # from "not a member" rather than collapsing the two into "expire".
-        counts[:no_user] += 1
+        # No User at all. The reconcile writes nothing either way — this is the
+        # safety bias, and it is why the preview must distinguish "unknown" from
+        # "not a member" rather than collapsing the two into "expire".
+        counts[email.blank? ? :no_identifier : :no_user] += 1
         next
       end
 
@@ -104,21 +103,30 @@ namespace :pretix do
   ##
   # Entitlement read from this app's own database.
   class DatabaseLookup
-    def initialize = @users = {}
+    def initialize
+      @by_email = {}
+      @by_link = {}
+    end
 
-    def prepare(emails)
-      @users = User.includes(:roles).where(email: emails).index_by { |user| user.email.to_s.downcase }
+    # Indexed exactly as the reconcile indexes them, and resolved through the
+    # same Pretix::MembershipSync.user_for, so a preview cannot predict a
+    # different run from the one that happens.
+    def prepare(customers)
+      @by_email = Pretix::MembershipSync.users_by_email(customers)
+      @by_link = Pretix::MembershipSync.users_by_link(customers)
     end
 
     # nil = no such user (write nothing); true/false = entitled or not.
-    def status_for(email)
-      user = @users[email]
+    def status_for(customer)
+      user = Pretix::MembershipSync.user_for(customer, by_email: @by_email, by_link: @by_link)
       return nil if user.nil?
 
       Pretix::MembershipSync.entitled?(user)
     end
 
-    def matched_entitled_count = @users.values.count { |user| Pretix::MembershipSync.entitled?(user) }
+    def matched_entitled_count
+      (@by_email.values | @by_link.values).count { |user| Pretix::MembershipSync.entitled?(user) }
+    end
 
     # Every member on the website, whether or not they have a pretix account.
     # Counted through the roles rather than rolify's with_role so that it reads
@@ -151,18 +159,21 @@ namespace :pretix do
 
     # Remembers which of the file's users a pretix customer actually resolved to,
     # so the two counts below mean the same things they do for DatabaseLookup.
-    def prepare(emails)
-      @matched_emails = emails.to_set
+    def prepare(customers)
+      @matched_emails = customers.filter_map { |c| Pretix::MembershipSync.external_email(c) }.to_set
     end
 
-    def status_for(email) = @statuses[email]
+    # Email only: a dump of "email<TAB>member" carries no User records, so the
+    # stored links cannot be honoured here. The report says so rather than
+    # letting this quietly diverge from a real run.
+    def status_for(customer) = @statuses[Pretix::MembershipSync.external_email(customer)]
 
     def matched_entitled_count
       @statuses.count { |email, entitled| entitled && @matched_emails.include?(email) }
     end
 
     def total_entitled_count = @statuses.values.count(true)
-    def source = "USERS_FILE (#{@statuses.size} users)"
+    def source = "USERS_FILE (#{@statuses.size} users) — email only, stored links NOT honoured"
   end
 
   def report(customers, membership_count, lookup, counts, creates, revokes, extensions)
