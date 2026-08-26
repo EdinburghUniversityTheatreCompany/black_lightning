@@ -51,11 +51,32 @@ login fails to match it, tries to insert, and dies on the unique-email constrain
 first login and only then.
 
 **The identity claim is `email`, not `sub`** — 686 of 686 SSO customers carry an email address in
-`external_identifier`, so that is the join key. Do **not** switch the claim to `sub` to match
-`User#id`: it re-hashes every identifier at once and orphans all 686 accounts along with their
-order history. One-way door. The cost of leaving it is that a member who changes their website
-email gets a fresh empty pretix account on next login; that is a pre-existing bug, not one this
-sync introduces.
+`external_identifier`, so that is the join key.
+
+**Switching the claim to `sub` would lock all 686 members out of the shop.** Not orphan them —
+lock them out. pretix derives the account key as `sha256(claim + '@' + provider_pk)`, so changing
+the claim changes every identifier at once. On each member's next login the lookup misses, pretix
+tries to insert a new customer carrying the same address, that violates
+`unique_together ['organizer', 'email']`, and the rescue gives up with *"the email address … is
+already used for a different account in this system."*
+
+There is no migration around it, because pretix deliberately prevents rewriting an SSO account's
+identity in **three** places:
+
+- `identifier` is `read_only=True` in `CustomerSerializer`, and absent from `CustomerUpdateForm`'s
+  `fields` entirely — it appears only in `CustomerCreateForm`. It cannot be changed after creation
+  by API or by hand.
+- `external_identifier` is forced back on update whenever `provider_id` is set — in the API
+  (`validated_data['external_identifier'] = instance.external_identifier`) and in the control panel
+  (`self.fields['external_identifier'].disabled = True`).
+- Even past both, the login re-checks it: `if customer.external_identifier != str(profile['uid'])`
+  fails with *"identifier not unique"*. So the two fields would have to change in lockstep.
+
+Freeing the email by anonymising the old customer is not a way out either: `anonymize()` runs
+`self.orders.all().update(customer=None)`, severing every order from its owner, irreversibly.
+
+Because the claim cannot move, the fragility is handled on our side instead — see
+[The stored customer link](#the-stored-customer-link).
 
 **There are no customer or membership webhooks**, so nothing here can be event-driven from
 pretix's side. See [Triggers](#triggers).
@@ -125,6 +146,32 @@ backwards over a lapsed year cannot grant anything.
 pretix stops carrying any record of *which years* a person was a member — the website's archived
 roles (`member 24/25`) become the only history. Acceptable while the website is the source of
 truth, but it means membership counts can no longer be reported out of pretix.
+
+## The stored customer link
+
+`users.pretix_customer_identifier` records which pretix customer a user signs in as. Both lookup
+paths resolve **by the stored link first and by email only as a fallback**, the same shape
+`Reimbursements::PersonLink` uses to resolve a payee, and for the same reason: an email is a moving
+target, an id is not.
+
+The link is written only on the email path — that is, when it was blank or no longer resolved — so
+a stale link is re-pointed rather than leaving that person paying a doomed lookup before every real
+one. A link that still resolves is never touched. That last part matters more than it looks: a few
+people hold **two** pretix accounts, an `@sms.ed.ac.uk` one and its rewritten `@ed.ac.uk` twin, and
+without it whichever account the loop reached second would re-point the link on every run.
+
+Two consequences worth knowing:
+
+- **Two accounts for one person means two memberships, and that is correct.** The invariant is one
+  membership per *customer*, not per person. Each account is one they can log into, and each needs
+  its own membership to price their tickets. They cannot be combined — an order has a single
+  customer — so there is no double discount.
+- **A customer already claimed by another user is not stolen.** The unique index makes the write
+  fail, it is rescued, and that customer keeps matching by email exactly as it did before the
+  column existed.
+
+It does not fix the customers that never matched at all: with nothing to pin, they still need an
+email correction on the website or a manual link.
 
 ## Triggers
 

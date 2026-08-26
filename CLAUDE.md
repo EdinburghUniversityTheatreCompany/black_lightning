@@ -637,9 +637,14 @@ roles by `Pretix::MembershipSync`. Full detail in [docs/pretix/membership-sync.m
   and no `ordering` parameter, so `LIMIT`/`OFFSET` repeats and drops rows — a live fetch returned
   838 rows holding 626 distinct ids. A member whose row vanished looks like one with none, so the
   reconcile would mint another every night. Read per customer.
-- **The SSO identity claim is `email`, not `sub`**, so customers join on email, normalized through
-  `User.normalize_value_for` (it rewrites `@sms.ed.ac.uk`). Switching the claim re-hashes every
-  pretix `identifier` and orphans all 686 accounts — a one-way door.
+- **The SSO identity claim is `email`, not `sub`. Switching it LOCKS all 686 members out of the
+  shop** — it re-hashes every `identifier`, and the next login dies on the duplicate email. pretix
+  blocks the migration three separate ways, and anonymising to free the email severs every order
+  from its owner. Not recoverable; see the doc before touching it.
+- **`users.pretix_customer_identifier` is how that fragility is handled instead**: both lookups
+  resolve by the stored link first, email second (as `Reimbursements::PersonLink` does). Written
+  only on the email path, so a stale link re-points and a working one is never disturbed — which is
+  what stops the people holding two pretix accounts flip-flopping every run.
 - **Memberships cannot be deleted and customers cannot be pre-created.** Revoke with
   `PATCH date_end`; creating a customer over the API breaks that member's next SSO login with
   "email address is already used for a different account".
