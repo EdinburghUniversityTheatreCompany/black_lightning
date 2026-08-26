@@ -21,7 +21,7 @@ class Display::SetupController < ApplicationController
     { route: [ :display_credits_path ], seconds: 18, note: "Cast and company for tonight's show when one is running, else the next one" },
     { route: [ :display_get_involved_path ], seconds: 15, note: "Open opportunities" },
     { route: [ :display_news_path ], seconds: 12, note: "Latest news headline" },
-    { route: [ :display_on_this_day_path ], seconds: 15, note: "Something from the archive" }
+    { route: [ :display_on_this_day_path ], seconds: 15, note: "Something from the archive -- a different show each time it comes round" }
   ].freeze
 
   # Resolved lazily, not at class-load: route helpers are not guaranteed to be

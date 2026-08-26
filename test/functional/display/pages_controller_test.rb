@@ -1,6 +1,12 @@
 require "test_helper"
 
 class Display::PagesControllerTest < ActionController::TestCase
+  setup do
+    # The archive slide's cursor is cache state, which no transaction rolls
+    # back: without this, where the last test left it decides what this one sees.
+    Rails.cache.clear
+  end
+
   # Anthias plays a fixed playlist of URLs forever, so a page that renders
   # nothing is not a blank page for a moment -- it is a blank screen in the box
   # office until somebody notices and reconfigures the Pi. Every route has to
@@ -155,6 +161,29 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match event.name, response.body
     assert_no_match(/object-cover/, response.body)
+  end
+
+  # The screen fetches this URL again every few minutes, all day.
+  test "on_this_day shows a different archive show on each fetch" do
+    Event.delete_all
+    names = 3.times.map do |index|
+      # Subtracting years rather than rebuilding the date: on 29 February,
+      # Date.new(year - 5, 2, 29) raises. A two-day run for the same reason --
+      # it still covers today when the start slips back to the 28th.
+      start_date = Date.current - (5 + index).years
+      FactoryBot.create(:show, is_public: true, attach_image: true, name: "Archive Show #{index}",
+                               start_date: start_date, end_date: start_date + 2).name
+    end
+
+    rendered = names.size.times.map do
+      get :on_this_day
+
+      assert_response :success
+      names.find { |name| response.body.include?(name) }
+    end
+
+    assert_equal names.sort, rendered.compact.sort,
+                 "the archive slide did not work through its matches: #{rendered.inspect}"
   end
 
   # Substitutes for Step 7 of the task brief (open /display/news in a browser):
