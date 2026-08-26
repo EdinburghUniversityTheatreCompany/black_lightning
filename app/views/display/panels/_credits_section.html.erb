@@ -1,0 +1,18 @@
+<%# locals: (title:, members:, name_size:, spaced: false) %>
+<%# A heading with nothing under it reads as a broken page from across the room,
+    and an all-crew or all-cast event is normal here.
+
+    The break-* rules only bite in the flowed layout, where this runs on into a
+    second column: keep a heading with the names under it, and never split a
+    name across the gap. %>
+<% if members.any? %>
+  <h2 class="<%= "mt-8" if spaced %> mb-5 break-after-avoid text-3xl font-semibold uppercase tracking-widest text-neutral-500"><%= title %></h2>
+  <ul class="space-y-2">
+    <% members.each do |name, detail| %>
+      <li class="<%= name_size %> break-inside-avoid text-white">
+        <span class="font-semibold"><%= name %></span>
+        <span class="text-neutral-400"><%= detail %></span>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

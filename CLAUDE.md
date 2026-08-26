@@ -635,12 +635,17 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
 - **The credits QR always resolves to something** — `Event#digital_programme_url` when set, the
   event's own page otherwise. A footer that appears for one show and vanishes for the next reads
   as a broken slide, and the caption names whichever it got.
-- **`display_credits_layout` sizes that slide in measured pixels, not row counts.** The QR is a
-  different fraction of a row at each step (under three at `text-5xl`, nearly five at `text-xl`),
-  so counting it as a fixed number of rows pushed it off the bottom for an 18-name cast. It also
-  puts the QR under the **shorter** list — usually the cast, hence bottom left — and hard-caps
-  each list's height, so a name long enough to wrap clips the list rather than the code under it.
-  Re-measure `CREDITS_*` in the browser if the header or the row spacing changes.
+- **`display_credits_layout` picks between two layouts and sizes them in measured pixels, not row
+  counts.** *Side by side* is Cast against Company; *flowed* runs both lists as one sequence down
+  the first column and into the second. It takes whichever prints the names **bigger**, tie to side
+  by side — which needs no threshold on "how lopsided": flowing only wins where a column was going
+  to waste, and 3 cast against 18 crew gains two size steps. Pixels rather than rows because the QR
+  is a different fraction of a row at each step (under three at `text-5xl`, nearly five at
+  `text-xl`), and counting it as a fixed number pushed it off the bottom for an 18-name cast.
+  Side by side puts the QR under the **shorter** list (usually the cast, hence bottom left) and
+  hard-caps each list's height so a name long enough to wrap clips the list rather than the code;
+  flowed makes it a footer, since a balanced flow leaves neither column spare.
+  Re-measure `CREDITS_*` in the browser if the header, row spacing or QR size changes.
 
 ### Deployment
 

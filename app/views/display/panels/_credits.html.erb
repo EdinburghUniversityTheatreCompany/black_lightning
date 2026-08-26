@@ -1,15 +1,22 @@
 <%# locals: (event:, cast:, crew:, tonight:) %>
 <%
-  # How the two lists and the QR are fitted to the screen -- the measured
-  # arithmetic lives in DisplayHelper, next to the pixel figures it depends on.
+  # Which of the two layouts this show gets, and how big the names may be --
+  # the measured arithmetic lives in DisplayHelper, next to the pixel figures
+  # it depends on.
   layout = display_credits_layout(cast.size, crew.size)
-  name_size, block_position = layout.values_at(:name_size, :block_position)
+  name_size = layout[:name_size]
+  # Flattened to name/detail pairs so one partial can render either list: the
+  # two read the same on screen and differ only in where the second column of
+  # text comes from.
+  cast_members = cast.map { |member| [ member.user_name, member.cast_display_name ] }
+  crew_members = crew.map { |member| [ member.user_name, member.position ] }
   # Say what is behind the code. display_programme_url falls back to the event's
   # own page when no programme has been linked, and "Scan for the digital
   # programme" over a QR that opens a listing is worse than no QR at all.
   qr_label = event.digital_programme_url.present? ? "Scan for the digital programme" : "Scan for more about this show"
 %>
-<%# Captured, not written out twice: it goes under one column or the other. %>
+<%# Captured, not written out repeatedly: it goes under one column or the other,
+    or under both, depending on the layout. %>
 <% qr_block = capture do %>
   <%# mt-auto, not a fixed offset: for a short list this drops the QR to the
       foot of the column beside it, so the two end together rather than leaving
@@ -31,46 +38,35 @@
     <%= display_logo %>
   </div>
 
-  <div class="grid flex-1 grid-cols-2 gap-16 overflow-hidden <%= block_position %>">
-    <div class="flex flex-col">
-      <%# Capped in pixels rather than by a Tailwind class: the figure is derived
-          from the measured constants in DisplayHelper, and Tailwind never
-          generates a class name that is only ever built at runtime. %>
-      <div class="overflow-hidden" style="max-height: <%= layout[:cast_list_height] %>px">
-        <%# A heading with nothing under it reads as a broken page from across
-            the room, and an all-crew or all-cast event is normal here. %>
-        <% if cast.any? %>
-          <h2 class="mb-5 text-3xl font-semibold uppercase tracking-widest text-neutral-500">Cast</h2>
-        <% end %>
-        <ul class="space-y-2">
-          <% cast.each do |member| %>
-            <li class="<%= name_size %> text-white">
-              <span class="font-semibold"><%= member.user_name %></span>
-              <span class="text-neutral-400"><%= member.cast_display_name %></span>
-            </li>
-          <% end %>
-        </ul>
+  <% if layout[:mode] == :flowed %>
+    <%# Both lists as one sequence, down the first column and on into the second,
+        so a short cast beside a long company list stops wasting half the screen.
+        The browser balances the two itself, which also absorbs a name long
+        enough to wrap -- something the row arithmetic cannot see coming. %>
+    <div class="columns-2 gap-16 overflow-hidden" style="height: <%= layout[:flow_height] %>px">
+      <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
+      <%= render "display/panels/credits_section", title: "Company", members: crew_members,
+                 name_size: name_size, spaced: cast_members.any? %>
+    </div>
+    <%= qr_block %>
+  <% else %>
+    <div class="grid flex-1 grid-cols-2 gap-16 overflow-hidden <%= layout[:block_position] %>">
+      <div class="flex flex-col">
+        <%# Capped in pixels rather than by a Tailwind class: the figure is
+            derived from the measured constants in DisplayHelper, and Tailwind
+            never generates a class name that is only ever built at runtime. %>
+        <div class="overflow-hidden" style="max-height: <%= layout[:cast_list_height] %>px">
+          <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
+        </div>
+        <%= qr_block if layout[:qr_in_cast_column] %>
       </div>
 
-      <%= qr_block if layout[:qr_in_cast_column] %>
-    </div>
-
-    <div class="flex flex-col">
-      <div class="overflow-hidden" style="max-height: <%= layout[:crew_list_height] %>px">
-        <% if crew.any? %>
-          <h2 class="mb-5 text-3xl font-semibold uppercase tracking-widest text-neutral-500">Company</h2>
-        <% end %>
-        <ul class="space-y-2">
-          <% crew.each do |member| %>
-            <li class="<%= name_size %> text-white">
-              <span class="font-semibold"><%= member.user_name %></span>
-              <span class="text-neutral-400"><%= member.position %></span>
-            </li>
-          <% end %>
-        </ul>
+      <div class="flex flex-col">
+        <div class="overflow-hidden" style="max-height: <%= layout[:crew_list_height] %>px">
+          <%= render "display/panels/credits_section", title: "Company", members: crew_members, name_size: name_size %>
+        </div>
+        <%= qr_block unless layout[:qr_in_cast_column] %>
       </div>
-
-      <%= qr_block unless layout[:qr_in_cast_column] %>
     </div>
-  </div>
+  <% end %>
 </div>

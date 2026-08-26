@@ -103,14 +103,14 @@ module DisplayHelper
     sanitize(display_block(name, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
-  # Fitting the credits list to a 1080p screen. A 90-seat house still puts up big
+  # Fitting the credits to a 1080p screen. A 90-seat house still puts up big
   # casts, so the type steps down rather than the list running off a screen
   # nobody can scroll.
   #
-  # Measured in the browser at 1920x1080: the page header and a column heading
-  # leave CREDITS_LIST_HEIGHT for the names; a row costs its line height plus the
-  # 8px gap under it (CREDITS_ROW_STRIDES); and the QR block is a flat 160px
-  # wherever it lands.
+  # Measured in the browser at 1920x1080: the page header leaves
+  # CREDITS_COLUMN_HEIGHT for a column, a heading costs CREDITS_HEADING_HEIGHT of
+  # it, a name costs its line height plus the 8px gap under it
+  # (CREDITS_ROW_STRIDES), and the QR block is a flat 160px wherever it lands.
   #
   # Pixels rather than a row count, because the QR is not a whole number of rows
   # and is a different fraction of one at each size -- under three at text-5xl,
@@ -120,49 +120,126 @@ module DisplayHelper
   CREDITS_HEADING_HEIGHT = 56
   CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
   CREDITS_QR_HEIGHT = 160
+  # Air above a heading that follows another section, which only the flowed
+  # layout has -- side by side puts one section in each column. Deliberately
+  # modest: it competes directly with name size, and at 40px an 18-cast, 2-crew
+  # show missed text-5xl by a single pixel. Four times the gap between names is
+  # plenty to read as a new section.
+  CREDITS_SECTION_GAP = 32
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
   }.freeze
 
-  # The QR goes under whichever list is SHORTER, so the room it takes is room
-  # that column had going spare and the other keeps its full height. That is
-  # nearly always the cast, which puts it bottom left.
+  # Two ways to lay the slide out.
+  #
+  # SIDE BY SIDE is Cast in one column against Company in the other, and it is
+  # the clearer read: the eye finds "who played whom" in one place. But it sizes
+  # off the LONGER list, so three cast against eighteen crew wastes a whole
+  # column and shrinks every name to fit the crew list into half the screen.
+  #
+  # FLOWED runs both lists as one sequence down the first column and on into the
+  # second, headings and all, so the two share the space evenly.
+  #
+  # Which one is used is decided by which lets the names be BIGGER, with a tie
+  # going to side by side. That needs no threshold on "how lopsided is lopsided":
+  # flow only wins where a column was going to waste, and it is exactly then
+  # that it buys a size step -- three steps, for an 18-cast, 2-crew show.
   def display_credits_layout(cast_count, crew_count)
-    qr_in_cast_column = cast_count <= crew_count
-    heights = CREDITS_ROW_STRIDES.transform_values do |stride|
-      [ cast_count * stride + (qr_in_cast_column ? CREDITS_QR_HEIGHT : 0),
-        crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
+    side = credits_first_fit { |stride| side_by_side_height(cast_count, crew_count, stride) <= CREDITS_LIST_HEIGHT }
+    flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= credits_flow_height }
+
+    if prefer_flowed?(cast_count, crew_count, side, flowed)
+      flowed_layout(flowed)
+    else
+      side_by_side_layout(cast_count, crew_count, side)
     end
+  end
 
-    # The first size both columns fit at. The bottom two steps exist for the QR
-    # rather than for the names: 18 names a side is the most text-2xl holds and
-    # was already the old floor, but the same 18 plus a QR only fits at
-    # text-base. A 36-person company is small type either way, and the code is
-    # the one thing on the slide that leads to the full list, so it is what the
-    # last steps are spent on.
-    #
-    # Bigger than that is past what this screen can hold at any size: the list
-    # then loses its tail to overflow, which is what block_position anchors for.
-    name_size = heights.find { |_, height| height <= CREDITS_LIST_HEIGHT }&.first || heights.keys.last
+  private
 
-    { name_size: name_size,
+  # The index of the first size the block yields true for, or nil if none does.
+  def credits_first_fit
+    CREDITS_ROW_STRIDES.values.index { |stride| yield(stride) }
+  end
+
+  def credits_flow_height
+    CREDITS_COLUMN_HEIGHT - CREDITS_QR_HEIGHT
+  end
+
+  def side_by_side_height(cast_count, crew_count, stride)
+    qr_in_cast_column = cast_count <= crew_count
+
+    [ cast_count * stride + (qr_in_cast_column ? CREDITS_QR_HEIGHT : 0),
+      crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
+  end
+
+  # Both lists and their headings, halved: what one of the two flowed columns
+  # has to hold. A list with nobody in it prints no heading, so it costs none.
+  def flowed_height(cast_count, crew_count, stride)
+    sections = [ cast_count, crew_count ].count(&:positive?)
+    headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
+
+    ((headings + (cast_count + crew_count) * stride) / 2.0).ceil
+  end
+
+  # A tie goes to side by side, so a normal show keeps Cast beside Company and
+  # only a wasted column moves. When NEITHER fits -- a company past what this
+  # screen holds at any size -- the smallest size is going to be used either way,
+  # so it comes down to which loses less off the end.
+  def prefer_flowed?(cast_count, crew_count, side, flowed)
+    return false if flowed.nil?
+    return true if side.nil? && flowed
+
+    smallest = CREDITS_ROW_STRIDES.values.last
+    return flowed_height(cast_count, crew_count, smallest) < side_by_side_height(cast_count, crew_count, smallest) if side.nil?
+
+    flowed < side
+  end
+
+  # nil index = nothing on the scale fitted, which is a company past what this
+  # screen holds at any size. Shrink as far as we can and let the caps clip.
+  def credits_size_at(index)
+    (index && CREDITS_ROW_STRIDES.keys[index]) || CREDITS_ROW_STRIDES.keys.last
+  end
+
+  def flowed_layout(flowed)
+    { mode: :flowed,
+      name_size: credits_size_at(flowed),
+      # The QR is a footer under both columns here rather than under one of
+      # them: the flow balances, so neither column has spare room the other
+      # does not, and the height it needs is taken off the flow before it runs.
+      flow_height: credits_flow_height }
+  end
+
+  def side_by_side_layout(cast_count, crew_count, side)
+    # The QR goes under whichever list is SHORTER, so the room it takes is room
+    # that column had going spare and the other keeps its full height. That is
+    # nearly always the cast, which puts it bottom left.
+    qr_in_cast_column = cast_count <= crew_count
+    name_size = credits_size_at(side)
+    tallest = side_by_side_height(cast_count, crew_count, CREDITS_ROW_STRIDES.fetch(name_size))
+
+    { mode: :side_by_side,
+      name_size: name_size,
       qr_in_cast_column: qr_in_cast_column,
       # A hard cap on each list, so it can only ever push itself off the bottom
-      # and never the QR under it. The arithmetic above assumes one line per
-      # person, which a long enough name against a character name breaks -- and
-      # the code is the one thing here that leads to the names it just cut.
-      cast_list_height: column_list_height(qr_in_cast_column),
-      crew_list_height: column_list_height(!qr_in_cast_column),
+      # and never the QR under it. The arithmetic assumes one line per person,
+      # which a long enough name against a character name breaks -- and the code
+      # is the one thing here that leads to the names it just cut.
+      cast_list_height: credits_column_list_height(qr_in_cast_column),
+      crew_list_height: credits_column_list_height(!qr_in_cast_column),
       # Centre the columns in the space they leave -- unless the names need all
       # of it, in which case start at the top so a long list loses its tail
       # rather than its heading.
-      block_position: heights[name_size] > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
+      block_position: tallest > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
   end
 
-  def column_list_height(carries_qr)
+  def credits_column_list_height(carries_qr)
     CREDITS_COLUMN_HEIGHT - (carries_qr ? CREDITS_QR_HEIGHT : 0)
   end
+
+  public
 
   # Poster titles are sized by length rather than truncated: naming the show is
   # the page's whole job, so a long title steps down instead of being cut off.
