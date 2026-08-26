@@ -71,6 +71,14 @@ class Role < ApplicationRecord
       return false
     end
 
+    # Captured BEFORE the clear, and synced only after the transaction commits.
+    # `users.clear` is delete_all, which fires no association callbacks at all,
+    # so nothing downstream can observe this the way it observes add_role — and
+    # archiving `member` is precisely the moment the whole society stops being
+    # members. Enqueuing inside the transaction would tell pretix about a
+    # revocation that a rollback then undid.
+    archived_user_ids = users.ids
+
     ActiveRecord::Base.transaction do
       # Create or find the archival role and move all users over.
       new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
@@ -79,6 +87,9 @@ class Role < ApplicationRecord
       # Then clear them from this role.
       self.users.clear
     end
+
+    sync_pretix_memberships(archived_user_ids)
+    true
   end
 
   def children_attributes=(attributes)
@@ -104,6 +115,15 @@ class Role < ApplicationRecord
   end
 
   private
+
+  # Only the two roles that actually entitle someone to member pricing are worth
+  # a pretix round trip; archiving "DM Trained" would otherwise enqueue a job per
+  # holder to discover each is a no-op.
+  def sync_pretix_memberships(user_ids)
+    return unless Pretix::MembershipSync::ENTITLING_ROLES.include?(name.to_s.downcase.strip)
+
+    Pretix::SyncMembershipJob.enqueue_for(user_ids)
+  end
 
   def prevent_hardcoded_or_non_purgeable_destruction
     if HARDCODED_NAMES.include?(name)

@@ -95,3 +95,6 @@ fnox.toml
 # when run without --config-only style flags. Those reports carry absolute paths
 # from whoever ran it and are pure noise in a diff, so never commit one.
 /database_consistency_*.txt
+
+# Local pretix API token (spike) — never commit
+PRETIX_API_TOKEN

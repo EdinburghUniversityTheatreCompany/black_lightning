@@ -1,0 +1,278 @@
+# Syncing member status to pretix
+
+Member ticket prices in the pretix shop are gated behind a pretix **membership**. This document
+specifies how that membership is driven from the website's `member` role instead of from a
+product the member has to remember to buy.
+
+Status: built and tested, not yet merged or deployed. `Pretix::Settings`, `Pretix::Client`,
+`Pretix::MembershipSync`, `Pretix::ReconcileMembershipsJob` and `Pretix::SyncMembershipJob`, with
+the three triggers wired. The one-off data fix in [Rollout](#rollout) step 0 is done in production.
+
+**Verified against the live API**, not only against fakes: both filter names on the memberships
+endpoint, `PATCH date_end` (the 198-record backfill), and `POST` creation — the last by creating a
+membership whose dates were already in the past, so the production payload was exercised without
+ever granting an entitlement.
+
+## Why
+
+Members used to activate themselves by buying a free "membership activation product" once a year.
+That produced three standing problems:
+
+1. Regular ticket buyers could not create pretix accounts, because native login had been turned
+   off to force everyone through SSO.
+2. Members did not notice they had to activate, so they paid full price.
+3. Nothing tied a pretix membership back to *this year's* member list, so a membership granted in
+   2023 kept working.
+
+Making the website the single source of truth fixes all three: the shop can no longer grant a
+membership at all, so there is nothing to forget and nothing to leak between years.
+
+## What pretix actually does
+
+These are the constraints the design has to survive. All verified against the live API and the
+pretix source, August 2026.
+
+**A membership is checked against the *show's* date, not the purchase date.**
+`Membership.is_valid` resolves `dt = ev.date_from` and requires `date_start <= dt <= date_end`.
+The same window filters the checkout dropdown (`Customer.usable_memberships(for_event)`) and is
+re-checked at order validation, which raises *"You selected a membership that is valid from
+{start} to {end}, but selected an event taking place at {date}."* So `date_end` caps **how far
+ahead a member can book**, not merely when they lapse. This is why the cohorts ending 31 August
+silently blocked every autumn show, and why a short rolling window is not an option.
+
+**Memberships cannot be deleted.** The API answers DELETE with *"Memberships cannot be deleted.
+You can change the date instead."* Revoking means `PATCH date_end` into the past. The model has a
+`canceled` flag but it is absent from the API serializer, so it is unreachable.
+
+**Customers cannot be pre-created**, and trying breaks the member. pretix keys an SSO account on
+`sha256(claim + '@' + provider_pk)`; an API-created customer has no provider, so the member's next
+login fails to match it, tries to insert, and dies on the unique-email constraint — they see
+*"the email address is already used for a different account in this system."* Accounts appear on
+first login and only then.
+
+**The identity claim is `email`, not `sub`** — 686 of 686 SSO customers carry an email address in
+`external_identifier`, so that is the join key. Do **not** switch the claim to `sub` to match
+`User#id`: it re-hashes every identifier at once and orphans all 686 accounts along with their
+order history. One-way door. The cost of leaving it is that a member who changes their website
+email gets a fresh empty pretix account on next login; that is a pre-existing bug, not one this
+sync introduces.
+
+**There are no customer or membership webhooks**, so nothing here can be event-driven from
+pretix's side. See [Triggers](#triggers).
+
+### Fixed values
+
+| Thing | Value |
+|---|---|
+| Organizer | `eutc` (pretix Hosted — `/control/` redirects to pretix.eu, so no custom plugins) |
+| Membership type | `225`, "EUTC Member" — `max_usages: null` (unlimited), `allow_parallel_usage: false`, `transferable: false` |
+| Customer lookup | `GET /organizers/eutc/customers/?email=` — `email` is the only filter offered |
+| API permission | `organizer.customers:read` + `:write` (team flag "Can manage customer accounts") |
+
+`allow_parallel_usage: false` is deliberate: one discounted seat per member per performance.
+
+### Writes are gated to production
+
+`Pretix::Settings.writes_enabled?` is true in production and otherwise only with
+`PRETIX_ENABLE_WRITES` set. Reads stay live everywhere so this document's spike scripts and any
+future dashboard keep working, but **there is one pretix organizer and no staging copy of it**:
+a developer running the reconcile against their own database — which holds a different, older set
+of member roles — would expire real members' pricing on the first pass. `Client` raises
+`WritesSuppressedError` rather than silently no-opping, so a suppressed write is visible instead
+of looking like success.
+
+The token itself comes from `PRETIX_API_TOKEN` (fnox in development) or credentials under
+`pretix:`. Development credentials are publicly readable in this repo, so the real token must
+never go there.
+
+## The model: one membership, forever
+
+Each person gets **exactly one** membership record, created the first time they are a member and
+never replaced. The sync only ever moves `date_end`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoRecord
+    NoRecord --> Live: gains member role<br/>POST membership
+    Live --> Live: still a member<br/>PATCH date_end forward if under 18 months
+    Live --> Expired: role archived or removed<br/>PATCH date_end = now
+    Expired --> Live: rejoins<br/>PATCH date_end forward (same record)
+```
+
+Annual cohorts are not recreated. Rejoining reuses the existing record, so order history and
+identity stay attached to one row, and the September re-import restores pricing instantly rather
+than minting a new membership.
+
+**`date_end` while a member** is the end of the *next* academic year plus three weeks — today,
+`2027-09-21T23:59:59+01:00`. The horizon therefore sits between roughly 13 and 24 months, which
+keeps it clear of anything ever on sale while still expiring on its own within two years if the
+sync dies. The three weeks are slack for the manual September rollover.
+
+The reconcile refreshes `date_end` only when it is both under 18 months out **and** different from
+the target, so most nights it writes nothing. The 18-month test alone does not achieve that — see
+[Reconcile algorithm](#reconcile-algorithm).
+
+**`date_end` when not a member** is set to now. Losing the role means losing member pricing
+immediately — no grace period — which matches the website, where an archived role stops being a
+membership at the same instant.
+
+**`date_start`** is left alone on an existing record and set to the start of the current day on a
+new one. It never needs to move: everything bookable is in the future, so widening the window
+backwards over a lapsed year cannot grant anything.
+
+### What this gives up
+
+pretix stops carrying any record of *which years* a person was a member — the website's archived
+roles (`member 24/25`) become the only history. Acceptable while the website is the source of
+truth, but it means membership counts can no longer be reported out of pretix.
+
+## Triggers
+
+No webhooks exist, so the sync is driven from our side.
+
+**The nightly reconcile is what makes this correct. Everything else only makes it fast.** That
+split is the whole design: the reconcile reads the full picture from both systems and fixes any
+drift, so a missed trigger costs at most a day, never a wrong answer. Immediate triggers are
+therefore added only where a day is too slow to be acceptable.
+
+1. **Nightly reconcile** — the safety net, and the only thing that has to be right.
+2. **On login** — Doorkeeper's `after_successful_authorization`
+   (config/initializers/doorkeeper.rb). On a member's *first ever* pretix login the customer does
+   not exist yet at that moment, so the job needs a short delay and a retry; worst case they see
+   non-member prices for about a minute, once.
+3. **On the membership import applying** (`Admin::MembershipImportsController`) — a member who has
+   just been activated wants to buy a ticket now, not tomorrow. Bulk: one job carrying the ids,
+   not one enqueue per row.
+4. **On `Role#archive`** — losing member pricing is supposed to be immediate, and this is the one
+   removal that matters. Bulk, same shape.
+
+### Why not model callbacks
+
+rolify does support `after_add`/`after_remove`, and it is tempting to hook there and catch
+everything. It was rejected: it does not actually catch everything, and the machinery it needs is
+out of proportion to being 24 hours faster on paths the reconcile already covers.
+
+The decisive fact is that **`Role#archive` and `Role#purge` remove members with
+`users.clear`, which is `delete_all` and fires no association callbacks** — so the single most
+important removal path needs an explicit call regardless. The same is true of user destruction
+(HABTM rows go via `delete_all`) and of `User#absorb`'s email rewrites, which use `update_column`
+and bypass callbacks entirely. On top of that, callbacks would need a transaction-aware buffer
+(`absorb` genuinely rolls back), per-user coalescing (one import row can produce a create, an
+email change and a role add), a second hook on the `Role` side (writes through `role.users` do not
+fire User-side callbacks), and guards to stop `db:seed` and the factories generating live pretix
+traffic.
+
+Two related traps recorded while surveying:
+
+- **`User#activate` has no callers.** It looks like the membership entry point and is not one.
+  Hooking it would give false confidence that the import path is covered.
+- **Fixtures write `users_roles` in raw SQL**, so no callback can ever see them. Any test asserting
+  sync behaviour has to grant roles through `add_role` or the factories, not fixtures.
+
+### Email is part of the join
+
+Because customers are matched on email, an email change is a membership event too. It is left to
+the reconcile rather than hooked, but two things constrain what is sent:
+
+- `User` `normalizes :email` — among other things rewriting `s1234567@sms.ed.ac.uk` to
+  `@ed.ac.uk`. Always join on the normalised value.
+- Imported and mid-merge users carry synthetic `unknown_*@bedlamtheatre.co.uk` and
+  `temp_*@bedlamtheatre.co.uk` addresses. **These must never be sent to pretix** — they are not
+  real addresses and would accumulate as junk customers.
+
+## Reconcile algorithm
+
+```
+customers  = GET /organizers/eutc/customers/        (paginated, ~875)
+memberships = GET /organizers/eutc/memberships/     (paginated, type 225)
+
+for each customer with an external_identifier:
+    user     = User.find_by(email: customer.external_identifier)
+    entitled = user&.has_role?(:member) || user&.has_role?("life member")
+    mine     = memberships for this customer, type 225
+
+    canonical = mine.min_by(&:date_start)       # widest window
+    others    = mine - [canonical]
+
+    expire(others)                              # collapse duplicates to one
+
+    if entitled
+        canonical ? extend(canonical) : create(customer)
+    else
+        expire(canonical)
+```
+
+`extend` requires **both** that `date_end` is under 18 months out **and** that it differs from the
+target. The 18-month test alone does not keep the run quiet: the horizon sits 13–24 months out, so
+from roughly March onward every membership is permanently inside the window while its target value
+has not moved, and the rule as first written re-PATCHed the same date nightly. `expire` is a no-op
+if `date_end` is already past.
+
+`date_end` is never **shortened** for an entitled member. A record ending beyond the target — the
+step-0 backfill, or a date set by hand — is left alone, because pulling it back is the revoking
+direction and the safety bias runs the other way.
+
+**Never read memberships from one whole-shop list.** pretix orders them by
+`-date_end, -date_start, membership_type` with **no unique tiebreaker**, and the endpoint accepts
+no `ordering` parameter to add one. Under `LIMIT`/`OFFSET` that silently repeats some rows and
+drops others: measured against the live shop, one fetch returned **838 rows holding only 626
+distinct ids**, with three of one customer's ten memberships absent — including their live one.
+Read per customer (`?customer=<identifier>`) instead, and only for customers that resolve to a
+`User`.
+
+This is not a tidiness point. A member whose only membership fell out of the list looks like a
+member with none, so the reconcile mints another — **every night, unbounded**. The preview task
+made the same mistake first and reported 130 creations where the truth was 71; the other 59 were
+people who already had a membership. It failed in the reassuring direction, which is worse than
+not running at all.
+
+The step-0 backfill made it markedly worse by giving 198 rows an identical `date_end`, and that
+run reported "89 patched, 0 failed" while 16 records were still stale. Writes shift the pages too,
+which is why `reconcile_all` re-fetches and repeats until a pass finds nothing to do.
+
+**Duplicates are real**: 198 live memberships across 125 customers before the first reconcile.
+They are double-activations, not allowance top-ups — `max_usages` is null, so one membership
+already buys unlimited member tickets.
+
+## Rollout
+
+Order matters. Step 3 must not happen before step 2, or anyone with a pretix account could still
+grant themselves a membership.
+
+0. **Done (26 Aug 2026)** — pushed `date_end` on all 198 live type-225 memberships to
+   `2027-09-21T23:59:59+01:00`. They were expiring on 31 August, which had already blocked member
+   pricing for the whole autumn programme. This grants nobody anything new; over-inclusion is
+   corrected by the first reconcile.
+1. Ship the sync and let the nightly reconcile run clean for a few days.
+2. **Delete the membership activation product**, so nothing in the shop grants a membership.
+3. Re-enable native email+password login (Organizer → Settings → General → Customer accounts).
+   189 native accounts already exist and none collide with an SSO account today, so nobody is
+   locked out. Forward risk: a member who later creates a native account on their Bedlam email
+   locks themselves out of SSO.
+4. September rollover, unchanged for whoever runs it — archive `member`, import the new list. The
+   reconcile expires everyone on archive and restores them as the import lands.
+
+## Things the build settled that the spec had not
+
+- **`sync_user` checks `external_identifier` too, not just the email match.** pretix's only customer
+  filter is email, and 189 native accounts exist carrying no `external_identifier`. Matching on the
+  customer's own `email` field would grant a membership to an account the reconcile — which keys on
+  `external_identifier` — could never find again, so the two paths would disagree by construction.
+- **The re-fetch loop is capped at 5 passes**, stopping as soon as a pass writes nothing, and
+  `reconcile_all` returns `passes:` so a job log shows whether it converged. `ReconcileMembershipsJob`
+  warns when it hits the cap, because that is the tell that the pagination hazard is biting.
+- **Write counts accumulate across passes; read-only counts are the last pass's snapshot.** Summing
+  the latter would double-count the same customer on every pass.
+- `users.email` is uniquely indexed, so an email resolves to exactly one `User` — no ambiguity
+  branch is needed there. `date_start` ties are broken by membership id, for determinism.
+
+## Open items
+
+- **Roughly 280 of the 473 members have never logged into pretix**, so they have no customer record
+  for a membership to attach to and the sync cannot reach them. pretix will not let customers be
+  pre-created, so each needs one shop login before member pricing works — after which it is
+  automatic and takes about a minute. Worth saying out loud in whatever announcement ships with
+  this. Measured 2026-08-26: of 642 resolvable customers, 71 would be created, 117 extended, 5
+  deduplicated.
+- The email-change orphaning above has no mitigation. Warning on email change, or reconciling
+  orphaned customers by matching a former email, would both work; neither is specified here.

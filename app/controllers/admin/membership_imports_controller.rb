@@ -76,6 +76,7 @@ class Admin::MembershipImportsController < AdminController
 
   def process_import(categorized, actions)
     results = { activated: 0, created: 0, merged: 0, skipped: 0, errors: [] }
+    @synced_user_ids = []
 
     # Process each bucket
     categorized.each do |bucket, items|
@@ -84,6 +85,13 @@ class Admin::MembershipImportsController < AdminController
         process_item(item, action, results)
       end
     end
+
+    # One enqueue for the whole import rather than one per row: this loop runs
+    # over hundreds of rows, and a row can activate a user AND rewrite their
+    # placeholder email, which is two membership events for one person. The
+    # nightly reconcile would pick all of this up anyway — this only spares a
+    # newly activated member from waiting until tomorrow to buy at member price.
+    Pretix::SyncMembershipJob.enqueue_for(@synced_user_ids)
 
     results
   end
@@ -134,6 +142,7 @@ class Admin::MembershipImportsController < AdminController
     update_ids_if_missing(user, row)
     user.add_role(:member)
     user.send_welcome_email
+    @synced_user_ids << user.id
     results[:activated] += 1
   end
 
@@ -151,6 +160,7 @@ class Admin::MembershipImportsController < AdminController
     if user.save
       user.add_role(:member)
       user.send_welcome_email
+      @synced_user_ids << user.id
       results[:created] += 1
     else
       results[:errors] << "Failed to create #{row[:original_name]}: #{user.errors.full_messages.join(', ')}"
@@ -177,6 +187,9 @@ class Admin::MembershipImportsController < AdminController
       existing_user.send_welcome_email
     end
 
+    # Collected even when the role was already held: this branch also rewrites a
+    # placeholder email, and the pretix customer is matched on email.
+    @synced_user_ids << existing_user.id
     results[:merged] += 1
   end
 

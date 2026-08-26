@@ -621,6 +621,31 @@ through `javascript/lib/pretix.js`. All URLs come from `PretixHelper`.
 - The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
   `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
 
+## Pretix membership sync
+
+Member ticket prices are gated behind a pretix membership, driven from the `member` / `life member`
+roles by `Pretix::MembershipSync`. Full detail in [docs/pretix/membership-sync.md](docs/pretix/membership-sync.md).
+
+- **A membership is validated against the SHOW's date, not the purchase date**, so `date_end` caps
+  how far ahead a member can book. Cohorts ending 31 Aug silently blocked every autumn show. This
+  also rules out any short rolling window.
+- **The nightly `ReconcileMembershipsJob` is what makes this correct**; the login / import / archive
+  triggers only make it immediate. `Role#archive` removes members with `users.clear` — `delete_all`,
+  which fires **no association callbacks** — so the annual de-membering is invisible to any hook and
+  needs its explicit enqueue. Don't replace the reconcile with callbacks.
+- **Never read memberships from one whole-shop list.** pretix pages them with no unique tiebreaker
+  and no `ordering` parameter, so `LIMIT`/`OFFSET` repeats and drops rows — a live fetch returned
+  838 rows holding 626 distinct ids. A member whose row vanished looks like one with none, so the
+  reconcile would mint another every night. Read per customer.
+- **The SSO identity claim is `email`, not `sub`**, so customers join on email, normalized through
+  `User.normalize_value_for` (it rewrites `@sms.ed.ac.uk`). Switching the claim re-hashes every
+  pretix `identifier` and orphans all 686 accounts — a one-way door.
+- **Memberships cannot be deleted and customers cannot be pre-created.** Revoke with
+  `PATCH date_end`; creating a customer over the API breaks that member's next SSO login with
+  "email address is already used for a different account".
+- **Writes are gated to production** (`Settings.writes_enabled?`). There is one organizer and no
+  staging copy, so a dev machine reconciling against its own database would expire real members.
+
 ## Box office display (Anthias)
 
 Public unauthenticated pages under `/display` for the box office screen, plus `/display` itself,
