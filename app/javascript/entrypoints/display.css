@@ -5,6 +5,19 @@
  * this screen is set to be read from across a room. */
 @import "../styles/tailwind-base.css";
 
+/* theme.css names "Source Sans Pro" in --font-sans but nothing ever loaded it,
+ * so this screen rendered in whatever system-ui resolved to -- one font in a
+ * developer's browser, another on the Pi. Self-hosted rather than Google Fonts:
+ * the box office is a kiosk that must not depend on an external request. Latin
+ * subsets only, at the three weights this screen actually uses (400, 600, 700).
+ *
+ * Scoped to this entrypoint on purpose. The rest of the site is falling back
+ * too, but fixing that changes the look of every page and is not this branch's
+ * job -- see plans/off-topic-improvements.md. */
+@import "@fontsource/source-sans-pro/latin-400.css";
+@import "@fontsource/source-sans-pro/latin-600.css";
+@import "@fontsource/source-sans-pro/latin-700.css";
+
 /* This entrypoint is loaded by layouts/display.html.erb and nothing else, so a
  * token defined here is scoped to the box office screen. */
 @theme {
@@ -17,9 +30,82 @@
 
   /* Tailwind's `truncate` sets overflow:hidden, and the line box the size
    * utilities ship with is shorter than this font's content area (measured at
-   * ~1.36em, ascent + descent), so every g, j, p, q and y is sliced flat. The
-   * single-line clamp is wanted -- a wrapped title breaks these layouts -- so
-   * every truncating element on this screen pairs `truncate` with
-   * `leading-descender` instead, which is just wide enough to hold them. */
+   * ~1.36em, ascent + descent), so every g, j, p, q and y is sliced flat. Where
+   * a single-line clamp is still wanted -- the price column, the date column --
+   * `truncate` is paired with `leading-descender`, which is just wide enough to
+   * hold them. Show titles no longer truncate at all; they wrap. */
   --leading-descender: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+ * The What's On marquee
+ *
+ * Show titles wrap to as many lines as they need instead of being cut off, so
+ * the board can hold more than fits. It scrolls the overflow past, and holds
+ * perfectly still when there is no overflow -- with no JavaScript, because the
+ * display layout deliberately loads none.
+ *
+ * The scroll distance is (viewport height - track height), and the only way to
+ * say "track height" in CSS is a percentage on the track itself. So the
+ * viewport has to be a real length rather than `flex-1`: --display-marquee-
+ * viewport is both the box's height and the animation's reference, which is
+ * what stops the two drifting apart. The 17.25rem is the panel's chrome, and
+ * every part of it is pinned in the markup so the sum stays true:
+ *   py-12 top 3 + header 4.5 + mb-10 2.5 + mt-8 2 + footer 2.25 + py-12 bot 3.
+ *
+ * `100cqh` would express the viewport directly and drop the constant, but
+ * Anthias's player is QtWebEngine -- the same engine that rendered the QR code
+ * as a blank square -- and container query units postdate it by years. An
+ * unsupported unit here would make the whole transform invalid and the board
+ * would silently stop scrolling on the one screen it is for.
+ *
+ * min(0px, ...) is what makes it self-limiting. A track shorter than its
+ * viewport yields a positive distance, which clamps to zero: no movement, no
+ * server-side guess about how many rows happen to fit.
+ * ------------------------------------------------------------------------- */
+.display-marquee {
+  --display-marquee-viewport: calc(100vh - 17.25rem);
+
+  height: var(--display-marquee-viewport);
+  overflow: hidden;
+}
+
+.display-marquee__track {
+  /* Fills the frame when the events are few -- five events on an eight-row
+   * board used to read as a half-empty wall -- and grows past it when they are
+   * many, which is the case the scroll exists for. */
+  min-height: 100%;
+  /* One fixed duration, so the speed varies with the distance rather than the
+   * other way round. That is the only pacing a fixed Anthias slot can take: a
+   * constant speed would make a long board need a longer slot than a short one,
+   * and since the playlist holds a single number, the slot would have to cover
+   * the worst case and every ordinary board would sit there for twice as long
+   * as it needed. This way the pass always finishes inside the slot, whatever
+   * is on the board.
+   *
+   * The distance is the OVERFLOW, not the list: twelve short titles overflow by
+   * ~310px and twelve wrapping ones by ~1030px, so the same 18s is a 23px/s
+   * drift in the first case and a 75px/s roll in the second -- both readable,
+   * for very different lists. Pacing this per event instead had the common case
+   * crawling at 16px/s, near six seconds a row. */
+  animation: display-marquee 18s ease-in-out infinite;
+}
+
+@keyframes display-marquee {
+  /* Held at the top for the first eighth: the top of this list is tonight, and
+   * it is what most people standing at the box office came to read. */
+  0%, 12% { transform: translateY(0); }
+  88%, 100% { transform: translateY(min(0px, calc(var(--display-marquee-viewport) - 100%))); }
+}
+
+/* An unattended screen has nobody to hold a motion preference, but a developer
+ * checking the page on their own machine might hold one already. Honoured at a
+ * cost worth stating: with the scroll stopped, whatever overflows the frame
+ * cannot be reached at all, since there is no JavaScript here to offer another
+ * way down. That trade is acceptable only because the screen this is for never
+ * asks. */
+@media (prefers-reduced-motion: reduce) {
+  .display-marquee__track {
+    animation: none;
+  }
 }

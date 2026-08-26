@@ -643,11 +643,44 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   two display-scoped tokens: `--color-display-accent` (`text-primary` is 2.9:1 on black) and
   `--leading-descender`, which every `truncate` here must be paired with or `overflow: hidden` slices
   the descenders flat.
+- **The What's On board scrolls with pure CSS, and the scroll is self-limiting.** Show titles wrap
+  instead of truncating, so the list can outgrow the frame; `.display-marquee` translates the track
+  by `min(0px, calc(var(--display-marquee-viewport) - 100%))` — the `100%` is the track's own
+  height, so a track that fits yields a positive distance and clamps to no movement at all. That is
+  why the box takes an explicit `height` from that same variable rather than `flex-1`: the variable
+  IS the box, so the two cannot drift. `100cqh` would say this directly and needs no constant, but
+  Anthias's QtWebEngine predates container query units — the same engine that rendered the QR code
+  as a blank square. **The `17.25rem` in that variable is the panel's header, footer and padding
+  summed by hand**, which is why `_whats_on.html.erb` pins them (`h-18`, `h-9`) instead of letting
+  content size them.
+- **The marquee's pass is ONE fixed duration, so the speed varies with the distance.** That is the
+  only pacing a fixed Anthias slot can take: constant speed would make a long board need a longer
+  slot than a short one, and since the playlist holds a single number the slot would have to cover
+  the worst case, leaving every ordinary board sitting there twice as long as it needed. The
+  distance is the *overflow*, not the list — twelve short titles overflow by ~310px and twelve
+  wrapping ones by ~1030px. Don't pace it per event: that had the common case crawling at 16px/s,
+  near six seconds a row. A test asserts the slot still covers the pass, reading the duration out
+  of `display.css`.
+- **`Display::Panels::News`'s budget is in measured pixels, not guessed characters.** Every constant
+  maps to one Tailwind class in `_news.html.erb` and was measured in Chrome; `CHARS_PER_LINE = 68`
+  sits between the 76 characters a mixed-case headline fits and the 66 an all-caps one does. It was
+  55, which charged the real top headline three lines for the two it renders as and stopped the
+  slide after two items with 372px of black space under them. The list's `min-h-0 overflow-hidden`
+  is the safety net under that arithmetic: a wrong answer clips a headline instead of pushing the QR
+  code off screen.
+- **Only the display self-hosts Source Sans Pro.** `theme.css` has always *named* it in
+  `--font-sans` without anything loading it, so the rest of the site still renders in whatever
+  `system-ui` resolves to. Any layout arithmetic done against rendered text is therefore only
+  trustworthy on display pages — see `plans/off-topic-improvements.md`.
 - **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
   real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
   join; on its own it outer-joins and silently drops the guard.
 - **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
   here can say "7.30pm" without a migration.
+- **The archive slide moves on one place every time it is rendered** (`Display::Rotation`, a cached
+  cursor keyed by date). Anthias comes back to that one URL every few minutes, so picking the oldest
+  match every time showed a single frame from open to close. A cache that cannot answer falls back to
+  a random pick rather than standing still.
 
 ### Deployment
 

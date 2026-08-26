@@ -27,26 +27,42 @@ module Display
 
       private
 
+      # A date in the middle of the Fringe matches dozens of archive shows, and
+      # the screen comes back to this URL every few minutes: Display::Rotation
+      # moves on one place per render so it is a different show each time rather
+      # than the oldest one all day.
       def event
         return @event if defined?(@event)
 
-        @event = Event.on_date(@on)
-                      .where(is_public: true)
-                      .where("end_date < ?", @on - 1.year)
-                      .where("DATEDIFF(end_date, start_date) <= ?", MAX_RUN_DAYS)
-                      # fetch_image attaches a generated placeholder, so "has
-                      # artwork" has to be asked of the database, before anything
-                      # calls it. joins is what asks: eager_load on its own would
-                      # LEFT OUTER JOIN and let artwork-less events through.
-                      # Together they inner-join the attachment (the guard) and
-                      # outer-join the blob (the preload), so the partial does not
-                      # re-query for the variant.
-                      .joins(:image_attachment)
-                      .eager_load(image_attachment: :blob)
-                      # reorder, not order: Event's default_scope is end_date DESC,
-                      # so order would append and "oldest" would mean something else.
-                      .reorder(:start_date)
-                      .first
+        @event = rotate_to_next
+      end
+
+      def rotate_to_next
+        ids = candidate_ids
+        return nil if ids.empty?
+
+        index = Display::Rotation.next_index("on-this-day", size: ids.size, on: @on)
+
+        # ids first, so only the event actually going on screen is loaded.
+        Event.includes(image_attachment: :blob).find_by(id: ids[index])
+      end
+
+      def candidate_ids
+        Event.on_date(@on)
+             .where(is_public: true)
+             .where("end_date < ?", @on - 1.year)
+             .where("DATEDIFF(end_date, start_date) <= ?", MAX_RUN_DAYS)
+             # fetch_image attaches a generated placeholder, so "has artwork" has
+             # to be asked of the database, before anything calls it. This join is
+             # what asks.
+             .joins(:image_attachment)
+             # reorder, not order: Event's default_scope is end_date DESC, so
+             # order would append and "oldest" would mean something else. id
+             # breaks ties, because the rotation walks this list by position and
+             # two shows opening on the same date would otherwise be free to swap
+             # places between renders -- showing one twice and skipping the other.
+             .reorder(:start_date, :id)
+             .pluck(:id)
       end
     end
   end
