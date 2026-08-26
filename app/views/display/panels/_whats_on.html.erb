@@ -1,24 +1,36 @@
-<%# locals: (events:, on:) %>
+<%# locals: (events:, on:, scroll_seconds:) %>
 <div class="flex h-full w-full flex-col bg-neutral-950 px-16 py-12">
-  <div class="mb-10 flex items-center justify-between gap-10">
+  <%# The header and footer carry pinned heights (h-18, h-9) rather than being
+      sized by their content, because display.css subtracts them from 100vh to
+      get the marquee's height. Change one and change the sum there too. %>
+  <div class="mb-10 flex h-18 items-center justify-between gap-10">
     <h1 class="text-7xl font-bold tracking-tight text-display-accent">What's On</h1>
     <%= display_logo %>
   </div>
 
-  <%# Equal-height rows filling the frame, rather than a short block pinned to
-      the top of a 1080-tall screen with the bottom half empty -- which is what
-      five events on an eight-row board used to look like on a wall. %>
-  <ul class="flex flex-1 flex-col divide-y divide-neutral-800">
-    <% events.each do |event| %>
-      <li class="flex flex-1 items-center gap-10 py-3">
-        <span class="w-[26rem] shrink-0 text-4xl font-semibold text-neutral-300">
-          <%= display_when(event, on: on) %>
-        </span>
-        <span class="min-w-0 flex-1 truncate text-5xl font-bold leading-descender text-white"><%= event.name %></span>
-        <span class="w-64 shrink-0 truncate text-right text-3xl leading-descender text-neutral-400"><%= event.price %></span>
-      </li>
-    <% end %>
-  </ul>
+  <div class="display-marquee">
+    <%# Equal-height rows filling the frame, rather than a short block pinned to
+        the top of a 1080-tall screen with the bottom half empty -- which is what
+        five events on an eight-row board used to look like on a wall. `grow`
+        rather than `flex-1`: flex-1 sets a zero basis, so a two-line title would
+        be squeezed back onto one. %>
+    <ul class="display-marquee__track flex flex-col divide-y divide-neutral-800"
+        style="--display-marquee-duration: <%= scroll_seconds %>s">
+      <% events.each do |event| %>
+        <li class="flex grow items-center gap-10 py-4">
+          <span class="w-[26rem] shrink-0 truncate text-4xl font-semibold leading-descender text-neutral-300">
+            <%= display_when(event, on: on) %>
+          </span>
+          <%# No `truncate`: naming the show is this board's whole job, and "The
+              Rocky Horror Picture Show by Richard O'Brien" cut off mid-word tells
+              nobody what is on. It wraps instead, and the marquee scrolls
+              whatever that pushes past the bottom. %>
+          <span class="min-w-0 flex-1 text-5xl font-bold leading-tight text-white"><%= event.name %></span>
+          <span class="w-64 shrink-0 truncate text-right text-3xl leading-descender text-neutral-400"><%= event.price %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
 
-  <p class="mt-8 text-3xl text-neutral-500">bedlamtheatre.co.uk</p>
+  <p class="mt-8 flex h-9 items-center text-3xl text-neutral-500">bedlamtheatre.co.uk</p>
 </div>

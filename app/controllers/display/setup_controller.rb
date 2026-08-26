@@ -17,7 +17,11 @@ class Display::SetupController < ApplicationController
     { route: [ :display_next_event_path, 4 ], seconds: 20, note: "Fourth" },
     { route: [ :display_next_event_path, 5 ], seconds: 20, note: "Fifth (repeats an earlier one if the pool is short)" },
     { route: [ :display_next_event_path, 6 ], seconds: 20, note: "Sixth (likewise)" },
-    { route: [ :display_whats_on_path ], seconds: 18, note: "The upcoming schedule board" },
+    # Long enough for one full scroll of a full board: the What's On list scrolls
+    # its overflow past rather than truncating, and a shorter slot would cut the
+    # pass off before the bottom of the list was ever on screen.
+    { route: [ :display_whats_on_path ], seconds: Display::Panels::WhatsOn.max_scroll_seconds,
+      note: "The upcoming schedule board (scrolls when there are more events than fit)" },
     { route: [ :display_credits_path ], seconds: 18, note: "Cast and company for tonight's show when one is running, else the next one" },
     { route: [ :display_get_involved_path ], seconds: 15, note: "Open opportunities" },
     { route: [ :display_news_path ], seconds: 12, note: "Latest news headline" },
