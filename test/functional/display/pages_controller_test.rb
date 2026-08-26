@@ -354,4 +354,52 @@ class Display::PagesControllerTest < ActionController::TestCase
     Opportunity.delete_all
     News.delete_all
   end
+
+  # Naming the show is the What's On board's whole job, so its titles wrap and
+  # the overflow scrolls past. A `truncate` back on the title span would put
+  # "The Rocky Horror Picture Show by Richard O..." on a box office wall.
+  test "whats_on lets show titles wrap instead of truncating them" do
+    FactoryBot.create(:show, is_public: true, name: "The Rocky Horror Picture Show by Richard O'Brien",
+                             start_date: Date.current, end_date: Date.current + 2)
+
+    get :whats_on
+
+    assert_select ".display-marquee__track li" do
+      assert_select "span:nth-child(2)" do |titles|
+        titles.each do |title|
+          assert_not_includes title["class"].to_s.split, "truncate",
+                              "show titles must wrap, not truncate"
+        end
+      end
+    end
+  end
+
+  # The scroll is pure CSS -- the display layout loads no JavaScript -- so the
+  # markup has to carry both the clipping box and the track inside it, or the
+  # board silently stops scrolling and the tail of the list is never seen.
+  test "whats_on renders the marquee box and its track" do
+    FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 2)
+
+    get :whats_on
+
+    assert_select ".display-marquee .display-marquee__track ul, .display-marquee ul.display-marquee__track"
+  end
+
+  # The line budget in Display::Panels::News decides how many headlines to
+  # print; this is what stops a wrong answer pushing the QR code -- the only
+  # thing on the slide anybody can act on -- off the bottom of the screen.
+  test "news clips an over-long list rather than displacing the QR code" do
+    3.times do |i|
+      FactoryBot.create(:news, show_public: true, publish_date: (i + 1).days.ago,
+                               title: "Headline #{i}")
+    end
+
+    get :news
+
+    assert_select "ul" do |lists|
+      classes = lists.first["class"].to_s.split
+      assert_includes classes, "overflow-hidden"
+      assert_includes classes, "min-h-0", "without min-h-0 a flex child refuses to shrink and overflows anyway"
+    end
+  end
 end
