@@ -90,6 +90,10 @@ module Pretix
     end
 
     # The whole shop, from two list calls per pass — never one call per user.
+    # A failure on those two list calls is deliberately NOT caught: it is fatal
+    # for every customer alike, and a run that carried on would report a shop
+    # full of customers with no memberships. Per-customer write failures are
+    # caught and counted.
     def reconcile_all
       totals = blank_counts
       passes = 0
