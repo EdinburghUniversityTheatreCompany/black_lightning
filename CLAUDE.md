@@ -632,6 +632,15 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   join; on its own it outer-joins and silently drops the guard.
 - **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
   here can say "7.30pm" without a migration.
+- **The credits QR always resolves to something** — `Event#digital_programme_url` when set, the
+  event's own page otherwise. A footer that appears for one show and vanishes for the next reads
+  as a broken slide, and the caption names whichever it got.
+- **`display_credits_layout` sizes that slide in measured pixels, not row counts.** The QR is a
+  different fraction of a row at each step (under three at `text-5xl`, nearly five at `text-xl`),
+  so counting it as a fixed number of rows pushed it off the bottom for an 18-name cast. It also
+  puts the QR under the **shorter** list — usually the cast, hence bottom left — and hard-caps
+  each list's height, so a name long enough to wrap clips the list rather than the code under it.
+  Re-measure `CREDITS_*` in the browser if the header or the row spacing changes.
 
 ### Deployment
 

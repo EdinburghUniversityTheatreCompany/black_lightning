@@ -62,6 +62,18 @@ module DisplayHelper
   def display_booking_url(event)
     return pretix_event_url(event) if event.pretix_shown?
 
+    display_event_url(event)
+  end
+
+  # The programme QR always resolves to something. A footer that appears for one
+  # show and vanishes for the next reads as a broken slide from across the room,
+  # and every event has a page on the site even when nobody has made a
+  # programme -- so the fallback is that page rather than nothing.
+  def display_programme_url(event)
+    event.digital_programme_url.presence || display_event_url(event)
+  end
+
+  def display_event_url(event)
     "#{request.base_url}#{event_page_path(event)}"
   end
 
@@ -89,6 +101,67 @@ module DisplayHelper
   # every few seconds forever, so a write here would never stop.
   def display_block_text(name)
     sanitize(display_block(name, false), tags: %w[p br strong em ul ol li], attributes: [])
+  end
+
+  # Fitting the credits list to a 1080p screen. A 90-seat house still puts up big
+  # casts, so the type steps down rather than the list running off a screen
+  # nobody can scroll.
+  #
+  # Measured in the browser at 1920x1080: the page header and a column heading
+  # leave CREDITS_LIST_HEIGHT for the names; a row costs its line height plus the
+  # 8px gap under it (CREDITS_ROW_STRIDES); and the QR block is a flat 160px
+  # wherever it lands.
+  #
+  # Pixels rather than a row count, because the QR is not a whole number of rows
+  # and is a different fraction of one at each size -- under three at text-5xl,
+  # nearly five at text-xl. Counting it as a fixed four let an 18-name cast size
+  # for the names alone and pushed the QR off the bottom of the screen.
+  CREDITS_COLUMN_HEIGHT = 795
+  CREDITS_HEADING_HEIGHT = 56
+  CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
+  CREDITS_QR_HEIGHT = 160
+  CREDITS_ROW_STRIDES = {
+    "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
+    "text-xl" => 36, "text-base" => 32
+  }.freeze
+
+  # The QR goes under whichever list is SHORTER, so the room it takes is room
+  # that column had going spare and the other keeps its full height. That is
+  # nearly always the cast, which puts it bottom left.
+  def display_credits_layout(cast_count, crew_count)
+    qr_in_cast_column = cast_count <= crew_count
+    heights = CREDITS_ROW_STRIDES.transform_values do |stride|
+      [ cast_count * stride + (qr_in_cast_column ? CREDITS_QR_HEIGHT : 0),
+        crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
+    end
+
+    # The first size both columns fit at. The bottom two steps exist for the QR
+    # rather than for the names: 18 names a side is the most text-2xl holds and
+    # was already the old floor, but the same 18 plus a QR only fits at
+    # text-base. A 36-person company is small type either way, and the code is
+    # the one thing on the slide that leads to the full list, so it is what the
+    # last steps are spent on.
+    #
+    # Bigger than that is past what this screen can hold at any size: the list
+    # then loses its tail to overflow, which is what block_position anchors for.
+    name_size = heights.find { |_, height| height <= CREDITS_LIST_HEIGHT }&.first || heights.keys.last
+
+    { name_size: name_size,
+      qr_in_cast_column: qr_in_cast_column,
+      # A hard cap on each list, so it can only ever push itself off the bottom
+      # and never the QR under it. The arithmetic above assumes one line per
+      # person, which a long enough name against a character name breaks -- and
+      # the code is the one thing here that leads to the names it just cut.
+      cast_list_height: column_list_height(qr_in_cast_column),
+      crew_list_height: column_list_height(!qr_in_cast_column),
+      # Centre the columns in the space they leave -- unless the names need all
+      # of it, in which case start at the top so a long list loses its tail
+      # rather than its heading.
+      block_position: heights[name_size] > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
+  end
+
+  def column_list_height(carries_qr)
+    CREDITS_COLUMN_HEIGHT - (carries_qr ? CREDITS_QR_HEIGHT : 0)
   end
 
   # Poster titles are sized by length rather than truncated: naming the show is
