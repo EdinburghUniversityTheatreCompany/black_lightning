@@ -3,8 +3,8 @@
 module Pretix
   ##
   # Thin client over the pretix REST API, covering only what the membership sync
-  # needs. Goes through the +transport+ callable seam (see HttpTransport) so tests
-  # can substitute a plain fake — this suite has no mocking library.
+  # needs. Takes its HTTP transport and its settings as constructor seams so tests
+  # can substitute plain fakes — this suite has no mocking library.
   #
   # See docs/pretix/membership-sync.md.
   class Client
@@ -14,7 +14,7 @@ module Pretix
     # organizer.customers:read/:write.
     class AuthError < Error; end
 
-    # A write was attempted while Settings.writes_enabled? is false.
+    # A write was attempted while the injected settings' writes_enabled? is false.
     class WritesSuppressedError < Error; end
 
     AUTH_STATUSES = [ 401, 403 ].freeze
@@ -30,11 +30,17 @@ module Pretix
     # rather than fail.
     MAX_PAGES = 500
 
-    class_attribute :transport, default: HttpTransport
-
-    def initialize(organizer: Settings::ORGANIZER, token: Settings.api_token)
+    # Every argument is defaulted: the membership sync builds a bare
+    # Pretix::Client.new. +http+ is the transport seam (see HttpTransport) and
+    # +settings+ the writes gate, both injected the way GraphClient and
+    # Climate::OpenMeteoClient take theirs, so a test substitutes a plain fake
+    # per instance rather than mutating anything this parallelising suite shares.
+    def initialize(organizer: Settings::ORGANIZER, token: Settings.api_token,
+                   http: HttpTransport, settings: Settings)
       @organizer = organizer
       @token = token
+      @http = http
+      @settings = settings
     end
 
     # Every customer for the organizer, following pagination to the end.
@@ -62,6 +68,16 @@ module Pretix
 
     # Memberships for the organizer, following pagination. Both filters are
     # optional; +customer+ takes a customer *identifier*.
+    #
+    # Both filter names verified against the live organizer (Aug 2026), because
+    # a filter pretix does not recognise is silently ignored and hands back the
+    # WHOLE list — a reconcile would then read every one of the 849 memberships
+    # as belonging to the one customer it asked about. ?customer=<identifier>
+    # returned 2 of 849, all that customer's; ?membership_type=225 returned 837,
+    # all type 225; and a bogus ?customer=DOESNOTEXIST returned 0 rather than
+    # everything, which is what rules the silent-ignore case out. Matches
+    # pretix's MembershipFilter, which maps +customer+ to customer__identifier
+    # with iexact.
     # => Array<Hash> with "id", "customer", "membership_type", "date_start", "date_end".
     def memberships(customer: nil, membership_type: nil)
       filters = { customer: customer, membership_type: membership_type }.compact
@@ -108,7 +124,7 @@ module Pretix
       raise AuthError, "no pretix API token is configured" if @token.blank?
 
       uri = build_uri(path, params)
-      status, response_body = transport.call(http_method, uri, headers, body&.to_json)
+      status, response_body = @http.call(http_method, uri, headers, body&.to_json)
 
       check!(http_method, uri, status, response_body)
       parse(response_body, uri)
@@ -162,7 +178,7 @@ module Pretix
     end
 
     def refuse_write!(description)
-      return if Settings.writes_enabled?
+      return if @settings.writes_enabled?
 
       # There is one live pretix organizer and no staging copy, so a dev machine
       # holding a token must not touch real members' pricing. Raising (rather

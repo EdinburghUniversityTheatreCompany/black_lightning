@@ -3,13 +3,20 @@ require "test_helper"
 class Pretix::ClientTest < ActiveSupport::TestCase
   TOKEN = "s3cr3t-pretix-token".freeze
 
-  # The transport seam is a class_attribute, so it carries an instance writer
-  # too; setting it on the instance keeps one test from leaking a fake into
-  # every later Pretix::Client in the same parallel worker.
-  def build_client(responses, organizer: "eutc", token: TOKEN)
+  # Stands in for Pretix::Settings so the writes gate is decided per client
+  # instance. The real one reads ENV outside production, and this suite
+  # parallelises — a test that toggled ENV would be reaching for process-global
+  # state a sibling test in the same worker also reads.
+  FakeSettings = Struct.new(:writes_enabled) do
+    def writes_enabled?
+      writes_enabled
+    end
+  end
+
+  def build_client(responses, organizer: "eutc", token: TOKEN, writes: false)
     http = FakeHttp.new(responses)
-    client = Pretix::Client.new(organizer: organizer, token: token)
-    client.transport = http
+    client = Pretix::Client.new(organizer: organizer, token: token, http: http,
+                                settings: FakeSettings.new(writes))
     [ client, http ]
   end
 
@@ -26,14 +33,14 @@ class Pretix::ClientTest < ActiveSupport::TestCase
       date_start: "2026-08-26T00:00:00+01:00", date_end: "2027-09-21T23:59:59+01:00" }
   end
 
-  # Writes are gated on Settings.writes_enabled?, which reads ENV outside
-  # production. A dev shell may already export it, so both directions are forced.
-  def with_writes(enabled)
-    previous = ENV["PRETIX_ENABLE_WRITES"]
-    ENV["PRETIX_ENABLE_WRITES"] = enabled ? "1" : nil
-    yield
-  ensure
-    ENV["PRETIX_ENABLE_WRITES"] = previous
+  test "every argument is defaulted, so the sync can build a bare client" do
+    # Pretix::MembershipSync constructs Pretix::Client.new with no arguments,
+    # and the real transport must stay the default rather than a test fake.
+    client = Pretix::Client.new
+
+    assert_kind_of Pretix::Client, client
+    assert_equal HttpTransport, client.instance_variable_get(:@http)
+    assert_equal Pretix::Settings, client.instance_variable_get(:@settings)
   end
 
   test "customers requests the organizer-scoped endpoint with a Token header" do
@@ -132,13 +139,11 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "create_membership posts the payload and returns the created membership" do
-    client, http = build_client([ [ 201, membership(id: 77).to_json ] ])
+    client, http = build_client([ [ 201, membership(id: 77).to_json ] ], writes: true)
 
-    created = with_writes(true) do
-      client.create_membership(customer: "MG3KL", membership_type: 225,
-                               date_start: Time.zone.parse("2026-08-26 00:00:00"),
-                               date_end: Time.zone.parse("2027-09-21 23:59:59"))
-    end
+    created = client.create_membership(customer: "MG3KL", membership_type: 225,
+                                      date_start: Time.zone.parse("2026-08-26 00:00:00"),
+                                      date_end: Time.zone.parse("2027-09-21 23:59:59"))
 
     assert_equal 77, created["id"]
     request = http.requests.sole
@@ -154,12 +159,10 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "create_membership sends a bare Date with an offset, not a naked date" do
-    client, http = build_client([ [ 201, membership.to_json ] ])
+    client, http = build_client([ [ 201, membership.to_json ] ], writes: true)
 
-    with_writes(true) do
-      client.create_membership(customer: "MG3KL", membership_type: 225,
-                               date_start: Date.new(2026, 8, 26), date_end: Date.new(2027, 9, 21))
-    end
+    client.create_membership(customer: "MG3KL", membership_type: 225,
+                             date_start: Date.new(2026, 8, 26), date_end: Date.new(2027, 9, 21))
 
     payload = JSON.parse(http.requests.sole.body)
     assert_equal "2026-08-26T00:00:00+01:00", payload["date_start"]
@@ -167,11 +170,9 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "update_membership patches only date_end" do
-    client, http = build_client([ [ 200, membership(id: 77).to_json ] ])
+    client, http = build_client([ [ 200, membership(id: 77).to_json ] ], writes: true)
 
-    updated = with_writes(true) do
-      client.update_membership(77, date_end: Time.zone.parse("2026-08-26 12:00:00"))
-    end
+    updated = client.update_membership(77, date_end: Time.zone.parse("2026-08-26 12:00:00"))
 
     assert_equal 77, updated["id"]
     request = http.requests.sole
@@ -183,11 +184,9 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   test "create_membership is suppressed when writes are disabled" do
     client, http = build_client([])
 
-    with_writes(false) do
-      assert_raises(Pretix::Client::WritesSuppressedError) do
-        client.create_membership(customer: "MG3KL", membership_type: 225,
-                                 date_start: Time.current, date_end: 1.year.from_now)
-      end
+    assert_raises(Pretix::Client::WritesSuppressedError) do
+      client.create_membership(customer: "MG3KL", membership_type: 225,
+                               date_start: Time.current, date_end: 1.year.from_now)
     end
 
     assert_empty http.requests, "a suppressed write must not reach pretix at all"
@@ -196,10 +195,8 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   test "update_membership is suppressed when writes are disabled" do
     client, http = build_client([])
 
-    with_writes(false) do
-      assert_raises(Pretix::Client::WritesSuppressedError) do
-        client.update_membership(77, date_end: Time.current)
-      end
+    assert_raises(Pretix::Client::WritesSuppressedError) do
+      client.update_membership(77, date_end: Time.current)
     end
 
     assert_empty http.requests
@@ -208,7 +205,7 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   test "reads stay live when writes are disabled" do
     client, = build_client([ page([ customer ]) ])
 
-    with_writes(false) { assert_equal 1, client.customers.size }
+    assert_equal 1, client.customers.size
   end
 
   test "401 and 403 raise AuthError" do
