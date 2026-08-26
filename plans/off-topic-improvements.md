@@ -548,3 +548,23 @@ the sensible place). Both would be fixed by having the controller skip
 **Fix (if it earns it):** small, self-contained, and testable only at the JS level — there is no
 JS unit-test harness in this repo, and SortableJS's native HTML5 drag-and-drop is not drivable
 from Selenium, which is why the drag fix landed with a structural assertion instead.
+
+## The site declares Source Sans Pro but never loads it
+
+*Noticed 2026-08-26.* `app/javascript/styles/theme.css` sets
+`--font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif`, and nothing anywhere
+ships that font: no `@font-face`, no Google Fonts link, and until this branch no package. So
+every page on the site has been rendering in whatever `system-ui` resolves to — one font in a
+developer's browser, a different one on a visitor's phone, a third on the box office Pi. The
+declared font has never been the font anybody saw.
+
+The box office display now self-hosts it (`@fontsource/source-sans-pro`, latin subsets at 400 /
+600 / 700, imported from `app/javascript/entrypoints/display.css`), because that screen's layout
+is measured against real text metrics and needed a font it could count on. **The rest of the site
+still falls back**, so display pages and public pages now render in different typefaces.
+
+**Fix (if it earns it):** move the three `@import`s from `display.css` up into `theme.css` and
+drop them from `display.css`. That is a one-line change and the package is already a dependency —
+but it changes the typography of every page on the site at once, which wants somebody looking at
+it rather than a blind flip. Worth checking at the same time whether the weights in use across
+`application.css` go beyond 400/600/700 (italics are not currently imported).
