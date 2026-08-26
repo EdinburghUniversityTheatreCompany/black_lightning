@@ -27,10 +27,8 @@ class Display::Panels::WhatsOnTest < ActiveSupport::TestCase
     assert_equal 12, Display::Panels::WhatsOn::ROWS
   end
 
-  # A pass takes one fixed duration however long the board is, so the Anthias
-  # slot is a constant too -- but the two are written down in different files
-  # and a slot shorter than a pass would cut the scroll off before the bottom of
-  # the list was ever on screen.
+  # Both are constants, but they live in different files, and a slot shorter than
+  # a pass cuts the scroll off before the bottom of the list is ever on screen.
   test "the Anthias slot covers a full pass of the marquee" do
     slot = Display::SetupController.playlist.find { |e| e[:path] == "/display/whats-on" }
     css = Rails.root.join("app/javascript/entrypoints/display.css").read

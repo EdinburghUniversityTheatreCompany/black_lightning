@@ -355,9 +355,8 @@ class Display::PagesControllerTest < ActionController::TestCase
     News.delete_all
   end
 
-  # Naming the show is the What's On board's whole job, so its titles wrap and
-  # the overflow scrolls past. A `truncate` back on the title span would put
-  # "The Rocky Horror Picture Show by Richard O..." on a box office wall.
+  # A `truncate` back on the title span would put "The Rocky Horror Picture Show
+  # by Richard O..." on a box office wall.
   test "whats_on lets show titles wrap instead of truncating them" do
     FactoryBot.create(:show, is_public: true, name: "The Rocky Horror Picture Show by Richard O'Brien",
                              start_date: Date.current, end_date: Date.current + 2)
@@ -374,9 +373,8 @@ class Display::PagesControllerTest < ActionController::TestCase
     end
   end
 
-  # The scroll is pure CSS -- the display layout loads no JavaScript -- so the
-  # markup has to carry both the clipping box and the track inside it, or the
-  # board silently stops scrolling and the tail of the list is never seen.
+  # The scroll is pure CSS, so the markup must carry both the clipping box and the
+  # track inside it, or the board silently stops scrolling.
   test "whats_on renders the marquee box and its track" do
     FactoryBot.create(:show, is_public: true, start_date: Date.current, end_date: Date.current + 2)
 
@@ -385,9 +383,7 @@ class Display::PagesControllerTest < ActionController::TestCase
     assert_select ".display-marquee .display-marquee__track ul, .display-marquee ul.display-marquee__track"
   end
 
-  # The line budget in Display::Panels::News decides how many headlines to
-  # print; this is what stops a wrong answer pushing the QR code -- the only
-  # thing on the slide anybody can act on -- off the bottom of the screen.
+  # What stops a wrong budget pushing the QR code off the bottom of the screen.
   test "news clips an over-long list rather than displacing the QR code" do
     3.times do |i|
       FactoryBot.create(:news, show_public: true, publish_date: (i + 1).days.ago,

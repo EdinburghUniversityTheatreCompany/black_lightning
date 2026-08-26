@@ -51,11 +51,8 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     assert_operator listed.size, :>=, 1, "at least the newest headline is always shown"
   end
 
-  # The real bedlamtheatre.co.uk/news headlines, longest first. Every one of
-  # them fits, and that is the point: the budget used to charge the top headline
-  # three lines for the two it renders as and stop after two items, leaving a
-  # slide with 372px of black space under the last date. Measured in Chrome, the
-  # four of them come to 648px of the 680px the list has.
+  # The real bedlamtheatre.co.uk/news headlines: all four fit, coming to 648px of
+  # the 680px the list has. This is what a too-low CHARS_PER_LINE breaks first.
   test "the four real newsletter headlines all fit on the slide" do
     [
       "EUTC Week 14 Newsletter - GM4, Rocky Horror Murder Mystery, " \
@@ -69,8 +66,8 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
     assert_equal 4, Display::Panels::News.new.locals[:articles].size
   end
 
-  # Guards the calibration from being loosened until a headline is charged fewer
-  # lines than it renders as, which is how the QR code gets pushed off screen.
+  # The other direction: a headline charged fewer lines than it renders as is how
+  # the QR code gets pushed off screen.
   test "headline line counts match what the browser renders" do
     panel = Display::Panels::News.new
 
@@ -100,10 +97,8 @@ class Display::Panels::NewsTest < ActiveSupport::TestCase
 
     assert_equal 4, Display::Panels::News.new.locals[:articles].size
 
-    # Four items overflow once they need seven lines between them, so it takes a
-    # headline far longer than any real one -- near the column's 255 cap -- to
-    # push the fourth off. A 110-character headline no longer does, and should
-    # not: measured, it leaves room for three more.
+    # Four items only overflow once they need seven lines between them, so it
+    # takes a headline near the column's 255 cap to push the fourth off.
     ::News.delete_all
     headline("A" * 250, 1.day.ago)
     3.times { |i| headline("Short headline #{i}", (i + 2).days.ago) }

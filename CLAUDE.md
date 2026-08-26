@@ -668,10 +668,10 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   slide after two items with 372px of black space under them. The list's `min-h-0 overflow-hidden`
   is the safety net under that arithmetic: a wrong answer clips a headline instead of pushing the QR
   code off screen.
-- **Only the display self-hosts Source Sans Pro.** `theme.css` has always *named* it in
-  `--font-sans` without anything loading it, so the rest of the site still renders in whatever
-  `system-ui` resolves to. Any layout arithmetic done against rendered text is therefore only
-  trustworthy on display pages — see `plans/off-topic-improvements.md`.
+- **The font is self-hosted from `theme.css`, and it is Source Sans 3, not Source Sans Pro.**
+  Pro ships no weight 500 and `font-medium` is this codebase's most-used weight, so Pro would
+  render all of those at 400. Source Sans 3 is the same typeface renamed upstream, in a variable
+  build covering 200–900. Its metrics match Pro's, so the measured figures above still hold.
 - **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
   real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
   join; on its own it outer-joins and silently drops the guard.
