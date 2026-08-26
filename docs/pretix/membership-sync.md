@@ -120,17 +120,57 @@ truth, but it means membership counts can no longer be reported out of pretix.
 
 ## Triggers
 
-No webhooks exist, so the sync is driven from our side. The nightly reconcile is the one that
-actually guarantees correctness; the other two only make it feel immediate.
+No webhooks exist, so the sync is driven from our side.
 
-1. **On login** — Doorkeeper's `after_successful_authorization` (config/initializers/doorkeeper.rb)
-   enqueues a sync for that user. On a member's *first ever* pretix login the customer does not
-   exist yet at that moment, so the job needs a short delay and a retry; worst case they see
+**The nightly reconcile is what makes this correct. Everything else only makes it fast.** That
+split is the whole design: the reconcile reads the full picture from both systems and fixes any
+drift, so a missed trigger costs at most a day, never a wrong answer. Immediate triggers are
+therefore added only where a day is too slow to be acceptable.
+
+1. **Nightly reconcile** — the safety net, and the only thing that has to be right.
+2. **On login** — Doorkeeper's `after_successful_authorization`
+   (config/initializers/doorkeeper.rb). On a member's *first ever* pretix login the customer does
+   not exist yet at that moment, so the job needs a short delay and a retry; worst case they see
    non-member prices for about a minute, once.
-2. **On role change** — `User#activate`, the membership import apply, `Role#purge` / `#archive`,
-   and admin role edits.
-3. **Nightly reconcile** — the safety net, and the only thing that catches the September archive,
-   revocations, and anything the first two missed.
+3. **On the membership import applying** (`Admin::MembershipImportsController`) — a member who has
+   just been activated wants to buy a ticket now, not tomorrow. Bulk: one job carrying the ids,
+   not one enqueue per row.
+4. **On `Role#archive`** — losing member pricing is supposed to be immediate, and this is the one
+   removal that matters. Bulk, same shape.
+
+### Why not model callbacks
+
+rolify does support `after_add`/`after_remove`, and it is tempting to hook there and catch
+everything. It was rejected: it does not actually catch everything, and the machinery it needs is
+out of proportion to being 24 hours faster on paths the reconcile already covers.
+
+The decisive fact is that **`Role#archive` and `Role#purge` remove members with
+`users.clear`, which is `delete_all` and fires no association callbacks** — so the single most
+important removal path needs an explicit call regardless. The same is true of user destruction
+(HABTM rows go via `delete_all`) and of `User#absorb`'s email rewrites, which use `update_column`
+and bypass callbacks entirely. On top of that, callbacks would need a transaction-aware buffer
+(`absorb` genuinely rolls back), per-user coalescing (one import row can produce a create, an
+email change and a role add), a second hook on the `Role` side (writes through `role.users` do not
+fire User-side callbacks), and guards to stop `db:seed` and the factories generating live pretix
+traffic.
+
+Two related traps recorded while surveying:
+
+- **`User#activate` has no callers.** It looks like the membership entry point and is not one.
+  Hooking it would give false confidence that the import path is covered.
+- **Fixtures write `users_roles` in raw SQL**, so no callback can ever see them. Any test asserting
+  sync behaviour has to grant roles through `add_role` or the factories, not fixtures.
+
+### Email is part of the join
+
+Because customers are matched on email, an email change is a membership event too. It is left to
+the reconcile rather than hooked, but two things constrain what is sent:
+
+- `User` `normalizes :email` — among other things rewriting `s1234567@sms.ed.ac.uk` to
+  `@ed.ac.uk`. Always join on the normalised value.
+- Imported and mid-merge users carry synthetic `unknown_*@bedlamtheatre.co.uk` and
+  `temp_*@bedlamtheatre.co.uk` addresses. **These must never be sent to pretix** — they are not
+  real addresses and would accumulate as junk customers.
 
 ## Reconcile algorithm
 
