@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -553,6 +553,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
 
   create_table "oauth_access_grants", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "application_id", null: false
+    t.string "code_challenge"
+    t.string "code_challenge_method"
     t.datetime "created_at", precision: nil, null: false
     t.integer "expires_in", null: false
     t.text "redirect_uri", size: :medium, null: false
@@ -1088,6 +1090,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
     t.string "last_sign_in_ip"
     t.json "not_duplicate_user_ids"
     t.string "phone_number"
+    t.string "pretix_customer_identifier", limit: 190
     t.datetime "profile_completed_at"
     t.string "profile_completion_salt"
     t.boolean "public_profile", default: true
@@ -1104,6 +1107,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
     t.index ["calendar_token"], name: "index_users_on_calendar_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["last_name"], name: "index_users_on_last_name"
+    t.index ["pretix_customer_identifier"], name: "index_users_on_pretix_customer_identifier", unique: true
     t.index ["profile_completed_at"], name: "index_users_on_profile_completed_at"
     t.index ["reimbursements_person_id"], name: "index_users_on_reimbursements_person_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true

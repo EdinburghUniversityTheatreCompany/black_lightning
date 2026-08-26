@@ -24,6 +24,13 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
       @customers.deep_dup
     end
 
+    def customer(identifier)
+      record(:customer, identifier)
+      return nil if identifier.blank?
+
+      @customers.find { |c| c["identifier"] == identifier }&.deep_dup
+    end
+
     def customer_by_email(email)
       record(:customer_by_email, email)
       @customers.find { |customer| customer["email"].to_s.casecmp?(email.to_s) }&.deep_dup
@@ -284,6 +291,96 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
     assert_equal 1, counts[:no_identifier]
     assert_empty client.writes
+  end
+
+  # --- the stored customer link ----------------------------------------------
+  #
+  # pretix keys an SSO account on a hash of the email claim, and refuses to let
+  # either identifier field be rewritten afterwards, so matching by email is the
+  # only way in. The link records what that match found, and everything below is
+  # about surviving the email changing later.
+
+  test "the link is recorded the first time a customer is matched by email" do
+    client = FakeClient.new(customers: [ customer_hash(member.email) ])
+
+    Pretix::MembershipSync.new(client: client).sync_user(member)
+
+    assert_equal "cust-#{member.email}", member.reload.pretix_customer_identifier
+  end
+
+  test "a member who changed their email is still found, through the stored link" do
+    member.update_column(:pretix_customer_identifier, "cust-old")
+    # The customer still carries the address they first signed in with; the user
+    # no longer does. Matching by email would find nobody.
+    client = FakeClient.new(customers: [ customer_hash("old@example.com", identifier: "cust-old") ])
+
+    assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
+    assert_equal [ :customer ], client.reads.map(&:first).grep(/customer/), "email lookup must not be needed"
+  end
+
+  test "a stale link falls back to email rather than giving up" do
+    member.update_column(:pretix_customer_identifier, "cust-deleted")
+    client = FakeClient.new(customers: [ customer_hash(member.email) ])
+
+    assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
+  end
+
+  test "a link that still resolves is left alone, even beside a second account" do
+    # Someone holding two pretix accounts — an @sms.ed.ac.uk one and its
+    # rewritten @ed.ac.uk twin. Both resolve to this user, so whichever the loop
+    # reaches second would re-point the link if nothing stopped it.
+    #
+    # Both accounts are given a membership that already needs no change, so the
+    # run SETTLES IN ONE PASS. That matters: with two passes the re-pointing
+    # happens and is then undone by the next pass, leaving the stored value
+    # looking untouched and hiding the churn completely.
+    member.update_column(:pretix_customer_identifier, "cust-linked")
+    client = FakeClient.new(
+      customers: [
+        customer_hash(member.email, identifier: "cust-linked"),
+        customer_hash(member.email, identifier: "cust-twin")
+      ],
+      memberships: [
+        membership_hash(id: 1, customer: "cust-linked", date_start: "2025-09-01T00:00:00+01:00", date_end: HORIZON),
+        membership_hash(id: 2, customer: "cust-twin", date_start: "2025-09-01T00:00:00+01:00", date_end: HORIZON)
+      ]
+    )
+
+    counts = Pretix::MembershipSync.new(client: client).reconcile_all
+
+    assert_equal 1, counts[:passes], "the scenario must settle in one pass or the churn is invisible"
+    assert_equal "cust-linked", member.reload.pretix_customer_identifier
+  end
+
+  test "a stale link is re-pointed at the customer found by email" do
+    # Otherwise this person pays a doomed lookup before the email one, forever.
+    member.update_column(:pretix_customer_identifier, "cust-gone")
+    client = FakeClient.new(customers: [ customer_hash(member.email) ])
+
+    Pretix::MembershipSync.new(client: client).sync_user(member)
+
+    assert_equal "cust-#{member.email}", member.reload.pretix_customer_identifier
+  end
+
+  test "a customer already claimed by another user does not steal the link" do
+    other = FactoryBot.create(:user, email: "other@example.com")
+    other.update_column(:pretix_customer_identifier, "cust-#{member.email}")
+    client = FakeClient.new(customers: [ customer_hash(member.email) ])
+
+    Pretix::MembershipSync.new(client: client).sync_user(member)
+
+    assert_nil member.reload.pretix_customer_identifier
+    assert_equal "cust-#{member.email}", other.reload.pretix_customer_identifier
+  end
+
+  test "the reconcile matches on the stored link before the email" do
+    member.update_column(:pretix_customer_identifier, "cust-old")
+    client = FakeClient.new(customers: [ customer_hash("old@example.com", identifier: "cust-old") ])
+
+    counts = Pretix::MembershipSync.new(client: client).reconcile_all
+
+    assert_equal 1, counts[:created], "the member must be recognised despite the email not matching"
+    assert_equal 0, counts[:no_user]
   end
 
   # --- reconcile_all ---------------------------------------------------------

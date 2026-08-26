@@ -17,6 +17,10 @@ module Pretix
     # A write was attempted while the injected settings' writes_enabled? is false.
     class WritesSuppressedError < Error; end
 
+    # pretix does not know that URL. Its own subclass because a stale stored
+    # customer link is a fact about our data, not a failure worth aborting over.
+    class NotFoundError < Error; end
+
     AUTH_STATUSES = [ 401, 403 ].freeze
 
     # How much of a failure body reaches the exception message. Long enough for
@@ -45,6 +49,7 @@ module Pretix
     MIN_REQUEST_INTERVAL = 60.0 / MAX_REQUESTS_PER_MINUTE
 
     THROTTLED_STATUS = 429
+    NOT_FOUND_STATUS = 404
 
     # Retried rather than raised, because the reconcile has no resume point: a
     # run that died halfway would leave the shop half-synced with no record of
@@ -75,6 +80,18 @@ module Pretix
     # => Array<Hash> with at least "identifier", "email", "external_identifier".
     def customers
       paginated("customers/")
+    end
+
+    # One customer by its pretix identifier, which is the shop's own primary key
+    # for the account and the thing User#pretix_customer_identifier stores.
+    # Unlike the email filter this cannot go stale when someone changes address.
+    # => Hash, or nil if pretix no longer knows that identifier.
+    def customer(identifier)
+      return nil if identifier.blank?
+
+      request(:get, "customers/#{identifier}/")
+    rescue NotFoundError
+      nil
     end
 
     # pretix's only customer filter is an exact-ish email match (iexact).
@@ -207,8 +224,9 @@ module Pretix
       end
       return if (200..299).cover?(status)
 
-      raise Error, "pretix #{http_method.to_s.upcase} #{uri.path} failed (HTTP #{status}): " \
-                   "#{response_body.to_s.truncate(BODY_EXCERPT)}"
+      error_class = status == NOT_FOUND_STATUS ? NotFoundError : Error
+      raise error_class, "pretix #{http_method.to_s.upcase} #{uri.path} failed (HTTP #{status}): " \
+                         "#{response_body.to_s.truncate(BODY_EXCERPT)}"
     end
 
     def parse(response_body, uri)
