@@ -70,14 +70,20 @@ module Pretix
 
     # => Hash of the created membership.
     def create_membership(customer:, membership_type:, date_start:, date_end:)
-      raise NotImplementedError
+      refuse_write!("create a #{membership_type} membership for #{customer}")
+
+      request(:post, "memberships/",
+              body: { customer: customer, membership_type: membership_type,
+                      date_start: timestamp(date_start), date_end: timestamp(date_end) })
     end
 
     # pretix refuses DELETE on a membership ("Memberships cannot be deleted. You
     # can change the date instead."), so revoking is a date change like any other.
     # => Hash of the updated membership.
     def update_membership(id, date_end:)
-      raise NotImplementedError
+      refuse_write!("move membership #{id}'s date_end")
+
+      request(:patch, "memberships/#{id}/", body: { date_end: timestamp(date_end) })
     end
 
     private
@@ -146,6 +152,24 @@ module Pretix
 
     def headers
       { "Authorization" => "Token #{@token}", "Content-Type" => "application/json" }
+    end
+
+    # pretix compares a membership window against a show's date_from, so a bare
+    # date would be read at UTC midnight and shift the boundary an hour through
+    # BST. Always send the offset, and resolve it in the app's zone.
+    def timestamp(value)
+      value.in_time_zone.iso8601
+    end
+
+    def refuse_write!(description)
+      return if Settings.writes_enabled?
+
+      # There is one live pretix organizer and no staging copy, so a dev machine
+      # holding a token must not touch real members' pricing. Raising (rather
+      # than returning a plausible hash) keeps a suppressed write from being
+      # recorded as done.
+      raise WritesSuppressedError,
+            "pretix writes are disabled here (set PRETIX_ENABLE_WRITES): #{description}"
     end
   end
 end

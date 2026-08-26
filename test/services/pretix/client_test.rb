@@ -26,6 +26,16 @@ class Pretix::ClientTest < ActiveSupport::TestCase
       date_start: "2026-08-26T00:00:00+01:00", date_end: "2027-09-21T23:59:59+01:00" }
   end
 
+  # Writes are gated on Settings.writes_enabled?, which reads ENV outside
+  # production. A dev shell may already export it, so both directions are forced.
+  def with_writes(enabled)
+    previous = ENV["PRETIX_ENABLE_WRITES"]
+    ENV["PRETIX_ENABLE_WRITES"] = enabled ? "1" : nil
+    yield
+  ensure
+    ENV["PRETIX_ENABLE_WRITES"] = previous
+  end
+
   test "customers requests the organizer-scoped endpoint with a Token header" do
     client, http = build_client([ page([ customer ]) ])
 
@@ -119,6 +129,86 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     ])
 
     assert_equal [ 1, 2 ], client.memberships.map { |m| m["id"] }
+  end
+
+  test "create_membership posts the payload and returns the created membership" do
+    client, http = build_client([ [ 201, membership(id: 77).to_json ] ])
+
+    created = with_writes(true) do
+      client.create_membership(customer: "MG3KL", membership_type: 225,
+                               date_start: Time.zone.parse("2026-08-26 00:00:00"),
+                               date_end: Time.zone.parse("2027-09-21 23:59:59"))
+    end
+
+    assert_equal 77, created["id"]
+    request = http.requests.sole
+    assert_equal :post, request.method
+    assert_equal "https://pretix.eu/api/v1/organizers/eutc/memberships/", request.uri
+    assert_equal "application/json", request.headers["Content-Type"]
+
+    payload = JSON.parse(request.body)
+    assert_equal "MG3KL", payload["customer"]
+    assert_equal 225, payload["membership_type"]
+    assert_equal "2026-08-26T00:00:00+01:00", payload["date_start"]
+    assert_equal "2027-09-21T23:59:59+01:00", payload["date_end"]
+  end
+
+  test "create_membership sends a bare Date with an offset, not a naked date" do
+    client, http = build_client([ [ 201, membership.to_json ] ])
+
+    with_writes(true) do
+      client.create_membership(customer: "MG3KL", membership_type: 225,
+                               date_start: Date.new(2026, 8, 26), date_end: Date.new(2027, 9, 21))
+    end
+
+    payload = JSON.parse(http.requests.sole.body)
+    assert_equal "2026-08-26T00:00:00+01:00", payload["date_start"]
+    assert_equal "2027-09-21T00:00:00+01:00", payload["date_end"]
+  end
+
+  test "update_membership patches only date_end" do
+    client, http = build_client([ [ 200, membership(id: 77).to_json ] ])
+
+    updated = with_writes(true) do
+      client.update_membership(77, date_end: Time.zone.parse("2026-08-26 12:00:00"))
+    end
+
+    assert_equal 77, updated["id"]
+    request = http.requests.sole
+    assert_equal :patch, request.method
+    assert_equal "https://pretix.eu/api/v1/organizers/eutc/memberships/77/", request.uri
+    assert_equal({ "date_end" => "2026-08-26T12:00:00+01:00" }, JSON.parse(request.body))
+  end
+
+  test "create_membership is suppressed when writes are disabled" do
+    client, http = build_client([])
+
+    with_writes(false) do
+      assert_raises(Pretix::Client::WritesSuppressedError) do
+        client.create_membership(customer: "MG3KL", membership_type: 225,
+                                 date_start: Time.current, date_end: 1.year.from_now)
+      end
+    end
+
+    assert_empty http.requests, "a suppressed write must not reach pretix at all"
+  end
+
+  test "update_membership is suppressed when writes are disabled" do
+    client, http = build_client([])
+
+    with_writes(false) do
+      assert_raises(Pretix::Client::WritesSuppressedError) do
+        client.update_membership(77, date_end: Time.current)
+      end
+    end
+
+    assert_empty http.requests
+  end
+
+  test "reads stay live when writes are disabled" do
+    client, = build_client([ page([ customer ]) ])
+
+    with_writes(false) { assert_equal 1, client.customers.size }
   end
 
   test "401 and 403 raise AuthError" do
