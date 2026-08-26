@@ -425,11 +425,7 @@ Doorkeeper.configure do
   # does not exist when this fires. Immediacy only; the nightly reconcile is
   # what actually keeps the two in step.
   after_successful_authorization do |controller, _context|
-    user = controller.send(:current_user)
-    if user.present? && Pretix::Settings.configured?
-      Pretix::SyncMembershipJob.set(wait: Pretix::SyncMembershipJob::FIRST_LOGIN_DELAY)
-                               .perform_later(user.id)
-    end
+    Pretix::LoginSync.call(controller)
   end
 
   # after_successful_authorization do |controller, context|

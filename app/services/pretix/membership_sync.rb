@@ -35,9 +35,10 @@ module Pretix
     # an already-correct shop writes nothing.
     REFRESH_WINDOW = 18.months
 
-    # pretix orders memberships by -date_end, so patching one shifts every later
-    # page and a fetch-then-write pass can skip records. Re-fetch and repeat
-    # until a pass finds nothing to do; the cap stops a bug from looping forever.
+    # Memberships are read per customer precisely so a pass cannot miss rows
+    # (see reconcile_customer), but the CUSTOMER list is paged and pretix pages
+    # it without a unique tiebreaker too. Re-fetch and repeat until a pass finds
+    # nothing to do; the cap stops a bug from looping forever.
     MAX_PASSES = 5
 
     OUTCOMES = %i[
@@ -89,11 +90,13 @@ module Pretix
       end.outcome
     end
 
-    # The whole shop, from two list calls per pass — never one call per user.
-    # A failure on those two list calls is deliberately NOT caught: it is fatal
-    # for every customer alike, and a run that carried on would report a shop
-    # full of customers with no memberships. Per-customer write failures are
-    # caught and counted.
+    # The whole shop. One customer list per pass, then one membership read per
+    # customer that resolves to a User — see reconcile_customer for why the
+    # memberships cannot come from a single list call.
+    #
+    # A failure on the customer list is deliberately NOT caught: it is fatal for
+    # every customer alike, and a run that carried on would report a shop full of
+    # customers with no memberships. Per-customer failures are caught and counted.
     def reconcile_all
       totals = blank_counts
       passes = 0
@@ -109,11 +112,23 @@ module Pretix
     end
 
     class << self
-      # pretix keys an SSO account on the email claim, held in
-      # external_identifier. Never fall back to the customer's own email field:
-      # the reconcile matches on external_identifier, and a path that matched on
-      # anything else would grant memberships the reconcile could not maintain.
-      def external_email(customer) = normalize(customer["external_identifier"])
+      # The address this customer is matched to a User by.
+      #
+      # An SSO account is keyed on the email claim, held in external_identifier,
+      # and that is preferred wherever it exists. A NATIVE account (someone who
+      # signed up in the shop with a password) has no external_identifier at all,
+      # and for those the account's own email is the only handle there is — and a
+      # perfectly good one, since the reconcile will look them up the same way
+      # next time. Members should not have to have used SSO to be recognised.
+      #
+      # The preference matters where both exist for one address: the SSO account
+      # is the one the website drives, so it wins.
+      def external_email(customer)
+        normalize(customer["external_identifier"]).presence || normalize(customer["email"])
+      end
+
+      # True for a customer pretix created from an SSO login.
+      def sso?(customer) = normalize(customer["external_identifier"]).present?
 
       # THE entitlement rule, for both paths. Reads the loaded roles rather than
       # querying, so the reconcile can preload them for every customer at once
@@ -239,11 +254,10 @@ module Pretix
     def reconcile_pass
       counts = blank_counts
       customers = @client.customers
-      memberships = fetch_memberships.group_by { |membership| membership["customer"] }
       users = users_by_email(customers)
 
       customers.each do |customer|
-        result = reconcile_customer(customer, users, memberships)
+        result = reconcile_customer(customer, users)
         counts[result.outcome] += 1
         counts[:duplicates_expired] += result.duplicates_expired
       end
@@ -251,7 +265,7 @@ module Pretix
       counts
     end
 
-    def reconcile_customer(customer, users, memberships)
+    def reconcile_customer(customer, users)
       email = external_email(customer)
       return skipped(:no_identifier) if email.blank?
 
@@ -262,9 +276,19 @@ module Pretix
       user = users[email]
       return skipped(:no_user) if user.nil?
 
-      apply(plan_for(entitled: entitled?(user),
-                     memberships: memberships.fetch(customer["identifier"], [])),
-            customer: customer["identifier"])
+      # Fetched per customer, NOT sliced out of one list of every membership.
+      # pretix orders memberships by -date_end, -date_start, membership_type with
+      # no unique tiebreaker and offers no ordering parameter, so paging the full
+      # list under LIMIT/OFFSET silently repeats some rows and drops others —
+      # measured against the live shop as 838 rows containing only 626 distinct
+      # ids, with three of one customer's ten memberships missing, including
+      # their live one. A member whose only membership went missing would look
+      # like a member with none, so the reconcile would mint another every single
+      # night. This costs one request per customer and is the only way to be sure
+      # we have all of somebody's rows.
+      identifier = customer["identifier"]
+      apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
+            customer: identifier)
     end
 
     def skipped(outcome) = Result.new(outcome: outcome, duplicates_expired: 0)

@@ -213,11 +213,23 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_empty client.writes
   end
 
-  test "a customer that is not the member's SSO identity is left alone" do
-    # A native pretix account: same email, no external_identifier.
+  # A native pretix account — someone who signed up in the shop with a password
+  # rather than through SSO — has no external_identifier, and its own email is
+  # then the only handle there is. Matching on it is safe because BOTH paths
+  # resolve a customer the same way, so the reconcile can find this account again.
+  # Members should not have to have used SSO to be recognised.
+  test "a native account with no SSO identity is matched on its own email" do
     client = FakeClient.new(customers: [ customer_hash(member.email, external_identifier: nil) ])
 
-    assert_equal :no_identifier, Pretix::MembershipSync.new(client: client).sync_user(member)
+    assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
+  end
+
+  test "a customer with neither an SSO identity nor an email is left alone" do
+    # pretix's anonymize action clears both; 189 such records exist in the shop.
+    anonymized = customer_hash(member.email, external_identifier: nil).merge("email" => nil)
+    client = FakeClient.new(customers: [ anonymized ])
+
+    assert_equal :no_customer, Pretix::MembershipSync.new(client: client).sync_user(member)
     assert_empty client.writes
   end
 
@@ -260,9 +272,10 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_empty client.writes
   end
 
-  test "a customer with no external identifier is never expired" do
+  test "an anonymized customer, with no identity of any kind, is never expired" do
+    anonymized = customer_hash(non_member.email, external_identifier: nil).merge("email" => nil)
     client = FakeClient.new(
-      customers: [ customer_hash(non_member.email, external_identifier: nil) ],
+      customers: [ anonymized ],
       memberships: [ membership_hash(id: 6, customer: "cust-#{non_member.email}",
                                      date_start: "2025-09-01T00:00:00+01:00", date_end: HORIZON) ]
     )
@@ -275,7 +288,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
   # --- reconcile_all ---------------------------------------------------------
 
-  test "reconciles the whole shop from two list calls per pass" do
+  test "reads memberships per customer, never from one list of the whole shop" do
     client = FakeClient.new(
       customers: [ customer_hash(member.email), customer_hash(non_member.email), customer_hash("ghost@example.com") ],
       memberships: [ membership_hash(id: 1, customer: "cust-#{non_member.email}",
@@ -288,8 +301,16 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 1, counts[:expired]
     assert_equal 1, counts[:no_user]
     assert_equal 2, counts[:passes]
-    # Two passes' worth of the two list calls, and NOT one lookup per user.
-    assert_equal [ :customers, :memberships ] * 2, client.reads.map(&:first)
+
+    # One customer list per pass, then one membership read per customer that
+    # RESOLVES TO A USER — the ghost costs no membership call. Slicing a single
+    # whole-shop membership list would be cheaper and is exactly what this test
+    # forbids: pretix pages that list with no unique tiebreaker and silently
+    # drops rows, which made a member with a membership look like one with none.
+    reads = client.reads.map(&:first)
+    assert_equal 2, reads.count(:customers), "one customer list per pass"
+    assert_equal 4, reads.count(:memberships), "two resolvable customers, two passes"
+    assert_equal :customers, reads.first
   end
 
   test "a shop that is already correct is one pass and no writes" do

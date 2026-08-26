@@ -115,8 +115,14 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     assert_equal :created, sync(http).sync_user(student)
   end
 
-  test "a native pretix account carrying no SSO identity is left alone" do
-    http = FakeHttp.new([ page([ customer_row.merge("external_identifier" => nil) ]) ])
+  test "an anonymized customer, with no identity of any kind, is left alone" do
+    # pretix's anonymize action clears email and external_identifier both; 189
+    # such records exist in the live shop, all inactive and unverified.
+    # The fake hands the record back regardless of the query, so this exercises
+    # the guard rather than the lookup: a record with no identity of any kind
+    # cannot be confirmed as this person's, so it is left alone.
+    blank = customer_row.merge("external_identifier" => nil, "email" => nil)
+    http = FakeHttp.new([ page([ blank ]) ])
 
     assert_equal :no_identifier, sync(http).sync_user(@user)
     assert_equal 1, http.requests.size, "it must not go on to read or write memberships"

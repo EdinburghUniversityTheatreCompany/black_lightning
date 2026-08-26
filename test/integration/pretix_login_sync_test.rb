@@ -12,7 +12,8 @@ require "application_integration_test"
 class PretixLoginSyncTest < ApplicationIntegrationTest
   setup do
     @user = FactoryBot.create(:user)
-    @application = FactoryBot.create(:doorkeeper_application)
+    @application = FactoryBot.create(:doorkeeper_application,
+                                    redirect_uri: "https://#{Pretix::Settings::SHOP_HOST}/eutc/account/login/return")
     @token = ENV["PRETIX_API_TOKEN"]
     ENV["PRETIX_API_TOKEN"] = "test-token"
   end
@@ -40,6 +41,17 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
     assert_operator Time.zone.parse(scheduled_at.to_s), :>, Time.current
   end
 
+  test "signing in to a DIFFERENT oauth client enqueues nothing" do
+    # after_successful_authorization fires for every client the society runs, and
+    # a sync for someone signing in elsewhere is two pointless pretix API reads.
+    other = FactoryBot.create(:doorkeeper_application, redirect_uri: "https://example.com/callback")
+    login_as @user
+
+    assert_no_enqueued_jobs only: Pretix::SyncMembershipJob do
+      authorize!(other)
+    end
+  end
+
   test "nothing is enqueued when pretix is not configured" do
     ENV["PRETIX_API_TOKEN"] = nil
     login_as @user
@@ -51,10 +63,10 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
 
   private
 
-  def authorize!
+  def authorize!(application = @application)
     get "/oauth/authorize", params: {
-      client_id: @application.uid,
-      redirect_uri: @application.redirect_uri,
+      client_id: application.uid,
+      redirect_uri: application.redirect_uri,
       response_type: "code",
       scope: "openid profile email"
     }
@@ -64,8 +76,8 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
     return unless response.status == 200
 
     post "/oauth/authorize", params: {
-      client_id: @application.uid,
-      redirect_uri: @application.redirect_uri,
+      client_id: application.uid,
+      redirect_uri: application.redirect_uri,
       response_type: "code",
       scope: "openid profile email"
     }

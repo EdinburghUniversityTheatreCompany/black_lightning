@@ -11,6 +11,11 @@ module Pretix
 
     ORGANIZER = "eutc"
 
+    # The shop's own domain, which is also where pretix sends people back after
+    # SSO. Taken from PretixHelper so the widget and the sync cannot disagree
+    # about which host is the shop.
+    SHOP_HOST = URI(PretixHelper::SHOP_URL).host.freeze
+
     # "EUTC Member". max_usages is null (unlimited uses) and allow_parallel_usage
     # is false, so one membership buys any number of member tickets but only one
     # seat per performance.
