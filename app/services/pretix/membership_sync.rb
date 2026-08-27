@@ -5,23 +5,18 @@ module Pretix
   # Drives each pretix customer's ONE membership from the website's +member+ /
   # +life member+ roles. See docs/pretix/membership-sync.md.
   #
-  # Everything a person's membership should be is decided by the single pure
-  # function +plan_for+, and every write is made by the single +apply+. The
-  # per-user sync (login, role change) and the nightly reconcile differ ONLY in
-  # how they gather the facts — entitlement and the existing membership rows —
-  # so the two can never drift into disagreeing about what a person should have.
-  # (Same convention as Reimbursements::Exports, where one #row feeds both the
-  # CSV and the workbook.)
+  # +user_for+ is THE resolution, +plan_for+ THE decision, +apply+ THE write.
+  # The per-user sync and the nightly reconcile differ only in how they gather
+  # facts, so they cannot drift apart — as one #row feeds both outputs in
+  # Reimbursements::Exports.
   #
   #   sync_user(user)  => Symbol, one of OUTCOMES
   #   reconcile_all    => Hash of counts, one key per outcome
   #
-  # SAFETY BIAS: getting "not entitled" wrong revokes a real person's member
-  # pricing, while getting it wrong the other way costs a discounted seat. So
-  # every ambiguity here resolves towards leaving a membership alone: a customer
-  # we cannot match to a User, one carrying no SSO identity, and a membership
-  # whose dates will not parse all produce NO write at all. Only a customer that
-  # resolves to a User who demonstrably lacks the role is ever expired.
+  # SAFETY BIAS: a wrong "not entitled" revokes a real person's pricing; a wrong
+  # "entitled" costs one discounted seat. So every ambiguity writes nothing — an
+  # unmatched customer, one with no identity, an unparseable date. Only a
+  # customer resolving to a User who demonstrably lacks the role is expired.
   class MembershipSync
     include ErrorReporting
 
@@ -31,8 +26,9 @@ module Pretix
     # Slack past the end of the academic year, for the manual September rollover.
     GRACE = 3.weeks
 
-    # Only refresh date_end once it is nearer than this, so a nightly run over
-    # an already-correct shop writes nothing.
+    # Refresh date_end only once it is nearer than this AND differs from the
+    # target. The window alone would re-write the same date nightly from about
+    # March, when the horizon falls permanently inside it.
     REFRESH_WINDOW = 18.months
 
     # Memberships are read per customer precisely so a pass cannot miss rows
@@ -79,18 +75,15 @@ module Pretix
         linked = @client.customer(user.pretix_customer_identifier)
         customer = linked.presence || @client.customer_by_email(user.email)
         next skipped(:no_customer) if customer.blank?
-        # Only enforced when we found them by email. A customer reached through
-        # the stored link IS this person by construction — that is the whole
-        # point of storing it — and demanding the emails still agree would undo
-        # the link the moment someone changed address, which is the case it
-        # exists for.
+        # Only for an email match. A linked customer is this person by
+        # construction, and requiring the emails still agree would undo the link
+        # on the address change it exists to survive.
         if linked.blank? && external_email(customer) != normalize(user.email)
           next skipped(:no_identifier)
         end
 
         identifier = customer["identifier"]
-        # Reached by email, so the stored link was either absent or no longer
-        # resolves. Either way this is the customer to point at from now on.
+        # Reached by email, so the link was absent or stale either way.
         remember_link(user, identifier) if linked.blank?
         apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
               customer: identifier)

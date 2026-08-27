@@ -28,42 +28,32 @@ module Pretix
     # enough that a stray HTML error page doesn't fill the log.
     BODY_EXCERPT = 300
 
-    # pretix pages at 50 results, so ~875 customers is 18 pages. The cap only
-    # exists because these calls run unattended from the nightly reconcile: a
-    # "next" that ever pointed at its own page would otherwise spin forever
-    # rather than fail.
+    # pretix pages at 50, so ~875 customers is 18 pages. The cap exists because
+    # these run unattended: a self-referential "next" would spin forever.
     MAX_PAGES = 500
 
-    # pretix Hosted allows 360 requests per minute per organizer, and answers a
-    # 429 with a Retry-After header. Their docs are explicit that a client which
-    # keeps bursting after a 429 may have its API access disabled, so this is a
-    # requirement rather than a nicety.
-    #
-    # Paced a little under the limit to leave headroom for anything else using
-    # the same organizer token. The reconcile makes roughly one request per
-    # customer, so ~660 requests take a couple of minutes rather than arriving
-    # in a burst. This only surfaced in production: from a developer machine the
-    # round trip to pretix.eu is slow enough to stay under the limit by accident,
-    # while from the app container it is not.
+    # pretix Hosted allows 360/minute per organizer and may disable API access
+    # for a client that keeps bursting after a 429, so pacing is a requirement.
+    # Set under the limit to leave headroom for anything else on the token.
+    # Invisible locally: the round trip from a developer machine is slow enough
+    # to stay under it by accident, from the app container it is not.
     MAX_REQUESTS_PER_MINUTE = 300
     MIN_REQUEST_INTERVAL = 60.0 / MAX_REQUESTS_PER_MINUTE
 
     THROTTLED_STATUS = 429
     NOT_FOUND_STATUS = 404
 
-    # Retried rather than raised, because the reconcile has no resume point: a
-    # run that died halfway would leave the shop half-synced with no record of
-    # where it stopped.
+    # Retried rather than raised: the reconcile has no resume point, so a run
+    # dying halfway leaves the shop half-synced with no record of where.
     MAX_THROTTLE_RETRIES = 5
 
     # Used when a 429 arrives without a parseable Retry-After.
     DEFAULT_RETRY_AFTER = 30
 
-    # Every argument is defaulted: the membership sync builds a bare
-    # Pretix::Client.new. +http+ is the transport seam (see HttpTransport) and
-    # +settings+ the writes gate, both injected the way GraphClient and
-    # Climate::OpenMeteoClient take theirs, so a test substitutes a plain fake
-    # per instance rather than mutating anything this parallelising suite shares.
+    # All defaulted: the sync builds a bare Pretix::Client.new. +http+ and
+    # +settings+ are injected as GraphClient and Climate::OpenMeteoClient take
+    # theirs, so a test fakes them per instance rather than mutating anything
+    # this parallelising suite shares.
     # +sleeper+ is a seam so tests exercise the pacing and the throttle retry
     # without actually waiting.
     def initialize(organizer: Settings::ORGANIZER, token: Settings.api_token,
@@ -82,9 +72,9 @@ module Pretix
       paginated("customers/")
     end
 
-    # One customer by its pretix identifier, which is the shop's own primary key
-    # for the account and the thing User#pretix_customer_identifier stores.
-    # Unlike the email filter this cannot go stale when someone changes address.
+    # One customer by pretix's own key for the account, which is what
+    # User#pretix_customer_identifier stores. Unlike the email filter it cannot
+    # go stale when someone changes address.
     # => Hash, or nil if pretix no longer knows that identifier.
     def customer(identifier)
       return nil if identifier.blank?
@@ -182,8 +172,7 @@ module Pretix
       parse(response_body, uri)
     end
 
-    # Keeps successive requests at least MIN_REQUEST_INTERVAL apart. Measured
-    # from the END of the previous request, so a slow response — which has
+    # Measured from the END of the previous request, so a slow response — which
     # already spent the interval on the wire — is not made to wait again.
     def send_paced(http_method, uri, body)
       wait = pacing_delay

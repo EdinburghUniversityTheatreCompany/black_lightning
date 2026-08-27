@@ -9,24 +9,18 @@ namespace :pretix do
       abort "PRETIX_API_TOKEN is not set (or pretix: credentials are missing)."
     end
 
-    # Entitlement normally comes from this database. USERS_FILE lets it come
-    # from a TSV of "email<TAB>true|false" dumped elsewhere, so the preview can
-    # be run against PRODUCTION's members from a machine that only has the
-    # pretix token — no deploy needed to see what the first run would do.
-    # Deliberately only the fact-gathering differs: the decision below is the
-    # same Pretix::MembershipSync.plan_for the real reconcile calls, so a
-    # preview cannot disagree with the run it is predicting.
+    # USERS_FILE takes entitlement from a TSV of "email<TAB>true|false" dumped
+    # elsewhere, so the preview can be run against PRODUCTION's members from a
+    # machine holding only the pretix token, with no deploy.
     lookup = ENV["USERS_FILE"] ? FileLookup.new(ENV["USERS_FILE"]) : DatabaseLookup.new
 
     client = Pretix::Client.new
     customers = client.customers
     lookup.prepare(customers)
 
-    # OUTPUT_CSV writes the full post-run roster: one row per customer, saying
-    # whether they will hold a live type-225 membership once the reconcile has
-    # run. pretix has no organizer-wide membership list in its control panel —
-    # memberships are only visible one customer at a time — so this file is the
-    # only way to see who ends up entitled.
+    # OUTPUT_CSV writes the post-run roster. pretix's control panel shows
+    # memberships one customer at a time and has no list view, so this file is
+    # the only way to see who ends up entitled.
     roster = ENV["OUTPUT_CSV"] ? [] : nil
 
     now = Time.zone.now
@@ -37,25 +31,20 @@ namespace :pretix do
     extensions = []
 
     customers.each do |customer|
-      # Resolve BEFORE looking at the email, in that order, because that is the
-      # order the reconcile uses: a customer reached by its stored link is
-      # recognised even when its email tells us nothing.
+      # Resolve before reading the email, the order reconcile_customer uses: a
+      # customer reached by its stored link is recognised even with no email.
       status = lookup.status_for(customer)
       email = Pretix::MembershipSync.external_email(customer)
 
       if status.nil?
-        # No User at all. The reconcile writes nothing either way — this is the
-        # safety bias, and it is why the preview must distinguish "unknown" from
-        # "not a member" rather than collapsing the two into "expire".
+        # "Unknown" must stay distinct from "not a member": the first writes
+        # nothing, the second revokes.
         counts[email.blank? ? :no_identifier : :no_user] += 1
         next
       end
 
-      # Read per customer, exactly as the reconcile does. Slicing one whole-shop
-      # membership list is what this preview did first, and it was wrong: pretix
-      # pages that list with no unique tiebreaker, so it repeats and drops rows —
-      # which inflated "would create" with people who already have a membership.
-      # A preview that lies in the reassuring direction is worse than none.
+      # Per customer, never sliced out of one whole-shop list — see
+      # MembershipSync#reconcile_customer for why that list cannot be trusted.
       mine = client.memberships(customer: customer["identifier"],
                                 membership_type: Pretix::Settings::MEMBERSHIP_TYPE_ID)
       seen << mine.size
@@ -108,9 +97,8 @@ namespace :pretix do
       @by_link = {}
     end
 
-    # Indexed exactly as the reconcile indexes them, and resolved through the
-    # same Pretix::MembershipSync.user_for, so a preview cannot predict a
-    # different run from the one that happens.
+    # Through the same user_for the reconcile uses, so the preview cannot
+    # predict a different run from the one that happens.
     def prepare(customers)
       @by_email = Pretix::MembershipSync.users_by_email(customers)
       @by_link = Pretix::MembershipSync.users_by_link(customers)
@@ -157,15 +145,13 @@ namespace :pretix do
       end.to_h
     end
 
-    # Remembers which of the file's users a pretix customer actually resolved to,
-    # so the two counts below mean the same things they do for DatabaseLookup.
+    # So the two counts below mean what they mean for DatabaseLookup.
     def prepare(customers)
       @matched_emails = customers.filter_map { |c| Pretix::MembershipSync.external_email(c) }.to_set
     end
 
-    # Email only: a dump of "email<TAB>member" carries no User records, so the
-    # stored links cannot be honoured here. The report says so rather than
-    # letting this quietly diverge from a real run.
+    # Email only: a dump of email/member pairs carries no User records, so
+    # stored links cannot be honoured. #source says so on the report.
     def status_for(customer) = @statuses[Pretix::MembershipSync.external_email(customer)]
 
     def matched_entitled_count
