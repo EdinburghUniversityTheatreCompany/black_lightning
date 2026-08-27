@@ -71,17 +71,11 @@ climate_mailbox_poll:
   schedule: every 15 minutes
 
 # Brings every pretix membership back in line with the website's member roles.
-# This is what makes the sync correct — several role-removal paths (Role#archive's
-# users.clear, user destruction) fire no callbacks and can only be caught here.
-# A settled shop writes nothing.
-#
-# DELIBERATELY LEFT COMMENTED OUT FOR THE FIRST DEPLOY. The first run is the only
-# one that writes at scale (roughly 190 creations and extensions against the live
-# shop), and its failure mode is revoking real people's member pricing. Read
-#   bin/rails pretix:membership_reconcile_preview
-# which reports every intended write and makes none, satisfy yourself about the
-# revoke list, run the job once by hand, then uncomment this.
-# pretix_reconcile_memberships:
-#   class: Pretix::ReconcileMembershipsJob
-#   queue: default
-#   schedule: at 3am every day
+# This is what makes the sync correct: several role-removal paths (Role#archive's
+# users.clear, user destruction) fire no association callbacks and can only be
+# caught here. A settled shop writes nothing; a pass is ~660 paced API reads and
+# takes about three and a half minutes.
+pretix_reconcile_memberships:
+  class: Pretix::ReconcileMembershipsJob
+  queue: default
+  schedule: at 3am every day
