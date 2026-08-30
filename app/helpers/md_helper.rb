@@ -44,10 +44,23 @@ module MdHelper
   ##
   def normalise_hrefs(html)
     fragment = Nokogiri::HTML5.fragment(html)
+    relativise = web_request?
 
-    fragment.css("a[href]").each { |anchor| anchor["href"] = normalise_link_target(anchor["href"]) }
+    fragment.css("a[href]").each do |anchor|
+      anchor["href"] = normalise_link_target(anchor["href"], relativise: relativise)
+    end
 
     fragment.to_html
+  end
+
+  ##
+  # True when this markup is being rendered into a page served from our own origin. A mailer view
+  # has no request, and an email cannot resolve a relative href against anything.
+  ##
+  def web_request?
+    respond_to?(:request) && request.present?
+  rescue StandardError
+    false
   end
 
   def render_plain(md)

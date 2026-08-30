@@ -780,6 +780,15 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   `SchemaHelper#event_schema`**: emit one `Event` per performance with a real curtain time, and
   replace the `PRICE_PATTERN` scrape with the structured price. That is the single biggest
   remaining upgrade to the event rich results.
+- **`render_markdown` rewrites links, and one half of that must not reach an email.**
+  `LinkNormalisationHelper` does two things: a target typed without a scheme
+  ("theimproverts.co.uk") becomes absolute, and a link to our own host becomes a path so it
+  never spends a redirect. The second is right on the web and **wrong in a mail** — an email has
+  no base URL, so `href="/shows"` is dead on arrival. `MdHelper#normalise_hrefs` therefore passes
+  `relativise: web_request?`, which is false in a mailer view (no request). `MassMailer` renders
+  markdown straight from the newsletter body, so this is the whole membership's links.
+  `test/mailers/mass_mailer_test.rb` pins both halves.
+
 - **AI crawlers are blocked at Cloudflare, not in the app** — `GPTBot`, `OAI-SearchBot`,
   `ChatGPT-User`, `ClaudeBot` and `PerplexityBot` all get a 25-byte `blocked` 403 while Google,
   Bing, DuckDuckGo and the social scrapers pass. Nothing in this repo controls that.
