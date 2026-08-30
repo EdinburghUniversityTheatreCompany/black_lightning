@@ -1,6 +1,10 @@
 require "commonmarker"
 
 module MdHelper
+  # Explicit rather than relying on views mixing every helper together: render_markdown and
+  # render_plain are also called straight off `helpers` from controllers.
+  include LinkNormalisationHelper
+
   MARKDOWN_OPTIONS = ActionView::Template::Handlers::Markdown::OPTIONS
 
   # A single IAL token: a `.class`, an `#id`, or a `key="value"` attribute (the
@@ -28,9 +32,22 @@ module MdHelper
       iframe
       details summary
     ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
-    %(<div class="markdown-body prose max-w-none">#{sanitized}</div>).html_safe
+    %(<div class="markdown-body prose max-w-none">#{normalise_hrefs(sanitized)}</div>).html_safe
     # Note that these classes are also added in the markdown_editor_controller to the preview rendered there
     # so it matches. Search for previewContents.classList
+  end
+
+  ##
+  # A link target typed without a scheme ("theimproverts.co.uk") is a relative path to a browser,
+  # so it resolved against the site root and 404ed. Fixed here rather than row by row, because a
+  # content editor can type one at any time.
+  ##
+  def normalise_hrefs(html)
+    fragment = Nokogiri::HTML5.fragment(html)
+
+    fragment.css("a[href]").each { |anchor| anchor["href"] = normalise_link_target(anchor["href"]) }
+
+    fragment.to_html
   end
 
   def render_plain(md)
