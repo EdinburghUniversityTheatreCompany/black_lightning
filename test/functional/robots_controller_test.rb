@@ -89,4 +89,12 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
     allow = response.body.index("Allow: /rails/active_storage/")
     assert disallow && allow, "both rules should be present"
   end
+
+  # A static file survived the app being down; a controller does not. A 5xx robots.txt stops
+  # Googlebot crawling the whole site, so the edge is told to keep serving a stale copy instead.
+  test "the edge may serve a stale copy while the app is down" do
+    get "/robots.txt"
+
+    assert_includes response.headers["Cache-Control"].to_s, "stale-if-error=#{1.day.to_i}"
+  end
 end

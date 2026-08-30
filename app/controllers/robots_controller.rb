@@ -18,7 +18,12 @@ class RobotsController < ActionController::Base
   def show
     # Long enough not to be a per-crawl origin hit, short enough that a rules change is live the
     # same day. public: is safe only because nothing above touches the session.
-    expires_in 1.hour, public: true
+    #
+    # stale_if_error covers what skipping the DB filters cannot: the process being down. This was
+    # a static file before, so a failed deploy or an OOM-killed Puma now means a 502 here, and a
+    # 5xx robots.txt is what stops Googlebot crawling the site at all. A day-old copy is
+    # unreservedly better than that.
+    expires_in 1.hour, public: true, stale_if_error: 1.day
 
     render "robots/show", layout: false, content_type: "text/plain", formats: [ :text ]
   end
