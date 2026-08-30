@@ -30,13 +30,18 @@ module LinkNormalisationHelper
 
   ##
   # Turns a link target into one that resolves where its author meant it to.
+  #
+  # +relativise+ is false wherever the markup will be read outside a browser on our own origin --
+  # an email above all, where a relative href has no base URL to resolve against and is simply
+  # dead. The schemeless fix still applies there: a target typed without a scheme is broken in an
+  # email too.
   ##
-  def normalise_link_target(href)
+  def normalise_link_target(href, relativise: true)
     return href if href.blank?
 
     href = href.strip
 
-    return relativise_own_host(href) if href.start_with?("http://", "https://")
+    return relativise ? relativise_own_host(href) : href if href.start_with?("http://", "https://")
     return href if ABSOLUTE_PREFIXES.any? { |prefix| href.start_with?(prefix) }
     return "https://#{href}" if href.match?(SCHEMELESS_HOST) && !bare_filename?(href)
 
