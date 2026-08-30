@@ -18,10 +18,9 @@
 
   <%= meta_tags(@meta).html_safe %><%# herb:disable erb-no-unsafe-raw %>
 
-  <%# JSON-LD. There was none anywhere on the site, which on a ticketed events venue is what
-      keeps it out of Google's event rich results entirely. %>
+  <%# JSON-LD; see SchemaHelper for what each page carries. %>
   <% schema_documents.each do |document| %>
-    <script type="application/ld+json"><%= raw json_escape(document.to_json) %></script><%# herb:disable erb-no-unsafe-raw %>
+    <script type="application/ld+json"><%= raw json_escape(document.to_json) %></script>
   <% end %>
 </head>
 

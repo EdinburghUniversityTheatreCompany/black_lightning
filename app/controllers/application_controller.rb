@@ -30,11 +30,9 @@ class ApplicationController < ActionController::Base
     @base_url = request.protocol + request.host_with_port
     @current_path = request.path
 
-    # Create the @meta hash.
-    #
-    # Only values that genuinely cannot change during the action belong here: this is a
-    # before_action, so anything derived from @title reads nil. og:title, og:url and the
-    # twitter:* card tags are derived at render time in MetaHelper instead.
+    # Only values that cannot change during the action belong here: this is a before_action, so
+    # anything derived from @title reads nil. og:title, og:url and the twitter:* tags are derived
+    # at render time in MetaHelper instead.
     @meta = {
       description: "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.",
 
