@@ -218,7 +218,15 @@ module SchemaHelper
     }
   end
 
+  ##
+  # The show page has already resolved this into @meta["og:image"] (an array: the banner plus
+  # every production photo). Reusing it avoids a second Event#slideshow_image_url, which calls
+  # .processed and so can generate the variant synchronously mid-render.
+  ##
   def event_image_url(event)
+    from_meta = Array(@meta && @meta["og:image"]).first
+    return from_meta if from_meta.present?
+
     image = event.slideshow_image_url
 
     image.present? ? absolute_url(image) : nil

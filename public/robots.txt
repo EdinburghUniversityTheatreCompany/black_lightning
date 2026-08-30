@@ -11,6 +11,10 @@ User-agent: *
 # pagination. Nothing in that space is a page anyone searches for, and it is unbounded, so it
 # would eat the crawl budget the archive needs. Canonical tags say the same thing; this stops
 # the fetch happening at all.
+# Both forms: a crawler sees the percent-encoded URL (?q%5Bauthor_cont%5D=...), and a robots.txt
+# pattern is matched against that, not against the decoded form.
+Disallow: /*?*q%5B
+Disallow: /*&q%5B
 Disallow: /*?*q[
 Disallow: /*&q[
 

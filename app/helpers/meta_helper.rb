@@ -37,7 +37,9 @@ module MetaHelper
   def canonical_url
     return @canonical_url if @canonical_url.present?
 
-    kept = request.query_parameters.slice(*CANONICAL_PARAMS)
+    # page=1 is the same content as no page at all, so it must canonicalise to the same URL --
+    # otherwise the canonical tag introduces the duplicate it exists to collapse.
+    kept = request.query_parameters.slice(*CANONICAL_PARAMS).reject { |_, value| value.to_s == "1" }
     base = request.base_url + request.path
 
     kept.any? ? "#{base}?#{kept.to_query}" : base

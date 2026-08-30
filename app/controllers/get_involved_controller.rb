@@ -17,7 +17,11 @@ class GetInvolvedController < ApplicationController
     @editable_block = Admin::EditableBlock.find_by(url: "get_involved/opportunities")
 
     set_meta_from_editable_block
+
+    # Explicit rather than block-derived: this is the page that should win "theatre opportunities
+    # Edinburgh", and it must not depend on whether anyone has written the editable block.
     @title = "Opportunities"
+    @meta[:description] = "Auditions, crew calls and paid and unpaid theatre opportunities in Edinburgh, from the EUTC at Bedlam Theatre and other student and fringe companies."
 
     respond_to do |format|
       format.html

@@ -17,12 +17,19 @@ class StaticController < ApplicationController
 
   ALLOWED_PAGES = PAGE_TITLES.keys.freeze
 
-  # Only where the page has a specific job to do in search. The rest keep the site description,
-  # which describes them accurately enough.
+  # Every static page gets its own, because a page sharing the site-wide boilerplate is a page
+  # search engines have to choose between. Hand-written rather than derived from the editable
+  # block: these are the eight highest-value non-event pages, and the block bodies read as page
+  # content, not as a summary of it.
   PAGE_DESCRIPTIONS = {
     "accessibility"   => "How to find Bedlam Theatre at 11B Bristo Place, Edinburgh EH1 1EZ, and what to expect when you get here: entrances, step-free access and getting around.",
+    "black_lightning" => "Project Black Lightning: the open-source Rails application that runs Bedlam Theatre's website, box office admin and members' area.",
     "contact"         => "Get in touch with Bedlam Theatre and the Edinburgh University Theatre Company \u2014 committee contacts, venue hire enquiries and press.",
-    "student_theatre" => "What student theatre at Bedlam means: how the EUTC works, who can take part and how to get involved in a production."
+    "on_fire"         => "Something has gone wrong at Bedlam Theatre. What we know, and who to contact while we put it right.",
+    "press"           => "Press and media enquiries for Bedlam Theatre and the Edinburgh University Theatre Company, including images and interview requests.",
+    "privacy_policy"  => "How Bedlam Theatre and the Edinburgh University Theatre Company collect, use and store your personal data, and the rights you have over it.",
+    "student_theatre" => "What student theatre at Bedlam means: how the EUTC works, who can take part and how to get involved in a production.",
+    "welcome_week"    => "New in Edinburgh? What Bedlam Theatre and the EUTC have on during Welcome Week, and how to join in whatever your experience."
   }.freeze
 
   # This is a catch-all for the pages that do not have explicitly defined routes.
@@ -37,7 +44,7 @@ class StaticController < ApplicationController
     end
 
     @title = PAGE_TITLES.fetch(safe_page)
-    @meta[:description] = PAGE_DESCRIPTIONS[safe_page] if PAGE_DESCRIPTIONS.key?(safe_page)
+    @meta[:description] = PAGE_DESCRIPTIONS.fetch(safe_page)
 
     render "static/#{safe_page}"
   rescue ActionView::MissingTemplate
