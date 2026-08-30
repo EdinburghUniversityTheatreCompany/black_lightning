@@ -509,6 +509,12 @@ ChaosRails::Application.routes.draw do
     end
   end
 
+  # Sitemaps. Declared well before the /:id season constraint and the /*page catch-all, both of
+  # which would otherwise swallow these.
+  get "sitemap.xml", to: "sitemaps#index", as: :sitemap, format: false, defaults: { format: "xml" }
+  get "sitemaps/:section.xml", to: "sitemaps#section", as: :section_sitemap, format: false,
+      defaults: { format: "xml" }, constraints: { section: /[a-z_]+/ }
+
   get "archives", to: "archives#index", as: :archives_index
   namespace :archives do
     get "events", to: "events#index", as: :events
