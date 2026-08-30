@@ -751,10 +751,13 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   action assigns `@title` — deriving og:title there read `nil` on every request and captioned
   every shared show "Bedlam Theatre" for years. Anything that reads `@title` belongs in
   `MetaHelper`.
-- **`MetaHelper::CANONICAL_PARAMS` is `page` and nothing else.** That is what collapses Ransack's
-  `?q[...]` space — every author, company and venue is its own URL, each combining with
-  pagination — onto the page it filters. Adding `q` there reopens an unbounded crawl space.
-  `robots.txt` (static, in `public/`) disallows it too.
+- **`MetaHelper::CANONICAL_PARAMS` is `page` and nothing else, and `page=1` is dropped.** That is
+  what collapses Ransack's `?q[...]` space — every author, company and venue is its own URL, each
+  combining with pagination — onto the page it filters. Adding `q` there reopens an unbounded
+  crawl space; keeping `page=1` would make the canonical create the duplicate it exists to
+  collapse. `robots.txt` (static, in `public/`) disallows the same space, and must spell it
+  **percent-encoded** (`q%5B`): a crawler matches the rule against the URL it sees, and Ransack's
+  parameters arrive encoded.
 - **Variants say `format: "webp"`, not `convert:`.** Rails derives
   `ActiveStorage::Variation#content_type` from `:format` alone; `:convert` is passed to
   image_processing, so the bytes were WebP while every variant was served declaring
@@ -817,7 +820,11 @@ Start the test database using `docker start /mysql8` before running any tests.
   then the `.ts-dropdown-content .option`) — see `tom_select` in
   `test/system/admin/reimbursements/producer_js_test.rb`. Tom Select fires a native `change` on
   the underlying select, so Stimulus actions bound to it still run.
-- **`test/system/konami_code_test.rb` errors with `ActiveStorage::FileNotFoundError`** on a
-  seeded header image (verified on an unmodified `main`, 2026-07-28) — a pre-existing failure,
-  not something your branch broke.
+- **`ActiveStorage::FileNotFoundError` in system tests usually means a poisoned test DB, not a
+  branch regression.** `ActiveStorageHelper#default_image_blob` finds the placeholder blob **by
+  filename** and returns it without checking the file still exists, so a `bin/rails runner -e test`
+  that rendered an event page commits the row (runner does not roll back) and the next suite
+  teardown wipes `ActiveStorage::Blob.service.root` under it. Every run after that serves a URL
+  for a missing file. Check `created_at` on the `active_storage_default%` blobs — if it is from
+  your session, destroy those rows and the next render re-uploads them.
 - **No mocking library:** the suite has neither mocha nor `minitest/mock` (minitest 6 dropped it). Don't write `.stubs`/`.stub`. Stub external services by toggling their config instead (e.g. force a reCAPTCHA failure with `Recaptcha.configuration.skip_verify_env.delete("test")` and no token in the request).

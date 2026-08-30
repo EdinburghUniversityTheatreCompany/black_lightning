@@ -42,7 +42,7 @@ class SitemapsController < ApplicationController
 
     head :not_found and return if builder.nil?
 
-    @entries = method(builder).call.first(MAX_URLS_PER_SECTION)
+    @entries = method(builder).call
     @change_frequency = CHANGE_FREQUENCIES.fetch(@section)
 
     render :section, formats: :xml
@@ -62,7 +62,7 @@ class SitemapsController < ApplicationController
 
     entries = fixed.map { |url| { loc: url } }
 
-    entries + Admin::EditableBlock.where(admin_page: false).where.not(url: [ nil, "" ]).map do |block|
+    entries + capped(Admin::EditableBlock.where(admin_page: false).where.not(url: [ nil, "" ])) do |block|
       { loc: "#{root_url.chomp('/')}/#{block.url}", lastmod: block.updated_at }
     end
   end
@@ -70,26 +70,43 @@ class SitemapsController < ApplicationController
   # accessible_by keeps unpublished events out: a sitemap must never advertise a URL that
   # answers 403 to the crawler reading it.
   def events_entries
-    Event.accessible_by(guest_ability).where.not(slug: [ nil, "" ]).map do |event|
+    capped(Event.accessible_by(guest_ability).where.not(slug: [ nil, "" ])) do |event|
       { loc: polymorphic_url(event), lastmod: event.updated_at }
     end
   end
 
   def news_entries
-    News.accessible_by(guest_ability).map { |item| { loc: news_url(item), lastmod: item.updated_at } }
+    capped(News.accessible_by(guest_ability)) { |item| { loc: news_url(item), lastmod: item.updated_at } }
   end
 
   def venues_entries
-    Venue.accessible_by(guest_ability).map { |venue| { loc: venue_url(venue), lastmod: venue.updated_at } }
+    capped(Venue.accessible_by(guest_ability)) { |venue| { loc: venue_url(venue), lastmod: venue.updated_at } }
   end
 
   # Members are indexed on purpose. Opting out is public_profile, which is exactly what the
   # guest ability's :view_shows_and_bio rule reads, so an opted-out profile is never listed here
   # and 403s if a crawler reaches it anyway.
   def members_entries
-    User.accessible_by(guest_ability, :view_shows_and_bio).map do |user|
+    capped(User.accessible_by(guest_ability, :view_shows_and_bio)) do |user|
       { loc: user_url(user), lastmod: user.updated_at }
     end
+  end
+
+  ##
+  # Reads a section in batches and stops at the cap, so a sitemap never instantiates the whole
+  # table. Members alone run to five figures, and the cap used to be applied after loading all
+  # of them.
+  ##
+  def capped(scope)
+    entries = []
+
+    scope.find_each(batch_size: 1000) do |record|
+      entries << yield(record)
+
+      break if entries.size >= MAX_URLS_PER_SECTION
+    end
+
+    entries
   end
 
   def guest_ability
