@@ -77,6 +77,12 @@ class Event < ApplicationRecord
   # public page and the box office screen cannot drift on the word.
   OCCURRENCE_LABEL = "Date".freeze
 
+  # Whether an occurrence of this type is a performance of the event, or merely a
+  # span of time it is open for. Season overrides it: publishing its opening
+  # hours as events of their own claims the theatre is staging a show for every
+  # day the box office is open.
+  OCCURRENCES_ARE_PERFORMANCES = true
+
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :tagline, length: { maximum: 255 }
@@ -380,6 +386,10 @@ class Event < ApplicationRecord
   # ancestry, so Show gets "Performance" and everything unspecified gets "Date".
   def occurrence_label
     self.class::OCCURRENCE_LABEL
+  end
+
+  def occurrences_are_performances?
+    self.class::OCCURRENCES_ARE_PERFORMANCES
   end
 
   ##

@@ -76,6 +76,28 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
 
+  # A Season's occurrences are OPENING TIMES, and the close is half the
+  # information -- "open 10am" without "until 11pm" is the useless half.
+  test "display_when prints the span when an occurrence states its own end" do
+    season = FactoryBot.create(:season, start_date: Date.new(2026, 8, 30), end_date: Date.new(2026, 9, 2))
+    FactoryBot.create(:event_occurrence, event: season,
+                      starts_at: Time.zone.local(2026, 8, 30, 10, 0),
+                      ends_at: Time.zone.local(2026, 8, 30, 23, 0))
+
+    assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 30))
+  end
+
+  # A show states a curtain time and a running time, not an end time per night,
+  # so its rows stay a bare curtain -- printing a derived "7.30pm – 9.45pm" on
+  # every line is noise nobody asked for.
+  test "display_when prints a bare curtain when the end is only derived" do
+    show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7),
+                                    duration_minutes: 135)
+    FactoryBot.create(:event_occurrence, event: show, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+
+    assert_equal "Wed 4 Mar, 7.30pm", display_when(show, on: Date.new(2026, 3, 3))
+  end
+
   # The column is a fixed 256px on a screen read from across a room, and the
   # derived price string ("£10 / £8 concessions / £7 members") truncates in it.
   test "display_price collapses structured bands to fit the board" do

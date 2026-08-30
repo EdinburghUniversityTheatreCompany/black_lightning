@@ -61,6 +61,9 @@
 class Season < Event
   OCCURRENCE_LABEL = "Opening time".freeze
 
+  # A season's occurrences are the hours the venue is open, not performances.
+  OCCURRENCES_ARE_PERFORMANCES = false
+
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }

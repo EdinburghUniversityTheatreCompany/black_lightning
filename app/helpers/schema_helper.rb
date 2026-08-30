@@ -200,6 +200,7 @@ module SchemaHelper
   ##
   def event_performance_schemas(event)
     return [] unless event.respond_to?(:event_occurrences)
+    return [] unless event.occurrences_are_performances?
 
     event.event_occurrences.map do |occurrence|
       next nil if occurrence.starts_at.blank?

@@ -21,7 +21,7 @@ module DisplayHelper
 
     return display_date_range(event) if occurrence.nil?
 
-    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{short_time(occurrence.starts_at)}"
+    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{time_span(occurrence.starts_at, occurrence.ends_at)}"
   end
 
   # The compact price for a fixed-width column on a screen read from across a

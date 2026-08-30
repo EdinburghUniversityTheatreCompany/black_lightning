@@ -34,6 +34,20 @@ module TimeHelper
     time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
   end
 
+  # "10am – 11pm", or just "7.30pm" when there is no end worth stating.
+  #
+  # Callers pass the EXPLICIT ends_at, never effective_ends_at: an end derived
+  # from the running time would print "7.30pm – 9.45pm" on every line of a show,
+  # which is noise. An occurrence that states its own end is saying something --
+  # a Season's opening hours are exactly that, and the close is the half that
+  # tells somebody when they have to be out.
+  def time_span(from, to = nil)
+    return nil if from.blank?
+    return short_time(from) if to.blank?
+
+    "#{short_time(from)} – #{short_time(to)}"
+  end
+
   def max_end_year
     Date.current.year + 5
   end

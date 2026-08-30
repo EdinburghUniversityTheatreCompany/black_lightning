@@ -183,6 +183,21 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "2026-09-24T19:00:00+01:00", performance["doorTime"]
   end
 
+  # A Season's occurrences are the hours the venue is OPEN, not performances.
+  # Publishing them as TheaterEvents claims the theatre is staging four shows
+  # during the Fringe when it is stating box-office hours.
+  test "a season's opening times are not published as performances" do
+    season = FactoryBot.create(:season, is_public: true)
+    FactoryBot.create(:event_occurrence, event: season)
+
+    get season_path(season)
+
+    events = documents_of_type("TheaterEvent")
+
+    assert_equal 1, events.length, "opening times must not become events of their own"
+    assert_nil events.first["subEvent"]
+  end
+
   # --- structured prices -------------------------------------------------
 
   test "structured bands become one named offer each, not a scraped range" do

@@ -13,7 +13,12 @@
     <ul class="display-marquee__track flex flex-col divide-y divide-neutral-800">
       <% events.each do |event| %>
         <li class="flex grow items-center gap-10 py-4">
-          <span class="w-[26rem] shrink-0 truncate text-4xl font-semibold leading-descender text-neutral-300">
+          <%# 31rem, measured in Chrome at 1920x1080: the widest this column has to
+              carry is a Season's opening span with half-hours on both ends --
+              "Wed 30 Sep, 10.30am - 11.30pm" is 492px at text-4xl, which
+              truncated mid-time in the 26rem this used to be. The title keeps
+              ~960px, which is still ample. %>
+          <span class="w-[31rem] shrink-0 truncate text-4xl font-semibold leading-descender text-neutral-300">
             <%= display_when(event, on: on) %>
           </span>
           <%# No `truncate`: naming the show is this board's whole job, and a title

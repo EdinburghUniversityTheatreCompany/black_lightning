@@ -9,7 +9,7 @@
         <% occurrences.each do |occurrence| %>
           <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
             <span class="font-medium"><%= l(occurrence.starts_at.to_date, format: :long) %></span>
-            <span><%= short_time(occurrence.starts_at) %></span>
+            <span><%= time_span(occurrence.starts_at, occurrence.ends_at) %></span>
 
             <% if occurrence.doors_open_at.present? %>
               <span class="text-sm text-gray-500">doors <%= short_time(occurrence.doors_open_at) %></span>
