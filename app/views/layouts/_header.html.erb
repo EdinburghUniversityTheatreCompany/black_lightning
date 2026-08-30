@@ -1,7 +1,12 @@
 <%# locals: () %>
 
 <div class="container">
-  <%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300), root_url() %>
+  <%# The largest thing above the fold and the desktop LCP element, so it opts out of the
+      app-wide lazy default. alt names the theatre because the masthead is the only place the
+      name appears as text-in-artwork rather than text. %>
+  <%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300,
+                        alt: "Bedlam Theatre, Edinburgh University Theatre Company",
+                        loading: "eager", fetchpriority: "high"), root_url() %>
 </div>
 
 <div class="bg-primary">

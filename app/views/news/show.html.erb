@@ -5,7 +5,7 @@
     <%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %>
   </div>
 
-  <%= render 'shared/image', image: @news.fetch_image, variant: medium_variant, image_options: { class: "block w-full h-auto" } %>
+  <%= render 'shared/image', image: @news.fetch_image, variant: medium_variant, alt: @news.title.to_s, image_options: { class: "block w-full h-auto" } %>
 
   <div class="p-4">
     <%= render_markdown @news.body %>

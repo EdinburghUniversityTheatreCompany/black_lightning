@@ -44,8 +44,16 @@ module ActiveStorageHelper
     end
   end
 
+  # format:, not convert:. Rails derives ActiveStorage::Variation#content_type from the :format
+  # key alone; :convert is passed through to image_processing, so the bytes really were WebP
+  # while every variant was served declaring image/png or image/jpeg. Browsers sniff the bytes
+  # and cope, which is why it went unnoticed -- Facebook's and LinkedIn's og:image validators
+  # read the header instead.
+  #
+  # Note this changes the variation key, so every variant URL changes and the whole set
+  # regenerates on first request after deploy.
   def thumb_variant(scale_factor = 1)
-    { loader: { n: -1 }, resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ], convert: "webp", saver: { Q: 80 } }
+    { loader: { n: -1 }, resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ], format: "webp", saver: { Q: 80 } }
   end
 
   def thumb_variant_public(scale_factor = 1)
@@ -53,23 +61,23 @@ module ActiveStorageHelper
   end
 
   def medium_variant
-    { loader: { n: -1 }, resize_to_fill: [ 576, 300 ], convert: "webp", saver: { Q: 80 } }
+    { loader: { n: -1 }, resize_to_fill: [ 576, 300 ], format: "webp", saver: { Q: 80 } }
   end
 
   def slideshow_variant
-    { loader: { n: -1 }, resize_to_fill: [ 960, 500 ], convert: "webp", saver: { Q: 80 } }
+    { loader: { n: -1 }, resize_to_fill: [ 960, 500 ], format: "webp", saver: { Q: 80 } }
   end
 
   def square_thumb_variant(dimensions = 150)
-    { loader: { n: -1 }, resize_to_fill: [ dimensions, dimensions ], convert: "webp", saver: { Q: 80 } }
+    { loader: { n: -1 }, resize_to_fill: [ dimensions, dimensions ], format: "webp", saver: { Q: 80 } }
   end
 
   def square_display_variant
-    { loader: { n: -1 }, resize_to_fill: [ 700, 700 ], convert: "webp", saver: { Q: 80 } }
+    { loader: { n: -1 }, resize_to_fill: [ 700, 700 ], format: "webp", saver: { Q: 80 } }
   end
 
   def large_display_variant
-    { loader: { n: -1 }, resize_to_fill: [ 1920, 1200 ], convert: "webp", saver: { Q: 85 } }
+    { loader: { n: -1 }, resize_to_fill: [ 1920, 1200 ], format: "webp", saver: { Q: 85 } }
   end
 
   def variant_width_and_height_html(variant)

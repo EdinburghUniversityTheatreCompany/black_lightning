@@ -12,7 +12,9 @@
     <% carousel_items.each_with_index do |item, index| %>
       <div class="carousel-item <%= 'active' if index == 0 %>" data-carousel-target="item">
         <div class="carousel-image-wrapper<%= " carousel-image-wrapper--#{fit_mode}" if aspect_ratio %>" style="<%= "aspect-ratio: #{aspect_ratio};" if aspect_ratio %>">
-          <% img = render('shared/image', image: item[:image].presence || item.image, variant: slideshow_variant, proxy: true) %>
+          <%# The first slide is the mobile LCP element; the rest stay lazy. %>
+          <% img = render('shared/image', image: item[:image].presence || item.image, variant: slideshow_variant, proxy: true,
+                          priority: index.zero?, alt: item[:title].presence || item.try(:title).presence || "") %>
 
           <% if item[:url].present? %>
             <%= link_to(img, item[:url]) %>

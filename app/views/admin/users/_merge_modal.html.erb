@@ -113,7 +113,7 @@
                        data: { action: "change->field-choice#toggle" }) %>
                 <label class="form-check-label" for="keep_target_avatar">
                   <% if target.avatar.attached? %>
-                    <%= render 'shared/image', image: target.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
+                    <%= render 'shared/image', image: target.avatar, variant: square_thumb_variant(50), full_width: false, image_options: { class: "rounded" } %>
                   <% else %>
                     <em class="text-gray-500">(no avatar)</em>
                   <% end %>
@@ -131,7 +131,7 @@
                        data: { action: "change->field-choice#toggle" }) %>
                 <label class="form-check-label" for="keep_source_avatar">
                   <% if source.avatar.attached? %>
-                    <%= render 'shared/image', image: source.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
+                    <%= render 'shared/image', image: source.avatar, variant: square_thumb_variant(50), full_width: false, image_options: { class: "rounded" } %>
                   <% else %>
                     <em class="text-gray-500">(no avatar)</em>
                   <% end %>

@@ -26,7 +26,8 @@
         <%= render CardComponent.new(html_class: "h-full mb-0", flush: true) do %>
           <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
           <%= link_to url do %>
-            <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true, image_options: { class: 'block w-full h-auto rounded-t' } %>
+            <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true,
+                       alt: "#{item[:event].name} at Bedlam Theatre", image_options: { class: 'block w-full h-auto rounded-t' } %>
           <% end %>
 
           <div class="p-4 flex flex-col">

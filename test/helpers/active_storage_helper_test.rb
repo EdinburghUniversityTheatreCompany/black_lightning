@@ -83,7 +83,7 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert large_display_variant[:resize_to_fill].is_a? Array
     assert_equal 1920, large_display_variant[:resize_to_fill][0]
     assert_equal 1200, large_display_variant[:resize_to_fill][1]
-    assert_equal "webp", large_display_variant[:convert]
+    assert_equal "webp", large_display_variant[:format]
     assert_equal(-1, large_display_variant.dig(:loader, :n))
   end
 
@@ -111,9 +111,35 @@ class ActiveStorageHelperTest < ActionView::TestCase
     ]
 
     variants.each do |variant|
-      assert_equal "webp", variant[:convert], "#{variant.inspect} should convert to webp"
+      assert_equal "webp", variant[:format], "#{variant.inspect} should be served as webp"
       assert_equal 80, variant.dig(:saver, :Q), "#{variant.inspect} should have Q: 80 saver"
       assert_equal(-1, variant.dig(:loader, :n), "#{variant.inspect} should have loader n: -1 for GIF support")
     end
+  end
+
+  # Variants declared convert: "webp" produced real WebP bytes but Rails derives
+  # Variation#content_type from the :format key alone, so every variant on the live site was
+  # served declaring image/png or image/jpeg. Browsers sniff and cope; og:image validators do not.
+  VARIANTS = %i[thumb_variant medium_variant slideshow_variant square_thumb_variant
+                square_display_variant large_display_variant].freeze
+
+  test "every variant asks for webp with the key rails reads" do
+    VARIANTS.each do |name|
+      transformations = send(name)
+
+      assert_equal "webp", transformations[:format], "#{name} does not set :format"
+      assert_not transformations.key?(:convert), "#{name} still uses :convert, which rails ignores for content type"
+    end
+  end
+
+  test "a variant is served with a content type that matches its bytes" do
+    show = FactoryBot.create(:show)
+    variant = show.fetch_image.variant(slideshow_variant).processed
+
+    assert_equal "image/webp", variant.content_type
+
+    bytes = variant.download
+    assert_equal "RIFF", bytes[0, 4], "expected WebP container bytes"
+    assert_equal "WEBP", bytes[8, 4], "expected WebP container bytes"
   end
 end
