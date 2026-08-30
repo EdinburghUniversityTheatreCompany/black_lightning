@@ -105,8 +105,12 @@ class Event < ApplicationRecord
     only_integer: true, greater_than: 0, less_than_or_equal_to: 1440
   }, allow_nil: true
   validates :doors_open_minutes_before, numericality: {
-    only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 240
+    only_integer: true, greater_than: 0, less_than_or_equal_to: 240
   }, allow_nil: true
+  # greater_than 0, not >= 0, because a decimal column casts unreadable input to
+  # zero without complaint -- "£0 booking fee on the door" published from a typo.
+  # A fee of nothing is no fee: leave it blank.
+  validates :booking_fee, numericality: { greater_than: 0 }, allow_nil: true
   # A scheme is required rather than merely encouraged: this value is rendered
   # as an anchor on the public page and encoded straight into a QR code on the
   # box office screen, and a bare "bedlamtheatre.co.uk/programme" resolves as a

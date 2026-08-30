@@ -26,6 +26,18 @@ class DisplayHelperTest < ActionView::TestCase
     }&.first
   end
 
+  # A five-night evening run, which two of the tests below both need.
+  def run_of_five(from: Date.new(2026, 10, 11))
+    event = FactoryBot.create(:show, start_date: from, end_date: from + 4)
+
+    (0..4).each do |offset|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (from + offset).in_time_zone.change(hour: 19, min: 30))
+    end
+
+    event
+  end
+
   test "display_date_range collapses a single day" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 3))
 
@@ -46,13 +58,7 @@ class DisplayHelperTest < ActionView::TestCase
 
   # Mick's ask: five nights in a row is a range, not the next night of five.
   test "display_when collapses a consecutive run into one range" do
-    event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 15))
-    (0..4).each do |offset|
-      FactoryBot.create(:event_occurrence, event: event,
-                        starts_at: (Date.new(2026, 10, 11) + offset).in_time_zone.change(hour: 19, min: 30))
-    end
-
-    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(event)
+    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(run_of_five)
   end
 
   # The whole run, not the part still to come -- Mick's call. The board states
@@ -115,16 +121,41 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
   end
 
-  # Neither one run nor a weekly fixture, and nothing on today: the board states
-  # the span and the event page carries the real dates.
-  test "display_when falls back to the range for an irregular set of dates" do
+  # Scattered dates: the next one, with its curtain time. A bare "Tue 3 - Sat 7
+  # Mar" both drops the time and implies it plays every night in between, which it
+  # does not; the event page carries the full list.
+  test "display_when names the next date for an irregular set of dates" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
     [ 0, 2, 4 ].each do |offset|
       FactoryBot.create(:event_occurrence, event: event,
                         starts_at: (Date.new(2026, 3, 3) + offset).in_time_zone.change(hour: 19, min: 30))
     end
 
-    assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 1))
+    assert_equal "Tue 3 Mar, 7.30pm", display_when(event, on: Date.new(2026, 3, 1))
+    assert_equal "Thu 5 Mar, 7.30pm", display_when(event, on: Date.new(2026, 3, 4))
+  end
+
+  # Once every date has gone by there is no block left to name, so the run's own
+  # dates are all that is left to state.
+  test "display_when falls back to the range once every date has passed" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
+    [ 0, 2 ].each do |offset|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (Date.new(2026, 3, 3) + offset).in_time_zone.change(hour: 19, min: 30))
+    end
+
+    assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 7))
+  end
+
+  # A matinee makes the schedule :irregular, and a run that has not opened yet has
+  # no block covering today -- so the board printed the dates with no curtain time
+  # at all, which is worse than the same run without a matinee.
+  test "display_when keeps the curtain time for an upcoming run with a matinee" do
+    event = run_of_five
+    FactoryBot.create(:event_occurrence, event: event,
+                      starts_at: Date.new(2026, 10, 15).in_time_zone.change(hour: 14, min: 30))
+
+    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(event, on: Date.new(2026, 10, 1))
   end
 
   # A festival whose hours change by the day has no single run to state, and the

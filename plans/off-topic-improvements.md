@@ -612,3 +612,11 @@ deleting the row, which loses the fact that it was ever scheduled. schema.org wa
 `eventStatus: EventCancelled` on that performance, and the event page should say so rather than
 silently showing one fewer date. Related: `Venue` has no capacity column, so nothing can emit
 `maximumAttendeeCapacity`.
+
+## `display_price` reads oddly when one band is free and the others are not
+
+The compact board form joins the amounts — "£10/8/7" — and the "Free" shortcut only fires when
+*every* band is zero, so a show with a paid standard band and a free members band prints "£10/0".
+Not wrong (it means £10/£0) but it reads badly across a room. Left alone rather than special-cased:
+the mixed case is rare, and the obvious fixes ("£10/free", dropping the zero) each either break the
+compact convention or hide a band. Revisit if a real show ever prices this way.

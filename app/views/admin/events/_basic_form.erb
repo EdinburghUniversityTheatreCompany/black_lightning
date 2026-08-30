@@ -65,6 +65,13 @@
 
   <%# template_object: ticket_prices is a JSON column, not an association, so
       there is no reflection for _nested_fields to build its blank row from. %>
+  <%# Removing a band deletes its row from the DOM, so removing the LAST one posts
+      no ticket_prices_attributes key at all, ticket_prices_attributes= never
+      runs, and the bands survive a save that reported success. This sentinel
+      always posts, so an emptied collection is an empty collection. It is the
+      same trick check_boxes uses with its leading "". %>
+  <%= hidden_field_tag "#{f.object_name}[ticket_prices_attributes][sentinel][amount]", "" %>
+
   <%= render 'shared/form/sections/nested_fields',
         f: f,
         association_name: :ticket_prices,

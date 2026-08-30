@@ -1,6 +1,10 @@
 class CreateEventOccurrences < ActiveRecord::Migration[8.1]
   def change
-    create_table :event_occurrences do |t|
+    # Stated explicitly: every other table in this schema is utf8mb4_unicode_ci,
+    # and without this the table takes the migrating server's default (8.0's
+    # utf8mb4_0900_ai_ci here), so a later join or comparison against another
+    # table's string column raises "Illegal mix of collations".
+    create_table :event_occurrences, charset: "utf8mb4", collation: "utf8mb4_unicode_ci" do |t|
       # events.id is a legacy INTEGER primary key, not a bigint. A bigint foreign
       # key here aborts the migration with a column-type mismatch.
       t.references :event, null: false, foreign_key: true, type: :integer, index: false

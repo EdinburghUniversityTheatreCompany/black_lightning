@@ -376,7 +376,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
     t.index ["email", "attached_object_id", "attached_object_type"], name: "index_emails_on_email_and_attached_object", unique: true
   end
 
-  create_table "event_occurrences", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "event_occurrences", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.json "access_flags"
     t.datetime "created_at", null: false
     t.datetime "ends_at"

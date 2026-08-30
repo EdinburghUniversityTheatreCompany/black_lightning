@@ -68,11 +68,13 @@ class TeamMember < ActiveRecord::Base
     %w[position user_id teamwork_id teamwork_type]
   end
 
-  private
-
+  # Public because SchemaHelper reads crew credits with it; a second copy of this
+  # regex elsewhere is a copy that drifts.
   def position_segments
     position.split(/\/(?![^(]*\))/).map(&:strip)
   end
+
+  private
 
   def sync_debts_if_show
     return unless teamwork.is_a?(Show)

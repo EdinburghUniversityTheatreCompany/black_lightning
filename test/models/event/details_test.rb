@@ -39,6 +39,21 @@ class Event::DetailsTest < ActiveSupport::TestCase
     assert @show.errors[:doors_open_minutes_before].present?
   end
 
+  # A decimal column casts "abc" to 0 without complaint, and £0 was then published
+  # as "£0 booking fee on the door".
+  test "an unreadable booking fee is rejected rather than cast to zero" do
+    @show.booking_fee = "abc"
+
+    assert_not @show.valid?
+    assert @show.errors[:booking_fee].present?
+  end
+
+  test "a real booking fee is accepted" do
+    @show.booking_fee = "1.50"
+
+    assert_predicate @show, :valid?
+  end
+
   # --- what the running time buys ---------------------------------------
 
   test "an occurrence with no end time takes one from the running time" do

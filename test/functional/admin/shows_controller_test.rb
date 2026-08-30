@@ -497,6 +497,31 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal "£9 / £7 concessions", show.price
   end
 
+  # Removing a band deletes its row from the DOM, so removing the LAST one used to
+  # post no ticket_prices_attributes key at all -- the writer never ran and the
+  # bands survived a save that reported success. The form's sentinel row is what
+  # makes an emptied collection actually empty.
+  test "removing every price band through the form clears them" do
+    show = FactoryBot.create(:show, is_public: true)
+    show.update!(ticket_prices: [ { "category" => "standard", "amount" => "10" } ])
+
+    patch :update, params: { id: show.to_param, show: {
+      price: "Pay what you can",
+      ticket_prices_attributes: { "sentinel" => { "amount" => "" } }
+    } }
+
+    assert_empty show.reload.ticket_prices
+    assert_equal "Pay what you can", show.price
+  end
+
+  test "the edit form posts a sentinel so an emptied band list is not silently kept" do
+    show = FactoryBot.create(:show, is_public: true)
+
+    get :edit, params: { id: show.to_param }
+
+    assert_select "input[type=hidden][name='show[ticket_prices_attributes][sentinel][amount]']"
+  end
+
   # ticket_prices is a JSON column, not an association, so _nested_fields has no
   # reflection to build its blank row from and needs template_object.
   test "edit form renders the ticket price rows and their add-row template" do

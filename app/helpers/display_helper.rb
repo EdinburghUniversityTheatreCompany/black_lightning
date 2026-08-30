@@ -24,18 +24,21 @@ module DisplayHelper
   end
 
   ##
-  # No single run to state -- a festival whose opening hours change by the day,
-  # or a show with scattered dates. The block covering today is what somebody
-  # standing in front of the screen can act on; every block at once would not fit
-  # the column, and the bare date range says nothing about the hours.
+  # No single run to state -- a festival whose opening hours change by the day, or
+  # a run with a matinee in it. The block covering today is what somebody standing
+  # in front of the screen can act on; failing that the next one still to come,
+  # because a run that has not opened yet has no current block and would otherwise
+  # print a bare date range with no time at all. Every block at once would not fit
+  # the column.
   #
   # This is the one date-dependent case. A RUN states the whole run, as the
   # poster does, however much of it has already played.
   ##
   def display_irregular_when(event, schedule, on)
-    current = schedule.blocks.find { |block| (block.starts_on..block.ends_on).cover?(on) }
+    block = schedule.blocks.find { |candidate| (candidate.starts_on..candidate.ends_on).cover?(on) } ||
+            schedule.blocks.find { |candidate| candidate.ends_on >= on }
 
-    current ? display_block_when(current) : display_date_range(event)
+    block ? display_block_when(block) : display_date_range(event)
   end
 
   def display_block_when(block)

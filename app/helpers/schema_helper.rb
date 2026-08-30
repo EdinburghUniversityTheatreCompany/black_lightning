@@ -250,7 +250,7 @@ module SchemaHelper
     return nil unless event.respond_to?(:team_members)
 
     member = event.team_members.find do |candidate|
-      candidate.position.to_s.split(%r{/(?![^(]*\))}).any? { |part| part.strip.casecmp?(role) }
+      candidate.position_segments.any? { |part| part.casecmp?(role) }
     end
 
     return nil if member&.user.nil?
