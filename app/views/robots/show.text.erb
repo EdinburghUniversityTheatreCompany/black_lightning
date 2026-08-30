@@ -22,8 +22,13 @@ Disallow: /*&q[
 Disallow: /users/sign_in
 Disallow: /users/password
 Disallow: /oauth/
-Disallow: /rails/
 Disallow: /cdn-cgi/
+
+# Every image on the site is an ActiveStorage representation under /rails/, including every
+# og:image and the image in each Event's JSON-LD. Blocking /rails/ wholesale would bar
+# Googlebot-Image from all of it; the more specific Allow wins.
+Disallow: /rails/
+Allow: /rails/active_storage/
 
 User-agent: SemrushBot
 Disallow: /

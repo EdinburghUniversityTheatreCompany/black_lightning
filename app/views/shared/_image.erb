@@ -1,14 +1,9 @@
 <%# locals: (image:, variant: nil, full_width: true, priority: false, alt: nil, srcset_variants: nil, image_options: {}, proxy: false) -%>
 <%# KEEP %>
 
-<%# full_width and priority used to be one flag called eager_load, which set the layout classes
-    AND loading="eager" together. That coupled a styling decision to a performance one and got
-    the performance one backwards: every card below the fold loaded eagerly while the masthead,
-    the largest thing above it, inherited the app-wide lazy default. Measured on the live
-    homepage, that cost 1552ms of LCP on a throttled phone.
-
-    loading is left unset unless priority is passed, so it falls through to
-    config.action_view.image_loading ("lazy"). %>
+<%# full_width is a styling decision, priority a performance one; they were one flag and the
+    performance half was backwards, costing a measured 1552ms of homepage LCP. loading is left
+    unset unless priority is passed, so it falls through to config.action_view.image_loading. %>
 
 <% if variant.nil?
   if Rails.env.local?

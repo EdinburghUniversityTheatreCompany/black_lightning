@@ -509,6 +509,10 @@ ChaosRails::Application.routes.draw do
     end
   end
 
+  # robots.txt is served by the app, not from public/, so it does not inherit the one-year
+  # cache-control that public_file_server stamps on every static asset.
+  get "robots.txt", to: "robots#show", format: false, defaults: { format: "text" }
+
   # Sitemaps. Declared well before the /:id season constraint and the /*page catch-all, both of
   # which would otherwise swallow these.
   get "sitemap.xml", to: "sitemaps#index", as: :sitemap, format: false, defaults: { format: "xml" }

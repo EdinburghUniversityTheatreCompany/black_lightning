@@ -2,9 +2,8 @@
 # For the controllers whose whole page is one Admin::EditableBlock -- /about/*,
 # /get_involved/* and /archives/*.
 #
-# The block already knows what the page is called and what it says, so the page has no reason to
-# fall back to <title>Bedlam Theatre</title> and the site-wide boilerplate description. Twenty
-# pages did exactly that.
+# The block already knows what the page is called and what it says, so neither the title nor the
+# description has any reason to fall back to the site-wide default.
 ##
 module EditableBlockPage
   extend ActiveSupport::Concern

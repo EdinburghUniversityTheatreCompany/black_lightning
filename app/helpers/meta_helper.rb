@@ -6,9 +6,8 @@
 # reads from it -- the <tt><title></tt>, <tt>og:title</tt>, <tt>twitter:title</tt> -- is derived
 # here, at render time.
 #
-# That timing is the point. #set_globals is a +before_action+, so it runs before the action
-# assigns <tt>@title</tt>. Deriving og:title there read nil on every page and captioned every
-# shared show "Bedlam Theatre".
+# That timing is the point: #set_globals is a +before_action+, so it runs before the action
+# assigns <tt>@title</tt>. Anything derived from @title there reads nil.
 #
 # For an example, see the shows controller.
 ##
