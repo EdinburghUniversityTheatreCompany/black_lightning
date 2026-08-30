@@ -45,8 +45,7 @@ class GetInvolvedController < ApplicationController
     @opportunity.roles.build
     authorize! :create, Opportunity
 
-    @title = "Submit an Opportunity"
-    @meta[:description] = "Post an audition, crew call or theatre opportunity to Bedlam Theatre's listings, open to any Edinburgh student or fringe company."
+    set_submission_meta
   end
 
   def create
@@ -88,6 +87,13 @@ class GetInvolvedController < ApplicationController
 
   private
 
+  # Shared with rerender_new: a validation failure re-renders :new without going through #new,
+  # so the page came back titled "Bedlam Theatre".
+  def set_submission_meta
+    @title = "Submit an Opportunity"
+    @meta[:description] = "Post an audition, crew call or theatre opportunity to Bedlam Theatre's listings, open to any Edinburgh student or fringe company."
+  end
+
   def opportunity_params
     permitted = [ :title, :description, :expiry_date, :email_visibility, :contact_email,
                   :company_name, :project, :author, :dates, :location, :apply_url, :compensation_type, :experience_level,
@@ -101,6 +107,7 @@ class GetInvolvedController < ApplicationController
   # Re-render the submission form with a fresh role row if the user removed them all.
   def rerender_new
     @opportunity.roles.build if @opportunity.roles.empty?
+    set_submission_meta
     render :new, status: :unprocessable_entity
   end
 

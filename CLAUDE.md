@@ -755,7 +755,10 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   what collapses Ransack's `?q[...]` space — every author, company and venue is its own URL, each
   combining with pagination — onto the page it filters. Adding `q` there reopens an unbounded
   crawl space; keeping `page=1` would make the canonical create the duplicate it exists to
-  collapse. `robots.txt` (static, in `public/`) disallows the same space, and must spell it
+  collapse. `robots.txt` is served by `RobotsController`, **not** from `public/` (where
+  `public_file_server.headers` would stamp a one-year cache-control on a URL whose contents
+  change, and where the static middleware would shadow the route). It disallows the same space,
+  and must spell it
   **percent-encoded** (`q%5B`): a crawler matches the rule against the URL it sees, and Ransack's
   parameters arrive encoded.
 - **Variants say `format: "webp"`, not `convert:`.** Rails derives

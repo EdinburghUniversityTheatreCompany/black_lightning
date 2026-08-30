@@ -1,9 +1,8 @@
 class Archives::ShowsController < Archives::GenericEventsController
   def index
-    super
-
     @title = "Show Archive"
-    @url = :archives_shows
+
+    super
   end
 
   private
