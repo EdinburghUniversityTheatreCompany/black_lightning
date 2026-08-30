@@ -40,4 +40,8 @@ class VenuesController < ApplicationController
   def order_args
     [ "name" ]
   end
+
+  def index_description
+    "The venues Edinburgh University Theatre Company performs in, at Bedlam Theatre and across the city during the Fringe."
+  end
 end

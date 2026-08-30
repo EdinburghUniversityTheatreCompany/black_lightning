@@ -9,6 +9,7 @@ module GenericController
     return if return_random
 
     @title ||= helpers.get_formatted_class_name(resource_class, false)
+    @meta[:description] = index_description if index_description.present?
 
     resources = load_index_resources
 
@@ -306,6 +307,12 @@ module GenericController
 
   def update_failure_template
     "edit"
+  end
+
+  # What this listing is, in a sentence, for a search result. Nil keeps the site-wide
+  # description, which is the right answer for an index nobody searches for by name.
+  def index_description
+    nil
   end
 
   def index_editable_block_name
