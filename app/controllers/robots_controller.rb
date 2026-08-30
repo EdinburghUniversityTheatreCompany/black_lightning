@@ -19,10 +19,12 @@ class RobotsController < ActionController::Base
     # Long enough not to be a per-crawl origin hit, short enough that a rules change is live the
     # same day. public: is safe only because nothing above touches the session.
     #
-    # stale_if_error covers what skipping the DB filters cannot: the process being down. This was
-    # a static file before, so a failed deploy or an OOM-killed Puma now means a 502 here, and a
-    # 5xx robots.txt is what stops Googlebot crawling the site at all. A day-old copy is
-    # unreservedly better than that.
+    # stale_if_error asks a shared cache to keep serving the day-old copy rather than pass on an
+    # error. It is a mitigation, not a guarantee: Cloudflare honours the directive only on
+    # Enterprise, and a dead Puma surfaces as a connection-level 521/522 that serve-stale does not
+    # apply to at all. Cloudflare's Always Online is what actually covers that case -- see the
+    # Deployment note in CLAUDE.md. Worth sending regardless, since it costs nothing and other
+    # caches do honour it.
     expires_in 1.hour, public: true, stale_if_error: 1.day
 
     render "robots/show", layout: false, content_type: "text/plain", formats: [ :text ]

@@ -737,6 +737,12 @@ fresh regardless of what the origin now returns — a rules change deployed on 2
 being served from a 30-day-old copy. Later changes need no purge: the controller serves it with a
 one-hour cache.
 
+Robots.txt is now served by the app rather than by Thruster, so it goes down with the app — and a
+5xx robots.txt stops Googlebot crawling the site at all. The controller sends
+`stale-if-error=86400`, but Cloudflare honours that only on Enterprise and a dead Puma surfaces as
+a 521/522 that serve-stale cannot apply to. **Turn Cloudflare's Always Online on** (or add a Cache
+Rule for `/robots.txt`) so the edge keeps answering through an outage.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
