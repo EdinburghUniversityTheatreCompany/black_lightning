@@ -47,4 +47,32 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
     assert_not File.exist?(Rails.root.join("public/robots.txt")),
                "a file in public/ is served by middleware before the router ever runs"
   end
+
+  # A response marked publicly cacheable must never carry a session cookie: a shared cache
+  # (Cloudflare, in front of this site) would hand one visitor's session to the next.
+  test "it sets no session cookie, so public caching is safe" do
+    get "/robots.txt"
+
+    assert_includes response.headers["Cache-Control"].to_s, "public"
+    # rack-mini-profiler sets its own cookie in dev and test; the hazard is the session one.
+    assert_not_includes response.headers["Set-Cookie"].to_s, "_chaos_rails_session",
+                        "a publicly cached response must not carry a session cookie"
+  end
+
+  test "it is signed out of the application filter chain entirely" do
+    assert_not RobotsController.ancestors.include?(ApplicationController),
+               "inheriting ApplicationController makes robots.txt need the database, a session " \
+               "and a complete profile -- and a 5xx robots.txt stops Googlebot crawling the site"
+  end
+
+  # require_profile_completion! redirects a signed-in user with an incomplete profile everywhere
+  # else in the app; robots.txt must answer regardless of who is asking.
+  test "it answers with a session already established" do
+    get new_user_session_path
+
+    get "/robots.txt"
+
+    assert_response :success
+    assert_match(/Sitemap:/, response.body)
+  end
 end

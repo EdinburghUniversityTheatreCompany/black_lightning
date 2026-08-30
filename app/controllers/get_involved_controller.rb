@@ -44,6 +44,9 @@ class GetInvolvedController < ApplicationController
     @opportunity = Opportunity.new
     @opportunity.roles.build
     authorize! :create, Opportunity
+
+    @title = "Submit an Opportunity"
+    @meta[:description] = "Post an audition, crew call or theatre opportunity to Bedlam Theatre's listings, open to any Edinburgh student or fringe company."
   end
 
   def create
