@@ -29,7 +29,7 @@
         <p class="mt-8 text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
 
         <% if event.price.present? %>
-          <p class="mt-3 text-4xl text-neutral-300"><%= event.price %></p>
+          <p class="mt-3 text-4xl text-neutral-300"><%= display_price(event) %></p>
         <% end %>
 
         <% if tonight && event.content_warnings.present? %>

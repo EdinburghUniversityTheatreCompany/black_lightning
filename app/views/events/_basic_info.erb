@@ -11,3 +11,5 @@
 <% details << {   key: 'Programme', value: link_to('Read the digital programme', event.digital_programme_url, target: '_blank', rel: 'noopener') } if event.digital_programme_url.present? %>
 
 <%= render Public::BasicInfoComponent.new(header: event.name, image: event.fetch_image, tagline: event.tagline, details: details, admin_site: @admin_site) %>
+
+<%= render '/events/performances', event: event %>

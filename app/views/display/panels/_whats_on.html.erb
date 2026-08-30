@@ -20,7 +20,7 @@
               cut off mid-word tells nobody what is on. It wraps, and the marquee
               scrolls whatever that pushes past the bottom. %>
           <span class="min-w-0 flex-1 text-5xl font-bold leading-tight text-white"><%= event.name %></span>
-          <span class="w-64 shrink-0 truncate text-right text-3xl leading-descender text-neutral-400"><%= event.price %></span>
+          <span class="w-64 shrink-0 truncate text-right text-3xl leading-descender text-neutral-400"><%= display_price(event) %></span>
         </li>
       <% end %>
     </ul>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -406,12 +406,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_190000) do
   end
 
   create_table "events", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "age_guidance"
     t.string "author"
     t.decimal "booking_fee", precision: 8, scale: 2
     t.bigint "company_id"
     t.text "content_warnings", size: :medium
     t.datetime "created_at", precision: nil, null: false
     t.string "digital_programme_url"
+    t.integer "doors_open_minutes_before"
+    t.integer "duration_minutes"
     t.date "end_date"
     t.string "image_content_type"
     t.string "image_file_name"

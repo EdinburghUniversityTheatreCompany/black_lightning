@@ -10,12 +10,6 @@ module DisplayHelper
     "#{starts.strftime('%a %-d %b')} – #{ends.strftime('%a %-d %b')}"
   end
 
-  # "7.30pm", "8pm". British house style, and the minutes are dropped on the
-  # hour rather than printing a bare ":00" nobody says out loud.
-  def display_time(time)
-    time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
-  end
-
   # What to print in the "when" column. For an event that plays intermittently
   # the raw range is useless on a screen -- "Sep 1 - Jun 30" tells nobody when
   # to turn up -- so name the next performance and its curtain time instead.
@@ -27,7 +21,21 @@ module DisplayHelper
 
     return display_date_range(event) if occurrence.nil?
 
-    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{display_time(occurrence.starts_at)}"
+    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{short_time(occurrence.starts_at)}"
+  end
+
+  # The compact price for a fixed-width column on a screen read from across a
+  # room. The derived Event#price says "£10 / £8 concessions / £7 members", which
+  # is right on the website and does not fit here -- it truncates to
+  # "£10 / £8 concessio...". Structured bands collapse to "£10/8/7"; an event
+  # without them falls back to whatever was typed.
+  def display_price(event)
+    prices = event.ticket_prices
+
+    return event.price if prices.empty?
+    return "Free" if prices.all?(&:free?)
+
+    "£#{prices.map { |price| price.formatted_amount.delete_prefix('£') }.join('/')}"
   end
 
   # The white wordmark with the red arch -- the only logo asset that reads on

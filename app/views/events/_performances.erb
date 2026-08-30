@@ -1,0 +1,44 @@
+<%# locals: (event:) %>
+
+<% occurrences = event.event_occurrences.to_a %>
+
+<% if occurrences.any? || event.duration_minutes.present? || event.age_guidance.present? %>
+  <%= render CardComponent.new(title: occurrences.any? ? event.occurrence_label.pluralize : 'Details') do %>
+    <% if occurrences.any? %>
+      <ul class="divide-y divide-gray-200">
+        <% occurrences.each do |occurrence| %>
+          <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+            <span class="font-medium"><%= l(occurrence.starts_at.to_date, format: :long) %></span>
+            <span><%= short_time(occurrence.starts_at) %></span>
+
+            <% if occurrence.doors_open_at.present? %>
+              <span class="text-sm text-gray-500">doors <%= short_time(occurrence.doors_open_at) %></span>
+            <% end %>
+
+            <%# do/end, not { label }: a brace block returns the string rather than
+                writing it to the buffer, and ViewComponent captures the buffer --
+                so every badge renders as an empty pill. %>
+            <% occurrence.access_flag_labels.each do |flag_label| %>
+              <%= render(BadgeComponent.new(type: :info, pill: true)) do %><%= flag_label %><% end %>
+            <% end %>
+
+            <% if occurrence.note.present? %>
+              <span class="text-sm text-gray-500"><%= occurrence.note %></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% details = [] %>
+    <% details << "Running time #{event.duration_in_words}, including any interval" if event.duration_minutes.present? %>
+    <% details << "age guidance #{event.age_guidance}" if event.age_guidance.present? %>
+    <%# Through TicketPrice so a whole number of pounds prints as "£1", not "£1.00" --
+        the one place that formats money this way. %>
+    <% details << "#{Event::TicketPrice.new(amount: event.booking_fee).formatted_amount} booking fee on the door" if event.booking_fee.present? %>
+
+    <% if details.any? %>
+      <p class="<%= 'mt-3 ' if occurrences.any? %>text-sm text-gray-500"><%= details.to_sentence.upcase_first %>.</p>
+    <% end %>
+  <% end %>
+<% end %>

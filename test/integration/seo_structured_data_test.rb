@@ -15,7 +15,11 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
   end
 
   def document_of_type(type)
-    documents.flat_map { |doc| doc["@graph"] || [ doc ] }.find { |node| node["@type"] == type }
+    documents_of_type(type).first
+  end
+
+  def documents_of_type(type)
+    documents.flat_map { |doc| doc["@graph"] || [ doc ] }.select { |node| node["@type"] == type }
   end
 
   test "every page carries valid parseable json-ld" do
@@ -100,6 +104,184 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     offers = document_of_type("TheaterEvent")["offers"]
     assert_equal "5.00", offers["lowPrice"]
     assert_equal "5.00", offers["highPrice"]
+  end
+
+  # --- performances ------------------------------------------------------
+
+  # The upgrade CLAUDE.md named as the biggest one outstanding: a date-only
+  # startDate is all an event without performances can honestly claim, and it is
+  # what Google gets the poorest rich result from.
+  test "each performance becomes an event of its own with a real curtain time" do
+    @show.update!(duration_minutes: 135)
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 25, 19, 30))
+
+    get show_path(@show)
+
+    performances = documents_of_type("TheaterEvent").select { |node| node["superEvent"] }
+
+    assert_equal 2, performances.length
+    assert_equal "2026-09-24T19:30:00+01:00", performances.first["startDate"]
+    assert_equal "2026-09-24T21:45:00+01:00", performances.first["endDate"]
+  end
+
+  test "a performance points back at the run it belongs to" do
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+
+    get show_path(@show)
+
+    run = documents_of_type("TheaterEvent").find { |node| node["superEvent"].nil? }
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal run["@id"], performance.dig("superEvent", "@id")
+    assert_includes run["subEvent"].map { |sub| sub["@id"] }, performance["@id"]
+  end
+
+  # Every archive event has none, and must still be marked up exactly as before.
+  test "an event with no performances keeps its date-only run markup" do
+    get show_path(@show)
+
+    events = documents_of_type("TheaterEvent")
+
+    assert_equal 1, events.length
+    assert_equal "2026-09-23", events.first["startDate"]
+    assert_nil events.first["subEvent"]
+  end
+
+  test "an accessible performance says so in schema.org's own vocabulary" do
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30),
+                                         access_flags: %w[relaxed captioned])
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal %w[relaxedPerformance captions], performance["accessibilityFeature"]
+  end
+
+  # A press night is a scheduling label, not access provision. Publishing it as
+  # an accessibilityFeature tells a search engine something untrue.
+  test "a scheduling flag is not published as an accessibility feature" do
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30),
+                                         access_flags: %w[press_night preview])
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_nil performance["accessibilityFeature"]
+  end
+
+  test "doors open time is published when it is known" do
+    @show.update!(doors_open_minutes_before: 30)
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal "2026-09-24T19:00:00+01:00", performance["doorTime"]
+  end
+
+  # --- structured prices -------------------------------------------------
+
+  test "structured bands become one named offer each, not a scraped range" do
+    @show.update!(ticket_prices: [
+      { "category" => "standard", "amount" => "10" },
+      { "category" => "concession", "amount" => "8" }
+    ])
+
+    get show_path(@show)
+
+    offers = document_of_type("TheaterEvent")["offers"]
+
+    assert_equal "AggregateOffer", offers["@type"]
+    assert_equal "8.00", offers["lowPrice"]
+    assert_equal "10.00", offers["highPrice"]
+    assert_equal [ "Standard", "Concession" ], offers["offers"].map { |offer| offer["name"] }
+    assert_equal [ "10.00", "8.00" ], offers["offers"].map { |offer| offer["price"] }
+  end
+
+  # The parser refused ~38% of the archive, so the old scrape has to stay.
+  test "an event with no bands still falls back to reading the price string" do
+    get show_path(@show)
+
+    offers = document_of_type("TheaterEvent")["offers"]
+
+    assert_equal "7.00", offers["lowPrice"]
+    assert_equal "10.00", offers["highPrice"]
+    assert_nil offers["offers"]
+  end
+
+  test "a free event is marked as free" do
+    @show.update!(ticket_prices: [ { "category" => "standard", "amount" => "0" } ])
+
+    get show_path(@show)
+
+    assert document_of_type("TheaterEvent")["isAccessibleForFree"]
+  end
+
+  test "a paid event is not marked free" do
+    @show.update!(ticket_prices: [ { "category" => "standard", "amount" => "10" } ])
+
+    get show_path(@show)
+
+    assert_not document_of_type("TheaterEvent")["isAccessibleForFree"]
+  end
+
+  # --- the play and who made it ------------------------------------------
+
+  test "a show names the play it is staging and who wrote it" do
+    @show.update!(author: "Richard O'Brien")
+
+    get show_path(@show)
+
+    work = document_of_type("TheaterEvent")["workFeatured"]
+
+    assert_equal "Play", work["@type"]
+    assert_equal "The Rocky Horror Show", work["name"]
+    assert_equal "Richard O'Brien", work.dig("author", "name")
+  end
+
+  # A workshop is not a play, so claiming one would be a lie about what it is.
+  test "a workshop features no play" do
+    workshop = FactoryBot.create(:workshop, is_public: true, author: "Someone")
+
+    get workshop_path(workshop)
+
+    assert_nil document_of_type("TheaterEvent")["workFeatured"]
+  end
+
+  test "the director is named from the team" do
+    director = FactoryBot.create(:user, first_name: "Ada", last_name: "Lovelace")
+    FactoryBot.create(:team_member, teamwork: @show, user: director, position: "Director")
+
+    get show_path(@show)
+
+    assert_equal "Ada Lovelace", document_of_type("TheaterEvent").dig("director", "name")
+  end
+
+  # "Assistant Director" is not the director, and naming them as such is wrong.
+  test "an assistant director is not the director" do
+    assistant = FactoryBot.create(:user)
+    FactoryBot.create(:team_member, teamwork: @show, user: assistant, position: "Assistant Director")
+
+    get show_path(@show)
+
+    assert_nil document_of_type("TheaterEvent")["director"]
+  end
+
+  # --- running time and age ----------------------------------------------
+
+  test "the running time and age guidance are published when set" do
+    @show.update!(duration_minutes: 135, age_guidance: "14+")
+
+    get show_path(@show)
+
+    event = document_of_type("TheaterEvent")
+
+    assert_equal "PT2H15M", event["duration"]
+    assert_equal "14+", event["typicalAgeRange"]
   end
 
   test "a show page carries a breadcrumb trail" do

@@ -56,6 +56,7 @@ class Admin::GenericEventsController < AdminController
       :author, :venue, :venue_id, :season, :season_id,
       :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :booking_fee, :spark_seat_slug, :digital_programme_url,
+      :duration_minutes, :doors_open_minutes_before, :age_guidance,
       :maintenance_debt_start, :staffing_debt_start,
       :maintenance_debt_amount, :staffing_debt_amount,
       event_tag_ids: [],

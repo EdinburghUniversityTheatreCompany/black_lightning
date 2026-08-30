@@ -4,41 +4,44 @@
 # Table name: events
 # Database name: primary
 #
-#  id                      :integer          not null, primary key
-#  author                  :string(255)
-#  booking_fee             :decimal(8, 2)
-#  content_warnings        :text(16777215)
-#  digital_programme_url   :string(255)
-#  end_date                :date
-#  image_content_type      :string(255)
-#  image_file_name         :string(255)
-#  image_file_size         :integer
-#  image_updated_at        :datetime
-#  is_public               :boolean
-#  maintenance_debt_amount :integer
-#  maintenance_debt_start  :date
-#  members_only_text       :text(16777215)
-#  name                    :string(255)
-#  pretix_shown            :boolean
-#  pretix_slug_override    :string(255)
-#  pretix_view             :string(255)
-#  price                   :string(255)
-#  publicity_text          :text(16777215)
-#  slug                    :string(255)
-#  spark_seat_slug         :string(255)
-#  staffing_debt_amount    :integer
-#  staffing_debt_start     :date
-#  start_date              :date
-#  tagline                 :string(255)
-#  ticket_prices           :json
-#  type                    :string(255)
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  company_id              :bigint
-#  proposal_id             :integer
-#  season_id               :integer
-#  venue_id                :integer
-#  xts_id                  :integer
+#  id                        :integer          not null, primary key
+#  age_guidance              :string(255)
+#  author                    :string(255)
+#  booking_fee               :decimal(8, 2)
+#  content_warnings          :text(16777215)
+#  digital_programme_url     :string(255)
+#  doors_open_minutes_before :integer
+#  duration_minutes          :integer
+#  end_date                  :date
+#  image_content_type        :string(255)
+#  image_file_name           :string(255)
+#  image_file_size           :integer
+#  image_updated_at          :datetime
+#  is_public                 :boolean
+#  maintenance_debt_amount   :integer
+#  maintenance_debt_start    :date
+#  members_only_text         :text(16777215)
+#  name                      :string(255)
+#  pretix_shown              :boolean
+#  pretix_slug_override      :string(255)
+#  pretix_view               :string(255)
+#  price                     :string(255)
+#  publicity_text            :text(16777215)
+#  slug                      :string(255)
+#  spark_seat_slug           :string(255)
+#  staffing_debt_amount      :integer
+#  staffing_debt_start       :date
+#  start_date                :date
+#  tagline                   :string(255)
+#  ticket_prices             :json
+#  type                      :string(255)
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  company_id                :bigint
+#  proposal_id               :integer
+#  season_id                 :integer
+#  venue_id                  :integer
+#  xts_id                    :integer
 #
 # Indexes
 #

@@ -82,32 +82,28 @@ module SchemaHelper
   end
 
   ##
-  # A production. TheaterEvent rather than Event: it is the specific type Google understands for
-  # a staged performance.
+  # A production, and one node per performance of it.
+  #
+  # TheaterEvent rather than Event: it is the specific type Google understands for a staged
+  # performance. Each EventOccurrence becomes a TheaterEvent of its OWN, at the top level of the
+  # graph with a superEvent pointing back at the run -- Google keys its rich results off top-level
+  # items, so a performance buried in subEvent alone would not surface, while the two-way link
+  # still says these are one production rather than N unrelated shows.
+  #
+  # An event with no occurrences -- every one of the ~3000 archive rows -- emits exactly what it
+  # emitted before: a single node with a date-only startDate.
   ##
   def event_schema(event)
     return nil if event.start_date.blank?
 
-    {
-      "@context" => CONTEXT,
-      "@type" => "TheaterEvent",
-      "name" => event.name,
-      "url" => polymorphic_url(event),
-      # Dates, not datetimes. The schema carries no curtain times, so a date-only startDate is
-      # the honest answer; Google renders an event result from it and wants a time for the
-      # richest one. See the note in CLAUDE.md about adding performances.
-      "startDate" => event.start_date.iso8601,
-      "endDate" => event.end_date&.iso8601,
-      "eventStatus" => "https://schema.org/EventScheduled",
-      "eventAttendanceMode" => "https://schema.org/OfflineEventAttendanceMode",
-      "description" => truncate_description(render_plain(event.publicity_text)),
-      "image" => event_image_url(event),
-      "location" => { "@id" => absolute_url(VENUE_ID) },
-      "organizer" => { "@id" => absolute_url(ORGANISATION_ID) },
-      "performer" => event_performers(event),
-      "offers" => event_offers(event)
-    }.compact
+    performances = event_performance_schemas(event)
+    run = event_run_schema(event, performances)
+
+    return run if performances.empty?
+
+    { "@context" => CONTEXT, "@graph" => [ run ] + performances }
   end
+
 
   def news_article_schema(news)
     {
@@ -170,6 +166,107 @@ module SchemaHelper
 
   private
 
+  def event_run_schema(event, performances)
+    {
+      "@context" => CONTEXT,
+      "@type" => "TheaterEvent",
+      "@id" => event_schema_id(event),
+      "name" => event.name,
+      "url" => polymorphic_url(event),
+      # Dates, not datetimes, for the run as a whole: it spans days. The curtain times live on the
+      # performance nodes below.
+      "startDate" => event.start_date.iso8601,
+      "endDate" => event.end_date&.iso8601,
+      "eventStatus" => "https://schema.org/EventScheduled",
+      "eventAttendanceMode" => "https://schema.org/OfflineEventAttendanceMode",
+      "description" => truncate_description(render_plain(event.publicity_text)),
+      "image" => event_image_url(event),
+      "location" => { "@id" => absolute_url(VENUE_ID) },
+      "organizer" => { "@id" => absolute_url(ORGANISATION_ID) },
+      "performer" => event_performers(event),
+      "workFeatured" => event_work_featured(event),
+      "director" => event_crew_person(event, "director"),
+      "producer" => event_crew_person(event, "producer"),
+      "duration" => event.iso8601_duration,
+      "typicalAgeRange" => event.age_guidance.presence,
+      "isAccessibleForFree" => event_free(event),
+      "offers" => event_offers(event),
+      "subEvent" => (performances.map { |node| { "@id" => node["@id"] } } if performances.any?)
+    }.compact
+  end
+
+  ##
+  # One node per performance, each carrying the thing the run cannot: a real curtain time.
+  ##
+  def event_performance_schemas(event)
+    return [] unless event.respond_to?(:event_occurrences)
+
+    event.event_occurrences.map do |occurrence|
+      next nil if occurrence.starts_at.blank?
+
+      {
+        "@type" => "TheaterEvent",
+        "@id" => event_schema_id(event, occurrence),
+        "name" => event.name,
+        "url" => polymorphic_url(event),
+        "startDate" => occurrence.starts_at.iso8601,
+        "endDate" => occurrence.effective_ends_at&.iso8601,
+        "doorTime" => occurrence.doors_open_at&.iso8601,
+        "eventStatus" => "https://schema.org/EventScheduled",
+        "eventAttendanceMode" => "https://schema.org/OfflineEventAttendanceMode",
+        "location" => { "@id" => absolute_url(VENUE_ID) },
+        "organizer" => { "@id" => absolute_url(ORGANISATION_ID) },
+        "accessibilityFeature" => occurrence.schema_accessibility_features.presence,
+        "isAccessibleForFree" => event_free(event),
+        "offers" => event_offers(event),
+        "superEvent" => { "@id" => event_schema_id(event) }
+      }.compact
+    end.compact
+  end
+
+  def event_schema_id(event, occurrence = nil)
+    suffix = occurrence ? "#performance-#{occurrence.id}" : "#event"
+
+    "#{polymorphic_url(event)}#{suffix}"
+  end
+
+  ##
+  # The play, and who wrote it. Shows only: a workshop is not a play, and Event#author on one names
+  # whoever is running it rather than a playwright.
+  ##
+  def event_work_featured(event)
+    return nil unless event.is_a?(Show) && event.author.present?
+
+    { "@type" => "Play", "name" => event.name,
+      "author" => { "@type" => "Person", "name" => event.author } }
+  end
+
+  ##
+  # A crew credit matched EXACTLY, so "Assistant Director" is not published as the director. Team
+  # positions are free text split on "/", the same way TeamMember reads them.
+  ##
+  def event_crew_person(event, role)
+    return nil unless event.respond_to?(:team_members)
+
+    member = event.team_members.find do |candidate|
+      candidate.position.to_s.split(%r{/(?![^(]*\))}).any? { |part| part.strip.casecmp?(role) }
+    end
+
+    return nil if member&.user.nil?
+
+    { "@type" => "Person", "name" => member.user.name }
+  end
+
+  # True only when every band is zero. Nil rather than false when there are no bands at all: we do
+  # not know it is paid, we just have nothing structured to say.
+  def event_free(event)
+    prices = event.ticket_prices
+
+    return nil if prices.empty?
+
+    prices.all?(&:free?) || nil
+  end
+
   def showing?
     controller&.action_name == "show"
   end
@@ -199,11 +296,47 @@ module SchemaHelper
   end
 
   ##
-  # Event#price is free text ("£7/£8/£10", "£5 (£4 members)", "Free"), so offers are emitted only
-  # when a number can actually be read out of it. A wrong price in a rich result is worse than no
-  # price -- it is a promise the box office has to honour.
+  # Structured bands where there are any, and each one named -- "Concession £8" is a far better
+  # rich result than a bare range.
+  #
+  # Falling back to scraping Event#price is not legacy cruft: the parser refused about 38% of the
+  # archive outright, and those rows have nothing else to offer. A wrong price in a rich result is
+  # worse than no price -- it is a promise the box office has to honour -- so the scrape still only
+  # fires when a number can actually be read out.
   ##
   def event_offers(event)
+    structured = event.ticket_prices
+
+    return structured_offers(event, structured) if structured.any?
+
+    scraped_offers(event)
+  end
+
+  def structured_offers(event, prices)
+    amounts = prices.map(&:amount).sort
+
+    {
+      "@type" => "AggregateOffer",
+      "priceCurrency" => "GBP",
+      "lowPrice" => format("%.2f", amounts.first),
+      "highPrice" => format("%.2f", amounts.last),
+      "offerCount" => prices.length,
+      "availability" => "https://schema.org/InStock",
+      "url" => event_offer_url(event),
+      "offers" => prices.map do |price|
+        {
+          "@type" => "Offer",
+          "name" => price.display_label,
+          "price" => format("%.2f", price.amount),
+          "priceCurrency" => "GBP",
+          "availability" => "https://schema.org/InStock",
+          "url" => event_offer_url(event)
+        }
+      end
+    }
+  end
+
+  def scraped_offers(event)
     amounts = event.price.to_s.scan(PRICE_PATTERN).flatten.map(&:to_f).sort
 
     return nil if amounts.empty?
@@ -214,8 +347,13 @@ module SchemaHelper
       "lowPrice" => format("%.2f", amounts.first),
       "highPrice" => format("%.2f", amounts.last),
       "availability" => "https://schema.org/InStock",
-      "url" => event.pretix_shown? ? pretix_event_url(event) : polymorphic_url(event)
+      "url" => event_offer_url(event)
     }
+  end
+
+  # Where someone actually buys it.
+  def event_offer_url(event)
+    event.pretix_shown? ? pretix_event_url(event) : polymorphic_url(event)
   end
 
   ##

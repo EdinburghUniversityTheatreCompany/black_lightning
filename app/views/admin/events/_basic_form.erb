@@ -18,6 +18,19 @@
 
 <%= f.input :end_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
+<div class="flex flex-wrap gap-4">
+  <div class="w-64">
+    <%= f.input :duration_minutes, label: 'Running time (minutes)',
+          hint: 'Including the interval. Gives each performance an end time.' %>
+  </div>
+  <div class="w-64">
+    <%= f.input :doors_open_minutes_before, label: 'Doors open (minutes before)' %>
+  </div>
+  <div class="w-64">
+    <%= f.input :age_guidance, label: 'Age guidance', placeholder: 'e.g. 14+' %>
+  </div>
+</div>
+
 <div id="event-occurrences">
   <h3><%= f.object.occurrence_label.pluralize %></h3>
 

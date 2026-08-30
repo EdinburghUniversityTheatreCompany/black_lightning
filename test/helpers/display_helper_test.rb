@@ -2,6 +2,7 @@ require "test_helper"
 
 class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
+  include TimeHelper
   include PretixHelper
   include MdHelper
 
@@ -74,6 +75,37 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 6))
   end
 
+
+  # The column is a fixed 256px on a screen read from across a room, and the
+  # derived price string ("£10 / £8 concessions / £7 members") truncates in it.
+  test "display_price collapses structured bands to fit the board" do
+    event = FactoryBot.build(:show, ticket_prices: [
+      { "category" => "standard", "amount" => "10" },
+      { "category" => "concession", "amount" => "8" },
+      { "category" => "member", "amount" => "7" }
+    ])
+
+    assert_equal "£10/8/7", display_price(event)
+  end
+
+  test "display_price keeps the pence where there are any" do
+    event = FactoryBot.build(:show, ticket_prices: [ { "category" => "standard", "amount" => "4.50" } ])
+
+    assert_equal "£4.50", display_price(event)
+  end
+
+  test "display_price says Free rather than £0" do
+    event = FactoryBot.build(:show, ticket_prices: [ { "category" => "standard", "amount" => "0" } ])
+
+    assert_equal "Free", display_price(event)
+  end
+
+  # Every archive event has no bands, so this is the path almost all of them take.
+  test "display_price falls back to whatever was typed" do
+    event = FactoryBot.build(:show, price: "Pay what you can")
+
+    assert_equal "Pay what you can", display_price(event)
+  end
 
   test "display_booking_url points at the pretix shop when tickets are shown" do
     event = FactoryBot.build(:show, slug: "the-crucible", is_public: true, pretix_shown: true, pretix_slug_override: nil)

@@ -759,6 +759,9 @@ form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec
   section. `on_today?`, `next_occurrence` and `display_when` all branch on that, so a change to one
   needs the same change to the others.
 - `event_occurrences.event_id` is **`:integer`**, matching `events`' legacy integer primary key.
+- **The box office board renders `display_price`, not `Event#price`.** The derived string
+  ("£10 / £8 concessions / £7 members") truncates in that fixed 256px column; structured bands
+  collapse to "£10/8/7".
 
 ## Opportunities
 
@@ -803,12 +806,18 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
 - **Member profiles are indexed on purpose.** Opting out is `users.public_profile`, which is the
   same flag the guest ability's `:view_shows_and_bio` rule reads, so an opted-out profile is
   neither listed in the sitemap nor reachable. Don't add a blanket `noindex`.
-- **`TheaterEvent` emits a date-only `startDate` and omits `offers` when the free-text
-  `events.price` yields no number.** A wrong price in a rich result is a promise the box office
-  has to honour. **When performances and prices become real fields on `Event`, revisit
-  `SchemaHelper#event_schema`**: emit one `Event` per performance with a real curtain time, and
-  replace the `PRICE_PATTERN` scrape with the structured price. That is the single biggest
-  remaining upgrade to the event rich results.
+- **An event with performances emits a `@graph`: the run, plus one `TheaterEvent` per
+  `EventOccurrence`.** Each performance is a TOP-LEVEL node with a `superEvent` back-link, not
+  only a nested `subEvent` — Google keys its rich results off top-level items. An event with no
+  occurrences (every archive row) emits exactly the single date-only node it always did.
+- **`offers` prefer `ticket_prices`, one named `Offer` per band; the `PRICE_PATTERN` scrape stays
+  as the fallback.** It is not legacy cruft: the parser refused ~38% of the archive outright, and
+  those rows have nothing else to offer. A wrong price in a rich result is a promise the box
+  office has to honour, so the scrape still only fires when a number can be read out.
+- **`accessibilityFeature` carries only the flags that ARE access provision**, mapped to
+  schema.org's vocabulary (`captions`, `audioDescription`, `signLanguage`, `relaxedPerformance`).
+  Preview, press night and post-show discussion are scheduling labels; publishing them there would
+  tell a search engine a press night is an accessible performance.
 - **`render_markdown` rewrites links, and one half of that must not reach an email.**
   `LinkNormalisationHelper` does two things: a target typed without a scheme
   ("theimproverts.co.uk") becomes absolute, and a link to our own host becomes a path so it

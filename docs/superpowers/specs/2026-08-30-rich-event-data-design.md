@@ -1,7 +1,7 @@
 # Rich event data: performances, structured prices, and the fields the schema needs
 
 **Date:** 2026-08-30
-**Status:** approved, phased implementation
+**Status:** implemented on `rich-event-data` (phases 1–4); backfill written, not yet applied
 
 ## Why
 
@@ -251,6 +251,17 @@ gets verified in a browser, not by reasoning about it.
 - System: the nested-form add/remove buttons, which do verify fine in a browser.
 - The existing display tests asserting blank-weekday behaviour are updated deliberately. The
   empty-database display test is the feature and must keep passing.
+
+## What changed from the design during implementation
+
+- **`accessibilityFeature` is filtered and mapped.** The first cut published every flag verbatim,
+  which said a press night was an accessibility feature. Only `captioned`, `audio_described`,
+  `bsl` and `relaxed` are published, in schema.org's own vocabulary.
+- **Two plausibility guards were added to the parser** after sweeping the readable parses; see §4.
+- **The box office board needed its own compact price** (`display_price`): the derived string
+  truncates in that fixed-width column.
+- **Prices are stored dearest-first on read, not on write**, so the raw JSON keeps what was
+  entered.
 
 ## Phases
 

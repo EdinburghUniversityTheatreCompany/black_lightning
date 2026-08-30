@@ -51,6 +51,17 @@ class EventOccurrence < ApplicationRecord
 
   ACCESS_FLAGS = ACCESS_FLAG_LABELS.keys.freeze
 
+  # schema.org accessibilityFeature values for the flags that ARE accessibility
+  # features. Preview, press night and post-show discussion are scheduling
+  # labels, not access provision, and publishing them here would tell a search
+  # engine a press night is an accessible performance.
+  SCHEMA_ACCESSIBILITY_FEATURES = {
+    "captioned" => "captions",
+    "audio_described" => "audioDescription",
+    "bsl" => "signLanguage",
+    "relaxed" => "relaxedPerformance"
+  }.freeze
+
   belongs_to :event
 
   validates :starts_at, presence: true
@@ -87,6 +98,27 @@ class EventOccurrence < ApplicationRecord
 
   def on_date
     starts_at&.to_date
+  end
+
+  # Only the flags that are genuinely about access, in schema.org's vocabulary.
+  def schema_accessibility_features
+    access_flags.filter_map { |flag| SCHEMA_ACCESSIBILITY_FEATURES[flag] }
+  end
+
+  # When this one finishes. An explicit ends_at wins; otherwise the event's
+  # running time supplies it, which is the usual case -- a producer states the
+  # running time once rather than an end time per night.
+  def effective_ends_at
+    return ends_at if ends_at.present?
+    return nil if starts_at.blank? || event&.duration_minutes.blank?
+
+    starts_at + event.duration_minutes.minutes
+  end
+
+  def doors_open_at
+    return nil if starts_at.blank? || event&.doors_open_minutes_before.blank?
+
+    starts_at - event.doors_open_minutes_before.minutes
   end
 
   private

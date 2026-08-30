@@ -11,41 +11,44 @@
 # Table name: events
 # Database name: primary
 #
-#  id                      :integer          not null, primary key
-#  author                  :string(255)
-#  booking_fee             :decimal(8, 2)
-#  content_warnings        :text(16777215)
-#  digital_programme_url   :string(255)
-#  end_date                :date
-#  image_content_type      :string(255)
-#  image_file_name         :string(255)
-#  image_file_size         :integer
-#  image_updated_at        :datetime
-#  is_public               :boolean
-#  maintenance_debt_amount :integer
-#  maintenance_debt_start  :date
-#  members_only_text       :text(16777215)
-#  name                    :string(255)
-#  pretix_shown            :boolean
-#  pretix_slug_override    :string(255)
-#  pretix_view             :string(255)
-#  price                   :string(255)
-#  publicity_text          :text(16777215)
-#  slug                    :string(255)
-#  spark_seat_slug         :string(255)
-#  staffing_debt_amount    :integer
-#  staffing_debt_start     :date
-#  start_date              :date
-#  tagline                 :string(255)
-#  ticket_prices           :json
-#  type                    :string(255)
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  company_id              :bigint
-#  proposal_id             :integer
-#  season_id               :integer
-#  venue_id                :integer
-#  xts_id                  :integer
+#  id                        :integer          not null, primary key
+#  age_guidance              :string(255)
+#  author                    :string(255)
+#  booking_fee               :decimal(8, 2)
+#  content_warnings          :text(16777215)
+#  digital_programme_url     :string(255)
+#  doors_open_minutes_before :integer
+#  duration_minutes          :integer
+#  end_date                  :date
+#  image_content_type        :string(255)
+#  image_file_name           :string(255)
+#  image_file_size           :integer
+#  image_updated_at          :datetime
+#  is_public                 :boolean
+#  maintenance_debt_amount   :integer
+#  maintenance_debt_start    :date
+#  members_only_text         :text(16777215)
+#  name                      :string(255)
+#  pretix_shown              :boolean
+#  pretix_slug_override      :string(255)
+#  pretix_view               :string(255)
+#  price                     :string(255)
+#  publicity_text            :text(16777215)
+#  slug                      :string(255)
+#  spark_seat_slug           :string(255)
+#  staffing_debt_amount      :integer
+#  staffing_debt_start       :date
+#  start_date                :date
+#  tagline                   :string(255)
+#  ticket_prices             :json
+#  type                      :string(255)
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  company_id                :bigint
+#  proposal_id               :integer
+#  season_id                 :integer
+#  venue_id                  :integer
+#  xts_id                    :integer
 #
 # Indexes
 #
@@ -90,6 +93,14 @@ class Event < ApplicationRecord
   validates :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }
   validates :digital_programme_url, length: { maximum: 255 }
+  validates :age_guidance, length: { maximum: 255 }
+  # Blank is normal; a running time of zero or of a day and a half is a typo.
+  validates :duration_minutes, numericality: {
+    only_integer: true, greater_than: 0, less_than_or_equal_to: 1440
+  }, allow_nil: true
+  validates :doors_open_minutes_before, numericality: {
+    only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 240
+  }, allow_nil: true
   # A scheme is required rather than merely encouraged: this value is rendered
   # as an anchor on the public page and encoded straight into a QR code on the
   # box office screen, and a bare "bedlamtheatre.co.uk/programme" resolves as a
@@ -339,6 +350,30 @@ class Event < ApplicationRecord
     rows = attributes.respond_to?(:values) ? attributes.values : Array(attributes)
 
     self.ticket_prices = rows.reject { |row| destroy_flagged?(row) || row_amount(row).blank? }
+  end
+
+  # "2 hours 15 minutes". distance_of_time_in_words rounds this to "about 2
+  # hours", which throws away the quarter hour somebody is planning their evening
+  # around.
+  def duration_in_words
+    return nil if duration_minutes.blank?
+
+    hours, minutes = duration_minutes.divmod(60)
+    parts = []
+    parts << "#{hours} #{'hour'.pluralize(hours)}" if hours.positive?
+    parts << "#{minutes} #{'minute'.pluralize(minutes)}" if minutes.positive?
+
+    parts.join(" ")
+  end
+
+  # The running time as schema.org wants it: "PT2H15M". Nil when nobody has said
+  # how long the thing runs for, which is most of the archive.
+  def iso8601_duration
+    return nil if duration_minutes.blank?
+
+    hours, minutes = duration_minutes.divmod(60)
+
+    "PT#{"#{hours}H" if hours.positive?}#{"#{minutes}M" if minutes.positive?}"
   end
 
   # What this event calls its EventOccurrences. Resolved through the STI

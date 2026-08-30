@@ -26,6 +26,14 @@ module TimeHelper
     result
   end
 
+  # "7.30pm", "8pm". British house style, and the minutes are dropped on the hour
+  # rather than printing a bare ":00" that nobody says out loud.
+  def short_time(time)
+    return nil if time.blank?
+
+    time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
+  end
+
   def max_end_year
     Date.current.year + 5
   end
