@@ -75,4 +75,18 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/Sitemap:/, response.body)
   end
+
+  # Every image on the site -- every og:image, and the image in each Event's JSON-LD -- is an
+  # ActiveStorage representation under /rails/. A bare Disallow: /rails/ bars Googlebot-Image
+  # from all of it and makes the Event rich-result image unfetchable.
+  test "it does not block the ActiveStorage paths every image is served from" do
+    get "/robots.txt"
+
+    assert_match(%r{^Allow: /rails/active_storage/$}, response.body,
+                 "images live under /rails/; the Allow must override the Disallow")
+
+    disallow = response.body.index("Disallow: /rails/")
+    allow = response.body.index("Allow: /rails/active_storage/")
+    assert disallow && allow, "both rules should be present"
+  end
 end

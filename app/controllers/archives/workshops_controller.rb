@@ -8,6 +8,6 @@ class Archives::WorkshopsController < Archives::GenericEventsController
   private
 
   def index_description
-    "Workshops the EUTC has run at Bedlam Theatre, from acting and directing to lighting, sound and stage management."
+    "Workshops the EUTC has run at Bedlam Theatre over the years \u2014 the full archive, not just what is coming up."
   end
 end

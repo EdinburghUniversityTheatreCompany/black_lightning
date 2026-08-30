@@ -731,6 +731,12 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
 On merge, set the Improverts event's `performance_weekdays` to Friday in the admin, and do the same
 for any other intermittent long-running event — see the blank-weekdays trap above.
 
+**Purge Cloudflare's `/robots.txt` once**, after the deploy that moved it out of `public/`. The
+edge holds a copy stored with `max-age=31536000` from `public_file_server.headers`, and it stays
+fresh regardless of what the origin now returns — a rules change deployed on 2026-08-30 was still
+being served from a 30-day-old copy. Later changes need no purge: the controller serves it with a
+one-hour cache.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
