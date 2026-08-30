@@ -79,7 +79,8 @@ class Event::TicketPricesTest < ActiveSupport::TestCase
 
   test "clearing every row empties the column" do
     @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10" } })
-    @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10", "_destroy" => "1" } })
+    @show.update!(price: "Pay what you can",
+                  ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10", "_destroy" => "1" } })
 
     assert_equal [], @show.reload.ticket_prices
   end
@@ -132,6 +133,75 @@ class Event::TicketPricesTest < ActiveSupport::TestCase
 
     assert_equal "Pay what you can", @show.reload.price
     assert_equal [], @show.reload.ticket_prices
+  end
+
+  # --- validation --------------------------------------------------------
+
+  # TicketPrice validates itself, but nothing ran those validations: the JSON
+  # column has no association to cascade through, and the form's min="0" is
+  # client-side only.
+  test "a negative amount is rejected" do
+    @show.ticket_prices_attributes = { "0" => { "category" => "standard", "amount" => "-5" } }
+
+    assert_not @show.valid?
+    assert @show.errors[:ticket_prices].present?
+  end
+
+  test "an unknown band is rejected" do
+    @show.ticket_prices_attributes = { "0" => { "category" => "bogus", "amount" => "5" } }
+
+    assert_not @show.valid?
+    assert @show.errors[:ticket_prices].present?
+  end
+
+  # The dangerous one: a decimal cast turns "ten" into 0, so one typo makes a
+  # paid show advertise as Free and sets isAccessibleForFree in the JSON-LD.
+  test "an amount that is not a number is rejected rather than cast to zero" do
+    @show.ticket_prices_attributes = { "0" => { "category" => "standard", "amount" => "ten" } }
+
+    assert_not @show.valid?
+    assert @show.errors[:ticket_prices].present?
+  end
+
+  test "a genuine zero is still allowed" do
+    @show.ticket_prices_attributes = { "0" => { "category" => "standard", "amount" => "0" } }
+
+    assert_predicate @show, :valid?
+  end
+
+  test "a price written with the currency mark is read, not rejected" do
+    @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "£10" } })
+
+    assert_equal [ 10.0 ], @show.reload.ticket_prices.map { |price| price.amount.to_f }
+  end
+
+  # --- clearing the bands ------------------------------------------------
+
+  # Deleting every band used to leave the derived string behind, so the page, the
+  # board and the JSON-LD all kept advertising bands that no longer existed.
+  # A Show validates the presence of price, so clearing a derived one correctly
+  # fails the save and asks the producer what the price is now, instead of
+  # leaving the page advertising bands that no longer exist.
+  test "clearing the bands clears the price they wrote" do
+    @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10" } })
+    assert_equal "£10", @show.reload.price
+
+    assert_not @show.update(ticket_prices_attributes: {
+      "0" => { "category" => "standard", "amount" => "10", "_destroy" => "1" }
+    })
+
+    assert_nil @show.price
+    assert @show.errors[:price].present?
+  end
+
+  # ...but a string somebody typed by hand is theirs, not ours to remove.
+  test "clearing the bands leaves a hand-typed price alone" do
+    @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10" } })
+    @show.update!(price: "Pay what you can")
+
+    @show.update!(ticket_prices_attributes: { "0" => { "category" => "standard", "amount" => "10", "_destroy" => "1" } })
+
+    assert_equal "Pay what you can", @show.reload.price
   end
 
   # --- the booking fee ---------------------------------------------------

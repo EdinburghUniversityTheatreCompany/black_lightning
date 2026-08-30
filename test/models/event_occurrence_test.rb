@@ -86,6 +86,25 @@ class EventOccurrenceTest < ActiveSupport::TestCase
     assert_equal [ "Preview", "Relaxed" ], occurrence.access_flag_labels
   end
 
+  # The nested form always posts one untouched blank row from its template, and
+  # its access_flags check_boxes send [""] -- which is not blank, so :all_blank
+  # never fired and saving the event failed with "starts at must not be blank".
+  test "an untouched blank row from the form is dropped, not saved" do
+    assert_difference "EventOccurrence.count", 0 do
+      assert @event.update(event_occurrences_attributes: {
+        "0" => { "starts_at" => "", "ends_at" => "", "note" => "", "access_flags" => [ "" ] }
+      }), @event.errors.full_messages.to_sentence
+    end
+  end
+
+  test "a row with a start time is still saved" do
+    assert_difference "EventOccurrence.count", 1 do
+      @event.update!(event_occurrences_attributes: {
+        "0" => { "starts_at" => Time.zone.local(2026, 3, 4, 19, 30), "access_flags" => [ "" ] }
+      })
+    end
+  end
+
   test "occurrences come back in time order regardless of creation order" do
     late = EventOccurrence.create!(event: @event, starts_at: Time.zone.local(2026, 3, 6, 19, 30))
     early = EventOccurrence.create!(event: @event, starts_at: Time.zone.local(2026, 3, 4, 19, 30))

@@ -144,6 +144,7 @@ class Event < ApplicationRecord
   validates :name, :slug, :publicity_text, :members_only_text, :start_date, :end_date, presence: true
   validates :slug, uniqueness: { case_sensitive: false }
   validate :end_date_after_start_date
+  validate :ticket_prices_are_valid
 
   # Relationships #
 
@@ -162,7 +163,12 @@ class Event < ApplicationRecord
 
   has_and_belongs_to_many :event_tags, optional: true
 
-  accepts_nested_attributes_for :event_occurrences, reject_if: :all_blank, allow_destroy: true
+  # NOT :all_blank. The nested form's access_flags check_boxes always post a
+  # leading "" from their hidden field, so an untouched blank row is never
+  # all-blank -- it was saved, failed validation, and took the whole event update
+  # down with "starts at must not be blank".
+  accepts_nested_attributes_for :event_occurrences, allow_destroy: true,
+                                reject_if: ->(attributes) { attributes["starts_at"].blank? }
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
@@ -343,8 +349,13 @@ class Event < ApplicationRecord
   end
 
   def ticket_prices=(values)
-    super(Array(values).map { |value| value.is_a?(TicketPrice) ? value : TicketPrice.from_h(value) }
-                       .map(&:to_h))
+    prices = Array(values).map { |value| value.is_a?(TicketPrice) ? value : TicketPrice.from_h(value) }
+
+    # Held from assignment because the cast destroys the evidence: "ten" is
+    # already 0 by the time the column is read back, and 0 reads as Free.
+    @invalid_ticket_prices = prices.reject(&:valid?)
+
+    super(prices.map(&:to_h))
   end
 
   ##
@@ -522,6 +533,20 @@ class Event < ApplicationRecord
     self.company = @company_name.present? ? Company.find_or_build_by_name(@company_name) : nil
   end
 
+  ##
+  # TicketPrice validates itself, but nothing was running those validations --
+  # there is no association here to cascade through, and the form's min="0" is
+  # client-side only. Without this a negative, an unknown band or a typo saves
+  # clean and is published.
+  ##
+  def ticket_prices_are_valid
+    invalid = Array(@invalid_ticket_prices) + ticket_prices.reject(&:valid?)
+
+    invalid.flat_map { |price| price.errors.full_messages }.uniq.each do |message|
+      errors.add(:ticket_prices, message.downcase_first)
+    end
+  end
+
   def destroy_flagged?(row)
     ActiveModel::Type::Boolean.new.cast(row["_destroy"] || row[:_destroy])
   end
@@ -539,9 +564,28 @@ class Event < ApplicationRecord
   def derive_price_from_ticket_prices
     prices = ticket_prices
 
-    return if prices.empty?
+    return clear_derived_price if prices.empty?
 
-    self.price = prices.all?(&:free?) ? "Free" : prices.map(&:to_price_string).join(" / ")
+    self.price = price_string_for(prices)
+  end
+
+  def price_string_for(prices)
+    prices.all?(&:free?) ? "Free" : prices.map(&:to_price_string).join(" / ")
+  end
+
+  ##
+  # Only when it is still the string the previous bands wrote. Anything typed by
+  # hand ("Pay what you can") belongs to whoever typed it, and a Show validates
+  # the presence of price -- so clearing a derived one correctly fails the save
+  # and asks them what the price is now.
+  ##
+  def clear_derived_price
+    previous = Array(ticket_prices_in_database).map { |attributes| TicketPrice.from_h(attributes) }
+
+    return if previous.empty?
+    return unless price == price_string_for(previous)
+
+    self.price = nil
   end
 
   def cleanup_orphaned_company

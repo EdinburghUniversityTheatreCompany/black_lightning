@@ -132,7 +132,23 @@ class Event::Schedule
     dates.each_cons(2).all? { |from, to| ((to - from).to_i % 7).zero? }
   end
 
+  ##
+  # Both ends, not just the curtain. The view prints one block's hours from its
+  # first occurrence, so a Season open 12pm-1am on Tuesday and 12pm-10pm on
+  # Wednesday would fold into one block and advertise Wednesday as closing at
+  # 1am. Different hours are a different block.
+  ##
   def time_key(occurrence)
-    occurrence.starts_at.strftime("%H:%M")
+    [ occurrence.starts_at.strftime("%H:%M"), end_key(occurrence) ].compact.join("-")
+  end
+
+  def end_key(occurrence)
+    return nil if occurrence.ends_at.blank?
+
+    # Days apart, so a close after midnight does not read as the same hours as
+    # one before it.
+    offset = (occurrence.ends_at.to_date - occurrence.starts_at.to_date).to_i
+
+    "#{occurrence.ends_at.strftime('%H:%M')}+#{offset}"
   end
 end

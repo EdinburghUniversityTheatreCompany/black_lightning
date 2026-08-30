@@ -10,7 +10,7 @@ class Event::ScheduleTest < ActiveSupport::TestCase
   end
 
   def perform(event, date, hour: 19, min: 30, **attributes)
-    EventOccurrence.create!(event: event, starts_at: date.to_time.change(hour: hour, min: min), **attributes)
+    EventOccurrence.create!(event: event, starts_at: date.in_time_zone.change(hour: hour, min: min), **attributes)
   end
 
   def schedule(event)
@@ -61,6 +61,29 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     perform(event, Date.new(2026, 10, 12), hour: 14, min: 30)
 
     assert_equal 2, schedule(event).blocks.length
+  end
+
+  # A Season open 12pm-1am on Tuesday and 12pm-10pm on Wednesday shares a curtain
+  # time but not its hours. Folding them advertised Wednesday as closing at 1am,
+  # because the view prints the block's hours from its first occurrence.
+  test "the same opening time with a different closing time is a different block" do
+    event = show
+    perform(event, Date.new(2026, 10, 11), hour: 12,
+                   ends_at: Date.new(2026, 10, 12).in_time_zone.change(hour: 1))
+    perform(event, Date.new(2026, 10, 12), hour: 12,
+                   ends_at: Date.new(2026, 10, 12).in_time_zone.change(hour: 22))
+
+    assert_equal 2, schedule(event).blocks.length
+  end
+
+  test "matching hours on consecutive days still fold into one block" do
+    event = show
+    (0..1).each do |offset|
+      date = Date.new(2026, 10, 11) + offset
+      perform(event, date, hour: 12, ends_at: date.in_time_zone.change(hour: 22))
+    end
+
+    assert_equal 1, schedule(event).blocks.length
   end
 
   # --- the Improverts --------------------------------------------------

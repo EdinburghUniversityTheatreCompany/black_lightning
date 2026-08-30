@@ -454,7 +454,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
   test "updating a show stores its performances" do
     show = FactoryBot.create(:show, is_public: true)
-    starts_at = show.start_date.to_time.change(hour: 19, min: 30)
+    starts_at = show.start_date.in_time_zone.change(hour: 19, min: 30)
 
     patch :update, params: { id: show.to_param, show: { event_occurrences_attributes: {
       "0" => { starts_at: starts_at, note: "Press night", access_flags: [ "", "relaxed" ] }

@@ -780,6 +780,15 @@ form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec
   ("£10 / £8 concessions / £7 members") truncates in that fixed 256px column; structured bands
   collapse to "£10/8/7".
 
+### Deployment
+
+On merge, add the Improverts' Friday dates as `EventOccurrence`s in the admin, and do the same for
+any other intermittent long-running event. This replaced `performance_weekdays`, which was dropped
+with no backfill: until an event has occurrences it counts as playing every day of its run, so the
+box office board prints its raw range — "Sep 1 – Jun 30" for the Improverts, the exact string
+`display_when` exists to avoid. Three or more Fridays spanning over a fortnight render as
+"Every Friday, 7.30pm".
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.

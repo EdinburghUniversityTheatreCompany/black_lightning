@@ -258,14 +258,15 @@ module SchemaHelper
     { "@type" => "Person", "name" => member.user.name }
   end
 
-  # True only when every band is zero. Nil rather than false when there are no bands at all: we do
-  # not know it is paid, we just have nothing structured to say.
+  # True only when every band is zero, and FALSE when they are not -- a paid event saying so is
+  # worth stating. Nil only when there are no bands at all: we do not know it is paid, we just have
+  # nothing structured to say.
   def event_free(event)
     prices = event.ticket_prices
 
     return nil if prices.empty?
 
-    prices.all?(&:free?) || nil
+    prices.all?(&:free?)
   end
 
   def showing?

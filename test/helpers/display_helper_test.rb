@@ -49,7 +49,7 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 15))
     (0..4).each do |offset|
       FactoryBot.create(:event_occurrence, event: event,
-                        starts_at: (Date.new(2026, 10, 11) + offset).to_time.change(hour: 19, min: 30))
+                        starts_at: (Date.new(2026, 10, 11) + offset).in_time_zone.change(hour: 19, min: 30))
     end
 
     assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(event)
@@ -61,7 +61,7 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2)
     (-2..2).each do |offset|
       FactoryBot.create(:event_occurrence, event: event,
-                        starts_at: (Date.current + offset).to_time.change(hour: 19, min: 30))
+                        starts_at: (Date.current + offset).in_time_zone.change(hour: 19, min: 30))
     end
 
     assert_equal "#{date_span(Date.current - 2, Date.current + 2)}, 7.30pm", display_when(event)
@@ -80,7 +80,7 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 4), end_date: Date.new(2027, 6, 30))
     6.times do |week|
       FactoryBot.create(:event_occurrence, event: event,
-                        starts_at: (Date.new(2026, 9, 4) + (week * 7)).to_time.change(hour: 19, min: 30))
+                        starts_at: (Date.new(2026, 9, 4) + (week * 7)).in_time_zone.change(hour: 19, min: 30))
     end
 
     assert_equal "Every Friday, 7.30pm", display_when(event)
@@ -121,7 +121,7 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
     [ 0, 2, 4 ].each do |offset|
       FactoryBot.create(:event_occurrence, event: event,
-                        starts_at: (Date.new(2026, 3, 3) + offset).to_time.change(hour: 19, min: 30))
+                        starts_at: (Date.new(2026, 3, 3) + offset).in_time_zone.change(hour: 19, min: 30))
     end
 
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 1))
@@ -138,8 +138,11 @@ class DisplayHelperTest < ActionView::TestCase
                         ends_at: Time.zone.local(2026, month, day) + close_h.hours)
     end
 
+    # Sun and Mon share their hours, so they fold; Tue closes at 1am and Wed at
+    # 10pm, which are different hours and so different blocks.
     assert_equal "Sun 30 – Mon 31 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 31))
-    assert_equal "Tue 1 – Wed 2 Sep, 12pm – 1am", display_when(season, on: Date.new(2026, 9, 1))
+    assert_equal "Tue 1 Sep, 12pm – 1am", display_when(season, on: Date.new(2026, 9, 1))
+    assert_equal "Wed 2 Sep, 12pm – 10pm", display_when(season, on: Date.new(2026, 9, 2))
   end
 
   # The column is a fixed 256px on a screen read from across a room, and the

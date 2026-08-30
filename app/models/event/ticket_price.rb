@@ -39,8 +39,21 @@ class Event::TicketPrice
   # every row, so the object has to answer to it or the form raises.
   attribute :_destroy, :boolean, default: false
 
+  # A price as somebody types it: "10", "4.50", "£10".
+  READABLE_AMOUNT = /\A\s*£?\s*\d+(?:\.\d{1,2})?\s*\z/
+
   validates :category, inclusion: { in: CATEGORIES }
   validates :amount, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validate :amount_was_readable
+
+  # The cast is why this is needed at all: ActiveModel casts "ten" to 0 without
+  # complaint, and a band of £0 makes the whole show read as Free -- on the page,
+  # on the board, and as isAccessibleForFree in the JSON-LD. Keep what was typed
+  # so the validation can see it.
+  def amount=(value)
+    @raw_amount = value
+    super(value.is_a?(String) ? value.sub("£", "").strip : value)
+  end
 
   # A band is never a record of its own -- it is one entry in a JSON array, keyed
   # by nothing but its position. Answering true is also what makes the nested-form
@@ -59,6 +72,17 @@ class Event::TicketPrice
   end
 
   # What this band is called on screen.
+  private
+
+  def amount_was_readable
+    return unless @raw_amount.is_a?(String)
+    return if @raw_amount.blank? || @raw_amount.match?(READABLE_AMOUNT)
+
+    errors.add(:amount, "is not a price")
+  end
+
+  public
+
   def display_label
     return label.presence || CATEGORY_LABELS.fetch("other") if category == "other"
 
