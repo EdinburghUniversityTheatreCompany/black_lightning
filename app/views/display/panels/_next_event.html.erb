@@ -28,7 +28,8 @@
 
         <p class="mt-8 text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
 
-        <% if event.price.present? %>
+        <%# display_price, not event.price: the value rendered is the one to test. %>
+        <% if display_price(event).present? %>
           <p class="mt-3 text-4xl text-neutral-300"><%= display_price(event) %></p>
         <% end %>
 

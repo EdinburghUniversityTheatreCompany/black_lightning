@@ -588,3 +588,27 @@ channel; `optipng -o5`, `-o7` and an ImageMagick `PNG8:` conversion all return *
 same size**, because the alpha channel stops it becoming a true palette image. The win available
 there was the `fetchpriority`/`loading` fix, which has landed. Leave it alone unless the artwork
 is redrawn without transparency.
+
+## A Workshop is marked up as a `TheaterEvent`
+
+`SchemaHelper#event_schema` types every `Event` as `TheaterEvent`, which predates the performances
+work and is wrong for a `Workshop` — schema.org has `EducationEvent`, which is what a workshop is.
+`Season` is now handled (its occurrences are no longer published as performances), but the type on
+the run node is still `TheaterEvent` for all three subclasses. Low risk either way: Google will not
+penalise it, but a workshop showing up in theatre rich results is not what anybody wants.
+
+## The API does not expose performances or ticket prices
+
+`Event#as_json` lists `venue`, `pictures` and `team_members` but not `event_occurrences` or
+`ticket_prices`, so `/api/v1` consumers still see only the free-text `price` and the run dates.
+Adding them is a deliberate decision rather than an oversight — per CLAUDE.md, anything added to
+`ransackable_attributes` is also exposed through the API, and `test/.../leakage_test.rb` enforces
+that — so decide what the API should say before widening it.
+
+## A cancelled or sold-out performance has nowhere to be recorded
+
+`EventOccurrence` carries access flags and a note but no status, so pulling one night of a run means
+deleting the row, which loses the fact that it was ever scheduled. schema.org wants
+`eventStatus: EventCancelled` on that performance, and the event page should say so rather than
+silently showing one fewer date. Related: `Venue` has no capacity column, so nothing can emit
+`maximumAttendeeCapacity`.
