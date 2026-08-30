@@ -1,3 +1,8 @@
+<%# The page's heading for crawlers and screen readers. Visually hidden because the masthead
+    already carries the name as artwork, and the public stylesheet's unlayered h1-h6 rules beat
+    the Tailwind utilities that would otherwise size a visible one down. %>
+<h1 class="sr-only">Bedlam Theatre &mdash; student theatre in the heart of Edinburgh</h1>
+
 <div class="flex flex-col md:flex-row gap-4" data-controller="pretix-modal">
   <div class="w-full md:w-1/2 xl:w-2/3">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>

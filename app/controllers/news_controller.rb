@@ -45,4 +45,8 @@ class NewsController < ApplicationController
     def items_per_page
       10
     end
+
+    def index_description
+      "News from Bedlam Theatre and the Edinburgh University Theatre Company: show announcements, auditions, committee updates and weekly newsletters."
+    end
 end

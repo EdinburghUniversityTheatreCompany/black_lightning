@@ -10,13 +10,17 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_response 403
   end
 
+  # set_globals seeds only what cannot change during the action. og:url and og:title used to be
+  # built here and both read @title, which the action assigns afterwards -- so og:title was
+  # always nil. MetaHelper derives them at render time now; seo_metadata_test asserts the
+  # rendered tags.
   test "set globals" do
     get :index
 
     assert_equal "it@bedlamtheatre.co.uk", assigns(:support_email)
     assert_equal "http://test.host", assigns(:base_url)
-    assert_equal "http://test.host/shows", assigns(:meta)["og:url"]
-    assert_equal [ :description, "og:url", "og:image", "og:title", "viewport", "og:description" ], assigns(:meta).keys
+    assert_equal [ :description, "og:image", "viewport" ], assigns(:meta).keys
+    assert_nil assigns(:meta)["og:title"], "og:title must be derived at render time, not here"
   end
 
   # ==================

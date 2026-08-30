@@ -2,6 +2,8 @@
 
 # This is all going to be somewhat outdated with the summer 2022 Bootstrap redesign, but I will only remove things after it's been completed. ~ Mick
 module SubpageHelper
+  include LinkNormalisationHelper
+
   EXTERNAL_URL_PREFIX = "EXTERNAL_URL:"
 
   def get_subpage_root_url(root_folder, root_page)
@@ -34,6 +36,16 @@ module SubpageHelper
     # Collect the blocks into a has with title and path.
     # If the item links to an external url, set that as the path, otherwise just set the path to the editable block path
     # We need to add a / to the path to make it absolute to the root url (bedlamtheatre.co.uk) rather than relative to the current page url.
-    get_subpage_editable_blocks(subpage_type).collect { |eb| { title: eb.name, path: eb.content&.start_with?(EXTERNAL_URL_PREFIX) ? eb.content.sub(EXTERNAL_URL_PREFIX, "").strip : "/#{eb.url}" } }
+    get_subpage_editable_blocks(subpage_type).collect do |eb|
+      path = if eb.content&.start_with?(EXTERNAL_URL_PREFIX)
+        # normalise_link_target turns a link written against our own www. host back into a path.
+        # Two of these sat in the navbar, so every page carried two needless 301s.
+        normalise_link_target(eb.content.sub(EXTERNAL_URL_PREFIX, ""))
+      else
+        "/#{eb.url}"
+      end
+
+      { title: eb.name, path: path }
+    end
   end
 end

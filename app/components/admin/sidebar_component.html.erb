@@ -22,7 +22,7 @@
 
     <div class="w-10 h-10">
       <% if @current_user.avatar.present? %>
-        <%= render 'shared/image', image: @current_user.avatar, variant: helpers.square_thumb_variant, eager_load: true, image_options: { class: "rounded-full" } %>
+        <%= render 'shared/image', image: @current_user.avatar, variant: helpers.square_thumb_variant, full_width: true, image_options: { class: "rounded-full" } %>
       <% else %>
         <img src="/images/userdef.png" class="rounded-full" alt="User avatar">
       <% end %>

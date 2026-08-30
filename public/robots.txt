@@ -4,5 +4,22 @@
 # User-Agent: *
 # Disallow: /
 
+Sitemap: https://bedlamtheatre.co.uk/sitemap.xml
+
+User-agent: *
+# Ransack turns every author, company and venue into its own URL, and each one combines with
+# pagination. Nothing in that space is a page anyone searches for, and it is unbounded, so it
+# would eat the crawl budget the archive needs. Canonical tags say the same thing; this stops
+# the fetch happening at all.
+Disallow: /*?*q[
+Disallow: /*&q[
+
+# Application plumbing, never a landing page.
+Disallow: /users/sign_in
+Disallow: /users/password
+Disallow: /oauth/
+Disallow: /rails/
+Disallow: /cdn-cgi/
+
 User-agent: SemrushBot
 Disallow: /

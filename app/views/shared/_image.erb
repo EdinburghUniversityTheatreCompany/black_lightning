@@ -1,5 +1,14 @@
-<%# locals: (image:, variant: nil, eager_load: true, image_options: {}, proxy: false) -%>
+<%# locals: (image:, variant: nil, full_width: true, priority: false, alt: nil, srcset_variants: nil, image_options: {}, proxy: false) -%>
 <%# KEEP %>
+
+<%# full_width and priority used to be one flag called eager_load, which set the layout classes
+    AND loading="eager" together. That coupled a styling decision to a performance one and got
+    the performance one backwards: every card below the fold loaded eagerly while the masthead,
+    the largest thing above it, inherited the app-wide lazy default. Measured on the live
+    homepage, that cost 1552ms of LCP on a throttled phone.
+
+    loading is left unset unless priority is passed, so it falls through to
+    config.action_view.image_loading ("lazy"). %>
 
 <% if variant.nil?
   if Rails.env.local?
@@ -19,11 +28,26 @@ end
 
 <% image_options = image_options.merge(width_and_height) %>
 
-<% if eager_load %>
-  <% # I am not entirely sure it actually needs these classes. %>
-  <% image_options = image_options.merge({ loading: 'eager', class: "w-full h-auto #{image_options[:class]}" }) %>
+<%# Always an alt attribute. Every image on the site was missing one entirely, which is a
+    WCAG 2.2 1.1.1 failure; an explicit empty alt at least marks an image as decorative, which
+    is the correct answer for the ones that carry no information a caption does not. %>
+<% image_options = image_options.merge(alt: alt.to_s) %>
+
+<% if full_width %>
+  <% image_options = image_options.merge({ class: "w-full h-auto #{image_options[:class]}" }) %>
 <% end %>
 
+<% if priority %>
+  <% image_options = image_options.merge({ loading: "eager", fetchpriority: "high" }) %>
+<% end %>
+
+<%# A phone downloading a 960px card into a 412px viewport is roughly 2.3x the pixels it can
+    show. srcset_variants lets a caller offer the smaller variants that already exist, so the
+    browser picks; without it nothing changes. %>
+<% if srcset_variants.present? && proxy %>
+  <% candidates = srcset_variants.map { |v| "#{active_storage_proxy_url(image.variant(v))} #{v[:resize_to_fill][0]}w" } %>
+  <% image_options = image_options.merge(srcset: candidates.join(", "), sizes: image_options.delete(:sizes) || "(max-width: 768px) 100vw, 33vw") %>
+<% end %>
 
 <% if variant.present? %>
   <% image = image.variant(variant) %>

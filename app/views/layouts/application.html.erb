@@ -4,7 +4,8 @@
   <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
   <meta charset="UTF-8">
 
-  <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
+  <title><%= page_title %></title>
+  <link rel="canonical" href="<%= canonical_url %>">
 
   <%= vite_client_tag %>
   <%# Force reload of the page if these tags change so that we don't persist the wrong JavaScript or css when transitioning from public to admin or vice-versa. %>
@@ -16,6 +17,12 @@
   <%= yield :head %>
 
   <%= meta_tags(@meta).html_safe %><%# herb:disable erb-no-unsafe-raw %>
+
+  <%# JSON-LD. There was none anywhere on the site, which on a ticketed events venue is what
+      keeps it out of Google's event rich results entirely. %>
+  <% schema_documents.each do |document| %>
+    <script type="application/ld+json"><%= raw json_escape(document.to_json) %></script><%# herb:disable erb-no-unsafe-raw %>
+  <% end %>
 </head>
 
 <body data-controller="konami-code form-validator select"

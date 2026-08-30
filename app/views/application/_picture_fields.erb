@@ -6,9 +6,9 @@
       <%= link_to_remove f %>
     <% end %>
     <% if f.object.persisted? %>
-      <%= render 'shared/image', image: f.object.fetch_image, variant: thumb_variant(2), eager_load: false, image_options: { class: "block w-full h-auto rounded-t" } %>
+      <%= render 'shared/image', image: f.object.fetch_image, variant: thumb_variant(2), full_width: false, image_options: { class: "block w-full h-auto rounded-t" } %>
     <% elsif f.object.image.attached? && f.object.image.blob.persisted? %>
-      <%= render 'shared/image', image: f.object.image, variant: thumb_variant(2), eager_load: false, image_options: { class: "block w-full h-auto rounded-t" } %>
+      <%= render 'shared/image', image: f.object.image, variant: thumb_variant(2), full_width: false, image_options: { class: "block w-full h-auto rounded-t" } %>
       <%= f.hidden_field :image, value: f.object.image.blob.signed_id %>
     <% end %>
     <div class="p-4">

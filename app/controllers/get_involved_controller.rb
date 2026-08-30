@@ -4,6 +4,8 @@
 # The pages are all defined as Editable Blocks.
 ##
 class GetInvolvedController < ApplicationController
+  include EditableBlockPage
+
   skip_authorization_check only: [ :opportunities, :page ]
 
   def opportunities
@@ -13,6 +15,9 @@ class GetInvolvedController < ApplicationController
     @opportunities = @q.result(distinct: true).eutc_first.includes(:company, :roles, :creator)
 
     @editable_block = Admin::EditableBlock.find_by(url: "get_involved/opportunities")
+
+    set_meta_from_editable_block
+    @title = "Opportunities"
 
     respond_to do |format|
       format.html
@@ -70,6 +75,8 @@ class GetInvolvedController < ApplicationController
 
   def page
     @editable_block = Admin::EditableBlock.find_by!(url: @current_path.delete_prefix("/"))
+
+    set_meta_from_editable_block
   end
 
   private

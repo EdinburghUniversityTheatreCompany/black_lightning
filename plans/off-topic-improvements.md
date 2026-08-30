@@ -548,3 +548,43 @@ the sensible place). Both would be fixed by having the controller skip
 **Fix (if it earns it):** small, self-contained, and testable only at the JS level — there is no
 JS unit-test harness in this repo, and SortableJS's native HTML5 drag-and-drop is not drivable
 from Selenium, which is why the drag fix landed with a structural assertion instead.
+
+## SEO follow-ups left open after the 2026-08-30 audit
+
+The audit's code-side findings landed on `seo-fixes`. These four need something this repo cannot
+supply.
+
+### Richer Event schema once performances and prices are real fields
+
+`SchemaHelper#event_schema` currently emits a **date-only `startDate`**, because an `Event`
+carries dates and not performances, and builds `offers` by scraping `£` amounts out of the
+free-text `events.price` with `PRICE_PATTERN` — omitting `offers` entirely when it finds none,
+since a wrong price in a rich result is a promise the box office has to honour.
+
+**When performances and prices become structured fields on `Event`** (Mick has this in mind),
+revisit it: emit one `Event` per performance with a real curtain time, and take the price from
+the structured field instead of the scrape. Google's event rich results want a time, so this is
+the single biggest remaining upgrade to how Bedlam appears in "things to do in Edinburgh".
+
+### No phone number exists to publish
+
+The footer now carries the postal address as crawlable text on every page, which fixes two thirds
+of the Name/Address/Phone signal local search ranks on. There is **no phone number recorded
+anywhere in the app** to add as the third, and inventing one is not an option. If the box office
+has a public number, add it to the footer `<address>` and to `SchemaHelper::VENUE_ADDRESS`'s
+parent node as `telephone`.
+
+### Search Console and analytics are unverified
+
+No `google-site-verification` meta tag, no analytics tag of any kind, and no Google TXT record in
+DNS (only `MS=ms94671060`). Verification may exist via an uploaded HTML file — worth confirming.
+Until it does, none of the work above can be measured: there is no before-and-after to read.
+
+### The masthead PNG cannot usefully be compressed
+
+Recorded because the audit suggested it and it turned out not to hold. `app/assets/images/Header.png`
+is 115 KB and is the desktop LCP element. It is already 8/4-bit depth with 130 colours and an alpha
+channel; `optipng -o5`, `-o7` and an ImageMagick `PNG8:` conversion all return **byte-for-byte the
+same size**, because the alpha channel stops it becoming a true palette image. The win available
+there was the `fetchpriority`/`loading` fix, which has landed. Leave it alone unless the artwork
+is redrawn without transparency.

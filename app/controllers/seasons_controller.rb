@@ -5,4 +5,10 @@ class SeasonsController < PublicGenericEventsController
 
     super
   end
+
+  private
+
+  def index_description
+    "Festivals and seasons at Bedlam Theatre, from the Bedlam Fringe to Halfbaked and the Improverts' year-round run."
+  end
 end

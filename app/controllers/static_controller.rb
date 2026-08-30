@@ -1,7 +1,29 @@
 class StaticController < ApplicationController
   skip_authorization_check
 
-  ALLOWED_PAGES = %w[accessibility black_lightning contact on_fire press privacy_policy student_theatre welcome_week].freeze
+  # slug => the name the page goes by. Without these every one of them rendered
+  # <title>Bedlam Theatre</title>, including the Find Us page, which is the landing page for
+  # every "theatre near me" search.
+  PAGE_TITLES = {
+    "accessibility"   => "Accessibility & Find Us",
+    "black_lightning" => "Project Black Lightning",
+    "contact"         => "Contact Us",
+    "on_fire"         => "On Fire",
+    "press"           => "Press",
+    "privacy_policy"  => "Privacy Policy",
+    "student_theatre" => "Student Theatre",
+    "welcome_week"    => "Welcome Week"
+  }.freeze
+
+  ALLOWED_PAGES = PAGE_TITLES.keys.freeze
+
+  # Only where the page has a specific job to do in search. The rest keep the site description,
+  # which describes them accurately enough.
+  PAGE_DESCRIPTIONS = {
+    "accessibility"   => "How to find Bedlam Theatre at 11B Bristo Place, Edinburgh EH1 1EZ, and what to expect when you get here: entrances, step-free access and getting around.",
+    "contact"         => "Get in touch with Bedlam Theatre and the Edinburgh University Theatre Company \u2014 committee contacts, venue hire enquiries and press.",
+    "student_theatre" => "What student theatre at Bedlam means: how the EUTC works, who can take part and how to get involved in a production."
+  }.freeze
 
   # This is a catch-all for the pages that do not have explicitly defined routes.
   def show
@@ -13,6 +35,9 @@ class StaticController < ApplicationController
       Rails.logger.error "Could not find the page at #{request.fullpath}"
       raise ActionController::RoutingError.new("This page could not be found.")
     end
+
+    @title = PAGE_TITLES.fetch(safe_page)
+    @meta[:description] = PAGE_DESCRIPTIONS[safe_page] if PAGE_DESCRIPTIONS.key?(safe_page)
 
     render "static/#{safe_page}"
   rescue ActionView::MissingTemplate
