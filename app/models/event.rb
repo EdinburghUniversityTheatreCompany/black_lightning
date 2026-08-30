@@ -392,6 +392,37 @@ class Event < ApplicationRecord
     self.class::OCCURRENCES_ARE_PERFORMANCES
   end
 
+  # The facts that hold for the whole run rather than for one night: running
+  # time, doors, age guidance, the booking fee. Doors moved off the per-night
+  # rows when those collapsed into ranges -- it is the same offset every night.
+  def schedule_details
+    details = []
+    details << "running time #{duration_in_words}, including any interval" if duration_minutes.present?
+    details << "doors open #{doors_open_minutes_before} minutes before" if doors_open_minutes_before.present?
+    details << "age guidance #{age_guidance}" if age_guidance.present?
+
+    if booking_fee.present?
+      details << "#{TicketPrice.new(amount: booking_fee).formatted_amount} booking fee on the door"
+    end
+
+    details
+  end
+
+  ##
+  # The nights a collapsed range would hide, as [label, dates] pairs -- one line
+  # per access flag or note, naming every night it applies to.
+  ##
+  def schedule_exception_lines
+    lines = Hash.new { |hash, key| hash[key] = [] }
+
+    Event::Schedule.for(self).exceptions.each do |occurrence|
+      occurrence.access_flag_labels.each { |label| lines[label] << occurrence.on_date }
+      lines[occurrence.note] << occurrence.on_date if occurrence.note.present?
+    end
+
+    lines
+  end
+
   ##
   # An event with NO occurrences plays every day of its run. That is not a
   # placeholder: it is every one of the ~3000 archive rows, plus any event whose

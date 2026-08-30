@@ -263,6 +263,22 @@ gets verified in a browser, not by reasoning about it.
 - **Prices are stored dearest-first on read, not on write**, so the raw JSON keeps what was
   entered.
 
+## Follow-up: reading the performances back as a shape
+
+Added after review. Listing every performance was right for storage and wrong for display: a
+five-night run showed as five near-identical rows on the event page, and the board showed only the
+next one, having lost the run it used to print.
+
+`Event::Schedule` classifies an event's occurrences as `:range`, `:weekly`, `:single`,
+`:irregular` or `:none`, and both surfaces render from it. `:weekly` is what replaced the retired
+`performance_weekdays` column, now derived from real dates and knowing the curtain time.
+
+- Blocks group by curtain time before folding consecutive dates, or a Saturday matinee cuts the
+  evening run in three.
+- A run states the whole run, not the remainder.
+- A collapsed range names its exceptions underneath, or "which night is relaxed" is lost — the
+  thing people scan the list for.
+
 ## Phases
 
 Each is its own commit; the whole runs in the `rich-event-data` worktree.

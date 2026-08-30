@@ -759,6 +759,23 @@ form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec
   section. `on_today?`, `next_occurrence` and `display_when` all branch on that, so a change to one
   needs the same change to the others.
 - `event_occurrences.event_id` is **`:integer`**, matching `events`' legacy integer primary key.
+- **`Event::Schedule` reads the performances back as a shape**, and both the board and the event
+  page render from it: `:range` (consecutive days at one curtain time), `:weekly`, `:single`,
+  `:irregular`, `:none`. Five nights in a row is one range, not five rows.
+  - **Blocks are grouped by curtain time FIRST, then folded by consecutive date.** A Saturday
+    matinee sorts between the Friday and Saturday evenings, so one chronological pass would let it
+    cut the evening run into three.
+  - **`:weekly` is what replaced `performance_weekdays`** — same weekday, same time, gaps a
+    multiple of 7, at least 3 dates spanning over a fortnight. A date range for the Improverts
+    reads "Sep 4 – Jun 30", the exact string `display_when` exists to avoid.
+  - **A run states the WHOLE run** (Mick's call), so `display_when` is date-independent for
+    `:range`. `:irregular` is the one exception: with no single run to state it shows the block
+    covering today, because a festival's bare date range says nothing about its hours.
+  - **A collapsed range must not hide the relaxed night.** `Schedule#exceptions` are the
+    occurrences carrying a flag or a note, and the event page names them under the range.
+- **The board's when-column does not `truncate`.** It carries a run and its hours, and the longest
+  ("Wed 30 Sep – Sun 4 Oct, 10.30am – 11.30pm") wants ~700px at `text-4xl`; widening to that would
+  eat the title, so it wraps like the title does and the marquee scrolls the overflow.
 - **The box office board renders `display_price`, not `Event#price`.** The derived string
   ("£10 / £8 concessions / £7 members") truncates in that fixed 256px column; structured bands
   collapse to "£10/8/7".

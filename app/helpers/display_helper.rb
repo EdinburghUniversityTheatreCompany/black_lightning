@@ -1,27 +1,52 @@
 module DisplayHelper
-  # "Tue 3 Mar", or "Tue 3 - Sat 7 Mar" when both ends share a month.
   def display_date_range(event)
-    starts = event.start_date
-    ends   = event.end_date
-
-    return starts.strftime("%a %-d %b") if starts == ends
-    return "#{starts.strftime('%a %-d')} – #{ends.strftime('%a %-d %b')}" if starts.month == ends.month
-
-    "#{starts.strftime('%a %-d %b')} – #{ends.strftime('%a %-d %b')}"
+    date_span(event.start_date, event.end_date)
   end
 
-  # What to print in the "when" column. For an event that plays intermittently
-  # the raw range is useless on a screen -- "Sep 1 - Jun 30" tells nobody when
-  # to turn up -- so name the next performance and its curtain time instead.
+  ##
+  # What to print in the "when" column: the shape of the WHOLE run, as the poster
+  # states it, not the part still to come.
   #
-  # An event with no occurrences, which is every archive row, falls back to the
-  # range exactly as it did before performances were stored.
+  # A five-night run is one range rather than the next night of five. A year of
+  # Fridays is "Every Friday" -- its raw range reads "Sep 1 - Jun 30", which
+  # tells nobody when to turn up and is the string this method exists to avoid.
+  # Anything else, including every archive row with no performances at all, falls
+  # back to the plain date range exactly as before.
+  ##
   def display_when(event, on: Date.current)
-    occurrence = event.next_occurrence_at(on)
+    schedule = Event::Schedule.for(event)
 
-    return display_date_range(event) if occurrence.nil?
+    case schedule.kind
+    when :weekly then "Every #{schedule.weekday_name}#{display_curtain(schedule)}"
+    when :single, :range then display_block_when(schedule.blocks.first)
+    else display_irregular_when(event, schedule, on)
+    end
+  end
 
-    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{time_span(occurrence.starts_at, occurrence.ends_at)}"
+  ##
+  # No single run to state -- a festival whose opening hours change by the day,
+  # or a show with scattered dates. The block covering today is what somebody
+  # standing in front of the screen can act on; every block at once would not fit
+  # the column, and the bare date range says nothing about the hours.
+  #
+  # This is the one date-dependent case. A RUN states the whole run, as the
+  # poster does, however much of it has already played.
+  ##
+  def display_irregular_when(event, schedule, on)
+    current = schedule.blocks.find { |block| (block.starts_on..block.ends_on).cover?(on) }
+
+    current ? display_block_when(current) : display_date_range(event)
+  end
+
+  def display_block_when(block)
+    span = date_span(block.starts_on, block.ends_on)
+    first = block.occurrences.first
+
+    "#{span}, #{time_span(first.starts_at, first.ends_at)}"
+  end
+
+  def display_curtain(schedule)
+    schedule.starts_at ? ", #{short_time(schedule.starts_at)}" : ""
   end
 
   # The compact price for a fixed-width column on a screen read from across a

@@ -1,44 +1,48 @@
 <%# locals: (event:) %>
 
-<% occurrences = event.event_occurrences.to_a %>
+<% schedule = Event::Schedule.for(event) %>
+<% details = event.schedule_details %>
 
-<% if occurrences.any? || event.duration_minutes.present? || event.age_guidance.present? %>
-  <%= render CardComponent.new(title: occurrences.any? ? event.occurrence_label.pluralize : 'Details') do %>
-    <% if occurrences.any? %>
+<% if schedule.kind != :none || details.any? %>
+  <%= render CardComponent.new(title: schedule.kind == :none ? 'Details' : event.occurrence_label.pluralize) do %>
+    <% if schedule.kind == :weekly %>
+      <%# The Improverts. Listing forty Fridays says less than naming the pattern,
+          and the next few dates are what somebody actually needs. %>
+      <p class="font-medium">Every <%= schedule.weekday_name %> at <%= short_time(schedule.starts_at) %></p>
+
+      <% upcoming = schedule.occurrences.select { |o| o.on_date >= Date.current }.first(4) %>
+      <% if upcoming.any? %>
+        <p class="mt-1 text-sm text-gray-500">
+          Next: <%= upcoming.map { |o| date_span(o.on_date, nil) }.to_sentence %>
+        </p>
+      <% end %>
+    <% elsif schedule.blocks.any? %>
       <ul class="divide-y divide-gray-200">
-        <% occurrences.each do |occurrence| %>
+        <% schedule.blocks.each do |block| %>
+          <% first = block.occurrences.first %>
           <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
-            <span class="font-medium"><%= l(occurrence.starts_at.to_date, format: :long) %></span>
-            <span><%= time_span(occurrence.starts_at, occurrence.ends_at) %></span>
-
-            <% if occurrence.doors_open_at.present? %>
-              <span class="text-sm text-gray-500">doors <%= short_time(occurrence.doors_open_at) %></span>
-            <% end %>
-
-            <%# do/end, not { label }: a brace block returns the string rather than
-                writing it to the buffer, and ViewComponent captures the buffer --
-                so every badge renders as an empty pill. %>
-            <% occurrence.access_flag_labels.each do |flag_label| %>
-              <%= render(BadgeComponent.new(type: :info, pill: true)) do %><%= flag_label %><% end %>
-            <% end %>
-
-            <% if occurrence.note.present? %>
-              <span class="text-sm text-gray-500"><%= occurrence.note %></span>
-            <% end %>
+            <span class="font-medium"><%= date_span(block.starts_on, block.ends_on, long: true) %></span>
+            <span><%= time_span(first.starts_at, first.ends_at) %></span>
           </li>
         <% end %>
       </ul>
     <% end %>
 
-    <% details = [] %>
-    <% details << "Running time #{event.duration_in_words}, including any interval" if event.duration_minutes.present? %>
-    <% details << "age guidance #{event.age_guidance}" if event.age_guidance.present? %>
-    <%# Through TicketPrice so a whole number of pounds prints as "£1", not "£1.00" --
-        the one place that formats money this way. %>
-    <% details << "#{Event::TicketPrice.new(amount: event.booking_fee).formatted_amount} booking fee on the door" if event.booking_fee.present? %>
+    <%# Collapsing a run into a range loses which night is the relaxed one, which
+        is exactly what people scan this list for -- so the exceptions are named. %>
+    <% if schedule.exceptions.any? %>
+      <ul class="mt-3 space-y-1 text-sm">
+        <% event.schedule_exception_lines.each do |label, dates| %>
+          <li>
+            <span class="font-medium"><%= label %>:</span>
+            <%= dates.map { |date| date_span(date, nil, long: true) }.to_sentence %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
 
     <% if details.any? %>
-      <p class="<%= 'mt-3 ' if occurrences.any? %>text-sm text-gray-500"><%= details.to_sentence.upcase_first %>.</p>
+      <p class="mt-3 text-sm text-gray-500"><%= details.to_sentence.upcase_first %>.</p>
     <% end %>
   <% end %>
 <% end %>

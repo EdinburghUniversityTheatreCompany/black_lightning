@@ -34,6 +34,20 @@ module TimeHelper
     time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
   end
 
+  # "Tue 3 Mar", "Tue 3 – Sat 7 Mar", "Tue 3 Mar – Thu 2 Apr". The repeated month
+  # is dropped, which is how anyone writing a run of dates writes them.
+  def date_span(from, to, long: false)
+    return nil if from.blank?
+
+    day = long ? "%A %-d" : "%a %-d"
+    month = long ? "%B" : "%b"
+
+    return from.strftime("#{day} #{month}") if to.blank? || from == to
+    return "#{from.strftime(day)} – #{to.strftime("#{day} #{month}")}" if from.month == to.month
+
+    "#{from.strftime("#{day} #{month}")} – #{to.strftime("#{day} #{month}")}"
+  end
+
   # "10am – 11pm", or just "7.30pm" when there is no end worth stating.
   #
   # Callers pass the EXPLICIT ends_at, never effective_ends_at: an end derived

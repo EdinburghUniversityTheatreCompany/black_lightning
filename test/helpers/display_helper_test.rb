@@ -44,23 +44,70 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Mon 30 Mar – Thu 2 Apr", display_date_range(event)
   end
 
-  # A year-long range tells nobody when to turn up. Naming the next performance
-  # and its curtain time does, which is what the occurrence rows are for.
-  test "display_when names the next performance and its curtain time" do
-    event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 1), end_date: Date.new(2027, 6, 30))
-    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 10, 2, 19, 30))
+  # Mick's ask: five nights in a row is a range, not the next night of five.
+  test "display_when collapses a consecutive run into one range" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 15))
+    (0..4).each do |offset|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (Date.new(2026, 10, 11) + offset).to_time.change(hour: 19, min: 30))
+    end
 
-    assert_equal "Fri 2 Oct, 7.30pm", display_when(event, on: Date.new(2026, 9, 28))
+    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(event)
   end
 
-  test "display_when drops the minutes from an on-the-hour curtain" do
-    event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
-    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 3, 5, 20, 0))
+  # The whole run, not the part still to come -- Mick's call. The board states
+  # the run the way the poster does.
+  test "display_when states the whole run even once it has started" do
+    event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2)
+    (-2..2).each do |offset|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (Date.current + offset).to_time.change(hour: 19, min: 30))
+    end
 
-    assert_equal "Thu 5 Mar, 8pm", display_when(event, on: Date.new(2026, 3, 3))
+    assert_equal "#{date_span(Date.current - 2, Date.current + 2)}, 7.30pm", display_when(event)
   end
 
-  # Every archive event has no occurrences, so this is the path almost all of
+  test "display_when names a single night" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 11))
+    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 10, 11, 20, 0))
+
+    assert_equal "Sun 11 Oct, 8pm", display_when(event)
+  end
+
+  # The Improverts. Their raw range is "Sep 4 - Jun 30", which tells nobody when
+  # to turn up -- the exact string display_when exists to avoid.
+  test "display_when names the weekday for a standing weekly fixture" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 4), end_date: Date.new(2027, 6, 30))
+    6.times do |week|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (Date.new(2026, 9, 4) + (week * 7)).to_time.change(hour: 19, min: 30))
+    end
+
+    assert_equal "Every Friday, 7.30pm", display_when(event)
+  end
+
+  # A Season's occurrences are opening hours, and the close is the half that
+  # says when somebody has to be out.
+  test "display_when prints the span when an occurrence states its own end" do
+    season = FactoryBot.create(:season, start_date: Date.new(2026, 8, 30), end_date: Date.new(2026, 9, 2))
+    FactoryBot.create(:event_occurrence, event: season,
+                      starts_at: Time.zone.local(2026, 8, 30, 10, 0),
+                      ends_at: Time.zone.local(2026, 8, 30, 23, 0))
+
+    assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season)
+  end
+
+  # A show states a curtain time and a running time, not an end per night, so
+  # printing a derived "7.30pm – 9.45pm" on every line would be noise.
+  test "display_when prints a bare curtain when the end is only derived" do
+    show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7),
+                                    duration_minutes: 135)
+    FactoryBot.create(:event_occurrence, event: show, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+
+    assert_equal "Wed 4 Mar, 7.30pm", display_when(show)
+  end
+
+  # Every archive event has no performances, so this is the path almost all of
   # them take, and it has to keep printing what it printed before.
   test "display_when falls back to the range when nothing is scheduled" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
@@ -68,34 +115,31 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
   end
 
-  test "display_when falls back to the range once every performance has passed" do
+  # Neither one run nor a weekly fixture, and nothing on today: the board states
+  # the span and the event page carries the real dates.
+  test "display_when falls back to the range for an irregular set of dates" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
-    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+    [ 0, 2, 4 ].each do |offset|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: (Date.new(2026, 3, 3) + offset).to_time.change(hour: 19, min: 30))
+    end
 
-    assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 6))
+    assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 1))
   end
 
-
-  # A Season's occurrences are OPENING TIMES, and the close is half the
-  # information -- "open 10am" without "until 11pm" is the useless half.
-  test "display_when prints the span when an occurrence states its own end" do
+  # A festival whose hours change by the day has no single run to state, and the
+  # bare date range says nothing about when it is open. The stretch covering
+  # today is what somebody in front of the screen can act on.
+  test "display_when states the block covering today when there is no single run" do
     season = FactoryBot.create(:season, start_date: Date.new(2026, 8, 30), end_date: Date.new(2026, 9, 2))
-    FactoryBot.create(:event_occurrence, event: season,
-                      starts_at: Time.zone.local(2026, 8, 30, 10, 0),
-                      ends_at: Time.zone.local(2026, 8, 30, 23, 0))
+    [ [ 30, 8, 10, 23 ], [ 31, 8, 10, 23 ], [ 1, 9, 12, 25 ], [ 2, 9, 12, 22 ] ].each do |day, month, open_h, close_h|
+      FactoryBot.create(:event_occurrence, event: season,
+                        starts_at: Time.zone.local(2026, month, day, open_h),
+                        ends_at: Time.zone.local(2026, month, day) + close_h.hours)
+    end
 
-    assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 30))
-  end
-
-  # A show states a curtain time and a running time, not an end time per night,
-  # so its rows stay a bare curtain -- printing a derived "7.30pm – 9.45pm" on
-  # every line is noise nobody asked for.
-  test "display_when prints a bare curtain when the end is only derived" do
-    show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7),
-                                    duration_minutes: 135)
-    FactoryBot.create(:event_occurrence, event: show, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
-
-    assert_equal "Wed 4 Mar, 7.30pm", display_when(show, on: Date.new(2026, 3, 3))
+    assert_equal "Sun 30 – Mon 31 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 31))
+    assert_equal "Tue 1 – Wed 2 Sep, 12pm – 1am", display_when(season, on: Date.new(2026, 9, 1))
   end
 
   # The column is a fixed 256px on a screen read from across a room, and the
