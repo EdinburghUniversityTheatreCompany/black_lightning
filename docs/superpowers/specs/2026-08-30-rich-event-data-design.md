@@ -168,6 +168,17 @@ shilling row is 1970.
 - Anything else with leftover prose → refuse. `"Unknown"` alone is 1019 rows; `TBC`, `N/A`, `?`,
   `--`, `-`, `Various`, `Varying`, `from £N`, `pay-what-you-can`, `$5` follow.
 
+### Plausibility guards
+
+Two more refusals, found by sweeping the *readable* parses rather than the refusals — both came
+back as confident, ordinary-looking output, which is what made them worth catching:
+
+- `"150"` read as a £150 ticket. Bedlam is a 90-seat student theatre; it is £1.50 typed without
+  the dot. Anything over **£100** is refused.
+- `"1/75"` read as £75 standard against a £1 concession. It is £1.75 typed with a slash. A ratio
+  over **10x** between the dearest and cheapest paid band is refused. Zero bands are excluded, so
+  a genuine free-plus-paid pair (`"0/1.50"`) still reads.
+
 ### The task
 
 `bin/rails events:backfill_ticket_prices` **defaults to a dry run**: every distinct string, what
@@ -178,6 +189,23 @@ against production before anything is applied.
 The governing asymmetry, as with `Reconciliation.detect_offsetting_pairs`: a wrong parse writes a
 wrong price into structured data that search engines then publish, while a refusal leaves the row
 exactly as it is today. Prefer refusing to guessing.
+
+### What the dry run says, against production
+
+Run 2026-08-30 over all 2742 rows:
+
+| | rows | share |
+|---|---|---|
+| Readable | 1370 | 50.0% |
+| Refused on the date (pre-decimal) | 324 | 11.8% |
+| Unreadable | 1048 | 38.2% |
+
+795 of the unreadable are literally `"Unknown"`, plus `Various` (46), `N/A` (31), `TBC` (30) and
+the rest of the placeholder junk — 103 distinct strings in all. The refusals worth knowing about:
+`"4.00 (3.00)/2.00/1.00"` (6 rows, four amounts with nothing to name the fourth),
+`"Full price £12.00, Student and unwaged £10.00"` (2 rows — a band word *preceding* its amount,
+which the scanner does not read), and `"£2/£3 + fees; £3/4/5 + fees in person"` (2 rows, two
+price schemes in one string).
 
 ## 5. Extra fields
 

@@ -41,7 +41,28 @@
 <%= f.input :company_name, collection: Company.internal_first.pluck(:name), allow_custom_input: true,
       hint: 'Society or company that put on this event. Type to select an existing entry or enter a new name. New societies will be flagged for admin review.' %>
 
-<%= f.input :price %>
+<div id="ticket-prices">
+  <h3>Ticket prices</h3>
+
+  <p class="mb-2 text-sm text-muted">
+    Add a row per band. The price line shown on the website and the box office screen is written
+    from these, so you only need to type into "Price shown" if the bands cannot express it
+    (&ldquo;Pay what you can&rdquo;).
+  </p>
+
+  <%# template_object: ticket_prices is a JSON column, not an association, so
+      there is no reflection for _nested_fields to build its blank row from. %>
+  <%= render 'shared/form/sections/nested_fields',
+        f: f,
+        association_name: :ticket_prices,
+        partial_name: 'ticket_price_fields',
+        add_object_name: 'Price band',
+        template_object: Event::TicketPrice.new %>
+
+  <%= f.input :booking_fee, hint: 'Surcharge on top of every band, if there is one.' %>
+</div>
+
+<%= f.input :price, label: 'Price shown', hint: 'Written from the bands above whenever you change them.' %>
 
 <%= f.input :digital_programme_url,
       hint: 'Full link to the online programme for this show, including https://. It is shown on the event page and as a QR code on the box office screen — leave blank and the screen falls back to a QR for this event page.' %>

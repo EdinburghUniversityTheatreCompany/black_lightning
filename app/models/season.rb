@@ -6,6 +6,7 @@
 #
 #  id                      :integer          not null, primary key
 #  author                  :string(255)
+#  booking_fee             :decimal(8, 2)
 #  content_warnings        :text(16777215)
 #  digital_programme_url   :string(255)
 #  end_date                :date
@@ -29,6 +30,7 @@
 #  staffing_debt_start     :date
 #  start_date              :date
 #  tagline                 :string(255)
+#  ticket_prices           :json
 #  type                    :string(255)
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null

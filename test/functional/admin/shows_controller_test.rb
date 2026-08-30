@@ -481,6 +481,38 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                   "team member rows must be direct children of the sortable controller"
   end
 
+  test "updating a show stores its ticket price bands and rewrites the price line" do
+    show = FactoryBot.create(:show, is_public: true, price: "£10/8/7")
+
+    patch :update, params: { id: show.to_param, show: { ticket_prices_attributes: {
+      "0" => { category: "standard", amount: "9" },
+      "1" => { category: "concession", amount: "7" },
+      "2" => { category: "standard", amount: "" }
+    } } }
+
+    show.reload
+
+    assert_equal [ [ 9.0, "standard" ], [ 7.0, "concession" ] ],
+                 show.ticket_prices.map { |price| [ price.amount.to_f, price.category ] }
+    assert_equal "£9 / £7 concessions", show.price
+  end
+
+  # ticket_prices is a JSON column, not an association, so _nested_fields has no
+  # reflection to build its blank row from and needs template_object.
+  test "edit form renders the ticket price rows and their add-row template" do
+    show = FactoryBot.create(:show, is_public: true)
+    show.update!(ticket_prices: [ { "category" => "standard", "amount" => "10" } ])
+
+    get :edit, params: { id: show.to_param }
+    assert_response :success
+
+    assert_match "Ticket prices", response.body
+    assert_no_match "Translation missing", response.body
+    assert_select "input[name='show[ticket_prices_attributes][0][amount]']"
+    assert_select "select[name='show[ticket_prices_attributes][0][category]']"
+    assert_match "show[ticket_prices_attributes][NEW_RECORD][amount]", response.body
+  end
+
   # Substitutes for manually loading the edit page in a browser: the performance
   # rows have to render, under the word a Show calls them, with every access flag
   # offered and no missing translation.

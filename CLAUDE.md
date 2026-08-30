@@ -727,6 +727,25 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   flowed makes it a footer, since a balanced flow leaves neither column spare.
   Re-measure `CREDITS_*` in the browser if the header, row spacing or QR size changes.
 
+## Event ticket prices
+
+`events.ticket_prices` is a JSON array of `Event::TicketPrice` bands (standard / concession /
+member / other), with `booking_fee` beside it. `Event::PriceParser` reads the legacy free-text
+`price` column; `bin/rails events:backfill_ticket_prices` applies it (dry by default).
+
+- **`price` stays the display string every view renders.** Editing the bands in the admin
+  regenerates it, so the two cannot drift; the **backfill deliberately does not** (it writes with
+  `update_columns`), so all ~3000 archive pages keep rendering byte-identically.
+- **The parser refuses rather than guesses** — a wrong price reaches a search result as a promise
+  the box office must honour, while a refusal changes nothing. A residue check requires every
+  character to be an amount, a band word or a separator.
+- **Pre-decimal is a DATE rule, not a string rule.** 66 archive rows are shillings and pence
+  (1893–1970); `"2/6, 3/6, 5/-"` splits into five plausible-looking modern prices, and a bare
+  `"5/6"` on a 1962 show says nothing about itself. Nothing before **15 Feb 1971** is parsed.
+- **Categories are assigned by amount, never position** — `"3/4/5"` and `"£5.50/5/4.50"` both occur.
+- `ticket_prices` is not an association, so `shared/form/sections/_nested_fields` needs
+  `template_object:` to build its add-row template.
+
 ## Event performances
 
 `EventOccurrence` is one dated instance of an `Event` — nested-attribute edited on the admin event

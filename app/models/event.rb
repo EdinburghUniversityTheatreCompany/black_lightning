@@ -13,6 +13,7 @@
 #
 #  id                      :integer          not null, primary key
 #  author                  :string(255)
+#  booking_fee             :decimal(8, 2)
 #  content_warnings        :text(16777215)
 #  digital_programme_url   :string(255)
 #  end_date                :date
@@ -36,6 +37,7 @@
 #  staffing_debt_start     :date
 #  start_date              :date
 #  tagline                 :string(255)
+#  ticket_prices           :json
 #  type                    :string(255)
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
@@ -176,6 +178,7 @@ class Event < ApplicationRecord
   # Callbacks
   before_validation :generate_slug_from_name, :assign_company_from_name
   after_initialize :set_default_members_only_text
+  before_validation :derive_price_from_ticket_prices, if: :will_save_change_to_ticket_prices?
   after_update :recache_author_list_if_changed
   after_destroy :cleanup_orphaned_company
 
@@ -310,6 +313,34 @@ class Event < ApplicationRecord
     pretix_slug_override.presence || slug
   end
 
+  ##
+  # The priced bands of this event's tickets, dearest first.
+  #
+  # Stored as an array of plain hashes in the ticket_prices JSON column. Defining
+  # <name>_attributes= below is what makes fields_for treat this as if it were an
+  # association, so the existing nested-form UI edits it with no new JavaScript.
+  ##
+  def ticket_prices
+    Array(super).map { |attributes| TicketPrice.from_h(attributes) }
+                .sort_by { |price| -(price.amount || 0) }
+  end
+
+  def ticket_prices=(values)
+    super(Array(values).map { |value| value.is_a?(TicketPrice) ? value : TicketPrice.from_h(value) }
+                       .map(&:to_h))
+  end
+
+  ##
+  # The nested-form params shape: a hash of index => attributes, each of which may
+  # carry _destroy. A row with no amount is the blank one the form's template
+  # always posts, and storing it would mean a band with no price.
+  ##
+  def ticket_prices_attributes=(attributes)
+    rows = attributes.respond_to?(:values) ? attributes.values : Array(attributes)
+
+    self.ticket_prices = rows.reject { |row| destroy_flagged?(row) || row_amount(row).blank? }
+  end
+
   # What this event calls its EventOccurrences. Resolved through the STI
   # ancestry, so Show gets "Performance" and everything unspecified gets "Date".
   def occurrence_label
@@ -413,6 +444,28 @@ class Event < ApplicationRecord
     return if @company_name.nil?
 
     self.company = @company_name.present? ? Company.find_or_build_by_name(@company_name) : nil
+  end
+
+  def destroy_flagged?(row)
+    ActiveModel::Type::Boolean.new.cast(row["_destroy"] || row[:_destroy])
+  end
+
+  def row_amount(row)
+    row["amount"] || row[:amount]
+  end
+
+  ##
+  # price stays the free-text string every existing view renders; the structured
+  # bands regenerate it whenever they change, so the two cannot drift. The
+  # backfill deliberately does NOT go through here -- it writes ticket_prices with
+  # update_columns, leaving all ~3000 archive rows rendering byte-identically.
+  ##
+  def derive_price_from_ticket_prices
+    prices = ticket_prices
+
+    return if prices.empty?
+
+    self.price = prices.all?(&:free?) ? "Free" : prices.map(&:to_price_string).join(" / ")
   end
 
   def cleanup_orphaned_company
