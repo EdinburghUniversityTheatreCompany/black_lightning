@@ -18,9 +18,20 @@ module DisplayHelper
 
     case schedule.kind
     when :weekly then "Every #{schedule.weekday_name}#{display_curtain(schedule)}"
-    when :single, :range then display_block_when(schedule.blocks.first)
+    when :single, :range then display_run_when(event, schedule, on)
     else display_irregular_when(event, schedule, on)
     end
+  end
+
+  ##
+  # One run, stated whole. Unless every performance in it has already gone by
+  # while the run itself has not ended -- a half-entered list -- in which case
+  # naming a date in the past is worse than naming the run.
+  ##
+  def display_run_when(event, schedule, on)
+    block = schedule.blocks.first
+
+    block.ends_on < on ? display_date_range(event) : display_block_when(block)
   end
 
   ##

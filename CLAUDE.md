@@ -664,6 +664,11 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   `test/functional/display/pages_controller_test.rb` is the feature**, and anything that can raise
   mid-render is rescued for the same reason (`display_image_url` returns nil on a blob missing from
   storage rather than 500ing the screen).
+- **The RUN DATES decide what is on the board, not the performance list.** `Display::EventPool`
+  filters on `end_date` alone: an event whose listed performances have all passed stays until its
+  run ends and states its run, because a producer who enters the first week and forgets the second
+  must not have the show vanish for that second week — partial data producing a worse result than
+  none. `on_today?` still needs positive evidence, so such an event gets no "TONIGHT" flash.
 - **An event with no `EventOccurrence` rows plays every day of its run, and no duration rule may
   stand in for that.** It is how all ~3000 archive events behave and it is the fallback
   `display_when` falls back *to*; a duration filter would instead drop a three-week Fringe run that

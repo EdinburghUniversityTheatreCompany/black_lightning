@@ -110,7 +110,7 @@ class DisplayHelperTest < ActionView::TestCase
                                     duration_minutes: 135)
     FactoryBot.create(:event_occurrence, event: show, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
 
-    assert_equal "Wed 4 Mar, 7.30pm", display_when(show)
+    assert_equal "Wed 4 Mar, 7.30pm", display_when(show, on: Date.new(2026, 3, 1))
   end
 
   # Every archive event has no performances, so this is the path almost all of
@@ -133,6 +133,17 @@ class DisplayHelperTest < ActionView::TestCase
 
     assert_equal "Tue 3 Mar, 7.30pm", display_when(event, on: Date.new(2026, 3, 1))
     assert_equal "Thu 5 Mar, 7.30pm", display_when(event, on: Date.new(2026, 3, 4))
+  end
+
+  # A half-entered list: the run says it is still on, but every performance in it
+  # is behind us. Naming a date in the past is worse than naming the run.
+  test "display_when states the run once its only performance has passed" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 20))
+    FactoryBot.create(:event_occurrence, event: event,
+                      starts_at: Date.new(2026, 10, 11).in_time_zone.change(hour: 19, min: 30))
+
+    assert_equal "Sun 11 Oct, 7.30pm", display_when(event, on: Date.new(2026, 10, 11))
+    assert_equal "Sun 11 – Tue 20 Oct", display_when(event, on: Date.new(2026, 10, 15))
   end
 
   # Once every date has gone by there is no block left to name, so the run's own

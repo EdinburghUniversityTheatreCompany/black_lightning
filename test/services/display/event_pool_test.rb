@@ -70,16 +70,26 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_not_includes ids, finished.id
   end
 
-  # The run has not ended, so the SQL still returns it -- but every performance
-  # it had is behind us, and a poster for a show nobody can still see is worse
-  # than the next show in the list.
-  test "an event whose remaining run holds no performance drops out" do
+  # The run dates decide what is on, not the performance list. A producer who
+  # enters the first week and forgets the second must not have the show vanish
+  # for that second week -- partial data would otherwise produce a worse result
+  # than entering nothing at all.
+  test "an event whose listed performances have all passed stays until its run ends" do
     friday = Date.current.next_occurring(:friday)
-    stale = FactoryBot.create(:show, is_public: true,
-                                     start_date: friday + 1, end_date: friday + 6)
-    FactoryBot.create(:event_occurrence, event: stale, starts_at: (friday + 2).noon + 7.hours)
+    partial = FactoryBot.create(:show, is_public: true,
+                                       start_date: friday + 1, end_date: friday + 6)
+    FactoryBot.create(:event_occurrence, event: partial, starts_at: (friday + 2).noon + 7.hours)
 
-    assert_not_includes Display::EventPool.upcoming(on: friday + 4).map(&:id), stale.id
+    assert_includes Display::EventPool.upcoming(on: friday + 4).map(&:id), partial.id
+  end
+
+  test "an event drops out only once its run has ended" do
+    friday = Date.current.next_occurring(:friday)
+    finished = FactoryBot.create(:show, is_public: true,
+                                        start_date: friday - 6, end_date: friday - 1)
+    FactoryBot.create(:event_occurrence, event: finished, starts_at: (friday - 5).noon + 7.hours)
+
+    assert_not_includes Display::EventPool.upcoming(on: friday).map(&:id), finished.id
   end
 
   test "slots wrap around when there are fewer events than slots" do

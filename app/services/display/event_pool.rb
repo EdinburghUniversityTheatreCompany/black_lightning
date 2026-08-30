@@ -12,6 +12,13 @@ module Display
   # picking the next occurrence out of a preloaded association does not belong in
   # a query.
   class EventPool
+    # THE RUN DATES DECIDE WHAT IS ON, not the performance list. A producer who
+    # enters the first week's performances and forgets the second would otherwise
+    # have the show vanish from the board for that second week -- partial data
+    # producing a worse result than none, on a screen nobody is watching. An
+    # event whose listed performances have all passed stays until its end_date
+    # and states its run.
+    #
     # Not Event.current -- that scope hardcodes Date.current, so it would ignore
     # the +on+ argument the ordering is tested with.
     def self.upcoming(on: Date.current)
@@ -19,13 +26,15 @@ module Display
            .where("end_date >= ?", on)
            .includes(:event_occurrences, image_attachment: :blob)
            .to_a
-           .select { |event| event.next_occurrence(on).present? }
            # start_date and id are tiebreakers, not decoration: sort_by is not
            # stable and every event running today shares [0, today], so without a
            # total order the six slot pages -- fetched minutes apart, each
            # re-sorting independently -- can show the same show twice and skip
            # another. During the Fringe that is the normal state.
-           .sort_by { |event| [ event.on_today?(on) ? 0 : 1, event.next_occurrence(on), event.start_date, event.id ] }
+           # next_occurrence is nil for an event whose listed performances have all
+           # passed while its run has not; end_date stands in so the sort still
+           # has a total order.
+           .sort_by { |event| [ event.on_today?(on) ? 0 : 1, event.next_occurrence(on) || event.end_date, event.start_date, event.id ] }
     end
 
     # Slot numbers are 1-based and wrap: six slots against four events shows
