@@ -409,9 +409,11 @@ class EventTest < ActionView::TestCase
     assert_no_difference("Company.count") { event.destroy }
   end
 
-  # --- performance days -------------------------------------------------
+  # --- performances -----------------------------------------------------
 
-  test "on_today? is true every day of the run when no performance days are set" do
+  # The archive is ~3000 events with no occurrence rows, and this is what keeps
+  # them behaving exactly as they did before performances existed.
+  test "on_today? is true every day of the run when the event has no occurrences" do
     event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2, is_public: true)
 
     assert event.on_today?
@@ -419,36 +421,33 @@ class EventTest < ActionView::TestCase
     assert_not event.on_today?(Date.current + 3)
   end
 
-  test "on_today? is only true on the listed performance days" do
-    friday = Date.current.next_occurring(:friday)
-    event = FactoryBot.create(:show, start_date: friday - 30, end_date: friday + 30,
-                                     is_public: true, performance_weekdays: "5")
+  test "on_today? is only true on days the event actually has an occurrence" do
+    event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 4, is_public: true)
+    FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 2).noon + 7.hours)
 
-    assert event.on_today?(friday)
-    assert_not event.on_today?(friday + 1)
+    assert event.on_today?(Date.current + 2)
+    assert_not event.on_today?(Date.current + 1)
+    assert_not event.on_today?
   end
 
-  test "next_occurrence returns the next matching day inside the run" do
-    friday = Date.current.next_occurring(:friday)
-    event = FactoryBot.create(:show, start_date: friday - 30, end_date: friday + 30,
-                                     is_public: true, performance_weekdays: "5")
+  test "next_occurrence returns the date of the next occurrence" do
+    event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
+    FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 4).noon + 7.hours)
 
-    assert_equal friday, event.next_occurrence(friday - 3)
+    assert_equal Date.current + 4, event.next_occurrence
   end
 
-  test "next_occurrence is the start date when the run has not begun" do
+  test "next_occurrence is the start date when the run has not begun and nothing is scheduled" do
     event = FactoryBot.create(:show, start_date: Date.current + 10, end_date: Date.current + 12, is_public: true)
 
     assert_equal Date.current + 10, event.next_occurrence
   end
 
-  test "next_occurrence is nil when the remaining run holds no performance day" do
-    friday = Date.current.next_occurring(:friday)
-    # Saturday to Thursday: no Friday is left in the range.
-    event = FactoryBot.create(:show, start_date: friday + 1, end_date: friday + 6,
-                                     is_public: true, performance_weekdays: "5")
+  test "next_occurrence is nil once every occurrence has passed" do
+    event = FactoryBot.create(:show, start_date: Date.current - 4, end_date: Date.current + 4, is_public: true)
+    FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current - 2).noon + 7.hours)
 
-    assert_nil event.next_occurrence(friday + 1)
+    assert_nil event.next_occurrence
   end
 
   test "next_occurrence is nil once the run has ended" do
@@ -457,45 +456,29 @@ class EventTest < ActionView::TestCase
     assert_nil event.next_occurrence
   end
 
-  test "performance_weekdays normalises to a sorted deduped list and blanks to nil" do
-    event = FactoryBot.build(:show, performance_weekdays: " 5, 1 ,5 ")
-    assert_equal "1,5", event.performance_weekdays
+  # next_occurrence answers "which day"; the display needs the record so it can
+  # print a curtain time, which is the whole point of storing performances.
+  test "next_occurrence_at returns the occurrence itself, skipping the ones gone by" do
+    event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
+    FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 1).noon + 7.hours)
+    wanted = FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 3).noon + 7.hours)
 
-    event.performance_weekdays = ""
-    assert_nil event.performance_weekdays
+    assert_equal wanted, event.next_occurrence_at(Date.current + 2)
   end
 
-  test "performance_weekdays rejects day numbers outside 0..6" do
-    event = FactoryBot.build(:show, performance_weekdays: "7")
+  test "next_occurrence_at is nil for an event with no occurrences" do
+    event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
 
-    assert_not event.valid?
-    assert event.errors[:performance_weekdays].present?
+    assert_nil event.next_occurrence_at
   end
 
-  test "performance_wdays reads the stored list as integers" do
-    event = FactoryBot.build(:show, performance_weekdays: "1,5")
-
-    assert_equal [ 1, 5 ], event.performance_wdays
-  end
-
-  test "performance_wdays_list reads the stored days as strings for the form" do
-    event = FactoryBot.build(:show, performance_weekdays: "1,5")
-
-    assert_equal %w[1 5], event.performance_wdays_list
-  end
-
-  test "performance_wdays_list= joins the checkbox values and drops the blank" do
-    event = FactoryBot.build(:show)
-    # simple_form check_boxes always post a leading "" from their hidden field.
-    event.performance_wdays_list = [ "", "5", "1" ]
-
-    assert_equal "1,5", event.performance_weekdays
-  end
-
-  test "performance_wdays_list= with nothing ticked clears the column" do
-    event = FactoryBot.build(:show, performance_weekdays: "5")
-    event.performance_wdays_list = [ "" ]
-
-    assert_nil event.performance_weekdays
+  # One table, three words for it. The label is a constant rather than a string
+  # typed into each view, so the admin form, the public page and the box office
+  # screen cannot drift on what these are called.
+  test "each event type names its occurrences differently" do
+    assert_equal "Performance", Show.new.occurrence_label
+    assert_equal "Session", Workshop.new.occurrence_label
+    assert_equal "Opening time", Season.new.occurrence_label
+    assert_equal "Date", Event.new.occurrence_label
   end
 end

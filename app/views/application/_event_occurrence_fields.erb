@@ -1,0 +1,28 @@
+<%# locals: (f:, dynamic: nil) %>
+
+<%# Not shared/form/inline_fields_for_template: it lays every field out on one
+    bottom-aligned line, which turns the seven-item access collection into a
+    700px column of empty space beside the inputs. The inputs still take the
+    :inline_form wrapper (sr-only labels), as every other repeated row in this
+    admin does; the collection needs a line of its own. %>
+<div class="event-occurrence mb-3 rounded border border-gray-200 p-3">
+  <%= f.hidden_field :id %>
+
+  <div class="flex flex-wrap items-end gap-3">
+    <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:starts_at) %>">Starts</label>
+    <%= f.input :starts_at, as: :datetime, html5: true, wrapper: :inline_form %>
+
+    <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:ends_at) %>">Ends</label>
+    <%= f.input :ends_at, as: :datetime, html5: true, wrapper: :inline_form %>
+
+    <div class="min-w-48 flex-1">
+      <%= f.input :note, placeholder: 'Note, e.g. post-show Q&A', wrapper: :inline_form %>
+    </div>
+
+    <%= link_to_remove(f) %>
+  </div>
+
+  <%# vertical_collection_inline, or the seven flags stack one per line. %>
+  <%= f.input :access_flags, as: :check_boxes, label: 'Access', wrapper: :vertical_collection_inline,
+        collection: EventOccurrence::ACCESS_FLAG_LABELS.map { |flag, label| [label, flag] } %>
+</div>

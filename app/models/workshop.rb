@@ -18,7 +18,6 @@
 #  maintenance_debt_start  :date
 #  members_only_text       :text(16777215)
 #  name                    :string(255)
-#  performance_weekdays    :string(255)
 #  pretix_shown            :boolean
 #  pretix_slug_override    :string(255)
 #  pretix_view             :string(255)
@@ -55,6 +54,8 @@
 #  fk_rails_...  (proposal_id => admin_proposals_proposals.id)
 #
 class Workshop < Event
+  OCCURRENCE_LABEL = "Session".freeze
+
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }

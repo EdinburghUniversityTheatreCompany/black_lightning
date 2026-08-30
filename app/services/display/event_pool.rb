@@ -5,18 +5,19 @@ module Display
   # There is deliberately NO type filter and no duration rule. A Season is
   # normally a festival -- exactly what the box office should be advertising --
   # not a term-long container, and the only lever for an unusually long run is
-  # performance_weekdays. A duration rule here would also drop a three-week
+  # its EventOccurrences. A duration rule here would also drop a three-week
   # Fringe run, which genuinely is on every night.
   #
   # Ordering happens in Ruby rather than SQL: the pool is a handful of rows and
-  # the weekday logic does not belong in a query.
+  # picking the next occurrence out of a preloaded association does not belong in
+  # a query.
   class EventPool
     # Not Event.current -- that scope hardcodes Date.current, so it would ignore
     # the +on+ argument the ordering is tested with.
     def self.upcoming(on: Date.current)
       Event.where(is_public: true)
            .where("end_date >= ?", on)
-           .includes(image_attachment: :blob)
+           .includes(:event_occurrences, image_attachment: :blob)
            .to_a
            .select { |event| event.next_occurrence(on).present? }
            # start_date and id are tiebreakers, not decoration: sort_by is not

@@ -1,4 +1,4 @@
-<%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false, collection: nil) %>
+<%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false, collection: nil, add_object_name: nil) %>
 <%# KEEP %>
 <%# Pass `collection:` to render a custom set of records (e.g. one grouped representative per user)
     instead of the bare association. Omit it to keep the default behaviour. %>
@@ -39,7 +39,7 @@
 
   <% if display_link_to_add %>
     <div class="mt-2">
-      <%= link_to_add f, association_name, div_html_class: wrapper_class %>
+      <%= link_to_add f, association_name, object_name: add_object_name, div_html_class: wrapper_class %>
     </div>
   <% end %>
 </div>

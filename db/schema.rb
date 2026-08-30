@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_180600) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -376,6 +376,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
     t.index ["email", "attached_object_id", "attached_object_type"], name: "index_emails_on_email_and_attached_object", unique: true
   end
 
+  create_table "event_occurrences", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.json "access_flags"
+    t.datetime "created_at", null: false
+    t.datetime "ends_at"
+    t.integer "event_id", null: false
+    t.string "note"
+    t.datetime "starts_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "starts_at"], name: "index_event_occurrences_on_event_id_and_starts_at"
+  end
+
   create_table "event_tags", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description", size: :medium
@@ -410,7 +421,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
     t.date "maintenance_debt_start"
     t.text "members_only_text", size: :medium
     t.string "name"
-    t.string "performance_weekdays"
     t.boolean "pretix_shown"
     t.string "pretix_slug_override"
     t.string "pretix_view"
@@ -1164,6 +1174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
   add_foreign_key "cached_duplicates", "users", column: "user1_id"
   add_foreign_key "cached_duplicates", "users", column: "user2_id"
   add_foreign_key "climate_readings", "climate_sensors", column: "sensor_id", on_delete: :cascade
+  add_foreign_key "event_occurrences", "events"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "events", "companies"
   add_foreign_key "maintenance_credits", "users"

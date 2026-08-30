@@ -43,18 +43,35 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Mon 30 Mar – Thu 2 Apr", display_date_range(event)
   end
 
-  test "display_when says the weekday for a run that plays one day a week" do
-    # A year-long range tells nobody when to turn up; "Every Friday" does.
-    event = FactoryBot.build(:show, start_date: Date.new(2026, 9, 1), end_date: Date.new(2027, 6, 30),
-                                    performance_weekdays: "5")
+  # A year-long range tells nobody when to turn up. Naming the next performance
+  # and its curtain time does, which is what the occurrence rows are for.
+  test "display_when names the next performance and its curtain time" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 1), end_date: Date.new(2027, 6, 30))
+    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 10, 2, 19, 30))
 
-    assert_equal "Every Friday", display_when(event)
+    assert_equal "Fri 2 Oct, 7.30pm", display_when(event, on: Date.new(2026, 9, 28))
   end
 
-  test "display_when falls back to the range when no performance days are set" do
+  test "display_when drops the minutes from an on-the-hour curtain" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
+    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 3, 5, 20, 0))
+
+    assert_equal "Thu 5 Mar, 8pm", display_when(event, on: Date.new(2026, 3, 3))
+  end
+
+  # Every archive event has no occurrences, so this is the path almost all of
+  # them take, and it has to keep printing what it printed before.
+  test "display_when falls back to the range when nothing is scheduled" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
 
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
+  end
+
+  test "display_when falls back to the range once every performance has passed" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
+    FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+
+    assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 6))
   end
 
 

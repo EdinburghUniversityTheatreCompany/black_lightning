@@ -10,17 +10,24 @@ module DisplayHelper
     "#{starts.strftime('%a %-d %b')} – #{ends.strftime('%a %-d %b')}"
   end
 
+  # "7.30pm", "8pm". British house style, and the minutes are dropped on the
+  # hour rather than printing a bare ":00" nobody says out loud.
+  def display_time(time)
+    time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
+  end
+
   # What to print in the "when" column. For an event that plays intermittently
   # the raw range is useless on a screen -- "Sep 1 - Jun 30" tells nobody when
-  # to turn up -- so name the night instead.
+  # to turn up -- so name the next performance and its curtain time instead.
+  #
+  # An event with no occurrences, which is every archive row, falls back to the
+  # range exactly as it did before performances were stored.
   def display_when(event, on: Date.current)
-    wdays = event.performance_wdays
+    occurrence = event.next_occurrence_at(on)
 
-    return display_date_range(event) if wdays.empty?
-    return "Every #{Date::DAYNAMES[wdays.first]}" if wdays.one?
+    return display_date_range(event) if occurrence.nil?
 
-    occurrence = event.next_occurrence(on)
-    occurrence ? occurrence.strftime("%a %-d %b") : display_date_range(event)
+    "#{occurrence.starts_at.strftime('%a %-d %b')}, #{display_time(occurrence.starts_at)}"
   end
 
   # The white wordmark with the red arch -- the only logo asset that reads on

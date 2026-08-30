@@ -18,10 +18,21 @@
 
 <%= f.input :end_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
-<%= f.input :performance_wdays_list,
-      as: :check_boxes,
-      collection: Date::DAYNAMES.each_with_index.map { |name, wday| [ name, wday ] },
-      hint: 'Leave every box unticked if the event plays every day between the start and end dates — that is the normal case. Only tick days for something that runs a long time but plays intermittently, like the Improverts.' %>
+<div id="event-occurrences">
+  <h3><%= f.object.occurrence_label.pluralize %></h3>
+
+  <p class="mb-2 text-sm text-muted">
+    Leave this empty if the event runs every day between the start and end dates — that is the
+    normal case. Add <%= f.object.occurrence_label.downcase.pluralize %> to give the box office
+    screen and the event page real times, and to mark a relaxed or captioned night.
+  </p>
+
+  <%= render 'shared/form/sections/nested_fields',
+        f: f,
+        association_name: :event_occurrences,
+        partial_name: 'event_occurrence_fields',
+        add_object_name: f.object.occurrence_label %>
+</div>
 
 <%= f.association :venue, collection: Venue.all, label_method: :name, required: true %>
 

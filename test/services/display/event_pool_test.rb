@@ -4,11 +4,10 @@ class Display::EventPoolTest < ActiveSupport::TestCase
   test "an event on today sorts ahead of one that started earlier but is not" do
     friday = Date.current.next_occurring(:friday)
 
-    # Started long ago, plays Fridays only, so it is not on today unless today
-    # happens to be a Friday.
+    # Started long ago, next performance is a week off, so it is not on today.
     weekly = FactoryBot.create(:show, name: "Improverts", is_public: true,
-                                      start_date: Date.current - 60, end_date: Date.current + 60,
-                                      performance_weekdays: friday.wday.to_s)
+                                      start_date: Date.current - 60, end_date: Date.current + 60)
+    FactoryBot.create(:event_occurrence, event: weekly, starts_at: (friday + 7).noon + 7.hours)
     running = FactoryBot.create(:show, name: "Tonight", is_public: true,
                                        start_date: Date.current - 1, end_date: Date.current + 1)
 
@@ -71,13 +70,16 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_not_includes ids, finished.id
   end
 
-  test "an event whose remaining run holds no performance day drops out" do
+  # The run has not ended, so the SQL still returns it -- but every performance
+  # it had is behind us, and a poster for a show nobody can still see is worse
+  # than the next show in the list.
+  test "an event whose remaining run holds no performance drops out" do
     friday = Date.current.next_occurring(:friday)
     stale = FactoryBot.create(:show, is_public: true,
-                                     start_date: friday + 1, end_date: friday + 6,
-                                     performance_weekdays: "5")
+                                     start_date: friday + 1, end_date: friday + 6)
+    FactoryBot.create(:event_occurrence, event: stale, starts_at: (friday + 2).noon + 7.hours)
 
-    assert_not_includes Display::EventPool.upcoming(on: friday + 1).map(&:id), stale.id
+    assert_not_includes Display::EventPool.upcoming(on: friday + 4).map(&:id), stale.id
   end
 
   test "slots wrap around when there are fewer events than slots" do

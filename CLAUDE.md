@@ -664,10 +664,10 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   `test/functional/display/pages_controller_test.rb` is the feature**, and anything that can raise
   mid-render is rescued for the same reason (`display_image_url` returns nil on a blob missing from
   storage rather than 500ing the screen).
-- **Blank `performance_weekdays` means every day of the run, and no duration rule may stand in for
-  it.** A year-long Improverts event with no weekdays set is `on_today?` daily and prints
-  "Sep 1 - Jun 30", the exact string `display_when` exists to avoid; a duration filter would instead
-  drop a three-week Fringe run that genuinely is on every night.
+- **An event with no `EventOccurrence` rows plays every day of its run, and no duration rule may
+  stand in for that.** It is how all ~3000 archive events behave and it is the fallback
+  `display_when` falls back *to*; a duration filter would instead drop a three-week Fringe run that
+  genuinely is on every night. The retired `performance_weekdays` column encoded the same rule.
 - **The display layout must not load `application.css`** — its unlayered `h1`-`h6` rules beat the
   Tailwind utilities sizing this screen. `display.css` imports `tailwind-base.css` only and owns the
   two display-scoped tokens: `--color-display-accent` (`text-primary` is 2.9:1 on black) and
@@ -705,8 +705,9 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
 - **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
   real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
   join; on its own it outer-joins and silently drops the guard.
-- **There are no curtain times in the schema.** An event carries dates, not performances, so nothing
-  here can say "7.30pm" without a migration.
+- **Curtain times come from `EventOccurrence`, and only when someone entered them.** `display_when`
+  prints "Fri 2 Oct, 7.30pm" from `Event#next_occurrence_at`, and falls back to the bare date range
+  for an event with no occurrences — which is every archive row.
 - **The archive slide moves on one place every time it is rendered** (`Display::Rotation`, a cached
   cursor keyed by date). Anthias comes back to that one URL every few minutes, so picking the oldest
   match every time showed a single frame from open to close. A cache that cannot answer falls back to
@@ -726,10 +727,19 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   flowed makes it a footer, since a balanced flow leaves neither column spare.
   Re-measure `CREDITS_*` in the browser if the header, row spacing or QR size changes.
 
-### Deployment
+## Event performances
 
-On merge, set the Improverts event's `performance_weekdays` to Friday in the admin, and do the same
-for any other intermittent long-running event — see the blank-weekdays trap above.
+`EventOccurrence` is one dated instance of an `Event` — nested-attribute edited on the admin event
+form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec:
+[docs/superpowers/specs/2026-08-30-rich-event-data-design.md](docs/superpowers/specs/2026-08-30-rich-event-data-design.md).
+
+- **One table for Shows, Workshops and Seasons; only the word differs.** `OCCURRENCE_LABEL` per STI
+  subclass gives "Performance" / "Session" / "Opening time", read through `Event#occurrence_label`.
+  Never type the word into a view.
+- **No occurrences means every day of the run**, which is every archive event — see the box office
+  section. `on_today?`, `next_occurrence` and `display_when` all branch on that, so a change to one
+  needs the same change to the others.
+- `event_occurrences.event_id` is **`:integer`**, matching `events`' legacy integer primary key.
 
 ## Opportunities
 

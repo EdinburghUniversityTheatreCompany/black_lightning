@@ -90,7 +90,7 @@ class Admin::PermissionsController < AdminController
                   Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
                   Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
                   Reimbursements::FinancialYear, Reimbursements::CostCentre,
-                  Climate::Sensor, Climate::Reading ]).uniq
+                  Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq
 
     role_exclude = Admin::Permission::EXCLUDED_ROLES
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all.left_joins(:permissions).group(:id).order("COUNT(admin_permissions.id) DESC")

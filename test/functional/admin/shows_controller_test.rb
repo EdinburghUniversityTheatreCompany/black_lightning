@@ -452,12 +452,19 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
   end
 
-  test "updating a show stores the ticked performance days" do
+  test "updating a show stores its performances" do
     show = FactoryBot.create(:show, is_public: true)
+    starts_at = show.start_date.to_time.change(hour: 19, min: 30)
 
-    patch :update, params: { id: show.to_param, show: { performance_wdays_list: [ "", "5" ] } }
+    patch :update, params: { id: show.to_param, show: { event_occurrences_attributes: {
+      "0" => { starts_at: starts_at, note: "Press night", access_flags: [ "", "relaxed" ] }
+    } } }
 
-    assert_equal "5", show.reload.performance_weekdays
+    occurrence = show.reload.event_occurrences.sole
+
+    assert_equal starts_at.to_i, occurrence.starts_at.to_i
+    assert_equal "Press night", occurrence.note
+    assert_equal %w[relaxed], occurrence.access_flags
   end
 
   # SortableJS only reorders elements that are DIRECT children of the element it
@@ -474,21 +481,22 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                   "team member rows must be direct children of the sortable controller"
   end
 
-  # Substitutes for manually loading the edit page in a browser: confirms the
-  # "Performance days" checkboxes actually render on the form, with a translation
-  # for the new label and all seven days present.
-  test "edit form renders the performance days checkboxes" do
+  # Substitutes for manually loading the edit page in a browser: the performance
+  # rows have to render, under the word a Show calls them, with every access flag
+  # offered and no missing translation.
+  test "edit form renders the performance rows under the show's own word for them" do
     show = FactoryBot.create(:show, is_public: true)
+    FactoryBot.create(:event_occurrence, event: show)
 
     get :edit, params: { id: show.to_param }
     assert_response :success
 
-    assert_match "Performance days", response.body
+    assert_match "Performances", response.body
     assert_no_match "Translation missing", response.body
+    assert_select "[data-controller~=nested-form] input[name*='event_occurrences_attributes'][name*='[starts_at]']"
 
-    Date::DAYNAMES.each_with_index do |name, wday|
-      assert_match %(id="show_performance_wdays_list_#{wday}"), response.body
-      assert_match name, response.body
+    EventOccurrence::ACCESS_FLAG_LABELS.each_value do |label|
+      assert_match label, response.body
     end
   end
 
