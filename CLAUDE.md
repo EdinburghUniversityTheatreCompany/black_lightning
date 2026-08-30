@@ -741,6 +741,46 @@ An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional)
 - **Review:** `Opportunity Reviewer` role; approve/reject email whoever actually submitted (`OpportunityMailer`, `notification_email` — the account creator when present, so on-behalf decisions go to the internal user, else the external submitter) with an optional note. Reviewers also get the `OpportunityDigestJob` digest. A `close` member action (aliased to `:update` in Ability) expires a posting immediately.
 - `Company` (name + `acts_as_url` slug + `internal` EUTC flag) is admin-managed via `Admin::CompaniesController`.
 
+## SEO and structured data
+
+Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured data in
+`SchemaHelper`, the sitemap in `SitemapsController`. Audit that produced all of it: 2026-08-30.
+
+- **`og:title`, `og:url` and the canonical are derived at RENDER time, never in
+  `ApplicationController#set_globals`.** `set_globals` is a `before_action`, so it runs before the
+  action assigns `@title` — deriving og:title there read `nil` on every request and captioned
+  every shared show "Bedlam Theatre" for years. Anything that reads `@title` belongs in
+  `MetaHelper`.
+- **`MetaHelper::CANONICAL_PARAMS` is `page` and nothing else.** That is what collapses Ransack's
+  `?q[...]` space — every author, company and venue is its own URL, each combining with
+  pagination — onto the page it filters. Adding `q` there reopens an unbounded crawl space.
+  `robots.txt` (static, in `public/`) disallows it too.
+- **Variants say `format: "webp"`, not `convert:`.** Rails derives
+  `ActiveStorage::Variation#content_type` from `:format` alone; `:convert` is passed to
+  image_processing, so the bytes were WebP while every variant was served declaring
+  `image/png` or `image/jpeg`. Browsers sniff and cope — og:image validators do not.
+  **Changing a variant re-keys its URL and regenerates the whole set on first request.**
+- **In `shared/_image.erb`, `full_width` is styling and `priority` is loading.** They were one
+  flag (`eager_load`) and it had the performance backwards: eight cards below the fold loaded
+  eagerly while the masthead above them inherited the app-wide lazy default. Measured, correcting
+  it was worth 1552ms of homepage LCP on a throttled phone. Only a genuine LCP element passes
+  `priority`.
+- **The sitemap reads every record through `Ability.new(nil)`.** A sitemap must never advertise a
+  URL that answers 403 to the crawler following it; a test walks the event URLs and asserts each
+  renders for a guest.
+- **Member profiles are indexed on purpose.** Opting out is `users.public_profile`, which is the
+  same flag the guest ability's `:view_shows_and_bio` rule reads, so an opted-out profile is
+  neither listed in the sitemap nor reachable. Don't add a blanket `noindex`.
+- **`TheaterEvent` emits a date-only `startDate` and omits `offers` when the free-text
+  `events.price` yields no number.** A wrong price in a rich result is a promise the box office
+  has to honour. **When performances and prices become real fields on `Event`, revisit
+  `SchemaHelper#event_schema`**: emit one `Event` per performance with a real curtain time, and
+  replace the `PRICE_PATTERN` scrape with the structured price. That is the single biggest
+  remaining upgrade to the event rich results.
+- **AI crawlers are blocked at Cloudflare, not in the app** — `GPTBot`, `OAI-SearchBot`,
+  `ChatGPT-User`, `ClaudeBot` and `PerplexityBot` all get a 25-byte `blocked` 403 while Google,
+  Bing, DuckDuckGo and the social scrapers pass. Nothing in this repo controls that.
+
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
 

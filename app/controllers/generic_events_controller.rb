@@ -21,6 +21,12 @@ class GenericEventsController < ApplicationController
     # Set the instance variable that load_and_authorize_resource expects
     instance_variable_set("@#{resource_name.singularize}", @event)
 
+    # Four pairs of shows on the live site shared a title exactly -- two Importance of Being
+    # Earnests, two History Boys -- and competed with each other in search with nothing to tell
+    # them apart. A finished run is disambiguated by the year it ran; a current one is not, so
+    # what is on sale reads cleanly.
+    @title = "#{@event.name} (#{@event.end_date.year})" if @event.end_date&.past?
+
     @meta[:description] = helpers.render_plain(get_resource.publicity_text)
     @meta["og:image"] = [ @base_url + get_resource.slideshow_image_url ] + get_resource.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 

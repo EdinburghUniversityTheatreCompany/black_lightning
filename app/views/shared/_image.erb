@@ -1,4 +1,4 @@
-<%# locals: (image:, variant: nil, full_width: true, priority: false, alt: nil, image_options: {}, proxy: false) -%>
+<%# locals: (image:, variant: nil, full_width: true, priority: false, alt: nil, srcset_variants: nil, image_options: {}, proxy: false) -%>
 <%# KEEP %>
 
 <%# full_width and priority used to be one flag called eager_load, which set the layout classes
@@ -39,6 +39,14 @@ end
 
 <% if priority %>
   <% image_options = image_options.merge({ loading: "eager", fetchpriority: "high" }) %>
+<% end %>
+
+<%# A phone downloading a 960px card into a 412px viewport is roughly 2.3x the pixels it can
+    show. srcset_variants lets a caller offer the smaller variants that already exist, so the
+    browser picks; without it nothing changes. %>
+<% if srcset_variants.present? && proxy %>
+  <% candidates = srcset_variants.map { |v| "#{active_storage_proxy_url(image.variant(v))} #{v[:resize_to_fill][0]}w" } %>
+  <% image_options = image_options.merge(srcset: candidates.join(", "), sizes: image_options.delete(:sizes) || "(max-width: 768px) 100vw, 33vw") %>
 <% end %>
 
 <% if variant.present? %>

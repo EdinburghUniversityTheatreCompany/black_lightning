@@ -5,7 +5,10 @@ require "test_helper"
 # and the action, which a helper-level test cannot see.
 class SeoMetadataTest < ActionDispatch::IntegrationTest
   setup do
-    @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true)
+    # Dated forward on purpose: a finished run has its year appended to disambiguate it from a
+    # revival, which is covered in seo_page_titles_test.
+    @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true,
+                                     start_date: Date.current + 7, end_date: Date.current + 14)
   end
 
   test "a show page captions its social preview with the show, not the venue" do

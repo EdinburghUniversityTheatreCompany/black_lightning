@@ -48,6 +48,10 @@ module LinkNormalisationHelper
   ##
   # A link to our own site becomes a path, so it never spends a redirect -- and www. never
   # competes with the apex.
+  #
+  # This also rewrites an autolinked bare URL, leaving markup whose visible text still reads
+  # "https://www.bedlamtheatre.co.uk" while its href is "/". That is deliberate: the destination
+  # is identical and the redirect is what we came to remove.
   ##
   def relativise_own_host(href)
     uri = URI.parse(href)

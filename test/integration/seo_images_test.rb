@@ -36,12 +36,25 @@ class SeoImagesTest < ActionDispatch::IntegrationTest
     assert_predicate masthead["alt"].to_s, :present?, "the masthead is inside a link, so it needs a name"
   end
 
-  # The whole point of the inversion: nothing below the fold competes with the LCP image.
-  test "no more than one image on the homepage is eager" do
+  # The whole point of the inversion: nothing below the fold competes with the LCP image. Two
+  # images are above it -- the masthead and the first carousel slide -- and both opt out
+  # deliberately. Everything after them waits.
+  test "only the two above-the-fold images are eager" do
     get root_path
 
-    eager = css_select("img").select { |img| img["loading"] == "eager" }
-    assert_operator eager.length, :<=, 1, "#{eager.length} images load eagerly"
+    loadings = css_select("img").map { |img| img["loading"] }
+    eager_positions = loadings.each_index.select { |i| loadings[i] == "eager" }
+
+    assert_operator eager_positions.length, :<=, 2, "#{eager_positions.length} images load eagerly"
+    assert_equal eager_positions, (0...eager_positions.length).to_a,
+                 "an eager image sits below a lazy one, so the inversion is back"
+  end
+
+  test "the show cards below the fold all wait" do
+    get root_path
+
+    cards = css_select("img[src*='active_storage']").drop(1)
+    assert(cards.all? { |img| img["loading"] == "lazy" }, "a card image is not lazy")
   end
 
   test "a show banner names the show" do

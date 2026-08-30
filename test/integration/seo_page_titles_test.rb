@@ -89,4 +89,23 @@ class SeoPageTitlesTest < ActionDispatch::IntegrationTest
       end
     end
   end
+
+  # Four pairs of shows shared a title exactly and competed with each other in search.
+  test "a finished show is disambiguated by the year it ran" do
+    old_show = FactoryBot.create(:show, name: "The History Boys", is_public: true,
+                                        start_date: Date.new(2019, 3, 1), end_date: Date.new(2019, 3, 4))
+
+    get show_path(old_show)
+
+    assert_select "title", "The History Boys (2019) | Bedlam Theatre"
+  end
+
+  test "a show still to run keeps its plain name" do
+    upcoming = FactoryBot.create(:show, name: "The History Boys Returns", is_public: true,
+                                        start_date: Date.current + 7, end_date: Date.current + 14)
+
+    get show_path(upcoming)
+
+    assert_select "title", "The History Boys Returns | Bedlam Theatre"
+  end
 end
