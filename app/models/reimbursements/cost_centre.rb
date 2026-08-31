@@ -70,6 +70,10 @@ module Reimbursements
                               message: "may only contain lowercase letters, numbers and hyphens" },
                     allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
+    # Required: a cost centre whose reminders reach nobody leaves a producer
+    # waiting indefinitely with nothing on screen to explain it. The Settings
+    # forms collect it on both create and update.
+    validates :notification_role, presence: true
     # Prevents a duplicate-mailbox/code misconfiguration once a second cost
     # centre is seeded — e.g. two rows accidentally sharing one receive
     # mailbox would make MailboxPollJob attribute every email-in receipt to

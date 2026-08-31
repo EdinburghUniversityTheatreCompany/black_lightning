@@ -99,9 +99,9 @@ module Admin
 
     # A second cost centre, so the single-cost-centre shortcuts stop applying.
     def create_termtime_cost_centre
-      ::Reimbursements::CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-                                           receive_mailbox: "bed@example.com",
-                                           send_mailbox: "bed@example.com")
+      create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+                                        receive_mailbox: "bed@example.com",
+                                        send_mailbox: "bed@example.com")
     end
 
     def fringe_cost_centre

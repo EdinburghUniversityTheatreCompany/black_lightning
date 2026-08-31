@@ -45,6 +45,19 @@
                          class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
       </div>
     </div>
+    <div>
+      <%= f.label :notification_role_id, "Notification recipients (role)", class: "block text-sm font-medium" %>
+      <%= f.collection_select :notification_role_id, selectable_roles, :id, :name,
+                              { include_blank: "Select a role" },
+                              class: "simple-select2 border border-gray-300 rounded px-2 py-1 text-sm w-72",
+                              "aria-describedby": "new_notification_role_hint" %>
+      <p id="new_notification_role_hint" class="text-xs text-gray-500 mt-1">
+        Everyone in this role gets this cost centre's nightly reminders. Required &mdash; a cost
+        centre whose reminders reach nobody leaves producers waiting with nothing on screen to
+        explain it.
+      </p>
+    </div>
+
     <p class="text-xs text-gray-500 -mt-2">
       Each mailbox must be added to the "Reimbursements App Access" group before email-in and
       draft-sending will work. The setup steps for that are on the settings page after you create

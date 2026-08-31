@@ -348,7 +348,15 @@ git commit -m "feat(reimbursements): resolve operator recipients per cost centre
 
 ### Task 3: Test groundwork for the presence validation
 
-The validation in Task 4 would break 35 inline `CostCentre.create!` / `.new` sites across 9 test files. This task removes that duplication first, so Task 4 is a two-line change rather than a 35-site sweep.
+The validation in Task 4 breaks **10 sites**, not the 35 that `grep CostCentre.new` suggests. Counted precisely:
+
+| Kind | Count | Needs a role? |
+|---|---|---|
+| `CostCentre.create!` — persists, so validations run | 8 | **yes** |
+| `assert cc.valid?` in `cost_centre_test.rb` (lines 66 and 117) | 2 | **yes** |
+| `CostCentre.new` left unsaved — pure-logic unit tests (`nightly_due?`, `eusa_recipient_or_default`, `sharepoint_configured?`, key derivation) and validation-*failure* assertions | 25 | **no** — an unsaved `.new` never runs validations, and a failure assertion reading `errors[:key]` is unbothered by a second error on a different attribute |
+
+Leave the 25 alone. Touching them would be churn that hides the 10 that matter.
 
 **Files:**
 - Modify: `test/support/reimbursements_test_helpers.rb`
@@ -456,15 +464,17 @@ In `test/support/honeybadger_test_helpers.rb`, add alongside `capture_honeybadge
   end
 ```
 
-- [ ] **Step 5: Sweep the inline creation sites**
+- [ ] **Step 5: Sweep the 8 persisting sites**
 
-Find them:
+Find them — this grep returns exactly the 8 that matter:
 
 ```bash
 grep -rn "CostCentre.create!" test/
 ```
 
-Replace every one with `create_reimbursements_cost_centre(...)`, keeping the same keyword arguments. Example — `test/services/reimbursements/actuals_attribution_test.rb:10`:
+They are in `test/functional/admin/reimbursements/reconcile_controller_test.rb`, `test/services/reimbursements/actuals_attribution_test.rb`, `test/jobs/reimbursements/nightly_batch_job_test.rb`, `test/jobs/reimbursements/mailbox_poll_job_test.rb` (3), `test/models/reimbursements/budget_import_test.rb`, and `test/models/reimbursements/cost_centre_test.rb` (the `roundtrip` case).
+
+Replace each with `create_reimbursements_cost_centre(...)`, keeping the same keyword arguments. Example — `test/services/reimbursements/actuals_attribution_test.rb:10`:
 
 ```ruby
 # before
@@ -478,10 +488,17 @@ Replace every one with `create_reimbursements_cost_centre(...)`, keeping the sam
                                               send_mailbox: "bed@example.com")
 ```
 
-Two things to check as you go:
+Three things to check as you go:
 
 1. **The test class must `include ReimbursementsTestHelpers`.** Add it if missing.
-2. **`CostCentre.new` sites in `test/models/reimbursements/cost_centre_test.rb` that assert a validation failure must stay `CostCentre.new`** — they are testing the model's own validations and must not be routed through a helper that fills fields in. Give each one an explicit `notification_role:` so it fails on the attribute it is actually testing, not on the missing role. The three `notification_role_empty?` tests added in Task 1 already do this correctly and need no change.
+2. **Then fix the 2 `assert cc.valid?` sites** at `test/models/reimbursements/cost_centre_test.rb:66` and `:117`. These stay `CostCentre.new` — they test the model's own validations and must not be routed through a helper that fills fields in. Give each an explicit `notification_role: Role.create!(name: "<something unique>")` so it asserts on the attribute it is actually about, not on a missing role.
+3. **Leave every other `CostCentre.new` alone.** Unsaved records never run validations, and the validation-failure assertions read `errors[:key]` / `errors[:eusa_code]`, so a second error on `:notification_role` changes nothing. Rewriting them would be churn.
+
+Confirm the count before you start and after you finish:
+
+```bash
+grep -rc "CostCentre.create!" test/ -r | grep -v ':0'   # expect 8 across 6 files, then 0
+```
 
 - [ ] **Step 6: Run the affected files**
 

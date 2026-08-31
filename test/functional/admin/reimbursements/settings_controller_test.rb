@@ -3,6 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     class SettingsControllerTest < ActionController::TestCase
+      include ReimbursementsTestHelpers
+
       CC = ::Reimbursements::CostCentre
 
       # Fake Graph client for the SharePoint folder picker: returns canned
@@ -93,7 +95,7 @@ module Admin
       # --- Picker (index) ----------------------------------------------------
 
       test "index lists every cost centre" do
-        CC.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
                    receive_mailbox: "t@x.co", send_mailbox: "t@x.co")
         sign_in @user
 
@@ -448,7 +450,8 @@ module Admin
         assert_difference -> { CC.count }, 1 do
           post :create, params: { cost_centre: {
             name: "Bedlam Termtime", eusa_code: "BED",
-            receive_mailbox: "termtime-in@example.co", send_mailbox: "termtime-out@example.co"
+            receive_mailbox: "termtime-in@example.co", send_mailbox: "termtime-out@example.co",
+            notification_role_id: roles(:fringe_finance_admin).id
           } }
         end
 
@@ -463,7 +466,8 @@ module Admin
 
         post :create, params: { cost_centre: {
           name: "New Venue 2027", eusa_code: "NV7",
-          receive_mailbox: "nv-in@example.co", send_mailbox: "nv-out@example.co"
+          receive_mailbox: "nv-in@example.co", send_mailbox: "nv-out@example.co",
+          notification_role_id: roles(:fringe_finance_admin).id
         } }
 
         assert_equal "new-venue-2027", CC.find_by(eusa_code: "NV7").key
@@ -474,10 +478,38 @@ module Admin
 
         post :create, params: { cost_centre: {
           name: "Some Long Name", key: "shortkey", eusa_code: "SLN",
-          receive_mailbox: "sln-in@example.co", send_mailbox: "sln-out@example.co"
+          receive_mailbox: "sln-in@example.co", send_mailbox: "sln-out@example.co",
+          notification_role_id: roles(:fringe_finance_admin).id
         } }
 
         assert_equal "shortkey", CC.find_by(eusa_code: "SLN").key
+      end
+
+      # The picker is a Tom Select widget (.simple-select2), which Capybara's
+      # `select` cannot drive -- it hides the underlying <select>. The parameter
+      # plumbing is what matters here, so it is covered at request level.
+      test "update sets the notification role" do
+        sign_in @user
+        role = Role.create!(name: "Termtime Finance Admin")
+
+        # nightly_run_days must be sent: settings_params rewrites a missing key
+        # to [], which fails the weekday-numbers validation and aborts the save.
+        patch :update, params: { key: CC.default.key,
+                                 cost_centre: { notification_role_id: role.id,
+                                                nightly_run_days: %w[2 4] } }
+
+        assert_equal role, CC.default.reload.notification_role
+      end
+
+      test "create without a notification role creates nothing" do
+        sign_in @user
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "Roleless", eusa_code: "RL1",
+            receive_mailbox: "rl-in@example.co", send_mailbox: "rl-out@example.co"
+          } }
+        end
       end
 
       test "create rejects a blank name without creating a row" do

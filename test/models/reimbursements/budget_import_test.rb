@@ -9,8 +9,10 @@ module Reimbursements
     setup do
       @year = FinancialYear.create!(label: "Fringe 2027")
       @cost_centre = CostCentre.default ||
-                     CostCentre.create!(key: "fringe", name: "Bedlam Fringe", eusa_code: "F40",
-                                        receive_mailbox: "in@x.co", send_mailbox: "out@x.co")
+                     create_reimbursements_cost_centre(key: "fringe", name: "Bedlam Fringe",
+                                                       eusa_code: "F40",
+                                                       receive_mailbox: "in@x.co",
+                                                       send_mailbox: "out@x.co")
     end
 
     HEADERS = "Budget\tNominal code\tType\tAmount\tOwner emails\tNotes".freeze

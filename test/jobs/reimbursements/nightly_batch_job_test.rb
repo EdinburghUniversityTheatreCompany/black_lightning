@@ -163,8 +163,9 @@ module Reimbursements
       # deliver_reminders), so without this guard a second due cost centre would
       # remind on the same global queues and double-send BOTH alerts to the same
       # operators. It still records its own nightly run, just with no email.
-      second = CostCentre.create!(key: "extra", name: "Second Society", eusa_code: "X99",
-                                  receive_mailbox: "in@second.co.uk", send_mailbox: "send@second.co.uk")
+      second = create_reimbursements_cost_centre(key: "extra", name: "Second Society", eusa_code: "X99",
+                                                 receive_mailbox: "in@second.co.uk",
+                                                 send_mailbox: "send@second.co.uk")
       assert_not_equal CostCentre.default, second
       approved_expense
       pending_expense(days_ago: 5)

@@ -18,6 +18,8 @@ module Admin
     class SettingsController < FinanceController
       before_action :set_cost_centre, only: %i[edit update test_access]
 
+      helper_method :selectable_roles
+
       # Which CostCentre columns each SharePoint destination writes.
       FOLDER_COLUMNS = {
         "receipts" => { drive: :sharepoint_receipts_drive_id, folder: :sharepoint_receipts_folder_id },
@@ -84,6 +86,14 @@ module Admin
 
       private
 
+      # Every role, for the notification-role picker. Deliberately NOT filtered to
+      # finance-permission holders: the permission grid and the notification list
+      # are separate by design, and a mismatch is surfaced as a badge on the
+      # Integration Status page rather than hidden by removing the option.
+      def selectable_roles
+        @selectable_roles ||= Role.order(:name).to_a
+      end
+
       def set_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.find_by!(key: params[:key])
       end
@@ -109,14 +119,14 @@ module Admin
       # operator override it.
       def create_params
         params.require(:cost_centre).permit(
-          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox
+          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox, :notification_role_id
         )
       end
 
       def settings_params
         permitted = params.require(:cost_centre).permit(
           :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_signature_name,
-          :sharepoint_site_url
+          :sharepoint_site_url, :notification_role_id
         )
         permitted[:nightly_run_days] = normalized_run_days
         permitted

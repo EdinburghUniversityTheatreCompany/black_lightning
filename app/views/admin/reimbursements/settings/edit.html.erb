@@ -18,6 +18,25 @@
         <%= f.text_field :send_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
       </div>
     </div>
+    <div>
+      <%= f.label :notification_role_id, "Notification recipients (role)", class: "block text-sm font-medium" %>
+      <%= f.collection_select :notification_role_id, selectable_roles, :id, :name,
+                              { include_blank: "Select a role" },
+                              class: "simple-select2 border border-gray-300 rounded px-2 py-1 text-sm w-72",
+                              "aria-describedby": "notification_role_hint" %>
+      <p id="notification_role_hint" class="text-xs text-gray-500 mt-1">
+        Everyone in this role gets this cost centre's nightly reminders &mdash; claims stuck awaiting
+        approval, and the queue ready to batch. Nobody outside it does.
+      </p>
+      <% if @cost_centre.notification_role_empty? %>
+        <p class="text-xs text-red-700 mt-1">
+          <strong>This role has no members</strong>, so nobody gets this cost centre's reminders.
+          The nightly logs a warning and retries rather than marking the day handled, so nothing is
+          lost &mdash; but nothing is sent either.
+        </p>
+      <% end %>
+    </div>
+
     <p class="text-xs text-gray-500 -mt-2">
       Changing a mailbox breaks email-in / draft-sending until the new address is added to the
       "Reimbursements App Access" group (see the Microsoft-access steps below). Run the access

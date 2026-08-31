@@ -125,7 +125,7 @@ module Reimbursements
     # message arrived on. A termtime submitter told to write to the Fringe's
     # finance address emails a team that can't help them.
     test "the automated reply names the cost centre whose mailbox it came from" do
-      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+      termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
       CostCentre.where.not(id: termtime.id).destroy_all
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
@@ -392,7 +392,7 @@ module Reimbursements
     end
 
     test "polls each cost centre on its own receive mailbox" do
-      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+      termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
 
       setup_job(messages: [])
@@ -418,7 +418,7 @@ module Reimbursements
     end
 
     test "a generic failure polling one cost centre's mailbox doesn't stop the others being polled" do
-      CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+      create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
 
       setup_job(messages: [])

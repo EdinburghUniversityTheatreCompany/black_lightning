@@ -3,13 +3,16 @@ require "bigdecimal"
 
 module Reimbursements
   class ActualsAttributionTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
 
     setup do
       @fringe = reimbursements_cost_centres(:fringe)
-      @termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-                                     receive_mailbox: "bed@example.com",
-                                     send_mailbox: "bed@example.com")
+      @termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
+                                                    eusa_code: "BED",
+                                                    receive_mailbox: "bed@example.com",
+                                                    send_mailbox: "bed@example.com")
     end
 
     def row_text(cost_centre, narrative: "Alice", amount: "10.00")

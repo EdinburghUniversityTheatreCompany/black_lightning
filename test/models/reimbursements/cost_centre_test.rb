@@ -62,7 +62,8 @@ module Reimbursements
 
     test "accepts a lowercase-hyphen-digit slug as the key" do
       cc = CostCentre.new(name: "X", key: "venue-2027", eusa_code: "BK2",
-        receive_mailbox: "bk2-in@b.co", send_mailbox: "bk2-out@b.co")
+        receive_mailbox: "bk2-in@b.co", send_mailbox: "bk2-out@b.co",
+        notification_role: roles(:fringe_finance_admin))
       assert cc.valid?, cc.errors.full_messages.to_sentence
     end
 
@@ -104,12 +105,13 @@ module Reimbursements
       cost_centre.send_mailbox = "also not an email"
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :send_mailbox
+      assert_includes cost_centre.errors.attribute_names, :notification_role
     end
 
     test "rejects a mistyped eusa_recipient, but blank is still allowed" do
       cost_centre = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
         receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co",
-        eusa_recipient: "not-an-email")
+        eusa_recipient: "not-an-email", notification_role: roles(:fringe_finance_admin))
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :eusa_recipient
 
@@ -155,7 +157,8 @@ module Reimbursements
       assert_equal [ 2, 4 ], fresh.nightly_run_days
 
       fresh = CostCentre.create!(key: "roundtrip", name: "RT", eusa_code: "RT1",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [ 1, 3, 5 ])
+        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [ 1, 3, 5 ],
+        notification_role: roles(:fringe_finance_admin))
       assert_equal [ 1, 3, 5 ], CostCentre.find(fresh.id).nightly_run_days
     end
 
