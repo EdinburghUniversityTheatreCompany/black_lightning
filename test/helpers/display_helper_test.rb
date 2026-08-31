@@ -100,7 +100,7 @@ class DisplayHelperTest < ActionView::TestCase
                       starts_at: Time.zone.local(2026, 8, 30, 10, 0),
                       ends_at: Time.zone.local(2026, 8, 30, 23, 0))
 
-    assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season)
+    assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 30))
   end
 
   # A show states a curtain time and a running time, not an end per night, so
