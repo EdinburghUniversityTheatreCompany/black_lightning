@@ -119,4 +119,54 @@ class EventOccurrenceTest < ActiveSupport::TestCase
       @event.destroy
     end
   end
+
+  # --- pretix sync -----------------------------------------------------------
+
+  test "an occurrence with a pretix subevent id is the sync's to manage" do
+    assert occurrence_at(Time.zone.local(2026, 3, 3, 19, 30), pretix_subevent_id: 42).pretix_synced?
+  end
+
+  test "an occurrence typed by hand is not, which is what keeps the sync off it" do
+    assert_not occurrence_at(Time.zone.local(2026, 3, 3, 19, 30)).pretix_synced?
+  end
+
+  test "a per-occurrence admission time wins over the event-wide doors offset" do
+    @event.update!(doors_open_minutes_before: 30)
+    occurrence = occurrence_at(Time.zone.local(2026, 3, 3, 19, 30),
+                               admission_at: Time.zone.local(2026, 3, 3, 18, 45))
+
+    assert_equal Time.zone.local(2026, 3, 3, 18, 45), occurrence.doors_open_at
+  end
+
+  test "without an admission time the event-wide doors offset still applies" do
+    @event.update!(doors_open_minutes_before: 30)
+
+    assert_equal Time.zone.local(2026, 3, 3, 19, 0),
+                 occurrence_at(Time.zone.local(2026, 3, 3, 19, 30)).doors_open_at
+  end
+
+  test "sold out and cancelled default to false rather than nil" do
+    # The columns are nullable -- every row predating the sync reads back nil --
+    # and every view would otherwise have to know that.
+    occurrence = occurrence_at(Time.zone.local(2026, 3, 3, 19, 30))
+
+    assert_not occurrence.sold_out?
+    assert_not occurrence.cancelled?
+  end
+
+  test "two occurrences cannot claim the same pretix subevent" do
+    time = Time.zone.local(2026, 3, 3, 19, 30)
+    occurrence_at(time, pretix_subevent_id: 42).save!
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      occurrence_at(time + 1.day, pretix_subevent_id: 42).save!
+    end
+  end
+
+  test "hand-typed occurrences are unconstrained by that uniqueness" do
+    time = Time.zone.local(2026, 3, 3, 19, 30)
+    occurrence_at(time).save!
+
+    assert_nothing_raised { occurrence_at(time + 1.day).save! }
+  end
 end

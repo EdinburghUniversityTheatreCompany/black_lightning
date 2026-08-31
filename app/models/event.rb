@@ -31,6 +31,7 @@
 #  name                      :string(255)
 #  pretix_shown              :boolean
 #  pretix_slug_override      :string(255)
+#  pretix_sync_performances  :boolean
 #  pretix_view               :string(255)
 #  price                     :string(255)
 #  publicity_text            :text(16777215)
@@ -171,8 +172,16 @@ class Event < ApplicationRecord
   # leading "" from their hidden field, so an untouched blank row is never
   # all-blank -- it was saved, failed validation, and took the whole event update
   # down with "starts at must not be blank".
+  # The rule exists to drop the empty "Add a performance" template row, which
+  # carries no id. An existing record must NOT be rejected for a missing
+  # starts_at: a pretix-synced row renders its times as text rather than inputs
+  # (they are pretix's to set), so an edit to its flags, note or cancelled state
+  # posts no starts_at at all -- and on the blanket rule it saved, redirected and
+  # silently discarded the change.
   accepts_nested_attributes_for :event_occurrences, allow_destroy: true,
-                                reject_if: ->(attributes) { attributes["starts_at"].blank? }
+                                reject_if: ->(attributes) {
+                                  attributes["id"].blank? && attributes["starts_at"].blank?
+                                }
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
@@ -336,6 +345,15 @@ class Event < ApplicationRecord
     super(options)
   end
 
+  # The events Pretix::SyncPerformancesJob keeps in step with their series.
+  #
+  # Bounded by the run's end rather than its start: a show still selling for
+  # tonight is due, an archive row is not. Both dates are required above, so a
+  # ticked event always has one.
+  scope :pretix_performance_sync_due, -> {
+    where(pretix_sync_performances: true).where(end_date: Date.current..)
+  }
+
   def pretix_slug
     pretix_slug_override.presence || slug
   end
@@ -433,6 +451,14 @@ class Event < ApplicationRecord
     Event::Schedule.for(self).exceptions.each do |occurrence|
       occurrence.access_flag_labels.each { |label| lines[label] << occurrence.on_date }
       lines[occurrence.note] << occurrence.on_date if occurrence.note.present?
+
+      # Cancelled outranks sold out: a night that is off is not a night you
+      # missed, and naming it twice reads as two different problems.
+      if occurrence.cancelled?
+        lines[EventOccurrence::CANCELLED_LABEL] << occurrence.on_date
+      elsif occurrence.sold_out?
+        lines[EventOccurrence::SOLD_OUT_LABEL] << occurrence.on_date
+      end
     end
 
     lines

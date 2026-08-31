@@ -46,6 +46,18 @@ class RecurringScheduleTest < ActiveSupport::TestCase
     assert_not_equal [ pretix.hours, pretix.minutes ], [ retention.hours, retention.minutes ]
   end
 
+  # Every 15 minutes, so it can collide every quarter hour rather than once a
+  # day. climate_mailbox_poll already sits on :00/:15/:30/:45 -- the grid the
+  # every-5-minute mailbox poll owns -- so this one is offset off it instead of
+  # joining the pile.
+  test "the pretix performance sync avoids the five-minute mailbox poll grid" do
+    minutes = crons.fetch("pretix_sync_performances").minutes
+
+    assert minutes.all? { |minute| (minute % DENSE_POLL_INTERVAL_MINUTES).nonzero? },
+           "#{minutes.inspect} races the every-5-minute mailbox poll"
+    assert_operator minutes.size, :>=, 4, "sold-out state is read from this job and goes stale fast"
+  end
+
   private
 
   # Cron entries pinned to a specific hour and minute. The interval schedules ("every 5 minutes")

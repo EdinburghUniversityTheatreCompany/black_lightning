@@ -50,6 +50,11 @@ module Pretix
     # Used when a 429 arrives without a parseable Retry-After.
     DEFAULT_RETRY_AFTER = 30
 
+    # The sales channel availability is asked about. The website is the only one
+    # this organizer sells through, and it is what a visitor to our own show page
+    # would see.
+    WEB_SALES_CHANNEL = "web".freeze
+
     # All defaulted: the sync builds a bare Pretix::Client.new. +http+ and
     # +settings+ are injected as GraphClient and Climate::OpenMeteoClient take
     # theirs, so a test fakes them per instance rather than mutating anything
@@ -99,6 +104,23 @@ module Pretix
       # the single-user sync calls this; the nightly reconcile lists instead, so
       # raising costs one person's sync rather than the whole run.
       raise Error, "pretix returned #{matches.size} customers for #{email}"
+    end
+
+    # Every subevent (dated performance) of one event SERIES, following pagination.
+    # +slug+ is the series slug, which is what Event#pretix_slug holds.
+    #
+    # Availability is requested explicitly: without with_availability_for the
+    # response carries no best_availability_state at all, so nothing could tell a
+    # sold-out date from an available one. pretix documents 100 as "available",
+    # anything below as "sold out or reserved", and null as "status unknown".
+    #
+    # Unlike the whole-organizer membership list, this one is safe to page: it is
+    # scoped to a single series, so it is a handful of rows rather than the
+    # hundreds that made pretix's unordered LIMIT/OFFSET repeat and drop entries.
+    # => Array<Hash> with "id", "date_from", "date_to", "date_admission",
+    #    "active", "is_public" and "best_availability_state".
+    def subevents(slug, availability_channel: WEB_SALES_CHANNEL)
+      paginated("events/#{slug}/subevents/", with_availability_for: availability_channel)
     end
 
     # Memberships for the organizer, following pagination. Both filters are

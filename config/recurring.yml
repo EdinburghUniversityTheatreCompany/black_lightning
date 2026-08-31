@@ -81,3 +81,15 @@ pretix_reconcile_memberships:
   class: Pretix::ReconcileMembershipsJob
   queue: default
   schedule: at 3:17am every day
+
+# Keeps every event with performance sync ticked in step with its pretix series.
+# Every 15 minutes rather than nightly: the dates barely move, but sold-out state
+# does, and one job covering both is one code path instead of two.
+#
+# Offset off the quarter-hour on purpose. reimbursements_mailbox_poll runs every
+# five minutes and owns every minute divisible by five, and climate_mailbox_poll
+# already sits on :00/:15/:30/:45 -- see recurring_schedule_test.
+pretix_sync_performances:
+  class: Pretix::SyncPerformancesJob
+  queue: default
+  schedule: 7,22,37,52 * * * *

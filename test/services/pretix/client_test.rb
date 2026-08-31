@@ -320,4 +320,54 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     assert_raises(Pretix::Client::AuthError) { client.customers }
     assert_empty http.requests
   end
+
+  # --- subevents -------------------------------------------------------------
+  #
+  # A Bedlam show is a pretix event SERIES, so its performances are subevents of
+  # the series named by Event#pretix_slug. This is the read Pretix::PerformanceSync
+  # is built on.
+
+  test "subevents are read from the series named by the event slug" do
+    client, http = build_client([ page([ subevent ]) ])
+
+    results = client.subevents("hamlet")
+
+    assert_equal [ 42 ], results.map { |row| row["id"] }
+    assert_includes http.requests.first.uri, "organizers/eutc/events/hamlet/subevents/"
+  end
+
+  test "subevents ask for web availability, or nothing can tell a sold-out date" do
+    client, http = build_client([ page([ subevent ]) ])
+
+    client.subevents("hamlet")
+
+    assert_includes http.requests.first.uri, "with_availability_for=web"
+  end
+
+  test "subevents follow pagination like every other list" do
+    next_url = "https://pretix.eu/api/v1/organizers/eutc/events/hamlet/subevents/?page=2"
+    client, = build_client([ page([ subevent(id: 1) ], next_url: next_url),
+                             page([ subevent(id: 2) ]) ])
+
+    assert_equal [ 1, 2 ], client.subevents("hamlet").map { |row| row["id"] }
+  end
+
+  test "a series pretix does not know raises NotFoundError, not a bare Error" do
+    # The sync distinguishes these: a wrong slug is a fact about our data and
+    # must leave the event's existing performances standing, untouched.
+    client, = build_client([ [ 404, { detail: "Not found." }.to_json ] ])
+
+    assert_raises(Pretix::Client::NotFoundError) { client.subevents("nope") }
+  end
+
+  test "reading subevents needs no write permission" do
+    client, = build_client([ page([]) ], writes: false)
+
+    assert_empty client.subevents("hamlet")
+  end
+
+  def subevent(id: 42, date_from: "2026-10-10T19:30:00+01:00")
+    { id: id, name: { "en" => "Performance" }, event: "hamlet", active: true, is_public: true,
+      date_from: date_from, date_to: nil, date_admission: nil, best_availability_state: 100 }
+  end
 end

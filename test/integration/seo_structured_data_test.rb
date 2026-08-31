@@ -349,4 +349,54 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
 
     assert_nil document_of_type("ItemList")
   end
+
+  # --- cancelled and sold-out performances -----------------------------------
+  #
+  # Google surfaces both in rich results, and a ticket link to a night that is
+  # off is worse than no rich result at all.
+
+  test "a cancelled performance is marked cancelled, not scheduled" do
+    FactoryBot.create(:event_occurrence, event: @show,
+                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), cancelled: true)
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal "https://schema.org/EventCancelled", performance["eventStatus"]
+  end
+
+  test "a sold-out performance offers no tickets" do
+    FactoryBot.create(:event_occurrence, event: @show,
+                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), sold_out: true)
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal "https://schema.org/SoldOut", performance.dig("offers", "availability")
+  end
+
+  test "an ordinary performance is still scheduled and in stock" do
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+
+    get show_path(@show)
+
+    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+
+    assert_equal "https://schema.org/EventScheduled", performance["eventStatus"]
+    assert_equal "https://schema.org/InStock", performance.dig("offers", "availability")
+  end
+
+  # The run is not cancelled because one night of it is.
+  test "cancelling one night leaves the run itself scheduled" do
+    FactoryBot.create(:event_occurrence, event: @show,
+                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), cancelled: true)
+
+    get show_path(@show)
+
+    run = documents_of_type("TheaterEvent").find { |node| node["subEvent"] }
+
+    assert_equal "https://schema.org/EventScheduled", run["eventStatus"]
+  end
 end

@@ -241,6 +241,7 @@ ChaosRails::Application.routes.draw do
 
       member do
         patch "update_debt_settings", to: "shows#update_debt_settings"
+        post "sync_performances"
         post "convert_to_season", to: "shows#convert_to_season"
         post "convert_to_workshop", to: "shows#convert_to_workshop"
       end
@@ -258,6 +259,7 @@ ChaosRails::Application.routes.draw do
 
       member do
         patch "update_debt_settings", to: "workshops#update_debt_settings"
+        post "sync_performances"
       end
     end
 
@@ -273,6 +275,7 @@ ChaosRails::Application.routes.draw do
 
       member do
         patch "update_debt_settings", to: "seasons#update_debt_settings"
+        post "sync_performances"
       end
     end
 

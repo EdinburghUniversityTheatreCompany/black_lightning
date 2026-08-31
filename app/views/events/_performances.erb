@@ -32,9 +32,12 @@
         is exactly what people scan this list for -- so the exceptions are named. %>
     <% if schedule.exceptions.any? %>
       <ul class="mt-3 space-y-1 text-sm">
+        <%# Cancelled is not one more access tag: it is the line that stops
+            somebody travelling to a dark theatre, so it carries the weight. %>
         <% event.schedule_exception_lines.each do |label, dates| %>
-          <li>
-            <span class="font-medium"><%= label %>:</span>
+          <% cancelled = label == EventOccurrence::CANCELLED_LABEL %>
+          <li class="<%= 'text-primary font-medium' if cancelled %>">
+            <span class="font-medium"><%= cancelled ? label.upcase : label %>:</span>
             <%= dates.map { |date| date_span(date, nil, long: true) }.to_sentence %>
           </li>
         <% end %>

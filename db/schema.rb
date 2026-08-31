@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_130000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -378,13 +378,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_120100) do
 
   create_table "event_occurrences", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.json "access_flags"
+    t.datetime "admission_at"
+    t.boolean "cancelled"
     t.datetime "created_at", null: false
     t.datetime "ends_at"
     t.integer "event_id", null: false
     t.string "note"
+    t.bigint "pretix_subevent_id"
+    t.boolean "sold_out"
     t.datetime "starts_at", null: false
     t.datetime "updated_at", null: false
     t.index ["event_id", "starts_at"], name: "index_event_occurrences_on_event_id_and_starts_at"
+    t.index ["pretix_subevent_id"], name: "index_event_occurrences_on_pretix_subevent_id", unique: true
   end
 
   create_table "event_tags", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -427,6 +432,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_120100) do
     t.string "name"
     t.boolean "pretix_shown"
     t.string "pretix_slug_override"
+    t.boolean "pretix_sync_performances"
     t.string "pretix_view"
     t.string "price"
     t.integer "proposal_id"

@@ -835,6 +835,30 @@ Robots.txt is now served by the app rather than by Thruster, so it goes down wit
 a 521/522 that serve-stale cannot apply to. **Turn Cloudflare's Always Online on** (or add a Cache
 Rule for `/robots.txt`) so the edge keeps answering through an outage.
 
+## Pretix performance sync
+
+A Bedlam show is a pretix **event series**, so a subevent maps one-for-one onto an
+`EventOccurrence`. `events.pretix_sync_performances` turns it on; `Pretix::PerformanceSync` runs
+from `Pretix::SyncPerformancesJob` every 15 minutes. Spec:
+[docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md](docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md).
+
+- **Ownership rides on `event_occurrences.pretix_subevent_id` alone.** A row with one is pretix's
+  (times and `sold_out` overwritten each pass, destroyed when the subevent goes); a row without
+  one was typed by hand and is never touched. `access_flags`, `note` and `cancelled` are the
+  producer's on both kinds and are never written by the sync.
+- **`cancelled` is a human statement.** pretix has no cancellation concept — `active: false` is
+  equally *not on sale yet* — and a wrong CANCELLED on a public page is the worst error here. It
+  is why a cancelled row outlives its subevent (keeping its id, so a restored date reattaches).
+  `is_public: false` **is** treated as gone. `best_availability_state: null` is NOT sold out.
+- **The sync fetches before it writes**, so a 404 or timeout leaves the run standing instead of
+  blanking it; the job isolates per event so one wrong slug can't stop the rest.
+- **`accepts_nested_attributes_for :event_occurrences` must not reject on a blank `starts_at`
+  alone.** A synced row renders its times as text, so editing its flags posts no `starts_at` —
+  the old blanket rule saved, redirected and silently discarded the change. No id means the
+  empty "Add" template row, which is what the rule is actually for.
+- Cancelled and sold out ride `Schedule#exceptions` (the relaxed-night mechanism) and map to
+  schema.org `EventCancelled` / `SoldOut`. Cancelled outranks sold out. The board is unchanged.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
