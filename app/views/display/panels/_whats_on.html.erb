@@ -19,7 +19,10 @@
               the worst case would eat the title; wrapping costs a line only on the
               rows that need one, and the marquee scrolls whatever that pushes
               past the bottom. 31rem fits every ordinary line without wrapping. %>
-          <span class="w-[31rem] shrink-0 text-4xl font-semibold leading-descender text-neutral-300">
+          <%# whitespace-pre-line: display_when separates a run's two stretches (an
+              evening run and its late shows) with a newline, and both have to be
+              readable as their own line. %>
+          <span class="w-[31rem] shrink-0 whitespace-pre-line text-4xl font-semibold leading-descender text-neutral-300">
             <%= display_when(event, on: on) %>
           </span>
           <%# No `truncate`: naming the show is this board's whole job, and a title

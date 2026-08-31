@@ -71,18 +71,6 @@ class Event::Schedule
     weekday && Date::DAYNAMES[weekday]
   end
 
-  ##
-  # The performances a collapsed range would hide: the relaxed night, the press
-  # night, the one with a post-show discussion. Whatever the rest of the run is
-  # rendered as, these have to be named or the access information is lost.
-  ##
-  def exceptions
-    occurrences.select do |occurrence|
-      occurrence.access_flags.any? || occurrence.note.present? ||
-        occurrence.cancelled? || occurrence.sold_out?
-    end
-  end
-
   private
 
   ##

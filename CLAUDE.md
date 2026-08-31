@@ -805,11 +805,16 @@ form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec
   - **`:weekly` is what replaced `performance_weekdays`** — same weekday, same time, gaps a
     multiple of 7, at least 3 dates spanning over a fortnight. A date range for the Improverts
     reads "Sep 4 – Jun 30", the exact string `display_when` exists to avoid.
-  - **A run states the WHOLE run** (Mick's call), so `display_when` is date-independent for
-    `:range`. `:irregular` is the one exception: with no single run to state it shows the block
-    covering today, because a festival's bare date range says nothing about its hours.
-  - **A collapsed range must not hide the relaxed night.** `Schedule#exceptions` are the
-    occurrences carrying a flag or a note, and the event page names them under the range.
+  - **A run states the WHOLE run** (Mick's call), so `display_when` is date-independent. Two
+    stretches — an evening run and its late shows, or a matinee — are BOTH stated, a line each,
+    in advance and on the night alike: naming only the block covering today advertised one and
+    hid the other, and folding both times into one span would claim a midnight show on every
+    night of the run. Past `DisplayHelper::WHEN_MAX_BLOCKS` (2, measured) the column cannot hold
+    them and the block covering today is what is left — the one date-dependent case.
+  - **The event page does NOT collapse; the board does.** `Event::Schedule`'s blocks drive
+    `display_when` only. `events/_performances` lists one row per occurrence with its badges
+    inline, because a run with a midnight show rendered as two overlapping ranges plus a separate
+    "Relaxed: Thursday" list, and the reader had to cross-reference the two.
 - **The board's when-column does not `truncate`.** It carries a run and its hours, and the longest
   ("Wed 30 Sep – Sun 4 Oct, 10.30am – 11.30pm") wants ~700px at `text-4xl`; widening to that would
   eat the title, so it wraps like the title does and the marquee scrolls the overflow.
@@ -877,8 +882,8 @@ from `Pretix::SyncPerformancesJob` every 15 minutes. Spec:
   alone.** A synced row renders its times as text, so editing its flags posts no `starts_at` —
   the old blanket rule saved, redirected and silently discarded the change. No id means the
   empty "Add" template row, which is what the rule is actually for.
-- Cancelled and sold out ride `Schedule#exceptions` (the relaxed-night mechanism) and map to
-  schema.org `EventCancelled` / `SoldOut`. Cancelled outranks sold out. The board is unchanged.
+- Cancelled and sold out are badges on the performance's own row, and map to schema.org
+  `EventCancelled` / `SoldOut`. Cancelled outranks sold out everywhere.
 
 ## Opportunities
 

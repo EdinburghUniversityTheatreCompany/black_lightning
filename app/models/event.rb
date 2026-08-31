@@ -458,29 +458,6 @@ class Event < ApplicationRecord
   end
 
   ##
-  # The nights a collapsed range would hide, as [label, dates] pairs -- one line
-  # per access flag or note, naming every night it applies to.
-  ##
-  def schedule_exception_lines
-    lines = Hash.new { |hash, key| hash[key] = [] }
-
-    Event::Schedule.for(self).exceptions.each do |occurrence|
-      occurrence.access_flag_labels.each { |label| lines[label] << occurrence.on_date }
-      lines[occurrence.note] << occurrence.on_date if occurrence.note.present?
-
-      # Cancelled outranks sold out: a night that is off is not a night you
-      # missed, and naming it twice reads as two different problems.
-      if occurrence.cancelled?
-        lines[EventOccurrence::CANCELLED_LABEL] << occurrence.on_date
-      elsif occurrence.sold_out?
-        lines[EventOccurrence::SOLD_OUT_LABEL] << occurrence.on_date
-      end
-    end
-
-    lines
-  end
-
-  ##
   # An event with NO occurrences plays every day of its run. That is not a
   # placeholder: it is every one of the ~3000 archive rows, plus any event whose
   # producer has not filled the times in yet, and it is exactly the behaviour

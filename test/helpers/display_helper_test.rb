@@ -158,15 +158,62 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 7))
   end
 
-  # A matinee makes the schedule :irregular, and a run that has not opened yet has
-  # no block covering today -- so the board printed the dates with no curtain time
-  # at all, which is worse than the same run without a matinee.
-  test "display_when keeps the curtain time for an upcoming run with a matinee" do
+  # A matinee makes the schedule :irregular. The board used to name only the block
+  # covering today, so on a day with both a matinee and an evening it advertised
+  # one and hid the other -- and in advance it hid the matinee entirely.
+  test "display_when states both curtain times for a run with a matinee" do
     event = run_of_five
     FactoryBot.create(:event_occurrence, event: event,
                       starts_at: Date.new(2026, 10, 15).in_time_zone.change(hour: 14, min: 30))
 
-    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(event, on: Date.new(2026, 10, 1))
+    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm\nThu 15 Oct, 2.30pm",
+                 display_when(event, on: Date.new(2026, 10, 1))
+  end
+
+  # The case Mick spotted: Rocky Horror plays 7pm Wed-Sat with midnight shows on
+  # the Friday and Saturday. The board named the 7pm block and nothing else, so
+  # somebody in the box office on Saturday night saw no sign of the late show.
+  test "display_when states a late-show block alongside the evening run" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 23), end_date: Date.new(2026, 9, 26))
+    (23..26).each do |day|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: Time.zone.local(2026, 9, day, 19, 0))
+    end
+    [ 25, 26 ].each do |day|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: Time.zone.local(2026, 9, day, 23, 45))
+    end
+
+    expected = "Wed 23 – Sat 26 Sep, 7pm\nFri 25 – Sat 26 Sep, 11.45pm"
+
+    assert_equal expected, display_when(event, on: Date.new(2026, 9, 1)), "in advance"
+    assert_equal expected, display_when(event, on: Date.new(2026, 9, 26)), "and on the night"
+  end
+
+  # A run states the whole run, so it reads the same in advance as it does mid-run.
+  # (Once every date has passed the half-entered-list rule takes over and names
+  # the run instead -- see the test above.)
+  test "display_when for two blocks reads the same before and during the run" do
+    event = run_of_five
+    FactoryBot.create(:event_occurrence, event: event,
+                      starts_at: Date.new(2026, 10, 15).in_time_zone.change(hour: 14, min: 30))
+
+    [ Date.new(2026, 10, 1), Date.new(2026, 10, 13), Date.new(2026, 10, 15) ].each do |on|
+      assert_equal display_when(event, on: Date.new(2026, 10, 1)), display_when(event, on: on)
+    end
+  end
+
+  # Past two, the column cannot hold them and the today-based reading is what is
+  # left. DisplayHelper::WHEN_MAX_BLOCKS is measured, not guessed.
+  test "display_when falls back to the block covering today when there are too many" do
+    event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 8))
+    [ [ 3, 19 ], [ 5, 14 ], [ 7, 21 ] ].each do |day, hour|
+      FactoryBot.create(:event_occurrence, event: event,
+                        starts_at: Time.zone.local(2026, 3, day, hour))
+    end
+
+    assert_equal 3, Event::Schedule.for(event.reload).blocks.size
+    assert_equal "Thu 5 Mar, 2pm", display_when(event, on: Date.new(2026, 3, 5))
   end
 
   # A festival whose hours change by the day has no single run to state, and the

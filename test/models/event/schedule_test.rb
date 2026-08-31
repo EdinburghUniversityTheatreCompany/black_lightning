@@ -138,26 +138,7 @@ class Event::ScheduleTest < ActiveSupport::TestCase
 
   # --- what a range must not hide --------------------------------------
 
-  # Collapsing five nights into one line loses which of them is the relaxed
-  # performance, which is the thing people scan the list for.
-  test "flagged and noted performances are reported as exceptions" do
-    event = show
-    (0..4).each { |offset| perform(event, Date.new(2026, 10, 11) + offset) }
-    perform(event, Date.new(2026, 10, 16), access_flags: %w[relaxed])
-    perform(event, Date.new(2026, 10, 17), note: "Post-show Q&A")
 
-    exceptions = schedule(event).exceptions
-
-    assert_equal 2, exceptions.length
-    assert_equal [ Date.new(2026, 10, 16), Date.new(2026, 10, 17) ], exceptions.map(&:on_date)
-  end
-
-  test "an ordinary run has no exceptions" do
-    event = show
-    (0..4).each { |offset| perform(event, Date.new(2026, 10, 11) + offset) }
-
-    assert_empty schedule(event).exceptions
-  end
 
   test "the shared curtain time is reported when every performance agrees" do
     event = show
@@ -172,57 +153,5 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     perform(event, Date.new(2026, 10, 12), hour: 14, min: 30)
 
     assert_nil schedule(event).time_of_day
-  end
-
-  # --- cancelled and sold out ------------------------------------------------
-  #
-  # A collapsed range hides which night is which, and that is exactly what
-  # somebody scanning this list is looking for. Cancelled and sold out ride the
-  # same mechanism the relaxed night does rather than a second one.
-
-  test "a cancelled night is an exception, so a collapsed range cannot hide it" do
-    event = show
-    (0..4).each { |offset| perform(event, Date.new(2026, 10, 11) + offset) }
-    cancelled = perform(event, Date.new(2026, 10, 16), cancelled: true)
-
-    assert_includes schedule(event).exceptions, cancelled
-  end
-
-  test "a sold-out night is an exception too" do
-    event = show
-    sold_out = perform(event, Date.new(2026, 10, 11), sold_out: true)
-
-    assert_includes schedule(event).exceptions, sold_out
-  end
-
-  test "an ordinary night is not an exception" do
-    event = show
-    perform(event, Date.new(2026, 10, 11))
-
-    assert_empty schedule(event).exceptions
-  end
-
-  test "the exception lines name cancelled and sold-out dates" do
-    event = show
-    perform(event, Date.new(2026, 10, 11), cancelled: true)
-    perform(event, Date.new(2026, 10, 12), sold_out: true)
-    perform(event, Date.new(2026, 10, 13), access_flags: [ "relaxed" ])
-
-    lines = event.reload.schedule_exception_lines
-
-    assert_equal [ Date.new(2026, 10, 11) ], lines["Cancelled"]
-    assert_equal [ Date.new(2026, 10, 12) ], lines["Sold out"]
-    assert_equal [ Date.new(2026, 10, 13) ], lines["Relaxed"]
-  end
-
-  # Cancelled outranks sold out: a night that is off is not a night you missed.
-  test "a cancelled night that is also sold out is only reported as cancelled" do
-    event = show
-    perform(event, Date.new(2026, 10, 11), cancelled: true, sold_out: true)
-
-    lines = event.reload.schedule_exception_lines
-
-    assert_equal [ Date.new(2026, 10, 11) ], lines["Cancelled"]
-    assert_not lines.key?("Sold out")
   end
 end
