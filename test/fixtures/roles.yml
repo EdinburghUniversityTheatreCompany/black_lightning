@@ -49,3 +49,12 @@ tool_trained:
 opportunity_reviewer:
   id: 10
   name: "Opportunity Reviewer"
+# A cost centre's notification recipients (Reimbursements::CostCentre
+# #notification_role). Deliberately has NO explicit id: cost_centres.yml
+# references it by label, which resolves through FixtureSet.identify, and an
+# explicit id would not match that hash -- the association would load as nil.
+#
+# Deliberately EMPTY. A test that expects operator mail adds users to it
+# itself, so no test inherits a mailing list it did not ask for.
+fringe_finance_admin:
+  name: "Fringe Finance Admin"

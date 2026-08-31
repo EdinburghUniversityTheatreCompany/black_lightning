@@ -1,8 +1,13 @@
 # Reimbursements::CostCentre fixtures. Rails infers the class from the
 # reimbursements/ path -> reimbursements_cost_centres table.
+#
+# notification_role is required on the model: without it every update! on this
+# row (record_nightly_run! included) would raise. The role is deliberately
+# EMPTY -- see roles.yml.
 fringe:
   key: fringe
   name: Bedlam Fringe 2026
   eusa_code: F40
   receive_mailbox: reimbursements@bedlamfringe.co.uk
   send_mailbox: reimbursements@bedlamfringe.co.uk
+  notification_role: fringe_finance_admin

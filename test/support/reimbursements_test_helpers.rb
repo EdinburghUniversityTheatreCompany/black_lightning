@@ -21,6 +21,37 @@ module ReimbursementsTestHelpers
     person
   end
 
+  # A notification role for a cost centre. Roles are global (not namespaced), so
+  # give each one a distinct name or the fixture roles' uniqueness bites.
+  def create_reimbursements_role(name:, users: [])
+    role = Role.create!(name: name)
+    Array(users).each { |user| role.users << user }
+    role
+  end
+
+  # A cost centre with a notification role attached, since the model requires
+  # one. `notification_role: :auto` (the default) builds an EMPTY role, which is
+  # what almost every test wants -- it satisfies the validation without silently
+  # handing the test an operator mailing list. Pass nil for a centre with no role
+  # (the empty-role paths), or a Role to share one.
+  def create_reimbursements_cost_centre(key:, name:, eusa_code:,
+                                        receive_mailbox: "in@example.com",
+                                        send_mailbox: "out@example.com",
+                                        notification_role: :auto,
+                                        notification_users: [], **attrs)
+    role =
+      if notification_role == :auto
+        create_reimbursements_role(name: "#{name} Finance Admin", users: notification_users)
+      else
+        notification_role
+      end
+
+    Reimbursements::CostCentre.create!(key: key, name: name, eusa_code: eusa_code,
+                                       receive_mailbox: receive_mailbox,
+                                       send_mailbox: send_mailbox,
+                                       notification_role: role, **attrs)
+  end
+
   def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
                                    budget_type: "Expense", initial_budget: nil, notes: nil,
                                    owners: [])
