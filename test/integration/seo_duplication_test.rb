@@ -11,10 +11,19 @@ class SeoDuplicationTest < ActionDispatch::IntegrationTest
   # The pages a person would actually search for. Deliberately a literal list rather than a route
   # sweep: a sweep would drag in every admin and Devise page and quietly rot into a skip list.
   def public_pages
+    # The archive indexes are here because leaving them out is what let /shows and
+    # /archives/shows ship with identical titles: two different listings competing on one name.
     fixed = [ root_path, events_path, shows_path, workshops_path, seasons_path,
-              news_index_path, venues_path, archives_index_path, get_involved_opportunities_path ]
+              news_index_path, venues_path, archives_index_path, get_involved_opportunities_path,
+              new_get_involved_opportunity_path,
+              archives_events_path, archives_shows_path, archives_workshops_path, archives_seasons_path ]
 
-    fixed + StaticController::PAGE_TITLES.keys.map { |page| static_path(page) }
+    # welcome_week is claimed by an earlier redirect route to get_involved/welcome_week, so its
+    # static template is never reached. Named here rather than tolerated as a nil, or the next
+    # page to stop rendering drops out of every assertion below unnoticed.
+    static = StaticController::PAGE_TITLES.keys - [ "welcome_week" ]
+
+    fixed + static.map { |page| static_path(page) }
   end
 
   def head_of(path)
@@ -30,8 +39,15 @@ class SeoDuplicationTest < ActionDispatch::IntegrationTest
     }
   end
 
+  # A page that stops rendering 200 must fail loudly, not quietly drop out of every assertion
+  # below while they stay green -- the failure mode this whole file exists to prevent.
   def rendered_pages
-    public_pages.filter_map { |path| head_of(path) }
+    pages = public_pages.to_h { |path| [ path, head_of(path) ] }
+
+    assert_empty pages.select { |_, head| head.nil? }.keys,
+                 "these pages no longer render, so nothing below is checking them"
+
+    pages.values
   end
 
   test "no two public pages share a title" do

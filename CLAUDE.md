@@ -794,6 +794,18 @@ box office board prints its raw range — "Sep 1 – Jun 30" for the Improverts,
 `display_when` exists to avoid. Three or more Fridays spanning over a fortnight render as
 "Every Friday, 7.30pm".
 
+**Purge Cloudflare's `/robots.txt` once**, after the deploy that moved it out of `public/`. The
+edge holds a copy stored with `max-age=31536000` from `public_file_server.headers`, and it stays
+fresh regardless of what the origin now returns — a rules change deployed on 2026-08-30 was still
+being served from a 30-day-old copy. Later changes need no purge: the controller serves it with a
+one-hour cache.
+
+Robots.txt is now served by the app rather than by Thruster, so it goes down with the app — and a
+5xx robots.txt stops Googlebot crawling the site at all. The controller sends
+`stale-if-error=86400`, but Cloudflare honours that only on Enterprise and a dead Puma surfaces as
+a 521/522 that serve-stale cannot apply to. **Turn Cloudflare's Always Online on** (or add a Cache
+Rule for `/robots.txt`) so the edge keeps answering through an outage.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
@@ -818,7 +830,10 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   what collapses Ransack's `?q[...]` space — every author, company and venue is its own URL, each
   combining with pagination — onto the page it filters. Adding `q` there reopens an unbounded
   crawl space; keeping `page=1` would make the canonical create the duplicate it exists to
-  collapse. `robots.txt` (static, in `public/`) disallows the same space, and must spell it
+  collapse. `robots.txt` is served by `RobotsController`, **not** from `public/` (where
+  `public_file_server.headers` would stamp a one-year cache-control on a URL whose contents
+  change, and where the static middleware would shadow the route). It disallows the same space,
+  and must spell it
   **percent-encoded** (`q%5B`): a crawler matches the rule against the URL it sees, and Ransack's
   parameters arrive encoded.
 - **Variants say `format: "webp"`, not `convert:`.** Rails derives

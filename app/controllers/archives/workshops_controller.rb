@@ -1,8 +1,13 @@
 class Archives::WorkshopsController < Archives::GenericEventsController
   def index
-    super
-
     @title = "Workshops Archive"
-    @url = :archives_workshops
+
+    super
+  end
+
+  private
+
+  def index_description
+    "Workshops the EUTC has run at Bedlam Theatre over the years \u2014 the full archive, not just what is coming up."
   end
 end

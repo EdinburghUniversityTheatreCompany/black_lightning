@@ -1,10 +1,7 @@
 ##
-# The XML sitemap. There was none at all: /sitemap.xml 404ed and robots.txt named no sitemap, so
-# the only route into the archive -- 164 pages of pagination covering decades of productions --
-# was for a crawler to page through it.
-#
-# Served as an index plus one file per section rather than a single file, because the sections
-# grow at very different rates and a crawler can then re-fetch only the one that changed.
+# An index plus one file per section rather than a single file: the sections grow at very
+# different rates, so a crawler can re-fetch only the one that changed. Without this the only
+# route into the archive is 164 pages of pagination.
 ##
 class SitemapsController < ApplicationController
   skip_authorization_check
@@ -13,9 +10,8 @@ class SitemapsController < ApplicationController
   # never checked is a cap that silently breaks the day it is passed.
   MAX_URLS_PER_SECTION = 50_000
 
-  # section => the method that builds it. A literal map rather than a name interpolated into
-  # send: the allow-list would have made send safe, but a reader (and Brakeman) has to prove that
-  # every time, and there is nothing to prove here.
+  # A literal map rather than a name interpolated into send, which Brakeman flags as a dangerous
+  # send however well the allow-list guards it.
   SECTION_BUILDERS = {
     "pages" => :pages_entries, "events" => :events_entries, "news" => :news_entries,
     "venues" => :venues_entries, "members" => :members_entries

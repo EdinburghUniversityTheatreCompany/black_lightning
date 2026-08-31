@@ -1,9 +1,8 @@
 ##
 # JSON-LD structured data.
 #
-# There was none anywhere on the site -- 0 of 491 crawled pages -- which on a ticketed events
-# venue is the single largest gap in its search presence: Google's event rich results and the
-# "Things to do in Edinburgh" surfaces are fed almost entirely by Event markup.
+# Google's event rich results and the "Things to do" surfaces are fed almost entirely by Event
+# markup, which is why a ticketed venue needs this at all.
 #
 # Every method returns a plain Hash. The layout renders whatever #schema_documents collects, so a
 # page opts in by having a case here rather than by remembering to call something.

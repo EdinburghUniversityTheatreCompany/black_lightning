@@ -25,6 +25,9 @@ linter:
   # MSO-conditional email markup that works in clients; restructuring into a single layout
   # would be high-risk for no rendering benefit. Excluded from herb (decision: 2026-06).
   exclude:
+    # Plain text, not HTML: the & in the Ransack Disallow rules is literal, and escaping it to
+    # &amp; would break the rule.
+    - "app/views/robots/show.text.erb"
     - 'app/views/shared/mail/_header.html.erb'
     - 'app/views/shared/mail/_footer.html.erb'
 
