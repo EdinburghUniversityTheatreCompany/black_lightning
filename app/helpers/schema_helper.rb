@@ -29,6 +29,13 @@ module SchemaHelper
   ].freeze
 
   # Amounts in an Event#price string: "£7/£8/£10", "£5 (£4 members)", "Free".
+  # schema.org vocabulary, named once rather than repeated as literals across
+  # the run node, the performance nodes and both offer builders.
+  EVENT_SCHEDULED = "https://schema.org/EventScheduled".freeze
+  EVENT_CANCELLED = "https://schema.org/EventCancelled".freeze
+  IN_STOCK = "https://schema.org/InStock".freeze
+  SOLD_OUT = "https://schema.org/SoldOut".freeze
+
   PRICE_PATTERN = /£\s*(\d+(?:\.\d{1,2})?)/
 
   ##
@@ -176,7 +183,7 @@ module SchemaHelper
       # performance nodes below.
       "startDate" => event.start_date.iso8601,
       "endDate" => event.end_date&.iso8601,
-      "eventStatus" => "https://schema.org/EventScheduled",
+      "eventStatus" => EVENT_SCHEDULED,
       "eventAttendanceMode" => "https://schema.org/OfflineEventAttendanceMode",
       "description" => truncate_description(render_plain(event.publicity_text)),
       "image" => event_image_url(event),
@@ -212,16 +219,31 @@ module SchemaHelper
         "startDate" => occurrence.starts_at.iso8601,
         "endDate" => occurrence.effective_ends_at&.iso8601,
         "doorTime" => occurrence.doors_open_at&.iso8601,
-        "eventStatus" => "https://schema.org/EventScheduled",
+        "eventStatus" => performance_status(occurrence),
         "eventAttendanceMode" => "https://schema.org/OfflineEventAttendanceMode",
         "location" => { "@id" => absolute_url(VENUE_ID) },
         "organizer" => { "@id" => absolute_url(ORGANISATION_ID) },
         "accessibilityFeature" => occurrence.schema_accessibility_features.presence,
         "isAccessibleForFree" => event_free(event),
-        "offers" => event_offers(event),
+        "offers" => event_offers(event, availability: performance_availability(occurrence)),
         "superEvent" => { "@id" => event_schema_id(event) }
       }.compact
     end.compact
+  end
+
+  # A cancelled night is off; a sold-out one is still happening. Only the run's
+  # own node stays EventScheduled regardless -- one cancelled performance does
+  # not cancel the run.
+  def performance_status(occurrence)
+    occurrence.cancelled? ? EVENT_CANCELLED : EVENT_SCHEDULED
+  end
+
+  # A ticket link to a night nobody can buy into is worse than no rich result.
+  # Cancelled outranks sold out, as it does in the on-page exception lines.
+  def performance_availability(occurrence)
+    return SOLD_OUT if occurrence.cancelled? || occurrence.sold_out?
+
+    IN_STOCK
   end
 
   def event_schema_id(event, occurrence = nil)
@@ -305,15 +327,15 @@ module SchemaHelper
   # worse than no price -- it is a promise the box office has to honour -- so the scrape still only
   # fires when a number can actually be read out.
   ##
-  def event_offers(event)
+  def event_offers(event, availability: IN_STOCK)
     structured = event.ticket_prices
 
-    return structured_offers(event, structured) if structured.any?
+    return structured_offers(event, structured, availability) if structured.any?
 
-    scraped_offers(event)
+    scraped_offers(event, availability)
   end
 
-  def structured_offers(event, prices)
+  def structured_offers(event, prices, availability = IN_STOCK)
     amounts = prices.map(&:amount).sort
 
     {
@@ -322,7 +344,7 @@ module SchemaHelper
       "lowPrice" => format("%.2f", amounts.first),
       "highPrice" => format("%.2f", amounts.last),
       "offerCount" => prices.length,
-      "availability" => "https://schema.org/InStock",
+      "availability" => availability,
       "url" => event_offer_url(event),
       "offers" => prices.map do |price|
         {
@@ -330,14 +352,14 @@ module SchemaHelper
           "name" => price.display_label,
           "price" => format("%.2f", price.amount),
           "priceCurrency" => "GBP",
-          "availability" => "https://schema.org/InStock",
+          "availability" => availability,
           "url" => event_offer_url(event)
         }
       end
     }
   end
 
-  def scraped_offers(event)
+  def scraped_offers(event, availability = IN_STOCK)
     amounts = event.price.to_s.scan(PRICE_PATTERN).flatten.map(&:to_f).sort
 
     return nil if amounts.empty?
@@ -347,7 +369,7 @@ module SchemaHelper
       "priceCurrency" => "GBP",
       "lowPrice" => format("%.2f", amounts.first),
       "highPrice" => format("%.2f", amounts.last),
-      "availability" => "https://schema.org/InStock",
+      "availability" => availability,
       "url" => event_offer_url(event)
     }
   end

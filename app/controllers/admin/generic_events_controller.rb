@@ -6,6 +6,13 @@ class Admin::GenericEventsController < AdminController
   load_and_authorize_resource find_by: :slug
   skip_authorize_resource only: %i[update_debt_settings]
 
+  # Injection seam for tests, as Pretix::SyncPerformancesJob's is. A named
+  # constant so a teardown can put the real one back: class_attribute makes a
+  # wrong replacement stick for the rest of the process.
+  DEFAULT_PERFORMANCE_SYNC_BUILDER = -> { Pretix::PerformanceSync.new }
+
+  class_attribute :performance_sync_builder, default: DEFAULT_PERFORMANCE_SYNC_BUILDER
+
   def update
     # Set the previous user ids to see who the NEW debtors are.
     @previous_user_ids = get_resource.users.ids
@@ -42,7 +49,43 @@ class Admin::GenericEventsController < AdminController
     redirect_to polymorphic_path([ :admin, get_resource ])
   end
 
+  # POST admin/shows/1/sync_performances
+  # POST admin/workshops/1/sync_performances
+  # POST admin/seasons/1/sync_performances
+  #
+  # The recurring job is what makes this correct; the button only makes it
+  # immediate, for the producer who has just moved a date in the shop and wants
+  # to see it on the site now.
+  def sync_performances
+    event = get_resource
+
+    unless event.pretix_sync_performances?
+      helpers.append_to_flash(:error, "Turn on \"Sync #{event.occurrence_label.downcase.pluralize} " \
+                                      "from pretix\" for this event first.")
+      return redirect_to polymorphic_path([ :admin, event ])
+    end
+
+    report(event, performance_sync_builder.call.call(event))
+    redirect_to polymorphic_path([ :admin, event ])
+  rescue Pretix::Client::Error => e
+    # A wrong slug and a pretix outage both land here, and neither has touched a
+    # single performance -- the sync fetches before it writes.
+    helpers.append_to_flash(:error, "Could not read this event's dates from pretix: #{e.message}")
+    redirect_to polymorphic_path([ :admin, event ])
+  end
+
   private
+
+  def report(event, result)
+    label = event.occurrence_label.downcase
+    counts = [ [ result.created, "added" ], [ result.updated, "updated" ], [ result.destroyed, "removed" ] ]
+                .select { |count, _| count.positive? }
+                .map { |count, word| "#{word} #{helpers.pluralize(count, label)}" }
+
+    return helpers.append_to_flash(:success, "Already up to date with pretix.") if counts.empty?
+
+    helpers.append_to_flash(:success, "Synced with pretix: #{counts.to_sentence}.")
+  end
 
   def index_filename
     "admin/events/index"
@@ -52,7 +95,8 @@ class Admin::GenericEventsController < AdminController
     # Returns a hash with base permitted params to prevent accidentally omitting one.
     [
       :publicity_text, :members_only_text, :name, :slug, :tagline, :company_name,
-      :pretix_slug_override, :pretix_shown, :pretix_view, :content_warnings,
+      :pretix_slug_override, :pretix_shown, :pretix_view, :pretix_sync_performances,
+      :content_warnings,
       :author, :venue, :venue_id, :season, :season_id,
       :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :booking_fee, :spark_seat_slug, :digital_programme_url,
@@ -60,7 +104,7 @@ class Admin::GenericEventsController < AdminController
       :maintenance_debt_start, :staffing_debt_start,
       :maintenance_debt_amount, :staffing_debt_amount,
       event_tag_ids: [],
-      event_occurrences_attributes: [ :id, :_destroy, :starts_at, :ends_at, :note, access_flags: [] ],
+      event_occurrences_attributes: [ :id, :_destroy, :starts_at, :ends_at, :note, :cancelled, access_flags: [] ],
       ticket_prices_attributes: [ :_destroy, :category, :label, :amount ],
       pictures_attributes: [ :id, :_destroy, :description, :image, :access_level, picture_tag_ids: [] ],
       team_members_attributes: [ :id, :_destroy, :position, :user, :user_id, :proposal, :display_order ],

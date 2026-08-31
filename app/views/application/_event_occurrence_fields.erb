@@ -9,20 +9,53 @@
   <%= f.hidden_field :id %>
 
   <div class="flex flex-wrap items-end gap-3">
-    <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:starts_at) %>">Starts</label>
-    <%= f.input :starts_at, as: :datetime, html5: true, wrapper: :inline_form %>
+    <%# A synced row's times belong to pretix: the next sync overwrites whatever
+        is typed here, so offering an input would promise an edit that silently
+        reverts within fifteen minutes. Change the date in the shop instead. %>
+    <% if f.object.pretix_synced? %>
+      <div class="text-sm">
+        <span class="font-medium text-gray-700">Starts</span>
+        <span class="ml-1"><%= f.object.starts_at&.strftime('%a %-d %b %Y, %H:%M') %></span>
+        <% if f.object.ends_at.present? %>
+          <span class="ml-3 font-medium text-gray-700">Ends</span>
+          <span class="ml-1"><%= f.object.ends_at.strftime('%H:%M') %></span>
+        <% end %>
+        <% if f.object.admission_at.present? %>
+          <span class="ml-3 font-medium text-gray-700">Doors</span>
+          <span class="ml-1"><%= f.object.admission_at.strftime('%H:%M') %></span>
+        <% end %>
+        <span class="ml-3 rounded bg-gray-100 px-2 py-0.5 text-xs text-muted">From pretix</span>
+        <% if f.object.cancelled? %>
+          <span class="ml-1 rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">Cancelled</span>
+        <% elsif f.object.sold_out? %>
+          <span class="ml-1 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Sold out</span>
+        <% end %>
+      </div>
+    <% else %>
+      <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:starts_at) %>">Starts</label>
+      <%= f.input :starts_at, as: :datetime, html5: true, wrapper: :inline_form %>
 
-    <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:ends_at) %>">Ends</label>
-    <%= f.input :ends_at, as: :datetime, html5: true, wrapper: :inline_form %>
+      <label class="text-sm font-medium text-gray-700" for="<%= f.field_id(:ends_at) %>">Ends</label>
+      <%= f.input :ends_at, as: :datetime, html5: true, wrapper: :inline_form %>
+    <% end %>
 
     <div class="min-w-48 flex-1">
       <%= f.input :note, placeholder: 'Note, e.g. post-show Q&A', wrapper: :inline_form %>
     </div>
 
-    <%= link_to_remove(f) %>
+    <%# Removing a synced row here would only have the next sync recreate it. %>
+    <%= link_to_remove(f) unless f.object.pretix_synced? %>
   </div>
 
   <%# vertical_collection_inline, or the seven flags stack one per line. %>
   <%= f.input :access_flags, as: :check_boxes, label: 'Access', wrapper: :vertical_collection_inline,
         collection: EventOccurrence::ACCESS_FLAG_LABELS.map { |flag, label| [label, flag] } %>
+
+  <%# pretix has no cancellation concept for a date, so this is a person's to
+      set and the sync never touches it. It is also what keeps a synced row
+      alive after the date is pulled from the shop. %>
+  <%# vertical_boolean, not the admin default: that lays the label out in its own
+      column and leaves ~370px between it and its own checkbox. %>
+  <%= f.input :cancelled, as: :boolean, label: 'Cancelled', wrapper: :vertical_boolean,
+        hint: 'pretix cannot tell us a date is off, so set it here.' %>
 </div>

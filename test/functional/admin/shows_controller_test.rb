@@ -568,4 +568,103 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     team_members_attributes
   end
+
+  # --- pretix performance sync ----------------------------------------------
+
+  class FakeSync
+    attr_reader :events
+
+    def initialize(error: nil)
+      @error = error
+      @events = []
+    end
+
+    def call(event)
+      @events << event
+      raise @error if @error
+
+      Pretix::PerformanceSync::Result.new(created: 2, updated: 1, destroyed: 0, kept: 0,
+                                          skipped: 0, emptied_series: false)
+    end
+  end
+
+  def with_fake_sync(sync)
+    previous = Admin::GenericEventsController.performance_sync_builder
+    Admin::GenericEventsController.performance_sync_builder = -> { sync }
+    yield
+  ensure
+    # Restored by name, not by hand: class_attribute makes a wrong replacement
+    # stick for the rest of the process.
+    Admin::GenericEventsController.performance_sync_builder = previous
+  end
+
+  test "sync now pulls the performances in and says what changed" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true)
+    sync = FakeSync.new
+
+    with_fake_sync(sync) { post :sync_performances, params: { id: show } }
+
+    assert_redirected_to admin_show_path(show)
+    assert_equal [ show ], sync.events
+    assert_match(/2/, flash.to_h.values.join(" "))
+  end
+
+  test "sync now reports a pretix failure rather than 500ing" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true)
+    sync = FakeSync.new(error: Pretix::Client::NotFoundError.new("no such series"))
+
+    with_fake_sync(sync) { post :sync_performances, params: { id: show } }
+
+    assert_redirected_to admin_show_path(show)
+    assert_match(/pretix/i, flash.to_h.values.join(" "))
+  end
+
+  test "sync now refuses an event that has not opted in" do
+    show = FactoryBot.create(:show, pretix_sync_performances: false)
+    sync = FakeSync.new
+
+    with_fake_sync(sync) { post :sync_performances, params: { id: show } }
+
+    assert_empty sync.events, "syncing an event with the box unticked would import dates nobody asked for"
+  end
+
+  # The synced rows render their times as text, not inputs, so an update posts
+  # no starts_at for them. If nested attributes took that as a blank the whole
+  # run would be wiped by a producer ticking one access flag.
+  test "editing a synced performance's flags leaves its pretix times alone" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true,
+                                    start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
+    occurrence = show.event_occurrences.create!(starts_at: Time.zone.local(2026, 3, 4, 19, 30),
+                                                admission_at: Time.zone.local(2026, 3, 4, 19, 0),
+                                                pretix_subevent_id: 77)
+
+    # The exact shape the rendered form posts, read out of its live FormData: an
+    # id, the producer's own fields, and NO starts_at. The leading "" is the
+    # check_boxes hidden field, which is why :all_blank was never usable here.
+    patch :update, params: { id: show, show: { event_occurrences_attributes: {
+      "0" => { id: occurrence.id, note: "Q&A after", cancelled: "1",
+               access_flags: [ "", "relaxed" ], _destroy: "0" }
+    } } }
+
+    occurrence.reload
+
+    assert_equal Time.zone.local(2026, 3, 4, 19, 30), occurrence.starts_at
+    assert_equal Time.zone.local(2026, 3, 4, 19, 0), occurrence.admission_at
+    assert_equal 77, occurrence.pretix_subevent_id
+    assert_equal "Q&A after", occurrence.note
+    assert_predicate occurrence, :cancelled?
+    assert_equal [ "relaxed" ], occurrence.access_flags
+  end
+
+  # The other half of that rule: the blank template row the Add button clones
+  # must still be dropped, or every save would create an empty performance.
+  test "a blank new performance row is still discarded" do
+    show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
+
+    patch :update, params: { id: show, show: { event_occurrences_attributes: {
+      "0" => { starts_at: "", note: "" }
+    } } }
+
+    assert_empty show.event_occurrences.reload
+  end
 end

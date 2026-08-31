@@ -56,6 +56,12 @@ class EventOccurrence < ApplicationRecord
 
   ACCESS_FLAGS = ACCESS_FLAG_LABELS.keys.freeze
 
+  # The two state lines the event page renders beside the access flags. Named
+  # here rather than typed into the view, which has to style them differently:
+  # "Relaxed" is information, "Cancelled" is a wasted journey.
+  CANCELLED_LABEL = "Cancelled".freeze
+  SOLD_OUT_LABEL = "Sold out".freeze
+
   # schema.org accessibilityFeature values for the flags that ARE accessibility
   # features. Preview, press night and post-show discussion are scheduling
   # labels, not access provision, and publishing them here would tell a search

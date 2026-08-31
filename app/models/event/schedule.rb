@@ -77,7 +77,10 @@ class Event::Schedule
   # rendered as, these have to be named or the access information is lost.
   ##
   def exceptions
-    occurrences.select { |occurrence| occurrence.access_flags.any? || occurrence.note.present? }
+    occurrences.select do |occurrence|
+      occurrence.access_flags.any? || occurrence.note.present? ||
+        occurrence.cancelled? || occurrence.sold_out?
+    end
   end
 
   private
