@@ -337,6 +337,15 @@ class Event < ApplicationRecord
     super(options)
   end
 
+  # The events Pretix::SyncPerformancesJob keeps in step with their series.
+  #
+  # Bounded by the run's end rather than its start: a show still selling for
+  # tonight is due, an archive row is not. Both dates are required above, so a
+  # ticked event always has one.
+  scope :pretix_performance_sync_due, -> {
+    where(pretix_sync_performances: true).where(end_date: Date.current..)
+  }
+
   def pretix_slug
     pretix_slug_override.presence || slug
   end
