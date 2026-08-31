@@ -583,8 +583,9 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       @events << event
       raise @error if @error
 
-      Pretix::PerformanceSync::Result.new(created: 2, updated: 1, destroyed: 0, kept: 0,
-                                          skipped: 0, emptied_series: false)
+      Pretix::PerformanceSync::Result.new(created: 2, updated: 1, adopted: 0, destroyed: 0,
+                                          kept: 0, skipped: 0, emptied_series: false,
+                                          missing_series: false)
     end
   end
 
@@ -666,5 +667,41 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     } } }
 
     assert_empty show.event_occurrences.reload
+  end
+
+  # Ticking the box before the ticket shop exists is the natural order to work
+  # in, so the admin page has to say what is happening -- otherwise the producer
+  # sees a ticked box and no dates, with nothing to explain either.
+  test "an event waiting for its ticket shop says so on its admin page" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true)
+    show.update_columns(pretix_sync_error: "No pretix ticket shop found for \"#{show.slug}\" yet.")
+
+    get :show, params: { id: show }
+
+    assert_response :success
+    assert_match(/No pretix ticket shop found/, response.body)
+  end
+
+  test "an event syncing happily shows no warning" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true)
+    show.update_columns(pretix_synced_at: Time.current)
+
+    get :show, params: { id: show }
+
+    assert_response :success
+    assert_no_match(/ticket shop found/, response.body)
+  end
+
+  test "sync now on an event with no ticket shop yet says so instead of failing" do
+    show = FactoryBot.create(:show, pretix_sync_performances: true)
+    show.update_columns(pretix_sync_error: "No pretix ticket shop found yet.")
+    sync = Class.new do
+      def call(_event) = Pretix::PerformanceSync::MISSING_SERIES
+    end.new
+
+    with_fake_sync(sync) { post :sync_performances, params: { id: show } }
+
+    assert_redirected_to admin_show_path(show)
+    assert_match(/No pretix ticket shop found yet/, flash.to_h.values.join(" "))
   end
 end

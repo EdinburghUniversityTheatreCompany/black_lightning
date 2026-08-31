@@ -215,14 +215,47 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
 
   # --- failure ---------------------------------------------------------------
 
-  test "a series pretix does not know leaves every existing performance standing" do
+  # --- a series that does not exist yet --------------------------------------
+  #
+  # Ticking the box before building the shop is the natural order to work in, so
+  # "pretix has never heard of this slug" is a waiting state, not a failure. It
+  # is recorded and shown in the admin; nothing is raised and nothing reported,
+  # or every such event would alert every fifteen minutes for its whole run.
+
+  test "a series pretix does not know is recorded as waiting, not raised" do
     occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
 
-    assert_raises(Pretix::Client::NotFoundError) do
+    result = nil
+    assert_nothing_raised { result, = sync(error: Pretix::Client::NotFoundError.new("gone")) }
+
+    assert_predicate result, :missing_series?
+    assert_equal 1, @event.event_occurrences.reload.count, "existing performances must stand"
+    assert @event.reload.pretix_sync_error.present?
+    assert_nil @event.pretix_synced_at
+  end
+
+  test "a series appearing later clears the warning" do
+    @event.update_columns(pretix_sync_error: "No ticket shop found for hamlet yet.")
+
+    sync(rows: [ subevent ])
+    @event.reload
+
+    assert_nil @event.pretix_sync_error
+    assert @event.pretix_synced_at.present?
+  end
+
+  test "a successful sync stamps when it last read the series" do
+    freeze_time do
+      sync(rows: [ subevent ])
+
+      assert_equal Time.current.to_i, @event.reload.pretix_synced_at.to_i
+    end
+  end
+
+  test "recording the wait does not add a paper trail version every fifteen minutes" do
+    assert_no_difference -> { @event.versions.count } do
       sync(error: Pretix::Client::NotFoundError.new("gone"))
     end
-
-    assert_equal 1, @event.event_occurrences.reload.count
   end
 
   test "a transport failure writes nothing, rather than blanking a run" do
@@ -239,5 +272,64 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     assert_equal 1, result.created
     assert_equal 1, result.skipped
     assert_equal [ 2 ], @event.event_occurrences.reload.map(&:pretix_subevent_id)
+  end
+
+  # --- adopting a hand-typed row ---------------------------------------------
+  #
+  # A producer who typed their dates in before the box was ticked would otherwise
+  # get every night twice: theirs and pretix's. An exact match is the same
+  # performance, so the sync takes the existing row over rather than adding one.
+
+  test "a hand-typed performance at the same time is adopted, not duplicated" do
+    typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+
+    result, = sync(rows: [ subevent ])
+
+    assert_equal 1, result.adopted
+    assert_equal 0, result.created
+    assert_equal [ typed.id ], @event.event_occurrences.reload.map(&:id)
+    assert_equal 42, typed.reload.pretix_subevent_id
+  end
+
+  test "adopting keeps everything the producer put on that row" do
+    typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30),
+                        access_flags: [ "captioned" ], note: "Signed by arrangement")
+
+    sync(rows: [ subevent ])
+    typed.reload
+
+    assert_equal [ "captioned" ], typed.access_flags
+    assert_equal "Signed by arrangement", typed.note
+  end
+
+  test "a hand-typed performance at a different time is left as its own row" do
+    # Not the same performance: a matinee, a preview, or a producer who has the
+    # curtain time wrong. Either way it is not the sync's to merge away.
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 14, 0))
+
+    result, = sync(rows: [ subevent ])
+
+    assert_equal 0, result.adopted
+    assert_equal 1, result.created
+    assert_equal 2, @event.event_occurrences.reload.count
+  end
+
+  test "a row already owned by another subevent is never adopted away from it" do
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 99)
+
+    result, = sync(rows: [ subevent ])
+
+    assert_equal 0, result.adopted
+    assert_equal 1, result.created
+  end
+
+  test "two subevents cannot adopt the same hand-typed row" do
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+
+    result, = sync(rows: [ subevent(id: 1), subevent(id: 2) ])
+
+    assert_equal 1, result.adopted
+    assert_equal 1, result.created
+    assert_equal 2, @event.event_occurrences.reload.count
   end
 end

@@ -29,16 +29,25 @@ module Pretix
     # more costly direction of this error.
     AVAILABLE_STATE = 100
 
-    Result = Data.define(:created, :updated, :destroyed, :kept, :skipped, :emptied_series) do
+
+    Result = Data.define(:created, :updated, :adopted, :destroyed, :kept, :skipped,
+                         :emptied_series, :missing_series) do
       def emptied_series? = emptied_series
 
-      def any_change? = created.positive? || updated.positive? || destroyed.positive?
+      def missing_series? = missing_series
 
-      def to_h = { created:, updated:, destroyed:, kept:, skipped: }
+      def any_change? = created.positive? || updated.positive? || adopted.positive? || destroyed.positive?
+
+      def to_h = { created:, updated:, adopted:, destroyed:, kept:, skipped: }
     end
 
     # +client+ is a constructor seam, as MembershipSync's is: this suite has no
     # mocking library, so the outbound client is faked and injected.
+    # What a pass returns when pretix has no such series yet: nothing was read,
+    # so nothing changed. Built after Result is defined.
+    MISSING_SERIES = Result.new(created: 0, updated: 0, adopted: 0, destroyed: 0, kept: 0,
+                                skipped: 0, emptied_series: false, missing_series: true).freeze
+
     def initialize(client: Client.new)
       @client = client
     end
@@ -58,10 +67,29 @@ module Pretix
       # beyond the entered run save at all.
       widen_run(event, subevents)
 
-      apply(event, subevents)
+      result = apply(event, subevents)
+      record_state(event, error: nil)
+      result
+    rescue Client::NotFoundError
+      # NOT a failure. Ticking the box before building the ticket shop is the
+      # natural order to work in, so this is a waiting state: it is recorded for
+      # the admin page to show, existing performances stand untouched, and
+      # nothing is raised -- otherwise every such event would alert every
+      # fifteen minutes for the length of its run.
+      record_state(event, error: "No pretix ticket shop found for \"#{event.pretix_slug}\" yet. " \
+                                 "The dates will sync as soon as one exists.")
+      MISSING_SERIES
     end
 
     private
+
+    # update_columns, not update!: this runs every fifteen minutes per event, and
+    # has_paper_trail would otherwise write a version for each pass. It is
+    # bookkeeping about the sync, not a change to the event.
+    def record_state(event, error:)
+      event.update_columns(pretix_sync_error: error,
+                           pretix_synced_at: error ? event.pretix_synced_at : Time.current)
+    end
 
     # is_public is false for a subevent the producer has hidden from the shop's
     # listings. Hidden there means hidden here, so it is dropped before matching
@@ -89,22 +117,25 @@ module Pretix
     end
 
     def apply(event, subevents)
-      existing = event.event_occurrences.where.not(pretix_subevent_id: nil).index_by(&:pretix_subevent_id)
+      rows = event.event_occurrences.to_a
+      existing = rows.select(&:pretix_synced?).index_by(&:pretix_subevent_id)
+      # Hand-typed rows an incoming date might turn out to BE. Claimed as they
+      # are adopted, so two subevents at one time cannot both take the same row.
+      unclaimed = rows.reject(&:pretix_synced?).sort_by(&:id)
       counts = Hash.new(0)
 
-      subevents.each { |row| counts[upsert(event, existing, row)] += 1 }
+      subevents.each { |row| counts[upsert(event, existing, unclaimed, row)] += 1 }
 
       seen = subevents.filter_map { |row| row["id"] }
       (existing.keys - seen).each { |id| counts[discard(existing.fetch(id))] += 1 }
 
-      Result.new(created: counts[:created], updated: counts[:updated], destroyed: counts[:destroyed],
-                 kept: counts[:kept], skipped: counts[:skipped],
-                 emptied_series: subevents.empty? && existing.any?)
+      Result.new(created: counts[:created], updated: counts[:updated], adopted: counts[:adopted],
+                 destroyed: counts[:destroyed], kept: counts[:kept], skipped: counts[:skipped],
+                 emptied_series: subevents.empty? && existing.any?, missing_series: false)
     end
 
-    def upsert(event, existing, row)
-      occurrence = existing[row["id"]] || event.event_occurrences.build(pretix_subevent_id: row["id"])
-      outcome = occurrence.persisted? ? :updated : :created
+    def upsert(event, existing, unclaimed, row)
+      occurrence, outcome = match(event, existing, unclaimed, row)
 
       occurrence.assign_attributes(attributes_from(row))
       occurrence.save!
@@ -115,6 +146,35 @@ module Pretix
       Rails.logger.warn("Pretix performance sync skipped subevent #{row['id']} " \
                         "for #{event.pretix_slug}: #{e.message}")
       :skipped
+    end
+
+    ##
+    # Which row this subevent is, in order of confidence: the one already
+    # carrying its id, then a hand-typed row at exactly the same time, then a new
+    # one.
+    #
+    # The middle case is ADOPTION, and it is what stops a producer who typed
+    # their dates in before ticking the box getting every night twice. Same
+    # curtain time means same performance, so the existing row is taken over --
+    # keeping the access flags and note already on it -- rather than a second
+    # row appearing beside it. A row at a different time is deliberately NOT
+    # merged: that is a matinee, a preview, or a genuine disagreement, and none
+    # of those are the sync's to resolve.
+    ##
+    def match(event, existing, unclaimed, row)
+      claimed = existing[row["id"]]
+      return [ claimed, :updated ] if claimed
+
+      starts_at = parse_time(row["date_from"])
+      adoptee = starts_at && unclaimed.find { |occurrence| occurrence.starts_at == starts_at }
+
+      if adoptee
+        unclaimed.delete(adoptee)
+        adoptee.pretix_subevent_id = row["id"]
+        return [ adoptee, :adopted ]
+      end
+
+      [ event.event_occurrences.build(pretix_subevent_id: row["id"]), :created ]
     end
 
     # A cancelled row is the one thing here a person said to the public, so it

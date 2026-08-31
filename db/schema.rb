@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -432,7 +432,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_130000) do
     t.string "name"
     t.boolean "pretix_shown"
     t.string "pretix_slug_override"
+    t.string "pretix_sync_error"
     t.boolean "pretix_sync_performances"
+    t.datetime "pretix_synced_at"
     t.string "pretix_view"
     t.string "price"
     t.integer "proposal_id"

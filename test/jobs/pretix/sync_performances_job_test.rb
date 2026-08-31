@@ -15,8 +15,9 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
       @events << event
       raise Pretix::Client::NotFoundError, "no such series" if @failing_slugs.include?(event.pretix_slug)
 
-      Pretix::PerformanceSync::Result.new(created: 1, updated: 0, destroyed: 0, kept: 0,
-                                          skipped: 0, emptied_series: false)
+      Pretix::PerformanceSync::Result.new(created: 1, updated: 0, adopted: 0, destroyed: 0,
+                                          kept: 0, skipped: 0, emptied_series: false,
+                                          missing_series: false)
     end
   end
 

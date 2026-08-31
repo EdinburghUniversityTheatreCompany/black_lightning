@@ -25,7 +25,9 @@
 #  name                      :string(255)
 #  pretix_shown              :boolean
 #  pretix_slug_override      :string(255)
+#  pretix_sync_error         :string(255)
 #  pretix_sync_performances  :boolean
+#  pretix_synced_at          :datetime
 #  pretix_view               :string(255)
 #  price                     :string(255)
 #  publicity_text            :text(16777215)

@@ -54,6 +54,11 @@ module Pretix
     end
 
     def log(event, result)
+      # Not a failure: pretix has no such series yet, which is what ticking the
+      # box before building the shop looks like. PerformanceSync has recorded it
+      # for the admin page; there is nothing to say here every fifteen minutes.
+      return if result.missing_series?
+
       # An emptied series is a real thing a producer can do -- and it is also
       # exactly what a mis-set slug pointing at a bare series looks like, so it
       # is never silent.

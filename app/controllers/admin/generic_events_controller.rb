@@ -77,8 +77,14 @@ class Admin::GenericEventsController < AdminController
   private
 
   def report(event, result)
+    # Not a failure: the producer has ticked the box before building the shop.
+    # The event's admin page carries the same sentence, which is why this only
+    # has to point at it.
+    return helpers.append_to_flash(:notice, event.pretix_sync_error) if result.missing_series?
+
     label = event.occurrence_label.downcase
-    counts = [ [ result.created, "added" ], [ result.updated, "updated" ], [ result.destroyed, "removed" ] ]
+    counts = [ [ result.created, "added" ], [ result.updated, "updated" ],
+               [ result.adopted, "matched up" ], [ result.destroyed, "removed" ] ]
                 .select { |count, _| count.positive? }
                 .map { |count, word| "#{word} #{helpers.pluralize(count, label)}" }
 

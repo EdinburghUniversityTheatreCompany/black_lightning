@@ -44,8 +44,15 @@ whole ownership model:
 | `pretix_subevent_id` set, subevent present | Update `starts_at`, `ends_at`, `admission_at`, `sold_out` |
 | `pretix_subevent_id` set, subevent gone | Destroy — **unless** `cancelled`, which is kept |
 | `pretix_subevent_id` set, subevent hidden (`is_public: false`) | Treated as gone |
-| `pretix_subevent_id` nil | Hand-typed. Never read, never written, never deleted |
+| `pretix_subevent_id` nil, same `starts_at` as a subevent | **Adopted** — the row is taken over rather than duplicated |
+| `pretix_subevent_id` nil, no matching subevent | Hand-typed. Never read, never written, never deleted |
 | Subevent with no row | Create |
+
+Adoption is what stops a producer who typed their dates in *before* ticking the box getting every
+night twice. Same curtain time means same performance, so the existing row is taken over and keeps
+the flags and note already on it. A row at a different time is deliberately not merged: that is a
+matinee, a preview, or a genuine disagreement about the curtain time, and none of those are the
+sync's to resolve.
 
 `access_flags`, `note` and `cancelled` are producer-owned and are **never** written by the
 sync, on create or on update. That is what makes "tick the box and still tag the relaxed
@@ -103,10 +110,22 @@ Scheduled at `7,22,37,52 * * * *`. Not on a multiple of five: `reimbursements_ma
 runs every five minutes and owns every such minute (see `recurring_schedule_test` and the
 background-jobs section of CLAUDE.md).
 
+### A series that does not exist yet is a waiting state
+
+Ticking the box before building the ticket shop is the natural order to work in, so a `404` is
+**not** a failure. It is caught, written to `events.pretix_sync_error`, and shown as a banner on
+the event's admin page; nothing is raised and nothing reported. Raising would alert every such
+event every fifteen minutes for the length of its run, and the producer would see a ticked box,
+no dates, and nothing explaining either.
+
+`events.pretix_synced_at` records the last good read. Both columns are written with
+`update_columns`, not `update!`: this runs per event per quarter hour, and `has_paper_trail` would
+otherwise file a version for every pass.
+
 ### An outage must never blank a run
 
-A 404, an auth failure or a timeout writes **nothing** and is logged and reported; the
-existing occurrences stand. Only a successful `200` may delete anything. A response that
+An auth failure or a timeout writes **nothing** and is logged and reported; the existing
+occurrences stand. Only a successful `200` may delete anything. A response that
 would delete every synced occurrence for an event is carried out — an emptied series is a
 real thing — but reported, because it is also what a mis-set slug looks like.
 
@@ -136,7 +155,8 @@ flowchart TD
 | `Pretix::PerformanceSync` | All of the above for **one** event. Takes its client as a constructor seam, as `MembershipSync` does. Returns a result struct of counts. |
 | `Pretix::SyncPerformancesJob` | Recurring. Selects the due events, calls the sync per event, isolates a per-event failure so one bad slug cannot stop the rest. |
 | `EventOccurrence` | Gains `pretix_subevent_id`, `admission_at`, `sold_out`, `cancelled`, `#pretix_synced?`, and `#doors_open_at` preferring `admission_at`. |
-| Admin event form | The tick box; date/time inputs read-only on synced rows; a `cancelled` checkbox; a "Sync now" button. |
+| Admin event form | The tick box; date/time inputs read-only on synced rows; a `cancelled` checkbox; a "Sync now" button; the waiting banner on the event's show page. |
+| `Pretix::PerformanceSyncEnablement` | Bulk switch-on across future events, behind `pretix:enable_performance_sync`. No probe — adoption and the waiting state make one unnecessary. |
 | Show page + `SchemaHelper` | Renders the sold-out and cancelled badges; emits `availability: SoldOut` and `eventStatus: EventCancelled`. |
 
 ## Surfaces

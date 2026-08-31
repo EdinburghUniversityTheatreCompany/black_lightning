@@ -846,12 +846,25 @@ from `Pretix::SyncPerformancesJob` every 15 minutes. Spec:
   (times and `sold_out` overwritten each pass, destroyed when the subevent goes); a row without
   one was typed by hand and is never touched. `access_flags`, `note` and `cancelled` are the
   producer's on both kinds and are never written by the sync.
+- **A hand-typed row at exactly the same `starts_at` is ADOPTED, not duplicated** — the sync takes
+  it over (keeping its flags and note) instead of adding a second row beside it. A row at a
+  *different* time is left alone: that is a matinee, a preview, or a genuine disagreement, none of
+  which are the sync's to resolve.
+- **A series that does not exist yet is a waiting state, not an error.** Ticking the box before
+  building the shop is the normal order to work in, so a `NotFoundError` is caught, written to
+  `events.pretix_sync_error` and shown as a banner on the admin event page — never raised, never
+  reported, or every such event would alert every 15 minutes for its whole run. `pretix_synced_at`
+  records the last good read. Both are written with `update_columns`: `update!` would file a
+  PaperTrail version per event per quarter hour.
 - **`cancelled` is a human statement.** pretix has no cancellation concept — `active: false` is
   equally *not on sale yet* — and a wrong CANCELLED on a public page is the worst error here. It
   is why a cancelled row outlives its subevent (keeping its id, so a restored date reattaches).
   `is_public: false` **is** treated as gone. `best_availability_state: null` is NOT sold out.
-- **The sync fetches before it writes**, so a 404 or timeout leaves the run standing instead of
-  blanking it; the job isolates per event so one wrong slug can't stop the rest.
+- **The sync fetches before it writes**, so a timeout leaves the run standing instead of blanking
+  it; the job isolates per event so one broken event can't stop the rest.
+- `bin/rails pretix:enable_performance_sync` turns it on across every future event (dry by
+  default, `APPLY=1` writes). It deliberately does **not** probe pretix first — the two reasons it
+  used to are the two bullets above.
 - **`accepts_nested_attributes_for :event_occurrences` must not reject on a blank `starts_at`
   alone.** A synced row renders its times as text, so editing its flags posts no `starts_at` —
   the old blanket rule saved, redirected and silently discarded the change. No id means the

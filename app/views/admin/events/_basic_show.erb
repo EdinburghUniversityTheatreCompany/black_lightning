@@ -67,4 +67,15 @@
   <% end %>
 <% end %>
 
+<%# Ticking the sync on before the ticket shop exists is the ordinary order to
+    work in, so the wait is stated rather than raised anywhere. Above the field
+    list, not in it: a producer looking at a ticked box and no dates needs to see
+    why without scrolling past twenty rows. %>
+<% if event.pretix_sync_performances? && event.pretix_sync_error.present? %>
+  <div class="mb-4 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <span class="font-medium">Waiting for pretix.</span>
+    <%= event.pretix_sync_error %>
+  </div>
+<% end %>
+
 <%= render('shared/pages/show', object: event, fields: fields) %>
