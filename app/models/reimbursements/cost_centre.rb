@@ -16,6 +16,7 @@
 #  sharepoint_site_url           :string(255)
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
+#  notification_role_id          :integer
 #  sharepoint_bacs_drive_id      :string(255)
 #  sharepoint_bacs_folder_id     :string(255)
 #  sharepoint_receipts_drive_id  :string(255)
@@ -23,7 +24,12 @@
 #
 # Indexes
 #
-#  index_reimbursements_cost_centres_on_key  (key) UNIQUE
+#  index_reimbursements_cost_centres_on_key                   (key) UNIQUE
+#  index_reimbursements_cost_centres_on_notification_role_id  (notification_role_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (notification_role_id => roles.id)
 #
 module Reimbursements
   ##
