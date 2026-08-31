@@ -49,6 +49,17 @@ module Reimbursements
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
     serialize :nightly_run_days, coder: JSON
 
+    # Who gets this centre's operator reminders. A Role, so a committee handover
+    # is the same gesture as every other handover and the members are real
+    # accounts that cannot rot into someone who has left. These finance roles are
+    # deliberately NOT part of the annual Role#archive sweep.
+    #
+    # Optional at the association level; the requirement is the explicit
+    # validation below, so the error hangs off :notification_role -- the
+    # attribute the Settings form labels -- rather than off belongs_to's own
+    # message.
+    belongs_to :notification_role, class_name: "Role", optional: true
+
     # The +key+ is the URL slug (`param: :key`, `find_by!(key:)`), so it must be
     # URL-safe. Derive it from the name by default (create form leaves it blank),
     # and enforce the slug shape whether typed or derived.
@@ -124,6 +135,13 @@ module Reimbursements
 
     def eusa_recipient_or_default
       eusa_recipient.presence || DEFAULT_EUSA_RECIPIENT
+    end
+
+    # No role, or a role nobody is in -- either way this centre's reminders would
+    # reach nobody. The nightly warns and refuses to record the run-day rather
+    # than going quiet, and the Integration Status page badges it.
+    def notification_role_empty?
+      notification_role.nil? || notification_role.users.empty?
     end
 
     # --- Copy derived from this cost centre -------------------------------

@@ -213,5 +213,32 @@ module Reimbursements
       cc.record_nightly_run!(Date.new(2026, 7, 9))
       assert_equal Date.new(2026, 7, 9), cc.reload.last_nightly_run_on
     end
+
+    # --- Notification role -------------------------------------------------
+
+    test "notification_role_empty? is true with no role at all" do
+      centre = CostCentre.new(key: "nr1", name: "NR One", eusa_code: "NR1",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
+
+      assert_predicate centre, :notification_role_empty?
+    end
+
+    test "notification_role_empty? is true for a role with no users" do
+      centre = CostCentre.new(key: "nr2", name: "NR Two", eusa_code: "NR2",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_role: Role.create!(name: "NR Two Finance Admin"))
+
+      assert_predicate centre, :notification_role_empty?
+    end
+
+    test "notification_role_empty? is false once the role has a member" do
+      role = Role.create!(name: "NR Three Finance Admin")
+      role.users << users(:member)
+      centre = CostCentre.new(key: "nr3", name: "NR Three", eusa_code: "NR3",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_role: role)
+
+      assert_not_predicate centre, :notification_role_empty?
+    end
   end
 end

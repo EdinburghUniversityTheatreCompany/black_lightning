@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_120100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -777,6 +777,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
     t.date "last_nightly_run_on"
     t.string "name", null: false
     t.string "nightly_run_days", default: "[2,4]", null: false
+    t.integer "notification_role_id"
     t.string "receive_mailbox", null: false
     t.string "send_mailbox", null: false
     t.string "sharepoint_bacs_drive_id"
@@ -786,6 +787,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
     t.string "sharepoint_site_url"
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_reimbursements_cost_centres_on_key", unique: true
+    t.index ["notification_role_id"], name: "index_reimbursements_cost_centres_on_notification_role_id"
   end
 
   create_table "reimbursements_eusa_actuals", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -1201,6 +1203,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_200000) do
   add_foreign_key "reimbursements_budget_updates", "users", column: "created_by_id"
   add_foreign_key "reimbursements_budgets", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_budgets", "reimbursements_financial_years", column: "financial_year_id"
+  add_foreign_key "reimbursements_cost_centres", "roles", column: "notification_role_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_budgets", column: "budget_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_eusa_actuals", "reimbursements_eusa_actuals", column: "offset_of_id"
