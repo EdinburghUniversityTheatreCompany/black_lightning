@@ -147,6 +147,30 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/review?format=csv&amp;tab=approved"
       end
 
+      # A queue card without a date can't be triaged: "how long has this producer
+      # been waiting" is the first question asked of a pending claim, and the
+      # nightly reminder chases on exactly that age.
+      test "each card states the date the claim was submitted" do
+        pending_expense(auto_number: 7, submitted_at: Time.utc(2026, 5, 1, 9))
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "span", text: "Submitted 2026-05-01"
+      end
+
+      test "the approved tab states the submitted date too" do
+        pending_expense(auto_number: 8, status: ::Reimbursements::Status::APPROVED,
+                        submitted_at: Time.utc(2026, 4, 2, 9))
+        sign_in @user
+
+        get :index, params: { tab: "approved" }
+
+        assert_response :success
+        assert_select "span", text: "Submitted 2026-04-02"
+      end
+
       test "renders the payee-override warning" do
         pending_expense(payee_name_override: "Acme Lighting Ltd",
                         sort_code_override: "20-00-00",

@@ -63,6 +63,9 @@
     <% end %>
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= expense.receipt_count %></span>
+    <%# How long the producer has been waiting: the first thing asked of a claim
+        in the queue, and what the nightly stale-Pending reminder chases on. %>
+    <span class="text-gray-500">Submitted <%= reimbursements_date(expense.submitted_at) %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
     <% if attention[:blocking].any? %>
       <%= render BadgeComponent.new(type: :danger, pill: true).with_content("Can't approve yet") %>
