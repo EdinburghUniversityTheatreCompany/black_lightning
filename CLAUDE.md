@@ -162,6 +162,20 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
   now fires an hour earlier in UTC terms through BST, and unchanged through GMT. This is the
   reading the schedule names imply; to go back to clock time, set
   `config.solid_queue.time_zone = nil`.
+- **Two recurring tasks due at the same second deadlock, and Solid Queue drops one silently.**
+  The scheduler enqueues each due task in turn; concurrent inserts into `solid_queue_jobs` /
+  `solid_queue_recurring_executions` race, InnoDB kills one, and `RecurringTask#enqueue` rescues
+  the `EnqueueError`, logs it and returns false — **no retry, no failed-job row**, so a lost
+  occurrence is indistinguishable from one that was never scheduled. Two jobs sharing 3am cost
+  roughly half of `pretix_reconcile_memberships`' runs before this was found.
+  - **Every daily schedule sits on its own minute, and none is divisible by 5**, because
+    `reimbursements_mailbox_poll` runs every 5 minutes and owns every such minute.
+    `recurring_schedule_test` enforces both, so a new job added "at 3am" fails the suite.
+  - `RecurringEnqueueRetry` (prepended in an initializer) retries a deadlocked enqueue up to
+    three times with jittered backoff. It is the net under the staggering, not a substitute.
+    Retrying is safe because `RecurringExecution.record` wraps the job row and the execution row
+    in one transaction — a deadlock rolls back both, and a first attempt that did commit is
+    caught by the unique index on `(task_key, run_at)`.
 - The queue schema is **schema-loaded, not migrated** (`db/queue_schema.rb`,
   `migrations_paths: db/queue_migrate`). `bin/rails generate solid_queue:update` copies any new
   gem migrations in — as of 1.6.0 it ships none, and our schema matches the gem's table set.

@@ -1,27 +1,29 @@
 daily_maintenance:
   class: DailyMaintenanceJob
   queue: default
-  schedule: at 2am every day
+  schedule: at 2:03am every day
 
 refresh_cloudflare_ips:
   class: RefreshCloudflareIpsJob
   queue: default
-  schedule: every 12 hours
+  # 01:13 / 13:13 rather than every 12 hours, which lands on minute 0 and races the
+  # every-5-minute mailbox poll and the hourly climate poll -- see recurring_schedule_test.
+  schedule: 13 1,13 * * *
 
 refresh_fuzzy_duplicates:
   class: RefreshFuzzyBothDuplicatesJob
   queue: default
-  schedule: at 4am every day
+  schedule: at 4:06am every day
 
 opportunity_digest:
   class: OpportunityDigestJob
   queue: default
-  schedule: at 9am every day
+  schedule: at 9:09am every day
 
 reimbursements_credentials_check:
   class: Reimbursements::CredentialsCheckJob
   queue: default
-  schedule: at 8am every day
+  schedule: at 8:08am every day
 
 # Nudges budget owners about pending claims awaiting their sign-off (the
 # owner-endorsement gate). Sent via the website mailer; the job no-ops when
@@ -29,14 +31,14 @@ reimbursements_credentials_check:
 reimbursements_owner_endorsement_digest:
   class: Reimbursements::OwnerEndorsementDigestJob
   queue: default
-  schedule: at 7am every day
+  schedule: at 7:07am every day
 
 # Storage limitation: clears the bank details of payees who have not claimed in
 # six months. No-ops on nights with nothing to clear, so a daily trigger is safe.
 reimbursements_bank_details_retention:
   class: Reimbursements::BankDetailsRetentionJob
   queue: default
-  schedule: at 3am every day
+  schedule: at 3:02am every day
 
 reimbursements_mailbox_poll:
   class: Reimbursements::MailboxPollJob
@@ -48,7 +50,7 @@ reimbursements_mailbox_poll:
 reimbursements_nightly_batch:
   class: Reimbursements::NightlyBatchJob
   queue: default
-  schedule: at 9pm every day
+  schedule: at 9:11pm every day
 
 
 # The crypt climate monitor's outdoor comparison line. Hourly, matching
@@ -78,4 +80,4 @@ climate_mailbox_poll:
 pretix_reconcile_memberships:
   class: Pretix::ReconcileMembershipsJob
   queue: default
-  schedule: at 3am every day
+  schedule: at 3:17am every day
