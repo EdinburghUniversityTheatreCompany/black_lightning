@@ -106,6 +106,24 @@ module Pretix
       raise Error, "pretix returned #{matches.size} customers for #{email}"
     end
 
+    # Whether the token can read this organizer's events at ALL.
+    #
+    # Exists to tell two identical-looking failures apart. pretix answers 403,
+    # never 404, for an event slug it will not show you -- it declines to leak
+    # whether the event exists -- so a shop that has not been built yet and a
+    # token that has lost its access arrive as the same status on the same
+    # endpoint. This is the only thing that separates them.
+    #
+    # False on an auth failure; false on anything else too, because an
+    # unconfirmed token is not a working one and the caller's safe direction is
+    # to treat the original failure as real.
+    def events_readable?
+      request(:get, "events/")
+      true
+    rescue Error
+      false
+    end
+
     # Every subevent (dated performance) of one event SERIES, following pagination.
     # +slug+ is the series slug, which is what Event#pretix_slug holds.
     #

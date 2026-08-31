@@ -370,4 +370,24 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     { id: id, name: { "en" => "Performance" }, event: "hamlet", active: true, is_public: true,
       date_from: date_from, date_to: nil, date_admission: nil, best_availability_state: 100 }
   end
+
+  test "events_readable? is true when the organizer's events can be listed" do
+    client, = build_client([ page([]) ])
+
+    assert client.events_readable?
+  end
+
+  test "events_readable? is false when the token is refused" do
+    # This is what separates a shop that does not exist yet from a dead token:
+    # pretix answers 403 for both on the per-event endpoint.
+    client, = build_client([ [ 403, { detail: "Permission denied." }.to_json ] ])
+
+    assert_not client.events_readable?
+  end
+
+  test "events_readable? is false rather than raising when pretix is unreachable" do
+    client, = build_client([ [ 500, "gateway error" ] ])
+
+    assert_not client.events_readable?, "an unconfirmed token is not a working one"
+  end
 end

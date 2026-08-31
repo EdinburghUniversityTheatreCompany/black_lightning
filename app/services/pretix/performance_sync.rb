@@ -71,17 +71,38 @@ module Pretix
       record_state(event, error: nil)
       result
     rescue Client::NotFoundError
-      # NOT a failure. Ticking the box before building the ticket shop is the
-      # natural order to work in, so this is a waiting state: it is recorded for
-      # the admin page to show, existing performances stand untouched, and
-      # nothing is raised -- otherwise every such event would alert every
-      # fifteen minutes for the length of its run.
+      missing_series(event)
+    rescue Client::AuthError
+      # pretix answers 403, not 404, for a slug it will not show you: it declines
+      # to leak whether the event exists. So an unbuilt shop looks exactly like a
+      # token that has lost its access, and only the token itself tells them
+      # apart. A working token means this event is simply not in pretix yet; a
+      # token that can read nothing is a real outage and must stay loud.
+      raise unless token_working?
+
+      missing_series(event)
+    end
+
+    private
+
+    # NOT a failure. Ticking the box before building the ticket shop is the
+    # natural order to work in, so this is a waiting state: it is recorded for
+    # the admin page to show, existing performances stand untouched, and nothing
+    # is raised -- otherwise every such event would alert every fifteen minutes
+    # for the length of its run.
+    def missing_series(event)
       record_state(event, error: "No pretix ticket shop found for \"#{event.pretix_slug}\" yet. " \
                                  "The dates will sync as soon as one exists.")
       MISSING_SERIES
     end
 
-    private
+    # Memoized per instance, and the job builds one sync per run, so a season of
+    # unbuilt shops costs a single extra request rather than one apiece.
+    def token_working?
+      return @token_working unless @token_working.nil?
+
+      @token_working = @client.events_readable?
+    end
 
     # update_columns, not update!: this runs every fifteen minutes per event, and
     # has_paper_trail would otherwise write a version for each pass. It is

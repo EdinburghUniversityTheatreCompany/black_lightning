@@ -850,12 +850,17 @@ from `Pretix::SyncPerformancesJob` every 15 minutes. Spec:
   it over (keeping its flags and note) instead of adding a second row beside it. A row at a
   *different* time is left alone: that is a matinee, a preview, or a genuine disagreement, none of
   which are the sync's to resolve.
+- **pretix answers `403`, never `404`, for an event slug it will not show you** — it declines to
+  leak whether the event exists. So *the shop is not built yet* and *the token has lost its access*
+  arrive as the same status on the same endpoint, and the only thing separating them is
+  `Client#events_readable?` (one organizer-level read, memoized per sync run). A working token
+  means the event is simply not in pretix yet; a token that can read nothing stays loud.
 - **A series that does not exist yet is a waiting state, not an error.** Ticking the box before
-  building the shop is the normal order to work in, so a `NotFoundError` is caught, written to
-  `events.pretix_sync_error` and shown as a banner on the admin event page — never raised, never
-  reported, or every such event would alert every 15 minutes for its whole run. `pretix_synced_at`
-  records the last good read. Both are written with `update_columns`: `update!` would file a
-  PaperTrail version per event per quarter hour.
+  building the shop is the normal order to work in, so it is written to `events.pretix_sync_error`
+  and shown as a banner on the admin event page — never raised, never reported, or every such
+  event would alert every 15 minutes for its whole run. `pretix_synced_at` records the last good
+  read. Both are written with `update_columns`: `update!` would file a PaperTrail version per
+  event per quarter hour.
 - **`cancelled` is a human statement.** pretix has no cancellation concept — `active: false` is
   equally *not on sale yet* — and a wrong CANCELLED on a public page is the worst error here. It
   is why a cancelled row outlives its subevent (keeping its id, so a restored date reattaches).

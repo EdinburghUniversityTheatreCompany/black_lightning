@@ -112,7 +112,14 @@ background-jobs section of CLAUDE.md).
 
 ### A series that does not exist yet is a waiting state
 
-Ticking the box before building the ticket shop is the natural order to work in, so a `404` is
+pretix answers **403, never 404**, for an event slug it will not show you — it declines to leak
+whether the event exists (confirmed against the live organizer: a garbage slug and a real-but-absent
+one give the identical 403). So an unbuilt shop and a revoked token arrive as the same status on the
+same endpoint, and `Client#events_readable?` — one organizer-level read, memoized per sync run — is
+what separates them: a working token means the event is simply not in pretix yet, while a token that
+can read nothing is a real outage and stays loud.
+
+Ticking the box before building the ticket shop is the natural order to work in, so that case is
 **not** a failure. It is caught, written to `events.pretix_sync_error`, and shown as a banner on
 the event's admin page; nothing is raised and nothing reported. Raising would alert every such
 event every fifteen minutes for the length of its run, and the producer would see a ticked box,

@@ -11,10 +11,14 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
   class FakeClient
     attr_reader :slugs
 
-    def initialize(rows: [], error: nil)
+    attr_reader :probes
+
+    def initialize(rows: [], error: nil, events_readable: true)
       @rows = rows
       @error = error
+      @events_readable = events_readable
       @slugs = []
+      @probes = 0
     end
 
     def subevents(slug, **)
@@ -22,6 +26,11 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
       raise @error if @error
 
       @rows
+    end
+
+    def events_readable?
+      @probes += 1
+      @events_readable
     end
   end
 
@@ -37,8 +46,8 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
       "active" => true, "is_public" => true, "best_availability_state" => 100 }.merge(overrides.stringify_keys)
   end
 
-  def sync(rows: [], error: nil)
-    client = FakeClient.new(rows: rows, error: error)
+  def sync(rows: [], error: nil, events_readable: true)
+    client = FakeClient.new(rows: rows, error: error, events_readable: events_readable)
     [ Pretix::PerformanceSync.new(client: client).call(@event), client ]
   end
 
@@ -331,5 +340,48 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     assert_equal 1, result.adopted
     assert_equal 1, result.created
     assert_equal 2, @event.event_occurrences.reload.count
+  end
+
+  # pretix answers 403, NOT 404, for an event slug it will not show you -- it
+  # declines to leak whether the event exists. So "the shop is not built yet"
+  # and "the token has lost its access" arrive as the same status, and the only
+  # thing that separates them is whether the token still works at all.
+
+  test "a 403 on a working token is the shop not existing yet, not a failure" do
+    result = nil
+    assert_nothing_raised do
+      result, = sync(error: Pretix::Client::AuthError.new("HTTP 403"), events_readable: true)
+    end
+
+    assert_predicate result, :missing_series?
+    assert @event.reload.pretix_sync_error.present?
+  end
+
+  test "a 403 from a token that can read nothing is a real auth failure" do
+    # The token has been revoked or its team stripped. That must stay loud: it
+    # takes the whole integration down, not one unbuilt shop.
+    assert_raises(Pretix::Client::AuthError) do
+      sync(error: Pretix::Client::AuthError.new("HTTP 403"), events_readable: false)
+    end
+  end
+
+  test "the token is probed once per run, not once per event" do
+    client = FakeClient.new(error: Pretix::Client::AuthError.new("HTTP 403"))
+    sync = Pretix::PerformanceSync.new(client: client)
+    other = FactoryBot.create(:show, slug: "macbeth", start_date: Date.new(2026, 3, 3),
+                                     end_date: Date.new(2026, 3, 7))
+
+    sync.call(@event)
+    sync.call(other)
+
+    assert_equal 1, client.probes, "one organizer probe per run, however many events are unbuilt"
+  end
+
+  test "a 403 leaves the existing performances standing" do
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
+
+    sync(error: Pretix::Client::AuthError.new("HTTP 403"))
+
+    assert_equal 1, @event.event_occurrences.reload.count
   end
 end
