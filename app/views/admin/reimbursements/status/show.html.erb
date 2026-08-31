@@ -20,6 +20,43 @@
   </ul>
 <% end %>
 
+<%= render CardComponent.new(title: "Notification recipients", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    Who gets each cost centre's nightly reminders — claims stuck awaiting approval, and the queue
+    ready to batch. Change it under that cost centre's Settings.
+  </p>
+  <ul class="flex flex-col gap-3">
+    <% @cost_centres.each do |cost_centre| %>
+      <% members = cost_centre.notification_role&.users.to_a %>
+      <% unpermitted = members.reject { |user| finance_user_ids.include?(user.id) } %>
+      <li class="text-sm">
+        <div class="flex items-center gap-2">
+          <%= render(BadgeComponent.new(type: members.any? ? :info : :danger, pill: true)
+                                   .with_content(members.any? ? pluralize(members.size, "member") : "No notification recipients")) %>
+          <span><strong><%= cost_centre.name %></strong></span>
+          <% if cost_centre.notification_role %>
+            <span class="text-gray-500"><%= cost_centre.notification_role.name %></span>
+          <% end %>
+        </div>
+        <% if members.empty? %>
+          <p class="text-xs text-danger mt-1">
+            Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
+            than marking the day handled, so nothing is lost — but nothing is sent either.
+          </p>
+        <% end %>
+        <% if unpermitted.any? %>
+          <p class="text-xs text-warning mt-1">
+            <%= unpermitted.map(&:full_name).to_sentence %>
+            <%= unpermitted.one? ? "is" : "are" %> in this role but
+            <strong>cannot open the finance screens</strong>, so the reminders will point at claims
+            they can't see. Grant them "Manage reimbursements finance" or remove them from the role.
+          </p>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
 <%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-2">
     Probe Microsoft Graph with the app's own credentials. Graph is the only

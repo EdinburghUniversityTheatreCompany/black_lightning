@@ -159,6 +159,52 @@ module Admin
         assert_includes response.body, "2026-06-30"
       end
 
+      # --- Notification recipients ------------------------------------------
+
+      test "flags a cost centre whose notification role has no members" do
+        ::Reimbursements::CostCentre.default.notification_role.users.clear
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body, "No notification recipients"
+      end
+
+      test "does not flag a cost centre whose notification role has members" do
+        @cost_centre.notification_role.users << users(:member)
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_not_includes response.body, "No notification recipients"
+      end
+
+      # users(:committee) is the file's stand-in for someone without the finance
+      # permission (see the gating tests above); users(:member) can't play that
+      # part here because setup grants it that very permission.
+      test "flags a notification-role member who lacks the finance permission" do
+        @cost_centre.notification_role.users << users(:committee)
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body, "cannot open the finance screens"
+        assert_includes response.body, users(:committee).full_name
+      end
+
+      test "does not flag a notification-role member who holds the finance permission" do
+        @cost_centre.notification_role.users << users(:member)
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_not_includes response.body, "cannot open the finance screens"
+      end
+
       test "run answers a turbo stream that updates the results in place" do
         sign_in @user
 
