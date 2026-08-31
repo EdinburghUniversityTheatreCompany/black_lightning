@@ -51,10 +51,10 @@ module Reimbursements
         @notifier
       end
 
-      # Operator recipients: a user holding the finance permission.
-      finance = Role.create!(name: "Business Manager")
-      finance.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
-      users(:member).add_role("Business Manager")
+      # Operator recipients come from the cost centre's notification role, not
+      # from the finance permission grid. The fixture role is empty on purpose,
+      # so every test that expects mail to go out says so here.
+      roles(:fringe_finance_admin).users << users(:member)
     end
 
     teardown do
@@ -158,23 +158,23 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
-    test "a second, non-default cost centre never re-reminds on the (cost-centre-unscoped) queues" do
-      # Expenses carry no cost-centre link yet (see the TODO(mysql) in
-      # deliver_reminders), so without this guard a second due cost centre would
-      # remind on the same global queues and double-send BOTH alerts to the same
-      # operators. It still records its own nightly run, just with no email.
+    test "a second cost centre with none of its own claims emails nothing and still records its run" do
+      # What survives of the old cost-centre-unscoped guard: a due centre with an
+      # empty queue must not re-remind on another centre's claims, and a reminder
+      # with nothing to say still counts as delivered, so its run-day is recorded.
       second = create_reimbursements_cost_centre(key: "extra", name: "Second Society", eusa_code: "X99",
                                                  receive_mailbox: "in@second.co.uk",
-                                                 send_mailbox: "send@second.co.uk")
+                                                 send_mailbox: "send@second.co.uk",
+                                                 notification_users: [ users(:committee) ])
       assert_not_equal CostCentre.default, second
       approved_expense
       pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_equal 1, mailer_calls(:approved_ready).size, "only the default cost centre's alert fires"
-      assert_equal 1, mailer_calls(:pending_reminder).size,
-                   "the pending reminder is behind the same guard, so it fires once too"
+      assert_equal [ [ users(:member).email ] ], mailer_calls(:approved_ready).map { |(_, k)| k[:recipients] },
+                   "the claims belong to the default centre, so only its recipients hear about them"
+      assert_equal [ [ users(:member).email ] ], mailer_calls(:pending_reminder).map { |(_, k)| k[:recipients] }
       assert_equal THURSDAY, second.reload.last_nightly_run_on,
                    "the second cost centre still records its own nightly run"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on,
@@ -312,7 +312,7 @@ module Reimbursements
 
     # --- Operator recipients ----------------------------------------------
 
-    test "operator emails go to the finance-permission holders" do
+    test "operator emails go to the cost centre's notification role" do
       approved_expense
 
       NightlyBatchJob.perform_now(today: THURSDAY)
@@ -331,16 +331,95 @@ module Reimbursements
       ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL")
     end
 
-    test "with no operator recipients the run still records and doesn't crash" do
-      # Strip the finance role set up above so operator_emails resolves to []
-      # (and no ENV override), the same as a fresh install with nobody granted.
-      Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance").destroy_all
+    test "an empty notification role sends nothing and does not record the run" do
+      # The old behaviour counted "nobody to email" as delivered, which recorded
+      # the run-day and lost the alert forever. Leaving it unrecorded means
+      # tomorrow's run tries again and keeps alarming until the role is filled.
+      roles(:fringe_finance_admin).users.clear
       approved_expense
 
-      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+      events = capture_honeybadger_events do
+        assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+      end
 
-      assert_empty @notifier.calls, "no recipients -> the email send is skipped"
+      assert_empty @notifier.calls, "no recipients -> nothing is even built"
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+      assert_includes events.map(&:first), "reimbursements.nightly_no_recipients"
+    end
+
+    test "REIMBURSEMENTS_OPERATOR_EMAIL still overrides an empty notification role" do
+      # The divert-everything switch must reach the send, not be cut off by the
+      # empty-role guard in front of it.
+      roles(:fringe_finance_admin).users.clear
+      ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = "ops@example.com"
+      approved_expense
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal [ "ops@example.com" ], mailer_calls(:approved_ready).sole.last[:recipients]
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    ensure
+      ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL")
+    end
+
+    # --- Per-cost-centre scoping ------------------------------------------
+
+    test "each due cost centre is reminded about only its own claims" do
+      termtime = create_reimbursements_cost_centre(
+        key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
+        notification_users: [ users(:committee) ], nightly_run_days: [ 4 ]
+      )
+      termtime_budget = create_reimbursements_budget(name: "Termtime props")
+      termtime_budget.update!(cost_centre: termtime)
+      budget.update!(cost_centre: CostCentre.default)
+
+      fringe_claim = approved_expense
+      termtime_claim = create_reimbursements_expense(person: payee, budget: termtime_budget,
+                                                     status: Status::APPROVED)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      ready = mailer_calls(:approved_ready)
+      assert_equal 2, ready.size
+
+      by_recipient = ready.to_h { |(_name, kwargs)| [ kwargs[:recipients].sort, kwargs[:expenses] ] }
+      fringe_rows = by_recipient.fetch([ users(:member).email ])
+      termtime_rows = by_recipient.fetch([ users(:committee).email ])
+
+      assert_equal [ fringe_claim.auto_number ], fringe_rows.map { |row| row[:auto_number] }
+      assert_equal [ termtime_claim.auto_number ], termtime_rows.map { |row| row[:auto_number] }
+    end
+
+    test "a claim whose budget has no cost centre falls to the default centre" do
+      budget.update!(cost_centre: nil)
+      approved_expense
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      ready = mailer_calls(:approved_ready).sole.last
+      assert_equal [ users(:member).email ], ready[:recipients]
+      assert_equal 1, ready[:expenses].size
+    end
+
+    test "a non-default cost centre reports on its own run-day" do
+      termtime = create_reimbursements_cost_centre(
+        key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
+        notification_users: [ users(:committee) ], nightly_run_days: [ 4 ]
+      )
+      # The default centre is NOT due today, so the old skip_unscoped_cost_centre
+      # guard would have silenced termtime entirely.
+      CostCentre.default.update!(nightly_run_days: [ 1 ], last_nightly_run_on: THURSDAY - 1)
+      termtime_budget = create_reimbursements_budget(name: "Termtime props")
+      termtime_budget.update!(cost_centre: termtime)
+      create_reimbursements_expense(person: payee, budget: termtime_budget, status: Status::APPROVED)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      ready = mailer_calls(:approved_ready).sole.last
+      assert_equal [ users(:committee).email ], ready[:recipients]
+      assert_equal THURSDAY, termtime.reload.last_nightly_run_on
     end
   end
 end
