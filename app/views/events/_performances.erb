@@ -5,40 +5,36 @@
 
 <% if schedule.kind != :none || details.any? %>
   <%= render CardComponent.new(title: schedule.kind == :none ? 'Details' : event.occurrence_label.pluralize) do %>
-    <% if schedule.kind == :weekly %>
-      <%# The Improverts. Listing forty Fridays says less than naming the pattern,
-          and the next few dates are what somebody actually needs. %>
-      <p class="font-medium">Every <%= schedule.weekday_name %> at <%= short_time(schedule.starts_at) %></p>
-
-      <% upcoming = schedule.occurrences.select { |o| o.on_date >= Date.current }.first(4) %>
-      <% if upcoming.any? %>
-        <p class="mt-1 text-sm text-gray-500">
-          Next: <%= upcoming.map { |o| date_span(o.on_date, nil) }.to_sentence %>
-        </p>
-      <% end %>
-    <% elsif schedule.blocks.any? %>
+    <%# One row per performance, rather than Event::Schedule's collapsed blocks.
+        A run with a midnight show rendered as two overlapping ranges ("Wed 23 -
+        Sat 26 September" and "Fri 25 - Sat 26 September") with the relaxed and
+        cancelled nights listed separately underneath, so the reader had to
+        cross-reference two lists to find out that the Friday has two shows and
+        one of them is cancelled. The blocks still drive the box office board,
+        where a fixed column has no room for a list. %>
+    <% if schedule.occurrences.any? %>
       <ul class="divide-y divide-gray-200">
-        <% schedule.blocks.each do |block| %>
-          <% first = block.occurrences.first %>
-          <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
-            <span class="font-medium"><%= date_span(block.starts_on, block.ends_on, long: true) %></span>
-            <span><%= time_span(first.starts_at, first.ends_at) %></span>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
+        <% schedule.occurrences.each do |occurrence| %>
+          <li data-performance class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2
+                     <%= 'text-gray-400' if occurrence.on_date < Date.current %>">
+            <span class="font-medium"><%= date_span(occurrence.on_date, nil, long: true) %></span>
+            <span><%= time_span(occurrence.starts_at, occurrence.effective_ends_at) %></span>
 
-    <%# Collapsing a run into a range loses which night is the relaxed one, which
-        is exactly what people scan this list for -- so the exceptions are named. %>
-    <% if schedule.exceptions.any? %>
-      <ul class="mt-3 space-y-1 text-sm">
-        <%# Cancelled is not one more access tag: it is the line that stops
-            somebody travelling to a dark theatre, so it carries the weight. %>
-        <% event.schedule_exception_lines.each do |label, dates| %>
-          <% cancelled = label == EventOccurrence::CANCELLED_LABEL %>
-          <li class="<%= 'text-primary font-medium' if cancelled %>">
-            <span class="font-medium"><%= cancelled ? label.upcase : label %>:</span>
-            <%= dates.map { |date| date_span(date, nil, long: true) }.to_sentence %>
+            <%# Cancelled outranks sold out: a night that is off is not a night
+                you missed, and showing both reads as two separate problems. %>
+            <% if occurrence.cancelled? %>
+              <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Cancelled</span>
+            <% elsif occurrence.sold_out? %>
+              <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Sold out</span>
+            <% end %>
+
+            <% occurrence.access_flag_labels.each do |label| %>
+              <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700"><%= label %></span>
+            <% end %>
+
+            <% if occurrence.note.present? %>
+              <span class="text-sm text-gray-500"><%= occurrence.note %></span>
+            <% end %>
           </li>
         <% end %>
       </ul>

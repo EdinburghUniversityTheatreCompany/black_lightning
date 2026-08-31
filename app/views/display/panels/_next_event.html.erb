@@ -26,7 +26,9 @@
           <p class="mt-4 text-4xl text-neutral-300">by <%= event.author %></p>
         <% end %>
 
-        <p class="mt-8 text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
+        <%# whitespace-pre-line, as on the What's On board: display_when separates a
+            run's two stretches with a newline. %>
+        <p class="mt-8 whitespace-pre-line text-5xl font-semibold text-white"><%= display_when(event, on: on) %></p>
 
         <%# display_price, not event.price: the value rendered is the one to test. %>
         <% if display_price(event).present? %>

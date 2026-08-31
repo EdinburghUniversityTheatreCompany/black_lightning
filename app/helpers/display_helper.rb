@@ -13,6 +13,16 @@ module DisplayHelper
   # Anything else, including every archive row with no performances at all, falls
   # back to the plain date range exactly as before.
   ##
+  # How many stretches the when-column can state before it stops fitting.
+  # Measured in Chrome against the real board, not guessed: the column renders
+  # 496px wide (31rem) and "Fri 25 - Sat 26 Sep, 11.45pm" is 428px, so a stretch
+  # is one unwrapped line. Two of them stack to 151px inside a row the title and
+  # image already make 444px tall, so the second line costs nothing. Even the
+  # longest string this can produce ("Wed 30 Sep - Sun 4 Oct, 10.30am -
+  # 11.30pm", ~700px, which wraps to two) leaves two stretches inside that row.
+  # Re-measure if the column width or text size changes.
+  WHEN_MAX_BLOCKS = 2
+
   def display_when(event, on: Date.current)
     schedule = Event::Schedule.for(event)
 
@@ -35,19 +45,34 @@ module DisplayHelper
   end
 
   ##
-  # No single run to state -- a festival whose opening hours change by the day, or
-  # a run with a matinee in it. The block covering today is what somebody standing
-  # in front of the screen can act on; failing that the next one still to come,
-  # because a run that has not opened yet has no current block and would otherwise
-  # print a bare date range with no time at all. Every block at once would not fit
-  # the column.
+  # No single run to state -- a run with a matinee or a late show in it, or a
+  # festival whose opening hours change by the day.
   #
-  # This is the one date-dependent case. A RUN states the whole run, as the
-  # poster does, however much of it has already played.
+  # Two blocks are BOTH stated, on a line each, and the result is the same
+  # whatever the date: an evening run with midnight shows on the Friday and
+  # Saturday has to advertise the midnight shows, in advance and on the night
+  # alike. Naming only the block covering today advertised one and hid the other,
+  # so somebody in the box office on the Saturday saw no sign of the late show;
+  # and folding both times into the one span ("Wed 23 - Sat 26 Sep, 7pm &
+  # 11.45pm") would instead claim a midnight show on all four nights.
+  #
+  # Past WHEN_MAX_BLOCKS the column cannot hold them, and the block covering
+  # today is what is left -- a festival's bare date range says nothing about its
+  # hours. That is the one date-dependent case; failing a current block it takes
+  # the next still to come, because a run that has not opened yet has none.
   ##
   def display_irregular_when(event, schedule, on)
-    block = schedule.blocks.find { |candidate| (candidate.starts_on..candidate.ends_on).cover?(on) } ||
-            schedule.blocks.find { |candidate| candidate.ends_on >= on }
+    blocks = schedule.blocks
+
+    # Nothing to state, or a half-entered list whose every date is behind us
+    # while the run says it is still on. Naming a date in the past is worse than
+    # naming the run -- the same rule display_run_when applies to a single run.
+    return display_date_range(event) if blocks.empty? || blocks.all? { |block| block.ends_on < on }
+
+    return blocks.map { |block| display_block_when(block) }.join("\n") if blocks.size <= WHEN_MAX_BLOCKS
+
+    block = blocks.find { |candidate| (candidate.starts_on..candidate.ends_on).cover?(on) } ||
+            blocks.find { |candidate| candidate.ends_on >= on }
 
     block ? display_block_when(block) : display_date_range(event)
   end
