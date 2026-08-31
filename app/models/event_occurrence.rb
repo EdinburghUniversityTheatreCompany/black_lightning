@@ -15,18 +15,23 @@
 # Table name: event_occurrences
 # Database name: primary
 #
-#  id           :bigint           not null, primary key
-#  access_flags :json
-#  ends_at      :datetime
-#  note         :string(255)
-#  starts_at    :datetime         not null
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
-#  event_id     :integer          not null
+#  id                 :bigint           not null, primary key
+#  access_flags       :json
+#  admission_at       :datetime
+#  cancelled          :boolean
+#  ends_at            :datetime
+#  note               :string(255)
+#  sold_out           :boolean
+#  starts_at          :datetime         not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  event_id           :integer          not null
+#  pretix_subevent_id :bigint
 #
 # Indexes
 #
 #  index_event_occurrences_on_event_id_and_starts_at  (event_id,starts_at)
+#  index_event_occurrences_on_pretix_subevent_id      (pretix_subevent_id) UNIQUE
 #
 # Foreign Keys
 #
@@ -90,6 +95,12 @@ class EventOccurrence < ApplicationRecord
     access_flags.include?(flag.to_s)
   end
 
+  # Nullable columns, like access_flags above: every row predating the pretix
+  # sync reads back nil, and no view should have to know that.
+  def sold_out? = super || false
+
+  def cancelled? = super || false
+
   # The written labels for what this occurrence is flagged as, in the constant's
   # order rather than the order they happen to be stored in.
   def access_flag_labels
@@ -115,10 +126,21 @@ class EventOccurrence < ApplicationRecord
     starts_at + event.duration_minutes.minutes
   end
 
+  # pretix states an admission time per date; we state one offset for the whole
+  # run. The specific one wins, so a synced press night with earlier doors is not
+  # overwritten by the event-wide answer.
   def doors_open_at
+    return admission_at if admission_at.present?
     return nil if starts_at.blank? || event&.doors_open_minutes_before.blank?
 
     starts_at - event.doors_open_minutes_before.minutes
+  end
+
+  # Whether Pretix::PerformanceSync owns this row. A row with no subevent id was
+  # typed by hand -- a preview, a get-in, a schools matinee not sold through the
+  # shop -- and the sync never reads, updates or deletes it.
+  def pretix_synced?
+    pretix_subevent_id.present?
   end
 
   private
