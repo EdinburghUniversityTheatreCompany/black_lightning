@@ -29,9 +29,6 @@ module Pretix
     # more costly direction of this error.
     AVAILABLE_STATE = 100
 
-    # The only columns this sync owns. Everything else on the row is a person's.
-    SYNCED_ATTRIBUTES = %i[starts_at ends_at admission_at sold_out].freeze
-
     Result = Data.define(:created, :updated, :destroyed, :kept, :skipped, :emptied_series) do
       def emptied_series? = emptied_series
 
@@ -130,6 +127,9 @@ module Pretix
       :destroyed
     end
 
+    # The only four columns this sync owns. Everything else on the row --
+    # access_flags, note, cancelled -- is the producer's and is never assigned
+    # here, on create or on update.
     def attributes_from(row)
       { starts_at: parse_time(row["date_from"]),
         ends_at: parse_time(row["date_to"]),
