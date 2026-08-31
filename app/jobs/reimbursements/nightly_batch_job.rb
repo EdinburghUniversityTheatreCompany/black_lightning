@@ -5,7 +5,8 @@ module Reimbursements
   # (CostCentre#nightly_due?, which also de-dupes so a run-day fires once).
   #
   # It is a REMINDER job, not a gate: it submits nothing, builds no batch and
-  # holds nothing back. For the default cost centre it sends, independently:
+  # holds nothing back. Per due cost centre, over that centre's own claims (an
+  # expense resolves its centre through its budget), it sends, independently:
   #   1. a pending reminder — Pending submissions stuck awaiting approval
   #      (>PENDING_REMINDER_DAYS); these never reach the Approved queue.
   #   2. an approved reminder — everything in the Approved queue, ready to be
@@ -23,9 +24,11 @@ module Reimbursements
   # re-sends it every night. That is the intended direction — duplicates over
   # silence — so don't "fix" it by loosening the .all? in #deliver_reminders.
   #
-  # Operator recipients: the users holding the finance permission
-  # (`:manage, :reimbursements_finance`), overridable with the
-  # REIMBURSEMENTS_OPERATOR_EMAIL env var. See #operator_emails.
+  # Operator recipients: the members of the cost centre's own notification role
+  # (CostCentre#notification_role), resolved through NotificationRecipients,
+  # which keeps the whole-portal REIMBURSEMENTS_OPERATOR_EMAIL override ahead of
+  # it. A centre whose role is empty sends nothing, warns, and does NOT record
+  # the run-day, so it keeps alarming rather than going quiet.
   #
   # A +dry_run+ logs the same decisions without sending email or recording the
   # run — so it can be triggered safely to preview.
@@ -68,54 +71,77 @@ module Reimbursements
       @graph ||= graph_builder.call
     end
 
+    # Recipients are resolved BEFORE anything is built, so an empty notification
+    # role is reported as the configuration gap it is rather than discovered
+    # halfway through. Crucially the run-day is NOT recorded in that case: the
+    # old code returned "delivered" for no recipients, which marked the day
+    # handled forever and lost the alert. Leaving it unrecorded means tomorrow's
+    # run tries again and keeps alarming until somebody fills the role in.
     def run_for(cost_centre, dry_run:, today:)
       unless cost_centre.nightly_due?(today)
         Rails.logger.info("Nightly: #{cost_centre.key} not due on #{today} — skipping")
         return
       end
 
-      delivered = deliver_reminders(cost_centre, dry_run: dry_run, today: today)
+      recipients = NotificationRecipients.for(cost_centre)
+      return warn_no_recipients(cost_centre) if recipients.empty?
+
+      delivered = deliver_reminders(cost_centre, recipients, dry_run: dry_run, today: today)
       record_run(cost_centre, today) if delivered && !dry_run
     rescue StandardError => e
-      handle_failure(cost_centre, e, today, dry_run)
+      handle_failure(cost_centre, recipients, e, today, dry_run)
+    end
+
+    def warn_no_recipients(cost_centre)
+      Rails.logger.warn("Nightly: #{cost_centre.key} has no notification recipients — " \
+                        "its reminders went nowhere. Add people to the " \
+                        "#{cost_centre.notification_role&.name.inspect} role.")
+      Honeybadger.event("reimbursements.nightly_no_recipients",
+                        cost_centre: cost_centre.key,
+                        notification_role: cost_centre.notification_role&.name)
+      nil
     end
 
     # Both reminders must be ATTEMPTED even when the first fails to send. The
     # array literal is what enforces that: `a && b` would short-circuit and
     # silently drop the approved reminder whenever Graph fluffed the pending
     # one, so don't rewrite this into a boolean expression.
-    #
-    # TODO(mysql): scope both queues per cost centre via budget->cost_centre.
-    # Expenses carry no cost-centre link, so BOTH the Pending and Approved
-    # queues are global; a second due cost centre reminding on them would send
-    # the same operators a duplicate of each. Until the link exists, only the
-    # default cost centre reports.
-    def deliver_reminders(cost_centre, dry_run:, today:)
-      return skip_unscoped_cost_centre(cost_centre, today) unless cost_centre == default_cost_centre
-
-      expenses = store.expenses
-      [ remind_stale_pending(cost_centre, expenses.select(&:pending?),
+    def deliver_reminders(cost_centre, recipients, dry_run:, today:)
+      claims = claims_for(cost_centre)
+      [ remind_stale_pending(cost_centre, recipients, claims.select(&:pending?),
                              today: today, dry_run: dry_run),
-        remind_approved(cost_centre, expenses.select(&:approved?),
+        remind_approved(cost_centre, recipients, claims.select(&:approved?),
                         today: today, dry_run: dry_run) ].all?
     end
 
-    # Nothing to do for a non-default centre — but the guard rides on the
-    # DEFAULT centre's schedule, and nothing enforces that its run-days cover
-    # everyone else's. On a day only this centre is due, the whole job goes
-    # quiet while still recording the run, so say so loudly rather than at info.
-    def skip_unscoped_cost_centre(cost_centre, today)
-      if default_cost_centre.nightly_due?(today)
-        Rails.logger.info("Nightly: #{cost_centre.key} has no cost-centre-scoped queue yet — nothing to remind about")
-      else
-        Rails.logger.warn("Nightly: #{cost_centre.key} is due but #{default_cost_centre.key} is not, " \
-                          "so NO reminder goes out today — widen the default centre's run-days")
-      end
-      true
+    # --- Which claims belong to which cost centre --------------------------
+    # An expense carries no cost-centre column; it resolves one through its
+    # budget. store.expenses already `includes(:budget)`, so this costs no extra
+    # query however many centres there are — and it is memoized, so the whole
+    # job reads the ledger once rather than once per centre.
+
+    def claims_for(cost_centre)
+      claims_by_cost_centre_id.fetch(cost_centre.id, [])
     end
 
-    def default_cost_centre
-      @default_cost_centre ||= CostCentre.default
+    # A claim whose budget names no cost centre falls to the DEFAULT centre
+    # rather than to nobody. Same leniency as DatabaseStore#in_year (a row with
+    # no financial year belongs to the year being viewed) and the reconcile
+    # matcher (a budget with no cost centre still matches). The asymmetry that
+    # governs it: a claim reminded to the wrong centre's admins is visible and
+    # correctable, whereas a claim reminded to nobody leaves a producer waiting
+    # indefinitely with nothing on screen to explain it. Prefer the wrong
+    # reminder over silence.
+    #
+    # NOT memoized with ||=: the store read can raise (that is what drives
+    # handle_failure), and a rescued raise must not be cached as an empty
+    # result for the centres that follow.
+    def claims_by_cost_centre_id
+      return @claims_by_cost_centre_id if defined?(@claims_by_cost_centre_id)
+
+      default_id = CostCentre.default&.id
+      @claims_by_cost_centre_id =
+        store.expenses.group_by { |expense| expense.budget&.cost_centre_id || default_id }
     end
 
     # --- Stale pending reminder -------------------------------------------
@@ -123,7 +149,7 @@ module Reimbursements
     # Returns true when nothing needed sending or the alert went out; false only
     # when a send was attempted and failed (see #notify). run_for gates the
     # run-day record on it, so "nothing to say" must not read as a failure.
-    def remind_stale_pending(cost_centre, pending, today:, dry_run:)
+    def remind_stale_pending(cost_centre, recipients, pending, today:, dry_run:)
       cutoff = today.to_time(:utc) - PENDING_REMINDER_DAYS.days
       stale = pending.select { |e| e.submitted_at && e.submitted_at <= cutoff }
                      .sort_by(&:submitted_at)
@@ -136,7 +162,7 @@ module Reimbursements
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
       return true if dry_run
 
-      notify(cost_centre) do |emailer, to|
+      notify(cost_centre, recipients) do |emailer, to|
         emailer.pending_reminder(recipients: to, rows: rows, run_date: run_date(today),
                                  threshold_days: PENDING_REMINDER_DAYS)
       end
@@ -157,7 +183,7 @@ module Reimbursements
     # only hid the other claims from the operator.
     #
     # Same return contract as #remind_stale_pending.
-    def remind_approved(cost_centre, approved, today:, dry_run:)
+    def remind_approved(cost_centre, recipients, approved, today:, dry_run:)
       if approved.empty?
         Rails.logger.info("Nightly: no approved expenses for #{cost_centre.key}")
         return true
@@ -170,7 +196,7 @@ module Reimbursements
                         "(#{flagged} flagged) for #{cost_centre.key}")
       return true if dry_run
 
-      notify(cost_centre) do |emailer, to|
+      notify(cost_centre, recipients) do |emailer, to|
         emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
                                run_date: run_date(today),
                                next_run_day: next_run_day(cost_centre, today))
@@ -199,12 +225,20 @@ module Reimbursements
 
     # --- Outcomes ----------------------------------------------------------
 
-    def handle_failure(cost_centre, error, today, dry_run)
+    # +recipients+ can be nil: the raise may have happened before they resolved.
+    # There is nowhere to send a failure email in that case, and the report has
+    # already gone to Honeybadger.
+    def handle_failure(cost_centre, recipients, error, today, dry_run)
       log_and_notify("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}", error,
                      context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
       return if dry_run
 
-      notify(cost_centre) { |emailer, to| emailer.failure(recipients: to, error_text: error.message, run_date: run_date(today)) }
+      recipients = Array(recipients).compact_blank
+      return if recipients.empty?
+
+      notify(cost_centre, recipients) do |emailer, to|
+        emailer.failure(recipients: to, error_text: error.message, run_date: run_date(today))
+      end
     end
 
     # --- Helpers -----------------------------------------------------------
@@ -213,21 +247,14 @@ module Reimbursements
     # A Graph failure must never break the nightly run (or trip the surrounding
     # rescue into sending a spurious failure email), so it's rescued + logged.
     #
-    # Returns true when the alert was actually sent (or deliberately skipped —
-    # no operator recipients configured is a config gap, not a delivery
-    # failure, and must not block the run from being recorded), false when a
-    # send was attempted and failed. run_for gates record_run on EVERY reminder
-    # returning true: recording a run whose alert silently failed to send would
-    # lose that alert forever, since nightly_due? would then treat the run-day
-    # as already handled. The cost of the conjunction is that a run where one
-    # reminder sent and the other failed re-sends the first one tomorrow — the
-    # right trade, since these alerts are deliberately at-least-once.
-    def notify(cost_centre)
-      recipients = operator_emails
-      if recipients.empty?
-        Rails.logger.warn("Nightly: no operator recipients configured — email skipped")
-        return true
-      end
+    # Returns true when the alert was sent, false when a send was attempted and
+    # failed. run_for gates record_run on EVERY reminder returning true:
+    # recording a run whose alert silently failed to send would lose that alert
+    # forever, since nightly_due? would then treat the run-day as already
+    # handled. The cost of the conjunction is that a run where one reminder sent
+    # and the other failed re-sends the first one tomorrow — the right trade,
+    # since these alerts are deliberately at-least-once.
+    def notify(cost_centre, recipients)
       yield(notifier(cost_centre), recipients)
       true
     rescue GraphAuth::AuthError => e
@@ -255,27 +282,6 @@ module Reimbursements
 
     def notifier(cost_centre)
       notifier_builder.call(cost_centre: cost_centre, graph: graph)
-    end
-
-    # The finance operators: users granted the finance permission via the grid,
-    # or a single override address for a shared finance inbox.
-    # Memoized: notify runs at least twice per job, and this is a three-table
-    # permission join each time. Global today, so one ivar for the whole run is
-    # right — revisit if recipients ever become per-cost-centre.
-    def operator_emails
-      return @operator_emails if defined?(@operator_emails)
-
-      @operator_emails = compute_operator_emails
-    end
-
-    def compute_operator_emails
-      override = ENV["REIMBURSEMENTS_OPERATOR_EMAIL"].presence
-      return [ override ] if override
-
-      Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance")
-                       .includes(roles: :users)
-                       .flat_map(&:roles).flat_map(&:users).uniq
-                       .map(&:email).compact_blank
     end
 
     def run_date(today)
