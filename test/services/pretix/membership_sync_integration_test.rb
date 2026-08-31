@@ -71,8 +71,8 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     http = FakeHttp.new([
       page([ customer_row ]),
       # The earliest date_start is the canonical record; the other is collapsed.
-      page([ membership_row(id: 21, date_start: "2026-09-15T00:00:00+01:00", date_end: "2026-10-01T00:00:00+01:00"),
-             membership_row(id: 22, date_start: "2022-09-01T00:00:00+01:00", date_end: "2026-10-01T00:00:00+01:00") ]),
+      page([ membership_row(id: 21, date_start: "2026-09-15T00:00:00+01:00", date_end: 6.weeks.from_now.iso8601),
+             membership_row(id: 22, date_start: "2022-09-01T00:00:00+01:00", date_end: 6.weeks.from_now.iso8601) ]),
       [ 200, membership_row(id: 22).to_json ],
       [ 200, membership_row(id: 21).to_json ]
     ])
@@ -153,7 +153,11 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     { "identifier" => CUSTOMER, "email" => @user.email, "external_identifier" => @user.email }
   end
 
-  def membership_row(id:, date_start: "2025-09-15T00:00:00+01:00", date_end: "2026-08-31T00:00:00+01:00")
+  # date_end is RELATIVE, never a literal. A hardcoded one silently becomes
+  # "already expired" on the day it passes, and the sync then correctly reports
+  # :unchanged while the test still expects :expired. The old literal was
+  # 2026-08-31, and that is exactly what happened on 2026-08-31.
+  def membership_row(id:, date_start: "2025-09-15T00:00:00+01:00", date_end: 1.year.from_now.iso8601)
     { "id" => id, "customer" => CUSTOMER, "membership_type" => Pretix::Settings::MEMBERSHIP_TYPE_ID,
       "date_start" => date_start, "date_end" => date_end, "testmode" => false }
   end
