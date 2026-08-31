@@ -736,9 +736,12 @@ per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
   Pro ships no weight 500 and `font-medium` is this codebase's most-used weight, so Pro would
   render all of those at 400. Source Sans 3 is the same typeface renamed upstream, in a variable
   build covering 200–900. Its metrics match Pro's, so the measured figures above still hold.
-- **`OnThisDay` joins `image_attachment`** because `fetch_image` *attaches* a placeholder, so "has
-  real artwork" must be asked of the database first. `eager_load` adds the preload alongside that
-  join; on its own it outer-joins and silently drops the guard.
+- **`OnThisDay` filters on the BLOB'S FILENAME (`Event.with_uploaded_image`), not on having an
+  attachment.** `fetch_image` *attaches* a generated placeholder, so every archive event whose page
+  anyone has ever opened carries one — `joins(:image_attachment)` answers "has been looked at", not
+  "has a poster", and put the placeholders back on the screen. Placeholder blobs are the ones under
+  `ActiveStorageHelper::PREFIX`. `eager_load` adds the preload alongside that join; on its own it
+  outer-joins and silently drops the guard.
 - **Curtain times come from `EventOccurrence`, and only when someone entered them.** `display_when`
   prints "Fri 2 Oct, 7.30pm" from `Event#next_occurrence_at`, and falls back to the bare date range
   for an event with no occurrences — which is every archive row.

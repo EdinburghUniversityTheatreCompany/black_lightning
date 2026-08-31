@@ -202,6 +202,20 @@ class Event < ApplicationRecord
   scope :future, -> { where([ "end_date >= ?", Date.current ]) }
   scope :this_academic_year, -> { where("end_date >= ?", ApplicationController.helpers.start_of_year).where("start_date < ?", ApplicationController.helpers.next_year_start) }
 
+  # Artwork somebody actually uploaded, as opposed to an attachment of any kind.
+  # The two are not the same: fetch_image *attaches* a generated placeholder, so
+  # every archive event whose page has ever been rendered carries an attachment
+  # whether or not it has a poster. What separates them is the filename --
+  # ActiveStorageHelper stores its placeholders under a reserved prefix, which
+  # is also how get_file_attached_hint tells them apart. sanitize_sql_like
+  # escapes the underscores in that prefix, which LIKE would otherwise read as
+  # single-character wildcards.
+  scope :with_uploaded_image, -> {
+    joins(image_attachment: :blob)
+      .where.not("active_storage_blobs.filename LIKE ?",
+                 "#{sanitize_sql_like("#{ActiveStorageHelper::PREFIX}/")}%")
+  }
+
   def this_academic_year?
     end_date >= ApplicationController.helpers.start_of_year && start_date < ApplicationController.helpers.next_year_start
   end

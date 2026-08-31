@@ -53,9 +53,9 @@ module Display
              .where("end_date < ?", @on - 1.year)
              .where("DATEDIFF(end_date, start_date) <= ?", MAX_RUN_DAYS)
              # fetch_image attaches a generated placeholder, so "has artwork" has
-             # to be asked of the database, before anything calls it. This join is
-             # what asks.
-             .joins(:image_attachment)
+             # to be asked of the database, before anything calls it -- and asked
+             # of the blob's filename, since the placeholder is an attachment too.
+             .with_uploaded_image
              # reorder, not order: Event's default_scope is end_date DESC, so
              # order would append and "oldest" would mean something else. id
              # breaks ties, because the rotation walks this list by position and

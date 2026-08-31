@@ -100,6 +100,23 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
     assert_not Display::Panels::OnThisDay.new.available?
   end
 
+  test "excludes an event whose only artwork is a generated placeholder" do
+    # fetch_image *attaches* the placeholder, so any archive page anyone has
+    # ever opened carries an attachment. Asking only whether one exists answers
+    # "has this been looked at", not "has a poster".
+    show = archive_show(years_ago: 8, attach_image: false)
+    show.fetch_image
+
+    assert_not Display::Panels::OnThisDay.new.available?
+  end
+
+  test "a real upload still counts once a placeholder exists for another event" do
+    archive_show(years_ago: 8, attach_image: false).fetch_image
+    uploaded = archive_show(years_ago: 9)
+
+    assert_equal [ uploaded.id ], 2.times.map { rendered_event_id }.uniq
+  end
+
   test "excludes a private event" do
     archive_show(years_ago: 8, is_public: false)
 
