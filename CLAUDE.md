@@ -361,8 +361,23 @@ survive as historical import provenance and are never written. Spec + plan in
     nightly, which is the intended direction (duplicates over silence). Both reminders are
     always *attempted*: `deliver_reminders` collects them into an array and calls `.all?`
     precisely so the calls cannot short-circuit. Don't rewrite it into a boolean expression.
-  - Both reminders sit behind the default-cost-centre guard because expenses carry no
-    cost-centre link yet, so both queues are global and a second due centre would double-send.
+  - **Recipients are the cost centre's own `notification_role`, not the finance permission**
+    (`Reimbursements::NotificationRecipients`). That permission still gates every finance
+    SCREEN globally — a Fringe admin can open a termtime claim, they just aren't emailed about
+    it. `REIMBURSEMENTS_OPERATOR_EMAIL` stays whole-portal and overrides both. `roles.id` is a
+    legacy INTEGER primary key, so `notification_role_id` is `:integer`.
+  - **An empty role does NOT record the run-day.** The old code returned "delivered" for no
+    recipients, which marked the day handled forever and lost the alert; it now warns, fires a
+    `reimbursements.nightly_no_recipients` Honeybadger event, and retries tomorrow. Integration
+    Status badges it, and also flags role members lacking the finance permission.
+  - **A claim whose budget names no cost centre falls to the DEFAULT centre**, not to nobody
+    (`claims_by_cost_centre_id`) — the same leniency as `DatabaseStore#in_year`. A claim
+    reminded to the wrong admins is visible and correctable; one reminded to nobody leaves a
+    producer waiting. Build Batch's emails stay **clicker-only**, deliberately.
+  - **Don't make the second cost centre a fixture.** Measured: it makes `CostCentre.default`
+    (`order(:id).first`) resolve to whichever label `FixtureSet.identify` hashes lower, and it
+    deletes the one-centre world the reconcile tests deliberately pin as a business rule. The
+    5 hand-built sites go through `create_reimbursements_cost_centre` instead.
 - **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
   shared mailbox via `MailboxClient` (Graph app-only auth, scoped by an
   ApplicationAccessPolicy). Every inbound receipt becomes a **blank DRAFT** (subject as the

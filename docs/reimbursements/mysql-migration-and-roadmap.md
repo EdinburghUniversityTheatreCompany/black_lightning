@@ -81,11 +81,13 @@ just after the cutover.
 - **Mailbox idempotency key.** Today the poll marks a message read first to avoid re-creating an
   expense on a failed move (mitigation only). The real fix stamps the source message id on the
   expense and skips if seen. Needs a column; free once on MySQL.
-- **Per-cost-centre expense scoping.** Expenses currently have no cost-centre link, so the nightly
-  and Build Batch operate on the global Approved set (fine while only Fringe F40 is live). Add
-  `Budget belongs_to :cost_centre` so an expense resolves its centre via its budget; then scope the
-  nightly alert, Build Batch, and Reconcile per centre. This is the `TODO(mysql)` in
-  `nightly_batch_job.rb`. Required before a second cost centre (termtime BED) goes live.
+- **Per-cost-centre expense scoping.** *Partly done (2026-08-31.)* The nightly reminder is scoped:
+  `NightlyBatchJob` buckets claims by `budget -> cost_centre` and reminds each centre's own
+  `notification_role`, so the `TODO(mysql)` hard skip of non-default centres is gone. **Build Batch
+  and Reconcile are still global**, and expenses still carry no cost-centre column of their own —
+  they resolve one through their budget, which needs no backfill and no sync-on-change. Design and
+  the decisions behind it:
+  `docs/superpowers/specs/2026-08-31-per-cost-centre-finance-notifications-design.md`.
 - **Quota-only fixes become moot:** the cache dogpile on a miss and the "serving stale backup
   data" banner both disappear when reads are local. (The AI-check cache-bust storm listed here
   originally is moot twice over — the AI checker was removed on 2026-07-31.)
