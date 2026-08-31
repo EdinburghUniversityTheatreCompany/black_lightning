@@ -3,16 +3,6 @@ module DisplayHelper
     date_span(event.start_date, event.end_date)
   end
 
-  ##
-  # What to print in the "when" column: the shape of the WHOLE run, as the poster
-  # states it, not the part still to come.
-  #
-  # A five-night run is one range rather than the next night of five. A year of
-  # Fridays is "Every Friday" -- its raw range reads "Sep 1 - Jun 30", which
-  # tells nobody when to turn up and is the string this method exists to avoid.
-  # Anything else, including every archive row with no performances at all, falls
-  # back to the plain date range exactly as before.
-  ##
   # How many stretches the when-column can state before it stops fitting.
   # Measured in Chrome against the real board, not guessed: the column renders
   # 496px wide (31rem) and "Fri 25 - Sat 26 Sep, 11.45pm" is 428px, so a stretch
@@ -23,6 +13,16 @@ module DisplayHelper
   # Re-measure if the column width or text size changes.
   WHEN_MAX_BLOCKS = 2
 
+  ##
+  # What to print in the "when" column: the shape of the WHOLE run, as the poster
+  # states it, not the part still to come.
+  #
+  # A five-night run is one range rather than the next night of five. A year of
+  # Fridays is "Every Friday" -- its raw range reads "Sep 1 - Jun 30", which
+  # tells nobody when to turn up and is the string this method exists to avoid.
+  # Anything else, including every archive row with no performances at all, falls
+  # back to the plain date range exactly as before.
+  ##
   def display_when(event, on: Date.current)
     schedule = Event::Schedule.for(event)
 
