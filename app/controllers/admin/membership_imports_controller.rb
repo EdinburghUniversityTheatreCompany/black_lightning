@@ -182,7 +182,7 @@ class Admin::MembershipImportsController < AdminController
       existing_user.update(last_name: row[:last_name])
     end
 
-    unless existing_user.has_role?(:member)
+    unless existing_user.member?
       existing_user.add_role(:member)
       existing_user.send_welcome_email
     end

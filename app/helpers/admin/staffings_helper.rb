@@ -10,12 +10,12 @@ module Admin::StaffingsHelper
 
     case job&.downcase
     when "committee rep", "committee", "committee representative", "cr"
-      unless user.has_role?("Committee")
+      unless user.committee?
         append_to_flash(:error, "You are not on committee. If you think this is a mistake, please contact the Secretary.")
         can_sign_up = false
       end
     when "duty manager", "dm", "dungeon master"
-      unless user.has_role?("DM Trained") || user.has_role?("Committee")
+      unless user.has_role?("DM Trained") || user.committee?
         append_to_flash(:error, "You are not DM Trained. If you think this is a mistake, please contact the Theatre Manager.")
         can_sign_up = false
       end

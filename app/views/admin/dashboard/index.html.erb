@@ -31,7 +31,7 @@
         <%= render CollapsibleSectionComponent.new(title: "Resources", flush: true, start_open: true) do %>
           <%= render "resources_widget" %>
         <% end %>
-        <% if current_user.has_role?("Committee") || can?(:manage, Admin::Staffing) %>
+        <% if current_user.committee? || can?(:manage, Admin::Staffing) %>
           <%= render CollapsibleSectionComponent.new(title: "Committee Staffing", flush: true, start_open: true) do %>
             <%= render "committee_staffing_widget" %>
           <% end %>

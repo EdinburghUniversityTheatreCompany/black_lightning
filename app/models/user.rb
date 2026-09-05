@@ -915,6 +915,20 @@ class User < ApplicationRecord
     end
   end
 
+  # Facts about the person, read from the role. These are NOT permissions: "who are the
+  # members" drives mailing lists, the membership report and the annual archive, and a grid
+  # checkbox on some other role must not be able to make its holders members by accident.
+  # What a member or committee member MAY DO is granted through the permission grid instead.
+  # A life member is deliberately not a member here — only pretix treats them as one, for
+  # ticket discounts (Pretix::MembershipSync::ENTITLING_ROLES).
+  def member?
+    has_role?(:member)
+  end
+
+  def committee?
+    has_role?("Committee")
+  end
+
   def activate
     add_role :member
   end

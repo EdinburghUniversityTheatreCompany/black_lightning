@@ -8,7 +8,7 @@ module LabelHelper
 
         if show_member_status_when != :never
             is_life_member = user.has_role?("life member")
-            is_eutc_member = user.has_role?("member")
+            is_eutc_member = user.member?
 
             show_member_status = case show_member_status_when
             when :positive; is_eutc_member

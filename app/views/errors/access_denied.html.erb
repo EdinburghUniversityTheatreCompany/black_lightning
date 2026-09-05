@@ -4,7 +4,7 @@
   <br>
   <% if current_user.present? %>
     <p>
-      <% if current_user.has_role?('Member') %>
+      <% if current_user.member? %>
 
         If you've recently renewed your membership, you might need to <%= button_to "log out", destroy_user_session_path, method: :delete, class: "#{btn_classes(:link)} p-0 align-baseline", form: { style: "display:contents" } %> and log back in again to regain access to members only pages.
 

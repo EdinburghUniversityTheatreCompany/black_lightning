@@ -57,7 +57,7 @@ class MembershipImport
     if row[:user_id].present?
       user = User.find_by(id: row[:user_id])
       if user
-        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        bucket = user.member? ? :already_active : :activate_by_id
         return [ bucket, user, :user_id ]
       end
     end
@@ -66,7 +66,7 @@ class MembershipImport
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])
       if user
-        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        bucket = user.member? ? :already_active : :activate_by_id
         return [ bucket, user, :student_id ]
       end
     end
@@ -75,7 +75,7 @@ class MembershipImport
     if row[:associate_id].present?
       user = User.find_by(associate_id: row[:associate_id])
       if user
-        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        bucket = user.member? ? :already_active : :activate_by_id
         return [ bucket, user, :associate_id ]
       end
     end
@@ -84,7 +84,7 @@ class MembershipImport
     if row[:email].present?
       user = User.find_by(email: row[:email])
       if user
-        bucket = user.has_role?(:member) ? :already_active : :activate_by_email
+        bucket = user.member? ? :already_active : :activate_by_email
         return [ bucket, user, nil ]
       end
     end
