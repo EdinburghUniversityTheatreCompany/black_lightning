@@ -82,3 +82,11 @@ access_committee:
   id: 15
   action: access
   subject_class: committee
+
+# Read and index every proposal once its call's submission deadline has passed. Replaced the
+# has_role?("Proposal Checker") || has_role?("Committee") check in Ability; given to committee
+# so the fixture role keeps the access the production role is migrated to.
+review_proposals:
+  id: 16
+  action: review
+  subject_class: Admin::Proposals::Proposal

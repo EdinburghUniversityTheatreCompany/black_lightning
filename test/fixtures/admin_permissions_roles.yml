@@ -61,3 +61,7 @@ member_can_create_opportunity:
 committee_can_access_committee_page:
   role_id: 2
   permission_id: 15
+
+committee_can_review_proposals:
+  role_id: 2
+  permission_id: 16

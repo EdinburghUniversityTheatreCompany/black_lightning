@@ -76,6 +76,9 @@ class Admin::PermissionsController < AdminController
       "MarketingCreative::Profile" => { "approve" => "Approve or Reject Marketing Creative Profiles" },
       "backend" => { "access" => "Access Backend" },
       "committee" => { "access" => "Access the committee resources page" },
+      # Proposal is kept out of the model rows (its read rules are time-based, see Ability), so
+      # this is the one proposal permission the grid offers.
+      "Admin::Proposals::Proposal" => { "review" => "Review proposals: read and index every proposal once its call's submission deadline has passed" },
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },

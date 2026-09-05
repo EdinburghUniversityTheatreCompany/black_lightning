@@ -70,6 +70,18 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "grid offers the proposal review permission as a miscellaneous row" do
+    get :grid
+    assert_select "input[name='[Committee][Admin::Proposals::Proposal]review'][checked]", 1
+    assert_select "input[name='[Member][Admin::Proposals::Proposal]review']:not([checked])", 1
+  end
+
+  test "Proposal Checker's permissions are managed in the grid like any other role" do
+    role = Role.create!(name: "Proposal Checker")
+    get :role_grid, params: { id: role.id }
+    assert_response :success
+  end
+
   test "role_grid for excluded role should redirect to role show" do
     get :role_grid, params: { id: roles(:admin).id }
     assert_redirected_to admin_role_path(roles(:admin))

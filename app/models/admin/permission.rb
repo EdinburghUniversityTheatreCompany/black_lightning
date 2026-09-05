@@ -22,7 +22,8 @@ class Admin::Permission < ApplicationRecord
   has_and_belongs_to_many :roles
 
   DISABLED_PERMISSIONS = %w[update create delete].freeze
-  EXCLUDED_ROLES = [ "Admin", "Proposal Checker" ].freeze
+  # Roles whose permissions are not managed in the grid. Admin has :manage, :all in code.
+  EXCLUDED_ROLES = [ "Admin" ].freeze
 
   ##
   # Creates, Adds an existing or Removes a Admin::Permission from a role for the
