@@ -158,6 +158,18 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_response :success
   end
 
+  test "edit renders each category as its own card with the remove button in its footer" do
+    category_info = FactoryBot.create(:marketing_creatives_category_info, profile: @profile)
+
+    get :edit, params: { id: @profile }
+    assert_response :success
+
+    # The old layout ran one category's fields straight into the next, so the
+    # "Remove Category" button between them read as belonging to the wrong one.
+    assert_select ".categories .card-title", text: category_info.category.name, count: 1
+    assert_select ".categories button[data-action='nested-form#remove']", text: /Remove Category/, minimum: 1
+  end
+
   test "should not show user field if the user cannot manage" do
     committee = sign_in_as_committee
 

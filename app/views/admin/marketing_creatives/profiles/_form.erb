@@ -6,13 +6,19 @@
 
     <%= render('shared/form/user_field', f: f) if can?(:manage, MarketingCreatives::Profile) %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :about, rows: 12 )%>
-    
-    <%= render Admin::MdEditorComponent.new(f: f, field: :contact, rows: 12 )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :about, rows: 12 ) %>
+
+    <%= render Admin::MdEditorComponent.new(f: f, field: :contact, rows: 12 ) %>
 
     <div class="categories">
       <h3>Categories</h3>
-      <%= render('shared/form/sections/nested_fields', f: f, association_name: :category_infos, partial_name: 'category_info_fields') %>
-    </div >
+
+      <p class="mb-2 text-sm text-gray-600">
+        Add a card for each kind of work you offer. Each one gets its own description, a main image
+        for the listing, and a small gallery of examples.
+      </p>
+
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :category_infos, partial_name: 'category_info_fields', add_object_name: 'Category') %>
+    </div>
   <% end %>
 <% end %>

@@ -1,17 +1,23 @@
 <%# locals: (f:, dynamic: nil) %>
 
+<%# One card per category, as _attachment_fields does: without the boundary a
+    category's fields ran straight into the next one's and the Remove button
+    between them read as belonging to the wrong category. %>
 <%= render layout: '/shared/form/fields_for_template', locals: { f: f } do %>
+  <%= render CardComponent.new(title: f.object.category&.name || "New category") do |c| %>
+    <% c.with_footer do %>
+      <%= link_to_remove f, link_text: 'Remove Category' %>
+    <% end %>
+
     <%= f.hidden_field :id %>
 
     <%= f.association :category %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :description ) %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the main image that will appear in the listing for this category.' %>
 
-    <p>Please try to limit the amount of pictures you upload to 5.</p>
+    <p class="mb-2 text-sm text-gray-600">Please try to limit the amount of pictures you upload to 5.</p>
     <%= render(Admin::Form::GalleryComponent.new(f: f)) %>
-
-    <br>
-    <%= link_to_remove f, link_text: 'Remove Category' %>
+  <% end %>
 <% end %>
