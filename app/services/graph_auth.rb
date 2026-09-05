@@ -1,9 +1,11 @@
 ##
 # App-only (client-credentials) Microsoft Graph auth + JSON request plumbing,
 # shared by Graph::MailboxClient (mail folders / receive) and the reimbursements
-# GraphClient (drafts, SharePoint, send). The Entra app is scoped per shared mailbox via an
-# ApplicationAccessPolicy; the same client-credentials token serves every
-# Graph call.
+# GraphClient (drafts, SharePoint, send). The same client-credentials token
+# serves every Graph call; the Entra app carries NO mail permission, and Exchange
+# scopes it to named mailboxes via RBAC for Applications (a management scope plus
+# a role assignment, see docs/graph-mailbox-rbac.md). SharePoint is separate:
+# RBAC cannot express it, so that stays an Entra grant.
 #
 # The including object must set +@http+ (a transport callable
 # +(method, uri, headers, body) -> [status, body_string]+), +@settings+
