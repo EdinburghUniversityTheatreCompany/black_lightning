@@ -228,7 +228,7 @@ class Admin::Proposals::ProposalsController < AdminController
           :id, :_destroy, :answer, :question_id,
           { attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, { attachment_tag_ids: [] } ] }
         ],
-        team_members_attributes: %I[id _destroy position user user_id proposal proposal_id] }
+        team_members_attributes: %I[id _destroy position user user_id proposal proposal_id display_order] }
     ]
     # Only approvers may set status directly; otherwise it is controlled via the approve/reject/mark_* actions.
     params.unshift(:status) if can?(:approve, @proposal)
