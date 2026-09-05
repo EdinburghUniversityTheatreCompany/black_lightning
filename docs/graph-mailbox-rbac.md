@@ -121,8 +121,19 @@ outside the tenant.
 That has a consequence worth knowing before you debug a 403: **the old distribution group grants
 nothing now.** It backed an `ApplicationAccessPolicy`, which constrains Entra-granted permissions,
 and the app no longer has any. Adding a mailbox to `Reimbursements App Access` is a convincing
-no-op, so authorise mailboxes by re-running this script instead. The policy itself still exists
-(step 2 below was never done).
+no-op, so authorise mailboxes by re-running this script instead.
+
+That is measured, not reasoned. On 2026-09-05 the group held two members, both Fringe, while four
+mailboxes were reading fine over Graph, so at least two were working from outside it. Repeat the
+test the same way if you ever need to re-confirm, because it does not depend on knowing which
+display name is which address:
+
+```powershell
+Get-DistributionGroupMember -Identity "Reimbursements App Access"
+```
+
+Compare the count against the mailboxes that actually answer. More working mailboxes than members
+means the policy is inert, which makes step 2 below pure cleanup rather than a change in access.
 
 **Order matters.** An `ApplicationAccessPolicy` constrains only Entra-granted permissions, so if
 you remove it first, the app gets tenant-wide mail access for as long as that window lasts. Revoke
