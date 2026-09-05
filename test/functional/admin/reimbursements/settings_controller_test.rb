@@ -125,26 +125,51 @@ module Admin
         assert_select "a[href=?] span[aria-hidden=true]", admin_reimbursements_settings_path, text: "←"
       end
 
-      test "edit shows the Exchange grant command filled in with this mailbox" do
+      test "edit shows the Exchange verify command filled in with this mailbox" do
         sign_in @user
         get :edit, params: { key: @cost_centre.key }
 
         assert_response :success
         assert_includes response.body, "Microsoft access for this cost centre"
+        assert_includes response.body, "docs/graph-mailbox-rbac.ps1"
         assert_includes response.body,
-          %(Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member #{@cost_centre.receive_mailbox})
-        assert_includes response.body,
-          "Test-ApplicationAccessPolicy -Identity #{@cost_centre.receive_mailbox} -AppId b874d491-4edf-4b76-839d-84e534c7f7c0"
+          "Test-ServicePrincipalAuthorization -Identity b874d491-4edf-4b76-839d-84e534c7f7c0"
+        assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
       end
 
-      test "edit shows a separate grant block when the send mailbox differs" do
+      # The distribution group backed an ApplicationAccessPolicy, which only ever
+      # constrained Entra-granted Mail.*; those were revoked when the app moved to
+      # RBAC for Applications. Adding a mailbox to it now does nothing, so the page
+      # must not keep offering it as the fix (docs/graph-mailbox-rbac.md).
+      test "edit no longer tells the operator to use the retired app-access group" do
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_not_includes response.body, "Add-DistributionGroupMember"
+        assert_not_includes response.body, "Test-ApplicationAccessPolicy"
+        assert_not_includes response.body, "Reimbursements App Access"
+      end
+
+      test "edit shows a separate verify block when the send mailbox differs" do
         @cost_centre.update!(send_mailbox: "outbox@bedlamfringe.co.uk")
         sign_in @user
         get :edit, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "-Member #{@cost_centre.receive_mailbox}"
-        assert_includes response.body, "-Member outbox@bedlamfringe.co.uk"
+        assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
+        assert_includes response.body, "-Resource outbox@bedlamfringe.co.uk"
+      end
+
+      # The scope filter is replaced wholesale, so a partial list silently revokes
+      # every mailbox left out of it. The page has to say so where the command is.
+      test "edit warns that the mailbox scope filter is replaced rather than appended" do
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "replaced, not added to"
+        assert_includes response.body, "bin/rails graph:mailboxes"
       end
 
       test "edit shows the SharePoint Sites.Selected grant with the site path filled in" do
@@ -367,7 +392,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "403"
-        assert_includes response.body, "Reimbursements App Access"             # remediation hint
+        assert_includes response.body, "Exchange management scope"             # remediation hint
       end
 
       test "access check flags a SharePoint site the app can't reach" do

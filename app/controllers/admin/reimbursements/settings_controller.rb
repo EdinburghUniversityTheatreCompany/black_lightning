@@ -184,12 +184,20 @@ module Admin
         mailboxes.map { |mailbox| mailbox_check(mailbox) } + [ site_check ] + folder_checks
       end
 
+      # The remediation text names the Exchange management scope, NOT the old
+      # "Reimbursements App Access" distribution group. The group only ever
+      # constrained Entra-granted Mail.* permissions, and those were revoked when
+      # the app moved to RBAC for Applications, so adding a mailbox to it now
+      # changes nothing while reading as the fix (see docs/graph-mailbox-rbac.md).
       def mailbox_check(mailbox)
         graph.check_mailbox(mailbox)
-        Check.new(label: "Mailbox #{mailbox}", status: :ok, detail: "Reachable (it's in the app-access group).")
+        Check.new(label: "Mailbox #{mailbox}", status: :ok,
+                  detail: "Reachable (it's in the app's Exchange management scope).")
       rescue StandardError => e
         Check.new(label: "Mailbox #{mailbox}", status: :fail,
-                  detail: "#{e.message}. Add it to the Reimbursements App Access group (commands below).")
+                  detail: "#{e.message}. Add it to the app's Exchange management scope, passing the full " \
+                          "mailbox list (commands below). Allow up to 2 hours for the app's permission " \
+                          "cache before re-checking.")
       end
 
       def site_check
