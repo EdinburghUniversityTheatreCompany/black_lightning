@@ -198,6 +198,24 @@ Models carry `# == Schema Information` blocks maintained by **`annotaterb`** (re
 
 The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
 
+- **What a role MAY DO is a grid permission; WHO someone is stays a role check.** Gate a page or
+  an Ability rule on `can?(:access, :committee)` / `can?(:review, Admin::Proposals::Proposal)`
+  (miscellaneous rows in the grid), never on `has_role?("Committee")`. `User#member?` and
+  `User#committee?` are the one spelling of the two facts, for mailing lists, the membership
+  import, staffing eligibility and badges — those must not be grantable from a checkbox on some
+  other role, or a stray tick mass-mails 40 people and mints them pretix memberships overnight.
+  `member?` is the `member` role only: a life member is a member for pretix ticket discounts
+  (`Pretix::MembershipSync::ENTITLING_ROLES`) and nowhere else.
+- **A miscellaneous permission can only be read AFTER `set_permissions_based_on_grid`**, which
+  for non-admins runs late in `Ability#initialize`. A `can?(:review, …)` placed higher up reads
+  false for everyone; put derived rules next to the `:duplicate` / `:membership_import` ones.
+- **Every role name referenced in code is in `Role::HARDCODED_NAMES`** (matched case-insensitively
+  via `Role.hardcoded_name?`, because the code asks for `:member` and `"Member"` alike). It blocks
+  rename and delete only; archiving creates a suffixed sibling and is unaffected.
+- **A new permission that replaces a role check needs a data migration** granting it to the roles
+  that had the access (see the two `Grant…Permission` migrations of 2026-09-05) AND the matching
+  fixture rows: test and CI databases are schema-loaded, so the migration never runs there.
+
 ## Reimbursements portal
 
 Producer-facing expense portal under `/admin/reimbursements`

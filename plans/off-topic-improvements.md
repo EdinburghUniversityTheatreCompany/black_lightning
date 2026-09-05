@@ -620,3 +620,30 @@ The compact board form joins the amounts — "£10/8/7" — and the "Free" short
 Not wrong (it means £10/£0) but it reads badly across a room. Left alone rather than special-cased:
 the mixed case is rare, and the obvious fixes ("£10/free", dropping the zero) each either break the
 compact convention or hide a band. Revisit if a real show ever prices this way.
+
+## `life member` can still be renamed, and pretix is the only reader
+
+`Pretix::MembershipSync::ENTITLING_ROLES` includes `"life member"`, so renaming that role in the
+admin would silently drop every life member's ticket discount on the next nightly reconcile. It
+was left out of `Role::HARDCODED_NAMES` on 2026-09-05 because Mick asked for Committee and Member
+only; adding it is one word plus a test. Related: `Role::NON_PURGEABLE_ROLES` and
+`HARDCODED_NAMES` overlap now (member is in both) and could collapse into one list with a
+`purgeable:` flag.
+
+## The committee resources page has no link anywhere
+
+`admin/static#committee` is routed and now permission-gated, but nothing in the admin sidebar or
+dashboard links to it — the only way in is typing the URL. Either add a sidebar entry gated on
+`can?(:access, :committee)` or confirm the page is dead and remove it.
+
+## The admin events index comment claims parity with the public index
+
+`app/views/admin/events/index.html.erb` opens with "Essentially the same as in the public events
+index", but the public index has no members-only text search at all and the field lists have
+drifted. Either share the field definition or drop the comment.
+
+## Lower-case `has_role?("admin")` in `LabelHelper`
+
+`user_labels_for` checks `has_role?("admin")` while everything else spells it `"Admin"`; it only
+works because the MySQL collation is case-insensitive. Harmless today, but a SQLite/PostgreSQL
+test run or a stricter collation would silently hide the Admin badge.
