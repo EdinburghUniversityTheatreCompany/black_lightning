@@ -156,8 +156,21 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
         </p>
       </div>
       <div>
+        <%= f.label :eusa_contact_name, "EUSA contact name", class: "block text-sm font-medium" %>
+        <%= f.text_field :eusa_contact_name, placeholder: "Finance Team",
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Who the BACS request email greets — the EUSA finance person handling our payments.
+          Leave blank to open with "Hi Finance Team,".
+        </p>
+      </div>
+      <div>
         <%= f.label :eusa_signature_name, "EUSA email signature name", class: "block text-sm font-medium" %>
         <%= f.text_field :eusa_signature_name, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Who that email is signed off as when no operator name is available.
+          Leave blank to sign off as "<%= @cost_centre.name %> Finance".
+        </p>
       </div>
     </div>
 

@@ -77,6 +77,25 @@ module Admin
                         "default EUSA subject is prefilled"
       end
 
+      test "new greets the cost centre's configured EUSA contact" do
+        ::Reimbursements::CostCentre.default.update!(eusa_contact_name: "Craig")
+        one_approved
+        sign_in @user
+
+        get :new
+
+        assert_includes response.body, "Hi Craig,"
+      end
+
+      test "new falls back to a generic greeting with no contact configured" do
+        one_approved
+        sign_in @user
+
+        get :new
+
+        assert_includes response.body, "Hi Finance Team,"
+      end
+
       # Build Batch is the one screen that would otherwise print every payee's
       # account number the moment it loads — a page an operator has open while
       # screen-sharing or sitting in an open-plan office.
