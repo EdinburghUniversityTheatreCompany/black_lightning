@@ -1,15 +1,11 @@
 <%
-if current_user.present? && current_user.has_role?('Member')
-  members_only_text_entry = { slug: 'defaults.members_only_text' }
-else
-  members_only_text_entry = nil
-end
-
 # Essentially the same as in the public events index, so likely edit that too if you edit this.
+# The members-only text search is not gated on the member role: everyone on this page already has
+# backend access, and the field searches text they can read on each event's show page anyway.
 search_fields = {
   name_cont:                      { slug: 'defaults.name' },
   publicity_text_or_tagline_cont: { slug: 'defaults.publicity_text' },
-  members_only_text_cont:         members_only_text_entry,
+  members_only_text_cont:         { slug: 'defaults.members_only_text' },
   users_full_name_cont:           { slug: 'defaults.user' },
   author_cont:                    { slug: 'defaults.author' },
 

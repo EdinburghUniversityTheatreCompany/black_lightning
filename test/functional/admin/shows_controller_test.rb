@@ -16,6 +16,20 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:events)
   end
 
+  test "index offers the members-only text search to every backend user, not only members" do
+    backend_only = FactoryBot.create(:user)
+    Role.create!(name: "Backend Only").tap do |role|
+      role.permissions << admin_permissions(:access_backend)
+      backend_only.add_role(role)
+    end
+    assert_not backend_only.member?
+    sign_in backend_only
+
+    get :index
+    assert_response :success
+    assert_select "input[name='q[members_only_text_cont]']", 1
+  end
+
   test "should get random show" do
     FactoryBot.create_list(:show, 3)
 
