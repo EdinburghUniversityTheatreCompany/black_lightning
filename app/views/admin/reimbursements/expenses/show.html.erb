@@ -1,6 +1,4 @@
-<p class="mb-3 text-gray-600">
-  <%= link_to "← All my expenses", admin_reimbursements_expenses_path, class: "text-primary underline" %>
-</p>
+<%= render "shared/back_link", text: "All my expenses", path: admin_reimbursements_expenses_path %>
 
 <%= render CardComponent.new(title: "Expense ##{@expense.auto_number}") do %>
   <div class="mb-3 flex flex-wrap items-center gap-2">

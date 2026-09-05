@@ -1,8 +1,4 @@
-<p class="mb-3">
-  <%= link_to admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" do %>
-    <span aria-hidden="true">←</span> All cost centres
-  <% end %>
-</p>
+<%= render "shared/back_link", text: "All cost centres", path: admin_reimbursements_settings_path %>
 
 <%= render CardComponent.new(title: "New cost centre") do %>
   <p class="mb-4 text-sm text-gray-600">

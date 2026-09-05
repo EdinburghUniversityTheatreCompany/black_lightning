@@ -38,3 +38,20 @@ module FormHelper
     simple_form_for(object, *(args << options.merge(new_options)), &block)
   end
 end
+
+# Control classes for the hand-rolled `form_with url:` forms (finance, climate),
+# read from the same FormStyles constants simple_form's wrappers use. See
+# shared/form/_field for the label + hint wrapper that goes around them.
+module FormHelper
+  def input_classes(*extra)
+    [ FormStyles::INPUT, *extra ].join(" ")
+  end
+
+  def file_input_classes
+    FormStyles::FILE_INPUT
+  end
+
+  def checkbox_classes
+    FormStyles::CHECKBOX
+  end
+end

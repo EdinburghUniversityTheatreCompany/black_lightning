@@ -1,9 +1,6 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 
-<p class="mb-3">
-  <%= link_to "← All budget updates", admin_reimbursements_budget_updates_path,
-        class: "text-sm text-primary underline" %>
-</p>
+<%= render "shared/back_link", text: "All budget updates", path: admin_reimbursements_budget_updates_path %>
 
 <%= render CardComponent.new(title: "New budget update") do %>
   <p class="text-sm text-gray-600 mb-4">

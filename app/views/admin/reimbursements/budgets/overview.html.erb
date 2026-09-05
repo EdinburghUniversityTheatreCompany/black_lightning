@@ -1,8 +1,6 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 
-<p class="mb-3">
-  <%= link_to "← All budgets", admin_reimbursements_budgets_path, class: "text-sm text-primary underline" %>
-</p>
+<%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
 <p class="mb-3 text-gray-600">
   Every budget grouped by nominal code, with a subtotal per code and a grand total. Expense and

@@ -1,0 +1,18 @@
+<%# locals: (submit:, cancel_path: nil, cancel_text: "Cancel", note: nil, f: nil, submit_html: {}) %>
+<%# The button row for a hand-rolled form's card footer: primary submit,
+    optional Cancel link, optional one-line note under them. Pass `f` to
+    submit through the form builder (f.submit) or leave it for submit_tag. %>
+<div class="form-actions flex flex-wrap items-center gap-2">
+  <% if f %>
+    <%= f.submit submit, class: btn_classes(:primary), **submit_html %>
+  <% else %>
+    <%= submit_tag submit, class: btn_classes(:primary), **submit_html %>
+  <% end %>
+  <% if cancel_path %>
+    <%= link_to cancel_text, cancel_path, class: btn_classes(:secondary) %>
+  <% end %>
+  <%= yield if block_given? %>
+</div>
+<% if note.present? %>
+  <p class="mt-2 mb-0 text-sm text-gray-500"><%= note %></p>
+<% end %>

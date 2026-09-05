@@ -1,6 +1,4 @@
-<p class="mb-3">
-  <%= link_to "← All sensors", admin_climate_sensors_path, class: "text-sm text-primary underline" %>
-</p>
+<%= render "shared/back_link", text: "All sensors", path: admin_climate_sensors_path %>
 
 <%= render CardComponent.new(title: "New sensor") do %>
   <p class="text-gray-600">

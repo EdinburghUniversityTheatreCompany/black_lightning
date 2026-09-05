@@ -1,10 +1,6 @@
 <%# Same frame as step 1 — see show.html.erb for why the wizard needs one. %>
 <%= turbo_frame_tag "budget_import" do %>
-<p class="mb-3">
-  <%= link_to import_path, class: "text-sm text-blue-700 hover:underline" do %>
-    <span aria-hidden="true">&larr;</span> Start again
-  <% end %>
-</p>
+<%= render "shared/back_link", text: "Start again", path: import_path %>
 
 <% if flash[:alert].present? %>
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>

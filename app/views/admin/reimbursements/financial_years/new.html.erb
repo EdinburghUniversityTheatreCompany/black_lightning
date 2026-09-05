@@ -1,8 +1,4 @@
-<p class="mb-3">
-  <%= link_to admin_reimbursements_financial_years_path, class: "text-sm text-blue-700 hover:underline" do %>
-    <span aria-hidden="true">&larr;</span> All financial years
-  <% end %>
-</p>
+<%= render "shared/back_link", text: "All financial years", path: admin_reimbursements_financial_years_path %>
 
 <%= render CardComponent.new(title: "New financial year") do %>
   <p class="mb-4 text-sm text-gray-600">

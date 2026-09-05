@@ -5,12 +5,8 @@
     — the buttons render a perfectly good page server-side that never reaches
     the screen. Inside the frame a direct render is valid. %>
 <%= turbo_frame_tag "budget_import" do %>
-<p class="mb-3">
-  <%= link_to edit_admin_reimbursements_financial_year_path(@financial_year.key),
-              class: "text-sm text-blue-700 hover:underline" do %>
-    <span aria-hidden="true">&larr;</span> <%= @financial_year.label %>
-  <% end %>
-</p>
+<%= render "shared/back_link", text: @financial_year.label,
+           path: edit_admin_reimbursements_financial_year_path(@financial_year.key) %>
 
 <%# Flash lives in the layout, outside this frame, so a frame-only response
     would never show it. %>
