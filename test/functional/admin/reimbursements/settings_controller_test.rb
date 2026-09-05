@@ -166,12 +166,13 @@ module Admin
 
       # --- Update: settings --------------------------------------------------
 
-      test "update writes mailboxes, recipient, signature and run-days" do
+      test "update writes mailboxes, recipient, contact, signature and run-days" do
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, cost_centre: {
           receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
-          eusa_recipient: "eusa@ed.ac.uk", eusa_signature_name: "Fringe Finance",
+          eusa_recipient: "eusa@ed.ac.uk", eusa_contact_name: "Craig",
+          eusa_signature_name: "Fringe Finance",
           nightly_run_days: %w[1 3 5]
         } }
 
@@ -180,6 +181,7 @@ module Admin
         assert_equal "in@fringe.co", @cost_centre.receive_mailbox
         assert_equal "out@fringe.co", @cost_centre.send_mailbox
         assert_equal "eusa@ed.ac.uk", @cost_centre.eusa_recipient
+        assert_equal "Craig", @cost_centre.eusa_contact_name
         assert_equal "Fringe Finance", @cost_centre.eusa_signature_name
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
       end

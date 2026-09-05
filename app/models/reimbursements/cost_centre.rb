@@ -5,6 +5,7 @@
 #
 #  id                            :bigint           not null, primary key
 #  eusa_code                     :string(255)      not null
+#  eusa_contact_name             :string(255)
 #  eusa_recipient                :string(255)
 #  eusa_signature_name           :string(255)
 #  key                           :string(255)      not null

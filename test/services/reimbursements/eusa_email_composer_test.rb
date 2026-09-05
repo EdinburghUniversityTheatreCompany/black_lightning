@@ -8,9 +8,10 @@ module Reimbursements
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
 
-    def cost_centre(name: "Bedlam Fringe 2026")
+    def cost_centre(name: "Bedlam Fringe 2026", eusa_contact_name: nil)
       CostCentre.new(key: "fringe", name: name, eusa_code: "F40",
-                     receive_mailbox: "in@example.com", send_mailbox: "out@example.com")
+                     receive_mailbox: "in@example.com", send_mailbox: "out@example.com",
+                     eusa_contact_name: eusa_contact_name)
     end
 
     def expense(payee:, amount:, budget:, nominal:, description:)
@@ -45,6 +46,27 @@ module Reimbursements
         bacs_date: Date.new(2026, 5, 13), sender_name: "F", cost_centre: cost_centre
       )
       assert_includes email.body_html, "Hi Finance Team,"
+    end
+
+    test "greets the cost centre's configured EUSA contact" do
+      email = EusaEmailComposer.new.compose(
+        expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
+        bacs_date: Date.new(2026, 5, 13), sender_name: "F",
+        cost_centre: cost_centre(eusa_contact_name: "Craig")
+      )
+      assert_includes email.body_html, "Hi Craig,"
+    end
+
+    # BatchProcessor still takes a per-batch contact name; the setting is only
+    # the default it falls back to.
+    test "an explicit contact name overrides the cost centre's" do
+      email = EusaEmailComposer.new.compose(
+        expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
+        bacs_date: Date.new(2026, 5, 13), sender_name: "F",
+        cost_centre: cost_centre(eusa_contact_name: "Craig"), eusa_contact_name: "Sam"
+      )
+      assert_includes email.body_html, "Hi Sam,"
+      assert_not_includes email.body_html, "Craig"
     end
 
     test "strips dev-mode view-annotation comments from the body" do
