@@ -110,42 +110,26 @@ Nothing breaks while you're setting this up. Until you revoke the Entra consent 
 the old grant and the new one, and access is their union. That's exactly why verification comes
 before removal.
 
-## Then, by hand
+## The migration is finished
 
-**Status as of 2026-09-05: step 1 is done, step 2 is not.** The app-only token now comes back
-carrying `Files.ReadWrite.All`, `Sites.ReadWrite.All` and `Sites.Selected`, and no `Mail.*` at
-all, which is what proves the consent was revoked. Decode the `roles` claim of a
-client-credentials token if you want to check that again; it is the only way to see this from
-outside the tenant.
+**Both manual steps were completed on 2026-09-05**, so mail access now comes from RBAC alone.
+This is the record of what was done, not a to-do list.
 
-That has a consequence worth knowing before you debug a 403: **the old distribution group grants
-nothing now.** It backed an `ApplicationAccessPolicy`, which constrains Entra-granted permissions,
-and the app no longer has any. Adding a mailbox to `Reimbursements App Access` is a convincing
-no-op, so authorise mailboxes by re-running this script instead.
+1. **The tenant-wide `Mail.ReadWrite` / `Mail.Send` consent was revoked** in Entra, keeping
+   `Sites.*` and `Files.*`. The app-only token is the evidence: its `roles` claim carries
+   `Files.ReadWrite.All`, `Sites.ReadWrite.All` and `Sites.Selected`, and no `Mail.*` at all.
+   Decoding that claim is the only way to see this from outside the tenant.
+2. **The `ApplicationAccessPolicy` was removed**, once it had been shown to grant nothing: the
+   `Reimbursements App Access` group held two members while four mailboxes were answering over
+   Graph, so at least two were working from outside it. Removing it changed no answer, and an
+   unrelated mailbox still 403d afterwards.
 
-That is measured, not reasoned. On 2026-09-05 the group held two members, both Fringe, while four
-mailboxes were reading fine over Graph, so at least two were working from outside it. Repeat the
-test the same way if you ever need to re-confirm, because it does not depend on knowing which
-display name is which address:
+**If you are debugging a 403, that group and that policy are not the place to look.** Both are
+gone, and adding a mailbox to the group was a convincing no-op even before it went: it constrained
+Entra-granted permissions, and mail has none. Authorise a mailbox by re-running this script.
 
-```powershell
-Get-DistributionGroupMember -Identity "Reimbursements App Access"
-```
-
-Compare the count against the mailboxes that actually answer. More working mailboxes than members
-means the policy is inert, which makes step 2 below pure cleanup rather than a change in access.
-
-**Order matters.** An `ApplicationAccessPolicy` constrains only Entra-granted permissions, so if
-you remove it first, the app gets tenant-wide mail access for as long as that window lasts. Revoke
-the consent first and no such window exists.
-
-1. **Entra, Enterprise applications, your app, Permissions.** Revoke `Mail.ReadWrite` and
-   `Mail.Send` (the `...` at the end of each row). Keep `Sites.*` and `Files.*`.
-2. Check reimbursements still works, then remove the old policy:
-   ```powershell
-   $policy = Get-ApplicationAccessPolicy | Where-Object { $_.AppId -eq $env:BL_GRAPH_APP_ID }
-   Remove-ApplicationAccessPolicy -Identity $policy.Identity
-   ```
+The check that still matters is the negative one above. An unrelated mailbox must come back
+`InScope False`, and 403 over Graph. That is what proves the scope is doing the work.
 
 ## Confirming both features still work
 

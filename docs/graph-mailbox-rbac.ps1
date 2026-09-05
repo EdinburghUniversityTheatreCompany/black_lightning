@@ -33,15 +33,17 @@
   ./graph-mailbox-rbac.ps1           # do it
 
 .NOTES
-  Two steps are NOT automated, on purpose:
+  The scope filter is REPLACED, not appended. Pass every mailbox the app uses,
+  not just a new one, or you silently revoke the rest. Get the list from
+  `bin/rails graph:mailboxes` and read the -WhatIf filter before committing.
 
-  1. Revoking the tenant-wide Mail.* consent in Entra. This is the step that
-     makes the scoping real, because RBAC and Entra permissions are a UNION: a
-     scoped grant does nothing while the unscoped one still exists. It is also
-     the only irreversible-feeling step, so it wants a human who has just read
-     the verification output.
-
-  2. Removing the old Application Access Policy.
+  The two steps this script deliberately never automated are both done, as of
+  2026-09-05: the tenant-wide Mail.* consent is revoked in Entra, and the old
+  Application Access Policy is removed. That consent revocation is what makes
+  the scoping real, because RBAC and Entra permissions are a UNION, so a scoped
+  grant does nothing while an unscoped one still exists. Re-consenting Mail.* is
+  the emergency lever in graph-mailbox-rbac.md, not a fix: it restores service by
+  handing the app every mailbox in the tenant again.
 
   Get the IDs from Entra > Enterprise applications, NOT App registrations. The
   Object ID differs between those pages and the wrong one fails.
@@ -179,17 +181,12 @@ back False. That proves the scoping bites, rather than merely that the grant exi
 
   Test-ServicePrincipalAuthorization -Identity $AppId -Resource someone.else@example.com | Format-Table
 
-Then, by hand:
+Nothing else to do by hand. The Entra Mail.* consent was revoked and the old
+Application Access Policy removed on 2026-09-05, so this scope is now the only
+thing granting the app mail access. Keep Sites.* / Files.* consented: the BACS
+upload needs them and RBAC cannot express them.
 
-  1. Entra > Enterprise applications > $DisplayName > Permissions.
-     Revoke ONLY Mail.ReadWrite and Mail.Send.
-     KEEP Sites.* / Files.*, because the BACS upload needs them and RBAC cannot
-     express them. Until you do this the app keeps its unscoped access and none
-     of the above has any effect.
-
-  2. Remove the old policy:
-       Get-ApplicationAccessPolicy | Where-Object { `$_.AppId -eq '$AppId' }
-       Remove-ApplicationAccessPolicy -Identity <identity>
-
-Allow 30 minutes to 2 hours for the app's permission cache to turn over.
+Allow 30 minutes to 2 hours for the app's permission cache to turn over. Until
+it does, a mailbox you just added still 403s over Graph while reading InScope
+True above. That is the cache, not a failed run.
 "@ -ForegroundColor Green
