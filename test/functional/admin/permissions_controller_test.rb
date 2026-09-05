@@ -16,6 +16,12 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
       "CostCentre is managed via the Settings form + finance permission, not the per-model grid"
   end
 
+  test "grid offers the committee page permission as a miscellaneous row" do
+    get :grid
+    assert_select "input[name='[Committee][committee]access'][checked]", 1
+    assert_select "input[name='[Member][committee]access']:not([checked])", 1
+  end
+
   test "should update permissions" do
     post :update_grid
     assert_redirected_to admin_permissions_path

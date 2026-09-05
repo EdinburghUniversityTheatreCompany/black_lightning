@@ -75,6 +75,7 @@ class Admin::PermissionsController < AdminController
       "Admin::StaffingJob" => { "sign_up_for" => "Sign Up For Staffing" },
       "MarketingCreative::Profile" => { "approve" => "Approve or Reject Marketing Creative Profiles" },
       "backend" => { "access" => "Access Backend" },
+      "committee" => { "access" => "Access the committee resources page" },
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },

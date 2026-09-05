@@ -75,3 +75,10 @@ can_create_opportunity:
   id: 14
   action: create
   subject_class: Opportunity
+
+# The committee resources page (admin/static#committee). Given to committee so the
+# fixture role keeps the access the production role is migrated to.
+access_committee:
+  id: 15
+  action: access
+  subject_class: committee
