@@ -1,8 +1,8 @@
 module Graph
   ##
   # Microsoft Graph client for a shared mailbox, using app-only
-  # (client-credentials) auth — the Entra app is scoped to each mailbox via an
-  # ApplicationAccessPolicy. Send and receive go through the same credential,
+  # (client-credentials) auth — Exchange scopes the Entra app to named mailboxes
+  # through RBAC for Applications. Send and receive go through the same credential,
   # which is why the app polls instead of using ActionMailbox (and why standing
   # ActionMailbox up would mean new inbound infrastructure: Microsoft 365 has no
   # inbound webhook).

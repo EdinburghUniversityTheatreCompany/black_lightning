@@ -6,15 +6,18 @@ module Reimbursements
   # client-credentials, shared with MailboxClient via GraphAuth — a multi-user
   # web app can't do the per-user interactive OAuth a desktop tool would.
   #
-  # Azure app-registration permissions required (application permissions, admin
-  # consent — a MANUAL setup step, see the reimbursements setup guide):
-  #   * Mail.Send       — send the EUSA draft / producer notifications
-  #   * Mail.ReadWrite  — create the EUSA draft in the send mailbox
-  #   * Sites.Selected  — SharePoint, granted write per-site (least-privilege):
-  #                       upload receipts + BACS xlsx and browse a granted site's
-  #                       drives/folders. Cannot search/enumerate sites, so the
-  #                       Settings picker addresses each cost centre's configured
-  #                       site by URL (see #get_site).
+  # Permissions required (a MANUAL setup step, see docs/graph-mailbox-rbac.md).
+  # They come from two different systems, which is the thing to keep straight:
+  #   * Mail (send the EUSA draft / producer notifications, create the draft in
+  #     the send mailbox) is NOT an Entra grant. Exchange assigns the app
+  #     "Application Mail Full Access" over a management scope naming each
+  #     mailbox. Consenting Mail.* in Entra would re-grant the whole tenant,
+  #     since the two systems union rather than intersect.
+  #   * Sites.Selected is an Entra application permission, granted write
+  #     per-site (least-privilege): upload receipts + BACS xlsx and browse a
+  #     granted site's drives/folders. Cannot search/enumerate sites, so the
+  #     Settings picker addresses each cost centre's configured site by URL
+  #     (see #get_site). RBAC has no SharePoint equivalent.
   class GraphClient
     include ::GraphAuth
 
@@ -146,11 +149,14 @@ module Reimbursements
       end
     end
 
-    # A light read probe confirming the app can reach a mailbox, i.e. it sits in
-    # the Exchange ApplicationAccessPolicy group that scopes Mail.* for this app.
+    # A light read probe confirming the app can reach a mailbox, i.e. the address
+    # matches the Exchange management scope that grants this app its mail access.
     # Returns true on success; raises (403 etc.) so the Settings access-check turns
-    # it into a failed row with the Graph message. Same group gates send + poll, so
-    # this read is a fair proxy for "email-in and batch drafting will work".
+    # it into a failed row with the Graph message. One scope gates read, send and
+    # poll alike, so this read is a fair proxy for "email-in and batch drafting
+    # will work". Exchange caches the scope for up to 2 hours, so a mailbox added
+    # moments ago still fails here well after Test-ServicePrincipalAuthorization
+    # reports it in scope.
     def check_mailbox(address)
       graph_request(:get, "/users/#{address}/mailFolders/inbox", params: { "$select" => "id" })
       true

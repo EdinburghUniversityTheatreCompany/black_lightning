@@ -61,6 +61,17 @@ $env:BL_READ_ONLY_MAILBOXES    = "climatesensors@bedlamtheatre.co.uk"
 It's idempotent: an existing scope gets its filter updated, an existing assignment is left alone.
 Re-run it when you add a mailbox. You need **Organization Management** in Exchange Online.
 
+### Trap 3: the scope filter is REPLACED, not appended
+
+`Set-ManagementScope -RecipientRestrictionFilter` overwrites the whole filter with what you pass.
+So "add a mailbox" means passing **every** mailbox the app uses, including the ones already
+working. Hand it only the new address and you revoke the others, and nothing warns you: the
+cmdlet succeeds, and the cost centres it just cut off keep working for up to two hours on the
+cached permission before their email-in goes quiet.
+
+Run `-WhatIf` first and read the filter it prints. It shows the complete new filter, so it is the
+one place the mistake is visible before it lands.
+
 ### Get the mailbox list from the app, never from memory
 
 **A cost centre's send address is a separate column from its receive address, and on the live
@@ -100,6 +111,18 @@ the old grant and the new one, and access is their union. That's exactly why ver
 before removal.
 
 ## Then, by hand
+
+**Status as of 2026-09-05: step 1 is done, step 2 is not.** The app-only token now comes back
+carrying `Files.ReadWrite.All`, `Sites.ReadWrite.All` and `Sites.Selected`, and no `Mail.*` at
+all, which is what proves the consent was revoked. Decode the `roles` claim of a
+client-credentials token if you want to check that again; it is the only way to see this from
+outside the tenant.
+
+That has a consequence worth knowing before you debug a 403: **the old distribution group grants
+nothing now.** It backed an `ApplicationAccessPolicy`, which constrains Entra-granted permissions,
+and the app no longer has any. Adding a mailbox to `Reimbursements App Access` is a convincing
+no-op, so authorise mailboxes by re-running this script instead. The policy itself still exists
+(step 2 below was never done).
 
 **Order matters.** An `ApplicationAccessPolicy` constrains only Entra-granted permissions, so if
 you remove it first, the app gets tenant-wide mail access for as long as that window lasts. Revoke

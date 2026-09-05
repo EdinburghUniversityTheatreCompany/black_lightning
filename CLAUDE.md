@@ -393,8 +393,13 @@ survive as historical import provenance and are never written. Spec + plan in
     deletes the one-centre world the reconcile tests deliberately pin as a business rule. The
     5 hand-built sites go through `create_reimbursements_cost_centre` instead.
 - **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
-  shared mailbox via `MailboxClient` (Graph app-only auth, scoped by an
-  ApplicationAccessPolicy). Every inbound receipt becomes a **blank DRAFT** (subject as the
+  shared mailbox via `MailboxClient` (Graph app-only auth). **The app holds no Entra mail
+  permission**: Exchange grants it named mailboxes through RBAC for Applications, so the
+  retired "Reimbursements App Access" group no longer gates anything and adding a mailbox
+  to it is a convincing no-op. Authorise one by re-running `docs/graph-mailbox-rbac.ps1`
+  with the **full** list from `bin/rails graph:mailboxes`. The scope filter is replaced,
+  not appended, so a short list silently cuts off a working cost centre.
+  Every inbound receipt becomes a **blank DRAFT** (subject as the
   description, amount/budget/reference left blank) plus the "please complete it in the
   portal" reply.
   Reply-then-move is the commit point; unread = will retry.

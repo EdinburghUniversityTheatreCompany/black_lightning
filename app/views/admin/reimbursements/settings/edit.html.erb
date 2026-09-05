@@ -38,9 +38,9 @@
     </div>
 
     <p class="text-xs text-gray-500 -mt-2">
-      Changing a mailbox breaks email-in / draft-sending until the new address is added to the
-      "Reimbursements App Access" group (see the Microsoft-access steps below). Run the access
-      check after changing it.
+      Changing a mailbox breaks email-in / draft-sending until the new address is added to the app's
+      Exchange management scope (see the Microsoft-access steps below). Run the access check after
+      changing it.
     </p>
 
     <div>
@@ -70,29 +70,53 @@
           The manual Microsoft 365 steps the app can't do itself. You only need these when
           <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
           The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID <code><%= app_id %></code>)
-          already exists with admin-consented Graph permissions; you just wire up the mailboxes below.
+          already exists; what's left is authorising this cost centre's own mailboxes and site below.
         </p>
 
         <div>
           <p class="font-medium">Authorise this cost centre's mailbox<%= "es" unless @cost_centre.receive_mailbox == @cost_centre.send_mailbox %></p>
           <p>
-            Setting a mailbox above is <strong>not enough</strong>: the Graph app can only touch mailboxes inside
-            the <code>Reimbursements App Access</code> group in Exchange Online. Until
-            <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "it's" : "they're" %> in that group,
+            Setting a mailbox above is <strong>not enough</strong>. The app holds no tenant-wide mail permission
+            at all: Exchange hands it one mailbox at a time through a <strong>management scope</strong> listing
+            the addresses it may touch (RBAC for Applications). Until
+            <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "it's" : "they're" %> in that scope,
             every Graph call (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost
-            centre's email-in and batch drafting silently break. Add each mailbox to that group in Exchange
-            Online PowerShell:
+            centre's email-in and batch drafting silently break.
+          </p>
+          <p class="mt-2">
+            <strong>The scope filter is replaced, not added to</strong>, so you have to pass every mailbox the
+            app uses, not just the new one. Leave one out and you cut off a cost centre that was working.
+            Don't type that list from memory, because a send mailbox is a separate field from a receive one and
+            they usually differ. Ask the app:
+          </p>
+          <pre class="<%= code_class %>"><code>kamal app exec -i 'bin/rails graph:mailboxes'</code></pre>
+          <p class="mt-2">
+            That prints the <code>$env:</code> lines ready to paste. Then run the script from a checkout of this
+            repo (<code>docs/graph-mailbox-rbac.ps1</code>), which is idempotent, so re-running it is safe:
           </p>
           <pre class="<%= code_class %>"><code># Create each shared mailbox first (M365 admin center &rarr; Teams &amp; groups &rarr; Shared
-# mailboxes), then connect to Exchange Online PowerShell:
-Connect-ExchangeOnline</code></pre>
+# mailboxes), then:
+Connect-ExchangeOnline
+
+$env:BL_GRAPH_APP_ID       = "<%= app_id %>"
+$env:BL_GRAPH_SP_OBJECT_ID = "&lt;Object ID, from Entra &gt; ENTERPRISE APPLICATIONS&gt;"
+# ...then paste the two $env: lines from `bin/rails graph:mailboxes`
+
+./docs/graph-mailbox-rbac.ps1 -WhatIf   # read the filter it would write
+./docs/graph-mailbox-rbac.ps1</code></pre>
+          <p class="mt-2">
+            Read the <code>-WhatIf</code> filter before running it for real and check every mailbox is in it.
+            Then confirm this cost centre came out in scope:
+          </p>
           <% grant_mailboxes.each do |mailbox| %>
-            <pre class="<%= code_class %>"><code>Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member <%= mailbox %>
-Test-ApplicationAccessPolicy -Identity <%= mailbox %> -AppId <%= app_id %></code></pre>
+            <pre class="<%= code_class %>"><code>Test-ServicePrincipalAuthorization -Identity <%= app_id %> `
+  -Resource <%= mailbox %> | Format-Table RoleName,AllowedResourceScope,InScope</code></pre>
           <% end %>
-          <p class="text-xs text-gray-500">
-            One policy scopes the app to the whole group, so there's no new access policy per mailbox: just
-            add members. Propagation can take ~30-60 min.
+          <p class="mt-2 text-xs text-gray-500">
+            Look for <code>InScope True</code> against <code>Application Mail Full Access</code>. That cmdlet
+            bypasses the permission cache so it answers immediately, but the app doesn't: allow
+            <strong>30 minutes to 2 hours</strong> before Run access check goes green. A red mailbox row inside
+            that window isn't a second problem, so don't re-run the script at it.
             <strong>Address already in use?</strong> Find what holds the SMTP proxy with
             <code>Get-Recipient -Filter "EmailAddresses -eq 'smtp:THE-ADDRESS'"</code>, then free it or pick another.
           </p>
@@ -136,10 +160,22 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
         </div>
 
         <div>
-          <p class="font-medium">Graph permissions on the Entra app (already granted)</p>
+          <p class="font-medium">Graph permissions on the Entra app</p>
           <ul class="list-disc pl-5">
-            <li><code>Mail.ReadWrite</code> + <code>Mail.Send</code>: poll / draft / send, scoped to the group above.</li>
+            <li>
+              <strong>Mail: no Entra permission at all.</strong> Poll / draft / send come from the Exchange role
+              assignment above (<code>Application Mail Full Access</code>), scoped to the mailbox list.
+              Consenting <code>Mail.ReadWrite</code> or <code>Mail.Send</code> here would give the app every
+              mailbox in the tenant and make the scoping decorative, because Exchange and Entra permissions are
+              a union. Don't.
+            </li>
             <li><code>Sites.Selected</code>: SharePoint, granted <code>write</code> per-site (above), not tenant-wide.</li>
+            <li>
+              <code>Sites.ReadWrite.All</code> and <code>Files.ReadWrite.All</code> are still consented
+              tenant-wide, which is why SharePoint works today even for a site with no per-site grant. Retiring
+              them is the open item in <code>docs/graph-mailbox-rbac.md</code>: grant the site first, confirm a
+              batch upload, then revoke.
+            </li>
           </ul>
         </div>
       </div>
