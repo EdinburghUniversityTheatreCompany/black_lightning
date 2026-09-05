@@ -13,7 +13,7 @@ app read every mailbox in the organisation, so something has to narrow that. It 
 [RBAC for Applications](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac).
 
 Run [`graph-mailbox-rbac.ps1`](graph-mailbox-rbac.ps1). It takes everything as environment
-variables or parameters and supports `-WhatIf`. Read the two traps below first.
+variables or parameters and supports `-WhatIf`. Read the traps below first.
 
 ## Trap 1: RBAC and Entra permissions are a UNION
 
