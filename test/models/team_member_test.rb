@@ -177,6 +177,19 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal [ first_id, second_id, null_id ], ordered.map(&:id)
   end
 
+  test "in_display_order agrees with the ordered scope" do
+    members = TeamMember.where(teamwork_id: [ 9001, 9002 ], teamwork_type: "Event")
+
+    assert_equal members.ordered.map(&:id), TeamMember.in_display_order(members.to_a.shuffle).map(&:id)
+  end
+
+  test "in_display_order sorts unsaved rows with no display_order last" do
+    ordered = team_members(:ordered_first)
+    added = TeamMember.new(position: "Sound", user: users(:user))
+
+    assert_equal [ ordered, added ], TeamMember.in_display_order([ added, ordered ])
+  end
+
   test "ordered scope sorts null display_order records alphabetically by name" do
     alpha_id = team_members(:alpha_first).id
     last_id  = team_members(:alpha_last).id

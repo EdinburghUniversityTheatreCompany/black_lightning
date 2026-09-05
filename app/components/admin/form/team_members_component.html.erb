@@ -10,6 +10,10 @@
       </div>
     <% end %>
 
-    <%= render('shared/form/sections/nested_fields', f: @f, association_name: :team_members, partial_name: 'team_member_fields', sortable: true) %>
+    <%# In saved order, not id order: the sortable controller renumbers every row from its
+        on-screen position after a drag, so rows laid out in id order would have one drag
+        overwrite the whole saved ordering. %>
+    <%= render('shared/form/sections/nested_fields', f: @f, association_name: :team_members, partial_name: 'team_member_fields', sortable: true,
+               collection: TeamMember.in_display_order(@f.object.team_members)) %>
   <% end %>
 </div>
