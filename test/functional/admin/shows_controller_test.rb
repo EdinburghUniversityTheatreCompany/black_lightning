@@ -481,6 +481,54 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                   "team member rows must be direct children of the sortable controller"
   end
 
+  # The form is where the order gets edited, so it has to show the saved order:
+  # the sortable controller renumbers every row from its on-screen position
+  # after a drag, and rows laid out in id order would have that one drag
+  # overwrite the whole saved ordering with id order.
+  test "edit form lists team members in their saved display order, not id order" do
+    show = FactoryBot.create(:show, team_member_count: 3)
+    ids = show.team_members.order(:id).ids
+    # Reverse of id order, so the two disagree.
+    ids.each_with_index { |id, index| TeamMember.find(id).update_columns(display_order: ids.size - 1 - index) }
+
+    get :edit, params: { id: show.to_param }
+    assert_response :success
+
+    rendered_ids = css_select("[data-controller~=sortable] > [data-sortable-item] input[name$='[id]']").map { |input| input["value"].to_i }
+    assert_equal ids.reverse, rendered_ids
+  end
+
+  # After a failed save the form must show the rows the user just arranged, with
+  # their errors, not the database's order: a scope would query and render the
+  # stale ones.
+  test "a failed update re-renders the team members in the submitted order" do
+    show = FactoryBot.create(:show, team_member_count: 2)
+    first, second = show.team_members.order(:id).to_a
+
+    patch :update, params: { id: show.to_param, show: { price: nil, team_members_attributes: {
+      "0" => { id: first.id, user_id: first.user_id, position: first.position, display_order: 1 },
+      "1" => { id: second.id, user_id: second.user_id, position: second.position, display_order: 0 }
+    } } }
+    assert_response :unprocessable_entity
+
+    rendered = css_select("[data-controller~=sortable] > [data-sortable-item] input[name$='[id]']").map { |input| input["value"].to_i }
+    assert_equal [ second.id, first.id ], rendered
+    assert_nil first.reload.display_order, "the failed save must not have written the order"
+  end
+
+  test "updating a show saves the team members' display order" do
+    show = FactoryBot.create(:show, team_member_count: 2)
+    first, second = show.team_members.order(:id).to_a
+
+    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
+      "0" => { id: first.id, user_id: first.user_id, position: first.position, display_order: 1 },
+      "1" => { id: second.id, user_id: second.user_id, position: second.position, display_order: 0 }
+    } } }
+    assert_redirected_to admin_show_path(show)
+
+    assert_equal [ second.id, first.id ], show.team_members.ordered.ids
+  end
+
   test "updating a show stores its ticket price bands and rewrites the price line" do
     show = FactoryBot.create(:show, is_public: true, price: "£10/8/7")
 
