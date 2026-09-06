@@ -31,14 +31,14 @@
 <%= render(CollapsibleSectionComponent.new(title: f.object.occurrence_label.pluralize, start_open: true,
                                            html_class: "mb-4")) do %>
   <div id="event-occurrences">
-  <p class="mb-2 text-sm text-muted">
+  <p class="mb-2 text-sm text-gray-600">
     Leave this empty if the event runs every day between the start and end dates — that is the
     normal case. Add <%= f.object.occurrence_label.downcase.pluralize %> to give the box office
     screen and the event page real times, and to mark a relaxed or captioned night.
   </p>
 
   <% if f.object.pretix_sync_performances? %>
-    <p class="mb-2 text-sm text-muted">
+    <p class="mb-2 text-sm text-gray-600">
       Dates marked <em>From pretix</em> are kept in step with the ticket shop — change those in
       pretix, not here. Anything you add below is yours and is never touched by the sync.
     </p>
@@ -61,7 +61,7 @@
 
 <%= render(CollapsibleSectionComponent.new(title: 'Ticket prices', start_open: true, html_class: "mb-4")) do %>
   <div id="ticket-prices">
-  <p class="mb-2 text-sm text-muted">
+  <p class="mb-2 text-sm text-gray-600">
     Add a row per band. The price line shown on the website and the box office screen is written
     from these, so you only need to type into "Price shown" if the bands cannot express it
     (&ldquo;Pay what you can&rdquo;).

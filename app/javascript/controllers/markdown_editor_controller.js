@@ -381,7 +381,7 @@ export default class extends Controller {
   }
 
   async #loadPreview() {
-    this.#previewEl.innerHTML = '<p class="text-muted">Loading preview…</p>'
+    this.#previewEl.innerHTML = '<p class="text-gray-600">Loading preview…</p>'
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     const response = await fetch("/markdown/preview", {
       method: "POST",

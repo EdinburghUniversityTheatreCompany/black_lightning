@@ -46,7 +46,7 @@
 
 <%# Members-only text: show a muted note instead of the unfilled default template %>
 <% unless event.members_only_text_customised? %>
-  <% fields[:members_only_text] = { type: 'content', content: content_tag(:em, 'Not filled in yet.', class: 'text-muted') } %>
+  <% fields[:members_only_text] = { type: 'content', content: content_tag(:em, 'Not filled in yet.', class: 'text-gray-600') } %>
 <% end %>
 
 <%# Proposal %>

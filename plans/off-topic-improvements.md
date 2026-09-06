@@ -642,10 +642,3 @@ way. `.xlsx` is on MailerSend's supported list today (Sep 2026), so the rejectio
 but the shape of the failure is the same for any future 450 that is not a rate limit: consider
 matching the message (`file type`, `from.email must be verified`, `recipient is suppressed`) to
 `discard_on` instead of retrying, and telling the requester when a report cannot be delivered.
-
-## `text-muted` is not a defined utility
-
-`text-muted` is used in five views (`admin/events/_basic_form.erb` among them) as if it were a
-Tailwind utility, but no `--color-muted` token exists in `app/javascript/styles`, so the class is a
-silent no-op and those hints render in full-strength body text. Either add the token to the theme
-(`@theme { --color-muted: … }`) or replace the usages with `text-gray-600`. Found while fixing #261.
