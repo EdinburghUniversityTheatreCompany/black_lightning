@@ -43,21 +43,38 @@ class TeamMember < ActiveRecord::Base
 
   normalizes :position, with: ->(position) { position&.strip }
 
+  # +id+ last so the order is total: two members of one show can share a name
+  # (and every unstamped row shares a NULL display_order), and MySQL is free to
+  # return an undetermined tie either way from one query to the next.
   scope :ordered, -> {
     joins(:user)
-      .order(Arel.sql("ISNULL(team_members.display_order), team_members.display_order ASC, users.first_name ASC, users.last_name ASC"))
+      .order(Arel.sql("ISNULL(team_members.display_order), team_members.display_order ASC, " \
+                      "users.first_name ASC, users.last_name ASC, team_members.id ASC"))
   }
 
   # The in-memory twin of +ordered+, for the edit form: after a failed save the
   # association holds the submitted rows with their errors, and a scope would
   # query the database and render the stale ones instead. A test pins the two
   # to the same order.
+  #
+  # Names are folded with +transliterate+ because the SQL side sorts them under
+  # utf8mb4_unicode_ci, which ignores accents: a plain Ruby +downcase+ puts
+  # "Ábel" after "Bob" and MySQL puts it before, so the form and the public page
+  # would disagree — and the next save through the form would make the form's
+  # order permanent. An unsaved row sorts after a saved one it ties with, being
+  # the row that was just added.
   def self.in_display_order(members)
     members.to_a.sort_by do |member|
       [ member.display_order ? 0 : 1, member.display_order || 0,
-        member.user&.first_name.to_s.downcase, member.user&.last_name.to_s.downcase, member.id || 0 ]
+        sort_name(member.user&.first_name), sort_name(member.user&.last_name),
+        member.id || Float::INFINITY ]
     end
   end
+
+  def self.sort_name(name)
+    ActiveSupport::Inflector.transliterate(name.to_s).downcase
+  end
+  private_class_method :sort_name
 
   after_create :sync_debts_if_show
 

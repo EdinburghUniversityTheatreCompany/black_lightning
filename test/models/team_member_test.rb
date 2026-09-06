@@ -183,6 +183,21 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal members.ordered.map(&:id), TeamMember.in_display_order(members.to_a.shuffle).map(&:id)
   end
 
+  # The form sorts in Ruby and the public page in MySQL, whose collation
+  # (utf8mb4_unicode_ci) folds accents. If the two disagree, the form shows one
+  # order, the page another, and the first save through the form makes the
+  # form's order permanent.
+  test "in_display_order agrees with the ordered scope on accented names" do
+    show = FactoryBot.create(:show)
+    abel = FactoryBot.create(:team_member, teamwork: show, position: "Sound",
+                             user: FactoryBot.create(:member, first_name: "Ábel", last_name: "Nagy"))
+    bob = FactoryBot.create(:team_member, teamwork: show, position: "Lighting",
+                            user: FactoryBot.create(:member, first_name: "Bob", last_name: "Smith"))
+
+    assert_equal [ abel.id, bob.id ], show.team_members.ordered.ids
+    assert_equal [ abel.id, bob.id ], TeamMember.in_display_order([ bob, abel ]).map(&:id)
+  end
+
   test "in_display_order sorts unsaved rows with no display_order last" do
     ordered = team_members(:ordered_first)
     added = TeamMember.new(position: "Sound", user: users(:user))
