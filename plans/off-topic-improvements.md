@@ -435,3 +435,29 @@ way. `.xlsx` is on MailerSend's supported list today (Sep 2026), so the rejectio
 but the shape of the failure is the same for any future 450 that is not a rate limit: consider
 matching the message (`file type`, `from.email must be verified`, `recipient is suppressed`) to
 `discard_on` instead of retrying, and telling the requester when a report cannot be delivered.
+
+## The BACS spreadsheet's amount column loses its currency format (verified 2026-09-06)
+
+`BacsXlsx#write_row` writes the amount with `sheet.add_cell(row_index, COL_AMOUNT, row.amount.to_f)`,
+and the comment beside it claims "the template's currency format renders it". It does not.
+rubyXL's `add_cell` **replaces** the cell, dropping the style the template pre-styled that row
+with, so the written cell carries `General`.
+
+Verified by generating a real one-row workbook through the service and reading it back:
+
+| cell | number format |
+|---|---|
+| template row 3 (blank, pre-styled) | `_-"£"* #,##0.00_-;\-"£"* #,##0.00_-;_-"£"* "-"??_-;_-@` |
+| written row 3 | `General` |
+
+So every BACS spreadsheet EUSA has received shows `1234.56` where the template intended
+`£1,234.56`. Cosmetic only — the value is a true number, so the GRAND TOTAL `SUM` is unaffected,
+and the total row keeps its own format because nothing writes to it.
+
+Fix: use `sheet[row][col].change_contents(value)` (keeps the existing style) instead of
+`add_cell`, or re-apply the format after writing. `change_contents` was confirmed to preserve
+`"£"#,##0.00` on the international template in the same session. The text cells are unaffected —
+`text_cell` sets `@` explicitly straight after `add_cell`.
+
+Blocking: nothing, beyond wanting a regression test that asserts the written amount cell's
+number format is the template's and not `General`.
