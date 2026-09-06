@@ -7,7 +7,7 @@
 
 <% if search_fields.present? %>
   <div class="mb-3">
-    <%= render "shared/search_form", input_fields: search_fields, columns: 2 %>
+    <%= render SearchFormComponent.new(q: @q, input_fields: search_fields, columns: 2) %>
   </div>
 <% end %>
 

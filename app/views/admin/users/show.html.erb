@@ -21,7 +21,7 @@
     <% end %>
 <% end %>
 
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= render '/shared/show_actions', object: @user, destroy_link_params: {
     type_confirm: @user.name,
     detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:"
@@ -34,7 +34,7 @@
   </div>
   <div class="xl:col-span-2">
     <%= render CardComponent.new(flush: true) do %>
-      <%= render 'shared/basic_fields', fields: fields %>
+      <%= render FieldListComponent.new(fields: fields, admin_site: @admin_site) %>
     <% end %>
     <%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user) %>
   </div>
@@ -49,4 +49,4 @@
           { content: "<b>Position</b>: #{team_membership.position}".html_safe, class: 'mt-auto' }
         ] } } %>
 
-<%= render Admin::EventsGridComponent.new(items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>
+<%= render EventsGridComponent.new(items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>

@@ -113,6 +113,33 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+- **The namespace says who renders it, so check before adding one.** Top level = both sites
+  (`ImageComponent`, `GalleryComponent`, `SearchFormComponent`, `CardComponent`); `Admin::` and
+  `Public::` = only that site. A component rendered from both sites with an `Admin::`/`Public::`
+  prefix is a lie about where it is used, which is what #245 was about.
+- **`app/views/shared/` is not a second home for reusable markup.** A reusable piece is a
+  component; what is left there is the admin/public page scaffolding (`shared/pages/*`) and the
+  form field vocabulary (`shared/form/*`), both of which read controller ivars or wrap a form
+  builder. There is no `app/views/admin/shared/` — two directories called "shared" is how a
+  component came to render `shared/attachments_gallery` while the partial lived under
+  `admin/shared/`, 500ing questionnaires#show in production.
+- **A `@admin_site` read from inside markup becomes a constructor argument** when that markup
+  becomes a component (`GalleryComponent#show_tags`, `TeamCreditsComponent#admin_site`) — the
+  component must not reach for controller state.
+- **Write `alt:` as a literal keyword at the `image_tag` call**, not merged in from Ruby. herb's
+  `html-img-require-alt` reads the template statically and cannot see an alt that arrives inside
+  an options hash.
+- **`MdEditorComponent` takes `layout:`** — `:horizontal` (the admin default, a label column
+  beside the editor) or `:vertical` for the three public forms, whose other fields stack. Only
+  the vertical layout styles the `<label>`; horizontal puts it in an already-styled column.
+- **The public site's form classes come from `bootstrap_compat.css`, and the shim has to name
+  the class simple_form actually emits.** `simple_horizontal_form_for` resolves to the *bootstrap*
+  `horizontal_*` wrappers off the admin site, which emit `col-form-label` and `form-text` —
+  neither of which was shimmed, so every label and hint on the three public forms
+  (complaints, opportunity submission, profile completion) rendered browser-default next to a
+  14px control. The layout classes (`form-group row`, `col-sm-3`, `col-sm-9`) are deliberately
+  **not** shimmed, which is why those forms stack rather than sitting in two columns.
+
 ## Dev Environment (mise + hk)
 
 Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `pkl`, `gitleaks`,
@@ -1023,7 +1050,7 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   image_processing, so the bytes were WebP while every variant was served declaring
   `image/png` or `image/jpeg`. Browsers sniff and cope — og:image validators do not.
   **Changing a variant re-keys its URL and regenerates the whole set on first request.**
-- **In `shared/_image.erb`, `full_width` is styling and `priority` is loading.** They were one
+- **In `ImageComponent`, `full_width` is styling and `priority` is loading.** They were one
   flag (`eager_load`) and it had the performance backwards: eight cards below the fold loaded
   eagerly while the masthead above them inherited the app-wide lazy default. Measured, correcting
   it was worth 1552ms of homepage LCP on a throttled phone. Only a genuine LCP element passes
@@ -1094,7 +1121,7 @@ Start the test database using `docker start /mysql8` before running any tests.
 
 - **Validation/error messages are i18n-customised** (e.g. presence reads "must not be blank.", not Rails' default "can't be blank"). Assert on `errors[:field].present?` rather than the literal default string.
 - **Admin search-form/index table headers** translate symbol headers via `t("simple_form.labels.defaults.<key>")` (see `SearchFormHelper` and `shared/_table.erb`). A new column used as a header or search field needs a matching key in `config/locales/simple_form.en.yml` under `simple_form.labels.defaults`, or the page raises "Translation missing".
-- **The markdown editor (`Admin::MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
+- **The markdown editor (`MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
 - **Fixtures with an explicit `id:` break association-by-label references.** Some fixtures set an explicit `id:` (e.g. `test/fixtures/users.yml` `admin` has `id: 1`). Referencing such a record by label in another fixture's association (`creator: admin`) sets the foreign key to `ActiveRecord::FixtureSet.identify(:admin)` — a *hashed* id that does **not** equal the explicit `id`, so the loaded association (`opportunity.creator`) comes back `nil` even though `creator_id` is set. When a test relies on the association resolving, reference the explicit id directly (`creator_id: 1`), not the label.
 - **Capybara's `select` can't drive most admin selects.** `select_controller.js` replaces every
   `.simple-select2` element with a **Tom Select** widget and hides the original `<select>`, so

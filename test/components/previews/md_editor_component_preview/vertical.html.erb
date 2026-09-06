@@ -1,0 +1,7 @@
+<%# The public forms: every other field comes from simple_form's vertical
+    wrapper, so the editor stacks its label above the control too. The plain
+    input below is the sibling it has to line up with. %>
+<%= simple_form_for(record, url: "#") do |f| %>
+  <%= f.input :first_name, label: "Subject" %>
+  <%= render MdEditorComponent.new(f: f, field: :bio, layout: :vertical) %>
+<% end %>

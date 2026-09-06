@@ -1,8 +1,8 @@
 <%# locals: (category_info:) %>
 
 <h3><%= category_info.category.name_on_profile %></h3>
-<%= render 'shared/image', image: category_info.fetch_image, variant: slideshow_variant %>
+<%= render ImageComponent.new(image: category_info.fetch_image, variant: slideshow_variant) %>
 
 <p><%= render_markdown category_info.description %></p>
 
-<%= render '/admin/shared/gallery', pictures: category_info.pictures.includes(:gallery).accessible_by(current_ability), header_size: 4 %>
+<%= render GalleryComponent.new(pictures: category_info.pictures.includes(:gallery).accessible_by(current_ability), header_size: 4, show_tags: true) %>

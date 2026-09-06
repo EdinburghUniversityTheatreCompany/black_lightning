@@ -9,7 +9,7 @@
 
       <% case f.object.question.response_type %>
         <% when "Long Text" %>
-          <%= render Admin::MdEditorComponent.new(f: f, field: :answer, input_field_args: { label: question_text }) %>
+          <%= render MdEditorComponent.new(f: f, field: :answer, input_field_args: { label: question_text }) %>
         <% when "Number" %>
           <%= f.input :answer, as: :decimal, label: question_text %>
         <% when "Yes/No" %>

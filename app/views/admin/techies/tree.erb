@@ -1,4 +1,4 @@
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= get_link Techie, :index, variant: :primary %>
   <%= get_link Techie, :new, variant: :secondary %>
 <% end %>

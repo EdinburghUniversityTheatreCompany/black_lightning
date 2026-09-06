@@ -40,6 +40,6 @@ end %>
 } %>
 
 <%= render CardComponent.new(title: "Proposals", flush: true) do %>
-  <%= render 'shared/basic_fields', fields: call_info_fields %>
-  <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>
+  <%= render FieldListComponent.new(fields: call_info_fields, admin_site: @admin_site) %>
+  <%= render(IndexTableComponent.new(headers: headers, field_sets: field_sets, q: @q, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal)) %>
 <% end %>

@@ -4,8 +4,8 @@
   <div class="w-full<%= ' md:w-2/3' if any_details? %>">
     <%= render CardComponent.new(flush: true, html_class: "mb-0 overflow-hidden") do %>
       <%# The show page's banner: its LCP element. %>
-      <%= render "shared/image", image: @image, variant: helpers.slideshow_variant, proxy: true, priority: true,
-                 alt: @header.to_s, image_options: { class: "block w-full h-auto" } %>
+      <%= render ImageComponent.new(image: @image, variant: helpers.slideshow_variant, proxy: true, priority: true,
+                 alt: @header.to_s, image_options: { class: "block w-full h-auto" }) %>
 
       <% if show_card_body? %>
         <div class="p-4">

@@ -2,7 +2,7 @@
   <% @categories.each do |category| %>
     <div>
       <%= render CardComponent.new(html_class: "h-full mb-0", flush: true) do %>
-        <% img = capture do %><%= render 'shared/image', image: category.fetch_image, variant: square_thumb_variant(300), image_options: { class: 'block w-full h-auto rounded-t' } %><% end %>
+        <% img = capture do %><%= render ImageComponent.new(image: category.fetch_image, variant: square_thumb_variant(300), image_options: { class: 'block w-full h-auto rounded-t' }) %><% end %>
         <%= get_link category, :show, link_text: img %>
         <div class="p-4">
           <p class="block mb-2"><%= get_link category, :show %></p>

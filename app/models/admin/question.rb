@@ -37,7 +37,7 @@ class Admin::Question < ApplicationRecord
   # Defines the possible response types.
   #
   # Note that if you change these, you will need to update the answer_field partial.
-  # app/views/admin/shared/_answer_fields.erb
+  # app/views/application/_answer_fields.erb
   # You may also need to change the questionnaire show page.
   ##
   def self.response_types

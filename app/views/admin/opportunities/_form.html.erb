@@ -48,7 +48,7 @@
     <%= f.input :contact_email,
         hint: "Optional. If left blank and email visibility is enabled, the submitter's account email will be shown instead." %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12) %>
+    <%= render MdEditorComponent.new(f: f, field: :description, rows: 12) %>
 
     <h3>Roles</h3>
     <p class="text-gray-500 small mx-2 mb-3">

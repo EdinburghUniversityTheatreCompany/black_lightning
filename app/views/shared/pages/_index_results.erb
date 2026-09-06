@@ -16,8 +16,8 @@
       <%= content %>
     </div>
   <% else %>
-    <%= render('shared/index_table', headers: headers, field_sets: field_sets,
+    <%= render(IndexTableComponent.new(headers: headers, field_sets: field_sets, q: @q,
                include_edit_button: include_edit_button, include_link_to_item: include_link_to_item,
-               resource_class: resource_class) %>
+               resource_class: resource_class)) %>
   <% end %>
 <% end %>

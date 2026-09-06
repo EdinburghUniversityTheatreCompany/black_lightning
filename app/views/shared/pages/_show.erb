@@ -1,7 +1,7 @@
 <% # locals: (fields:, object:, show_actions_args: {}) %>
 <%# KEEP%>
 
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <% if content_for?(:custom_show_actions) %>
     <% yield :custom_show_actions %>
   <% else %>
@@ -10,5 +10,5 @@
 <% end %>
 
 <%= render CardComponent.new(flush: true) do %>
-  <%= render 'shared/basic_fields', fields: fields %>
+  <%= render FieldListComponent.new(fields: fields, admin_site: @admin_site) %>
 <% end %>

@@ -1,0 +1,80 @@
+<%# The two-column name grid is a grid-template-columns value Tailwind has no
+    utility for, so it stays as scoped CSS rather than becoming arbitrary-value
+    class soup. It could move into a stylesheet; it has not, because it is the
+    only rule these class names have anywhere. %>
+<style>
+  .team-grid {
+    display: grid;
+    grid-template-columns: fit-content(35%) 1fr;
+    gap: 0.25rem 1rem;
+    align-items: start;
+  }
+
+  @media (max-width: 576px) {
+    .team-grid {
+      grid-template-columns: 1fr;
+    }
+
+    /* In a single column the uniform row gap no longer separates one member
+       from the next, so add spacing before each member's role (every role
+       except the first starts a new member). */
+    .team-grid .team-role:not(:first-child) {
+      margin-top: 0.75rem;
+    }
+  }
+
+  .team-role {
+    word-break: break-word;
+    font-weight: 600;
+  }
+
+  .team-user {
+    min-width: 0;
+  }
+</style>
+
+<% if cast.any? %>
+  <h3>Cast</h3>
+
+  <div class="team-grid">
+    <% cast.each do |team_member| %>
+      <div class="team-role">
+        <%= team_member.cast_display_name %>
+      </div>
+
+      <div class="team-user">
+        <%= helpers.user_link(team_member.user, true) %>
+
+        <% if show_badges_for?(team_member) %>
+          <% badges_for(team_member).each do |label| %>
+            <%= helpers.generate_label(label[:label_class], label[:text]) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<% if crew.any? %>
+  <h3 class="mt-3">Production Team</h3>
+
+  <div class="team-grid">
+    <% crew.each do |team_member| %>
+      <div class="team-role">
+        <%= team_member.position %>
+      </div>
+
+      <div class="team-user">
+        <%= helpers.user_link(team_member.user, true) %>
+
+        <% if show_badges_for?(team_member) %>
+          <% badges_for(team_member).each do |label| %>
+            <%= helpers.generate_label(label[:label_class], label[:text]) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% elsif cast.empty? %>
+  <p class="text-gray-500">No team members yet.</p>
+<% end %>

@@ -1,4 +1,4 @@
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= link_to @cancel_text, @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
 <% end %>
 

@@ -19,7 +19,7 @@
             allow_custom_input: true, include_blank: true,
             hint: "Optional. Pick a venue or type another location." %>
 
-        <%= render "/shared/form/md_editor", f: f, field: :description %>
+        <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical) %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
 
         <%= f.input :compensation_type, as: :select,
@@ -62,6 +62,6 @@
         <%= link_to "Cancel", get_involved_opportunities_path, class: btn_classes(:secondary) %>
       <% end %>
       <div class="mt-3"></div>
-      <%= render '/shared/form/form_actions', f: f, include_index: false, submit_label: "Submit Opportunity" %>
+      <%= render '/shared/form/model_actions', f: f, include_index: false, submit_label: "Submit Opportunity" %>
   <% end %>
 </div>

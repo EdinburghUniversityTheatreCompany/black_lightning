@@ -71,7 +71,7 @@
           { fields: fields }
         end %>
 
-        <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
+        <%= render TableComponent.new(headers: headers, field_sets: field_sets, q: @q, col_widths: [ "70%", "30%" ]) %>
       </div>
     <% end %>
   <% else %>
@@ -112,7 +112,7 @@
           { fields: fields }
         end %>
 
-        <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
+        <%= render TableComponent.new(headers: headers, field_sets: field_sets, q: @q, col_widths: [ "70%", "30%" ]) %>
       </div>
     <% end %>
   <% else %>

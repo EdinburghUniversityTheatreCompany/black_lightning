@@ -10,7 +10,7 @@
   <div class="form-inputs">
     <%= f.input :subject %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :description %>
+    <%= render MdEditorComponent.new(f: f, field: :description, layout: :vertical) %>
   </div>
 
   <%= recaptcha_v3(action: 'submit_complaint') %>
@@ -19,5 +19,5 @@
     <%= display_block("Submit Complaint Help Bottom", false) %>
   </p>
 
-  <%= render '/shared/form/form_actions', f: f, include_index: false %>
+  <%= render '/shared/form/model_actions', f: f, include_index: false %>
 <% end %>

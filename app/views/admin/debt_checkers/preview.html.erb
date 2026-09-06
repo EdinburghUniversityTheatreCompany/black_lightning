@@ -1,4 +1,4 @@
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= link_to "New Check", new_admin_debt_checker_path, class: btn_classes(:primary) %>
   <% if can?(:index, Admin::Debt) %>
     <%= link_to "Back to Debts", admin_debts_path, class: btn_classes(:secondary) %>
