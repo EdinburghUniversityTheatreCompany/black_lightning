@@ -46,37 +46,6 @@ that trims its oldest lines would be the proper fix if that ever needs closing.
   the apt list this repo settled on for a precompiled-Ruby devcontainer, and the
   `.worktree-isolate.conf` + `database.yml` suffix recipe now wired up here.
 
-## Admin::MembershipCardsController is unrouted dead code — NEEDS MICK'S GO-AHEAD TO DELETE
-
-`admin/membership_cards` has **no routes** — the `resources :membership_cards` line in
-`config/routes.rb` is commented out (~line 334) and `bin/rails routes -c admin/membership_cards`
-returns nothing. The controller (whose own header says "Has been severely neglected. Can probably
-use the GenericController.") and its views (`index`/`show`/`_index_results`) are therefore
-unreachable. Its `index` still renders the unguarded `shared/pages/index` turbo_stream fragment, but
-that's moot while unrouted.
-
-Scoped out fully on 2026-07-26 while draining this file. **Removal is the right call** and the
-cluster is bigger than the note said — every one of these is reachable only through the unrouted
-controller:
-
-- `app/controllers/admin/membership_cards_controller.rb`
-- `app/views/admin/membership_cards/` (`index`, `show`, `_index_results`)
-- `test/functional/admin/membership_cards_controller_test.rb` (an empty class, no tests)
-- `lib/membership_card_pdf.rb` — already gutted to a no-op stub ("Prawn broke on upgrading to
-  Ruby 3.1. Most of the contents of this file got deleted."), so `generate_card` produces nothing
-- `app/javascript/controllers/print_controller.js` — used by exactly one template, the unreachable
-  `show`, which POSTs to a hardcoded box-office receipt printer at `192.168.1.254:8179` /
-  `localhost:5000` behind an `if request.remote_ip == "79.77.20.249"` check
-- the commented-out `resources :membership_cards` block in `config/routes.rb`
-
-The `MembershipCard` **model stays** — `User has_one :membership_card`, `delegate :card_number`,
-the merge path and `MembershipMailer` all use it.
-
-Not done because deleting files is exactly the case the worktree workflow says to surface rather
-than merge silently (and the sandbox declined the deletion). Say the word and it is one commit.
-
----
-
 ## Multiple financial years — PLANNED (post-MySQL)
 Now designed: a year-selector model (one active year + look-back), landing at the MySQL
 cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-roadmap.md`
