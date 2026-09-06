@@ -1,0 +1,9 @@
+<%# locals: (text:, path:) %>
+<%# The "← Back to the list" line above a page's card. One partial so the
+    arrow, colour and size match everywhere; the arrow is decoration and hidden
+    from screen readers, the text is the link's whole name. %>
+<p class="mb-3">
+  <%= link_to path, class: "text-sm text-primary underline" do %>
+    <span aria-hidden="true">←</span> <%= text %>
+  <% end %>
+</p>

@@ -158,7 +158,7 @@ module Admin
         attached, upload_errors = attach_posted_receipts(expense)
         if attached.zero?
           redirect_to_review(alert: upload_errors.presence&.to_sentence ||
-                                    "No usable receipt files (PDF or image, under the size limit).")
+                                    NOTHING_USABLE)
           return
         end
 

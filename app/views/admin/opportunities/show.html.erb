@@ -42,7 +42,7 @@
                               : [ approve_admin_opportunity_path(@opportunity), :success, "Approve" ] %>
     <%= form_with url: action_path, method: :put do %>
       <%= label_tag :approval_note, "Note to submitter (optional)", class: "block text-sm text-gray-600" %>
-      <%= text_area_tag :approval_note, nil, rows: 2, class: "w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2",
+      <%= text_area_tag :approval_note, nil, rows: 2, class: input_classes("mb-2"),
             placeholder: "Included in the email sent to the submitter." %>
       <%= submit_tag button_label, class: btn_classes(button_variant) %>
     <% end %>

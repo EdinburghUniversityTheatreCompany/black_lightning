@@ -1,0 +1,16 @@
+<%# locals: (label:, name:, hint: nil, html_class: "mb-4", id: nil) %>
+<%# One field of a hand-rolled (form_with url:) form: label above, the control
+    yielded from the caller, then error and hint. Styled from the same
+    FormStyles constants as simple_form's vertical wrapper so the finance
+    screens read like the rest of the admin, `mb-4` included — override
+    html_class where a parent already spaces its children. `id` is only needed
+    when the control's id is not derived from its name (a per-row form on a
+    list). %>
+<div class="<%= html_class %>">
+  <%= label_tag (id || name), label, class: FormStyles::LABEL %>
+  <%= yield %>
+  <% if hint.present? %>
+    <%# id so a caller can point its control's aria-describedby here. %>
+    <small id="<%= id || name %>_hint" class="<%= FormStyles::HINT %>"><%= hint %></small>
+  <% end %>
+</div>

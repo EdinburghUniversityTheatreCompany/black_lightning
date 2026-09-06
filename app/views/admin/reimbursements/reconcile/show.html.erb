@@ -17,28 +17,22 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "Step 1: Paste actuals data") do %>
-  <%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
-    <div class="flex flex-col gap-3">
-      <div>
-        <%= label_tag :pasted_text, "Actuals data (tab- or comma-separated, include the header row)",
-                      class: "block text-sm font-medium mb-1" %>
-        <%= text_area_tag :pasted_text, @pasted_text, rows: 10,
-                          placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
-                          "aria-describedby": "pasted_text_hint",
-                          class: "w-full border border-gray-300 rounded px-2 py-1 font-mono text-xs" %>
-      </div>
-      <p id="pasted_text_hint" class="text-xs text-gray-600">
-        Each row's EUSA period (P1–P12) and cost centre are read from the pasted data, so
-        there's no need to enter a month or pick a cost centre. A paste may cover several cost
-        centres: each row is imported under its own, rows naming a cost centre that isn't set
-        up here are skipped (and reported), and rows with no cost centre at all will ask you
-        where they belong.
-      </p>
-      <div>
-        <%= submit_tag "Parse and match", class: btn_classes(:primary) %>
-      </div>
-    </div>
+<%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
+  <%= render CardComponent.new(title: "Step 1: Paste actuals data") do |card| %>
+    <% card.with_footer do %>
+      <%= render "shared/form/actions", submit: "Parse and match" %>
+    <% end %>
+
+    <%= render "shared/form/paste_or_upload",
+          text_name: :pasted_text,
+          text_label: "Actuals data (tab- or comma-separated, include the header row)",
+          text_value: @pasted_text, rows: 10,
+          placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
+          text_hint: "Each row's EUSA period (P1–P12) and cost centre are read from the pasted data, so " \
+                     "there's no need to enter a month or pick a cost centre. A paste may cover several " \
+                     "cost centres: each row is imported under its own, rows naming a cost centre that " \
+                     "isn't set up here are skipped (and reported), and rows with no cost centre at all " \
+                     "will ask you where they belong." %>
   <% end %>
 <% end %>
 <% end %>

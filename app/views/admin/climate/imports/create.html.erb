@@ -1,6 +1,4 @@
-<p class="mb-3">
-  <%= link_to "← Back to the charts", admin_climate_dashboard_path, class: "text-sm text-primary underline" %>
-</p>
+<%= render "shared/back_link", text: "Back to the charts", path: admin_climate_dashboard_path %>
 
 <%= render CardComponent.new(title: "Imported into #{@sensor.display_name}") do %>
   <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">

@@ -1,9 +1,10 @@
+<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+
 <p class="mb-3 text-gray-600">
   This EUSA row is a cost the Students' Association levied on us directly, not a claim anyone
   submitted. Recording it as a From-EUSA expense charges it to a budget so the budget's spend is
   honest. The money has already gone, so it is created as <strong>already paid</strong>: it never
   enters the review queue or a BACS batch, and nobody is emailed.
-  <%= link_to "← All actuals", admin_reimbursements_actuals_path, class: "text-primary underline" %>
 </p>
 
 <%= render CardComponent.new(title: "The EUSA row") do %>

@@ -76,6 +76,31 @@ Always maintain the URL as state with readable parameters where possible for GET
 
 **To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.**
 
+## Admin forms
+
+One vocabulary for every admin form. `FormStyles` (top of
+`config/initializers/simple_form_tailwind.rb`) holds the control classes; simple_form's wrappers
+read it, and so do the hand-rolled `form_with url:` forms through `input_classes` /
+`file_input_classes` / `checkbox_classes` and `shared/form/_field` (label above, control yielded,
+error and hint below). Never type `border border-gray-300 rounded …` into a view again.
+
+- **Model-backed forms use simple_form**: `simple_horizontal_form_for` + `shared/pages/form` for
+  the label-column layout the older admin uses, plain `simple_form_for` (vertical wrappers) for
+  the stacked finance layout. **Flat-param forms** (`params[:name]`, no model) wrap a
+  `CardComponent` in `form_with` and put `render "shared/form/actions"` in `card.with_footer`, so
+  Save and Cancel sit in the grey footer on every form.
+- `shared/back_link` is the "← All …" line above a card; `shared/form/paste_or_upload` is the
+  paste-box-plus-file-input pair the budget import, climate import and Reconcile share.
+- **A select Tom Select will take over must carry only `simple-select2`.** Tom Select copies the
+  `<select>`'s classes onto its `.ts-wrapper`, which already draws the box, so `border … w-72` on
+  the select renders a box inside a box. simple_form's `CollectionSelectInput` strips the classes
+  for you; a `select_tag` must not add them. The single border comes from `.ts-control` in
+  Tom Select's own CSS: overriding it away leaves the widget with no box at all.
+- **Receipt add/remove on both expense edit pages answers a turbo stream** replacing
+  `#receipts-gallery` (`AttachesReceipts#respond_with_receipts_gallery`, `finance: true` for the
+  finance routes), with a redirect for a plain post; `shared/_receipts_dropzone` is the drop
+  target both pages render inside the `receipts-upload` controller element.
+
 ## Link Helper
 
 **Use `get_link` from `LinkHelper` for button-style links to model resources.**

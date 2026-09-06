@@ -1,6 +1,6 @@
 <p class="mb-3 text-gray-600">
   <% if @expense.status == Reimbursements::Status::DRAFT %>
-    This claim is a draft. Only you can see it. Finish it and submit it below.
+    Finish this draft and submit it below.
   <% else %>
     You can edit this claim while it's still waiting for review. Once the finance team
     picks it up, contact <%= reimbursements_contact_link %> for changes.
@@ -10,22 +10,7 @@
 <div data-controller="receipts-upload"
      data-receipts-upload-url-value="<%= admin_reimbursements_expense_receipts_path(@expense.record_id) %>">
   <%= render CardComponent.new(title: "Receipts") do %>
-    <div class="dropzone dropzone-default mb-3 p-4 text-center"
-         data-action="dragover->receipts-upload#dragover dragleave->receipts-upload#dragleave drop->receipts-upload#drop">
-      <input type="file" multiple class="hidden" tabindex="-1" aria-hidden="true"
-             accept="<%= Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE %>"
-             data-receipts-upload-target="input"
-             data-action="change->receipts-upload#inputChanged">
-      <div class="dropzone-msg dz-message text-gray-600">
-        <h3 class="dropzone-msg-title">
-          Drag a receipt here, or
-          <button type="button" class="font-medium underline" data-action="receipts-upload#pick">browse for a file</button>
-        </h3>
-        <span class="dropzone-msg-desc text-sm">PDF or photo, max 5&nbsp;MB. It's added straight away.</span>
-      </div>
-    </div>
-    <p class="mb-2 text-sm text-gray-600" aria-live="polite" data-receipts-upload-target="status"></p>
-
+    <%= render "admin/reimbursements/shared/receipts_dropzone" %>
     <%= render "receipts_gallery", expense: @expense %>
   <% end %>
 </div>
@@ -35,11 +20,16 @@
       show_receipt_input: false, current_status: @expense.status %>
 
 <% if @expense.status == Reimbursements::Status::DRAFT %>
-  <div class="mt-4 border-t border-gray-200 pt-3">
+  <%# Its own button_to form, deliberately: the destroy route is the same URL as
+      the update this page posts to, so a Delete button inside the edit form
+      would rely on its _method=delete outranking the form's hidden
+      _method=patch — and if that ever lost, the click would silently SAVE the
+      draft and report success. One form, one method. %>
+  <div class="-mt-2 mb-4 flex flex-wrap items-center gap-3">
     <%= button_to "Delete draft", admin_reimbursements_expense_path(@expense.record_id),
-          method: :delete, class: btn_classes(:danger, :sm),
+          method: :delete, class: btn_classes(:danger),
           form: { data: { turbo_confirm: "Delete this draft for good? This can't be undone." } } %>
-    <p class="mt-1 mb-0 text-sm text-gray-500">
+    <p class="mb-0 text-sm text-gray-500">
       Discards this unsent draft entirely. Only you ever saw it.
     </p>
   </div>

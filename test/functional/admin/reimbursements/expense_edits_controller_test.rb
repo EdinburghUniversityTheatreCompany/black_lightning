@@ -853,15 +853,48 @@ module Admin
         assert_includes response.body, "fa-file-lines"
       end
 
-      test "edit keeps the finance Remove button and Attach form" do
+      test "edit offers the finance dropzone and a remove control per receipt" do
         expense = two_receipt_expense
         sign_in @user
 
         get :edit, params: { id: expense.record_id }
 
-        assert_includes response.body, ">Remove</button>"
-        assert_includes response.body,
-                        admin_reimbursements_expense_edit_receipts_path(expense.record_id)
+        assert_select "[data-controller='receipts-upload'][data-receipts-upload-url-value=?]",
+                      admin_reimbursements_expense_edit_receipts_path(expense.record_id)
+        assert_select "button[data-action='receipts-upload#remove']", 2
+        # The remove controls hit the FINANCE route, not the producer's own.
+        assert_select "button[data-url^=?]",
+                      "#{edit_admin_reimbursements_expense_edit_path(expense.record_id).delete_suffix('/edit')}/receipts/",
+                      2
+      end
+
+      test "remove_receipt as a turbo stream replaces the gallery with finance remove controls" do
+        expense = two_receipt_expense
+        removed = expense.receipt_files.find { |file| file.filename.to_s == "a.pdf" }
+        sign_in @user
+
+        delete :remove_receipt, params: { id: expense.record_id, attachment_id: removed.blob_id.to_s },
+                                format: :turbo_stream
+
+        assert_response :success
+        assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
+        assert_select "button[data-action='receipts-upload#remove']", 1
+        assert_includes response.body, "/receipts/"
+        assert_equal [ "b.pdf" ], expense.reload.receipt_files.map { |file| file.filename.to_s }
+      end
+
+      test "add_receipts as a turbo stream replaces the gallery" do
+        expense = expense_at("Paid")
+        sign_in @user
+
+        assert_difference -> { expense.receipt_files.count }, 1 do
+          post :add_receipts, params: { id: expense.record_id,
+                                        receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/pdf") ] },
+                              format: :turbo_stream
+        end
+
+        assert_response :success
+        assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
       end
 
       test "remove_receipt drops a receipt and redirects to edit" do

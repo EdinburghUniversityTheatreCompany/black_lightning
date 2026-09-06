@@ -160,28 +160,28 @@
                 method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2",
                 data: { review_decision_target: "editForm" } do %>
     <div>
-      <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: "block text-sm font-medium" %>
+      <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: FormStyles::LABEL %>
       <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
-                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+                           class: input_classes %>
     </div>
     <div>
-      <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: "block text-sm font-medium" %>
+      <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: FormStyles::LABEL %>
       <%= number_field_tag :amount_excl_vat, expense.amount_excl_vat, step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
-                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+                           class: input_classes %>
     </div>
     <div class="sm:col-span-2">
-      <%= label_tag "description_#{expense.record_id}", "Description", class: "block text-sm font-medium" %>
+      <%= label_tag "description_#{expense.record_id}", "Description", class: FormStyles::LABEL %>
       <%= text_area_tag :description, expense.description, id: "description_#{expense.record_id}", rows: 2,
-                        class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+                        class: input_classes %>
     </div>
     <div>
-      <%= label_tag "payment_reference_#{expense.record_id}", "Payment reference", class: "block text-sm font-medium" %>
+      <%= label_tag "payment_reference_#{expense.record_id}", "Payment reference", class: FormStyles::LABEL %>
       <%= text_field_tag :payment_reference, expense.payment_reference, id: "payment_reference_#{expense.record_id}",
                          maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
-                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+                         class: input_classes %>
     </div>
     <div>
-      <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: "block text-sm font-medium" %>
+      <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: FormStyles::LABEL %>
       <% budget_options = @budgets.map { |b| [ b.name, b.record_id ] } %>
       <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
         <% budget_options.unshift([ expense.budget.name, expense.budget.record_id ]) %>
@@ -190,14 +190,14 @@
                      options_for_select(budget_options, expense.budget&.record_id),
                      include_blank: expense.budget&.record_id.blank?,
                      id: "budget_record_id_#{expense.record_id}",
-                     class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+                     class: input_classes %>
     </div>
     <div>
-      <%= label_tag "nominal_code_override_#{expense.record_id}", "Nominal code override", class: "block text-sm font-medium" %>
+      <%= label_tag "nominal_code_override_#{expense.record_id}", "Nominal code override", class: FormStyles::LABEL %>
       <%= text_field_tag :nominal_code_override, expense.nominal_code_override, id: "nominal_code_override_#{expense.record_id}",
                          placeholder: "blank = use budget default",
-                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
-      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
+                         class: input_classes %>
+      <p class="<%= FormStyles::HINT %>">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
     </div>
     <div class="sm:col-span-2">
       <%= submit_tag "Save changes", "aria-label": "Save changes to ##{expense.auto_number}",
@@ -229,7 +229,7 @@
                       data: { turbo_confirm: override_confirm } do %>
           <%= text_field_tag :override_note, nil, placeholder: "Reason for override (optional)",
                              "aria-label": "Reason for overriding the owner sign-off on ##{expense.auto_number}",
-                             class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                             class: input_classes(width: nil) %>
           <%= submit_tag "Approve (override sign-off)",
                          "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
                          data: { action: "review-decision#guard", decision_verb: "approving" },
@@ -255,7 +255,7 @@
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
                          "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                         class: input_classes(width: nil) %>
       <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}",
                      data: { action: "review-decision#guard", decision_verb: "rejecting" },
                      class: btn_classes(:danger, :sm) %>
@@ -292,7 +292,8 @@
     <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
                   method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
       <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
-                         "aria-label": "Attach receipts to expense ##{expense.auto_number}", class: "text-sm" %>
+                         "aria-label": "Attach receipts to expense ##{expense.auto_number}",
+                         class: file_input_classes %>
       <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
     <% end %>
   </div>

@@ -15,6 +15,27 @@
 #   @source "../../../config/initializers/**/*.rb"
 # in admin.css and application.css, so Vite picks up all utility classes used here.
 
+# The one place the admin's form control classes are written down. simple_form's
+# wrappers below read them, and so do the hand-rolled `form_with url:` forms
+# (finance, climate) through FormHelper#input_classes and shared/form/_field,
+# so a select on the budgets page and one on the news page cannot drift apart.
+# Defined here rather than in lib/ because an initializer cannot autoload a
+# reloadable constant, and this file is where the strings were already kept.
+module FormStyles
+  # INPUT_BASE carries no width so a caller can size a control (a table cell's
+  # amount, a search box) without two width utilities fighting; INPUT is the
+  # full-width default every wrapper uses.
+  INPUT_BASE = "rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+  INPUT      = "w-full #{INPUT_BASE}"
+  LABEL      = "block text-sm font-medium text-gray-700 mb-1"
+  HINT       = "block mt-1 text-xs text-gray-500"
+  ERROR      = "block text-xs text-red-600 mt-1"
+  INVALID    = "border-red-500"
+  VALID      = "border-green-500"
+  CHECKBOX   = "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0"
+  FILE_INPUT = "block w-full text-sm text-gray-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-sm file:font-medium hover:file:bg-gray-200 cursor-pointer"
+end
+
 SimpleForm.setup do |config|
   # === Shared config ===
   config.button_class = "btn"
@@ -34,12 +55,12 @@ SimpleForm.setup do |config|
   # Use Tailwind utility classes. form-control/is-invalid/invalid-feedback are
   # shimmed in bootstrap_compat.css so they render correctly on the public site.
 
-  input_class   = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-  label_class   = "block text-sm font-medium text-gray-700 mb-1"
-  error_class   = "text-xs text-red-600 mt-1"
-  hint_class    = "block mt-1 text-xs text-gray-500"
-  invalid_class = "border-red-500"
-  valid_class_f = "border-green-500"
+  input_class   = FormStyles::INPUT
+  label_class   = FormStyles::LABEL
+  error_class   = FormStyles::ERROR
+  hint_class    = FormStyles::HINT
+  invalid_class = FormStyles::INVALID
+  valid_class_f = FormStyles::VALID
 
   # Shared wrapper body for the vertical collection wrappers (regular + inline).
   # The two wrappers differ only in their item_wrapper_class (set on the
@@ -50,7 +71,7 @@ SimpleForm.setup do |config|
     b.wrapper :legend_tag, tag: "legend", class: "block text-sm font-medium text-gray-700 mb-1" do |ba|
       ba.use :label_text
     end
-    b.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0",
+    b.use :input, class: FormStyles::CHECKBOX,
                   error_class: invalid_class, valid_class: valid_class_f
     b.use :full_error, wrap_with: { tag: "div", class: "#{error_class} block" }
     b.use :hint, wrap_with: { tag: "small", class: hint_class }
@@ -78,7 +99,7 @@ SimpleForm.setup do |config|
     b.use :html5
     b.optional :readonly
     b.wrapper :form_check_wrapper, tag: "div", class: "flex items-center gap-2" do |bb|
-      bb.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0",
+      bb.use :input, class: FormStyles::CHECKBOX,
                      error_class: invalid_class, valid_class: valid_class_f
       bb.use :label, class: "text-sm text-gray-700"
       bb.use :full_error, wrap_with: { tag: "div", class: error_class }
@@ -108,7 +129,7 @@ SimpleForm.setup do |config|
     b.optional :readonly
     b.use :label, class: label_class
     b.use :input,
-          class: "block w-full text-sm text-gray-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-sm file:font-medium hover:file:bg-gray-200 cursor-pointer",
+          class: FormStyles::FILE_INPUT,
           error_class: invalid_class, valid_class: valid_class_f
     b.use :full_error, wrap_with: { tag: "div", class: error_class }
     b.use :hint, wrap_with: { tag: "small", class: hint_class }
@@ -235,14 +256,14 @@ SimpleForm.setup do |config|
   # === Admin horizontal wrappers (used via simple_horizontal_form_for on admin/ controllers) ===
   # Tailwind utility classes; invoked by FormHelper#horizontal_form_options.
 
-  adm_input_class   = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+  adm_input_class   = FormStyles::INPUT
   adm_label_class   = "w-full md:w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700"
   adm_grid_class    = "w-full md:w-9/12 px-2"
   adm_row_class     = "flex flex-wrap mb-4 items-start"
-  adm_error_class   = "block text-xs text-red-600 mt-1"
-  adm_hint_class    = "block mt-1 text-xs text-gray-500"
-  adm_invalid_class = "border-red-500"
-  adm_valid_class   = "border-green-500"
+  adm_error_class   = FormStyles::ERROR
+  adm_hint_class    = FormStyles::HINT
+  adm_invalid_class = FormStyles::INVALID
+  adm_valid_class   = FormStyles::VALID
 
   # Shared label + input-grid fragment for the admin Tailwind text-style wrappers
   # (used by tailwind_horizontal_form and tailwind_horizontal_range, which share
@@ -281,7 +302,7 @@ SimpleForm.setup do |config|
     b.use :label, class: adm_label_class
     b.wrapper :grid_wrapper, tag: "div", class: "#{adm_grid_class} py-1.5" do |wr|
       wr.wrapper :form_check_wrapper, tag: "div", class: "flex items-center gap-2" do |bb|
-        bb.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: adm_invalid_class, valid_class: adm_valid_class
+        bb.use :input, class: FormStyles::CHECKBOX, error_class: adm_invalid_class, valid_class: adm_valid_class
         bb.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
         bb.use :hint, wrap_with: { tag: "small", class: adm_hint_class }
       end
@@ -297,7 +318,7 @@ SimpleForm.setup do |config|
     b.optional :readonly
     b.use :label, class: adm_label_class
     b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
-      ba.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: adm_invalid_class, valid_class: adm_valid_class
+      ba.use :input, class: FormStyles::CHECKBOX, error_class: adm_invalid_class, valid_class: adm_valid_class
       ba.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
       ba.use :hint, wrap_with: { tag: "small", class: adm_hint_class }
     end
@@ -311,7 +332,7 @@ SimpleForm.setup do |config|
     b.use :label, class: adm_label_class
     b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
       ba.use :input,
-          class: "block w-full text-sm text-gray-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-sm file:font-medium hover:file:bg-gray-200 cursor-pointer",
+          class: FormStyles::FILE_INPUT,
           error_class: adm_invalid_class, valid_class: adm_valid_class
       ba.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
       ba.use :hint, wrap_with: { tag: "small", class: adm_hint_class }

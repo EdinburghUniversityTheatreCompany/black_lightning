@@ -37,20 +37,8 @@ module Admin
       end
 
       def respond_with_gallery(record_id, upload_errors: [], notice: nil)
-        expense = store.find_expense!(record_id)
-        respond_to do |format|
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.replace(
-              "receipts-gallery",
-              partial: "admin/reimbursements/expenses/receipts_gallery",
-              locals: { expense: expense, upload_errors: upload_errors }
-            )
-          end
-          format.html do
-            redirect_to edit_admin_reimbursements_expense_path(record_id),
-                        notice: notice, alert: upload_errors.presence&.to_sentence
-          end
-        end
+        respond_with_receipts_gallery(record_id, upload_errors: upload_errors, notice: notice,
+                                      redirect_path: edit_admin_reimbursements_expense_path(record_id))
       end
     end
   end

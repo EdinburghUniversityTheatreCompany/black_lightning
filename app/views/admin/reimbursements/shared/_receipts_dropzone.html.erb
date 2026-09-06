@@ -1,0 +1,21 @@
+<%# locals: () %>
+<%# The drop target + live status line for the receipts-upload controller. The
+    caller wraps this AND the receipts gallery in the data-controller element,
+    because the gallery's per-thumbnail remove buttons dispatch to the same
+    controller. Shared by the producer's edit page and the finance edit page so
+    the two cannot drift. %>
+<div class="dropzone dropzone-default mb-3 p-4 text-center"
+     data-action="dragover->receipts-upload#dragover dragleave->receipts-upload#dragleave drop->receipts-upload#drop">
+  <input type="file" multiple class="hidden" tabindex="-1" aria-hidden="true"
+         accept="<%= Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE %>"
+         data-receipts-upload-target="input"
+         data-action="change->receipts-upload#inputChanged">
+  <div class="dropzone-msg dz-message text-gray-600">
+    <h3 class="dropzone-msg-title">
+      Drag a receipt here, or
+      <button type="button" class="font-medium underline" data-action="receipts-upload#pick">browse for a file</button>
+    </h3>
+    <span class="dropzone-msg-desc text-sm">PDF or photo, max 5&nbsp;MB. It's added straight away.</span>
+  </div>
+</div>
+<p class="mb-2 text-sm text-gray-600" aria-live="polite" data-receipts-upload-target="status"></p>
