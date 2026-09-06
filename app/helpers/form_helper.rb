@@ -43,8 +43,10 @@ end
 # read from the same FormStyles constants simple_form's wrappers use. See
 # shared/form/_field for the label + hint wrapper that goes around them.
 module FormHelper
-  def input_classes(*extra)
-    [ FormStyles::INPUT, *extra ].join(" ")
+  # `width:` is the one utility a caller may swap (nil for a control that
+  # sizes itself, such as a date input or a table cell's amount).
+  def input_classes(*extra, width: "w-full")
+    [ width, FormStyles::INPUT_BASE, *extra ].compact.join(" ")
   end
 
   def file_input_classes

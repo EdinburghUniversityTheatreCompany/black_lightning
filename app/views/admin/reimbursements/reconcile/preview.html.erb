@@ -57,7 +57,7 @@
           <%= select_tag :blank_cost_centre_id,
                          options_for_select(blank_cost_centre_options(@cost_centres),
                                             params[:blank_cost_centre_id]),
-                         class: "border border-gray-300 rounded px-2 py-1" %>
+                         class: input_classes(width: "w-64") %>
         </div>
         <%= submit_tag "Apply that choice", class: btn_classes(:secondary) %>
       </div>

@@ -65,7 +65,7 @@
                       id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
           <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
                              data: { bulk_review_target: "reason" },
-                             class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                             class: input_classes(width: nil) %>
           <%= submit_tag "Approve selected",
                          formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab),
                          data: { bulk_review_target: "approveButton" }, disabled: true,

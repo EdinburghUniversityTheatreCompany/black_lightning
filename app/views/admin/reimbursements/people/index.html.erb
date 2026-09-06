@@ -59,7 +59,7 @@
                                    placeholder: "80-22-60", autocomplete: "off",
                                    "aria-describedby": error_id, "aria-invalid": error_id.present?,
                                    data: { "bank-details-target": "field" },
-                                   class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                                   class: input_classes(width: nil) %>
               </div>
               <div>
                 <%= label_tag "account_number_#{person.record_id}", "Account number", class: "block text-sm font-medium" %>
@@ -68,7 +68,7 @@
                                    placeholder: "12345678", autocomplete: "off",
                                    "aria-describedby": error_id, "aria-invalid": error_id.present?,
                                    data: { "bank-details-target": "field" },
-                                   class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                                   class: input_classes(width: nil) %>
               </div>
               <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
                       aria-pressed="false"

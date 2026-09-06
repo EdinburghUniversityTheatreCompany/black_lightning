@@ -11,10 +11,10 @@
     <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
       <% if @periods.any? %>
         <div>
-          <%= label_tag :period, "EUSA period", class: "block text-sm font-medium mb-1" %>
+          <%= label_tag :period, "EUSA period", class: FormStyles::LABEL %>
           <%= select_tag :period,
                          options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                         class: input_classes(width: "w-44") %>
         </div>
       <% end %>
       <div class="flex items-center gap-2 pb-1">

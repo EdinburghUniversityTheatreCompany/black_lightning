@@ -1,79 +1,51 @@
 <%= render "shared/back_link", text: "All cost centres", path: admin_reimbursements_settings_path %>
 
-<%= render CardComponent.new(title: "New cost centre") do %>
-  <p class="mb-4 text-sm text-gray-600">
-    Set the basics for a new cost centre (its name, EUSA code and the two mailboxes it uses).
-    After you create it, you'll land on its settings page to add the EUSA recipient, nightly
-    run-days and SharePoint destinations.
-  </p>
+<%= simple_form_for @cost_centre, as: :cost_centre, url: admin_reimbursements_settings_path,
+                    method: :post do |f| %>
+  <%= render CardComponent.new(title: "New cost centre") do |card| %>
+    <% card.with_footer do %>
+      <%= render "shared/form/actions", f: f, submit: "Create cost centre",
+            cancel_path: admin_reimbursements_settings_path %>
+    <% end %>
 
-  <%= form_with model: @cost_centre, scope: :cost_centre,
-                url: admin_reimbursements_settings_path,
-                class: "flex flex-col gap-4" do |f| %>
-    <div>
-      <%= f.label :name, "Name", class: "block text-sm font-medium" %>
-      <%= f.text_field :name, placeholder: "e.g. Bedlam Termtime",
-                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-md" %>
-      <p class="text-xs text-gray-500 mt-1">
-        A human-readable label for this cost centre. The URL slug is generated from it unless you
-        set one yourself under Advanced.
-      </p>
+    <p class="mb-4 text-sm text-gray-600">
+      Set the basics for a new cost centre (its name, EUSA code and the two mailboxes it uses).
+      After you create it, you'll land on its settings page to add the EUSA recipient, nightly
+      run-days and SharePoint destinations.
+    </p>
+
+    <%= f.input :name, placeholder: "e.g. Bedlam Termtime",
+          hint: "A human-readable label for this cost centre. The URL slug is generated from it " \
+                "unless you set one yourself under Advanced." %>
+
+    <div class="grid gap-x-4 sm:grid-cols-2">
+      <%= f.input :eusa_code, label: "EUSA cost-centre code", placeholder: "e.g. F40",
+            hint: "The EUSA finance code this cost centre pays against. Must be unique." %>
     </div>
 
-    <div>
-      <%= f.label :eusa_code, "EUSA cost-centre code", class: "block text-sm font-medium" %>
-      <%= f.text_field :eusa_code, placeholder: "e.g. F40",
-                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
-      <p class="text-xs text-gray-500 mt-1">
-        The EUSA finance code this cost centre pays against. Must be unique.
-      </p>
+    <div class="grid gap-x-4 sm:grid-cols-2">
+      <%= f.input :receive_mailbox, label: "Receive mailbox (email-in)" %>
+      <%= f.input :send_mailbox, label: "Send-from mailbox (drafts)" %>
     </div>
-
-    <div class="flex flex-wrap gap-4">
-      <div>
-        <%= f.label :receive_mailbox, "Receive mailbox (email-in)", class: "block text-sm font-medium" %>
-        <%= f.text_field :receive_mailbox,
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
-      </div>
-      <div>
-        <%= f.label :send_mailbox, "Send-from mailbox (drafts)", class: "block text-sm font-medium" %>
-        <%= f.text_field :send_mailbox,
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
-      </div>
-    </div>
-    <div>
-      <%= f.label :notification_role_id, "Notification recipients (role)", class: "block text-sm font-medium" %>
-      <%= f.collection_select :notification_role_id, selectable_roles, :id, :name,
-                              { include_blank: "Select a role" },
-                              class: "simple-select2 border border-gray-300 rounded px-2 py-1 text-sm w-72",
-                              "aria-describedby": "new_notification_role_hint" %>
-      <p id="new_notification_role_hint" class="text-xs text-gray-500 mt-1">
-        Everyone in this role gets this cost centre's nightly reminders. Required &mdash; a cost
-        centre whose reminders reach nobody leaves producers waiting with nothing on screen to
-        explain it.
-      </p>
-    </div>
-
-    <p class="text-xs text-gray-500 -mt-2">
+    <p class="<%= FormStyles::HINT %> -mt-2 mb-4">
       Each mailbox must be added to the app's Exchange management scope before email-in and
       draft-sending will work. The setup steps for that are on the settings page after you create
       this cost centre.
     </p>
 
-    <%= render CollapsibleSectionComponent.new(title: "Advanced", html_class: "my-1") do %>
-      <div>
-        <%= f.label :key, "URL key (slug)", class: "block text-sm font-medium" %>
-        <%= f.text_field :key, placeholder: "auto-generated from the name",
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
-        <p class="text-xs text-gray-500 mt-1">
-          Leave blank to derive it from the name. If you set it, use lowercase letters, numbers and
-          hyphens only (it appears in the settings URL and can't be changed here later).
-        </p>
-      </div>
-    <% end %>
+    <%= f.input :notification_role_id, label: "Notification recipients (role)",
+          collection: selectable_roles, label_method: :name, value_method: :id,
+          include_blank: "Select a role", input_html: { class: "simple-select2" },
+          hint: "Everyone in this role gets this cost centre's nightly reminders. Required — a cost " \
+                "centre whose reminders reach nobody leaves producers waiting with nothing on screen " \
+                "to explain it." %>
 
-    <div>
-      <%= f.submit "Create cost centre", class: btn_classes(:primary) %>
-    </div>
+    <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
+      <%= f.input :key, label: "URL key (slug)", placeholder: "auto-generated from the name",
+            wrapper_html: { class: "mb-0" },
+            hint: "Leave blank to derive it from the name. If you set it, use lowercase letters, " \
+                  "numbers and hyphens only (it appears in the settings URL and can't be changed " \
+                  "here later)." %>
+    <% end %>
   <% end %>
 <% end %>

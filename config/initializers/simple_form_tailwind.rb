@@ -22,7 +22,11 @@
 # Defined here rather than in lib/ because an initializer cannot autoload a
 # reloadable constant, and this file is where the strings were already kept.
 module FormStyles
-  INPUT      = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+  # INPUT_BASE carries no width so a caller can size a control (a table cell's
+  # amount, a search box) without two width utilities fighting; INPUT is the
+  # full-width default every wrapper uses.
+  INPUT_BASE = "rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+  INPUT      = "w-full #{INPUT_BASE}"
   LABEL      = "block text-sm font-medium text-gray-700 mb-1"
   HINT       = "block mt-1 text-xs text-gray-500"
   ERROR      = "block text-xs text-red-600 mt-1"

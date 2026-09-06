@@ -1,61 +1,15 @@
 <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
-<%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do %>
-  <%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch,
-                class: "flex flex-col gap-4" do |form| %>
-    <div class="flex flex-wrap gap-4">
-      <div>
-        <%= label_tag :name, "Name", class: "block text-sm font-medium" %>
-        <%= text_field_tag :name, @budget.name,
-                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
-      </div>
-      <div>
-        <%= label_tag :nominal_code, "Nominal code", class: "block text-sm font-medium" %>
-        <%= text_field_tag :nominal_code, @budget.nominal_code,
-                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
-      </div>
-      <div>
-        <%= label_tag :budget_type, "Type", class: "block text-sm font-medium" %>
-        <%= select_tag :budget_type,
-                       options_for_select(::Reimbursements::Budget::TYPES, @budget.budget_type),
-                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-      </div>
-      <div>
-        <%= label_tag :initial_budget, "Initial budget (£)", class: "block text-sm font-medium" %>
-        <%= number_field_tag :initial_budget, @budget.initial_budget, step: "0.01",
-                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
-      </div>
-    </div>
+<%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch do |form| %>
+  <%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do |card| %>
+    <% card.with_footer do %>
+      <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
+    <% end %>
 
-    <label class="inline-flex items-center gap-2 text-sm">
-      <%= check_box_tag :active, "1", @budget.active %>
-      Visible to submitters
-    </label>
-
-    <fieldset aria-describedby="owner_ids_hint">
-      <legend class="block text-sm font-medium">Owners</legend>
-      <p id="owner_ids_hint" class="text-xs text-gray-500 mb-1">Tick everyone who owns this budget.</p>
-      <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
-          collection_check_boxes emits the empty hidden field itself, so unticking
-          everyone still clears the owners. %>
-      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1">
-        <%= form.collection_check_boxes(:owner_ids, @people, :record_id,
-              ->(person) { person.name.presence || person.email },
-              { checked: @budget.owner_ids }) do |b| %>
-          <%= b.label(class: "flex items-center gap-2 text-sm") { safe_join([ b.check_box, b.text ]) } %>
-        <% end %>
-      </div>
-    </fieldset>
-
-    <div>
-      <%= label_tag :notes, "Notes", class: "block text-sm font-medium" %>
-      <%= text_area_tag :notes, @budget.notes, rows: 3,
-                        class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
-    </div>
-
-    <div>
-      <%= submit_tag "Save budget", class: btn_classes(:primary) %>
-    </div>
+    <%= render "fields", form: form, people: @people,
+          name: @budget.name, nominal_code: @budget.nominal_code, budget_type: @budget.budget_type,
+          initial_budget: @budget.initial_budget, notes: @budget.notes,
+          active: @budget.active, owner_ids: @budget.owner_ids %>
   <% end %>
 <% end %>
 
@@ -97,21 +51,15 @@
 
   <%= form_with url: forecast_admin_reimbursements_budget_path(@budget.record_id), method: :post,
                 class: "flex flex-wrap items-end gap-3 mb-4" do %>
-    <div>
-      <%= label_tag :amount, "Amount (£, excl. VAT)", class: "block text-sm font-medium" %>
-      <%= number_field_tag :amount, nil, step: "0.01",
-                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
-    </div>
-    <div>
-      <%= label_tag :date, "Date", class: "block text-sm font-medium" %>
-      <%= date_field_tag :date, Date.current,
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-    </div>
-    <div class="grow">
-      <%= label_tag :reason, "Reason / notes", class: "block text-sm font-medium" %>
-      <%= text_field_tag :reason, nil,
-                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
-    </div>
+    <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount, html_class: "w-40" do %>
+      <%= number_field_tag :amount, nil, step: "0.01", class: input_classes %>
+    <% end %>
+    <%= render "shared/form/field", label: "Date", name: :date do %>
+      <%= date_field_tag :date, Date.current, class: input_classes(width: nil) %>
+    <% end %>
+    <%= render "shared/form/field", label: "Reason / notes", name: :reason, html_class: "grow" do %>
+      <%= text_field_tag :reason, nil, class: input_classes %>
+    <% end %>
     <%= submit_tag "Add forecast", class: btn_classes(:primary, :sm) %>
   <% end %>
 
@@ -136,21 +84,20 @@
                   <%= form_with url: update_forecast_admin_reimbursements_budget_path(@budget.record_id),
                                 method: :patch, class: "flex flex-wrap items-end gap-3" do %>
                     <%= hidden_field_tag :forecast_id, forecast.record_id %>
-                    <div>
-                      <%= label_tag "edit_amount_#{forecast.record_id}", "Amount (£, excl. VAT)", class: "block text-xs font-medium" %>
+                    <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount,
+                          id: "edit_amount_#{forecast.record_id}", html_class: "w-40" do %>
                       <%= number_field_tag :amount, forecast.amount, step: "0.01", id: "edit_amount_#{forecast.record_id}",
-                                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
-                    </div>
-                    <div>
-                      <%= label_tag "edit_date_#{forecast.record_id}", "Date", class: "block text-xs font-medium" %>
+                                           class: input_classes %>
+                    <% end %>
+                    <%= render "shared/form/field", label: "Date", name: :date, id: "edit_date_#{forecast.record_id}" do %>
                       <%= date_field_tag :date, forecast.date, id: "edit_date_#{forecast.record_id}",
-                                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-                    </div>
-                    <div class="grow">
-                      <%= label_tag "edit_reason_#{forecast.record_id}", "Reason / notes", class: "block text-xs font-medium" %>
+                                         class: input_classes(width: nil) %>
+                    <% end %>
+                    <%= render "shared/form/field", label: "Reason / notes", name: :reason,
+                          id: "edit_reason_#{forecast.record_id}", html_class: "grow" do %>
                       <%= text_field_tag :reason, forecast.reason, id: "edit_reason_#{forecast.record_id}",
-                                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
-                    </div>
+                                         class: input_classes %>
+                    <% end %>
                     <%= submit_tag "Save", class: btn_classes(:primary, :sm) %>
                     <%= link_to "Cancel", edit_admin_reimbursements_budget_path(@budget.record_id), class: btn_classes(:secondary, :sm) %>
                   <% end %>

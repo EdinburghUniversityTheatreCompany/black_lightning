@@ -1,58 +1,52 @@
 <%= render "shared/back_link", text: "Back to the charts", path: admin_climate_dashboard_path %>
 
-<%= render CardComponent.new(title: "Import a Govee export") do %>
-  <% if @sensors.empty? %>
+<% if @sensors.empty? %>
+  <%= render CardComponent.new(title: "Import a Govee export") do %>
     <%= render AlertComponent.new(type: :info) do %>
       There are no sensors to import against yet.
       <%= link_to "Add one first", new_admin_climate_sensor_path, class: "text-primary underline" %>.
     <% end %>
-  <% else %>
-    <p class="text-gray-600 mb-3">
-      Open the Govee Home app, pick the sensor and choose <strong>Export Data</strong>. Since the
-      dressing room access point went in at the start of August 2026 the sensors upload to Govee's
-      cloud on their own, so you can do this from anywhere. If one looks stuck, stand in the
-      dressing room with the app open and let it sync over Bluetooth instead.
-    </p>
-
-    <p class="text-gray-600 mb-4">
-      <% if Climate::Settings.mailbox.present? %>
-        A daily report already goes to <code><%= Climate::Settings.mailbox %></code> and imports
-        itself, so you only need this page to backfill a gap or to pull something in sooner. Either
-        way, importing
-      <% else %>
-        Importing
+  <% end %>
+<% else %>
+  <%= form_with url: admin_climate_import_path, method: :post, multipart: true,
+                data: { turbo: false } do %>
+    <%= render CardComponent.new(title: "Import a Govee export") do |card| %>
+      <% card.with_footer do %>
+        <%= render "shared/form/actions", submit: "Import", cancel_path: admin_climate_dashboard_path %>
       <% end %>
-      the same file twice is harmless: readings are keyed by sensor and timestamp, so an overlap
-      overwrites rather than duplicates.
-    </p>
 
-    <%= form_with url: admin_climate_import_path, method: :post, multipart: true,
-                  data: { turbo: false }, class: "flex flex-col gap-4" do %>
-      <div>
-        <%= label_tag :sensor_id, "Which sensor is this file from?", class: "block font-semibold mb-1" %>
-        <p class="text-sm text-gray-600 mb-1">
-          The export doesn't say which device it came from, so this is worth double-checking.
-          Readings land against whichever sensor is picked here.
-        </p>
-        <%= select_tag :sensor_id,
-                       options_from_collection_for_select(@sensors, :id, :to_label, params[:sensor_id]),
-                       include_blank: "Choose a sensor…", class: "form-control" %>
-      </div>
+      <p class="text-gray-600 mb-3">
+        Open the Govee Home app, pick the sensor and choose <strong>Export Data</strong>. Since the
+        dressing room access point went in at the start of August 2026 the sensors upload to Govee's
+        cloud on their own, so you can do this from anywhere. If one looks stuck, stand in the
+        dressing room with the app open and let it sync over Bluetooth instead.
+      </p>
 
-      <div>
-        <%= label_tag :file, "CSV file", class: "block font-semibold mb-1" %>
-        <%= file_field_tag :file, accept: ".csv,text/csv", class: "text-sm" %>
-      </div>
+      <p class="text-gray-600 mb-4">
+        <% if Climate::Settings.mailbox.present? %>
+          A daily report already goes to <code><%= Climate::Settings.mailbox %></code> and imports
+          itself, so you only need this page to backfill a gap or to pull something in sooner. Either
+          way, importing
+        <% else %>
+          Importing
+        <% end %>
+        the same file twice is harmless: readings are keyed by sensor and timestamp, so an overlap
+        overwrites rather than duplicates.
+      </p>
 
-      <div>
-        <%= label_tag :pasted_text, "…or paste the contents", class: "block font-semibold mb-1" %>
-        <%= text_area_tag :pasted_text, params[:pasted_text], rows: 8, class: "form-control font-mono text-xs",
-                          placeholder: "Timestamp,Temperature_Celsius,Relative_Humidity" %>
-      </div>
+      <div class="flex flex-col gap-4">
+        <%= render "shared/form/field", label: "Which sensor is this file from?", name: :sensor_id,
+              hint: "The export doesn't say which device it came from, so this is worth " \
+                    "double-checking. Readings land against whichever sensor is picked here." do %>
+          <%= select_tag :sensor_id,
+                         options_from_collection_for_select(@sensors, :id, :to_label, params[:sensor_id]),
+                         include_blank: "Choose a sensor…", class: input_classes %>
+        <% end %>
 
-      <div>
-        <%= submit_tag "Import", class: btn_classes(:primary) %>
-        <%= link_to "Cancel", admin_climate_dashboard_path, class: btn_classes(:secondary) %>
+        <%= render "shared/form/paste_or_upload", file_first: true,
+              file_name: :file, file_label: "CSV file", file_accept: ".csv,text/csv",
+              text_name: :pasted_text, text_label: "…or paste the contents", text_value: params[:pasted_text],
+              rows: 8, placeholder: "Timestamp,Temperature_Celsius,Relative_Humidity" %>
       </div>
     <% end %>
   <% end %>

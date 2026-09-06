@@ -12,21 +12,21 @@
   <%= form_with url: admin_reimbursements_expense_edits_path, method: :get,
                 class: "flex flex-wrap items-end gap-3" do %>
     <div>
-      <%= label_tag :status, "Status", class: "block text-sm font-medium mb-1" %>
+      <%= label_tag :status, "Status", class: FormStyles::LABEL %>
       <%= select_tag :status,
                      options_for_select([ [ "All statuses", "" ] ] + @statuses.map { |s| [ s, s ] }, @status_filter),
-                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                     class: input_classes(width: "w-44") %>
     </div>
     <div>
-      <%= label_tag :budget, "Budget", class: "block text-sm font-medium mb-1" %>
+      <%= label_tag :budget, "Budget", class: FormStyles::LABEL %>
       <%= select_tag :budget,
                      options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.name, b.record_id ] }, @budget_filter),
-                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                     class: input_classes(width: "w-44") %>
     </div>
     <div>
-      <%= label_tag :q, "Search", class: "block text-sm font-medium mb-1" %>
+      <%= label_tag :q, "Search", class: FormStyles::LABEL %>
       <%= text_field_tag :q, @query, placeholder: "description, payee, ref, £, or #",
-                         class: "w-64 border border-gray-300 rounded px-2 py-1 text-sm" %>
+                         class: input_classes(width: "w-64") %>
     </div>
     <label class="flex items-center gap-2 text-sm">
       <%= check_box_tag :attention, "1", @attention_only %>

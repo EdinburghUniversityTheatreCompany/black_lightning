@@ -1,6 +1,6 @@
 <%= render "shared/back_link", text: "All financial years", path: admin_reimbursements_financial_years_path %>
 
-<%= render CardComponent.new(title: @financial_year.label) do %>
+<% intro = capture do %>
   <% badge, explanation = {
        active: [ [ :success, "Active" ], "This is the year submitters are filing claims against." ],
        past: [ [ :secondary, "Past" ],
@@ -15,15 +15,16 @@
       <% else %>
         Not live yet. Set its budgets up here, then make it active from the
         <%= link_to "financial years list", admin_reimbursements_financial_years_path,
-                    class: "text-blue-700 hover:underline" %>.
+                    class: "text-primary underline" %>.
       <% end %>
     </span>
   </p>
 
-  <%= render "form", financial_year: @financial_year,
-                     url: admin_reimbursements_financial_year_path(@financial_year.key),
-                     submit_label: "Save", show_key: false %>
 <% end %>
+
+<%= render "form", financial_year: @financial_year,
+                   url: admin_reimbursements_financial_year_path(@financial_year.key),
+                   title: @financial_year.label, submit_label: "Save", show_key: false, intro: intro %>
 
 <%= render CardComponent.new(title: "Budgets") do %>
   <p class="mb-3 text-sm text-gray-600">
