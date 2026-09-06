@@ -11,10 +11,8 @@ class Admin::QuestionsAndAnswersComponentPreview < Admin::ApplicationComponentPr
     render Admin::QuestionsAndAnswersComponent.new(answers: answers)
   end
 
-  # An answer carrying more than one attachment renders the multi-attachment
-  # gallery (admin/shared/attachments_gallery) rather than a single show_attachment.
-  # This is the branch that 500'd in production (error 132814643) when the partial
-  # path was wrong.
+  # An answer carrying more than one attachment renders AttachmentsGalleryComponent
+  # rather than a single show_attachment.
   def multiple_attachments
     answer_ids = Attachment.where(item_type: "Admin::Answer")
                            .group(:item_id)

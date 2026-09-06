@@ -18,10 +18,8 @@ class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
     assert_no_text "Attachments"
   end
 
-  # Two attachments hit the multi-attachment gallery branch. This is the
-  # production 500 (error 132814643): the component rendered 'shared/attachments_gallery'
-  # but the partial lives at admin/shared/_attachments_gallery.html.erb, so the
-  # lookup raised MissingTemplate whenever an answer had more than one attachment.
+  # Two attachments hit the multi-attachment gallery branch, which once 500'd in
+  # production by naming a gallery partial that did not exist at that path.
   test "renders multiple attachments through the attachments gallery" do
     render_inline(Admin::QuestionsAndAnswersComponent.new(answers: answers_with_attachments(2)))
 
