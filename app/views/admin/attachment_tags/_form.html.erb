@@ -5,6 +5,6 @@
     <%= f.input :name %>
     <%= f.input :ordering, hint: 'Lowest will appear at the top.' %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12 ) %>
+    <%= render MdEditorComponent.new(f: f, field: :description, rows: 12 ) %>
   <% end %>
 <% end %>

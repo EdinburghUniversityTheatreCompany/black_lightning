@@ -13,7 +13,7 @@
 
     <%= f.association :category %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description ) %>
+    <%= render MdEditorComponent.new(f: f, field: :description ) %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the main image that will appear in the listing for this category.' %>
 

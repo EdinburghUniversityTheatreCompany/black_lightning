@@ -13,6 +13,6 @@
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>
-    <%= render Admin::MdEditorComponent.new(f: f, field: :body ) %>
+    <%= render MdEditorComponent.new(f: f, field: :body ) %>
   <% end %>
 <% end %>
