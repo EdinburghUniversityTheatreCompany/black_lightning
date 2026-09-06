@@ -451,21 +451,6 @@ finds nothing to renumber there.
 server-side pattern would close them: an `opportunity_roles_attributes=` override stamping
 `ordering` by row position, then drop the hidden field and the JS renumbering altogether.
 
-## Team members written outside the form get no `display_order`
-
-*Noticed 2026-09-06 (code review of the row-order stamping).* `TeamMemberOrdering` only numbers
-rows that come through `team_members_attributes=`. The bulk crew import
-(`Admin::ShowCrewImportsController`, `team_members.create!`), the "Proposer" row
-`Admin::Proposals::ProposalsController#on_create_success` adds, and `lib/tasks/imports.rake` all
-leave it nil, so those rows sort to the bottom by name rather than in the order they were
-imported. Harmless for a fresh show (that is what every archive row does), but a crew list
-imported in the producer's chosen order renders alphabetised until someone saves the form once.
-
-**Fix (if it earns it):** an append-to-end default on `TeamMember` itself
-(`before_validation { self.display_order ||= <max for teamwork> + 1 }`) — but only once no
-nil rows remain on that teamwork, or a numbered row jumps ABOVE the nil ones (nulls sort last),
-which is why the form stamps every row rather than the new one.
-
 ## SEO follow-ups left open after the 2026-08-30 audit
 
 The audit's code-side findings landed on `seo-fixes`. These four need something this repo cannot
