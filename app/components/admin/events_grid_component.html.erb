@@ -6,11 +6,10 @@
     <div class="bg-white rounded border border-gray-200 flex flex-col overflow-hidden">
       <%= link_to url do %>
         <div class="aspect-[576/300] overflow-hidden bg-gray-100">
-          <%= render 'shared/image',
-                image: item[:event].fetch_image,
+          <%= render ImageComponent.new(image: item[:event].fetch_image,
                 variant: helpers.medium_variant,
                 proxy: true,
-                image_options: { class: 'object-cover w-full h-full' } %>
+                image_options: { class: 'object-cover w-full h-full' }) %>
         </div>
       <% end %>
       <div class="p-4 flex flex-col flex-1">

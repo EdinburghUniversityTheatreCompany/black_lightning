@@ -11,7 +11,7 @@
           <% download_url = helpers.active_storage_proxy_url(picture.fetch_image) %>
 
           <%= link_to lightbox_url, class: "fancybox", rel: "group", title: picture.description, "data-title" => picture.description, "data-fancybox" => "gallery" do %>
-            <%= render "shared/image", image: picture.fetch_image, variant: helpers.medium_variant, proxy: true, image_options: { class: "w-full h-auto block rounded-t" } %>
+            <%= render ImageComponent.new(image: picture.fetch_image, variant: helpers.medium_variant, proxy: true, image_options: { class: "w-full h-auto block rounded-t" }) %>
           <% end %>
 
           <div class="p-2 text-sm">

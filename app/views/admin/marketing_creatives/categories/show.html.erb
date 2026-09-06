@@ -4,7 +4,7 @@
       <div>
         <%= render CardComponent.new(html_class: "h-full mb-0", flush: true) do %>
           <%# 2× scale for retina screens — displayed at thumb size (192×100) but rendered at 384×200 %>
-          <% img = capture do %><%= render 'shared/image', image: category_info.fetch_image, variant: thumb_variant(2), image_options: { class: 'block w-full h-auto rounded-t' } %><% end %>
+          <% img = capture do %><%= render ImageComponent.new(image: category_info.fetch_image, variant: thumb_variant(2), image_options: { class: 'block w-full h-auto rounded-t' }) %><% end %>
           <%= get_link category_info.profile, :show, link_text: img %>
           <div class="p-4">
             <p class="block mb-2"><%= get_link category_info.profile, :show %></p>
