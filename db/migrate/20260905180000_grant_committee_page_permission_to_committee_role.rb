@@ -7,10 +7,14 @@
 class GrantCommitteePagePermissionToCommitteeRole < ActiveRecord::Migration[8.1]
   def up
     role = Role.find_by("LOWER(name) = ?", "committee")
-    return unless role
+    unless role
+      say "No role named 'committee' found: NOBODY was granted the committee page. Grant it in the grid."
+      return
+    end
 
     permission = Admin::Permission.find_or_create_by!(action: "access", subject_class: "committee")
     role.permissions << permission unless role.permissions.include?(permission)
+    say "Granted 'access committee' to role '#{role.name}'"
   end
 
   def down

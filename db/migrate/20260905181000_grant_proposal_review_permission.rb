@@ -12,6 +12,10 @@ class GrantProposalReviewPermission < ActiveRecord::Migration[8.1]
 
     roles.each do |role|
       role.permissions << permission unless role.permissions.include?(permission)
+      say "Granted proposal review to role '#{role.name}'"
+    end
+    (ROLE_NAMES - roles.map { |role| role.name.downcase }).each do |missing|
+      say "No role named '#{missing}' found: it was NOT granted proposal review. Grant it in the grid."
     end
   end
 
