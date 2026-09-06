@@ -311,18 +311,6 @@ already overrides it, and `realign_heading_anchor` keeps the self-link consisten
 would *change existing anchor URLs* on any page whose heading carries a class-only IAL, so it
 needs a deliberate decision about breaking inbound links, not a silent tidy-up.
 
-## A shared `Settings::Base` for the ENV-then-credentials pattern
-
-*Noticed 2026-08-06 while building the climate monitor.* `Climate::Settings` and
-`Reimbursements::Settings` are now the same shape twice: a `KEYS` list, a
-`define_singleton_method` loop, and a private `raw_value` reading
-`ENV["PREFIX_#{KEY}"].presence || credentials.dig(:namespace, key).presence`. A third subsystem
-would make it three.
-
-**Fix:** extract a `Settings::Base` that takes the ENV prefix and credentials namespace, leaving
-each module to declare only its keys and its derived predicates. Small enough that jscpd doesn't
-currently catch it, which is exactly why it will drift.
-
 ## The Open-Meteo forecast tail is fetched and then discarded
 
 *Noticed 2026-08-06.* `OutdoorPollJob` requests `forecast_days=1` purely for self-heal margin, and

@@ -21,12 +21,13 @@ module Pretix
     # seat per performance.
     MEMBERSHIP_TYPE_ID = 225
 
-    def self.api_token
-      raw_value(:api_token)
-    end
+    extend ::Settings::Base
+
+    reads_from env: "PRETIX", credentials: :pretix
+    setting :api_token
 
     def self.configured?
-      api_token.present?
+      settings_present?
     end
 
     # Whether the sync may WRITE to pretix. Reads stay live everywhere so the
@@ -39,11 +40,5 @@ module Pretix
 
       ENV["PRETIX_ENABLE_WRITES"].present?
     end
-
-    def self.raw_value(key)
-      ENV["PRETIX_#{key.to_s.upcase}"].presence ||
-        Rails.application.credentials.dig(:pretix, key).presence
-    end
-    private_class_method :raw_value
   end
 end

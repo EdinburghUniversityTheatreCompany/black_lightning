@@ -9,14 +9,18 @@ module Graph
   # renaming the variables would have broken every existing fnox and production
   # credential entry for no gain.
   module Settings
-    KEYS = %i[azure_tenant_id azure_client_id azure_client_secret].freeze
+    extend ::Settings::Base
 
-    KEYS.each do |key|
-      define_singleton_method(key) { raw_value(key) }
-    end
+    reads_from env: "GRAPH", credentials: :graph
+    # Not a temporary fallback: there is one Entra app registration for the
+    # organisation, so renaming these would break every existing fnox and
+    # production credential entry for no gain.
+    reads_from env: "REIMBURSEMENTS", credentials: :reimbursements
+
+    setting :azure_tenant_id, :azure_client_id, :azure_client_secret
 
     def self.configured?
-      KEYS.map { |key| public_send(key) }.all?(&:present?)
+      settings_present?
     end
 
     # Whether outbound side effects (replying, moving, marking read) actually
@@ -28,13 +32,5 @@ module Graph
 
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"].present?
     end
-
-    def self.raw_value(key)
-      ENV["GRAPH_#{key.to_s.upcase}"].presence ||
-        ENV["REIMBURSEMENTS_#{key.to_s.upcase}"].presence ||
-        Rails.application.credentials.dig(:graph, key).presence ||
-        Rails.application.credentials.dig(:reimbursements, key).presence
-    end
-    private_class_method :raw_value
   end
 end
