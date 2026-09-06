@@ -818,11 +818,13 @@ screen (`TeamMember.ordered`, nulls last then by name). Spec: issue #167.
   form in document order and nested attributes are assigned in that order, so the row carries **no
   hidden order field** and the sortable controller renumbers nothing here. Rows flagged `_destroy`
   are skipped (no gaps) and blank template rows are left blank so `reject_if: :all_blank` still
-  drops them. A functional test encodes params with `Hash#to_query`, which SORTS keys — a row
-  added in the browser posts under a timestamp key, so that case lives in an integration test.
+  drops them. Row order cannot be tested in a functional test (see **Testing**).
 - **The form renders through `TeamMember.in_display_order`, the in-memory twin of `ordered`**,
   never the scope: after a failed save the association holds the submitted rows with their
-  errors, and a scope would query and render the stale ones. A test pins the two together.
+  errors, and a scope would query and render the stale ones. Its name tiebreak folds accents
+  (`transliterate`) because the SQL side sorts under `utf8mb4_unicode_ci`, which ignores them —
+  otherwise the form and the public page disagree on "Ábel", and the next save through the form
+  makes the form's order permanent. A test pins the two together.
 
 ## Event performances
 
@@ -999,6 +1001,13 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
 
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
+
+- **A functional test cannot pin the ORDER of nested-attribute rows.**
+  `ActionController::TestCase` encodes params with `Hash#to_query`, which **sorts** the encoded
+  keys, so `{"0" =>, "1760000000000" =>, "1" =>}` arrives as `0, 1, 1760000000000` and `"10"`
+  sorts between `"1"` and `"2"`. Anything reading row position (`TeamMemberOrdering`) needs an
+  `ActionDispatch::IntegrationTest`, where rack-test encodes in insertion order as a browser
+  serialises a form — `test/integration/admin/team_member_ordering_test.rb` is the pattern.
 
 - **The suite runs in parallel** (`parallelize` in `test_helper.rb`, capped at 8 workers —
   measured optimum on a 20-thread machine; past the physical cores the workers contend, and

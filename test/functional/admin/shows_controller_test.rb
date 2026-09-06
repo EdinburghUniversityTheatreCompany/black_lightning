@@ -528,10 +528,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_nil first.reload.display_order, "the failed save must not have written the order"
   end
 
-  # See TeamMemberOrdering. A functional test encodes params with Hash#to_query,
-  # which SORTS keys, so these keys are chosen to sort as written; a row added in
-  # the browser posts under a timestamp key, covered by
-  # test/integration/admin/team_member_ordering_test.rb.
+  # See TeamMemberOrdering. These keys are chosen to sort as written, because a
+  # functional test cannot pin row order (CLAUDE.md, Testing).
   test "updating a show stores the team members in the order the rows were submitted" do
     show = FactoryBot.create(:show, team_member_count: 3)
     a, b, c = show.team_members.order(:id).to_a
