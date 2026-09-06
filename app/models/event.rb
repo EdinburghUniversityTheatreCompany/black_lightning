@@ -133,6 +133,7 @@ class Event < ApplicationRecord
   include MdHelper
   include DebtManagement
   include Sluggable
+  include TeamMemberOrdering
 
   # +company_name+ is a virtual field resolved to a Company (created if needed) by a before_validation hook.
   attr_writer :company_name
@@ -185,7 +186,6 @@ class Event < ApplicationRecord
                                   attributes["id"].blank? && attributes["starts_at"].blank?
                                 }
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
-  include TeamMemberOrdering
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 

@@ -22,6 +22,8 @@
 #  index_admin_proposals_proposals_on_status   (status)
 #
 class Admin::Proposals::Proposal < ApplicationRecord
+  include TeamMemberOrdering
+
   # Length validations enforcing database column limits
   validates :show_title, length: { maximum: 255 }
   validates :publicity_text, length: { maximum: 16777215 }
@@ -47,7 +49,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
   has_many :users, through: :team_members
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
-  include TeamMemberOrdering
 
   after_initialize :set_default_proposal_text
 
