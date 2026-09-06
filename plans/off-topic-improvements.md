@@ -3,10 +3,20 @@
 Improvements spotted mid-task and parked as out of scope, per the "Suggest Improvements" rule.
 Each is optional.
 
-Everything below is genuinely still open, and each item says what is blocking it. The file was
-drained on 2026-07-26 (branch `off-topic-backlog`): eleven items landed as their own commits, and
-what remains needs either a production data audit, a product decision from Mick, or a change to
-another repo.
+Everything below is genuinely still open, and each item says what is blocking it. What remains
+needs either a production data audit, a product decision from Mick, a change to another repo, or
+a live run against a third-party service.
+
+Drained twice: 2026-07-26 (branch `off-topic-backlog`, eleven items) and 2026-09-06 (branch
+`off-topic-drain`, ten items plus the membership-cards deletion). The second pass also **audited
+every remaining entry against the code** and removed six that had since been resolved elsewhere
+(the dev-hooks devcontainer template, multiple financial years, the MySQL 8.0/8.4 mismatch, the
+Govee CSV import and its superseded twin, and richer Event schema), dropped the masthead-PNG note
+as a finding rather than a task, and narrowed three that had half shipped — the cost-centre
+selection, the climate mailbox ingest, and cancelled/sold-out performances.
+
+**Settled, so don't re-raise:** a `Season` stays a schema.org `TheaterEvent` (Mick, 2026-09-06 —
+see the comment in `app/models/season.rb`).
 
 ## database_consistency — schema-migration backlog (gate still advisory)
 
@@ -36,22 +46,6 @@ the same backlog above — including `PaymentDetails#notes`, deliberately left u
 is an append-only audit trail and a cap would eventually make a payee's bank details un-editable
 (its headroom is measured in `test/models/reimbursements/encryption_test.rb`). A bounded audit log
 that trims its oldest lines would be the proper fix if that ever needs closing.
-
-## Upstream a mise-driven devcontainer template into dev-hooks
-
-- Consider upstreaming devcontainer-mise support into the `dev-hooks:dev-env-setup` skill: it
-  already standardises mise + hk + CI, but doesn't yet template a mise-driven `.devcontainer/`.
-  (This is a change to the dev-hooks plugin marketplace, not to this repo — which is why the
-  2026-07-26 drain left it here: nothing to change in BlackLightning.) Worth carrying up with it:
-  the apt list this repo settled on for a precompiled-Ruby devcontainer, and the
-  `.worktree-isolate.conf` + `database.yml` suffix recipe now wired up here.
-
-## Multiple financial years — PLANNED (post-MySQL)
-Now designed: a year-selector model (one active year + look-back), landing at the MySQL
-cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-roadmap.md`
-(financial_year FK on budgets/expenses/actuals, EUSA codes stay on CostCentre with a thin
-per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
-per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
 
 ## Per-worktree / per-subagent database isolation — SEEDING still manual (2026-07-26)
 
@@ -121,23 +115,27 @@ product call rather than a bug:
 Deliberately not implemented in the round that fixed the netting: changing matching
 semantics needs Mick's call on which of those shapes finance actually wants.
 
-## Reconcile and the notifier still pick a cost centre by "first row by id"
+## The notifier still picks a cost centre by "first row by id"
 
-The hardcoded `"F40"` literals are gone (2026-07-26): `Reconciliation.parse_actuals_rows`
-requires `cost_centre_code:` with no default, and `ReconcileController` raises
-`CostCentre::NotConfiguredError` rather than guessing. But the *selection* is still
-`CostCentre.default`, which is `order(:id).first` — so once a second cost centre exists,
-reconcile silently filters a pasted export by whichever cost centre happens to have the lower
-id, and `BaseController` hands the same `.default` to the `Notifier`.
+*Reconcile's half of this landed; the notifier's has not (re-audited 2026-09-06).*
 
-That is a worse failure than the old hardcode in one respect: it looks configured. A termtime
-export pasted into reconcile would have its rows dropped as "another cost centre's" with no
-indication why, or termtime rows would be filed under the Fringe.
+`ReconcileController` now has an explicit cost-centre selector: `Reimbursements::ActualsAttribution`
+attributes each pasted row to a chosen centre and carries the choice through the stateless
+preview/apply round trip, with a `blank_cost_centre_id` for rows naming none. The hardcoded `"F40"`
+literals went in 2026-07-26.
 
-**Fix:** give the reconcile wizard an explicit cost-centre selector (and carry the choice
-through the stateless preview/apply round trip, which re-parses the pasted text), and resolve
-the notifier's cost centre from the expense/batch being acted on rather than from `.default`.
-Until then the portal is single-cost-centre in practice, whatever the copy says.
+**What is still open:** every other caller resolves the centre as `CostCentre.default`, which is
+`order(:id).first` — so once a second cost centre exists they silently pick whichever has the lower
+id. That is a worse failure than a hardcode in one respect: it looks configured.
+
+- `BaseController#notifier` (`app/controllers/admin/reimbursements/base_controller.rb:53`) — hands
+  `.default` to the `Notifier`, so operator alerts name the wrong centre.
+- `BatchesController` (the send mailbox and `@cost_centre`), `MailboxClient`'s default
+  `receive_mailbox`, `ReimbursementsHelper`'s contact email, `BudgetsController`.
+
+**Fix:** resolve the centre from the expense/batch being acted on rather than from `.default`.
+Note `NightlyBatchJob` already does the right thing — `claims_by_cost_centre_id` falls back to the
+default deliberately, so a claim whose budget names no centre reaches somebody rather than nobody.
 
 ## A long worktree name overflows MySQL's identifier limit
 
@@ -171,22 +169,6 @@ only sampled once (clean), so this may well predate the speedup branch rather th
 logs for `^Error:`/`^Failure:`), name the test, and fix the race — most likely a missing
 Capybara wait on an assertion that races the Turbo/Stimulus render, given the suite's use of
 `assert_selector … wait: 5` in some places and bare assertions in others.
-
-## CI tests against MySQL 8.4, production runs 8.0
-
-`.github/workflows/ci.yml` pins the service container to `mysql:8.4`, but
-`config/deploy.yml`'s accessory is `mysql:8.0`. The devcontainer's `mysql:8` floats to
-whatever the latest 8.x is (currently 8.4.8 locally), so **no environment actually tests
-against the version production runs**, and CI tests against a newer one. 8.4 changed
-defaults and dropped deprecated behaviour relative to 8.0, so this is the wrong direction
-for a safety net to lean.
-
-**Fix:** align CI (and ideally the devcontainer) to `mysql:8.0`, or upgrade production to
-8.4 deliberately. Note the ubuntu-24.04 runner ships MySQL **8.0.46** preinstalled
-(disabled; root/root, `sudo systemctl start mysql.service`), so switching CI to it would fix
-the mismatch *and* remove the ~28s spent pulling the service-container image. The cost is
-reproducibility: the runner's version drifts with the image, where the service container is
-pinned by SHA digest (deliberately, per c9933f12).
 
 ## CI setup time is apt-get update and an image pull, not packages
 
@@ -309,29 +291,6 @@ at it. The damage from crypt damp happens over days, and nobody watches a chart 
 for N consecutive hours. Deliberately out of scope for the first cut (Mick asked for the charts),
 but this dashboard is really a prerequisite for it — the readings and the margin already exist.
 
-## DONE: import the Govee CSV export to backfill sensor history
-
-*Done 2026-08-06: `Climate::CsvImport` + `/admin/climate/import` + `Climate::MailboxPollJob`.
-The API poller was removed entirely rather than kept alongside. See CLAUDE.md for why polling
-is lossy in a building with intermittent WiFi. Original note follows.*
-
-## (superseded) Import the Govee CSV export to backfill sensor history
-
-*Noticed 2026-08-06, correcting an overstatement in the climate work.* The Govee **Developer API**
-has no history endpoint, which is true and is why `SensorPollJob` exists. However, the earlier note
-that pre-activation data "can never be recovered" was wrong. Govee keeps ~20 days on the device and up to
-**2 years in the app**, exportable as **CSV by email** (Govee Home → sensor → Export Data).
-
-**Fix:** a paste-or-upload importer feeding `Climate::ReadingIngest.upsert_series!`, following the
-`Reimbursements::BudgetImport` shape (preview then apply, via the shared `ImportParsing` concern).
-The ingest path is already idempotent, so a re-import cannot duplicate rows, and `raw_temperature`
-gives the same reversibility the poller has.
-
-Two gotchas for whoever builds it: the CSV carries whatever unit the **app** is set to display,
-which need not match what the API reports, so the importer must ask rather than assume (the same
-trap as `temperature_unit`). And the on-device 20-day buffer rolls over, so an export is worth
-taking before a period of interest ages out.
-
 ## Vendor-file parsers are a separate family from the sheet importers
 
 *Noticed 2026-08-06 while adding the climate CSV import.* The app now has two distinct kinds of
@@ -354,14 +313,18 @@ Not worth doing for two callers; worth doing at three.
 
 ## The climate mailbox ingest is unverified end to end
 
-*Noticed 2026-08-06.* `Climate::MailboxPollJob` is unit-tested against a fake mailbox, but has
-never run against real Graph: it needs a mailbox, an `ApplicationAccessPolicy` covering it, and
-Govee's scheduled export pointed at it.
+*Noticed 2026-08-06; the sensor-matching half was answered since (re-audited 2026-09-06).*
 
-The sensor-matching rule in particular is a guess at what Govee's export email looks like. **Check
-a real export email before trusting it.** If Govee's subject line turns out not to name the device, the fix is probably a
-per-sensor `import_match` column (what Govee calls it, as distinct from what we call it) rather
-than a cleverer heuristic.
+`Climate::MailboxPollJob` is unit-tested against a fake mailbox but has never run against real
+Graph: it needs a mailbox, an `ApplicationAccessPolicy` covering it, and Govee's scheduled export
+pointed at it.
+
+The open question about Govee's email **has been settled**: the export identifies no device, not in
+the subject and not in the filename, which is why `#sensor_for` resolves the sole Govee sensor and
+otherwise leaves the message unread and fires a deduped `ConfigurationError` rather than guessing.
+So the remaining work is the live run, plus the multi-sensor case: with more than one Govee sensor
+nothing can be attributed, and the extension point is a mailbox (or plus-address) per sensor
+resolved on the recipient, not a cleverer heuristic.
 
 ## The pretix modal dialog is driven by two controllers at once
 
@@ -413,18 +376,6 @@ server-side pattern would close them: an `opportunity_roles_attributes=` overrid
 The audit's code-side findings landed on `seo-fixes`. These four need something this repo cannot
 supply.
 
-### Richer Event schema once performances and prices are real fields
-
-`SchemaHelper#event_schema` currently emits a **date-only `startDate`**, because an `Event`
-carries dates and not performances, and builds `offers` by scraping `£` amounts out of the
-free-text `events.price` with `PRICE_PATTERN` — omitting `offers` entirely when it finds none,
-since a wrong price in a rich result is a promise the box office has to honour.
-
-**When performances and prices become structured fields on `Event`** (Mick has this in mind),
-revisit it: emit one `Event` per performance with a real curtain time, and take the price from
-the structured field instead of the scrape. Google's event rich results want a time, so this is
-the single biggest remaining upgrade to how Bedlam appears in "things to do in Edinburgh".
-
 ### No phone number exists to publish
 
 The footer now carries the postal address as crawlable text on every page, which fixes two thirds
@@ -439,25 +390,6 @@ No `google-site-verification` meta tag, no analytics tag of any kind, and no Goo
 DNS (only `MS=ms94671060`). Verification may exist via an uploaded HTML file — worth confirming.
 Until it does, none of the work above can be measured: there is no before-and-after to read.
 
-### The masthead PNG cannot usefully be compressed
-
-Recorded because the audit suggested it and it turned out not to hold. `app/assets/images/Header.png`
-is 115 KB and is the desktop LCP element. It is already 8/4-bit depth with 130 colours and an alpha
-channel; `optipng -o5`, `-o7` and an ImageMagick `PNG8:` conversion all return **byte-for-byte the
-same size**, because the alpha channel stops it becoming a true palette image. The win available
-there was the `fetchpriority`/`loading` fix, which has landed. Leave it alone unless the artwork
-is redrawn without transparency.
-
-## A Season is marked up as a `TheaterEvent`
-
-`Event::SCHEMA_TYPE` is now per subclass (Show `TheaterEvent`, Workshop
-`EducationEvent`, 2026-09-06), and `Season` deliberately inherits the default rather than
-overriding it. schema.org's **`Festival`** is the likely right answer — a Bedlam season is a
-short festival, not a term-long container — but that is a call about how Bedlam's festivals
-should appear in search, not a consequence of fixing the workshop type. Overriding it is one
-line in `app/models/season.rb`; the tests to update are in
-`test/integration/seo_structured_data_test.rb`.
-
 ## The API does not expose performances or ticket prices
 
 `Event#as_json` lists `venue`, `pictures` and `team_members` but not `event_occurrences` or
@@ -466,13 +398,17 @@ Adding them is a deliberate decision rather than an oversight — per CLAUDE.md,
 `ransackable_attributes` is also exposed through the API, and `test/.../leakage_test.rb` enforces
 that — so decide what the API should say before widening it.
 
-## A cancelled or sold-out performance has nowhere to be recorded
+## `Venue` has no capacity column
 
-`EventOccurrence` carries access flags and a note but no status, so pulling one night of a run means
-deleting the row, which loses the fact that it was ever scheduled. schema.org wants
-`eventStatus: EventCancelled` on that performance, and the event page should say so rather than
-silently showing one fewer date. Related: `Venue` has no capacity column, so nothing can emit
-`maximumAttendeeCapacity`.
+*What is left of "a cancelled or sold-out performance has nowhere to be recorded" — the rest
+shipped with the pretix performance sync (re-audited 2026-09-06).*
+
+`EventOccurrence` now carries `cancelled` and `sold_out`, both rendered as badges on the
+performance row and mapped to schema.org `EventCancelled` / `SoldOut` by
+`SchemaHelper#performance_status` / `#performance_availability`, so pulling one night no longer
+means deleting the row.
+
+Still missing: `Venue` has no capacity column, so nothing can emit `maximumAttendeeCapacity`.
 
 ## `display_price` reads oddly when one band is free and the others are not
 
