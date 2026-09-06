@@ -9,8 +9,6 @@ class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
     Admin::Answer.where(id: answer.id)
   end
 
-  # A single attachment renders through shared/show_attachment (which exists) and
-  # NOT through the multi-attachment gallery.
   test "renders a single attachment without the gallery wrapper" do
     render_inline(Admin::QuestionsAndAnswersComponent.new(answers: answers_with_attachments(1)))
 
@@ -18,8 +16,6 @@ class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
     assert_no_text "Attachments"
   end
 
-  # Two attachments hit the multi-attachment gallery branch, which once 500'd in
-  # production by naming a gallery partial that did not exist at that path.
   test "renders multiple attachments through the attachments gallery" do
     render_inline(Admin::QuestionsAndAnswersComponent.new(answers: answers_with_attachments(2)))
 
@@ -27,7 +23,6 @@ class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
     assert_text "Attachments"
   end
 
-  # Same bug lived in the flush branch used by questionnaires#show.
   test "renders multiple attachments through the gallery in flush mode" do
     render_inline(Admin::QuestionsAndAnswersComponent.new(answers: answers_with_attachments(2), flush: true))
 

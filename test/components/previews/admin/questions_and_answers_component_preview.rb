@@ -11,8 +11,6 @@ class Admin::QuestionsAndAnswersComponentPreview < Admin::ApplicationComponentPr
     render Admin::QuestionsAndAnswersComponent.new(answers: answers)
   end
 
-  # An answer carrying more than one attachment renders AttachmentsGalleryComponent
-  # rather than a single show_attachment.
   def multiple_attachments
     answer_ids = Attachment.where(item_type: "Admin::Answer")
                            .group(:item_id)
