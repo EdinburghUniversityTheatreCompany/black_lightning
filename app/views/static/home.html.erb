@@ -36,7 +36,7 @@
               { content: buttons, class: 'mt-auto' }
             ] }
           } %>
-          <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
+          <%= render(Public::EventsGridComponent.new(items: items, col_size: 8)) %>
         <% end %>
       <% end %>
     <% end %>
