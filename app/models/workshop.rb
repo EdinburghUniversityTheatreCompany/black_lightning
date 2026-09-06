@@ -64,6 +64,10 @@
 class Workshop < Event
   OCCURRENCE_LABEL = "Session".freeze
 
+  # A workshop is taught, not staged. schema.org has EducationEvent for exactly
+  # this; publishing it as a TheaterEvent puts it in theatre rich results.
+  SCHEMA_TYPE = "EducationEvent".freeze
+
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }

@@ -67,6 +67,11 @@ class Season < Event
   # A season's occurrences are the hours the venue is open, not performances.
   OCCURRENCES_ARE_PERFORMANCES = false
 
+  # SCHEMA_TYPE is deliberately NOT overridden here. schema.org's Festival is
+  # the likely right answer for a season, but that is a separate call about how
+  # Bedlam's festivals should appear in search, not a consequence of fixing the
+  # workshop type. See plans/off-topic-improvements.md.
+
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }

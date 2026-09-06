@@ -506,13 +506,15 @@ same size**, because the alpha channel stops it becoming a true palette image. T
 there was the `fetchpriority`/`loading` fix, which has landed. Leave it alone unless the artwork
 is redrawn without transparency.
 
-## A Workshop is marked up as a `TheaterEvent`
+## A Season is marked up as a `TheaterEvent`
 
-`SchemaHelper#event_schema` types every `Event` as `TheaterEvent`, which predates the performances
-work and is wrong for a `Workshop` — schema.org has `EducationEvent`, which is what a workshop is.
-`Season` is now handled (its occurrences are no longer published as performances), but the type on
-the run node is still `TheaterEvent` for all three subclasses. Low risk either way: Google will not
-penalise it, but a workshop showing up in theatre rich results is not what anybody wants.
+`Event::SCHEMA_TYPE` is now per subclass (Show `TheaterEvent`, Workshop
+`EducationEvent`, 2026-09-06), and `Season` deliberately inherits the default rather than
+overriding it. schema.org's **`Festival`** is the likely right answer — a Bedlam season is a
+short festival, not a term-long container — but that is a call about how Bedlam's festivals
+should appear in search, not a consequence of fixing the workshop type. Overriding it is one
+line in `app/models/season.rb`; the tests to update are in
+`test/integration/seo_structured_data_test.rb`.
 
 ## The API does not expose performances or ticket prices
 

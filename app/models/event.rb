@@ -86,6 +86,12 @@ class Event < ApplicationRecord
   # day the box office is open.
   OCCURRENCES_ARE_PERFORMANCES = true
 
+  # The schema.org type this event is published as, on both the run node and its
+  # performance nodes. A constant per subclass for the same reason as the label
+  # above: the word must not be typed into SchemaHelper, where a new subclass
+  # would silently inherit whatever the last one needed.
+  SCHEMA_TYPE = "TheaterEvent".freeze
+
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :tagline, length: { maximum: 255 }
@@ -440,6 +446,10 @@ class Event < ApplicationRecord
 
   def occurrences_are_performances?
     self.class::OCCURRENCES_ARE_PERFORMANCES
+  end
+
+  def schema_type
+    self.class::SCHEMA_TYPE
   end
 
   # The facts that hold for the whole run rather than for one night: running

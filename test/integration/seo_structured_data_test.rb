@@ -264,7 +264,29 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
 
     get workshop_path(workshop)
 
-    assert_nil document_of_type("TheaterEvent")["workFeatured"]
+    assert_nil document_of_type("EducationEvent")["workFeatured"]
+  end
+
+  # A workshop is taught, not staged. Typed as a TheaterEvent it would turn up
+  # in theatre rich results, which is not what it is.
+  test "a workshop is marked up as an EducationEvent, not a TheaterEvent" do
+    workshop = FactoryBot.create(:workshop, is_public: true)
+
+    get workshop_path(workshop)
+
+    assert_not_nil document_of_type("EducationEvent")
+    assert_nil document_of_type("TheaterEvent")
+  end
+
+  test "a workshop's sessions are EducationEvents too" do
+    workshop = FactoryBot.create(:workshop, is_public: true)
+    workshop.event_occurrences.create!(starts_at: workshop.start_date.to_time.change(hour: 14))
+
+    get workshop_path(workshop)
+
+    sessions = documents_of_type("EducationEvent").select { |node| node["superEvent"] }
+    assert_equal 1, sessions.size
+    assert_nil document_of_type("TheaterEvent")
   end
 
   test "the director is named from the team" do
