@@ -1,0 +1,3 @@
+<%= render SearchFormComponent.new(q: @q, input_fields: UsersTableComponent::SEARCH_FIELDS, url: @url, columns: 1) %>
+
+<%= render IndexTableComponent.new(headers: headers, field_sets: field_sets, resource_class: User, q: @q) %>
