@@ -222,6 +222,14 @@ module Admin
         when :skipped_no_amount
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
                                     "excluding VAT. It would never match on reconciliation.")
+        when :skipped_no_foreign_amount
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without the amount in EUR. " \
+                                    "That is the figure EUSA's international payment form asks for.")
+        when :skipped_no_gbp_amount
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a GBP amount. " \
+                                    "Enter what the payment is expected to cost in pounds — the budget " \
+                                    "counts it in GBP, and reconciliation corrects it to the rate the " \
+                                    "bank charged.")
         when :skipped_awaiting_endorsement
           redirect_to_review(alert: "##{expense.auto_number} needs a budget owner's endorsement first " \
                                     "(or a finance override).")
@@ -237,6 +245,8 @@ module Admin
       # details (:skipped_no_bank), no linked budget (:skipped_no_budget — a
       # blank budget writes a blank nominal code straight into the BACS
       # spreadsheet, permanently breaking reconciliation matching), or no
+      # the international EUR/GBP pair (:skipped_no_foreign_amount /
+      # :skipped_no_gbp_amount), a
       # non-zero ex-VAT amount (:skipped_no_amount — the reconciliation
       # matcher can never match a nil/zero amount, so the expense is paid but
       # never marked Paid). The other "needs attention" reasons (no receipt,
@@ -271,6 +281,12 @@ module Admin
         # blocking reason (the UI promises the two agree).
         return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
         return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+        # The international pair, read through ReviewSupport so this guard and
+        # its "blocking" reason cannot drift apart. EUSA's bank pays the
+        # supplier in their own currency, so the EUR figure is what goes on the
+        # form; the GBP one is what every budget rollup counts.
+        return :skipped_no_foreign_amount if ::Reimbursements::ReviewSupport.missing_foreign_amount?(expense)
+        return :skipped_no_gbp_amount if ::Reimbursements::ReviewSupport.missing_gbp_amount?(expense)
         # A budget owner must sign off before finance approves (any one owner, or
         # a submitter who owns the budget is auto-bypassed). Overridable by
         # finance via override_approve; unmet here means neither has happened.

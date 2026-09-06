@@ -51,21 +51,59 @@ module Reimbursements
       blocking = []
       advisory = []
 
-      advisory << "no amount" if expense.amount.nil? || expense.amount.zero?
+      amount_reasons(expense, blocking, advisory)
       blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
       blocking << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
       advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 
-      if expense.effective_has_bank_details?
+      if !expense.effective_has_bank_details?
+        blocking << "no bank details"
+      elsif !expense.international?
+        # A UK sort-code/account-number algorithm, so it is skipped rather than
+        # run and failed on a payee who has neither.
         modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
         advisory << "failed the bank modulus check" if modulus == ModulusCheck::INVALID
-      else
-        blocking << "no bank details"
       end
 
       advisory << "over budget" if over_budget?(expense, budget_by_id)
       advisory << "ex-VAT amount exceeds the gross" if excl_vat_over_gross?(expense)
       { blocking: blocking, advisory: advisory }
+    end
+
+    # The amount rules, which differ by rail.
+    #
+    # A UK claim's gross amount is the submitter's own figure and has always
+    # been advisory. An international claim needs BOTH figures and cannot be
+    # approved without them: +foreign_amount+ is what goes on EUSA's form (their
+    # bank pays the supplier in their own currency, so the GBP figure cannot
+    # stand in for it), and +amount+ is the GBP equivalent finance types at
+    # review — every budget rollup is GBP, so approving without one would book
+    # the claim against its budget at nothing.
+    def amount_reasons(expense, blocking, advisory)
+      unless expense.international?
+        advisory << "no amount" if blank_amount?(expense.amount)
+        return
+      end
+
+      blocking << "no EUR amount" if missing_foreign_amount?(expense)
+      blocking << "no GBP amount" if missing_gbp_amount?(expense)
+    end
+    private_class_method :amount_reasons
+
+    # The two international amount rules, public because
+    # ReviewController#approve_blocker refuses on exactly these — the blocking
+    # list and the approval guard are documented as being in lockstep, so they
+    # read one definition rather than each spelling the rule out.
+    def missing_foreign_amount?(expense)
+      expense.international? && blank_amount?(expense.foreign_amount)
+    end
+
+    def missing_gbp_amount?(expense)
+      expense.international? && blank_amount?(expense.amount)
+    end
+
+    def blank_amount?(value)
+      value.nil? || value.zero?
     end
 
     # The flat reason list (blocking first, then advisory) — for the CSV export,

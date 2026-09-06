@@ -43,6 +43,22 @@ module Reimbursements
         sort_code: "", account_number: "")
     end
 
+    def international_payee
+      person = Person.new(name: "Ausland GmbH", email: "konto@example.de")
+      person.build_payment_details(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
+      person.define_singleton_method(:record_id) { "recPerson3" }
+      person
+    end
+
+    # An international claim as it looks once finance has done its part: the EUR
+    # figure from the invoice and the GBP equivalent they typed at review.
+    def international_expense(payee: nil, **extra)
+      expense(payee: payee || international_payee, budget: budget, receipts: [ receipt ],
+        payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+        foreign_amount: BigDecimal("266.69"), foreign_currency: Expense::CURRENCY_EUR,
+        **extra)
+    end
+
     def budget(remaining: BigDecimal("500.00"), nominal_code: "439999", record_id: "recBudget1")
       remaining_value = remaining
       rid = record_id
@@ -438,6 +454,97 @@ module Reimbursements
         exp.status = done
         assert_not ReviewSupport.attention_actionable?(exp), "#{done} is not actionable"
       end
+    end
+
+    # --- needs_attention: the international rail ----------------------------
+    #
+    # These are the rules that decide whether an international claim can ever
+    # leave the review queue. Before payment_method existed the UK sort-code
+    # pair was read for every claim, so an IBAN-only one was permanently stuck.
+
+    test "a complete international claim has no attention reasons" do
+      exp = international_expense
+      assert_empty ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
+    end
+
+    test "the modulus check never runs on an international claim" do
+      # It is a UK sort-code/account-number algorithm; running it on a payee
+      # with no sort code would fail every international claim on a check that
+      # does not apply to it.
+      checker = FakeChecker.new(ModulusCheck::INVALID)
+      reasons = ReviewSupport.needs_attention_reasons(international_expense, { "recBudget1" => budget }, checker)
+
+      assert_empty checker.calls
+      assert_not_includes reasons, "failed the bank modulus check"
+    end
+
+    test "an international claim with no IBAN is blocked" do
+      payee = Person.new(name: "Ausland GmbH", email: "konto@example.de")
+      payee.build_payment_details(iban: "", bic: "")
+      payee.define_singleton_method(:record_id) { "recPerson3" }
+      summary = ReviewSupport.attention_summary(international_expense(payee: payee),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no bank details"
+    end
+
+    test "a UK sort code does not satisfy an international claim" do
+      # The whole reason the predicate had to become rail-aware.
+      summary = ReviewSupport.attention_summary(international_expense(payee: valid_payee),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no bank details"
+    end
+
+    test "an international claim with no EUR amount is blocked" do
+      # foreign_amount is what goes on EUSA's form. Without it there is nothing
+      # to send, and the GBP figure beside it cannot stand in — EUSA's bank
+      # pays the supplier in their own currency.
+      summary = ReviewSupport.attention_summary(international_expense(foreign_amount: nil),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no EUR amount"
+    end
+
+    test "a zero EUR amount is blocked too" do
+      summary = ReviewSupport.attention_summary(international_expense(foreign_amount: BigDecimal("0")),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no EUR amount"
+    end
+
+    test "an international claim with no GBP amount is BLOCKED, not merely flagged" do
+      # This is what enforces "finance types the GBP figure at review": the
+      # budget rollups are all GBP, so approving without one would book the
+      # claim against the budget at nothing.
+      summary = ReviewSupport.attention_summary(international_expense(amount: nil),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no GBP amount"
+      assert_not_includes summary[:advisory], "no GBP amount"
+    end
+
+    test "a missing gross amount stays ADVISORY on the UK rail" do
+      # Only the international rail hard-blocks on it. A UK claim's amount is
+      # the submitter's own figure and has always been a soft flag; promoting
+      # it would start refusing approvals that work today.
+      summary = ReviewSupport.attention_summary(
+        expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: nil),
+        { "recBudget1" => budget }, valid_checker
+      )
+
+      assert_includes summary[:advisory], "no amount"
+      assert_empty summary[:blocking]
+    end
+
+    test "the EUR amount is not read on a UK claim" do
+      # A UK claim never has one, and demanding it would block every one of them.
+      summary = ReviewSupport.attention_summary(
+        expense(payee: valid_payee, budget: budget, receipts: [ receipt ]),
+        { "recBudget1" => budget }, valid_checker
+      )
+
+      assert_not_includes summary[:blocking], "no EUR amount"
     end
   end
 end

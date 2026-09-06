@@ -747,6 +747,73 @@ module Admin
         assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
       end
 
+      # --- The international rail ------------------------------------------
+      #
+      # Before payment_method existed these claims could never be approved at
+      # all: approve_blocker read the UK sort-code pair, which an IBAN-only
+      # payee has none of.
+
+      def international_expense(**attrs)
+        pending_expense(
+          payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+          foreign_amount: BigDecimal("266.69"),
+          foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR,
+          iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500",
+          **attrs
+        )
+      end
+
+      test "approve accepts an international claim with an IBAN and both amounts" do
+        expense = international_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
+      end
+
+      test "approve is blocked on an international claim with no IBAN" do
+        expense = international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person)
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_match(/without bank details/, flash[:alert])
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+      end
+
+      test "approve is blocked on an international claim with no EUR amount" do
+        expense = international_expense(foreign_amount: nil)
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_match(/without the amount in EUR/, flash[:alert])
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+      end
+
+      # The structural half of "finance types the GBP figure at review": the
+      # budget rollups are all GBP, so an approval without one would book the
+      # claim against its budget at nothing.
+      test "approve is blocked on an international claim with no GBP amount" do
+        expense = international_expense(amount: nil)
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_match(/without a GBP amount/, flash[:alert])
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+      end
+
+      test "a UK claim is never asked for a EUR amount" do
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
+      end
+
       test "approve is blocked without a linked budget" do
         expense = pending_expense(budget: nil)
         sign_in @user
