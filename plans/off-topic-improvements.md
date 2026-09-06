@@ -481,18 +481,6 @@ a real export email before trusting it.** If Govee's subject line turns out not 
 per-sensor `import_match` column (what Govee calls it, as distinct from what we call it) rather
 than a cleverer heuristic.
 
-## The Buy Tickets buttons rely on not being inside a form
-
-*Noticed 2026-08-17 while fixing the pretix modal.* Both Buy Tickets buttons —
-`tag.button` in `static/home.html.erb` and the `<button>` in `shared/_carousel.html.erb` —
-omit `type="button"`, so they default to `type="submit"`. Nothing breaks today because
-neither the home page's What's On grid nor the carousel caption sits inside a `<form>`, but
-the day either does, clicking Buy Tickets will open the modal *and* submit the surrounding
-form, navigating away from it.
-
-**Fix:** add `type: "button"` / `type="button"`. Worth a sweep for other action-only buttons
-in public views while in there.
-
 ## The pretix modal dialog is driven by two controllers at once
 
 *Noticed 2026-08-17.* `shared/_pretix_modal.html.erb`'s `<dialog>` declares
