@@ -18,7 +18,7 @@
     <%= f.input :password, hint: password_hint %>
     <%= f.input :password_confirmation %>
 
-    <% if current_user.has_role?('Admin') %>
+    <% if current_user.admin? %>
       <%= f.association :roles, as: :check_boxes %>
     <% end %>
 

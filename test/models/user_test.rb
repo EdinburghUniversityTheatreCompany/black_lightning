@@ -777,6 +777,12 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_not life_member.member?, "A life member is only a member for ticket discounts (pretix), nowhere else"
   end
 
+  test "admin? reads the Admin role" do
+    assert users(:admin).admin?
+    assert_not users(:committee).admin?
+    assert_not users(:member).admin?
+  end
+
   test "committee? reads the Committee role" do
     assert users(:committee).committee?
     assert_not users(:member).committee?

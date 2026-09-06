@@ -45,7 +45,7 @@ class Ability
     # :delete is not mapped to :destroy, that's done manually.
     # :manage -> every action
 
-    if user&.has_role?("Admin")
+    if user&.admin?
       ##############################################
       #              ADMIN PERMISSIONS             #
       ##############################################
@@ -238,7 +238,7 @@ class Ability
     cannot [ :add_user, :remove_user ], Role
 
     # Re-allow for admins (they should be able to add/remove users from any role)
-    if user&.has_role?("Admin")
+    if user&.admin?
       can [ :add_user, :remove_user ], Role
     end
 

@@ -152,7 +152,6 @@ product call rather than a bug:
 Deliberately not implemented in the round that fixed the netting: changing matching
 semantics needs Mick's call on which of those shapes finance actually wants.
 
-
 ## Reconcile and the notifier still pick a cost centre by "first row by id"
 
 The hardcoded `"F40"` literals are gone (2026-07-26): `Reconciliation.parse_actuals_rows`
@@ -171,7 +170,6 @@ through the stateless preview/apply round trip, which re-parses the pasted text)
 the notifier's cost centre from the expense/batch being acted on rather than from `.default`.
 Until then the portal is single-cost-centre in practice, whatever the copy says.
 
-
 ## A long worktree name overflows MySQL's identifier limit
 
 `.worktree-isolate.conf` derives `WORKTREE_DB_SUFFIX` from the worktree directory name, and
@@ -186,7 +184,6 @@ hand-editing the generated `mise.local.toml` to a shorter suffix.
 `isolate-worktree.sh`, and/or note the limit in `.worktree-isolate.conf`'s header comment so
 the constraint is visible where the naming decision is made. The upstream script is the
 better home — every repo using this isolation scheme has the same ceiling.
-
 
 ## An intermittently flaky system test
 
@@ -205,7 +202,6 @@ only sampled once (clean), so this may well predate the speedup branch rather th
 logs for `^Error:`/`^Failure:`), name the test, and fix the race — most likely a missing
 Capybara wait on an assertion that races the Turbo/Stimulus render, given the suite's use of
 `assert_selector … wait: 5` in some places and bare assertions in others.
-
 
 ## CI tests against MySQL 8.4, production runs 8.0
 
@@ -454,7 +450,6 @@ which need not match what the API reports, so the importer must ask rather than 
 trap as `temperature_unit`). And the on-device 20-day buffer rolls over, so an export is worth
 taking before a period of interest ages out.
 
-
 ## Vendor-file parsers are a separate family from the sheet importers
 
 *Noticed 2026-08-06 while adding the climate CSV import.* The app now has two distinct kinds of
@@ -630,29 +625,8 @@ Not wrong (it means £10/£0) but it reads badly across a room. Left alone rathe
 the mixed case is rare, and the obvious fixes ("£10/free", dropping the zero) each either break the
 compact convention or hide a band. Revisit if a real show ever prices this way.
 
-## `life member` can still be renamed, and pretix is the only reader
-
-`Pretix::MembershipSync::ENTITLING_ROLES` includes `"life member"`, so renaming that role in the
-admin would silently drop every life member's ticket discount on the next nightly reconcile. It
-was left out of `Role::HARDCODED_NAMES` on 2026-09-05 because Mick asked for Committee and Member
-only; adding it is one word plus a test. Related: `Role::NON_PURGEABLE_ROLES` and
-`HARDCODED_NAMES` overlap now (member is in both) and could collapse into one list with a
-`purgeable:` flag.
-
 ## The committee resources page has no link anywhere
 
 `admin/static#committee` is routed and now permission-gated, but nothing in the admin sidebar or
 dashboard links to it — the only way in is typing the URL. Either add a sidebar entry gated on
 `can?(:access, :committee)` or confirm the page is dead and remove it.
-
-## The admin events index comment claims parity with the public index
-
-`app/views/admin/events/index.html.erb` opens with "Essentially the same as in the public events
-index", but the public index has no members-only text search at all and the field lists have
-drifted. Either share the field definition or drop the comment.
-
-## Lower-case `has_role?("admin")` in `LabelHelper`
-
-`user_labels_for` checks `has_role?("admin")` while everything else spells it `"Admin"`; it only
-works because the MySQL collation is case-insensitive. Harmless today, but a SQLite/PostgreSQL
-test run or a stricter collation would silently hide the Admin badge.

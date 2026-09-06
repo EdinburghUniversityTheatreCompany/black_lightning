@@ -929,6 +929,11 @@ class User < ApplicationRecord
     has_role?("Committee")
   end
 
+  # Admin is the one role Ability reads directly (can :manage, :all); everything else is the grid.
+  def admin?
+    has_role?("Admin")
+  end
+
   def activate
     add_role :member
   end
