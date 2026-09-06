@@ -79,29 +79,32 @@ module Admin
         redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
       end
 
+      # Both answer a turbo stream for the receipts-upload dropzone on the edit
+      # page (replacing the gallery in place) and redirect for a plain post.
       def add_receipts
         expense = find_expense!
         attached, upload_errors = attach_posted_receipts(expense)
-        if attached.zero?
-          redirect_to_edit(expense, alert: upload_errors.presence&.to_sentence ||
-                                           "No usable receipt files (PDF or image, under the size limit).")
-          return
+        if attached.zero? && upload_errors.empty?
+          upload_errors = [ "No usable receipt files (PDF or image, under the size limit)." ]
         end
-
-        redirect_to_edit(expense, notice: "Attached #{attached} receipt(s) to ##{expense.auto_number}.",
-                                  alert: upload_errors.presence&.to_sentence)
+        notice = "Attached #{attached} receipt(s) to ##{expense.auto_number}." if attached.positive?
+        respond_with_finance_gallery(expense, upload_errors: upload_errors, notice: notice)
       rescue StandardError => e # AR/ActiveStorage failures
-        redirect_to_edit(expense, alert: "Couldn't attach the receipt: #{e.message}")
+        raise if expense.nil?
+
+        respond_with_finance_gallery(expense, upload_errors: [ "Couldn't attach the receipt: #{e.message}" ])
       end
 
       def remove_receipt
         expense = find_expense!
         store.remove_receipt!(expense.record_id, params[:attachment_id])
-        redirect_to_edit(expense, notice: "Removed a receipt from ##{expense.auto_number}.")
+        respond_with_finance_gallery(expense, notice: "Removed a receipt from ##{expense.auto_number}.")
       rescue ::Reimbursements::DatabaseStore::LastReceiptError
-        redirect_to_edit(expense, alert: "Can't remove the last receipt from a submitted expense.")
+        respond_with_finance_gallery(expense, upload_errors: [ "Can't remove the last receipt from a submitted expense." ])
       rescue StandardError => e
-        redirect_to_edit(expense, alert: "Couldn't remove the receipt: #{e.message}")
+        raise if expense.nil?
+
+        respond_with_finance_gallery(expense, upload_errors: [ "Couldn't remove the receipt: #{e.message}" ])
       end
 
       private
@@ -253,6 +256,12 @@ module Admin
 
       def redirect_to_edit(expense, flash)
         redirect_to edit_admin_reimbursements_expense_edit_path(expense.record_id), **flash
+      end
+
+      def respond_with_finance_gallery(expense, upload_errors: [], notice: nil)
+        respond_with_receipts_gallery(expense.record_id, upload_errors: upload_errors, notice: notice,
+                                      finance: true,
+                                      redirect_path: edit_admin_reimbursements_expense_edit_path(expense.record_id))
       end
     end
   end

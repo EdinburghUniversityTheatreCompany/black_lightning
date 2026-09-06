@@ -1,4 +1,4 @@
-<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
+<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil, delete_path: nil) %>
 <%# Receipt-first expense form. The Stimulus controller holds on to the picked
     receipt across a failed submit and drives the inline warnings; everything
     still works with JavaScript disabled (plain manual form). %>
@@ -32,6 +32,17 @@
               name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true %>
       <% end %>
       <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
+      <% if delete_path %>
+        <%# Submits THIS form to the destroy route: formaction retargets it, and
+            the button's own name/value posts _method=delete after the form's
+            hidden _method=patch, so the later value wins the override. One
+            form, no nested or detached delete form. %>
+        <%= button_tag "Delete draft", type: :submit, name: "_method", value: "delete",
+              formaction: delete_path, formnovalidate: true,
+              class: "#{btn_classes(:danger)} ml-auto",
+              title: "Discards this unsent draft entirely. Only you ever saw it.",
+              data: { turbo_confirm: "Delete this draft for good? This can't be undone." } %>
+      <% end %>
     </div>
     <p class="mt-2 mb-0 text-sm text-gray-500">
       <% if editing_pending %>
@@ -49,29 +60,28 @@
 
   <%= render('shared/pages/form', f: f) do %>
     <% if show_receipt_input %>
-      <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
-        <%# With JS, the controller re-attaches the file the user picked and
-            hides this. This is the no-JS / no-file-attached fallback. %>
-        <% if form.errors.any? %>
-          <p class="mb-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
-             role="status" aria-live="polite"
-             data-reimbursements-receipt-target="reattachNotice">
-            Please re-attach your receipt below. Check the errors above, then submit again.
-          </p>
-        <% end %>
-        <p class="mb-2 text-sm text-gray-600">
-          Upload the receipt or invoice first, then fill in the details below. PDF or photo,
-          max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we have to deduct the
-          full amount from your budget instead of the ex-VAT amount, so a VAT receipt is in
-          your own interest.
+      <%# With JS, the controller re-attaches the file the user picked and
+          hides this. This is the no-JS / no-file-attached fallback. %>
+      <% if form.errors.any? %>
+        <p class="mb-4 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
+           role="status" aria-live="polite"
+           data-reimbursements-receipt-target="reattachNotice">
+          Please re-attach your receipt below. Check the errors above, then submit again.
         </p>
-        <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
-              input_html: { multiple: true,
-                            accept: Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE,
-                            data: { reimbursements_receipt_target: "files",
-                                    action: "change->reimbursements-receipt#stash" } } %>
-
-        <p class="mt-2 text-sm text-gray-600" aria-live="polite"
+      <% end %>
+      <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
+            hint: "Upload the receipt or invoice first, then fill in the details below. PDF or " \
+                  "photo, max 5 MB. Ask for a VAT receipt if you can: without one we have to " \
+                  "deduct the full amount from your budget instead of the ex-VAT amount, so a " \
+                  "VAT receipt is in your own interest.",
+            input_html: { multiple: true,
+                          accept: Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE,
+                          data: { reimbursements_receipt_target: "files",
+                                  action: "change->reimbursements-receipt#stash" } } %>
+      <%# The controller's status line sits in the input column, under the hint. %>
+      <div class="flex flex-wrap -mt-2 mb-4">
+        <div class="hidden md:block md:w-3/12 px-2"></div>
+        <p class="w-full md:w-9/12 px-2 mb-0 text-sm text-gray-600" aria-live="polite"
            data-reimbursements-receipt-target="status"></p>
       </div>
     <% end %>
@@ -130,14 +140,15 @@
     <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
           input_html: { required: false } %>
 
+    <%# The live character counter is part of the hint, so it sits under the
+        field it counts rather than at the card edge. %>
     <%= f.input :payment_reference, label: "Payment reference", required: true,
-          hint: "What EUSA puts on the bank transfer. Invoices usually specify one; otherwise the invoice number or a short label.",
+          hint: safe_join([ "What EUSA puts on the bank transfer. Invoices usually specify one; " \
+                            "otherwise the invoice number or a short label. ",
+                            tag.span(data: { reimbursements_receipt_target: "referenceCounter" }) ]),
           input_html: { required: false, maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
                         data: { reimbursements_receipt_target: "reference",
                                 action: "input->reimbursements-receipt#updateCounter" } } %>
-    <p class="mb-3 text-sm text-gray-500">
-      <span data-reimbursements-receipt-target="referenceCounter"></span>
-    </p>
 
     <%# Always shown (not a collapsible): tucked in an accordion, whether a
         third-party payee was filled in was invisible at a glance — a
@@ -145,8 +156,8 @@
         signal when it's in use. %>
     <% overrides_filled = form.payee_name_override.present? || form.sort_code_override.present? || form.account_number_override.present? %>
     <% invoice_selected = form.expense_type == Reimbursements::Expense::TYPE_INVOICE %>
-    <div class="mb-3 rounded border <%= overrides_filled ? 'border-warning/50 bg-warning/5' : 'border-gray-200' %> p-3">
-      <p class="mb-1 font-medium">
+    <div class="mb-4 border-t <%= overrides_filled ? 'border-warning/50' : 'border-gray-200' %> pt-3">
+      <h3 class="mb-1">
         Pay someone else
         <%# Server-rendered for the no-JS case and for a 422 re-render; the
             controller's typeChanged keeps it honest as the type select changes. %>
@@ -157,15 +168,15 @@
         <% if overrides_filled %>
           <%= render BadgeComponent.new(type: :warning, pill: true).with_content("In use") %>
         <% end %>
-      </p>
-      <p class="mb-2 text-sm text-gray-600">
+      </h3>
+      <p class="mb-4 text-sm text-gray-600">
         Fill this out when EUSA should pay a third party directly — which is what an
         <strong>Invoice</strong> means, so all three are required there. Leave all three blank
         to be reimbursed yourself.
       </p>
-      <%= f.input :payee_name_override, label: "Payee account name" %>
-      <%= f.input :sort_code_override, label: "Payee sort code" %>
-      <%= f.input :account_number_override, label: "Payee account number" %>
     </div>
+    <%= f.input :payee_name_override, label: "Payee account name" %>
+    <%= f.input :sort_code_override, label: "Payee sort code" %>
+    <%= f.input :account_number_override, label: "Payee account number" %>
   <% end %>
 <% end %>

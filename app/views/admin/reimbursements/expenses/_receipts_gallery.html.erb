@@ -1,16 +1,23 @@
-<%# locals: (expense:, upload_errors: [], readonly: false) %>
-<%# Replaced wholesale by turbo streams from receipts#create/#destroy; the
-    fancybox and receipt-viewer controllers reconnect with the new DOM on each
-    replacement. readonly hides the remove control for the view-only show page.
+<%# locals: (expense:, upload_errors: [], readonly: false, finance: false) %>
+<%# Replaced wholesale by turbo streams from the receipt create/destroy
+    actions; the fancybox and receipt-viewer controllers reconnect with the new
+    DOM on each replacement. readonly hides the remove control for the
+    view-only show page; finance points the remove control at the finance
+    routes (ExpenseEditsController) instead of the producer's own.
 
     Display, thumbnails and the in-page pane all come from the shared
     shared/_receipt_viewer partial, the same one the Review queue and the finance
-    expense pages use; this wrapper only adds the producer's upload errors and
-    the per-thumbnail remove button. %>
-<% remove_url = ->(receipt) {
-     admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id)
-   } unless readonly %>
-<% draft_note =expense.draft? ? " yet. A draft can wait, but the claim needs one before you submit it." : "." %>
+    expense pages use; this wrapper only adds the upload errors and the
+    per-thumbnail remove button. %>
+<% remove_url =
+     if readonly
+       nil
+     elsif finance
+       ->(receipt) { admin_reimbursements_expense_edit_receipt_path(expense.record_id, receipt.attachment_id) }
+     else
+       ->(receipt) { admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id) }
+     end %>
+<% draft_note = expense.draft? ? " yet. A draft can wait, but the claim needs one before you submit it." : "." %>
 <div id="receipts-gallery">
   <% upload_errors.each do |message| %>
     <p class="mb-2 text-sm text-danger"><%= message %></p>

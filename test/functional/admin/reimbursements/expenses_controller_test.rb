@@ -393,10 +393,9 @@ module Admin
       get :edit, params: { id: draft.record_id }
 
       assert_select "input[type=submit][value='Submit expense']"
-      # Delete-draft button (a button_to DELETE with a confirm).
-      assert_select "form[action=?][method=post]", admin_reimbursements_expense_path(draft.record_id) do
-        assert_select "input[name=_method][value=delete]", 1
-      end
+      # The footer's Delete draft retargets the edit form at the destroy route.
+      assert_select "button[formaction=?][name=_method][value=delete][data-turbo-confirm]",
+                    admin_reimbursements_expense_path(draft.record_id), 1
       assert_includes response.body, "Delete draft"
     end
 

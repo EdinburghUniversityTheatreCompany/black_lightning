@@ -20,6 +20,28 @@ module Admin
         usable.each { |receipt| store.attach_receipt!(expense.record_id, **receipt.to_attachment) }
         [ usable.size, rejected.map(&:error) ]
       end
+
+      # Answers a receipt add/remove the way the receipts-upload controller
+      # expects: a turbo stream replacing #receipts-gallery (re-read, so the
+      # gallery shows what is attached now), or a redirect for a plain form
+      # post. `finance` points the gallery's remove buttons at the finance
+      # routes instead of the producer's own.
+      def respond_with_receipts_gallery(record_id, redirect_path:, upload_errors: [], notice: nil,
+                                        finance: false)
+        expense = store.find_expense!(record_id)
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.replace(
+              "receipts-gallery",
+              partial: "admin/reimbursements/expenses/receipts_gallery",
+              locals: { expense: expense, upload_errors: upload_errors, finance: finance }
+            )
+          end
+          format.html do
+            redirect_to redirect_path, notice: notice, alert: upload_errors.presence&.to_sentence
+          end
+        end
+      end
     end
   end
 end
