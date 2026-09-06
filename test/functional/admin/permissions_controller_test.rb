@@ -72,8 +72,25 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
 
   test "grid offers the proposal review permission as a miscellaneous row" do
     get :grid
-    assert_select "input[name='[Committee][Admin::Proposals::Proposal]review'][checked]", 1
-    assert_select "input[name='[Member][Admin::Proposals::Proposal]review']:not([checked])", 1
+    assert_select "input[name='[Committee][proposals]review'][checked]", 1
+    assert_select "input[name='[Member][proposals]review']:not([checked])", 1
+  end
+
+  test "saving the grid leaves stored permissions on subject classes the grid does not render alone" do
+    # Admin::Proposals::Proposal is excluded from the model rows, so the grid offers no checkbox
+    # for it — but rows from before it was excluded (2026-05-08) still exist in production, and
+    # `manage` there is how a non-admin approves proposals. update_permission deletes every action
+    # not submitted, so the class must never be in the list of subject classes the save walks.
+    role = roles(:welfare)
+    legacy = Admin::Permission.create!(action: "manage", subject_class: "Admin::Proposals::Proposal")
+    role.permissions << legacy
+
+    post :update_grid, params: { "[#{role.name}]" => { "Complaint" => { "read" => "read" } } }
+    assert_redirected_to admin_permissions_path
+    assert_includes role.reload.permissions, legacy, "A grid save wiped a stored proposal permission the grid never showed"
+
+    post :update_role_grid, params: { id: role.id, "[#{role.name}]" => { "Complaint" => { "read" => "read" } } }
+    assert_includes role.reload.permissions, legacy
   end
 
   test "Proposal Checker's permissions are managed in the grid like any other role" do

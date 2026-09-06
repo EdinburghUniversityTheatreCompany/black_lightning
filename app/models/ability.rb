@@ -201,12 +201,12 @@ class Ability
 
     set_permissions_based_on_grid(user)
 
-    # The `review Admin::Proposals::Proposal` grid permission (Committee and Proposal Checker by
-    # default) opens every proposal once its call's submission deadline has passed — approved,
-    # rejected or awaiting — and the index of all of them. Proposal is deliberately NOT a model
-    # row in the grid because its rules are time-based, so this is a miscellaneous permission and
-    # has to sit after set_permissions_based_on_grid, which is what makes can?(:review) true.
-    if can?(:review, Admin::Proposals::Proposal)
+    # The `review proposals` grid permission (Committee and Proposal Checker by default) opens
+    # every proposal once its call's submission deadline has passed — approved, rejected or
+    # awaiting — and the index of all of them. Proposal is deliberately NOT a model row in the
+    # grid because its rules are time-based, so this is a miscellaneous permission and has to sit
+    # after set_permissions_based_on_grid, which is what makes can?(:review) true.
+    if can?(:review, :proposals)
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
       can :index, Admin::Proposals::Proposal
     end

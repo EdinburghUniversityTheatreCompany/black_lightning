@@ -165,7 +165,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_set_up_proposal
     @proposal.status = :awaiting_approval
 
-    # The role NAME alone grants nothing any more.
+    # The role NAME alone grants nothing any more. (@checker_ability was built by
+    # helper_set_up_proposal before this delete and holds its own rule set, so it is unaffected.)
     named_only = FactoryBot.create(:user)
     named_only.add_role "Proposal Checker"
     Role.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))

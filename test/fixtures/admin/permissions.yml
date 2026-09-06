@@ -89,4 +89,4 @@ access_committee:
 review_proposals:
   id: 16
   action: review
-  subject_class: Admin::Proposals::Proposal
+  subject_class: proposals

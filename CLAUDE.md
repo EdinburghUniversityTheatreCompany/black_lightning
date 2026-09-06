@@ -198,14 +198,16 @@ Models carry `# == Schema Information` blocks maintained by **`annotaterb`** (re
 
 The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
 
-- **What a role MAY DO is a grid permission; WHO someone is stays a role check.** Gate a page or
-  an Ability rule on `can?(:access, :committee)` / `can?(:review, Admin::Proposals::Proposal)`
-  (miscellaneous rows in the grid), never on `has_role?("Committee")`. `User#member?` and
-  `User#committee?` are the one spelling of the two facts, for mailing lists, the membership
-  import, staffing eligibility and badges — those must not be grantable from a checkbox on some
-  other role, or a stray tick mass-mails 40 people and mints them pretix memberships overnight.
-  `member?` is the `member` role only: a life member is a member for pretix ticket discounts
-  (`Pretix::MembershipSync::ENTITLING_ROLES`) and nowhere else.
+- **What a role MAY DO is a grid permission; WHO someone is stays a role check.** Gate on
+  `can?(:access, :committee)` / `can?(:review, :proposals)`, never on `has_role?("Committee")`.
+  `User#member?` / `User#committee?` are the facts (membership import, staffing eligibility,
+  badges; `with_role(:member)` for the set queries), and must never be grantable from a grid
+  checkbox: a stray tick on another role would mass-mail its holders and mint them pretix
+  memberships overnight. `member?` excludes life members, who count only for pretix discounts.
+- **A miscellaneous-only grid subject must be a symbol (`proposals`), never a model name.** A
+  grid save calls `update_permission` for every listed subject with only the actions the grid
+  offers, so a misc-only `"Admin::Proposals::Proposal"` row deleted the `manage` rows stored
+  before that class left the model rows (2026-05-08) — the rows non-admins approve with.
 - **A miscellaneous permission can only be read AFTER `set_permissions_based_on_grid`**, which
   for non-admins runs late in `Ability#initialize`. A `can?(:review, …)` placed higher up reads
   false for everyone; put derived rules next to the `:duplicate` / `:membership_import` ones.

@@ -76,9 +76,12 @@ class Admin::PermissionsController < AdminController
       "MarketingCreative::Profile" => { "approve" => "Approve or Reject Marketing Creative Profiles" },
       "backend" => { "access" => "Access Backend" },
       "committee" => { "access" => "Access the committee resources page" },
-      # Proposal is kept out of the model rows (its read rules are time-based, see Ability), so
-      # this is the one proposal permission the grid offers.
-      "Admin::Proposals::Proposal" => { "review" => "Review proposals: read and index every proposal once its call's submission deadline has passed" },
+      # A symbol subject on purpose, not "Admin::Proposals::Proposal": that class is excluded from
+      # the model rows (its read rules are time-based, see Ability), and a miscellaneous-only entry
+      # named after a class makes every save call update_permission for it with just the actions
+      # offered here — deleting the read/update/manage rows stored before 2026-05-08, which is how
+      # non-admins approve proposals. Any misc-only subject must be a symbol for the same reason.
+      "proposals" => { "review" => "Review proposals (read every proposal after its call's deadline)" },
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },
