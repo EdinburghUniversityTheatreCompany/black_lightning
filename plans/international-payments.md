@@ -179,24 +179,24 @@ per-payment variant, since these are one file each rather than one per batch. Ev
 downstream — the Batch record, `mark_submitted`, producer notifications, the cardinal rule and the
 orphan-draft guard — is unchanged, because there is still exactly one draft.
 
-**6 — Reconcile. NOT DONE, and it is a gap in phases 1–5 rather than optional polish.**
+**6 — Reconcile. DONE** (2026-09-06, branch `intl-reconcile`).
 
-`Reconciliation.match_debit_to_expense` requires the amount within
-`AMOUNT_TOLERANCE = BigDecimal("0.01")`. An international claim's stored `amount` is finance's GBP
-*estimate*; the EUSA actual is what the bank charged after the FX spread — pounds apart on a €267
-invoice, not pence. **So an international claim will essentially never auto-match**: it stays
-Submitted, never reaches Paid, and its budget line keeps the estimate. There is no manual fallback
-either — `DatabaseStore#link_actual_to_expense!` exists but no controller action exposes it for an
-*existing* expense (only `create_expense_for_actual!` calls it).
+`match_debit_to_expense` took a penny window (`AMOUNT_TOLERANCE`), but an international claim's
+stored `amount` is finance's GBP estimate while the actual is what the bank charged after the FX
+spread: pounds apart on a €267 invoice, not pence. Every international claim would have sat
+unmatched forever, stuck Submitted with its budget line frozen on the estimate.
 
-So this needs two things, and the first is a design decision rather than a mechanical follow-up:
-
-1. **Match at all.** A wider tolerance for international claims (a percentage, not a penny),
-   matching them on something other than amount, or a manual link control. A blanket wider
-   tolerance is the wrong answer — it would loosen matching for UK claims too, where a penny is
-   right and the governing asymmetry says prefer an unmatched row to a wrong link.
-2. **Then correct the estimate**, overwriting `amount` with the actual's GBP value so the budget
-   carries what the bank really charged. `amount_excl_vat` follows automatically.
+- **A percentage window for international claims only** (`INTERNATIONAL_TOLERANCE_RATE`, 5%),
+  floored at the penny so a tiny claim does not get a sub-penny window. The UK rail keeps the
+  penny: widening it there buys nothing and costs a wrong link, which the governing asymmetry
+  says is the worse error. Read off the EXPENSE, since nothing on the actuals row says a payment
+  went out over SWIFT (checked against the BED 25/26 sheet) and nothing needs to.
+- **`DatabaseStore#settle_expense_from_actual!`** is now the one settle path, marking the claim
+  Paid and correcting an international amount to what EUSA charged. A UK amount is never
+  overwritten: it is what the producer spent, not a guess.
+- **A manual "Link to claim"** on the Actuals index (`ActualsController#link_expense` /
+  `#confirm_link`), for the rows the matcher still declines. It is the backstop under the widened
+  window and under the matcher's deliberate conservatism.
 
 ## Open questions for EUSA finance
 

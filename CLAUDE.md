@@ -88,7 +88,10 @@ error and hint below). Never type `border border-gray-300 rounded …` into a vi
   the label-column layout the older admin uses, plain `simple_form_for` (vertical wrappers) for
   the stacked finance layout. **Flat-param forms** (`params[:name]`, no model) wrap a
   `CardComponent` in `form_with` and put `render "shared/form/actions"` in `card.with_footer`, so
-  Save and Cancel sit in the grey footer on every form.
+  Save and Cancel sit in the grey footer on every form. **That nesting order is load-bearing**: the
+  footer is a component SLOT, so a `form_with` opened INSIDE the card renders its submit button
+  outside the `<form>` and the button silently does nothing. A request-level test cannot see this
+  (it POSTs straight to the action); only a browser test clicking the real button catches it.
 - `shared/back_link` is the "← All …" line above a card; `shared/form/paste_or_upload` is the
   paste-box-plus-file-input pair the budget import, climate import and Reconcile share.
 - **A select Tom Select will take over must carry only `simple-select2`.** Tom Select copies the
@@ -636,6 +639,16 @@ is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK c
   Write cells with `change_contents`, never `add_cell`, which drops the template's styling.
 - **The BACS spreadsheet is skipped when a batch has no UK claims** — an empty one reads to EUSA as
   a request to pay nobody. The covering email states each row in its own currency; the total stays GBP.
+- **An international claim is reconciled on a PERCENTAGE window, not the penny one**
+  (`Reconciliation::INTERNATIONAL_TOLERANCE_RATE`, 5%). Its stored `amount` is finance's estimate;
+  the actual is what the bank charged after the FX spread, pounds apart on a few hundred. The UK
+  rail keeps the penny — widening it there would buy nothing and cost a wrong link. Nothing on the
+  actuals ROW says a payment was international (checked against the BED 25/26 sheet) and nothing
+  needs to: the matcher walks EXPENSES, and each knows its own rail.
+- **Settling goes through `DatabaseStore#settle_expense_from_actual!`**, shared by the reconcile
+  apply and the Actuals index's manual "Link to claim". It marks the claim Paid AND corrects an
+  international claim's amount to what EUSA charged, so the budget stops quoting the estimate.
+  A UK amount is never overwritten: it is what the producer spent, not a guess.
 - **A hidden input carrying HTML `required` silently breaks the whole form.** The browser refuses to
   submit and reports a control it cannot scroll to, so Submit just stops working — two producer
   system tests caught this and nothing else did. `required:` follows the ACTIVE rail at render time
