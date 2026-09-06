@@ -531,23 +531,32 @@ image backend actually runs. Low value on its own; worth doing next time this fi
 
 ## `sortable_controller`'s reindex counts rows that are on their way out
 
-*Noticed 2026-08-24.* `#updateOrder` (`app/javascript/controllers/sortable_controller.js`)
-renumbers every `[data-sortable-item]` in the container from 0, including rows the user has
-already removed. `stimulus-rails-nested-form` removes a *new* row from the DOM but only hides a
-*persisted* one and ticks its `_destroy`, so a form where a persisted row was removed and the
-rest reordered writes display orders with a gap where the doomed row sat. Harmless today —
-`TeamMember`'s ordering only reads the relative order, and `OpportunityRole#ordering` likewise —
-but it means the stored numbers aren't the contiguous sequence they look like.
+*Noticed 2026-08-24; team members resolved 2026-09-05.* `#updateOrder`
+(`app/javascript/controllers/sortable_controller.js`) renumbers every `[data-sortable-item]` in
+the container from 0, including rows the user has already removed, and a row added with "Add"
+gets no number until something is dragged. **Team members no longer use it**: `TeamMemberOrdering`
+stamps `display_order` from the row's position in the submitted params on save (browsers post a
+form in document order), so the team member row carries no hidden order field and the controller
+finds nothing to renumber there.
 
-Related: a row added with "Add" gets no `display_order` at all until something is dragged
-(`TeamMember`'s scope sorts `ISNULL(display_order)` last, so it lands at the bottom, which is
-the sensible place). Both would be fixed by having the controller skip
-`[data-sortable-item]` whose `_destroy` input is `"true"`, and by reindexing on the
-`nested-form` add/remove events as well as on drag end.
+`OpportunityRole#ordering` still goes through the hidden field and has both gaps. The same
+server-side pattern would close them: an `opportunity_roles_attributes=` override stamping
+`ordering` by row position, then drop the hidden field and the JS renumbering altogether.
 
-**Fix (if it earns it):** small, self-contained, and testable only at the JS level — there is no
-JS unit-test harness in this repo, and SortableJS's native HTML5 drag-and-drop is not drivable
-from Selenium, which is why the drag fix landed with a structural assertion instead.
+## Team members written outside the form get no `display_order`
+
+*Noticed 2026-09-06 (code review of the row-order stamping).* `TeamMemberOrdering` only numbers
+rows that come through `team_members_attributes=`. The bulk crew import
+(`Admin::ShowCrewImportsController`, `team_members.create!`), the "Proposer" row
+`Admin::Proposals::ProposalsController#on_create_success` adds, and `lib/tasks/imports.rake` all
+leave it nil, so those rows sort to the bottom by name rather than in the order they were
+imported. Harmless for a fresh show (that is what every archive row does), but a crew list
+imported in the producer's chosen order renders alphabetised until someone saves the form once.
+
+**Fix (if it earns it):** an append-to-end default on `TeamMember` itself
+(`before_validation { self.display_order ||= <max for teamwork> + 1 }`) — but only once no
+nil rows remain on that teamwork, or a numbered row jumps ABOVE the nil ones (nulls sort last),
+which is why the form stamps every row rather than the new one.
 
 ## SEO follow-ups left open after the 2026-08-30 audit
 

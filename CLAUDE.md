@@ -788,6 +788,22 @@ member / other), with `booking_fee` beside it. `Event::PriceParser` reads the le
 - `ticket_prices` is not an association, so `shared/form/sections/_nested_fields` needs
   `template_object:` to build its add-row template.
 
+## Team members
+
+`TeamMember#display_order` orders the credits on every show, proposal and the box office
+screen (`TeamMember.ordered`, nulls last then by name). Spec: issue #167.
+
+- **The order is the row's position in the submitted form, stamped on save by
+  `TeamMemberOrdering`** (`team_members_attributes=` on `Event` and `Proposal`). Browsers post a
+  form in document order and nested attributes are assigned in that order, so the row carries **no
+  hidden order field** and the sortable controller renumbers nothing here. Rows flagged `_destroy`
+  are skipped (no gaps) and blank template rows are left blank so `reject_if: :all_blank` still
+  drops them. A functional test encodes params with `Hash#to_query`, which SORTS keys — a row
+  added in the browser posts under a timestamp key, so that case lives in an integration test.
+- **The form renders through `TeamMember.in_display_order`, the in-memory twin of `ordered`**,
+  never the scope: after a failed save the association holds the submitted rows with their
+  errors, and a scope would query and render the stale ones. A test pins the two together.
+
 ## Event performances
 
 `EventOccurrence` is one dated instance of an `Event` — nested-attribute edited on the admin event
