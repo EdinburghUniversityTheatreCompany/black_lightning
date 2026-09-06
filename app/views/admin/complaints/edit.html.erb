@@ -5,7 +5,7 @@
       description: render_markdown(@complaint.description)
     } %>
 
-    <%= render 'shared/basic_fields', fields: fields %>
+    <%= render FieldListComponent.new(fields: fields, admin_site: @admin_site) %>
 
     <%= f.input :resolved %>
     <%= render MdEditorComponent.new(f: f, field: :comments ) %>

@@ -34,7 +34,7 @@
   </div>
   <div class="xl:col-span-2">
     <%= render CardComponent.new(flush: true) do %>
-      <%= render 'shared/basic_fields', fields: fields %>
+      <%= render FieldListComponent.new(fields: fields, admin_site: @admin_site) %>
     <% end %>
     <%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user) %>
   </div>

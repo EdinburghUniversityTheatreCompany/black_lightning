@@ -10,5 +10,5 @@
 <% end %>
 
 <%= render CardComponent.new(flush: true) do %>
-  <%= render 'shared/basic_fields', fields: fields %>
+  <%= render FieldListComponent.new(fields: fields, admin_site: @admin_site) %>
 <% end %>

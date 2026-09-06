@@ -1,0 +1,40 @@
+<ul class="flex flex-col">
+  <% visible_fields.each do |label, value| %>
+    <% title = title_for(label) %>
+
+    <li class="list-row py-2">
+      <% if block_field?(value) %>
+        <% case value[:type] %>
+        <% when FieldListComponent::MARKDOWN %>
+          <h3 id="<%= label %>"><%= title %></h3>
+
+          <%= helpers.render_markdown(value[:markdown]) %>
+
+        <% when FieldListComponent::IMAGE %>
+          <h3 id="<%= label %>"><%= title %></h3>
+
+          <% if real_image?(value) %>
+            <%= render(ImageComponent.new(image: value[:image], variant: value[:variant])) %>
+            <% if downloadable? %>
+              <%= link_to "Download original image", url_for(value[:image]), class: "small text-gray-500", target: "_blank" %>
+            <% end %>
+          <% else %>
+            No Image
+          <% end %>
+
+        <% when FieldListComponent::CONTENT %>
+          <% if value.key?(:header) %>
+            <h3 id="<%= label %>"><%= value[:header] %></h3>
+          <% end %>
+
+          <%= value[:content] %>
+        <% end %>
+      <% else %>
+        <div class="md:flex md:items-baseline">
+          <b class="md:w-3/12 xl:w-2/12 md:shrink-0"><%= title %>:</b>
+          <span class="md:min-w-0"><%= inline_value(value) %></span>
+        </div>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
