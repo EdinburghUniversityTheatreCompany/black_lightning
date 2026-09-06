@@ -7,7 +7,7 @@
     "@hotwired/turbo-rails": "^8.0.23",
     "@milkdown/core": "^7.21.3",
     "@milkdown/plugin-clipboard": "^7.21.3",
-    "@milkdown/plugin-history": "^7.21.3",
+    "@milkdown/plugin-history": "^7.22.1",
     "@milkdown/plugin-listener": "^7.21.3",
     "@milkdown/plugin-upload": "^7.21.3",
     "@milkdown/preset-commonmark": "^7.21.3",
