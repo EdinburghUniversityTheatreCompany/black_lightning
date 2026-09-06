@@ -297,6 +297,72 @@ module Reimbursements
       )
     end
 
+    # --- The international rail ---------------------------------------------
+    #
+    # An international claim's stored amount is finance's GBP ESTIMATE, entered
+    # at review; the actual is what EUSA's bank charged after the FX spread and
+    # its fees. Those differ by pounds on a few hundred, not by pence, so the
+    # penny window that is right for a UK claim would leave every international
+    # one permanently unmatched: stuck Submitted, never Paid, its budget line
+    # frozen on the estimate.
+    #
+    # Nothing on the actuals ROW says a payment was international (checked
+    # against the BED 25/26 sheet), and nothing needs to: the matcher walks
+    # EXPENSES, and each expense knows its own rail.
+
+    def international_expense(amount: bd("230.00"), **attrs)
+      expense(amount: amount, **attrs).tap do |e|
+        e.payment_method = Expense::PAYMENT_METHOD_INTERNATIONAL
+        e.foreign_amount = bd("266.69")
+        e.foreign_currency = Expense::CURRENCY_EUR
+      end
+    end
+
+    test "an international claim matches an actual a few percent off the estimate" do
+      # £230 estimated, £236.10 actually charged: a 2.7% spread.
+      exp = international_expense(amount: bd("230.00"))
+
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("236.10")), [ exp ])
+    end
+
+    test "the international window is a percentage, so it scales with the amount" do
+      # The same 2.7% on a £4,000 claim is £108 — far outside any fixed window
+      # that would still be safe on a £20 one.
+      exp = international_expense(amount: bd("4000.00"))
+
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("4108.00")), [ exp ])
+    end
+
+    test "an international claim still refuses a wildly different amount" do
+      # 30% out is not an exchange rate, it is a different payment.
+      exp = international_expense(amount: bd("230.00"))
+
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(debit: bd("299.00")), [ exp ])
+    end
+
+    # The governing asymmetry: a false match stamps one claim's spend onto
+    # another, which every rollup then repeats. Widening the window for the UK
+    # rail too would buy nothing and cost exactly that.
+    test "a UK claim keeps the penny window" do
+      exp = expense(amount: bd("230.00"))
+
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(debit: bd("236.10")), [ exp ])
+    end
+
+    test "an international claim still matches exactly when the rate happened to land" do
+      exp = international_expense(amount: bd("230.00"))
+
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("230.00")), [ exp ])
+    end
+
+    # A tiny claim's percentage window would be sub-penny, which is narrower
+    # than the UK rail's own floor and would fail a rounding difference.
+    test "the international window never narrows below the penny floor" do
+      exp = international_expense(amount: bd("0.10"))
+
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("0.11")), [ exp ])
+    end
+
     test "debit exact match" do
       exp = expense
       assert_same exp, Reconciliation.match_debit_to_expense(debit_row, [ exp ])

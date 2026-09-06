@@ -421,9 +421,12 @@ module Admin
       def apply_debit_row(entry, expense, imported_at)
         with_row_rescue("expense ##{expense.auto_number}") do
           actual = store.create_actual!(actuals_attrs(entry, imported_at))
-          store.link_actual_to_expense!(actual.record_id, expense.record_id)
-          store.update_expense!(expense.record_id, status: ::Reimbursements::Status::PAID,
-                                payment_confirmed_date: entry.row.date)
+          # gbp_charged corrects an INTERNATIONAL claim's amount from finance's
+          # estimate to what the bank really charged; the store ignores it on a
+          # UK claim, whose amount was never an estimate.
+          store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                            payment_date: entry.row.date,
+                                            gbp_charged: entry.row.debit)
         end
       end
 

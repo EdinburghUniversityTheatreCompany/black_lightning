@@ -443,6 +443,32 @@ module Reimbursements
       actual
     end
 
+    # Link an actual to an expense and settle the claim in one transaction: it
+    # becomes Paid on the row's date, and an INTERNATIONAL claim's amount is
+    # corrected to what EUSA's bank actually charged.
+    #
+    # That correction is the point. An international claim's stored amount is
+    # the GBP estimate finance typed at review, because nobody knows the rate
+    # until the payment clears; the actual is the real cost. Left uncorrected,
+    # every budget rollup keeps quoting the estimate forever. `amount_excl_vat`
+    # follows automatically (Expense mirrors it on that rail, there being no
+    # reclaimable UK VAT on a foreign invoice).
+    #
+    # One method rather than three steps at each call site, because the reconcile
+    # apply and the manual link on the Actuals index both do exactly this, and a
+    # half-applied settle leaves an actual pointing at a claim still reading
+    # Submitted.
+    def settle_expense_from_actual!(actual_id, expense_id, payment_date:, gbp_charged: nil)
+      settled = EusaActual.transaction do
+        link_actual_to_expense!(actual_id, expense_id)
+        attrs = { status: Status::PAID, payment_confirmed_date: payment_date }
+        attrs[:amount] = gbp_charged if gbp_charged && Expense.find(expense_id).international?
+        update_expense!(expense_id, attrs)
+      end
+      bust_eusa_actuals!
+      settled
+    end
+
     def link_actual_to_budget!(actual_id, budget_id)
       actual = EusaActual.find(actual_id)
       actual.update!(budget_id: budget_id)

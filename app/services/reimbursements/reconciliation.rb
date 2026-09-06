@@ -122,6 +122,20 @@ module Reimbursements
     end
 
     AMOUNT_TOLERANCE = BigDecimal("0.01")
+    # An international claim is matched against a PERCENTAGE window instead of
+    # the penny one. Its stored amount is finance's GBP estimate, entered at
+    # review; the actual is what EUSA's bank charged after the FX spread and its
+    # fees, which differ by pounds on a few hundred rather than by pence. Under
+    # the penny window every international claim would sit permanently
+    # unmatched: stuck Submitted, never Paid, its budget line frozen on the
+    # estimate.
+    #
+    # 5% covers a bank's retail spread and transfer fee with room to spare, and
+    # is still far short of the gap between two different payments. The window
+    # is deliberately NOT widened for the UK rail, where a penny is right: the
+    # governing asymmetry says an unmatched row a human can see beats a wrong
+    # link every rollup then repeats.
+    INTERNATIONAL_TOLERANCE_RATE = BigDecimal("0.05")
     DATE_WINDOW_DAYS = 14
 
     # Best matching expense for a debit row: nominal code equal (case-insensitive),
@@ -141,13 +155,28 @@ module Reimbursements
         # for it, since 0/BigDecimal("0") are truthy in Ruby.
         excl_vat = expense.amount_excl_vat
         compare_amount = excl_vat.nil? || excl_vat.zero? ? expense.amount : excl_vat
-        next if compare_amount.nil? || (compare_amount - row.debit).abs > AMOUNT_TOLERANCE
+        next if compare_amount.nil? ||
+                (compare_amount - row.debit).abs > amount_tolerance_for(expense, compare_amount)
 
         candidate_dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
         closest = candidate_dates.map { |date| (date - row.date).abs }.select { |diff| diff <= DATE_WINDOW_DAYS }.min
         [ expense, closest ] if closest
       end
       candidates.min_by { |(_expense, distance)| distance }&.first
+    end
+
+    # How far the row's amount may sit from the claim's before they stop being
+    # the same payment. Read off the EXPENSE, because nothing on the actuals row
+    # says whether a payment went out through BACS or over SWIFT — verified
+    # against the BED 25/26 export — and nothing needs to: the matcher walks
+    # expenses, and each one knows its own rail.
+    #
+    # The percentage never narrows below the penny floor, or a small claim would
+    # get a sub-penny window and fail on a rounding difference.
+    def amount_tolerance_for(expense, compare_amount)
+      return AMOUNT_TOLERANCE unless expense.international?
+
+      [ (compare_amount.abs * INTERNATIONAL_TOLERANCE_RATE), AMOUNT_TOLERANCE ].max
     end
 
     # Matching income budget for a credit row: nominal code equal

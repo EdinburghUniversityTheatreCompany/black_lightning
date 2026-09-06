@@ -623,6 +623,39 @@ module Admin
         assert_selector "input#account_number_#{@person.record_id}[type='text']"
         assert_equal "66374958", find_field("Account number").value
       end
+
+      # --- Linking an EUSA row to a claim -------------------------------------
+      #
+      # This exists because a request-level test cannot see form STRUCTURE. The
+      # first version of this screen opened form_with INSIDE the CardComponent,
+      # so the footer slot rendered the submit button outside the <form> and the
+      # button silently did nothing, while every functional test passed by
+      # POSTing straight to the action.
+      test "linking an EUSA row settles the claim and corrects an international amount" do
+        claim = create_reimbursements_expense(
+          person: @person, budget: @budget, status: ::Reimbursements::Status::SUBMITTED,
+          amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("230.00"),
+          description: "Festival insurance", receipt: false,
+          payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+          foreign_amount: BigDecimal("266.69"),
+          foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR
+        )
+        actual = create_reimbursements_actual(
+          nominal_code: "4000", narrative: "AUSLAND GMBH", debit: BigDecimal("236.10"),
+          date: Date.new(2026, 6, 1)
+        )
+
+        visit link_expense_admin_reimbursements_actual_path(actual.record_id)
+        choose "expense_id_#{claim.record_id}"
+        click_on "Link and mark Paid"
+
+        assert_current_path admin_reimbursements_actuals_path
+        settled = claim.reload
+        assert_equal ::Reimbursements::Status::PAID, settled.status
+        assert_equal BigDecimal("236.10"), settled.amount,
+                     "the estimate must be corrected to what EUSA charged"
+        assert_equal claim.id, ::Reimbursements::EusaActual.find(actual.id)[:expense_id]
+      end
     end
   end
 end

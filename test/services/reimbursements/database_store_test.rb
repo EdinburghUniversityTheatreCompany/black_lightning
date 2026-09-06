@@ -720,5 +720,77 @@ module Reimbursements
 
       assert_equal draft, update.financial_year
     end
+
+    # --- settle_expense_from_actual! ----------------------------------------
+    #
+    # The one place a reconciled row settles its claim, shared by the reconcile
+    # apply and the manual link on the Actuals index.
+
+    def settle_setup(international:, amount: BigDecimal("230.00"))
+      budget = Budget.create!(name: "Insurance", nominal_code: "432540")
+      attrs = { budget: budget, status: Status::SUBMITTED, amount: amount,
+                amount_excl_vat: amount, description: "Festival insurance" }
+      if international
+        attrs.merge!(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+                     foreign_amount: BigDecimal("266.69"),
+                     foreign_currency: Expense::CURRENCY_EUR)
+      end
+      expense = Expense.create!(**attrs)
+      actual = EusaActual.create!(nominal_code: "432540", narrative: "Ausland GmbH",
+                                  debit: BigDecimal("236.10"), date: Date.new(2026, 5, 20))
+      [ expense, actual ]
+    end
+
+    # An international claim's stored amount was finance's GBP estimate, typed
+    # at review because nobody knows the rate until the payment clears. Left
+    # uncorrected, every budget rollup quotes the estimate forever.
+    test "settling an international claim corrects its amount to what the bank charged" do
+      expense, actual = settle_setup(international: true)
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20),
+                                        gbp_charged: BigDecimal("236.10"))
+
+      settled = expense.reload
+      assert_equal BigDecimal("236.10"), settled.amount
+      assert_equal Status::PAID, settled.status
+      assert_equal Date.new(2026, 5, 20), settled.payment_confirmed_date
+    end
+
+    # No reclaimable UK VAT on a foreign invoice, so Expense mirrors it.
+    test "the corrected amount carries the ex-VAT figure with it" do
+      expense, actual = settle_setup(international: true)
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20),
+                                        gbp_charged: BigDecimal("236.10"))
+
+      assert_equal BigDecimal("236.10"), expense.reload.amount_excl_vat
+    end
+
+    # A UK claim's amount is what the producer actually spent, not an estimate.
+    # Overwriting it from the ledger row would silently rewrite the claim to
+    # whatever EUSA happened to book.
+    test "settling a UK claim leaves its amount alone" do
+      expense, actual = settle_setup(international: false)
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20),
+                                        gbp_charged: BigDecimal("236.10"))
+
+      settled = expense.reload
+      assert_equal BigDecimal("230.00"), settled.amount, "a UK amount is not an estimate"
+      assert_equal Status::PAID, settled.status
+    end
+
+    test "settling links the actual to the expense" do
+      expense, actual = settle_setup(international: true)
+
+      store.settle_expense_from_actual!(actual.record_id, expense.record_id,
+                                        payment_date: Date.new(2026, 5, 20),
+                                        gbp_charged: BigDecimal("236.10"))
+
+      assert_equal expense.id, actual.reload[:expense_id]
+    end
   end
 end

@@ -1,0 +1,74 @@
+<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+
+<p class="mb-3 text-gray-600">
+  Attach this EUSA row to a claim the automatic matcher missed. The matcher only links a row it is
+  sure about, so anything it left alone ends up here. Linking marks the claim
+  <strong>Paid</strong> on the row's date, exactly as a reconcile run would, and nobody is emailed.
+</p>
+
+<%= render CardComponent.new(title: "The EUSA row") do %>
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
+    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
+    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
+    <span>Amount: <strong><%= reimbursements_money(@actual.debit) %></strong></span>
+    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
+  </div>
+  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
+<% end %>
+
+<% if @candidates.empty? %>
+  <%= render CardComponent.new(title: "Which claim did this pay?") do %>
+    <p class="mb-0 text-gray-600">
+      No unpaid claims to link this to. Every claim on file is already Paid, so this row is
+      either income, someone else's, or a cost nobody claimed - in which case
+      <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id) %>
+      instead.
+    </p>
+  <% end %>
+<% else %>
+  <%# form_with wraps the card, never the other way round: the footer is a
+      component SLOT, so a form opened inside the card renders its submit button
+      outside the <form> and the button silently does nothing. %>
+  <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id),
+                method: :post do |f| %>
+    <%= render CardComponent.new(title: "Which claim did this pay?") do |card| %>
+      <p class="mb-3 text-sm text-gray-600">
+        Closest amount first. An <strong>international</strong> claim's amount is only the
+        estimate finance typed at review, so it will not match the row exactly; linking it
+        corrects the claim to what EUSA actually charged.
+      </p>
+
+      <div class="space-y-1">
+        <% @candidates.each do |expense| %>
+          <label class="flex items-start gap-3 rounded border border-gray-200 p-2 hover:bg-gray-50">
+            <%= f.radio_button :expense_id, expense.record_id, class: "mt-1" %>
+            <span class="text-sm">
+              <span class="font-medium">#<%= expense.auto_number %></span>
+              <%= expense.person&.name.presence || "(no payee)" %>
+              <span class="font-medium"><%= reimbursements_money(expense.amount) %></span>
+              <% if expense.international? %>
+                <%= render BadgeComponent.new(type: :info, pill: true).with_content("International") %>
+                <span class="text-gray-500">invoice <%= reimbursements_payment_amount(expense) %></span>
+              <% end %>
+              <%= render BadgeComponent.new(
+                    type: Reimbursements::Status.badge_variant(expense.status), pill: true
+                  ).with_content(expense.status) %>
+              <span class="block text-gray-600">
+                <%= expense.budget&.name.presence || "(no budget)" %>
+                <%= "- #{expense.description}" if expense.description.present? %>
+              </span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+
+      <% card.with_footer do %>
+        <div class="form-actions flex flex-wrap items-center gap-2">
+          <%= f.submit "Link and mark Paid", class: btn_classes(:primary) %>
+          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

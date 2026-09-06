@@ -12,7 +12,13 @@ module Admin
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ActualsController < FinanceController
-      before_action :set_convertible_actual, only: %i[new_expense create_expense]
+      before_action :set_convertible_actual, only: %i[new_expense create_expense
+                                                      link_expense confirm_link]
+
+      # Enough that the right claim is almost always on the list, few enough
+      # that the page stays readable. The list is sorted by closeness, so a
+      # claim past this point was never the answer.
+      LINK_CANDIDATE_LIMIT = 50
 
       def index
         @title = "EUSA Actuals"
@@ -81,6 +87,33 @@ module Admin
       # operator ticks them, but a wrong tick stamps real spend as noise and
       # hides it from the ledger view and every rollup, so the way back must not
       # need a console. Both legs stay on the ledger, they just stop cancelling.
+      # Attach this row to a claim the matcher missed, settling it exactly as a
+      # reconcile run would. The matcher is deliberately conservative — it
+      # prefers leaving a row unmatched to inventing a link — so a human needs a
+      # way to finish the job without a console. It is also the backstop under
+      # the international window: an international claim's stored amount is only
+      # finance's estimate until the payment clears, and a rate that moved far
+      # enough lands outside even the widened tolerance.
+      def link_expense
+        @title = "Link EUSA actual to a claim"
+        @candidates = link_candidates(@actual)
+      end
+
+      def confirm_link
+        expense = store.find_expense(params[:expense_id])
+        if expense.nil?
+          redirect_to actuals_path_with_filters, alert: "That claim no longer exists."
+          return
+        end
+
+        store.settle_expense_from_actual!(@actual.record_id, expense.record_id,
+                                          payment_date: @actual.date,
+                                          gbp_charged: @actual.debit)
+        redirect_to actuals_path_with_filters,
+                    notice: "Linked to ##{expense.auto_number}, which is now Paid" \
+                            "#{' with the amount corrected to what EUSA charged' if expense.international?}."
+      end
+
       def unoffset
         actual = find_or_404(:find_actual)
         unless actual.offset?
@@ -120,6 +153,19 @@ module Admin
         else
           "Only a debit row can become an expense: a credit is income, and belongs to a budget."
         end
+      end
+
+      # Claims this row could plausibly settle, closest amount first so the
+      # obvious answer is at the top. Deliberately NOT filtered to the row's
+      # nominal code or to a date window: this list exists precisely for the
+      # rows the automatic matcher, which applies both of those, already gave up
+      # on. Paid claims are excluded — one is already settled.
+      def link_candidates(actual)
+        target = actual.debit || 0
+        store.expenses
+             .reject { |expense| expense.status == ::Reimbursements::Status::PAID }
+             .sort_by { |expense| [ ((expense.amount || 0) - target).abs, -expense.auto_number.to_i ] }
+             .first(LINK_CANDIDATE_LIMIT)
       end
 
       def conversion_params

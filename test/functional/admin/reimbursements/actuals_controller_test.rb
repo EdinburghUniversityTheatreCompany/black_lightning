@@ -676,6 +676,105 @@ module Admin
       post :create_expense, params: { id: @unlinked.record_id }
       assert_response :forbidden
     end
+
+    # --- Manual link to a claim ---------------------------------------------
+    #
+    # The matcher is deliberately conservative and leaves a row unmatched rather
+    # than inventing a link, so a human needs a way to finish the job. It is
+    # also the backstop under the international window: an international claim's
+    # stored amount is only finance's estimate until the payment clears, and a
+    # rate that moved far enough lands outside even the widened tolerance.
+
+    def international_claim(amount: BigDecimal("230.00"))
+      create_reimbursements_expense(
+        auto_number: 77, budget: @budget, status: ::Reimbursements::Status::SUBMITTED,
+        amount: amount, amount_excl_vat: amount, description: "Festival insurance",
+        payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        foreign_amount: BigDecimal("266.69"),
+        foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR
+      )
+    end
+
+    test "link_expense lists unpaid claims, closest amount first" do
+      international_claim(amount: BigDecimal("41.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      # The £41 claim is 1.00 from the £42 row; the £12.50 fixture claim is far off.
+      assert_equal 77, assigns(:candidates).first.auto_number
+    end
+
+    test "link_expense refuses a row that is already linked" do
+      sign_in @user
+
+      get :link_expense, params: { id: @linked_expense.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/already linked/, flash[:alert])
+    end
+
+    test "link_expense refuses a credit row" do
+      sign_in @user
+
+      get :link_expense, params: { id: @linked_budget.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/Only a debit row/, flash[:alert])
+    end
+
+    test "confirm_link settles the claim and links the row" do
+      claim = international_claim
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+      settled = claim.reload
+      assert_equal ::Reimbursements::Status::PAID, settled.status
+      assert_equal Date.new(2026, 6, 1), settled.payment_confirmed_date
+      assert_equal claim.id, @unlinked.reload[:expense_id]
+    end
+
+    # The whole point of linking an international claim: its stored amount was
+    # the estimate, and the budget would otherwise quote it forever.
+    test "confirm_link corrects an international claim to what EUSA charged" do
+      claim = international_claim
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+      assert_equal BigDecimal("42.0"), claim.reload.amount
+      assert_match(/corrected to what EUSA charged/, flash[:notice])
+    end
+
+    test "confirm_link leaves a UK claim's amount alone" do
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: @expense.record_id }
+
+      assert_equal BigDecimal("12.5"), @expense.reload.amount, "a UK amount is not an estimate"
+      assert_no_match(/corrected/, flash[:notice])
+    end
+
+    test "confirm_link on a vanished claim changes nothing" do
+      sign_in @user
+
+      post :confirm_link, params: { id: @unlinked.record_id, expense_id: "999999" }
+
+      assert_match(/no longer exists/, flash[:alert])
+      assert_nil @unlinked.reload[:expense_id]
+    end
+
+    test "confirm_link refuses a row that is already linked" do
+      claim = international_claim
+      sign_in @user
+
+      post :confirm_link, params: { id: @linked_expense.record_id, expense_id: claim.record_id }
+
+      assert_match(/already linked/, flash[:alert])
+      assert_equal ::Reimbursements::Status::SUBMITTED, claim.reload.status
+    end
   end
   end
 end
