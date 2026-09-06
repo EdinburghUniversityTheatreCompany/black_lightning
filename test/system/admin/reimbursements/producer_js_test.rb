@@ -52,6 +52,69 @@ module Admin
         assert_equal 1, still_attached, "the receipt must survive the failed submit"
       end
 
+      # --- The international rail --------------------------------------------
+
+      # The trap this exists for: a hidden input carrying `required` makes the
+      # browser refuse to submit the WHOLE form, and it does so silently —
+      # the control it wants to report can't be scrolled to, so Submit simply
+      # stops working. simple_form emits `required` from its own `required:`
+      # option regardless of input_html, so the attribute has to follow the
+      # active rail. Both directions are checked because only one was broken.
+      test "switching payment method moves the required attribute with the fields" do
+        visit new_admin_reimbursements_expense_path
+        required = lambda { |field|
+          page.evaluate_script(
+            "document.querySelector('[name=\"reimbursements_expense_form[#{field}]\"]').required"
+          )
+        }
+
+        assert required.call("amount"), "the UK amount is required on the UK rail"
+        assert_not required.call("foreign_amount"), "a hidden required input blocks the whole form"
+
+        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+
+        assert required.call("foreign_amount")
+        assert_not required.call("amount"), "the UK amount is hidden now, so it must not be required"
+        assert_not required.call("amount_excl_vat")
+      end
+
+      # Nobody has an IBAN on file, so the payee trio is always required here —
+      # a heading still reading "(optional)" over fields the server will reject
+      # is worse than no hint at all.
+      test "switching to international relabels the payee section as required" do
+        visit new_admin_reimbursements_expense_path
+        assert_text "Pay someone else (optional)"
+
+        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+
+        assert_text "Pay someone else (required)"
+        assert_text "there is nothing on file to fall back to"
+        assert_selector "label", text: "Payee IBAN"
+        assert_no_selector "label", text: "Payee sort code", visible: true
+      end
+
+      test "an international claim submits on the euro amount alone" do
+        visit new_admin_reimbursements_expense_path
+
+        attach_file "reimbursements_expense_form_receipts",
+                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
+        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        fill_in "Amount (€, as printed on the invoice)", with: "266.69"
+        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        fill_in "Description", with: "Festival insurance"
+        fill_in "Payment reference", with: "INS-2026"
+        fill_in "Payee account name", with: "Ausland GmbH"
+        fill_in "Payee IBAN", with: "DE89 3704 0044 0532 0130 00"
+        fill_in "Payee BIC / SWIFT code", with: "DEUTDEFF500"
+        click_on "Submit expense"
+
+        assert_text "Expense submitted", wait: 5
+        expense = ::Reimbursements::Expense.order(:id).last
+        assert expense.international?
+        assert_equal BigDecimal("266.69"), expense.foreign_amount
+        assert_nil expense.amount, "finance supplies the GBP figure at review"
+      end
+
       # An Invoice pays the supplier, so the payee trio stops being optional.
       # The label has to track the type select live — a producer who reads
       # "(optional)", leaves the trio blank and hits Submit gets a hard stop.

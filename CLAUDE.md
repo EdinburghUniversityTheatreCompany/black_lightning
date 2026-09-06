@@ -609,8 +609,13 @@ is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK c
   Write cells with `change_contents`, never `add_cell`, which drops the template's styling.
 - **The BACS spreadsheet is skipped when a batch has no UK claims** — an empty one reads to EUSA as
   a request to pay nobody. The covering email states each row in its own currency; the total stays GBP.
-- **Neither amount field carries the HTML `required` attribute.** One rail's fields are hidden, and a
-  hidden required input makes the browser refuse to submit the form with an error it cannot scroll to.
+- **A hidden input carrying HTML `required` silently breaks the whole form.** The browser refuses to
+  submit and reports a control it cannot scroll to, so Submit just stops working — two producer
+  system tests caught this and nothing else did. `required:` follows the ACTIVE rail at render time
+  and the Stimulus controller moves the attribute (`data-rail-required`) when the rail changes.
+  **`input_html: { required: false }` does NOT suppress it** — simple_form's own `required:` option
+  wins and emits `required="required"` regardless, so the several fields in this app using that
+  pattern only work because they are never hidden.
 
 ## Crypt climate monitor
 

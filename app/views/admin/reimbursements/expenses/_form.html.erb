@@ -95,22 +95,26 @@
 
     <%# Each rail's amount fields are BOTH rendered and the server picks which is
         visible, so the form is right with JavaScript off and after a 422
-        re-render. Neither carries the HTML `required` attribute: a hidden
-        required input makes the browser refuse to submit the form, with an
-        error it cannot even scroll to. The star is kept (required: true) so the
-        starred set still matches what a submit needs, exactly as the budget
-        field below does. %>
+        re-render.
+        `required:` follows the ACTIVE rail, and the Stimulus controller moves
+        the attribute when the rail changes. A hidden input carrying
+        `required` makes the browser refuse to submit the whole form, silently:
+        it reports an invalid control it cannot scroll to, so the Submit button
+        simply does nothing. simple_form's `required:` wins over
+        `input_html: { required: false }` — it emits `required="required"`
+        either way — so the attribute has to be driven by the rail, not
+        suppressed. %>
     <div data-reimbursements-receipt-target="ukAmount" class="<%= 'hidden' if form.international? %>">
-      <%= f.input :amount, label: "Amount (£, incl. VAT)", required: true,
+      <%= f.input :amount, label: "Amount (£, incl. VAT)", required: !form.international?,
             hint: "What actually left your account, or the invoice total.",
             input_html: { inputmode: "decimal", required: false,
-                          data: { reimbursements_receipt_target: "amount",
+                          data: { rail_required: true, reimbursements_receipt_target: "amount",
                                   action: "input->reimbursements-receipt#checkAmount " \
                                           "input->reimbursements-receipt#checkVat" } } %>
-      <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)", required: true,
+      <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)", required: !form.international?,
             hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.",
             input_html: { inputmode: "decimal", required: false,
-                          data: { reimbursements_receipt_target: "amountExclVat",
+                          data: { rail_required: true, reimbursements_receipt_target: "amountExclVat",
                                   action: "input->reimbursements-receipt#checkVat" } } %>
 
       <%# Shown when the amounts already say VAT isn't itemised or the ack failed;
@@ -134,10 +138,10 @@
           hits the budget. The submitter knows what the invoice says and nothing
           about the rate EUSA's bank will get, so finance enters the GBP
           equivalent when they review it — and cannot approve without it. %>
-      <%= f.input :foreign_amount, label: "Amount (€, as printed on the invoice)", required: true,
+      <%= f.input :foreign_amount, label: "Amount (€, as printed on the invoice)", required: form.international?,
             hint: "The invoice total in euros. Finance works out the pound equivalent when " \
                   "they review this, so you don't need to convert it.",
-            input_html: { inputmode: "decimal", required: false } %>
+            input_html: { inputmode: "decimal", required: false, data: { rail_required: true } } %>
     </div>
 
     <%# Soft-block a large claim (a mistyped amount would otherwise skew a

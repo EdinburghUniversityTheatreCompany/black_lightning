@@ -41,10 +41,26 @@ export default class extends Controller {
     this.#updatePayeeLabels()
     this.ukFieldsTarget.classList.toggle("hidden", international)
     this.internationalFieldsTarget.classList.toggle("hidden", !international)
-    if (this.hasUkAmountTarget) this.ukAmountTarget.classList.toggle("hidden", international)
+    if (this.hasUkAmountTarget) this.#showSection(this.ukAmountTarget, !international)
     if (this.hasInternationalAmountTarget) {
-      this.internationalAmountTarget.classList.toggle("hidden", !international)
+      this.#showSection(this.internationalAmountTarget, international)
     }
+  }
+
+  // Show or hide a section AND move the `required` attribute with it. A hidden
+  // input carrying `required` makes the browser refuse to submit the whole
+  // form — silently, because the control it wants to report cannot be scrolled
+  // to — so the Submit button just stops working.
+  //
+  // Which fields their rail requires is declared in the markup
+  // (data-rail-required) rather than snapshotted on the way out: the server
+  // renders the INACTIVE rail's fields as not-required, so remembering what
+  // they were when first hidden would record "false" and never restore it.
+  #showSection(section, visible) {
+    section.classList.toggle("hidden", !visible)
+    section.querySelectorAll("input, select, textarea").forEach((field) => {
+      field.required = visible && field.dataset.railRequired === "true"
+    })
   }
 
   // Says the payee trio is required before the submit does; the server both
