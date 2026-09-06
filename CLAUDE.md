@@ -582,6 +582,36 @@ survive as historical import provenance and are never written. Spec + plan in
   parameter on the producer form, so a submitter can't pick the internal type to dodge the
   receipt rule.
 
+### International payments (EUR)
+
+`expenses.payment_method` (`uk_bacs` / `international`) picks the rail. EUSA's international form
+is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK claims plus one
+`InternationalXlsx` form per international claim, all on the same draft. Plan:
+[plans/international-payments.md](plans/international-payments.md).
+
+- **`payment_method` is the discriminator, NOT the currency.** An international supplier can
+  invoice in GBP and still need an IBAN and their form. `amount`/`amount_excl_vat` stay **GBP**, so
+  every budget rollup is untouched; `foreign_amount` + `foreign_currency` hold the EUR figure that
+  goes on the form.
+- **The submitter enters EUR only; finance types the GBP equivalent at review.** Enforced
+  structurally — a blank `amount` is a *blocking* approval reason, and those guards run BEFORE the
+  ex-VAT one or a blank GBP amount reports the ex-VAT message instead.
+- **`effective_has_bank_details?` is rail-aware, and that is what gates approval.** It reads
+  IBAN+BIC for international. Reading the UK pair left every international claim permanently
+  unapprovable. The modulus check is skipped, not run and failed. `approve_blocker` and
+  `ReviewSupport` share the predicates rather than restating them.
+- **An international claim's ex-VAT amount mirrors its gross** (`before_validation` on Expense): a
+  foreign invoice carries no reclaimable UK VAT, so a split would deduct tax nobody can reclaim.
+- **The xlsx template caches each formula's last value, and clearing it is a correctness fix.** The
+  cache held EUSA's *sample* payment's answers, so a EUR 1,266.69 form RENDERED "UP TO £1,000:
+  FINANCE TEAM CO-ORDINATOR" — their rule sends £1,000+ to the Head of Finance. `force_recalculation`
+  sets `fullCalcOnLoad` **and** drops the cached values, because LibreOffice ignores the flag.
+  Write cells with `change_contents`, never `add_cell`, which drops the template's styling.
+- **The BACS spreadsheet is skipped when a batch has no UK claims** — an empty one reads to EUSA as
+  a request to pay nobody. The covering email states each row in its own currency; the total stays GBP.
+- **Neither amount field carries the HTML `required` attribute.** One rail's fields are hidden, and a
+  hidden required input makes the browser refuse to submit the form with an error it cannot scroll to.
+
 ## Crypt climate monitor
 
 Temperature / humidity / dew point charts at `/admin/climate`
