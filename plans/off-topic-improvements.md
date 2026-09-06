@@ -364,17 +364,6 @@ already overrides it, and `realign_heading_anchor` keeps the self-link consisten
 would *change existing anchor URLs* on any page whose heading carries a class-only IAL, so it
 needs a deliberate decision about breaking inbound links, not a silent tidy-up.
 
-## Heading anchors have no accessible name after sanitising
-
-*Noticed 2026-07-31, same upgrade.* commonmarker 2.9 emits `aria-label="Link to heading '…'"`
-and `data-heading-content` on each heading self-link, but `MdHelper`'s
-`SafeListSanitizer` allow-list permits neither attribute, so both are stripped. The anchor ships
-as an empty `<a>` with no accessible name — a screen reader announces an unlabelled link.
-
-**Fix:** add `aria-label` to the sanitizer's `attributes:` list (it is inert markup, no
-injection surface beyond the existing `title`/`alt` entries). Not done during the upgrade
-because it is an a11y change, not a dependency change.
-
 ## A shared `Settings::Base` for the ENV-then-credentials pattern
 
 *Noticed 2026-08-06 while building the climate monitor.* `Climate::Settings` and
