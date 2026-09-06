@@ -1,9 +1,17 @@
 <%# locals: (f:) %>
 
+<%= f.association(:event_tags, collection: EventTag.accessible_by(current_ability),
+      input_html: { multiple: 'multiple' }) %>
+
+<%# An untagged event is advisory, not an error: a warning line under the field
+    rather than the red box that used to sit between two unrelated rows. Its own
+    paragraph because `hint:` renders grey and simple_form has no hint_html on
+    an association. The label column is empty so it lines up under the input. %>
 <% if f.object.event_tags.empty? %>
-  <div id="no_event_tags_warning" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
-  You have not set any tags for this Event.
+  <div id="no_event_tags_warning" class="flex flex-wrap -mt-2 mb-4">
+    <div class="hidden md:block md:w-3/12 px-2"></div>
+    <p class="w-full md:w-9/12 px-2 mb-0 text-xs text-warning">
+      This event has no tags yet. Tag it so it appears in the right lists.
+    </p>
   </div>
 <% end %>
-
-<%= f.association(:event_tags, collection: EventTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>

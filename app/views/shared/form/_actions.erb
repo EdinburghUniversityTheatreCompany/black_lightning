@@ -1,0 +1,14 @@
+<%# locals: (submit:, cancel_path: nil, note: nil, submit_html: {}) %>
+<%# The button row for a form's card footer: primary submit, optional Cancel
+    link, optional one-line note under them. submit_tag rather than f.submit
+    because FormBuilder#submit IS submit_tag, so this works the same inside a
+    simple_form block and needs no builder passed in. %>
+<div class="form-actions flex flex-wrap items-center gap-2">
+  <%= submit_tag submit, class: btn_classes(:primary), **submit_html %>
+  <% if cancel_path %>
+    <%= link_to "Cancel", cancel_path, class: btn_classes(:secondary) %>
+  <% end %>
+</div>
+<% if note.present? %>
+  <p class="mt-2 mb-0 text-sm text-gray-500"><%= note %></p>
+<% end %>

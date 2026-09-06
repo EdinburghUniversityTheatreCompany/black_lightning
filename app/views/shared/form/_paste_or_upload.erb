@@ -1,0 +1,22 @@
+<%# locals: (text_name:, text_label:, text_value: nil, placeholder: nil, rows: 10, text_hint: nil, file_name: nil, file_label: "…or upload a file", file_accept: nil, file_hint: nil, file_first: false) %>
+<%# The "paste it, or upload the file" pair that the budget import, the climate
+    import and Reconcile all offer. One partial so the three read identically;
+    `file_first` puts the upload above the paste box where the file is the
+    normal route (a Govee export) rather than the fallback. %>
+<% paste = capture do %>
+  <%= render "shared/form/field", label: text_label, name: text_name, hint: text_hint do %>
+    <%= text_area_tag text_name, text_value, rows: rows, placeholder: placeholder,
+                      "aria-describedby": ("#{text_name}_hint" if text_hint.present?),
+                      class: input_classes("font-mono") %>
+  <% end %>
+<% end %>
+<% upload = capture do %>
+  <% if file_name %>
+    <%= render "shared/form/field", label: file_label, name: file_name, hint: file_hint do %>
+      <%= file_field_tag file_name, accept: file_accept, class: file_input_classes %>
+    <% end %>
+  <% end %>
+<% end %>
+<div class="flex flex-col gap-4">
+  <%= file_first ? safe_join([ upload, paste ]) : safe_join([ paste, upload ]) %>
+</div>

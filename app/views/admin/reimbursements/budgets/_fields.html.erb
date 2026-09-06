@@ -1,0 +1,54 @@
+<%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil) %>
+<%# The budget fields, shared by new (values from params) and edit (values
+    from the budget). The cost centre picker only exists on new and only when
+    there is a choice to make. %>
+<div class="flex flex-col gap-4">
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <%= render "shared/form/field", label: "Name", name: :name do %>
+      <%= text_field_tag :name, name, class: input_classes %>
+    <% end %>
+    <%= render "shared/form/field", label: "Nominal code", name: :nominal_code do %>
+      <%= text_field_tag :nominal_code, nominal_code, class: input_classes %>
+    <% end %>
+    <%= render "shared/form/field", label: "Type", name: :budget_type do %>
+      <%= select_tag :budget_type, options_for_select(::Reimbursements::Budget::TYPES, budget_type),
+                     class: input_classes %>
+    <% end %>
+    <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
+      <%= number_field_tag :initial_budget, initial_budget, step: "0.01", class: input_classes %>
+    <% end %>
+    <% if cost_centres.size > 1 %>
+      <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
+        <%= select_tag :cost_centre_id,
+                       options_from_collection_for_select(cost_centres, :id, :name, cost_centre_id),
+                       class: input_classes %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+    <%= check_box_tag :active, "1", active, class: checkbox_classes %>
+    Visible to submitters
+  </label>
+
+  <fieldset aria-describedby="owner_ids_hint">
+    <legend class="<%= FormStyles::LABEL %>">Owners</legend>
+    <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
+        collection_check_boxes emits the empty hidden field itself, so unticking
+        everyone still clears the owners. %>
+    <div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
+      <%= form.collection_check_boxes(:owner_ids, people, :record_id,
+            ->(person) { person.name.presence || person.email },
+            { checked: owner_ids }) do |b| %>
+        <%= b.label(class: "flex items-center gap-2 text-sm text-gray-700") do %>
+          <%= b.check_box(class: checkbox_classes) %><%= b.text %>
+        <% end %>
+      <% end %>
+    </div>
+    <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this budget.</p>
+  </fieldset>
+
+  <%= render "shared/form/field", label: "Notes", name: :notes do %>
+    <%= text_area_tag :notes, notes, rows: 3, class: input_classes %>
+  <% end %>
+</div>

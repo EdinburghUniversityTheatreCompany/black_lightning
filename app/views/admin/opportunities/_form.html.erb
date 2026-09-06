@@ -55,7 +55,9 @@
       Add each position this opportunity is recruiting for. These appear as a sub-list under the
       opportunity, and people can filter the listings by role category.
     </p>
-    <%= render("shared/form/sections/nested_fields", f: f, association_name: :roles, partial_name: "opportunity_role_fields", sortable: true) %>
+    <div class="mb-6">
+      <%= render("shared/form/sections/nested_fields", f: f, association_name: :roles, partial_name: "opportunity_role_fields", sortable: true) %>
+    </div>
 
     <% if can? :manage, Opportunity %>
       <h3>Attribution (optional)</h3>

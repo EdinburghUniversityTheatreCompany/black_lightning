@@ -18,22 +18,19 @@
 
 <%= f.input :end_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
-<div class="flex flex-wrap gap-4">
-  <div class="w-64">
-    <%= f.input :duration_minutes, label: 'Running time (minutes)',
-          hint: 'Including the interval. Gives each performance an end time.' %>
-  </div>
-  <div class="w-64">
-    <%= f.input :doors_open_minutes_before, label: 'Doors open (minutes before)' %>
-  </div>
-  <div class="w-64">
-    <%= f.input :age_guidance, label: 'Age guidance', placeholder: 'e.g. 14+' %>
-  </div>
-</div>
+<%= f.input :duration_minutes, label: 'Running time (minutes)',
+      hint: 'Including the interval. Gives each performance an end time.' %>
 
-<div id="event-occurrences">
-  <h3><%= f.object.occurrence_label.pluralize %></h3>
+<%= f.input :doors_open_minutes_before, label: 'Doors open (minutes before)' %>
 
+<%= f.input :age_guidance, label: 'Age guidance', placeholder: 'e.g. 14+' %>
+
+<%# The two repeating sections are cards (like the Gallery below) so each has a
+    visible end: a heading followed straight by the next plain field read as a
+    preamble to that field. %>
+<%= render(CollapsibleSectionComponent.new(title: f.object.occurrence_label.pluralize, start_open: true,
+                                           html_class: "mb-4")) do %>
+  <div id="event-occurrences">
   <p class="mb-2 text-sm text-muted">
     Leave this empty if the event runs every day between the start and end dates — that is the
     normal case. Add <%= f.object.occurrence_label.downcase.pluralize %> to give the box office
@@ -52,7 +49,8 @@
         association_name: :event_occurrences,
         partial_name: 'event_occurrence_fields',
         add_object_name: f.object.occurrence_label %>
-</div>
+  </div>
+<% end %>
 
 <%= f.association :venue, collection: Venue.all, label_method: :name, required: true %>
 
@@ -61,9 +59,8 @@
 <%= f.input :company_name, collection: Company.internal_first.pluck(:name), allow_custom_input: true,
       hint: 'Society or company that put on this event. Type to select an existing entry or enter a new name. New societies will be flagged for admin review.' %>
 
-<div id="ticket-prices">
-  <h3>Ticket prices</h3>
-
+<%= render(CollapsibleSectionComponent.new(title: 'Ticket prices', start_open: true, html_class: "mb-4")) do %>
+  <div id="ticket-prices">
   <p class="mb-2 text-sm text-muted">
     Add a row per band. The price line shown on the website and the box office screen is written
     from these, so you only need to type into "Price shown" if the bands cannot express it
@@ -86,8 +83,10 @@
         add_object_name: 'Price band',
         template_object: Event::TicketPrice.new %>
 
-  <%= f.input :booking_fee, hint: 'Surcharge on top of every band, if there is one.' %>
-</div>
+  <%= f.input :booking_fee, hint: 'Surcharge on top of every band, if there is one.',
+        wrapper_html: { class: "mt-4 !mb-0" } %>
+  </div>
+<% end %>
 
 <%= f.input :price, label: 'Price shown', hint: 'Written from the bands above whenever you change them.' %>
 

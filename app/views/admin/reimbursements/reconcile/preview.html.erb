@@ -53,11 +53,11 @@
       <div class="flex flex-wrap items-end gap-3">
         <div>
           <%= label_tag :blank_cost_centre_id, "These rows belong to",
-                        class: "block text-sm font-medium mb-1" %>
+                        class: FormStyles::LABEL %>
           <%= select_tag :blank_cost_centre_id,
                          options_for_select(blank_cost_centre_options(@cost_centres),
                                             params[:blank_cost_centre_id]),
-                         class: "border border-gray-300 rounded px-2 py-1" %>
+                         class: input_classes(width: "w-64") %>
         </div>
         <%= submit_tag "Apply that choice", class: btn_classes(:secondary) %>
       </div>
@@ -320,6 +320,6 @@
 <% end %>
 
 <div class="mt-4">
-  <%= link_to "← Start over", admin_reimbursements_reconciliation_path, class: "text-sm text-gray-600 underline" %>
+  <%= render "shared/back_link", text: "Start over", path: admin_reimbursements_reconciliation_path %>
 </div>
 <% end %>

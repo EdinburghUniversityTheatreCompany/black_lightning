@@ -56,51 +56,39 @@
     </div>
   <% end %>
 
-  <%= render CardComponent.new(title: "EUSA email", html_class: "mt-4") do %>
-    <%= form_with url: admin_reimbursements_batches_path, method: :post, class: "flex flex-col gap-4" do %>
-      <div class="flex flex-wrap gap-4">
-        <div>
-          <%= label_tag :bacs_date, "BACS date", class: "block text-sm font-medium" %>
-          <%= date_field_tag :bacs_date, @bacs_date, class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-        </div>
-        <div>
-          <%= label_tag :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
-          <%= text_field_tag :eusa_recipient, @eusa_recipient,
-                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
-        </div>
-        <div>
-          <%= label_tag :sender_name, "Your name (signature)", class: "block text-sm font-medium" %>
-          <%= text_field_tag :sender_name, @sender_name,
-                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
-        </div>
-        <div>
-          <span class="block text-sm font-medium">Draft sent from</span>
-          <span class="inline-block px-2 py-1 text-sm text-gray-600"><%= @cost_centre.send_mailbox %></span>
-        </div>
-      </div>
+  <%= form_with url: admin_reimbursements_batches_path, method: :post do %>
+    <%= render CardComponent.new(title: "EUSA email", html_class: "mt-4") do |card| %>
+      <% card.with_footer do %>
+        <%= render "shared/form/actions", submit: "Create draft and process batch",
+              cancel_path: admin_reimbursements_batches_path,
+              submit_html: { data: { turbo_confirm: "Create the EUSA draft and mark #{@expenses.size} " \
+                                                    "#{'expense'.pluralize(@expenses.size)} as Submitted?" } },
+              note: "Processing will: generate the xlsx, upload it and every receipt to SharePoint, " \
+                    "create the EUSA draft (you send it manually), record the batch, mark these " \
+                    "expenses Submitted, and email each producer that their expense was submitted." %>
+      <% end %>
 
-      <div>
-        <%= label_tag :eusa_subject, "Subject", class: "block text-sm font-medium" %>
-        <%= text_field_tag :eusa_subject, @default_email.subject,
-                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
-      </div>
+      <div class="flex flex-col gap-4">
+        <div class="grid gap-4 sm:grid-cols-3">
+          <%= render "shared/form/field", label: "BACS date", name: :bacs_date do %>
+            <%= date_field_tag :bacs_date, @bacs_date, class: input_classes %>
+          <% end %>
+          <%= render "shared/form/field", label: "EUSA recipient", name: :eusa_recipient do %>
+            <%= text_field_tag :eusa_recipient, @eusa_recipient, class: input_classes %>
+          <% end %>
+          <%= render "shared/form/field", label: "Your name (signature)", name: :sender_name do %>
+            <%= text_field_tag :sender_name, @sender_name, class: input_classes %>
+          <% end %>
+        </div>
 
-      <div>
-        <%= label_tag :eusa_body, "Body (HTML)", class: "block text-sm font-medium" %>
-        <%= text_area_tag :eusa_body, @default_email.body_html, rows: 16,
-                          class: "border border-gray-300 rounded px-2 py-1 text-xs font-mono w-full" %>
-      </div>
+        <%= render "shared/form/field", label: "Subject", name: :eusa_subject do %>
+          <%= text_field_tag :eusa_subject, @default_email.subject, class: input_classes %>
+        <% end %>
 
-      <div class="text-sm text-gray-600">
-        Processing will: generate the xlsx, upload it and every receipt to SharePoint, create the EUSA
-        draft (you send it manually), record the batch, mark these expenses Submitted, and email each
-        producer that their expense was submitted.
-      </div>
-
-      <div>
-        <%= submit_tag "Create draft and process batch", class: btn_classes(:primary),
-                       data: { turbo_confirm: "Create the EUSA draft and mark #{@expenses.size} " \
-                                              "#{'expense'.pluralize(@expenses.size)} as Submitted?" } %>
+        <%= render "shared/form/field", label: "Body (HTML)", name: :eusa_body,
+              hint: "Sent from #{@cost_centre.send_mailbox}." do %>
+          <%= text_area_tag :eusa_body, @default_email.body_html, rows: 16, class: input_classes("font-mono") %>
+        <% end %>
       </div>
     <% end %>
   <% end %>
