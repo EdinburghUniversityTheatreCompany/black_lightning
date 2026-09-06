@@ -1,7 +1,10 @@
 <%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false, collection: nil, add_object_name: nil, template_object: nil) %>
 <%# KEEP %>
 <%# Pass `collection:` to render a custom set of records (e.g. one grouped representative per user)
-    instead of the bare association. Omit it to keep the default behaviour. %>
+    instead of the bare association. Omit it to keep the default behaviour.
+    The ROW ORDER IS DATA for some callers: TeamMemberOrdering stamps display_order from each
+    row's position in the posted params, which is its document position here (rows in order,
+    "Add" inserts before the trailing target). Keep the rows in document order. %>
 
 <% if f.object.errors[association_name].present? then %>
   <p id="<%= association_name %>_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">

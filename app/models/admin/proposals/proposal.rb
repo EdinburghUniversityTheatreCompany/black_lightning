@@ -47,6 +47,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   has_many :users, through: :team_members
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
+  include TeamMemberOrdering
 
   after_initialize :set_default_proposal_text
 

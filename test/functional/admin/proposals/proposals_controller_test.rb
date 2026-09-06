@@ -162,7 +162,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_proposal_path(assigns(:proposal))
   end
 
-  test "updating a proposal saves the team members' display order" do
+  test "updating a proposal stores the team members in the order the rows were submitted" do
     sign_out @admin
     @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
     proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
@@ -171,13 +171,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     first, second = proposal.team_members.order(:id).first(2)
 
     put :update, params: { id: proposal, admin_proposals_proposal: { team_members_attributes: {
-      "0" => { id: first.id, user_id: first.user_id, position: first.position, display_order: 1 },
-      "1" => { id: second.id, user_id: second.user_id, position: second.position, display_order: 0 }
+      "0" => { id: second.id, user_id: second.user_id, position: second.position },
+      "1" => { id: first.id, user_id: first.user_id, position: first.position }
     } } }
     assert_redirected_to admin_proposals_proposal_path(proposal)
 
-    assert_equal 1, first.reload.display_order
     assert_equal 0, second.reload.display_order
+    assert_equal 1, first.reload.display_order
   end
 
   test "should not email after updating when the editing deadline is passed" do

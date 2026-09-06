@@ -10,9 +10,8 @@
       </div>
     <% end %>
 
-    <%# In saved order, not id order: the sortable controller renumbers every row from its
-        on-screen position after a drag, so rows laid out in id order would have one drag
-        overwrite the whole saved ordering. %>
+    <%# In saved order, not id order: the rows' order at submit IS the order that gets saved
+        (TeamMemberOrdering), so a form drawn in id order would rewrite the credits on any save. %>
     <%= render('shared/form/sections/nested_fields', f: @f, association_name: :team_members, partial_name: 'team_member_fields', sortable: true,
                collection: TeamMember.in_display_order(@f.object.team_members)) %>
   <% end %>

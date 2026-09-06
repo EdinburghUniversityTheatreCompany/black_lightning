@@ -481,10 +481,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                   "team member rows must be direct children of the sortable controller"
   end
 
-  # The form is where the order gets edited, so it has to show the saved order:
-  # the sortable controller renumbers every row from its on-screen position
-  # after a drag, and rows laid out in id order would have that one drag
-  # overwrite the whole saved ordering with id order.
+  # The rows' order at submit is the order that gets saved (TeamMemberOrdering),
+  # so a form drawn in id order would rewrite the credits on any save.
   test "edit form lists team members in their saved display order, not id order" do
     show = FactoryBot.create(:show, team_member_count: 3)
     ids = show.team_members.order(:id).ids
@@ -506,8 +504,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     first, second = show.team_members.order(:id).to_a
 
     patch :update, params: { id: show.to_param, show: { price: nil, team_members_attributes: {
-      "0" => { id: first.id, user_id: first.user_id, position: first.position, display_order: 1 },
-      "1" => { id: second.id, user_id: second.user_id, position: second.position, display_order: 0 }
+      "0" => team_member_row(second),
+      "1" => team_member_row(first)
     } } }
     assert_response :unprocessable_entity
 
@@ -516,17 +514,77 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_nil first.reload.display_order, "the failed save must not have written the order"
   end
 
-  test "updating a show saves the team members' display order" do
+  # See TeamMemberOrdering. A functional test encodes params with Hash#to_query,
+  # which SORTS keys, so these keys are chosen to sort as written; a row added in
+  # the browser posts under a timestamp key, covered by
+  # test/integration/admin/team_member_ordering_test.rb.
+  test "updating a show stores the team members in the order the rows were submitted" do
+    show = FactoryBot.create(:show, team_member_count: 3)
+    a, b, c = show.team_members.order(:id).to_a
+
+    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
+      "0" => team_member_row(c),
+      "1" => team_member_row(a),
+      "2" => team_member_row(b)
+    } } }
+    assert_redirected_to admin_show_path(show)
+
+    assert_equal [ [ c.id, 0 ], [ a.id, 1 ], [ b.id, 2 ] ], show.team_members.ordered.pluck(:id, :display_order)
+  end
+
+  test "a submitted display_order never overrides the row order" do
     show = FactoryBot.create(:show, team_member_count: 2)
     first, second = show.team_members.order(:id).to_a
 
     patch :update, params: { id: show.to_param, show: { team_members_attributes: {
-      "0" => { id: first.id, user_id: first.user_id, position: first.position, display_order: 1 },
-      "1" => { id: second.id, user_id: second.user_id, position: second.position, display_order: 0 }
+      "0" => team_member_row(second, display_order: 5),
+      "1" => team_member_row(first, display_order: 0)
     } } }
     assert_redirected_to admin_show_path(show)
 
-    assert_equal [ second.id, first.id ], show.team_members.ordered.ids
+    assert_equal [ [ second.id, 0 ], [ first.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
+  end
+
+  test "a team member row marked for destruction leaves no gap in the order" do
+    show = FactoryBot.create(:show, team_member_count: 3)
+    a, b, c = show.team_members.order(:id).to_a
+
+    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
+      "0" => team_member_row(a),
+      "1" => team_member_row(b, _destroy: "1"),
+      "2" => team_member_row(c)
+    } } }
+    assert_redirected_to admin_show_path(show)
+
+    assert_equal [ [ a.id, 0 ], [ c.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
+  end
+
+  test "a blank team member row is dropped without taking a place in the order" do
+    show = FactoryBot.create(:show, team_member_count: 2)
+    a, b = show.team_members.order(:id).to_a
+
+    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
+      "0" => team_member_row(a),
+      "1" => { id: "", position: "", user_id: "", _destroy: "false" },
+      "2" => team_member_row(b)
+    } } }
+    assert_redirected_to admin_show_path(show)
+
+    assert_equal [ [ a.id, 0 ], [ b.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
+  end
+
+  test "creating a show stores its team members in row order" do
+    users = FactoryBot.create_list(:member, 3)
+    attributes = FactoryBot.attributes_for(:show, team_members_attributes: {
+      "0" => { user_id: users[2].id, position: "Director" },
+      "1" => { user_id: users[0].id, position: "Producer" },
+      "2" => { user_id: users[1].id, position: "Stage Manager" }
+    })
+
+    assert_difference("Show.count") { post :create, params: { show: attributes } }
+
+    assert_equal [ [ users[2].id, 0 ], [ users[0].id, 1 ], [ users[1].id, 2 ] ],
+                 Show.last.team_members.ordered.pluck(:user_id, :display_order)
   end
 
   test "updating a show stores its ticket price bands and rewrites the price line" do
@@ -606,6 +664,11 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   private
+
+  # A persisted row as the form posts it, with any override the test needs.
+  def team_member_row(member, **extra)
+    { id: member.id, user_id: member.user_id, position: member.position, _destroy: "false", **extra }
+  end
 
   def team_members_attributes(users)
     team_members_attributes = {}

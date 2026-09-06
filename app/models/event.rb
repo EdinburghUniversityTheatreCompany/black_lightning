@@ -185,6 +185,7 @@ class Event < ApplicationRecord
                                   attributes["id"].blank? && attributes["starts_at"].blank?
                                 }
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
+  include TeamMemberOrdering
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
