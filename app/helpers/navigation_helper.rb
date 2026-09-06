@@ -56,8 +56,10 @@ module NavigationHelper
     # producer who isn't on the finance team isn't shown a group called
     # "Finance" containing only their personal links.
     children = []
-    # Points at /expenses (not the namespace root) so the sidebar's
-    # start_with? active-check doesn't also light up for payment_details.
+    # Points at /expenses, not the namespace root: the sidebar marks an item
+    # active for its own page and anything beneath it, so the root would light
+    # up for payment_details and my_budgets too. (An item that must match its
+    # own page only can say `exact: true`.)
     children << { title: "My Claims", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
     children << { title: "My Budgets", path: admin_reimbursements_my_budgets_path, fa_icon: "fa-user-check" } if can? :access, :reimbursements
@@ -81,10 +83,9 @@ module NavigationHelper
     children << { title: "Export Workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
-    # Building — the crypt climate monitor. Deliberately ONE entry, not a second
-    # for /admin/climate/sensors: active_item? is a start_with? prefix match, so
-    # the two would light up together (the same trap the My Claims note above
-    # describes). Sensors is reached by a button on the dashboard.
+    # Building — the crypt climate monitor. ONE entry: Sensors is reached by a
+    # button on the dashboard rather than the sidebar. Adding it here would need
+    # `exact: true` on this entry, or /admin/climate would light up alongside it.
     children = []
     children << { title: "Crypt Climate", path: admin_climate_dashboard_path, fa_icon: "fa-droplet" } if can? :read, :climate
     navbar_categories << { title: "Building", children: children, fa_icon: "fa-building-columns" }

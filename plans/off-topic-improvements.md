@@ -352,17 +352,6 @@ at it. The damage from crypt damp happens over days, and nobody watches a chart 
 for N consecutive hours. Deliberately out of scope for the first cut (Mick asked for the charts),
 but this dashboard is really a prerequisite for it — the readings and the margin already exist.
 
-## `Admin::SidebarComponent#active_item?` is a bare prefix match
-
-*Noticed 2026-08-06, and it has now forced the same workaround twice.* `active_item?` is
-`@current_path.start_with?(item[:path])`, so a parent path lights up whenever a child is open.
-The reimbursements "My Claims" entry carries a comment about it, and the climate section is
-limited to a single sidebar entry for the same reason — `/admin/climate` would light up while on
-`/admin/climate/sensors`.
-
-**Fix:** an `exact: true` option on a navbar item, matching on equality instead. Both existing
-call sites could then say what they mean rather than working around it.
-
 ## DONE: import the Govee CSV export to backfill sensor history
 
 *Done 2026-08-06: `Climate::CsvImport` + `/admin/climate/import` + `Climate::MailboxPollJob`.
