@@ -36,7 +36,7 @@
     "tailwindcss": "^4.3.3",
     "tom-select": "^2.6.2",
     "vite": "^8.1.5",
-    "vite-plugin-ruby": "^5.2.2"
+    "vite-plugin-ruby": "^5.2.3"
   },
   "scripts": {
     "build": "vite build",
