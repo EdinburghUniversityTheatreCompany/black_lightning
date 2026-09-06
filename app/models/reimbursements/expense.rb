@@ -8,11 +8,16 @@
 #  amount                  :decimal(12, 2)
 #  amount_excl_vat         :decimal(12, 2)
 #  auto_number             :integer
+#  bic_override            :string(255)
 #  description             :text(65535)
 #  expense_type            :string(255)      default("Reimbursement"), not null
+#  foreign_amount          :decimal(12, 2)
+#  foreign_currency        :string(255)
+#  iban_override           :string(255)
 #  nominal_code_override   :string(255)
 #  payee_name_override     :text(65535)
 #  payment_confirmed_date  :date
+#  payment_method          :string(255)      default("uk_bacs"), not null
 #  payment_reference       :string(255)
 #  producer_notified       :boolean          default(FALSE), not null
 #  receipts_offloaded      :boolean          default(FALSE), not null
@@ -69,6 +74,20 @@ module Reimbursements
     # "From EUSA" is internal bookkeeping; submitters only pick between these.
     SUBMITTER_TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE ].freeze
 
+    # Which rail the money travels on. This is the discriminator rather than
+    # the currency, because the two come apart: an international supplier can
+    # invoice in GBP and still need an IBAN and EUSA's international form.
+    PAYMENT_METHOD_UK_BACS = "uk_bacs".freeze
+    PAYMENT_METHOD_INTERNATIONAL = "international".freeze
+    PAYMENT_METHODS = [ PAYMENT_METHOD_UK_BACS, PAYMENT_METHOD_INTERNATIONAL ].freeze
+
+    # The one currency the international rail handles today. EUSA's form is
+    # labelled in euros and their bank quotes us a euro price; adding another
+    # means deciding what an unconverted figure means to every budget rollup,
+    # so it is a deliberate decision rather than a new string.
+    CURRENCY_EUR = "EUR".freeze
+    FOREIGN_CURRENCIES = [ CURRENCY_EUR ].freeze
+
     # Third-party "pay a supplier directly" bank details, encrypted at rest.
     # Non-deterministic (the default) — the money path reads the
     # decrypted attributes via EffectivePayee; nothing queries by value.
@@ -77,6 +96,8 @@ module Reimbursements
     encrypts :sort_code_override
     encrypts :account_number_override
     encrypts :payee_name_override
+    encrypts :iban_override
+    encrypts :bic_override
 
     # Column fit for the encrypted trio. Rails' own auto-injected
     # validate_column_size guard is switched off in config/application.rb because
@@ -87,6 +108,8 @@ module Reimbursements
     validates :payee_name_override, length: { maximum: BankDetails::PAYEE_NAME_MAX_LENGTH }
     validates :sort_code_override, :account_number_override,
               length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
+    validates :iban_override, length: { maximum: BankDetails::IBAN_MAX_LENGTH }
+    validates :bic_override, length: { maximum: BankDetails::BIC_MAX_LENGTH }
 
     belongs_to :person, class_name: "Reimbursements::Person", optional: true, inverse_of: :expenses
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true, inverse_of: :expenses
@@ -102,6 +125,7 @@ module Reimbursements
 
     validates :status, inclusion: { in: Status.all }
     validates :expense_type, inclusion: { in: TYPES }
+    validates :payment_method, inclusion: { in: PAYMENT_METHODS }
 
     # auto_number backs the human-facing "Expense #N" label. It continues from
     # the highest number on record rather than tracking the PK, so the numbers
@@ -115,6 +139,8 @@ module Reimbursements
     # linked batch's record id STRING, compared against batch.record_id in
     # the batches controller. Same for budget_id/person_id below — the Store
     # and OwnerEndorsement flows pass them around as opaque strings.
+    def international? = payment_method == PAYMENT_METHOD_INTERNATIONAL
+
     def batch_id = self[:batch_id]&.to_s
     def budget_record_id = self[:budget_id]&.to_s
     def person_record_id = self[:person_id]&.to_s

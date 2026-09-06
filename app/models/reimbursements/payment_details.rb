@@ -5,6 +5,8 @@
 #
 #  id             :bigint           not null, primary key
 #  account_number :string(255)      default(""), not null
+#  bic            :string(255)      default(""), not null
+#  iban           :string(255)      default(""), not null
 #  notes          :text(65535)
 #  sort_code      :string(255)      default(""), not null
 #  verified       :boolean          default(FALSE), not null
@@ -35,7 +37,7 @@ module Reimbursements
     # over there meant a new bank field could be added to the model and then silently
     # dropped on the way in. `payment_details_fields_are_complete` in the model test holds
     # the two in step.
-    FIELDS = %i[sort_code account_number verified notes].freeze
+    FIELDS = %i[sort_code account_number iban bic verified notes].freeze
 
     # Bank details encrypted at rest. Non-deterministic (the default):
     # nothing queries these by value — the modulus check and the BACS builder
@@ -45,6 +47,8 @@ module Reimbursements
     # so pre-encryption plaintext rows keep reading until the backfill runs.
     encrypts :sort_code
     encrypts :account_number
+    encrypts :iban
+    encrypts :bic
     encrypts :notes
 
     validates :person_id, uniqueness: true
@@ -57,9 +61,19 @@ module Reimbursements
     # longer audit trail than this app can produce, so it is left uncapped.
     validates :sort_code, :account_number,
               length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
+    validates :iban, length: { maximum: BankDetails::IBAN_MAX_LENGTH }
+    validates :bic, length: { maximum: BankDetails::BIC_MAX_LENGTH }
 
     def bank_details?
       sort_code.present? && account_number.present?
+    end
+
+    # The international pair, kept separate from bank_details? rather than
+    # folded into it: every caller of that predicate is a producer-facing
+    # "add your bank details before claiming" prompt on the UK rail, and a
+    # payee with only an IBAN on file must not read as having satisfied it.
+    def international_bank_details?
+      iban.present? && bic.present?
     end
 
     # Append one timestamped line to a notes audit trail, preserving what is

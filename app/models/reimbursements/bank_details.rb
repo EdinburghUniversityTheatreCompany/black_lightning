@@ -22,6 +22,15 @@ module Reimbursements
     # column once encrypted.
     BANK_DIGITS_MAX_LENGTH = 32
 
+    # An IBAN is at most 34 characters (Malta and Saint Lucia) and a BIC 11.
+    # Both are format-validated on every write path, so these are backstops for
+    # direct model writes — and they keep the plaintext far inside the
+    # ciphertext a string(255) column holds (~123 characters' worth).
+    IBAN_MAX_LENGTH = 34
+    BIC_MAX_LENGTH = 11
+    IBAN_HINT = "must be a valid IBAN, e.g. DE89 3704 0044 0532 0130 00.".freeze
+    BIC_HINT = "must be 8 or 11 characters, e.g. DEUTDEFF or DEUTDEFF500.".freeze
+
     module_function
 
     def normalize_sort_code(value)

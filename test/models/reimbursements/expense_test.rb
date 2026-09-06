@@ -163,6 +163,75 @@ module Reimbursements
       assert_equal "9999", expense.effective_nominal_code
     end
 
+    # --- The international rail ---------------------------------------------
+
+    test "an expense is UK BACS unless it says otherwise" do
+      expense = create_expense
+
+      assert_equal Expense::PAYMENT_METHOD_UK_BACS, expense.payment_method
+      assert_not expense.international?
+    end
+
+    test "payment_method is validated against the known set" do
+      assert_raises(ActiveRecord::RecordInvalid) { create_expense(payment_method: "carrier_pigeon") }
+    end
+
+    test "effective IBAN and BIC fall back through PaymentDetails" do
+      person = Person.create!(name: "Pat", email: "intl-payee@example.com")
+      person.create_payment_details!(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
+      expense = create_expense(person: person, payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL)
+
+      assert_equal "DE89370400440532013000", expense.effective_iban
+      assert_equal "DEUTDEFF500", expense.effective_bic
+      assert expense.effective_has_bank_details?
+    end
+
+    test "an IBAN override wins over the payee's own details" do
+      person = Person.create!(name: "Pat", email: "intl-override@example.com")
+      person.create_payment_details!(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
+      expense = create_expense(person: person, payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+                               iban_override: "NL91ABNA0417164300", bic_override: "ABNANL2A")
+
+      assert_equal "NL91ABNA0417164300", expense.effective_iban
+      assert_equal "ABNANL2A", expense.effective_bic
+    end
+
+    # The whole reason payment_method exists: the two rails ask completely
+    # different questions of "do we know where to send the money?", and reading
+    # the wrong one is what blocked every international claim at approval.
+    test "effective_has_bank_details? reads the rail's own fields, not the other's" do
+      person = Person.create!(name: "Pat", email: "rail-split@example.com")
+      person.create_payment_details!(sort_code: "80-22-60", account_number: "12345678")
+      expense = create_expense(person: person)
+
+      assert expense.effective_has_bank_details?, "UK details satisfy the UK rail"
+
+      expense.update!(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL)
+      assert_not expense.effective_has_bank_details?,
+                 "a sort code says nothing about where an international payment goes"
+
+      expense.update!(iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500")
+      assert expense.effective_has_bank_details?
+    end
+
+    test "an international claim needs BOTH an IBAN and a BIC" do
+      expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+                               iban_override: "DE89370400440532013000")
+
+      assert_not expense.effective_has_bank_details?, "an IBAN with no BIC is not routable"
+    end
+
+    test "the encrypted international overrides survive a round trip at full length" do
+      # The longest IBAN in circulation is 34 characters; both columns are
+      # string(255), which has to hold the ciphertext, not the plaintext.
+      longest = "MT84MALT011000012345MTLCAST001S"
+      expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+                               iban_override: longest, bic_override: "DEUTDEFF500")
+
+      assert_equal longest, expense.reload.iban_override
+      assert_equal "DEUTDEFF500", expense.bic_override
+    end
+
     test "editable? only for submitter types in Draft or Pending" do
       assert create_expense.editable?
       assert_not create_expense(status: Status::APPROVED).editable?
