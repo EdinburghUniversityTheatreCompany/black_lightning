@@ -8,6 +8,15 @@
 
 <p>Individual receipts are also attached, named by date, budget and description.</p>
 
+<% if international_count.positive? %>
+  <p>
+    <%= international_count %> of these <%= international_count == 1 ? "is an" : "are" %>
+    international <%= "payment".pluralize(international_count) %>, each on its own
+    international payment request form, attached alongside. Their amounts below are shown in
+    the currency of the payment.
+  </p>
+<% end %>
+
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
   <thead style="background-color: #f0f0f0;">
     <tr>
@@ -22,7 +31,7 @@
     <% expenses.each do |expense| %>
       <tr>
         <td><%= expense.effective_payee_name %></td>
-        <td><%= reimbursements_money(expense.amount || 0) %></td>
+        <td><%= reimbursements_payment_amount(expense) %></td>
         <td><%= expense.budget&.name %></td>
         <td><%= expense.effective_nominal_code %></td>
         <td><%= expense.description %></td>

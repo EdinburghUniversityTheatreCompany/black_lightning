@@ -41,7 +41,7 @@ module Reimbursements
       @bob = create_reimbursements_person(name: "Bob", email: "bob@example.com",
                                           sort_code: "20-20-20", account_number: "50502366")
       @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
-      expenses || default_expenses
+      expenses.respond_to?(:call) ? expenses.call : (expenses || default_expenses)
       store = FlakyStore.new
       graph = FakeGraphClient.new
       # The default Notifier sends producer notifications through this same
@@ -64,6 +64,102 @@ module Reimbursements
     def run_batch(processor, store)
       processor.process(expenses: store.expenses, bacs_date: Date.new(2026, 5, 13),
                         sender_name: "Fringe Finance", eusa_recipient: "finance@eusa.ed.ac.uk")
+    end
+
+    # --- Mixed and international batches ------------------------------------
+    #
+    # EUSA's international form is a SINGLE-payment document, so an
+    # international claim cannot join the 200-row BACS spreadsheet: it gets its
+    # own file, attached to the same draft.
+
+    def international_expense(auto_number: 21, **attrs)
+      create_reimbursements_expense(
+        person: @alice, budget: @budget, status: Status::APPROVED, auto_number: auto_number,
+        payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+        foreign_amount: BigDecimal("266.69"), foreign_currency: Expense::CURRENCY_EUR,
+        payee_name_override: "Ausland GmbH",
+        iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500", **attrs
+      )
+    end
+
+    # FakeGraphClient already records attachments as their filenames.
+    def attached_filenames(graph)
+      graph.drafts.first[:attachments]
+    end
+
+    test "a mixed batch attaches the BACS sheet plus one form per international claim" do
+      processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      names = attached_filenames(graph)
+      assert_includes names, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
+      assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
+    end
+
+    test "two international claims get a form each, told apart by claim number" do
+      processor, store, graph = build_scenario(expenses: lambda {
+        international_expense(auto_number: 21)
+        international_expense(auto_number: 22)
+      })
+      run_batch(processor, store)
+
+      names = attached_filenames(graph)
+      assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
+      assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#22.xlsx"
+    end
+
+    # A spreadsheet holding a header, an example row and no data reads to EUSA
+    # as a request to pay nobody.
+    test "an all-international batch attaches NO BACS spreadsheet" do
+      processor, store, graph = build_scenario(expenses: -> { international_expense })
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_not(attached_filenames(graph).any? { |name| name.include?("BACS-request") },
+                 "an empty BACS sheet would ask EUSA to pay nobody")
+      assert_equal 1, attached_filenames(graph).count { |name| name.include?("international-payment") }
+    end
+
+    test "every payment document is backed up to SharePoint" do
+      processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
+      run_batch(processor, store)
+
+      uploaded = graph.uploaded.map { |u| u[:filename] }
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
+    end
+
+    # The claim still reaches Submitted, is linked to the batch and notifies its
+    # producer exactly as a UK one does — the rail changes the paperwork, not
+    # the bookkeeping.
+    test "an international claim goes through the same post-draft path as a UK one" do
+      processor, store, _graph = build_scenario(expenses: -> { international_expense })
+      result = run_batch(processor, store)
+
+      expense = store.expenses.first
+      assert_equal Status::SUBMITTED, expense.status
+      assert_equal result.batch_id, expense.batch_id
+      assert_equal 1, result.producer_notifications_sent
+    end
+
+    # EUSA's bank pays the supplier in euros; our budgets count the GBP figure.
+    # A covering email quoting GBP beside a form saying EUR reads as a
+    # discrepancy in the paperwork.
+    test "the EUSA email states the foreign amount for an international row" do
+      processor, store, graph = build_scenario(expenses: -> { international_expense })
+      run_batch(processor, store)
+      body = graph.drafts.first[:html]
+
+      assert_includes body, "€266.69"
+      assert_includes body, "international payment request form"
+    end
+
+    test "a UK-only batch says nothing about international payments" do
+      processor, store, graph = build_scenario
+      run_batch(processor, store)
+
+      assert_not_includes graph.drafts.first[:html], "international payment request form"
     end
 
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
@@ -234,7 +330,7 @@ module Reimbursements
                    "no Graph request may leave a non-production environment, token exchange included"
       assert_equal "", result.bacs_sharepoint_url
       assert_equal 0, result.receipts_uploaded
-      assert(result.errors.any? { |e| e.include?("BACS file SharePoint upload failed") },
+      assert(result.errors.any? { |e| e.include?("SharePoint upload failed for") },
              "the suppression is surfaced, not silent: #{result.errors.inspect}")
       store.expenses.each do |expense|
         assert_not expense.receipts_offloaded,
@@ -252,7 +348,8 @@ module Reimbursements
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert(result.errors.any? { |e| e.include?("BACS file SharePoint upload failed") })
+      assert(result.errors.any? { |e| e.include?("SharePoint upload failed for #{bacs_filename}") },
+             "the failure names the document that failed: #{result.errors.inspect}")
       assert_equal "", result.bacs_sharepoint_url
       assert_equal 1, graph.drafts.size, "the EUSA draft still goes out"
       uploaded_filenames = graph.uploaded.map { |u| u[:filename] }

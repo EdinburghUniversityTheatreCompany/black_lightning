@@ -23,14 +23,20 @@ module Reimbursements
     # BuildBatchJob with no overrides address the same EUSA contact.
     def compose(expenses:, bacs_date:, sender_name:, cost_centre:, eusa_contact_name: "")
       contact_name = eusa_contact_name.presence || cost_centre.eusa_contact_name
+      # Deliberately GBP across every claim, international ones included: this
+      # is what the batch costs the budgets, and it is the figure the operator
+      # reconciles against. The per-row amounts in the table are each in the
+      # currency of their own payment, which the body says.
       total = expenses.sum { |expense| expense.amount || 0 }
+      international_count = expenses.count(&:international?)
       Email.new(
         subject: "#{cost_centre.name} BACS Request - #{bacs_date.iso8601} - #{cost_centre.eusa_code}",
         body_html: ApplicationController.render(
           template: "reimbursements/emails/eusa",
           layout: false,
           locals: { expenses: expenses, bacs_date: bacs_date, total: total,
-                    expense_count: expenses.size, sender_name: sender_name,
+                    expense_count: expenses.size, international_count: international_count,
+                    sender_name: sender_name,
                     cost_centre_name: cost_centre.name, eusa_contact_name: contact_name }
         ).gsub(ANNOTATION_COMMENT, "")
       )

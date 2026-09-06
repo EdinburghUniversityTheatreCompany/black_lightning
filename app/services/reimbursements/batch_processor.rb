@@ -3,7 +3,9 @@ module Reimbursements
   # Orchestrates one BACS submission. A single #process call, triggered from
   # Build Batch, does everything:
   #
-  #   1. generate the BACS xlsx from the EFFECTIVE payee/sort/account/nominal
+  #   1. generate the payment documents — the BACS xlsx from the EFFECTIVE
+  #      payee/sort/account/nominal, plus one international form per
+  #      international claim
   #   2. read every receipt's bytes and rename them
   #   3. upload the xlsx + receipts to the cost centre's SharePoint folders
   #   4. create the EUSA draft in the cost centre's send mailbox
@@ -34,11 +36,13 @@ module Reimbursements
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
                         :producer_notifications_sent, :receipts_uploaded, :errors, keyword_init: true)
 
-    def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, notifier: nil, sleeper: nil)
+    def initialize(store:, graph:, cost_centre:, xlsx: nil, international_xlsx: nil,
+                   composer: nil, notifier: nil, sleeper: nil)
       @store = store
       @graph = graph
       @cost_centre = cost_centre
       @xlsx = xlsx || BacsXlsx.new
+      @international_xlsx = international_xlsx || InternationalXlsx.new
       @composer = composer || EusaEmailComposer.new
       # Producer notifications send through Graph from the cost centre's send
       # mailbox (same client as the EUSA draft), so they land in its Sent Items.
@@ -54,16 +58,17 @@ module Reimbursements
         return fail_with(result, "SharePoint folders not configured for #{@cost_centre.name}.")
       end
 
-      xlsx_bytes = build_xlsx(expenses)
+      # The UK rows collapse into one BACS spreadsheet; each international claim
+      # needs its own form, because that is the shape of EUSA's template.
+      documents = build_payment_documents(expenses, bacs_date)
       renamed = collect_receipts(expenses, bacs_date)
 
-      bacs_filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
-      upload_bacs_file(result, bacs_filename, xlsx_bytes)
+      upload_payment_documents(result, documents)
       urls_by_expense = upload_receipts(result, renamed)
 
       subject, body_html = eusa_email(expenses, bacs_date, sender_name, eusa_subject,
                                       eusa_body_html, eusa_contact_name)
-      attachments = [ xlsx_attachment(bacs_filename, xlsx_bytes) ] + renamed.values.flatten
+      attachments = documents + renamed.values.flatten
 
       # CARDINAL RULE — a failed draft leaves every expense Approved.
       begin
@@ -124,7 +129,24 @@ module Reimbursements
       expenses.sum { |expense| expense.amount || 0 }
     end
 
-    def build_xlsx(expenses)
+    # Every payment document this batch needs, as ready-to-attach Attachments:
+    # at most one BACS spreadsheet for the UK claims, plus one international
+    # form per international claim.
+    #
+    # The BACS spreadsheet is SKIPPED when there are no UK claims — a batch of
+    # only international payments would otherwise attach a spreadsheet with a
+    # header, an example row and nothing else, which reads to EUSA as a request
+    # to pay nobody.
+    def build_payment_documents(expenses, bacs_date)
+      uk, international = expenses.partition { |expense| !expense.international? }
+
+      documents = []
+      documents << bacs_document(uk, bacs_date) if uk.any?
+      documents.concat(international.map { |expense| international_document(expense, bacs_date) })
+      documents
+    end
+
+    def bacs_document(expenses, bacs_date)
       rows = expenses.map do |expense|
         BacsXlsx::BacsRow.new(
           payee_name: expense.effective_payee_name, amount: expense.amount,
@@ -133,7 +155,26 @@ module Reimbursements
           payment_reference: expense.payment_reference, cost_centre: @cost_centre.eusa_code
         )
       end
-      @xlsx.generate(rows)
+      filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
+      xlsx_attachment(filename, @xlsx.generate(rows))
+    end
+
+    # One form for one claim. The amount on it is the FOREIGN one: EUSA's bank
+    # pays the supplier in their own currency, and the GBP figure beside it is
+    # only what our budgets count.
+    def international_document(expense, bacs_date)
+      payment = InternationalXlsx::Payment.new(
+        payee_name: expense.effective_payee_name,
+        amount: expense.foreign_amount, currency: expense.foreign_currency,
+        description: expense.description, date_required: bacs_date,
+        nominal_code: expense.effective_nominal_code, cost_centre: @cost_centre.eusa_code,
+        bic: expense.effective_bic, iban: expense.effective_iban
+      )
+      filename = FilenameSanitizer.build_international_form_filename(
+        bacs_date: bacs_date, cost_centre_slug: @cost_centre.slug,
+        payee_name: expense.effective_payee_name, auto_number: expense.auto_number
+      )
+      xlsx_attachment(filename, @international_xlsx.generate(payment, format_iban: true))
     end
 
     # Expense record id -> renamed GraphClient::Attachments, ready to upload/attach.
@@ -153,13 +194,21 @@ module Reimbursements
     end
 
     # Best-effort: a SharePoint outage shouldn't block sending to EUSA.
-    def upload_bacs_file(result, filename, bytes)
+    #
+    # Every payment document goes up, and each is uploaded independently so one
+    # failure doesn't cost the rest. result.bacs_sharepoint_url records the
+    # FIRST — the BACS spreadsheet when there is one — which is the link the
+    # batch record and the operator's email quote; the international forms land
+    # beside it in the same folder, named by date and payee.
+    def upload_payment_documents(result, documents)
       folder = @cost_centre.bacs_folder
-      result.bacs_sharepoint_url = @graph.upload_to_folder(
-        drive_id: folder.drive_id, folder_id: folder.folder_id, filename: filename, content: bytes
-      )
-    rescue StandardError => e
-      result.errors << "BACS file SharePoint upload failed: #{e.message}"
+      documents.each do |document|
+        url = @graph.upload_to_folder(drive_id: folder.drive_id, folder_id: folder.folder_id,
+                                      filename: document.filename, content: document.content)
+        result.bacs_sharepoint_url = url if result.bacs_sharepoint_url.blank?
+      rescue StandardError => e
+        result.errors << "SharePoint upload failed for #{document.filename}: #{e.message}"
+      end
     end
 
     def upload_receipts(result, renamed)

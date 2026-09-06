@@ -66,6 +66,28 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # The amount EUSA is being asked to PAY, in the currency they pay it in.
+  #
+  # For an international claim that is the foreign figure on their form, not
+  # the GBP one our budgets count — quoting GBP in the covering email beside a
+  # form that says EUR reads as a discrepancy in the paperwork, and the two
+  # numbers are days of exchange-rate apart.
+  def reimbursements_payment_amount(expense)
+    return reimbursements_money(expense.amount) unless expense.international?
+
+    "#{reimbursements_currency_symbol(expense.foreign_currency)}#{number_with_precision(
+      expense.foreign_amount || 0, precision: 2, delimiter: ","
+    )}"
+  end
+
+  CURRENCY_SYMBOLS = { "EUR" => "€" }.freeze
+
+  # Falls back to the ISO code plus a space ("USD 12.50"), which is unambiguous
+  # if unlovely — better than printing a euro sign over a currency that is not.
+  def reimbursements_currency_symbol(currency)
+    CURRENCY_SYMBOLS.fetch(currency.to_s, "#{currency} ".lstrip)
+  end
+
   # The one "no value here" glyph for the reimbursements section, matching what
   # reimbursements_date / reimbursements_money already render for nil. A view
   # hardcoding an em dash makes the same empty cell read "—" in one column and

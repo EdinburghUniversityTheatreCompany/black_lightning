@@ -43,5 +43,18 @@ module Reimbursements
 
       "#{date_part} #{budget_part} - #{desc_part}#{suffix}#{ext}"
     end
+
+    # Name one international payment form. Unlike the BACS spreadsheet, which
+    # is one file for the whole batch, these are one file PER payment — so the
+    # name has to tell them apart in an inbox and a SharePoint folder. The
+    # claim number is what makes it unique: two payments to the same supplier
+    # on the same day are ordinary.
+    def build_international_form_filename(bacs_date:, cost_centre_slug:, payee_name:, auto_number:)
+      date_part = bacs_date.strftime("%Y-%m-%d")
+      payee_part = truncate_description(sanitize_component(payee_name))
+      payee_part = "payee" if payee_part.empty?
+
+      "#{date_part}-#{cost_centre_slug}-international-payment-#{payee_part}-##{auto_number}.xlsx"
+    end
   end
 end
