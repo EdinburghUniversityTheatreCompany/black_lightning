@@ -327,22 +327,6 @@ grouped and filtered, so it is a deliberate reporting change, not a silent clean
 the upgrade commit for exactly that reason. (Coverage is opt-in via `COVERAGE=1` and is not run
 by CI or hk, so nothing is gated on this today.)
 
-## `MarkdownControllerTest` asserts on `Attachment.last`
-
-*Noticed 2026-07-31 during the dependency sweep.* Two upload tests in
-`test/functional/markdown_controller_test.rb` grab `Attachment.last` and assert on its `item`.
-That assumes the attachments table holds nothing newer than the row the test just created —
-true against a schema-loaded worker database, false against a **seeded** one, where
-`Attachment.last` returns a seed row and the test fails with a `Show` where it wanted a `News`.
-
-It passes in the full suite (parallel workers get their own schema-loaded databases) and fails
-when the file is run alone in a worktree whose test DB came from `db:prepare` (which seeds).
-So it is a latent isolation bug, not a flake in the usual sense.
-
-**Fix:** capture the attachment the request created — assert on the record found by the URL the
-JSON response returns, or scope to `Attachment.where("name LIKE 'md-upload-%'").last` — rather
-than the global `.last`.
-
 ## README fails the `github-readme` audit
 
 *Noticed 2026-07-31 while syncing the version table.* The `writing:github-readme` audit script
