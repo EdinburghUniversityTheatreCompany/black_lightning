@@ -1,8 +1,13 @@
-class Public::EventsGridComponent < ViewComponent::Base
-  # The public event grid. Admin::EventsGridComponent is a different design for
-  # the same data, not a copy of this: this one carries the srcset and the alt
-  # text the public pages need, and lets the poster keep its own aspect ratio,
-  # where the admin grid crops every card to 576/300.
+class EventsGridComponent < ViewComponent::Base
+  # The grid of event cards, on the home page, a venue, and both the public and
+  # admin versions of a member's profile — which built identical items and then
+  # rendered them through two different components.
+  #
+  # Posters are cropped to a fixed ratio rather than left at their own, so a row
+  # of cards lines up; `srcset` still offers the smaller variants so a phone does
+  # not fetch a 960px poster to show it at 412.
+  POSTER_ASPECT = "aspect-[576/300]".freeze
+
   def initialize(items:, col_size:, link_to_admin_events: false)
     @items = items
     @col_size = col_size
@@ -42,5 +47,9 @@ class Public::EventsGridComponent < ViewComponent::Base
 
   def url_for_item(item)
     @link_to_admin_events ? [ :admin, item[:event] ] : item[:event]
+  end
+
+  def srcset_variants
+    [ helpers.thumb_variant_public, helpers.medium_variant, helpers.slideshow_variant ]
   end
 end

@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Public::EventsGridComponentTest < ViewComponent::TestCase
+class EventsGridComponentTest < ViewComponent::TestCase
   def items(count)
     Array.new(count) do
       { event: FactoryBot.create(:show), paragraphs: [ { content: "blurb" } ] }
@@ -8,11 +8,11 @@ class Public::EventsGridComponentTest < ViewComponent::TestCase
   end
 
   def render_grid(count, col_size)
-    render_inline(Public::EventsGridComponent.new(items: items(count), col_size: col_size))
+    render_inline(EventsGridComponent.new(items: items(count), col_size: col_size))
   end
 
   test "renders nothing when there are no events" do
-    render_inline(Public::EventsGridComponent.new(items: [], col_size: 12))
+    render_inline(EventsGridComponent.new(items: [], col_size: 12))
 
     assert_no_selector "div.grid"
   end
@@ -43,5 +43,28 @@ class Public::EventsGridComponentTest < ViewComponent::TestCase
 
     assert_selector "div.grid.grid-cols-1.md\\:grid-cols-2"
     assert_no_selector "div.lg\\:grid-cols-3"
+  end
+
+  # Posters are cropped to a fixed ratio so a row of cards lines up. The image
+  # must not also carry h-auto, or it fights the crop box's h-full.
+  test "posters are cropped to a fixed ratio" do
+    render_grid(1, 12)
+
+    assert_selector "div.aspect-\\[576\\/300\\].overflow-hidden img.object-cover.h-full"
+    assert_no_selector "img.h-auto"
+  end
+
+  # Cropping must not cost the responsive sources or the alt text.
+  test "cards still offer smaller sources and name the theatre in the alt" do
+    render_grid(1, 12)
+
+    assert_selector "img[srcset][sizes]"
+    assert_selector "img[alt$='at Bedlam Theatre']"
+  end
+
+  test "the title link carries the primary colour" do
+    render_grid(1, 12)
+
+    assert_selector "a.font-semibold.text-primary"
   end
 end

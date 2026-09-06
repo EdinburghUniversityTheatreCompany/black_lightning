@@ -1,0 +1,28 @@
+<% if any_items? %>
+  <div class="<%= grid_classes %>">
+    <% @items.each do |item| %>
+      <div class="flex flex-col">
+        <%= render CardComponent.new(html_class: "h-full mb-0", flush: true) do %>
+          <% url = url_for_item(item) %>
+          <%= link_to url do %>
+            <div class="<%= EventsGridComponent::POSTER_ASPECT %> overflow-hidden bg-gray-100 rounded-t">
+              <%# full_width: false because the crop box sizes the image — otherwise
+                  ImageComponent adds h-auto alongside this h-full. %>
+              <%= render ImageComponent.new(image: item[:event].fetch_image, variant: helpers.medium_variant,
+                         proxy: true, full_width: false, srcset_variants: srcset_variants,
+                         alt: "#{item[:event].name} at Bedlam Theatre",
+                         image_options: { class: "object-cover w-full h-full" }) %>
+            </div>
+          <% end %>
+
+          <div class="p-4 flex flex-col flex-1">
+            <%= link_to(item[:event].name_and_author, url,
+                  class: "font-semibold text-primary hover:text-primary-dark block mb-2 leading-snug") %>
+
+            <%= render("shared/pages/public/partials/card_paragraphs", paragraphs: item[:paragraphs]) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
