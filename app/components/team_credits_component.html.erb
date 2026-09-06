@@ -1,15 +1,8 @@
-<%# locals: (team_members:, deadline: nil) -%>
-<%# KEEP %>
-
-<%# TODO: This would be much nicer with components and using Tailwind helpers, but not right now. %>
-<%# It can also generally be better. It's a bit janky, but it mostly works. %>
-
-<% current_user_is_part_of_teamwork = team_members.collect(&:user).include?(current_user) %>
-<% cast, crew = team_members.partition(&:cast?) %>
-
+<%# The two-column name grid is a grid-template-columns value Tailwind has no
+    utility for, so it stays as scoped CSS rather than becoming arbitrary-value
+    class soup. It could move into a stylesheet; it has not, because it is the
+    only rule these class names have anywhere. %>
 <style>
-
-  
   .team-grid {
     display: grid;
     grid-template-columns: fit-content(35%) 1fr;
@@ -50,11 +43,11 @@
       </div>
 
       <div class="team-user">
-        <%= user_link(team_member.user, true) %>
+        <%= helpers.user_link(team_member.user, true) %>
 
-        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-          <% team_member_labels_for(team_member, deadline).each do |label| %>
-            <%= generate_label(label[:label_class], label[:text]) %>
+        <% if show_badges_for?(team_member) %>
+          <% badges_for(team_member).each do |label| %>
+            <%= helpers.generate_label(label[:label_class], label[:text]) %>
           <% end %>
         <% end %>
       </div>
@@ -72,11 +65,11 @@
       </div>
 
       <div class="team-user">
-        <%= user_link(team_member.user, true) %>
+        <%= helpers.user_link(team_member.user, true) %>
 
-        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-          <% team_member_labels_for(team_member, deadline).each do |label| %>
-            <%= generate_label(label[:label_class], label[:text]) %>
+        <% if show_badges_for?(team_member) %>
+          <% badges_for(team_member).each do |label| %>
+            <%= helpers.generate_label(label[:label_class], label[:text]) %>
           <% end %>
         <% end %>
       </div>

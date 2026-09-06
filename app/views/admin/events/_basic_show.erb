@@ -13,7 +13,7 @@
 
     <% if event.team_members.any? %>
       <div class="col-span-12 xl:col-span-6 xl:border-l xl:border-gray-200 xl:pl-4">
-          <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered.preload(:user) %>
+          <%= render TeamCreditsComponent.new(team_members: event.team_members.ordered.preload(:user), admin_site: true) %>
       </div>
     <% end %>
   </div>

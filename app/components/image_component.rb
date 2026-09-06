@@ -39,13 +39,16 @@ class ImageComponent < ViewComponent::Base
     @proxy ? helpers.active_storage_proxy_url(resolved) : resolved
   end
 
+  # Always an alt attribute. Every image on the site was missing one entirely, a
+  # WCAG 2.2 1.1.1 failure; an explicit empty alt at least marks an image as
+  # decorative, which is right for the ones a caption already covers. Passed from
+  # the template rather than merged in here so it is visible at the img tag.
+  def alt_text
+    @alt.to_s
+  end
+
   def image_options
     options = @image_options.merge(dimensions)
-
-    # Always an alt attribute. Every image on the site was missing one entirely,
-    # a WCAG 2.2 1.1.1 failure; an explicit empty alt at least marks an image as
-    # decorative, which is right for the ones a caption already covers.
-    options = options.merge(alt: @alt.to_s)
     options = options.merge(class: "w-full h-auto #{options[:class]}") if @full_width
     options = options.merge(loading: "eager", fetchpriority: "high") if @priority
     options = options.merge(srcset_options(options)) if srcset?

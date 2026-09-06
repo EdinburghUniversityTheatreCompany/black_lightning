@@ -6,7 +6,7 @@
   editing_deadline: l(@proposal.call.editing_deadline, format: :longy),
   publicity_text: render_markdown(@proposal.publicity_text),
   proposal_text: render_markdown(@proposal.proposal_text),
-  team_members: { type: 'content', content: render('/shared/admin_show_team_members', team_members: @proposal.team_members.ordered.preload(:user), deadline: @proposal.call.editing_deadline) },
+  team_members: { type: 'content', content: render(TeamCreditsComponent.new(team_members: @proposal.team_members.ordered.preload(:user), deadline: @proposal.call.editing_deadline, admin_site: true)) },
   questions_and_answers: { type: 'content', header: 'Questions', content: render(Admin::QuestionsAndAnswersComponent.new(answers: @proposal.answers)) }
 } %>
 
