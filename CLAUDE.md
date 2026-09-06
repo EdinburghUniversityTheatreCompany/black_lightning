@@ -113,6 +113,23 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+- **The namespace says who renders it, so check before adding one.** Top level = both sites
+  (`ImageComponent`, `GalleryComponent`, `SearchFormComponent`, `CardComponent`); `Admin::` and
+  `Public::` = only that site. A component rendered from both sites with an `Admin::`/`Public::`
+  prefix is a lie about where it is used, which is what #245 was about.
+- **`app/views/shared/` is not a second home for reusable markup.** A reusable piece is a
+  component; what is left there is the admin/public page scaffolding (`shared/pages/*`) and the
+  form field vocabulary (`shared/form/*`), both of which read controller ivars or wrap a form
+  builder. There is no `app/views/admin/shared/` — two directories called "shared" is how a
+  component came to render `shared/attachments_gallery` while the partial lived under
+  `admin/shared/`, 500ing questionnaires#show in production.
+- **A `@admin_site` read from inside markup becomes a constructor argument** when that markup
+  becomes a component (`GalleryComponent#show_tags`, `TeamCreditsComponent#admin_site`) — the
+  component must not reach for controller state.
+- **Write `alt:` as a literal keyword at the `image_tag` call**, not merged in from Ruby. herb's
+  `html-img-require-alt` reads the template statically and cannot see an alt that arrives inside
+  an options hash.
+
 ## Dev Environment (mise + hk)
 
 Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `pkl`, `gitleaks`,
@@ -988,7 +1005,7 @@ Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured d
   image_processing, so the bytes were WebP while every variant was served declaring
   `image/png` or `image/jpeg`. Browsers sniff and cope — og:image validators do not.
   **Changing a variant re-keys its URL and regenerates the whole set on first request.**
-- **In `shared/_image.erb`, `full_width` is styling and `priority` is loading.** They were one
+- **In `ImageComponent`, `full_width` is styling and `priority` is loading.** They were one
   flag (`eager_load`) and it had the performance backwards: eight cards below the fold loaded
   eagerly while the masthead above them inherited the app-wide lazy default. Measured, correcting
   it was worth 1552ms of homepage LCP on a throttled phone. Only a genuine LCP element passes
