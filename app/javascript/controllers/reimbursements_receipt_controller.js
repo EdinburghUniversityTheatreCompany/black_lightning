@@ -12,9 +12,9 @@ let stashedFiles = null
 // across a failed submit, and surfaces the payee and large-amount rules inline
 // rather than only at submit time. The server validates all of it regardless.
 export default class extends Controller {
-  static targets = ["files", "status", "amount", "reference", "referenceCounter",
-    "reattachNotice", "largeAmountWarning", "expenseType", "payeeOptional",
-    "payeeRequired"]
+  static targets = ["files", "status", "amount", "amountExclVat", "reference",
+    "referenceCounter", "reattachNotice", "largeAmountWarning", "vatWarning",
+    "expenseType", "payeeOptional", "payeeRequired"]
   static values = {
     resubmit: Boolean,
     largeAmountThreshold: { type: Number, default: 1000 },
@@ -72,6 +72,20 @@ export default class extends Controller {
     const value = this.#parseAmount(this.amountTarget.value)
     const large = Number.isFinite(value) && value >= this.largeAmountThresholdValue
     this.largeAmountWarningTarget.classList.toggle("hidden", !large)
+  }
+
+  // Reveal the missing-VAT confirmation as soon as the two amounts say the
+  // receipt doesn't itemise VAT. Mirrors ExpenseForm#vat_missing?: both amounts
+  // present, and the ex-VAT one not below the total. The large-amount block has
+  // revealed itself live since it was written; this one was server-rendered
+  // only, so a producer entering 12.50/12.50 first heard about it from a failed
+  // submit.
+  checkVat() {
+    if (!this.hasVatWarningTarget || !this.hasAmountTarget || !this.hasAmountExclVatTarget) return
+    const total = this.#parseAmount(this.amountTarget.value)
+    const exclVat = this.#parseAmount(this.amountExclVatTarget.value)
+    const missing = Number.isFinite(total) && Number.isFinite(exclVat) && exclVat >= total
+    this.vatWarningTarget.classList.toggle("hidden", !missing)
   }
 
   // Mirror the server's ExpenseForm#parse_decimal: a trailing "," with 1-2

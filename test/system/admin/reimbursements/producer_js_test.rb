@@ -112,6 +112,24 @@ module Admin
                         wait: 2
       end
 
+      # The other soft block. It was server-rendered only, so a producer entering
+      # 12.50 / 12.50 first learnt about it from a failed submit while the
+      # large-amount block beside it revealed itself as they typed.
+      test "the missing-VAT confirmation appears as the two amounts converge" do
+        visit new_admin_reimbursements_expense_path
+
+        assert_selector "[data-reimbursements-receipt-target='vatWarning']", visible: :hidden
+
+        fill_in "Amount (£, incl. VAT)", with: "12.50"
+        fill_in "Amount excl. VAT (£)", with: "12.50"
+        assert_selector "[data-reimbursements-receipt-target='vatWarning']", visible: :visible
+
+        # A real VAT breakdown puts the ex-VAT amount below the total.
+        fill_in "Amount excl. VAT (£)", with: "10.42"
+        assert_selector "[data-reimbursements-receipt-target='vatWarning']", visible: :hidden,
+                        wait: 2
+      end
+
       test "the payment-reference counter tracks what EUSA will actually keep" do
         visit new_admin_reimbursements_expense_path
         limit = ::Reimbursements::ExpenseForm::REFERENCE_LIMIT
