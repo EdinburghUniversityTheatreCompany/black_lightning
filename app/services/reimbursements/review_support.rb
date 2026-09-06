@@ -52,7 +52,13 @@ module Reimbursements
       advisory = []
 
       amount_reasons(expense, blocking, advisory)
-      blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+      # Not asked of an international claim: its ex-VAT amount mirrors its
+      # gross (no reclaimable UK VAT), so a blank one is already reported as
+      # "no GBP amount" and repeating it sends finance looking for a field this
+      # rail does not have.
+      unless expense.international?
+        blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+      end
       blocking << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
       advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 

@@ -280,13 +280,18 @@ module Admin
         # stays in lockstep with ReviewSupport.attention_summary's "no budget"
         # blocking reason (the UI promises the two agree).
         return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
-        return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
-        # The international pair, read through ReviewSupport so this guard and
-        # its "blocking" reason cannot drift apart. EUSA's bank pays the
-        # supplier in their own currency, so the EUR figure is what goes on the
-        # form; the GBP one is what every budget rollup counts.
+        # The international pair FIRST, read through ReviewSupport so these
+        # guards and the matching "blocking" reasons cannot drift apart. EUSA's
+        # bank pays the supplier in their own currency, so the EUR figure is
+        # what goes on the form; the GBP one is what every budget rollup counts.
+        #
+        # Before the ex-VAT guard on purpose: an international claim's ex-VAT
+        # amount mirrors its gross, so a blank GBP amount fails BOTH, and the
+        # ex-VAT message would send finance looking for a field this rail does
+        # not have.
         return :skipped_no_foreign_amount if ::Reimbursements::ReviewSupport.missing_foreign_amount?(expense)
         return :skipped_no_gbp_amount if ::Reimbursements::ReviewSupport.missing_gbp_amount?(expense)
+        return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
         # A budget owner must sign off before finance approves (any one owner, or
         # a submitter who owns the budget is auto-bypassed). Overridable by
         # finance via override_approve; unmet here means neither has happened.

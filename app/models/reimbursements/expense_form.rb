@@ -30,7 +30,8 @@ module Reimbursements
                   :description, :payment_reference, :payee_name_override,
                   :sort_code_override, :account_number_override,
                   :vat_acknowledged, :save_as_draft,
-                  :large_amount_acknowledged, :expense_receipt_count
+                  :large_amount_acknowledged, :expense_receipt_count,
+                  :payment_method, :foreign_amount, :iban_override, :bic_override
     attr_writer :receipts, :require_receipts, :internal
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
@@ -39,6 +40,7 @@ module Reimbursements
     LARGE_AMOUNT_THRESHOLD = BigDecimal("1000")
 
     validates :expense_type, inclusion: { in: :permitted_expense_types }
+    validates :payment_method, inclusion: { in: Expense::PAYMENT_METHODS }
     validates :budget_record_id, :description, :payment_reference, presence: true, unless: :draft?
     validates :payment_reference, length: { maximum: REFERENCE_LIMIT }
     validate :amounts_valid
@@ -50,6 +52,15 @@ module Reimbursements
     def initialize(attributes = {})
       super
       self.expense_type = Expense::TYPE_REIMBURSEMENT if expense_type.blank?
+      self.payment_method = Expense::PAYMENT_METHOD_UK_BACS if payment_method.blank?
+    end
+
+    def international?
+      payment_method == Expense::PAYMENT_METHOD_INTERNATIONAL
+    end
+
+    def foreign_amount_decimal
+      parse_decimal(foreign_amount)
     end
 
     def draft?
@@ -103,8 +114,15 @@ module Reimbursements
         amount_excl_vat_decimal >= amount_decimal
     end
 
+    # Read against whichever figure the submitter actually typed. For an
+    # international claim that is the foreign one, compared to a sterling
+    # threshold — approximate, but this is a fat-finger guard (pence typed as
+    # pounds, a stray digit), not an accounting rule, and a EUR 5,000 claim
+    # sailing through unconfirmed because its GBP figure is not filled in yet
+    # is exactly what it exists to stop.
     def large_amount?
-      amount_decimal.present? && amount_decimal >= LARGE_AMOUNT_THRESHOLD
+      typed = international? ? foreign_amount_decimal : amount_decimal
+      typed.present? && typed >= LARGE_AMOUNT_THRESHOLD
     end
 
     # Attributes for Store#create_expense!.
@@ -127,7 +145,15 @@ module Reimbursements
         expense_type: expense_type,
         payee_name_override: payee_name_override.to_s.strip,
         sort_code_override: BankDetails.format_sort_code(sort_code_override.to_s.strip),
-        account_number_override: BankDetails.normalize_account_number(account_number_override.to_s.strip)
+        account_number_override: BankDetails.normalize_account_number(account_number_override.to_s.strip),
+        payment_method: payment_method,
+        foreign_amount: foreign_amount_decimal,
+        # Stamped from the rail rather than asked for: EUR is the only currency
+        # this handles, and storing it makes the figure self-describing when a
+        # second one is added.
+        foreign_currency: (Expense::CURRENCY_EUR if international?),
+        iban_override: BankDetails.normalize_iban(iban_override.to_s.strip),
+        bic_override: BankDetails.normalize_bic(bic_override.to_s.strip)
       }
     end
 
@@ -142,6 +168,10 @@ module Reimbursements
         payee_name_override: expense.payee_name_override,
         sort_code_override: expense.sort_code_override,
         account_number_override: expense.account_number_override,
+        payment_method: expense.payment_method,
+        foreign_amount: expense.foreign_amount&.to_s("F"),
+        iban_override: expense.iban_override,
+        bic_override: expense.bic_override,
         require_receipts: false
       )
     end
@@ -186,8 +216,13 @@ module Reimbursements
     def amounts_valid
       if draft?
         errors.add(:amount, "must be a positive amount.") if amount.present? && (amount_decimal.nil? || amount_decimal <= 0)
+        if foreign_amount.present? && (foreign_amount_decimal.nil? || foreign_amount_decimal <= 0)
+          errors.add(:foreign_amount, "must be a positive amount.")
+        end
         return
       end
+
+      return international_amounts_valid if international?
 
       errors.add(:amount, "must be a positive amount.") if amount_decimal.nil? || amount_decimal <= 0
 
@@ -197,6 +232,21 @@ module Reimbursements
       elsif amount_decimal.present? && amount_excl_vat_decimal > amount_decimal
         errors.add(:amount_excl_vat, "can't be more than the total amount.")
       end
+    end
+
+    # A submitter holding a foreign invoice knows what it says and nothing
+    # about the rate EUSA's bank will get, so only the foreign amount is asked
+    # for. The GBP equivalent is finance's to enter at review — and they cannot
+    # approve without it (ReviewSupport's "no GBP amount" block), so leaving it
+    # out here loses nothing.
+    #
+    # There is no ex-VAT figure either: a foreign invoice carries no
+    # reclaimable UK VAT, so the whole amount hits the budget and
+    # Expense mirrors it automatically.
+    def international_amounts_valid
+      return if foreign_amount_decimal.present? && foreign_amount_decimal.positive?
+
+      errors.add(:foreign_amount, "must be a positive amount, as printed on the invoice.")
     end
 
     def receipts_valid
@@ -222,6 +272,10 @@ module Reimbursements
       if payee_name_override.to_s.length > BankDetails::PAYEE_NAME_MAX_LENGTH
         errors.add(:payee_name_override, BankDetails::PAYEE_NAME_HINT)
       end
+      international? ? international_overrides_valid : uk_overrides_valid
+    end
+
+    def uk_overrides_valid
       if sort_code_override.present? && !BankDetails.valid_sort_code?(sort_code_override)
         errors.add(:sort_code_override, BankDetails::SORT_CODE_HINT)
       end
@@ -238,6 +292,29 @@ module Reimbursements
                           "bill yourself and want the money back, change the type to " \
                           "Reimbursement instead.")
       end
+    end
+
+    # The same all-or-nothing rule, over the pair this rail actually routes on.
+    # The IBAN is mod-97 checked because it is the last point anything looks at
+    # the number before EUSA's bank acts on it.
+    def international_overrides_valid
+      errors.add(:iban_override, BankDetails::IBAN_HINT) if iban_override.present? && !BankDetails.valid_iban?(iban_override)
+      errors.add(:bic_override, BankDetails::BIC_HINT) if bic_override.present? && !BankDetails.valid_bic?(bic_override)
+
+      if BankDetails.overrides_incomplete?(payee_name_override, iban_override, bic_override)
+        errors.add(:base, "To pay someone abroad, fill in all three: payee name, IBAN and " \
+                          "BIC/SWIFT code, not just one or two.")
+      elsif international_without_payee?
+        errors.add(:base, "An international payment goes straight to the payee's own bank, so it " \
+                          "needs their account name, IBAN and BIC/SWIFT code below.")
+      end
+    end
+
+    # Unlike the UK rail, this applies to EVERY international claim, not only
+    # an Invoice: nobody on file has an IBAN by default, so falling back to the
+    # submitter's own details would leave the form with nothing to send.
+    def international_without_payee?
+      !draft? && BankDetails.overrides_missing?(payee_name_override, iban_override, bic_override)
     end
 
     # EffectivePayee falls back to the SUBMITTER's own bank details, so an

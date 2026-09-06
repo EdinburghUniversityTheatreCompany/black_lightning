@@ -130,6 +130,14 @@ module Reimbursements
     # auto_number backs the human-facing "Expense #N" label. It continues from
     # the highest number on record rather than tracking the PK, so the numbers
     # imported with the historical claims are never handed out twice.
+    # A foreign invoice carries no reclaimable UK VAT, so the whole amount hits
+    # the budget: ex-VAT IS the gross here. Set in one place rather than asked
+    # for on each of the three forms that can write an amount, so the two
+    # figures cannot drift into a VAT deduction nobody can reclaim.
+    before_validation lambda {
+      self.amount_excl_vat = amount if international?
+    }
+
     before_create lambda {
       self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1
       self.submitted_at ||= Time.current

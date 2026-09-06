@@ -232,6 +232,23 @@ module Reimbursements
       assert_equal "DEUTDEFF500", expense.bic_override
     end
 
+    # A foreign invoice carries no reclaimable UK VAT, so ex-VAT IS the gross.
+    # Set on the record rather than on each of the three forms that can write an
+    # amount, so the two figures cannot drift into a deduction nobody can claim.
+    test "an international claim's ex-VAT amount mirrors its GBP amount" do
+      expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+                               amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67"))
+
+      assert_equal BigDecimal("230.00"), expense.reload.amount_excl_vat,
+                   "a VAT split on a foreign invoice would deduct tax nobody can reclaim"
+    end
+
+    test "a UK claim keeps its own ex-VAT split" do
+      expense = create_expense(amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67"))
+
+      assert_equal BigDecimal("191.67"), expense.reload.amount_excl_vat
+    end
+
     test "editable? only for submitter types in Draft or Pending" do
       assert create_expense.editable?
       assert_not create_expense(status: Status::APPROVED).editable?

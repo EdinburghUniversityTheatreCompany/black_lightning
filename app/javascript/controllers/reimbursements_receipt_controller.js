@@ -14,26 +14,69 @@ let stashedFiles = null
 export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "reference",
     "referenceCounter", "reattachNotice", "largeAmountWarning", "vatWarning",
-    "expenseType", "payeeOptional", "payeeRequired"]
+    "expenseType", "payeeOptional", "payeeRequired", "payeeInternational",
+    "ukPayeeCopy", "internationalPayeeCopy",
+    "paymentMethod", "ukFields", "internationalFields", "ukAmount", "internationalAmount"]
   static values = {
     resubmit: Boolean,
     largeAmountThreshold: { type: Number, default: 1000 },
     invoiceType: String,
+    internationalMethod: String,
   }
 
   connect() {
     this.updateCounter()
     this.#restoreOrClearStash()
     this.typeChanged()
+    this.paymentMethodChanged()
   }
 
-  // Says the payee trio is required on an Invoice before the submit does; the
-  // server both enforces the rule and renders the labels for the no-JS case.
+  // Swap the bank fields and the amount field for the rail's own. Both sets are
+  // in the markup and the server renders the right one visible, so this is a
+  // convenience: with JavaScript off the form still shows everything and the
+  // server enforces which fields the chosen rail actually needs.
+  paymentMethodChanged() {
+    if (!this.hasPaymentMethodTarget || !this.hasUkFieldsTarget) return
+    const international = this.#isInternational()
+    this.#updatePayeeLabels()
+    this.ukFieldsTarget.classList.toggle("hidden", international)
+    this.internationalFieldsTarget.classList.toggle("hidden", !international)
+    if (this.hasUkAmountTarget) this.ukAmountTarget.classList.toggle("hidden", international)
+    if (this.hasInternationalAmountTarget) {
+      this.internationalAmountTarget.classList.toggle("hidden", !international)
+    }
+  }
+
+  // Says the payee trio is required before the submit does; the server both
+  // enforces the rule and renders the labels for the no-JS case.
   typeChanged() {
+    this.#updatePayeeLabels()
+  }
+
+  // The payee section is optional on a UK reimbursement, required on a UK
+  // invoice, and ALWAYS required on the international rail — nobody has an IBAN
+  // on file, so there is nothing to fall back to. Both the type and the rail
+  // change the answer, so both call one method rather than each toggling a
+  // subset and leaving the heading contradicting the fields under it.
+  #updatePayeeLabels() {
     if (!this.hasExpenseTypeTarget || !this.hasPayeeOptionalTarget) return
-    const invoice = this.expenseTypeTarget.value === this.invoiceTypeValue
-    this.payeeOptionalTarget.classList.toggle("hidden", invoice)
+    const international = this.#isInternational()
+    const invoice = !international && this.expenseTypeTarget.value === this.invoiceTypeValue
+
+    this.payeeOptionalTarget.classList.toggle("hidden", invoice || international)
     this.payeeRequiredTarget.classList.toggle("hidden", !invoice)
+    if (this.hasPayeeInternationalTarget) {
+      this.payeeInternationalTarget.classList.toggle("hidden", !international)
+    }
+    if (this.hasUkPayeeCopyTarget) {
+      this.ukPayeeCopyTarget.classList.toggle("hidden", international)
+      this.internationalPayeeCopyTarget.classList.toggle("hidden", !international)
+    }
+  }
+
+  #isInternational() {
+    return this.hasPaymentMethodTarget &&
+      this.paymentMethodTarget.value === this.internationalMethodValue
   }
 
   // Keep a reference to the picked files so a failed submit doesn't lose them.

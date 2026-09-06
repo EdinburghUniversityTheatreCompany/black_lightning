@@ -15,6 +15,8 @@
                       action: "turbo:submit-end->reimbursements-receipt#submitEnd",
                       reimbursements_receipt_resubmit_value: form.errors.any?,
                       reimbursements_receipt_invoice_type_value: Reimbursements::Expense::TYPE_INVOICE,
+                      reimbursements_receipt_international_method_value:
+                        Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
                       reimbursements_receipt_large_amount_threshold_value:
                         Reimbursements::ExpenseForm::LARGE_AMOUNT_THRESHOLD.to_i } } do |f| %>
 
@@ -82,12 +84,61 @@
           input_html: { data: { reimbursements_receipt_target: "expenseType",
                                 action: "change->reimbursements-receipt#typeChanged" } } %>
 
-    <%= f.input :amount, label: "Amount (£, incl. VAT)",
-          hint: "What actually left your account, or the invoice total.", required: true,
-          input_html: { inputmode: "decimal",
-                        data: { reimbursements_receipt_target: "amount",
-                                action: "input->reimbursements-receipt#checkAmount " \
-                                        "input->reimbursements-receipt#checkVat" } } %>
+    <%= f.input :payment_method, label: "How is this paid?",
+          collection: [ [ "UK bank account", Reimbursements::Expense::PAYMENT_METHOD_UK_BACS ],
+                        [ "International (IBAN)", Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL ] ],
+          include_blank: false,
+          hint: "Pick International to pay a bank outside the UK. EUSA fills in a separate " \
+                "payment form for those, and needs an IBAN and BIC instead of a sort code.",
+          input_html: { data: { reimbursements_receipt_target: "paymentMethod",
+                                action: "change->reimbursements-receipt#paymentMethodChanged" } } %>
+
+    <%# Each rail's amount fields are BOTH rendered and the server picks which is
+        visible, so the form is right with JavaScript off and after a 422
+        re-render. Neither carries the HTML `required` attribute: a hidden
+        required input makes the browser refuse to submit the form, with an
+        error it cannot even scroll to. The star is kept (required: true) so the
+        starred set still matches what a submit needs, exactly as the budget
+        field below does. %>
+    <div data-reimbursements-receipt-target="ukAmount" class="<%= 'hidden' if form.international? %>">
+      <%= f.input :amount, label: "Amount (£, incl. VAT)", required: true,
+            hint: "What actually left your account, or the invoice total.",
+            input_html: { inputmode: "decimal", required: false,
+                          data: { reimbursements_receipt_target: "amount",
+                                  action: "input->reimbursements-receipt#checkAmount " \
+                                          "input->reimbursements-receipt#checkVat" } } %>
+      <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)", required: true,
+            hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.",
+            input_html: { inputmode: "decimal", required: false,
+                          data: { reimbursements_receipt_target: "amountExclVat",
+                                  action: "input->reimbursements-receipt#checkVat" } } %>
+
+      <%# Shown when the amounts already say VAT isn't itemised or the ack failed;
+          both amount inputs toggle it live via checkVat, so it announces. %>
+      <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
+           class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
+        <p class="mb-1 text-sm">
+          This receipt doesn't itemise VAT, so we have to deduct the
+          <strong>full amount</strong> from your budget. With a VAT receipt we'd only
+          deduct the ex-VAT amount, so it's worth asking the seller for one.
+        </p>
+        <%= f.input :vat_acknowledged, as: :boolean,
+              label: "I understand, submit anyway (I'll ask for a VAT receipt next time it's possible)" %>
+      </div>
+    </div>
+
+    <div data-reimbursements-receipt-target="internationalAmount"
+         class="<%= 'hidden' unless form.international? %>">
+      <%# Only the invoice figure is asked for, and there is no ex-VAT field: a
+          foreign invoice carries no reclaimable UK VAT, so the whole amount
+          hits the budget. The submitter knows what the invoice says and nothing
+          about the rate EUSA's bank will get, so finance enters the GBP
+          equivalent when they review it — and cannot approve without it. %>
+      <%= f.input :foreign_amount, label: "Amount (€, as printed on the invoice)", required: true,
+            hint: "The invoice total in euros. Finance works out the pound equivalent when " \
+                  "they review this, so you don't need to convert it.",
+            input_html: { inputmode: "decimal", required: false } %>
+    </div>
 
     <%# Soft-block a large claim (a mistyped amount would otherwise skew a
         budget). Shown when the amount is already large or the ack failed;
@@ -100,24 +151,6 @@
       </p>
       <%= f.input :large_amount_acknowledged, as: :boolean,
             label: "Yes, this amount is correct." %>
-    </div>
-    <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)",
-          hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
-          input_html: { inputmode: "decimal",
-                        data: { reimbursements_receipt_target: "amountExclVat",
-                                action: "input->reimbursements-receipt#checkVat" } } %>
-
-    <%# Shown when the amounts already say VAT isn't itemised or the ack failed;
-        both amount inputs toggle it live via checkVat, so it announces. %>
-    <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
-         class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
-      <p class="mb-1 text-sm">
-        This receipt doesn't itemise VAT, so we have to deduct the
-        <strong>full amount</strong> from your budget. With a VAT receipt we'd only
-        deduct the ex-VAT amount, so it's worth asking the seller for one.
-      </p>
-      <%= f.input :vat_acknowledged, as: :boolean,
-            label: "I understand, submit anyway (I'll ask for a VAT receipt next time it's possible)" %>
     </div>
     <%# Required to SUBMIT but optional for a draft. Show the required star so
         the star set matches what submit needs (they were unstarred, so a
@@ -155,21 +188,42 @@
         <%# Server-rendered for the no-JS case and for a 422 re-render; the
             controller's typeChanged keeps it honest as the type select changes. %>
         <span data-reimbursements-receipt-target="payeeOptional"
-              class="<%= 'hidden' if invoice_selected %> font-normal text-gray-500">(optional)</span>
+              class="<%= 'hidden' if invoice_selected || form.international? %> font-normal text-gray-500">(optional)</span>
         <span data-reimbursements-receipt-target="payeeRequired"
               class="<%= 'hidden' unless invoice_selected %> font-normal text-warning">(required for an invoice)</span>
+        <span data-reimbursements-receipt-target="payeeInternational"
+              class="<%= 'hidden' unless form.international? %> font-normal text-warning">(required)</span>
         <% if overrides_filled %>
           <%= render BadgeComponent.new(type: :warning, pill: true).with_content("In use") %>
         <% end %>
       </h3>
-      <p class="mb-4 text-sm text-gray-600">
+      <%# Two variants rather than one branch: the rail can change in the browser
+          after this renders, and a heading reading "(optional)" over fields the
+          server will reject is worse than no hint at all. %>
+      <p data-reimbursements-receipt-target="ukPayeeCopy"
+         class="<%= 'hidden' if form.international? %> mb-4 text-sm text-gray-600">
         Fill this out when EUSA should pay a third party directly — which is what an
         <strong>Invoice</strong> means, so all three are required there. Leave all three blank
         to be reimbursed yourself.
       </p>
+      <p data-reimbursements-receipt-target="internationalPayeeCopy"
+         class="<%= 'hidden' unless form.international? %> mb-4 text-sm text-gray-600">
+        An international payment goes straight to the payee's own bank, so their account name,
+        IBAN and BIC are always required — there is nothing on file to fall back to.
+      </p>
     </div>
     <%= f.input :payee_name_override, label: "Payee account name" %>
-    <%= f.input :sort_code_override, label: "Payee sort code" %>
-    <%= f.input :account_number_override, label: "Payee account number" %>
+    <div data-reimbursements-receipt-target="ukFields" class="<%= 'hidden' if form.international? %>">
+      <%= f.input :sort_code_override, label: "Payee sort code" %>
+      <%= f.input :account_number_override, label: "Payee account number" %>
+    </div>
+    <div data-reimbursements-receipt-target="internationalFields"
+         class="<%= 'hidden' unless form.international? %>">
+      <%= f.input :iban_override, label: "Payee IBAN",
+            hint: "As printed on the invoice. Spaces are fine — we check the IBAN's own " \
+                  "check digits, so a mistyped one is caught here rather than by the bank." %>
+      <%= f.input :bic_override, label: "Payee BIC / SWIFT code",
+            hint: "8 or 11 characters, e.g. DEUTDEFF or DEUTDEFF500." %>
+    </div>
   <% end %>
 <% end %>

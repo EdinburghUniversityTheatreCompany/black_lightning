@@ -324,5 +324,126 @@ module Reimbursements
       assert form.errors[:expense_type].present?
       assert form.errors[:receipts].present?, "and it still has to carry a receipt"
     end
+
+    # --- The international rail ---------------------------------------------
+
+    def international_params(**overrides)
+      {
+        payment_method: Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        foreign_amount: "266.69", budget_record_id: "recBudget1",
+        description: "Festival insurance", payment_reference: "INSURANCE",
+        payee_name_override: "Ausland GmbH",
+        iban_override: "DE89 3704 0044 0532 0130 00", bic_override: "deutdeff500",
+        require_receipts: false, expense_receipt_count: 1
+      }.merge(overrides)
+    end
+
+    test "an international claim submits on the foreign amount alone" do
+      # The submitter knows what the invoice says and nothing about the rate
+      # EUSA's bank will get. Finance enters the GBP figure at review, and
+      # cannot approve without it.
+      form = ExpenseForm.new(international_params)
+
+      assert form.valid?, form.errors.full_messages.inspect
+      assert_nil form.update_attrs[:amount]
+    end
+
+    test "a missing foreign amount is refused" do
+      form = ExpenseForm.new(international_params(foreign_amount: ""))
+
+      assert_not form.valid?
+      assert form.errors[:foreign_amount].present?
+    end
+
+    test "the IBAN is mod-97 checked, not merely shaped" do
+      form = ExpenseForm.new(international_params(iban_override: "DE88 3704 0044 0532 0130 00"))
+
+      assert_not form.valid?
+      assert form.errors[:iban_override].present?
+    end
+
+    test "a malformed BIC is refused" do
+      form = ExpenseForm.new(international_params(bic_override: "DEUTDEFF5"))
+
+      assert_not form.valid?
+      assert form.errors[:bic_override].present?
+    end
+
+    # Nobody on file has an IBAN, so falling back to the submitter's own
+    # details would leave the form with nothing to send.
+    test "an international claim always needs the payee trio" do
+      form = ExpenseForm.new(international_params(payee_name_override: "", iban_override: "",
+                                                  bic_override: ""))
+
+      assert_not form.valid?
+      assert form.errors[:base].any? { |e| e.include?("payee's own bank") }
+    end
+
+    test "a partly-filled international trio reports the all-or-nothing message" do
+      form = ExpenseForm.new(international_params(bic_override: ""))
+
+      assert_not form.valid?
+      assert form.errors[:base].any? { |e| e.include?("all three") }
+    end
+
+    test "the IBAN and BIC are normalised on the way through" do
+      attrs = ExpenseForm.new(international_params).update_attrs
+
+      assert_equal "DE89370400440532013000", attrs[:iban_override]
+      assert_equal "DEUTDEFF500", attrs[:bic_override]
+      assert_equal Reimbursements::Expense::CURRENCY_EUR, attrs[:foreign_currency]
+    end
+
+    test "a UK claim stores no currency" do
+      attrs = build_form.update_attrs
+
+      assert_nil attrs[:foreign_currency]
+      assert_equal Reimbursements::Expense::PAYMENT_METHOD_UK_BACS, attrs[:payment_method]
+    end
+
+    # The guard exists to catch pence typed as pounds; reading the GBP field,
+    # which an international submitter never fills in, would switch it off for
+    # exactly the claims whose figures nobody has checked yet.
+    test "the large-amount confirmation reads the foreign amount" do
+      form = ExpenseForm.new(international_params(foreign_amount: "5000"))
+
+      assert_not form.valid?
+      assert form.errors[:large_amount_acknowledged].present?
+
+      confirmed = ExpenseForm.new(international_params(foreign_amount: "5000",
+                                                       large_amount_acknowledged: "1"))
+      assert confirmed.valid?, confirmed.errors.full_messages.inspect
+    end
+
+    test "the VAT soft block never fires on an international claim" do
+      # There is no ex-VAT figure to compare: a foreign invoice carries no
+      # reclaimable UK VAT.
+      form = ExpenseForm.new(international_params)
+
+      assert form.valid?, form.errors.full_messages.inspect
+      assert_empty form.errors[:vat_acknowledged]
+    end
+
+    test "a draft international claim saves incomplete" do
+      form = ExpenseForm.new(international_params(foreign_amount: "", payee_name_override: "",
+                                                  iban_override: "", bic_override: "",
+                                                  save_as_draft: "1"))
+
+      assert form.valid?, form.errors.full_messages.inspect
+    end
+
+    test "from_expense round-trips the international fields" do
+      expense = Expense.new(
+        payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
+        foreign_amount: BigDecimal("266.69"), foreign_currency: Expense::CURRENCY_EUR,
+        iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500"
+      )
+      form = ExpenseForm.from_expense(expense)
+
+      assert form.international?
+      assert_equal "266.69", form.foreign_amount
+      assert_equal "DE89370400440532013000", form.iban_override
+      assert_equal "DEUTDEFF500", form.bic_override
+    end
   end
 end

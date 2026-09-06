@@ -5,7 +5,9 @@
   - duplicates: array of possible-duplicate expenses, or nil
   - selectable: whether to show the bulk-select checkbox (Pending only; default false)
 %>
-<% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
+<%# UK-only: the modulus algorithm takes a sort code and account number, which
+    an international payee has neither of. %>
+<% modulus = expense.international? ? nil : modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
 <%# The owner-endorsement gate is a distinct, overridable blocking reason (see
@@ -55,13 +57,22 @@
       #<%= expense.auto_number %>: <%= expense.person&.name.presence || "(no payee)" %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
     </span>
-    <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>
-    <% if expense.amount_excl_vat.nil? %>
-      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Excl. VAT not set") %>
+    <% if expense.international? %>
+      <%# The invoice figure comes first: it is what the submitter entered and
+          what EUSA's form will say. The GBP amount beside it is finance's own
+          estimate, and is blank until they enter it. %>
+      <span>Invoice: <strong><%= reimbursements_payment_amount(expense) %></strong></span>
+      <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong> GBP</span>
+      <%= render BadgeComponent.new(type: :info, pill: true).with_content("International") %>
     <% else %>
-      <span>Excl. VAT: <strong><%= reimbursements_money(expense.amount_excl_vat) %></strong></span>
+      <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>
+      <% if expense.amount_excl_vat.nil? %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Excl. VAT not set") %>
+      <% else %>
+        <span>Excl. VAT: <strong><%= reimbursements_money(expense.amount_excl_vat) %></strong></span>
+      <% end %>
+      <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <% end %>
-    <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= expense.receipt_count %></span>
     <%# How long the producer has been waiting: the first thing asked of a claim
         in the queue, and what the nightly stale-Pending reminder chases on. %>
@@ -120,10 +131,15 @@
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
       (not the submitter <%= expense.person&.name %>), paying
-      <%= render Admin::Reimbursements::BankDetailsComponent.new(
-            sort_code: expense.effective_sort_code,
-            account_number: expense.effective_account_number,
-            payee: expense.effective_payee_name) %>.
+      <% if expense.international? %>
+        IBAN <strong><%= Reimbursements::BankDetails.format_iban(expense.effective_iban) %></strong>
+        (BIC <strong><%= expense.effective_bic %></strong>)
+      <% else %>
+        <%= render Admin::Reimbursements::BankDetailsComponent.new(
+              sort_code: expense.effective_sort_code,
+              account_number: expense.effective_account_number,
+              payee: expense.effective_payee_name) %>
+      <% end %>.
       Confirm these match the invoice before approving.
     <% end %></div>
   <% end %>
@@ -137,7 +153,12 @@
 
   <% unless expense.effective_has_bank_details? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
-      No bank details on file for this payee. Fix the override or the People record.
+      <% if expense.international? %>
+        No IBAN and BIC on file for this payee, so there is nothing to put on EUSA's
+        international payment form. Fix the override or the People record.
+      <% else %>
+        No bank details on file for this payee. Fix the override or the People record.
+      <% end %>
     <% end %></div>
   <% end %>
 
@@ -161,10 +182,20 @@
                 data: { review_decision_target: "editForm" } do %>
     <div>
       <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: FormStyles::LABEL %>
+      <% if expense.international? %>
+        <p class="mb-1 text-sm text-gray-600">
+          What <%= reimbursements_payment_amount(expense) %> is expected to cost in pounds.
+          The budget counts this figure, and reconciliation later corrects it to the rate the
+          bank actually charged. It has to be filled in before the claim can be approved.
+        </p>
+      <% end %>
       <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
                            class: input_classes %>
     </div>
     <div>
+      <%# A foreign invoice carries no reclaimable UK VAT, so ex-VAT follows the
+          gross automatically and asking for it would invite a deduction nobody
+          can claim. %>
       <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: FormStyles::LABEL %>
       <%= number_field_tag :amount_excl_vat, expense.amount_excl_vat, step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
                            class: input_classes %>

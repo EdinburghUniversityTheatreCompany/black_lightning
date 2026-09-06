@@ -132,6 +132,44 @@ module Admin
       assert_equal 1, expense.receipt_files.count
     end
 
+    # --- The international rail ---------------------------------------------
+
+    test "create writes an international claim from the euro amount alone" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params.merge(
+        payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        amount: "", amount_excl_vat: "", foreign_amount: "266.69",
+        payee_name_override: "Ausland GmbH",
+        iban_override: "DE89 3704 0044 0532 0130 00", bic_override: "deutdeff500"
+      ) }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert expense.international?
+      assert_in_delta 266.69, expense.foreign_amount
+      assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency
+      assert_equal "DE89370400440532013000", expense.iban_override
+      assert_equal "DEUTDEFF500", expense.bic_override
+      # Finance supplies this at review, and cannot approve without it.
+      assert_nil expense.amount
+      assert_equal "Pending", expense.status
+    end
+
+    test "create refuses an international claim whose IBAN fails its check digits" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params.merge(
+        payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        amount: "", amount_excl_vat: "", foreign_amount: "266.69",
+        payee_name_override: "Ausland GmbH",
+        iban_override: "DE88 3704 0044 0532 0130 00", bic_override: "DEUTDEFF500"
+      ) }
+
+      assert_response :unprocessable_entity
+      assert_equal 0, ::Reimbursements::Expense.where(payment_method: "international").count
+    end
+
     # iOS photographs default to HEIC. The conversion happens at intake so the
     # stored blob is an ordinary JPEG for every downstream consumer (viewer,
     # the SharePoint offload, the receipts mailed with a BACS batch).

@@ -524,6 +524,17 @@ module Reimbursements
       assert_not_includes summary[:advisory], "no GBP amount"
     end
 
+    # Its ex-VAT amount mirrors its gross, so a blank GBP amount trips both
+    # rules — and "no ex-VAT amount" would send finance looking for a field this
+    # rail does not have.
+    test "a blank international amount is reported once, as the GBP amount" do
+      summary = ReviewSupport.attention_summary(international_expense(amount: nil),
+                                                { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no GBP amount"
+      assert_not_includes summary[:blocking], "no ex-VAT amount"
+    end
+
     test "a missing gross amount stays ADVISORY on the UK rail" do
       # Only the international rail hard-blocks on it. A UK claim's amount is
       # the submitter's own figure and has always been a soft flag; promoting
