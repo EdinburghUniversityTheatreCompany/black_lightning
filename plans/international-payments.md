@@ -92,8 +92,8 @@ is *always* GBP, so a column called `currency` sitting next to it would read as 
 
 The encrypted columns are **new**, with no plaintext rows, so the six-step rollout in
 [encryption-rollout.md](../docs/reimbursements/encryption-rollout.md) collapses to "add `encrypts`
-and deploy" — the backfill is a no-op. Worth stating because the CLAUDE.md rule reads as "always
-repeat the sequence".
+and deploy" — the backfill is a no-op. The CLAUDE.md rule reads as "always repeat the
+sequence", so say so explicitly.
 
 ## Where the path diverges
 
