@@ -305,28 +305,6 @@ the two soft blocks now behave inconsistently for no reason a user could infer.
 `checkAmount`. Three lines plus a target. Deliberately not done as part of the removal — it is
 new behaviour, not cleanup.
 
-## `SimpleCov.start` never loads the "rails" profile
-
-*Noticed 2026-07-31 during the simplecov 0.22 → 1.0 upgrade.* `test/test_helper.rb` has:
-
-```ruby
-SimpleCov.start do
-  "rails"
-  skip "/test/"
-  ...
-end
-```
-
-The bare `"rails"` inside the block is a no-op expression — it is not a profile load. The
-profile name has to be the *argument*: `SimpleCov.start "rails" do ... end`. So the Rails
-profile's groups (Controllers, Models, Mailers, Helpers, Libraries) and its filters have never
-been applied; coverage runs with only the two explicit `skip`s.
-
-**Fix:** move `"rails"` to the argument position and re-read the report — it changes what is
-grouped and filtered, so it is a deliberate reporting change, not a silent cleanup. Left out of
-the upgrade commit for exactly that reason. (Coverage is opt-in via `COVERAGE=1` and is not run
-by CI or hk, so nothing is gated on this today.)
-
 ## README fails the `github-readme` audit
 
 *Noticed 2026-07-31 while syncing the version table.* The `writing:github-readme` audit script

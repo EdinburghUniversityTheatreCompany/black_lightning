@@ -13,8 +13,11 @@ if ENV["COVERAGE"]
   SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
   SimpleCov.command_name "MiniTest"
 
-  SimpleCov.start do
-    "rails"
+  # "rails" is the profile NAME and has to be the argument: a bare string inside
+  # the block is just an expression that evaluates and is thrown away, so the
+  # profile's groups (Controllers, Models, Mailers, Helpers, Jobs, Libraries)
+  # and its filters were never applied.
+  SimpleCov.start "rails" do
     skip "/test/"
     skip "/config/"
     enable_coverage :branch
