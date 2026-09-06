@@ -174,7 +174,7 @@ SimpleForm.setup do |config|
     b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
       ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
       ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
     end
   end
 
@@ -190,7 +190,7 @@ SimpleForm.setup do |config|
     b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
       ba.use :input, class: "form-control", error_class: "is-invalid", valid_class: "is-valid"
       ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
     end
   end
 
@@ -204,7 +204,7 @@ SimpleForm.setup do |config|
       wr.wrapper :form_check_wrapper, tag: "div", class: "form-check" do |bb|
         bb.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
         bb.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-        bb.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+        bb.use :hint, wrap_with: { tag: "small", class: "form-text" }
       end
     end
   end
@@ -223,7 +223,7 @@ SimpleForm.setup do |config|
     b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
       ba.use :input, error_class: "is-invalid", valid_class: "is-valid"
       ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
     end
   end
 
@@ -236,7 +236,7 @@ SimpleForm.setup do |config|
         bb.use :input, class: "form-control", error_class: "is-invalid", valid_class: "is-valid"
       end
       ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
     end
   end
 
@@ -249,7 +249,7 @@ SimpleForm.setup do |config|
     b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
       ba.use :input, class: "form-control-range", error_class: "is-invalid", valid_class: "is-valid"
       ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
     end
   end
 

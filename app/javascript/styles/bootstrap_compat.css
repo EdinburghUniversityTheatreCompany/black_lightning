@@ -99,8 +99,19 @@
     @apply w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30;
   }
 
-  .form-label {
+  /* col-form-label is the one simple_form's horizontal wrappers actually emit;
+     only form-label was shimmed, so every label on the three public forms that
+     use them rendered browser-default 16px next to a 14px control. Both carry
+     the same rules as FormStyles::LABEL, which is what the admin gets. */
+  .form-label,
+  .col-form-label {
     @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  /* Matches FormStyles::HINT. Was `form-text text-muted`, and neither class had
+     any CSS, so public form hints rendered as full-strength body text. */
+  .form-text {
+    @apply block mt-1 text-xs text-gray-500;
   }
 
   .form-select {
