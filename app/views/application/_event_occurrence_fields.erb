@@ -24,7 +24,7 @@
           <span class="ml-3 font-medium text-gray-700">Doors</span>
           <span class="ml-1"><%= f.object.admission_at.strftime('%H:%M') %></span>
         <% end %>
-        <span class="ml-3 rounded bg-gray-100 px-2 py-0.5 text-xs text-muted">From pretix</span>
+        <span class="ml-3 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">From pretix</span>
         <% if f.object.cancelled? %>
           <span class="ml-1 rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">Cancelled</span>
         <% elsif f.object.sold_out? %>

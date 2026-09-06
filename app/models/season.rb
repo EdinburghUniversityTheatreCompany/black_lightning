@@ -67,6 +67,11 @@ class Season < Event
   # A season's occurrences are the hours the venue is open, not performances.
   OCCURRENCES_ARE_PERFORMANCES = false
 
+  # SCHEMA_TYPE stays the inherited TheaterEvent -- Mick's call, 2026-09-06.
+  # schema.org's Festival looks like the tidier label for a season, but what a
+  # season actually contains is staged theatre, and TheaterEvent is the type
+  # Google's event rich results are built around. Don't "correct" this.
+
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }

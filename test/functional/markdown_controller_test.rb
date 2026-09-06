@@ -23,7 +23,7 @@ class MarkdownControllerTest < ActionController::TestCase
     json = JSON.parse(response.body)
     assert json["url"].present?
     assert json["alt"].present?
-    assert Attachment.where("name LIKE 'md-upload-%'").exists?
+    assert_predicate Attachment.find_by(name: json["alt"]), :present?
   end
 
   test "upload associates item when item_type and item_id provided" do
@@ -32,7 +32,13 @@ class MarkdownControllerTest < ActionController::TestCase
     image = fixture_file_upload("test_image.png", "image/png")
     post :upload, params: { image: image, item_type: "News", item_id: news_item.id }
     assert_response :success
-    attachment = Attachment.last
+    # The record THIS request created, found by the unique name the response
+    # hands back. Attachment carries `default_scope { order("name ASC") }`, so
+    # `Attachment.last` is the alphabetically last row in the table -- not the
+    # newest -- and any row sorting after "md-upload-..." silently stands in
+    # for the one under test. Harmless against a schema-loaded worker database,
+    # wrong against a seeded one.
+    attachment = Attachment.find_by!(name: JSON.parse(response.body)["alt"])
     assert_equal news_item, attachment.item
   end
 

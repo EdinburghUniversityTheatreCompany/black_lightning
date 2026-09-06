@@ -24,6 +24,7 @@
               concat link_to('View Details', event, class: btn_classes(:primary))
               if event.pretix_shown?
                 concat tag.button("Buy Tickets",
+                  type: "button",
                   class: btn_classes(:success),
                   data: { action: "click->pretix-modal#open",
                           pretix_modal_slug_param: event.pretix_slug,

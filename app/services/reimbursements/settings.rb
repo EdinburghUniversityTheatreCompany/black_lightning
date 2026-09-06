@@ -4,14 +4,10 @@ module Reimbursements
   # +REIMBURSEMENTS_*+ environment variable first (Kamal-friendly), then the
   # per-environment Rails credentials under +reimbursements:+.
   module Settings
-    KEYS = %i[
-      azure_tenant_id azure_client_id azure_client_secret
-      alert_email
-    ].freeze
+    extend ::Settings::Base
 
-    KEYS.each do |key|
-      define_singleton_method(key) { raw_value(key) }
-    end
+    reads_from env: "REIMBURSEMENTS", credentials: :reimbursements
+    setting :azure_tenant_id, :azure_client_id, :azure_client_secret, :alert_email
 
     # Whether reimbursements may perform *outbound* Microsoft Graph side effects
     # — sending mail, replying to / moving mailbox messages, creating EUSA
@@ -35,14 +31,10 @@ module Reimbursements
       nil
     end
 
+    # Deliberately NOT every declared key: alert_email is optional, and a
+    # mailbox is usable without it.
     def self.mailbox_configured?
-      [ azure_tenant_id, azure_client_id, azure_client_secret ].all?(&:present?)
+      settings_present?(:azure_tenant_id, :azure_client_id, :azure_client_secret)
     end
-
-    def self.raw_value(key)
-      ENV["REIMBURSEMENTS_#{key.to_s.upcase}"].presence ||
-        Rails.application.credentials.dig(:reimbursements, key).presence
-    end
-    private_class_method :raw_value
   end
 end

@@ -6,9 +6,10 @@ module Climate
   # The Graph credential itself is shared and lives in Graph::Settings. The
   # Entra app just needs access to this mailbox too.
   module Settings
-    def self.mailbox
-      ENV["CLIMATE_MAILBOX"].presence || Rails.application.credentials.dig(:climate, :mailbox).presence
-    end
+    extend ::Settings::Base
+
+    reads_from env: "CLIMATE", credentials: :climate
+    setting :mailbox
 
     # The poll job no-ops rather than failing when this is unset, so an
     # environment without a climate mailbox is simply quiet.

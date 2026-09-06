@@ -31,7 +31,13 @@ module MdHelper
       div span
       iframe
       details summary
-    ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
+    ],
+    # aria-label carries the heading self-link's accessible name: commonmarker
+    # renders that anchor as an EMPTY <a>, so without the label a screen reader
+    # announces an unlabelled link. Inert markup, no injection surface beyond
+    # the title/alt entries already here.
+    attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow
+                   aria-label])
     %(<div class="markdown-body prose max-w-none">#{normalise_hrefs(sanitized)}</div>).html_safe
     # Note that these classes are also added in the markdown_editor_controller to the preview rendered there
     # so it matches. Search for previewContents.classList
@@ -132,11 +138,17 @@ module MdHelper
 
   # An `{ #id }` IAL renames the heading commonmarker already pointed its
   # self-link at, so the link has to follow or it dangles.
+  #
+  # The accessible name is rebuilt for the same reason: commonmarker derives
+  # `aria-label` from the RAW source, so it still reads "Link to heading \'My
+  # Heading { .text-danger }\'" after the token has been stripped from the text.
+  # Rewritten from the cleaned text, which is what the heading now says.
   def realign_heading_anchor(node)
     anchor = node.children.last
-    return unless heading_anchor?(anchor) && node["id"].present?
+    return unless heading_anchor?(anchor)
 
-    anchor["href"] = "##{node['id']}"
+    anchor["href"] = "##{node['id']}" if node["id"].present?
+    anchor["aria-label"] = "Link to heading '#{node.text.strip}'"
   end
 
   def heading_anchor?(node)

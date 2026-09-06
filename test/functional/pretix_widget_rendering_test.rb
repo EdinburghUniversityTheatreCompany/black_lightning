@@ -74,6 +74,21 @@ class PretixModalRenderingTest < ActionController::TestCase
     assert_select "button[data-pretix-modal-slug-param=?]", show.pretix_slug
   end
 
+  # A <button> with no type defaults to type="submit". Nothing sits inside a
+  # <form> on either surface today, so the day one does, Buy Tickets would open
+  # the modal AND submit the form out from under it.
+  test "the Buy Tickets button is type=button, not a submit" do
+    show = upcoming_show
+
+    get :home
+
+    # Both surfaces render one: the carousel caption and the What's On grid.
+    assert_select "button[data-pretix-modal-slug-param=?]", show.pretix_slug do |buttons|
+      assert_predicate buttons, :any?
+      buttons.each { |button| assert_equal "button", button["type"] }
+    end
+  end
+
   private
 
   # The home page lists Event.current, so the show has to still be running.

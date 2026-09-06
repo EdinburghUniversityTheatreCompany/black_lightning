@@ -212,4 +212,71 @@ class TeamMemberTest < ActiveSupport::TestCase
     ordered = TeamMember.where(id: [ alpha_id, last_id ]).ordered
     assert_equal [ alpha_id, last_id ], ordered.map(&:id)
   end
+
+  # --- display_order for rows written outside the form -----------------------
+  #
+  # TeamMemberOrdering only numbers rows that come through
+  # team_members_attributes=. The bulk crew import, the "Proposer" row and
+  # lib/tasks/imports.rake all create rows directly, so those sorted to the
+  # bottom by name rather than in the order they were imported.
+
+  test "rows created on an empty teamwork are numbered in creation order" do
+    show = FactoryBot.create(:show)
+    first = show.team_members.create!(user: FactoryBot.create(:user), position: "Director")
+    second = show.team_members.create!(user: FactoryBot.create(:user), position: "Producer")
+
+    assert_equal 0, first.reload.display_order
+    assert_equal 1, second.reload.display_order
+    assert_equal [ first, second ], show.team_members.ordered.to_a
+  end
+
+  test "a row appended to a numbered teamwork lands at the end" do
+    show = FactoryBot.create(:show)
+    show.team_members.create!(user: FactoryBot.create(:user), position: "Director")
+    show.team_members.create!(user: FactoryBot.create(:user), position: "Producer")
+
+    proposer = TeamMember.create!(teamwork: show, user: FactoryBot.create(:user), position: "Proposer")
+
+    assert_equal 2, proposer.reload.display_order
+    assert_equal proposer, show.team_members.ordered.last
+  end
+
+  # The trap in the obvious `display_order ||= max + 1`: on an all-nil teamwork
+  # `max` is nil, so the new row takes 0 -- and since NULLs sort last it jumps
+  # ABOVE every existing row instead of appending to them.
+  test "a row added to an unnumbered teamwork stays unnumbered" do
+    show = FactoryBot.create(:show)
+    zoe = FactoryBot.create(:user, first_name: "Zoe", last_name: "Zebra")
+    amy = FactoryBot.create(:user, first_name: "Amy", last_name: "Apple")
+    legacy = show.team_members.create!(user: zoe, position: "Director")
+    legacy.update_columns(display_order: nil)
+
+    added = show.team_members.create!(user: amy, position: "Producer")
+
+    assert_nil added.reload.display_order
+    # Both unnumbered, so the whole list stays in name order rather than the
+    # newest row leaping to the top.
+    assert_equal [ added, legacy ], show.team_members.ordered.to_a
+  end
+
+  test "an explicit display_order is never overwritten" do
+    show = FactoryBot.create(:show)
+    member = show.team_members.create!(user: FactoryBot.create(:user), position: "Director",
+                                       display_order: 7)
+
+    assert_equal 7, member.reload.display_order
+  end
+
+  # imports.rake builds rows against a Show that has not been saved yet, so
+  # there is no teamwork to count siblings on. Archive rows are name-ordered
+  # anyway, which is what an unnumbered teamwork gives.
+  test "rows built on an unsaved teamwork stay unnumbered" do
+    show = FactoryBot.build(:show, team_members: [
+      TeamMember.new(user: FactoryBot.create(:user), position: "Director"),
+      TeamMember.new(user: FactoryBot.create(:user), position: "Producer")
+    ])
+    show.save!
+
+    assert_equal [ nil, nil ], show.team_members.reload.map(&:display_order)
+  end
 end

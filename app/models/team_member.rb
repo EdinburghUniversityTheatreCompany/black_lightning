@@ -43,6 +43,8 @@ class TeamMember < ActiveRecord::Base
 
   normalizes :position, with: ->(position) { position&.strip }
 
+  before_validation :default_display_order, on: :create
+
   # +id+ last so the order is total: two members of one show can share a name
   # (and every unstamped row shares a NULL display_order), and MySQL is free to
   # return an undetermined tie either way from one query to the next.
@@ -76,6 +78,22 @@ class TeamMember < ActiveRecord::Base
   end
   private_class_method :sort_name
 
+  # The number an appended row should take, or nil when this teamwork is not
+  # numbered at all.
+  #
+  # The obvious `display_order ||= max + 1` is a trap: on a teamwork whose rows
+  # are all unstamped, +max+ is nil and the new row takes 0 -- and because NULLs
+  # sort last (see +ordered+), that lifts it ABOVE every existing row instead of
+  # appending to them. So a teamwork is either wholly numbered or wholly not,
+  # which is the invariant TeamMemberOrdering maintains by stamping every row of
+  # a submitted form at once.
+  def self.next_display_order_for(teamwork)
+    return 0 if teamwork.nil?
+    return nil if teamwork.team_members.exists?(display_order: nil)
+
+    (teamwork.team_members.maximum(:display_order) || -1) + 1
+  end
+
   after_create :sync_debts_if_show
 
   ACTOR_PATTERN = /\A(actor|cast)\s*\((.+)\)\s*\z/i
@@ -103,6 +121,22 @@ class TeamMember < ActiveRecord::Base
   end
 
   private
+
+  # Rows written outside the admin form -- the bulk crew import, the "Proposer"
+  # row on a new proposal, lib/tasks/imports.rake -- carried no display_order,
+  # so a crew list imported in the producer's chosen order rendered alphabetised
+  # until someone saved the form once. Numbering them here catches every writer,
+  # rather than each having to remember.
+  #
+  # Skipped for an unsaved teamwork: imports.rake builds its rows against a Show
+  # that has not been saved, so there are no siblings to count and querying for
+  # them would look for teamwork_id NULL. Archive rows sort by name anyway,
+  # which is exactly what an unnumbered teamwork gives.
+  def default_display_order
+    return if display_order || teamwork.nil? || !teamwork.persisted?
+
+    self.display_order = self.class.next_display_order_for(teamwork)
+  end
 
   def sync_debts_if_show
     return unless teamwork.is_a?(Show)

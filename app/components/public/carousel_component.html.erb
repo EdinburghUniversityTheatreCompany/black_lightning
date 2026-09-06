@@ -31,7 +31,7 @@
                   <%= link_to "Details", item[:url], class: ButtonComponent.classes_for(variant: :primary, size: :sm) %>
                 <% end %>
                 <% if item[:pretix_slug].present? %>
-                  <button class="<%= ButtonComponent.classes_for(variant: :success, size: :sm) %>" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>" data-pretix-modal-name-param="<%= item[:title] %>">
+                  <button type="button" class="<%= ButtonComponent.classes_for(variant: :success, size: :sm) %>" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>" data-pretix-modal-name-param="<%= item[:title] %>">
                     Buy Tickets
                   </button>
                 <% end %>

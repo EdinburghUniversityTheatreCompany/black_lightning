@@ -90,11 +90,13 @@ module SchemaHelper
   ##
   # A production, and one node per performance of it.
   #
-  # TheaterEvent rather than Event: it is the specific type Google understands for a staged
-  # performance. Each EventOccurrence becomes a TheaterEvent of its OWN, at the top level of the
-  # graph with a superEvent pointing back at the run -- Google keys its rich results off top-level
-  # items, so a performance buried in subEvent alone would not surface, while the two-way link
-  # still says these are one production rather than N unrelated shows.
+  # The type comes from the event's own SCHEMA_TYPE (TheaterEvent for a Show, EducationEvent for
+  # a Workshop) rather than plain Event: a specific type is what Google understands, and it must
+  # not be typed in here or a new subclass silently inherits the last one's. Each EventOccurrence
+  # becomes a node of that same type of its OWN, at the top level of the graph with a superEvent
+  # pointing back at the run -- Google keys its rich results off top-level items, so a performance
+  # buried in subEvent alone would not surface, while the two-way link still says these are one
+  # production rather than N unrelated shows.
   #
   # An event with no occurrences -- every one of the ~3000 archive rows -- emits exactly what it
   # emitted before: a single node with a date-only startDate.
@@ -175,7 +177,7 @@ module SchemaHelper
   def event_run_schema(event, performances)
     {
       "@context" => CONTEXT,
-      "@type" => "TheaterEvent",
+      "@type" => event.schema_type,
       "@id" => event_schema_id(event),
       "name" => event.name,
       "url" => polymorphic_url(event),
@@ -212,7 +214,7 @@ module SchemaHelper
       next nil if occurrence.starts_at.blank?
 
       {
-        "@type" => "TheaterEvent",
+        "@type" => event.schema_type,
         "@id" => event_schema_id(event, occurrence),
         "name" => event.name,
         "url" => polymorphic_url(event),
