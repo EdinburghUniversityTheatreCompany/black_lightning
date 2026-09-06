@@ -179,23 +179,41 @@ per-payment variant, since these are one file each rather than one per batch. Ev
 downstream — the Batch record, `mark_submitted`, producer notifications, the cardinal rule and the
 orphan-draft guard — is unchanged, because there is still exactly one draft.
 
-**6 — Reconcile corrects the estimate.** When an EUSA actual links to an international expense,
-overwrite `amount` with the actual's GBP value, so the budget ends up carrying what the bank
-really charged rather than finance's estimate.
+**6 — Reconcile. NOT DONE, and it is a gap in phases 1–5 rather than optional polish.**
+
+`Reconciliation.match_debit_to_expense` requires the amount within
+`AMOUNT_TOLERANCE = BigDecimal("0.01")`. An international claim's stored `amount` is finance's GBP
+*estimate*; the EUSA actual is what the bank charged after the FX spread — pounds apart on a €267
+invoice, not pence. **So an international claim will essentially never auto-match**: it stays
+Submitted, never reaches Paid, and its budget line keeps the estimate. There is no manual fallback
+either — `DatabaseStore#link_actual_to_expense!` exists but no controller action exposes it for an
+*existing* expense (only `create_expense_for_actual!` calls it).
+
+So this needs two things, and the first is a design decision rather than a mechanical follow-up:
+
+1. **Match at all.** A wider tolerance for international claims (a percentage, not a penny),
+   matching them on something other than amount, or a manual link control. A blanket wider
+   tolerance is the wrong answer — it would loosen matching for UK claims too, where a penny is
+   right and the governing asymmetry says prefer an unmatched row to a wrong link.
+2. **Then correct the estimate**, overwriting `amount` with the actual's GBP value so the budget
+   carries what the bank really charged. `amount_excl_vat` follows automatically.
 
 ## Open questions for EUSA finance
 
-Neither blocks phases 1–4.
+Two of the three originally listed here were overstated and are dropped (Mick, 2026-09-06):
 
-- **Cost centre.** The example shows `BED`, not the `F40` our cost centres use. If international
-  payments book to a different centre, `NotificationRecipients` and the nightly reminder need to
-  know.
-- **One email or several?** We will attach every form to a single draft alongside the domestic
-  spreadsheet. Each form carries its own signature block, so EUSA may want them separately. Worth
-  confirming before the first live batch — it only changes phase 5.
-- **Does EUSA accept a machine-filled form at all?** The round-trip is verified mechanically, but
-  not that their process accepts one. Worth sending a generated sample after phase 3, before
-  phases 4–6 are built on the assumption.
+- ~~Cost centre~~ — **not a question.** `BED` is simply the termtime cost centre, and the sample
+  was a termtime payment. The form takes `@cost_centre.eusa_code` exactly as the BACS spreadsheet
+  does, so a termtime batch writes BED and a Fringe batch writes F40 on its own.
+- ~~One email or several~~ — **a preference, not a fork.** Every form goes on the one draft
+  alongside the spreadsheet. Each still carries its own signature block, so sharing an email does
+  not merge their approval paths. Leave it unless EUSA asks otherwise.
+- **Does the authorisation row populate when EUSA opens it?** The narrow, checkable version of
+  "will they accept a machine-filled form", which was too vague to act on. It is their own
+  template filled in the cells a human fills, so there is no reason to expect a policy objection.
+  But rows 18–19 are the one part deliberately left to *recalculation* rather than computed here
+  (the thresholds are EUSA's to change), so they populate in Excel via `fullCalcOnLoad` and render
+  BLANK in a reader that ignores the flag — LibreOffice does, verified. One sample settles it.
 
 ## Traps, for whoever builds it
 
