@@ -155,9 +155,8 @@ class RoleTest < ActionView::TestCase
     assert_not role.valid?, "Renaming the member role should be refused"
     assert_includes role.errors.full_messages, "Name is hardcoded and cannot be altered"
 
-    lowercase = Role.create!(name: "life member")
-    lowercase.name = "Life Member"
-    assert lowercase.valid?, "Recasing a non-hardcoded name is not a rename that breaks anything"
+    role.reload.name = "MEMBER"
+    assert role.valid?, "Recasing a hardcoded name is not a rename: every check reads it case-insensitively"
   end
 
   test "hardcoding the member role does not stop it being archived" do

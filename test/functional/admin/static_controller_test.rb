@@ -37,6 +37,13 @@ class Admin::StaticControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
+  test "admin can get committee without holding the permission" do
+    sign_in users(:admin)
+
+    get :committee
+    assert_response :success
+  end
+
   test "error static page" do
     sign_in users(:admin)
 
