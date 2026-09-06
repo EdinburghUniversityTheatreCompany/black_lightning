@@ -182,7 +182,7 @@ class Admin::UsersController < AdminController
     # (an orphan confirmation would fail Devise's confirmation validation).
     perm_params.delete(:password_confirmation) if password_confirmation.blank? || drop_password
 
-    perm_params.push(role_ids: []) if current_user.has_role?(:admin)
+    perm_params.push(role_ids: []) if current_user.admin?
 
     perm_params
   end

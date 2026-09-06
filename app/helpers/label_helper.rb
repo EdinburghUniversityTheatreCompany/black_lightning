@@ -35,7 +35,7 @@ module LabelHelper
             end
         end
 
-        if exhaustive && user.has_role?("admin")
+        if exhaustive && user.admin?
             output_labels << { label_class: "bg-admin-rotate", text: "Admin" }
         end
 
