@@ -197,7 +197,7 @@
       <%= text_field_tag :nominal_code_override, expense.nominal_code_override, id: "nominal_code_override_#{expense.record_id}",
                          placeholder: "blank = use budget default",
                          class: input_classes %>
-      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
+      <p class="<%= FormStyles::HINT %>">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
     </div>
     <div class="sm:col-span-2">
       <%= submit_tag "Save changes", "aria-label": "Save changes to ##{expense.auto_number}",
@@ -292,7 +292,8 @@
     <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
                   method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
       <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
-                         "aria-label": "Attach receipts to expense ##{expense.auto_number}", class: "text-sm" %>
+                         "aria-label": "Attach receipts to expense ##{expense.auto_number}",
+                         class: file_input_classes %>
       <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
     <% end %>
   </div>

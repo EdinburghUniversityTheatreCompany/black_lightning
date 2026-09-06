@@ -6,6 +6,7 @@
 <% paste = capture do %>
   <%= render "shared/form/field", label: text_label, name: text_name, hint: text_hint do %>
     <%= text_area_tag text_name, text_value, rows: rows, placeholder: placeholder,
+                      "aria-describedby": ("#{text_name}_hint" if text_hint.present?),
                       class: input_classes("font-mono") %>
   <% end %>
 <% end %>

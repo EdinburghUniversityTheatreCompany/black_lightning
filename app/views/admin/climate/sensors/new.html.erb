@@ -1,10 +1,11 @@
 <%= render "shared/back_link", text: "All sensors", path: admin_climate_sensors_path %>
 
-<%= render CardComponent.new(title: "New sensor") do %>
+<% intro = capture do %>
   <p class="mb-4 text-gray-600">
     Add one row per Govee unit in the building. The CSV export carries no device identifier, so
     the name here is only for you. You pick which sensor a file belongs to when importing.
   </p>
-
-  <%= render "form", url: admin_climate_sensors_path, method: :post, submit_label: "Add sensor" %>
 <% end %>
+
+<%= render "form", url: admin_climate_sensors_path, method: :post, submit_label: "Add sensor",
+                   title: "New sensor", intro: intro %>

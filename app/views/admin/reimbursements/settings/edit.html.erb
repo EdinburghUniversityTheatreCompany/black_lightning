@@ -4,7 +4,7 @@
                     url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch do |f| %>
   <%= render CardComponent.new(title: "#{@cost_centre.name} (#{@cost_centre.eusa_code})") do |card| %>
     <% card.with_footer do %>
-      <%= render "shared/form/actions", f: f, submit: "Save settings",
+      <%= render "shared/form/actions", submit: "Save settings",
             cancel_path: admin_reimbursements_settings_path %>
     <% end %>
 

@@ -1,12 +1,13 @@
 <%= render "shared/back_link", text: "All sensors", path: admin_climate_sensors_path %>
 
-<%= render CardComponent.new(title: @sensor.display_name) do %>
+<% intro = capture do %>
   <% if @sensor.open_meteo? %>
     <p class="mb-4 text-gray-600">
       The outdoor feed. Its coordinates are set in code and it is refreshed hourly; only its name,
       ordering and whether it appears on the dashboard are editable here.
     </p>
   <% end %>
-
-  <%= render "form", url: admin_climate_sensor_path(@sensor), method: :patch, submit_label: "Save" %>
 <% end %>
+
+<%= render "form", url: admin_climate_sensor_path(@sensor), method: :patch, submit_label: "Save",
+                   title: @sensor.display_name, intro: intro %>

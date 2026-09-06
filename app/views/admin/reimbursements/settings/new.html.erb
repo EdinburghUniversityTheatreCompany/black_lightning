@@ -4,7 +4,7 @@
                     method: :post do |f| %>
   <%= render CardComponent.new(title: "New cost centre") do |card| %>
     <% card.with_footer do %>
-      <%= render "shared/form/actions", f: f, submit: "Create cost centre",
+      <%= render "shared/form/actions", submit: "Create cost centre",
             cancel_path: admin_reimbursements_settings_path %>
     <% end %>
 
@@ -41,8 +41,12 @@
                 "to explain it." %>
 
     <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
+      <%# required: false because the model derives the key from the name when it
+          is blank. It is presence-validated, so simple_form would mark it
+          required, and a required control inside this collapsed section is one
+          the browser cannot focus — it silently refuses to submit the form. %>
       <%= f.input :key, label: "URL key (slug)", placeholder: "auto-generated from the name",
-            wrapper_html: { class: "mb-0" },
+            required: false, wrapper_html: { class: "mb-0" },
             hint: "Leave blank to derive it from the name. If you set it, use lowercase letters, " \
                   "numbers and hyphens only (it appears in the settings URL and can't be changed " \
                   "here later)." %>

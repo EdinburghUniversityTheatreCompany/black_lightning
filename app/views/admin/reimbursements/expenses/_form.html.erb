@@ -1,4 +1,4 @@
-<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil, delete_path: nil) %>
+<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
 <%# Receipt-first expense form. The Stimulus controller holds on to the picked
     receipt across a failed submit and drives the inline warnings; everything
     still works with JavaScript disabled (plain manual form). %>
@@ -32,17 +32,6 @@
               name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true %>
       <% end %>
       <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
-      <% if delete_path %>
-        <%# Submits THIS form to the destroy route: formaction retargets it, and
-            the button's own name/value posts _method=delete after the form's
-            hidden _method=patch, so the later value wins the override. One
-            form, no nested or detached delete form. %>
-        <%= button_tag "Delete draft", type: :submit, name: "_method", value: "delete",
-              formaction: delete_path, formnovalidate: true,
-              class: "#{btn_classes(:danger)} ml-auto",
-              title: "Discards this unsent draft entirely. Only you ever saw it.",
-              data: { turbo_confirm: "Delete this draft for good? This can't be undone." } %>
-      <% end %>
     </div>
     <p class="mt-2 mb-0 text-sm text-gray-500">
       <% if editing_pending %>

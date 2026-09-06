@@ -7,7 +7,7 @@
 <%= simple_form_for financial_year, as: :financial_year, url: url do |f| %>
   <%= render CardComponent.new(title: title) do |card| %>
     <% card.with_footer do %>
-      <%= render "shared/form/actions", f: f, submit: submit_label,
+      <%= render "shared/form/actions", submit: submit_label,
             cancel_path: admin_reimbursements_financial_years_path %>
     <% end %>
 
@@ -27,8 +27,10 @@
 
     <% if show_key %>
       <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
+        <%# required: false — see settings/new: derived when blank, and a required
+            control in a collapsed section blocks the submit. %>
         <%= f.input :key, label: "URL key (slug)", placeholder: "auto-generated from the label",
-              wrapper_html: { class: "mb-0" },
+              required: false, wrapper_html: { class: "mb-0" },
               hint: "Leave blank to derive it from the label. If you set it, use lowercase letters, " \
                     "numbers and hyphens only (it appears in links to this year and can't be changed " \
                     "later)." %>

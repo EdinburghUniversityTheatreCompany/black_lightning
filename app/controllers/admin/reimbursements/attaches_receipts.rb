@@ -9,6 +9,13 @@ module Admin
     module AttachesReceipts
       extend ActiveSupport::Concern
 
+      # What to say when a post carried nothing we could attach and nothing to
+      # complain about — a drop target that posted no files, or only things that
+      # were never uploads. Here rather than in each controller, since both
+      # upload points word the rest of their flashes differently but mean the
+      # same thing by this.
+      NOTHING_USABLE = "No usable receipt files (PDF or image, under the size limit)."
+
       private
 
       # Attaches every usable receipt in params[:receipts] and returns
@@ -27,8 +34,10 @@ module Admin
       # post. `finance` points the gallery's remove buttons at the finance
       # routes instead of the producer's own.
       def respond_with_receipts_gallery(record_id, redirect_path:, upload_errors: [], notice: nil,
-                                        finance: false)
-        expense = store.find_expense!(record_id)
+                                        finance: false, expense: nil)
+        # Re-read only when the caller has no loaded expense: the gallery must
+        # show what is attached NOW, and Expense#reload resets its receipts.
+        expense = expense&.reload || store.find_expense!(record_id)
         respond_to do |format|
           format.turbo_stream do
             render turbo_stream: turbo_stream.replace(
