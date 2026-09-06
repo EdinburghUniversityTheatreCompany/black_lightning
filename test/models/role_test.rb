@@ -146,6 +146,35 @@ class RoleTest < ActionView::TestCase
     assert_includes role.errors.full_messages, "Name is hardcoded and cannot be altered"
   end
 
+  test "Member is in HARDCODED_NAMES and cannot be renamed, whatever its casing" do
+    assert Role.hardcoded_name?("Member")
+    assert Role.hardcoded_name?("member"), "The production row may be stored lowercase; the guard must not depend on casing"
+
+    role = roles(:member)
+    role.name = "Subscriber"
+    assert_not role.valid?, "Renaming the member role should be refused"
+    assert_includes role.errors.full_messages, "Name is hardcoded and cannot be altered"
+
+    lowercase = Role.create!(name: "life member")
+    lowercase.name = "Life Member"
+    assert lowercase.valid?, "Recasing a non-hardcoded name is not a rename that breaks anything"
+  end
+
+  test "hardcoding the member role does not stop it being archived" do
+    suffix = "TEST_ARCHIVE"
+    role = roles(:member)
+    user_ids = role.users.ids
+    assert user_ids.any?, "Member role does not have any users in the test. Attach some."
+
+    assert role.archive(suffix), role.errors.full_messages.join(", ")
+
+    assert_equal 0, role.reload.users.count, "Members were not moved off the member role"
+    archived = Role.find_by(name: "Member #{suffix}")
+    assert_not_nil archived, "The archival role was not created"
+    assert_equal user_ids.sort, archived.users.ids.sort, "Not every member reached the archival role"
+    assert_equal "Member", role.name, "Archiving must leave the hardcoded name untouched"
+  end
+
   test "cannot destroy Opportunity Reviewer role" do
     role = Role.find_or_create_by!(name: "Opportunity Reviewer")
 

@@ -24,9 +24,12 @@ class Role < ApplicationRecord
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :resource_type, length: { maximum: 255 }
-  # The roles that are referenced directly in the code.
-  # Changing the name would break the website, so this list is used to prevent name changes for these roles.
-  HARDCODED_NAMES = [ "Admin", "Committee", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer" ].freeze
+  # The roles that are referenced directly in the code (`has_role?` / `with_role`).
+  # Renaming one would silently break every such check, so these names cannot be changed.
+  # Matched case-insensitively (`hardcoded_name?`): the code asks for :member and "Member" alike,
+  # which MySQL's collation happily equates, so the guard must not be the one place casing matters.
+  # Archiving is unaffected — it creates a suffixed sibling role and never renames this one.
+  HARDCODED_NAMES = [ "Admin", "Committee", "Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer" ].freeze
   NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
   validates :name, presence: true
@@ -51,6 +54,10 @@ class Role < ApplicationRecord
 
   def self.ransackable_attributes(auth_object = nil)
     %w[name]
+  end
+
+  def self.hardcoded_name?(name)
+    HARDCODED_NAMES.any? { |hardcoded| hardcoded.casecmp?(name.to_s.strip) }
   end
 
   # Removes all users from the role.
@@ -101,7 +108,7 @@ class Role < ApplicationRecord
   end
 
   def name_not_hardcoded
-    errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
+    errors.add(:name, "is hardcoded and cannot be altered") if Role.hardcoded_name?(name_was) && !name.to_s.casecmp?(name_was.to_s)
   end
 
   def trained_role?
@@ -126,11 +133,11 @@ class Role < ApplicationRecord
   end
 
   def prevent_hardcoded_or_non_purgeable_destruction
-    if HARDCODED_NAMES.include?(name)
-      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
-      throw(:abort)
-    elsif NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
+    if NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
       errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
+      throw(:abort)
+    elsif Role.hardcoded_name?(name)
+      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
       throw(:abort)
     end
   end

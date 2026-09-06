@@ -160,6 +160,39 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:read, @proposal, true, true, false, situation)
   end
 
+  test "reviewing proposals is granted by the grid permission, not by a role name" do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
+    helper_set_up_proposal
+    @proposal.status = :awaiting_approval
+
+    # The role NAME alone grants nothing any more.
+    named_only = FactoryBot.create(:user)
+    named_only.add_role "Proposal Checker"
+    Role.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))
+    assert_not Ability.new(named_only).can?(:read, @proposal), "Holding a role called Proposal Checker without the permission must not grant review"
+
+    # Any role holding the permission does.
+    other_role_user = FactoryBot.create(:user)
+    Role.create!(name: "Artistic Panel").tap do |role|
+      role.permissions << admin_permissions(:review_proposals)
+      other_role_user.add_role(role)
+    end
+    assert Ability.new(other_role_user).can?(:read, @proposal), "A role holding the review permission must be able to read an awaiting proposal after the deadline"
+
+    # Committee reviews through the same permission (fixture), and loses it when it is unticked.
+    assert Ability.new(users(:committee)).can?(:read, @proposal)
+    roles(:committee).permissions.delete(admin_permissions(:review_proposals))
+    assert_not Ability.new(users(:committee).reload).can?(:read, @proposal), "Committee without the permission must not review; the role name is not the gate"
+  end
+
+  test "the review permission does not open proposals before the submission deadline" do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 2), editing_deadline: DateTime.current.advance(days: 3))
+    helper_set_up_proposal
+    @proposal.status = :awaiting_approval
+
+    assert_not @checker_ability.can?(:read, @proposal), "Review is post-deadline only; the call is still open"
+  end
+
   test "users have the correct proposal permissions after the editing deadline for proposals that have been approved " do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
     helper_set_up_proposal
@@ -699,7 +732,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @admin_ability = Ability.new(users(:admin))
 
     checker_user = FactoryBot.create(:user)
-    checker_user.add_role "Proposal Checker"
+    grant_proposal_review(checker_user)
     @checker_ability = Ability.new(checker_user)
 
     @random_ability = Ability.new(FactoryBot.create(:user))
@@ -713,6 +746,13 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @proposal.status = :rejected
 
     @on_proposal_ability = Ability.new(@proposal.users.sample)
+  end
+
+  # The review permission through a "Proposal Checker" role, as the grid would grant it.
+  def grant_proposal_review(user)
+    role = Role.find_or_create_by!(name: "Proposal Checker")
+    role.permissions << admin_permissions(:review_proposals) unless role.permissions.include?(admin_permissions(:review_proposals))
+    user.add_role(role)
   end
 
   def helper_test_proposal(action, proposal, can_checker, can_on_proposal, can_random, situation)

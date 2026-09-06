@@ -16,6 +16,12 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
       "CostCentre is managed via the Settings form + finance permission, not the per-model grid"
   end
 
+  test "grid offers the committee page permission as a miscellaneous row" do
+    get :grid
+    assert_select "input[name='[Committee][committee]access'][checked]", 1
+    assert_select "input[name='[Member][committee]access']:not([checked])", 1
+  end
+
   test "should update permissions" do
     post :update_grid
     assert_redirected_to admin_permissions_path
@@ -61,6 +67,18 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
 
   test "should get role_grid" do
     get :role_grid, params: { id: roles(:committee).id }
+    assert_response :success
+  end
+
+  test "grid offers the proposal review permission as a miscellaneous row" do
+    get :grid
+    assert_select "input[name='[Committee][Admin::Proposals::Proposal]review'][checked]", 1
+    assert_select "input[name='[Member][Admin::Proposals::Proposal]review']:not([checked])", 1
+  end
+
+  test "Proposal Checker's permissions are managed in the grid like any other role" do
+    role = Role.create!(name: "Proposal Checker")
+    get :role_grid, params: { id: role.id }
     assert_response :success
   end
 

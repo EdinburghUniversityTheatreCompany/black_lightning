@@ -762,4 +762,24 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { source.reload }
     assert_equal "s9922002@ed.ac.uk", third_user.reload.email
   end
+
+  ##
+  # member? / committee? — the one spelling of the two facts every role check reads.
+  ##
+
+  test "member? is the member role only, not life member" do
+    assert users(:member).member?
+    assert users(:committee).member?, "committee fixture also holds the member role"
+    assert_not users(:user).member?
+
+    life_member = FactoryBot.create(:user)
+    life_member.add_role("life member")
+    assert_not life_member.member?, "A life member is only a member for ticket discounts (pretix), nowhere else"
+  end
+
+  test "committee? reads the Committee role" do
+    assert users(:committee).committee?
+    assert_not users(:member).committee?
+    assert_not users(:user).committee?
+  end
 end

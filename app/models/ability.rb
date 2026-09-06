@@ -161,14 +161,6 @@ class Ability
     # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
     can :read, Admin::Proposals::Proposal, status: [ :approved, :successful, :unsuccessful ]
 
-    if user.has_role?("Proposal Checker") || user.has_role?("Committee")
-      # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
-      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
-
-      # They should also be able to index every proposal.
-      can :index, Admin::Proposals::Proposal
-    end
-
     can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
     can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
@@ -208,6 +200,16 @@ class Ability
     end
 
     set_permissions_based_on_grid(user)
+
+    # The `review Admin::Proposals::Proposal` grid permission (Committee and Proposal Checker by
+    # default) opens every proposal once its call's submission deadline has passed — approved,
+    # rejected or awaiting — and the index of all of them. Proposal is deliberately NOT a model
+    # row in the grid because its rules are time-based, so this is a miscellaneous permission and
+    # has to sit after set_permissions_based_on_grid, which is what makes can?(:review) true.
+    if can?(:review, Admin::Proposals::Proposal)
+      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
+      can :index, Admin::Proposals::Proposal
+    end
 
     # Producers on future shows can use the bulk debt checker
     if TeamMember
