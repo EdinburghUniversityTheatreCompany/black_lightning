@@ -516,6 +516,10 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   test "a failed update re-renders the team members in the submitted order" do
     show = FactoryBot.create(:show, team_member_count: 2)
     first, second = show.team_members.order(:id).to_a
+    # Captured rather than asserted as nil: TeamMember numbers rows appended to
+    # a persisted teamwork, so these carry their creation order already. What
+    # matters is that the REVERSED submission below does not overwrite it.
+    before = show.team_members.order(:id).pluck(:id, :display_order)
 
     patch :update, params: { id: show.to_param, show: { price: nil, team_members_attributes: {
       "0" => team_member_row(second),
@@ -525,7 +529,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     rendered = css_select("[data-controller~=sortable] > [data-sortable-item] input[name$='[id]']").map { |input| input["value"].to_i }
     assert_equal [ second.id, first.id ], rendered
-    assert_nil first.reload.display_order, "the failed save must not have written the order"
+    assert_equal before, show.team_members.reload.order(:id).pluck(:id, :display_order),
+                 "the failed save must not have written the order"
   end
 
   # See TeamMemberOrdering. These keys are chosen to sort as written, because a
