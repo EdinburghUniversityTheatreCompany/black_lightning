@@ -65,6 +65,71 @@ module Reimbursements
       "****#{digits[-4..] || digits}"
     end
 
+    # --- International (IBAN / BIC) -----------------------------------------
+    #
+    # The international rail carries an IBAN and a BIC instead of a sort code
+    # and account number. Only SPACES are stripped: they are the noise a human
+    # adds reading a number off an invoice, whereas a hyphen or a dot means the
+    # value came from somewhere unexpected and should be looked at rather than
+    # silently cleaned.
+
+    def normalize_iban(value)
+      value.to_s.gsub(/\s/, "").upcase
+    end
+
+    # Two letters (country), two check digits, then 11-30 alphanumerics.
+    IBAN_PATTERN = /\A[A-Z]{2}\d{2}[A-Z0-9]{11,30}\z/
+
+    # The ISO 13616 mod-97 check. This is the whole point of validating an IBAN
+    # at all: the realistic error is a transposed or dropped character in a
+    # 22-34 character string nobody reads back, and a wrong IBAN that passes a
+    # mere shape check is money sent somewhere unrecoverable. A shape check
+    # alone would accept 99% of typos.
+    def valid_iban?(value)
+      iban = normalize_iban(value)
+      return false unless iban.match?(IBAN_PATTERN)
+
+      # Move the country code and check digits to the end, then read every
+      # letter as its 0-based position in the alphabet plus 10 (A = 10, Z = 35).
+      rearranged = iban[4..] + iban[0, 4]
+      digits = rearranged.each_char.map { |char| char.match?(/[A-Z]/) ? (char.ord - 55).to_s : char }.join
+      digits.to_i % 97 == 1
+    end
+
+    # Grouped in fours for display, the convention every bank prints. An
+    # unparseable value is returned untouched rather than mangled into groups,
+    # so a half-typed IBAN on a re-rendered form still reads as what was typed.
+    def format_iban(value)
+      return value unless valid_iban?(value)
+
+      normalize_iban(value).scan(/.{1,4}/).join(" ")
+    end
+
+    # An IBAN reduced to its country and last four CHARACTERS, for exports and
+    # audit lines. Not BankDetails.mask: that strips non-digits, and some
+    # countries' IBANs end in letters (a Seychelles IBAN ends with a currency
+    # code), so it would mask the wrong end. The country prefix is kept because
+    # it is not identifying and tells a reader which rail the payment took.
+    def mask_iban(value)
+      iban = normalize_iban(value)
+      return "" if iban.empty?
+
+      "#{iban[0, 2]}****#{iban[-4..] || iban}"
+    end
+
+    def normalize_bic(value)
+      value.to_s.gsub(/\s/, "").upcase
+    end
+
+    # ISO 9362: four letters (institution), two letters (country), two
+    # alphanumerics (location), and optionally three more (branch). 8 or 11
+    # characters — never 9 or 10, which is the tell of a truncated paste.
+    BIC_PATTERN = /\A[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?\z/
+
+    def valid_bic?(value)
+      normalize_bic(value).match?(BIC_PATTERN)
+    end
+
     # A payee-name/sort-code/account-number override trio must be all-or-
     # nothing: setting only one or two would splice a third party's partial
     # bank details onto the payee's own remaining fields — an internally-
