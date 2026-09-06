@@ -1,19 +1,17 @@
-<%# locals: (pictures:, header_size: 3) -%>
-
-<% if pictures.any? %>
+<% if any_pictures? %>
   <div data-controller="fancybox">
-    <% header_tag = "h#{header_size}" %>
+    <% header_tag = header_tag() %>
     <%= content_tag(header_tag, "Gallery") %>
     <i class="text-sm text-gray-500">Click on a thumbnail to see the image in large size</i>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
-      <% pictures.includes(image_attachment: :blob).each do |picture| %>
+      <% @pictures.includes(image_attachment: :blob).each do |picture| %>
         <div class="bg-white rounded border border-gray-200 flex flex-col">
-          <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
-          <% download_url = active_storage_proxy_url(picture.fetch_image) %>
+          <% lightbox_url = helpers.active_storage_proxy_url(picture.fetch_image.variant(helpers.large_display_variant)) %>
+          <% download_url = helpers.active_storage_proxy_url(picture.fetch_image) %>
 
-          <%= link_to lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" do %>
-            <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "w-full h-auto block rounded-t" } %>
+          <%= link_to lightbox_url, class: "fancybox", rel: "group", title: picture.description, "data-title" => picture.description, "data-fancybox" => "gallery" do %>
+            <%= render "shared/image", image: picture.fetch_image, variant: helpers.medium_variant, proxy: true, image_options: { class: "w-full h-auto block rounded-t" } %>
           <% end %>
 
           <div class="p-2 text-sm">
@@ -25,9 +23,9 @@
             <% end %>
             - <%= link_to picture.filename, download_url, title: "Download original", target: "_blank" %>
 
-            <% if @admin_site && picture.picture_tags.present? %>
+            <% if tags_for(picture).present? %>
               <hr class="my-1">
-              <%= to_sentence(picture.picture_tags.map { |tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
+              <%= to_sentence(tags_for(picture).map { |tag| link_to(tag.name, helpers.admin_picture_tag_path(tag)) }) %>
             <% end %>
           </div>
         </div>
