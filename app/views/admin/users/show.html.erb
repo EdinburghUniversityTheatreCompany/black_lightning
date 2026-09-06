@@ -21,7 +21,7 @@
     <% end %>
 <% end %>
 
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= render '/shared/show_actions', object: @user, destroy_link_params: {
     type_confirm: @user.name,
     detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:"

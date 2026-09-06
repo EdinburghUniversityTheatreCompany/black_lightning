@@ -1,13 +1,10 @@
-<%# locals: (video_links:, include_header: true) -%>
-<%# KEEP%>
-
-<% if video_links.any? then %>
-  <% if include_header%>
+<% if any_video_links? %>
+  <% if @include_header %>
     <h3>Videos</h3>
   <% end %>
 
   <div class="grid gap-3 lg:grid-cols-2">
-    <% video_links.each do |video_link| %>
+    <% @video_links.each do |video_link| %>
       <div>
         <%= render CardComponent.new(title: video_link.name, html_class: "h-full mb-0") do %>
           <%= video_link.embed_code %>

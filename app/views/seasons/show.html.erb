@@ -41,6 +41,6 @@
 
 <%= render GalleryComponent.new(pictures: @season.pictures.accessible_by(current_ability, :show)) %>
 
-<%= render 'shared/video_link_gallery', video_links: @season.video_links.accessible_by(current_ability, :show) %>
+<%= render VideoLinkGalleryComponent.new(video_links: @season.video_links.accessible_by(current_ability, :show)) %>
 
 <%= render '/shared/show_actions', object: @season, index_link_params: { link_target: seasons_path } %>

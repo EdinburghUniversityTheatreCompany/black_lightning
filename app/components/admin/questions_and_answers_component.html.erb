@@ -8,7 +8,7 @@
         <% if answer.attachments.present? %>
           <%# There should not be more than 1, but it is technically possible. This is just in case. %>
           <% if answer.attachments.count == 1 %>
-            <%= render 'shared/show_attachment', attachment: answer.attachments.first %>
+            <%= render AttachmentCardComponent.new(attachment: answer.attachments.first) %>
           <% else %>
             <%= render AttachmentsGalleryComponent.new(attachments: answer.attachments) %>
           <% end %>
@@ -34,7 +34,7 @@
           <% if answer.attachments.present? %>
             <%# There should not be more than 1, but it is technically possible. This is just in case. %>
             <% if answer.attachments.count == 1 %>
-              <%= render 'shared/show_attachment', attachment: answer.attachments.first %>
+              <%= render AttachmentCardComponent.new(attachment: answer.attachments.first) %>
             <% else %>
               <%= render AttachmentsGalleryComponent.new(attachments: answer.attachments) %>
             <% end %>

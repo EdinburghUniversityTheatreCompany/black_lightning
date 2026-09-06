@@ -1,4 +1,4 @@
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <%= link_to "Cancel", new_admin_user_import_path, class: btn_classes(:secondary) %>
 <% end %>
 

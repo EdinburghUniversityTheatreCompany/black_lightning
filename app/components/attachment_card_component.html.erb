@@ -1,0 +1,24 @@
+<%= render CardComponent.new(html_class: "mb-0 flex flex-col", flush: true) do %>
+  <% if (thumb = thumbnail) %>
+    <% img = image_tag thumb, class: "block w-full h-auto rounded-t" %>
+    <%= link_to(img, fullsize_url, { rel: "group", title: @attachment.name, "data-title" => @attachment.name }.merge(helpers.variant_width_and_height_html(helpers.thumb_variant))) %>
+  <% else %>
+    <%# No preview is possible for this type, so show an icon instead. %>
+    <%= link_to fullsize_url, title: @attachment.name do %>
+      <i class="fas <%= icon_class %> fa-5x m-3 text-gray-500"></i>
+    <% end %>
+  <% end %>
+
+  <div class="m-2 block mb-2">
+    <%= link_to @attachment.name, path, rel: "group", title: @attachment.name %>
+    <% if show_item_link? %>
+      <hr class="m-1">
+      <%= link_to @attachment.item_name, item_url %>
+    <% end %>
+
+    <% if @attachment.attachment_tags.present? %>
+      <hr class="m-1">
+      <%= to_sentence(@attachment.attachment_tags.map { |tag| link_to(tag.name, helpers.admin_attachment_tag_path(tag)) }) %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,7 +1,7 @@
 <% # locals: (fields:, object:, show_actions_args: {}) %>
 <%# KEEP%>
 
-<%= render('shared/quick_actions_card') do %>
+<%= render(QuickActionsCardComponent.new) do %>
   <% if content_for?(:custom_show_actions) %>
     <% yield :custom_show_actions %>
   <% else %>
