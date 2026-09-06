@@ -29,7 +29,7 @@ class Role < ApplicationRecord
   # Matched case-insensitively (`hardcoded_name?`): the code asks for :member and "Member" alike,
   # which MySQL's collation happily equates, so the guard must not be the one place casing matters.
   # Archiving is unaffected — it creates a suffixed sibling role and never renames this one.
-  HARDCODED_NAMES = [ "Admin", "Committee", "Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer" ].freeze
+  HARDCODED_NAMES = [ "Admin", "Committee", "Member", "Life Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer" ].freeze
   NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
   validates :name, presence: true

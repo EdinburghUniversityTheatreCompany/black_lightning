@@ -159,6 +159,15 @@ class RoleTest < ActionView::TestCase
     assert role.valid?, "Recasing a hardcoded name is not a rename: every check reads it case-insensitively"
   end
 
+  test "Life Member cannot be renamed: pretix reads it and would silently drop every discount" do
+    assert Role.hardcoded_name?("life member")
+
+    role = Role.create!(name: "life member")
+    role.name = "Lifetime Member"
+    assert_not role.valid?
+    assert_includes role.errors.full_messages, "Name is hardcoded and cannot be altered"
+  end
+
   test "hardcoding the member role does not stop it being archived" do
     suffix = "TEST_ARCHIVE"
     role = roles(:member)
