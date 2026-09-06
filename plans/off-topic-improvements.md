@@ -630,3 +630,22 @@ compact convention or hide a band. Revisit if a real show ever prices this way.
 `admin/static#committee` is routed and now permission-gated, but nothing in the admin sidebar or
 dashboard links to it — the only way in is typing the URL. Either add a sidebar entry gated on
 `can?(:access, :committee)` or confirm the page is dead and remove it.
+
+## A rejected report attachment fails silently, after 30 minutes of pointless retries
+
+Issue #169 (Dec 2022) was MailerSend's SMTP relay answering `450 This file type is not supported`
+to `ReportsMailer#send_report`'s `report.xlsx`. MailerSend sends that as a 4xx, so
+`ApplicationJob`'s `retry_on Net::SMTPServerBusy` (added 2026-01-24 for the genuine 450 rate
+limits) now retries a permanent rejection ten times over ~30 minutes before giving up, and the
+requester, who was told "will be emailed to you when it is ready", never hears anything either
+way. `.xlsx` is on MailerSend's supported list today (Sep 2026), so the rejection should not recur,
+but the shape of the failure is the same for any future 450 that is not a rate limit: consider
+matching the message (`file type`, `from.email must be verified`, `recipient is suppressed`) to
+`discard_on` instead of retrying, and telling the requester when a report cannot be delivered.
+
+## `text-muted` is not a defined utility
+
+`text-muted` is used in five views (`admin/events/_basic_form.erb` among them) as if it were a
+Tailwind utility, but no `--color-muted` token exists in `app/javascript/styles`, so the class is a
+silent no-op and those hints render in full-strength body text. Either add the token to the theme
+(`@theme { --color-muted: … }`) or replace the usages with `text-gray-600`. Found while fixing #261.
