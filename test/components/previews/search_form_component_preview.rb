@@ -1,6 +1,6 @@
-class Admin::SearchFormComponentPreview < Admin::ApplicationComponentPreview
+class SearchFormComponentPreview < ViewComponent::Preview
   def default
-    render Admin::SearchFormComponent.new(
+    render SearchFormComponent.new(
       q: User.ransack,
       input_fields: {
         first_name_cont: { label: "First name" },
@@ -12,7 +12,7 @@ class Admin::SearchFormComponentPreview < Admin::ApplicationComponentPreview
   end
 
   def two_columns
-    render Admin::SearchFormComponent.new(
+    render SearchFormComponent.new(
       q: User.ransack,
       input_fields: {
         first_name_cont: { label: "First name" },
@@ -25,7 +25,7 @@ class Admin::SearchFormComponentPreview < Admin::ApplicationComponentPreview
   end
 
   def with_collapse
-    render Admin::SearchFormComponent.new(
+    render SearchFormComponent.new(
       q: User.ransack,
       input_fields: {
         first_name_cont: { label: "First name" },

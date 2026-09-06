@@ -33,7 +33,7 @@
   show_title_cont: { slug: 'defaults.show_title' },
   date_range: { type: :date_range, options: { start_date_attribute: 'start_time', end_date_attribute: 'start_time' } }
 } %>
-<%= render 'shared/search_form', input_fields: search_fields, columns: 2, url: admin_staffings_path %>
+<%= render SearchFormComponent.new(q: @q, input_fields: search_fields, columns: 2, url: admin_staffings_path) %>
 
 <%= render CardComponent.new do %>
   <%= display_block("Staffing", true) %>

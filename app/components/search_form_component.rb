@@ -1,4 +1,4 @@
-class Admin::SearchFormComponent < ViewComponent::Base
+class SearchFormComponent < ViewComponent::Base
   def initialize(q:, input_fields:, columns:, url: nil)
     @q = q
     @input_fields = input_fields

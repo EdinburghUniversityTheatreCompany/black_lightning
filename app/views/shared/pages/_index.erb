@@ -35,11 +35,7 @@
       <div class="flex-1 min-w-0">
 
         <% unless search_fields.blank? %>
-          <% if @admin_site %>
-            <%= render Admin::SearchFormComponent.new(q: @q, input_fields: search_fields, columns: block_exists?(@editable_block_name) ? 1 : 2) %>
-          <% else %>
-            <%= render 'shared/search_form', input_fields: search_fields, columns: block_exists?(@editable_block_name) ? 1 : 2 %>
-          <% end %>
+          <%= render SearchFormComponent.new(q: @q, input_fields: search_fields, columns: block_exists?(@editable_block_name) ? 1 : 2) %>
         <% end %>
 
         <% unless block_exists?(@editable_block_name) || quick_actions.blank? %>
