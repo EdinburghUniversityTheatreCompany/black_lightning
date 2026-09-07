@@ -16,23 +16,35 @@ module Admin
       include RejectsExpenses
       include AttachesReceipts
 
+      # ?tab= is the URL state. "to_approve" is the finance queue and the default
+      # -- every link into this page from elsewhere (the sidebar, the expense-edit
+      # views) carries no tab at all, so an unrecognised value has to land there
+      # too. "pending" is the value this tab used to have, still accepted so a
+      # bookmark or an in-flight redirect keeps working.
+      TABS = %w[awaiting_owner to_approve approved].freeze
+      DEFAULT_TAB = "to_approve".freeze
+      LEGACY_TABS = { "pending" => DEFAULT_TAB }.freeze
+
       def index
         @title = "Review Expenses"
-        @tab = params[:tab] == "approved" ? "approved" : "pending"
+        @tab = resolve_tab
 
         expenses = store.expenses
         @pending = expenses.select(&:pending?)
         @approved = expenses.select { |e| e.status == ::Reimbursements::Status::APPROVED }
+        # Split the Pending queue in two BEFORE the format branch: the CSV
+        # download follows the tab on screen, so it needs the same split the HTML
+        # tabs render. Everything else the queue needs is HTML-only (#load_queue).
+        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
+        @awaiting_owner, @to_approve =
+          @pending.partition { |e| @owner_gate_unmet_ids.include?(e.record_id) }
 
         respond_to do |format|
           format.html { load_queue }
           # The tab on screen is the tab you download. Reuses the Expenses
           # exporter, so a Review download and an Expenses download describe a
           # claim identically. It skips everything #load_queue does.
-          format.csv do
-            send_export ::Reimbursements::Exports::Expenses,
-                        @tab == "approved" ? @approved : @pending
-          end
+          format.csv { send_export ::Reimbursements::Exports::Expenses, expenses_for_tab }
         end
       end
 
@@ -180,31 +192,46 @@ module Admin
 
       private
 
+      # Which expenses this tab shows -- and therefore downloads.
+      def expenses_for_tab
+        case @tab
+        when "approved" then @approved
+        when "awaiting_owner" then @awaiting_owner
+        else @to_approve
+        end
+      end
+
+      # "to_approve" for anything unrecognised, so a bare link, a stale bookmark
+      # and a typo all land on the finance queue rather than on an empty page.
+      def resolve_tab
+        tab = params[:tab].to_s
+        tab = LEGACY_TABS.fetch(tab, tab)
+        TABS.include?(tab) ? tab : DEFAULT_TAB
+      end
+
       # Everything only the on-screen queue needs: the duplicate scan, the
-      # owner-endorsement gate and the ready/attention partition.
+      # endorsement chips and the ready/attention partition.
       def load_queue
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
         @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
+        # For the positive "Endorsed by / Cleared by finance" chip on the card,
+        # and to resolve the endorsing owner's name.
+        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
+          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
+        @people_by_id = store.people.index_by(&:record_id)
         # partition: ready first (needs_attention false, no possible duplicate),
         # attention second. A possible duplicate is folded in here (not into the
         # shared needs_attention_reasons, which other callers use for expenses
         # this per-pending-list duplicate scan was never computed for) so it's
         # grouped with every other advisory reason instead of being a wholly
         # separate, easy-to-miss warning box.
-        # Which pending expenses still await a budget owner's endorsement (batched
-        # to avoid an N+1). A blocking gate: finance can't approve until an owner
-        # endorses or overrides.
-        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
-        # For the positive "Endorsed by / Cleared by finance" chip on the card,
-        # and to resolve the endorsing owner's name.
-        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
-          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
-        @people_by_id = store.people.index_by(&:record_id)
-        @ready, @attention = @pending.partition do |expense|
+        #
+        # Over @to_approve, NOT @pending: an unmet owner gate is its own tab now,
+        # so "needs attention" here means a data problem finance can actually fix.
+        @ready, @attention = @to_approve.partition do |expense|
           !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
-            !@duplicates.key?(expense.record_id) &&
-            !@owner_gate_unmet_ids.include?(expense.record_id)
+            !@duplicates.key?(expense.record_id)
         end
       end
 
@@ -364,6 +391,9 @@ module Admin
         attrs
       end
 
+      # Keeps the operator on the tab they acted from. params[:tab] is passed
+      # through verbatim (not resolve_tab'd) so a redirect with no tab stays a
+      # redirect with no tab, which every existing test and link relies on.
       def redirect_to_review(flash)
         redirect_to admin_reimbursements_review_path(tab: params[:tab]), **flash
       end

@@ -87,14 +87,92 @@ module Admin
         assert_equal [ approved.record_id ], assigns(:approved).map(&:record_id)
       end
 
-      test "the current tab is marked aria-current, the other is not" do
+      test "the current tab is marked aria-current, the others are not" do
         pending_expense
         sign_in @user
 
         get :index, params: { tab: "approved" }
 
         assert_select "a[aria-current=page]", text: /Approved/
-        assert_select "a[aria-current=page]", text: /Pending/, count: 0
+        assert_select "a[aria-current=page]", text: /To approve/, count: 0
+        assert_select "a[aria-current=page]", text: /Awaiting owner/, count: 0
+      end
+
+      # --- The three tabs ----------------------------------------------------
+
+      test "the default tab is the finance queue, not the owner queue" do
+        gated_expense
+        sign_in @user
+
+        get :index
+
+        assert_equal "to_approve", assigns(:tab)
+        assert_select "a[aria-current=page]", text: /To approve/
+      end
+
+      test "an unknown tab falls back to the finance queue" do
+        sign_in @user
+
+        get :index, params: { tab: "nonsense" }
+
+        assert_equal "to_approve", assigns(:tab)
+      end
+
+      test "tab=pending still lands on the finance queue, for old links" do
+        sign_in @user
+
+        get :index, params: { tab: "pending" }
+
+        assert_equal "to_approve", assigns(:tab)
+      end
+
+      test "a gated claim is on the awaiting-owner tab, not in the finance queue" do
+        gated_expense
+        ready = pending_expense(auto_number: 77)
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }
+
+        assert_equal [ gated_expense.record_id ], assigns(:awaiting_owner).map(&:record_id)
+        assert_equal [ ready.record_id ], assigns(:to_approve).map(&:record_id)
+        assert_not_includes assigns(:attention).map(&:record_id), gated_expense.record_id
+        assert_not_includes assigns(:ready).map(&:record_id), gated_expense.record_id
+      end
+
+      test "a claim on a budget with no owner goes straight to the finance queue" do
+        # No owners on the budget, so OwnerReview.gate_applies? is false and no
+        # sign-off is awaited -- this is the documented ownerless-budget path.
+        ownerless = pending_expense(auto_number: 78)
+        sign_in @user
+
+        get :index
+
+        assert_includes assigns(:to_approve).map(&:record_id), ownerless.record_id
+        assert_empty assigns(:awaiting_owner)
+      end
+
+      test "the awaiting-owner tab still offers the finance override" do
+        gated_expense
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }
+
+        assert_response :success
+        assert_select "form[action=?]",
+                      admin_reimbursements_override_approve_review_path(gated_expense.record_id,
+                                                                       tab: "awaiting_owner")
+      end
+
+      test "the awaiting-owner tab CSV exports only the gated claims" do
+        gated_expense
+        pending_expense(auto_number: 79, description: "Not gated")
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal 2, rows.size, "header + the one gated claim"
+        assert_not_includes response.body, "Not gated"
       end
 
       # --- CSV export --------------------------------------------------------
@@ -201,7 +279,7 @@ module Admin
         assert_includes response.body, a.receipts.sole.url
         # Reviewers can still attach/detach receipts inline (per-tab review routes).
         assert_match(/Remove this receipt/, response.body)
-        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "pending")
+        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "to_approve")
       end
 
       # --- In-page receipt viewer ------------------------------------------
@@ -282,7 +360,7 @@ module Admin
 
       # --- Bulk actions ----------------------------------------------------
 
-      test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do
+      test "the to-approve tab exposes bulk-select checkboxes and a bulk toolbar" do
         a = pending_expense
         sign_in @user
 
@@ -292,7 +370,7 @@ module Admin
         assert_select "[data-controller~=?]", "bulk-review"
         assert_select "input[data-bulk-review-target=selectAll]"
         assert_select "form#bulk-review-form[action=?]",
-                      admin_reimbursements_bulk_approve_review_path(tab: "pending")
+                      admin_reimbursements_bulk_approve_review_path(tab: "to_approve")
         assert_select "input[type=checkbox][name=?][value=?][form=bulk-review-form]",
                       "expense_ids[]", a.record_id
         assert_select "input[data-bulk-review-target=rejectButton][data-turbo-confirm*=?]",
@@ -676,16 +754,17 @@ module Admin
         assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note.length
       end
 
-      test "the review queue sorts a gated claim into attention with an override button" do
+      test "the review queue sorts a gated claim onto its own tab with an override button" do
         gated_expense
         sign_in @user
 
-        get :index
+        get :index, params: { tab: "awaiting_owner" }
 
         assert_response :success
-        assert_includes assigns(:attention).map(&:record_id), gated_expense.record_id
+        assert_includes assigns(:awaiting_owner).map(&:record_id), gated_expense.record_id
         assert_select "form[action=?]",
-                      admin_reimbursements_override_approve_review_path(gated_expense.record_id, tab: "pending")
+                      admin_reimbursements_override_approve_review_path(gated_expense.record_id,
+                                                                       tab: "awaiting_owner")
       end
 
       test "bulk approve skips a claim awaiting owner endorsement" do
@@ -855,7 +934,7 @@ module Admin
 
         assert_response :success
         assert_select "form[action=?][data-turbo-confirm*=?]",
-                      admin_reimbursements_reject_review_path(expense.record_id, tab: "pending"),
+                      admin_reimbursements_reject_review_path(expense.record_id, tab: "to_approve"),
                       "Reject #42 and email the producer"
       end
 
@@ -1171,7 +1250,7 @@ module Admin
         gated_expense
         sign_in @user
 
-        get :index
+        get :index, params: { tab: "awaiting_owner" }
 
         assert_response :success
         assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"

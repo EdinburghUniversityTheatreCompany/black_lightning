@@ -4,7 +4,8 @@
   warnings. Fix anything that needs attention, then approve or reject.
 </p>
 
-<% pending_total = @pending.sum { |e| e.amount || 0 } %>
+<% awaiting_owner_total = @awaiting_owner.sum { |e| e.amount || 0 } %>
+<% to_approve_total = @to_approve.sum { |e| e.amount || 0 } %>
 <% approved_total = @approved.sum { |e| e.amount || 0 } %>
 
 <%# Each link is a full page navigation (a different tab: query param), not a
@@ -13,8 +14,13 @@
     correct pattern for "which of these navigation links is the current one". %>
 <nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
   <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
-  <%= link_to "Pending (#{@pending.size})", admin_reimbursements_review_path(tab: "pending"),
-              "aria-current": (@tab == "pending" ? "page" : nil), class: tab_class.call(@tab == "pending") %>
+  <%# Awaiting owner sits first because it is the earlier step in the claim's
+      life, not because it is the finance team's queue — "To approve" is, and it
+      is the tab every link into this page lands on. %>
+  <%= link_to "Awaiting owner (#{@awaiting_owner.size})", admin_reimbursements_review_path(tab: "awaiting_owner"),
+              "aria-current": (@tab == "awaiting_owner" ? "page" : nil), class: tab_class.call(@tab == "awaiting_owner") %>
+  <%= link_to "To approve (#{@to_approve.size})", admin_reimbursements_review_path(tab: "to_approve"),
+              "aria-current": (@tab == "to_approve" ? "page" : nil), class: tab_class.call(@tab == "to_approve") %>
   <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
               "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
   <span class="ml-auto self-center pb-1">
@@ -26,10 +32,11 @@
   </span>
 </nav>
 
-<% if @tab == "approved" %>
+<% case @tab %>
+<% when "approved" %>
   <% if @approved.empty? %>
     <%= render AlertComponent.new(type: :info) do %>
-      No approved expenses yet. Work the Pending tab first.
+      No approved expenses yet. Work the To approve tab first.
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
@@ -40,14 +47,46 @@
       <%= render "expense_card", expense: expense, allow_approve: false, duplicates: nil %>
     <% end %>
   <% end %>
-<% else %>
-  <% if @pending.empty? %>
+
+<% when "awaiting_owner" %>
+  <% if @awaiting_owner.empty? %>
     <%= render AlertComponent.new(type: :info) do %>
-      No pending expenses.
+      Nothing is waiting on a budget owner.
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
-      <%= @pending.size %> pending, total <%= reimbursements_money(pending_total) %>.
+      <%= @awaiting_owner.size %> awaiting a budget owner's sign-off,
+      total <%= reimbursements_money(awaiting_owner_total) %>.
+    </p>
+    <%= render AlertComponent.new(type: :info) do %>
+      These are with their budget owners, who endorse them on their own My Budgets page — they are
+      not yours to approve yet. Each card names the owners. Where no owner can act (nobody holds a
+      portal account, say), you can override the sign-off and approve it here; the override is
+      recorded against your account. A claim on a budget with no owner never appears here — it goes
+      straight to To approve.
+    <% end %>
+    <%# The bulk toolbar is deliberately NOT rendered here: bulk approve skips
+        every gated claim, so a "0 approved" summary is all it could ever
+        report. Overriding is a per-claim judgement with a reason attached. %>
+    <% @awaiting_owner.each do |expense| %>
+      <%= render "expense_card", expense: expense, allow_approve: true, duplicates: @duplicates[expense.record_id] %>
+    <% end %>
+  <% end %>
+
+<% else %>
+  <% if @to_approve.empty? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      Nothing to approve.
+      <% if @awaiting_owner.any? %>
+        <%= link_to pluralize(@awaiting_owner.size, "claim"),
+                    admin_reimbursements_review_path(tab: "awaiting_owner"),
+                    class: "text-primary underline" %>
+        <%= @awaiting_owner.one? ? "is" : "are" %> still with a budget owner.
+      <% end %>
+    <% end %>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      <%= @to_approve.size %> to approve, total <%= reimbursements_money(to_approve_total) %>.
     </p>
 
     <div data-controller="bulk-review">
@@ -81,7 +120,7 @@
       <h2 class="mt-4 mb-2 text-lg font-semibold">Ready to approve (<%= @ready.size %>)</h2>
       <% if @ready.empty? %>
         <%= render AlertComponent.new(type: :info) do %>
-          All pending expenses need attention before approving.
+          Every claim on this tab needs attention before approving.
         <% end %>
       <% else %>
         <% @ready.each do |expense| %>
@@ -92,13 +131,12 @@
       <h2 class="mt-6 mb-2 text-lg font-semibold">Needs attention (<%= @attention.size %>)</h2>
       <% if @attention.empty? %>
         <%= render AlertComponent.new(type: :info) do %>
-          None: all pending expenses are ready to approve.
+          None: everything on this tab is ready to approve.
         <% end %>
       <% else %>
         <%= render AlertComponent.new(type: :warning) do %>
-          These need attention before approving. Either a data problem to fix (missing excl.-VAT
-          amount, no budget, no receipts, invalid bank details, or over budget), or a budget owner's
-          sign-off still awaited (which an owner endorses, or you override).
+          These have a data problem to fix before approving: a missing excl.-VAT amount, no budget,
+          no receipts, invalid bank details, over budget, or a possible duplicate.
         <% end %>
         <% @attention.each do |expense| %>
           <%= render "expense_card", expense: expense, allow_approve: true, selectable: true, duplicates: @duplicates[expense.record_id] %>
