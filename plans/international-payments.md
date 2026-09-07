@@ -213,7 +213,7 @@ Two of the three originally listed here were overstated and are dropped (Mick, 2
 - **Does the authorisation row populate when EUSA opens it?** The narrow, checkable version of
   "will they accept a machine-filled form", which was too vague to act on. It is their own
   template filled in the cells a human fills, so there is no reason to expect a policy objection.
-  But rows 18–19 are the one part deliberately left to *recalculation* rather than computed here
+  But rows 19–20 are the one part deliberately left to *recalculation* rather than computed here
   (the thresholds are EUSA's to change), so they populate in Excel via `fullCalcOnLoad` and render
   BLANK in a reader that ignores the flag — LibreOffice does, verified. One sample settles it.
 
