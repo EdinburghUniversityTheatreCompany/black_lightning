@@ -201,10 +201,9 @@ module Reimbursements
     # sign-off is new work assigned to you, so it is named on the first due
     # run-day and re-named every run-day until it is endorsed or rejected.
     #
-    # UNLIKE the other two reminders, this one's result does not gate the
-    # run-day (see #deliver_reminders), so it returns nothing meaningful. An
-    # owner with no email address is skipped outright: there is no address to
-    # retry tomorrow.
+    # Returns nothing meaningful: best effort, and not part of the run-day
+    # decision (see #deliver_reminders for why). An owner with no email address
+    # is skipped outright — there is no address to retry tomorrow.
     def remind_budget_owners(cost_centre, awaiting_owner, today:, dry_run:)
       by_owner = claims_by_owner(awaiting_owner)
       return if by_owner.empty?
@@ -220,9 +219,8 @@ module Reimbursements
                        .count(false)
       return if failed.zero?
 
-      # Reported rather than swallowed: the send is best effort, but an address
-      # that never works would otherwise leave those owners silently un-nagged
-      # for the rest of the run.
+      # Reported rather than swallowed: an address that never works would
+      # otherwise leave those owners silently un-nagged for good.
       Rails.logger.warn("Nightly: #{failed} owner sign-off reminder(s) failed to send " \
                         "for #{cost_centre.key}")
       Honeybadger.event("reimbursements.owner_reminder_failed",
