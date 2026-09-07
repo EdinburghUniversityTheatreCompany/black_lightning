@@ -125,7 +125,8 @@ module Admin
                       :description, :payment_reference, :payee_name_override,
                       :sort_code_override, :account_number_override,
                       :vat_acknowledged, :large_amount_acknowledged,
-                      :payment_method, :foreign_amount, :iban_override, :bic_override,
+                      :payment_method, :foreign_amount, :foreign_currency,
+                      :iban_override, :bic_override,
                       :save_as_draft, receipts: [])
       end
 

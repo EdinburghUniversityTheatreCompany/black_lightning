@@ -327,10 +327,18 @@ module Reimbursements
 
     # --- The international rail ---------------------------------------------
 
+    def valid_uk_params(**overrides)
+      {
+        amount: "12.50", amount_excl_vat: "10.42", budget_record_id: "recBud1",
+        description: "Fake blood", payment_reference: "PROPS PAT",
+        require_receipts: false, expense_receipt_count: 1
+      }.merge(overrides)
+    end
+
     def international_params(**overrides)
       {
         payment_method: Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
-        foreign_amount: "266.69", budget_record_id: "recBudget1",
+        foreign_amount: "266.69", foreign_currency: "EUR", budget_record_id: "recBudget1",
         description: "Festival insurance", payment_reference: "INSURANCE",
         payee_name_override: "Ausland GmbH",
         iban_override: "DE89 3704 0044 0532 0130 00", bic_override: "deutdeff500",
@@ -384,6 +392,49 @@ module Reimbursements
 
       assert_not form.valid?
       assert form.errors[:base].any? { |e| e.include?("all three") }
+    end
+
+    # --- Currency ------------------------------------------------------------
+
+    test "the currency defaults to euros" do
+      form = ExpenseForm.new(international_params.except(:foreign_currency))
+
+      assert form.valid?, form.errors.full_messages.inspect
+      assert_equal Reimbursements::Expense::CURRENCY_EUR, form.update_attrs[:foreign_currency]
+    end
+
+    test "another listed currency is accepted and stored" do
+      form = ExpenseForm.new(international_params(foreign_currency: "USD"))
+
+      assert form.valid?, form.errors.full_messages.inspect
+      assert_equal "USD", form.update_attrs[:foreign_currency]
+    end
+
+    test "a currency is normalised to its upper-case code" do
+      assert_equal "SEK", ExpenseForm.new(international_params(foreign_currency: " sek ")).update_attrs[:foreign_currency]
+    end
+
+    # A mistyped code is a payment EUSA's bank cannot route, which is why the
+    # picker offers a list rather than a text box.
+    test "an unlisted currency is refused" do
+      form = ExpenseForm.new(international_params(foreign_currency: "XYZ"))
+
+      assert_not form.valid?
+      assert form.errors[:foreign_currency].present?
+    end
+
+    # An international supplier can invoice in sterling, and the rail is chosen
+    # by payment_method, not by the currency.
+    test "GBP is a valid international currency" do
+      form = ExpenseForm.new(international_params(foreign_currency: "GBP"))
+
+      assert form.valid?, form.errors.full_messages.inspect
+    end
+
+    test "a UK claim stores no currency even if one is posted" do
+      attrs = ExpenseForm.new(valid_uk_params(foreign_currency: "USD")).update_attrs
+
+      assert_nil attrs[:foreign_currency], "a code beside a GBP amount reads as a claim about it"
     end
 
     test "the IBAN and BIC are normalised on the way through" do

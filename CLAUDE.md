@@ -616,7 +616,7 @@ survive as historical import provenance and are never written. Spec + plan in
   parameter on the producer form, so a submitter can't pick the internal type to dodge the
   receipt rule.
 
-### International payments (EUR)
+### International payments
 
 `expenses.payment_method` (`uk_bacs` / `international`) picks the rail. EUSA's international form
 is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK claims plus one
@@ -625,9 +625,18 @@ is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK c
 
 - **`payment_method` is the discriminator, NOT the currency.** An international supplier can
   invoice in GBP and still need an IBAN and their form. `amount`/`amount_excl_vat` stay **GBP**, so
-  every budget rollup is untouched; `foreign_amount` + `foreign_currency` hold the EUR figure that
-  goes on the form.
-- **The submitter enters EUR only; finance types the GBP equivalent at review.** Enforced
+  every budget rollup is untouched; `foreign_amount` + `foreign_currency` hold the invoice figure
+  that goes on the form.
+- **The submitter picks the currency** from `Expense::FOREIGN_CURRENCIES`, defaulting to EUR. A
+  fixed list rather than free text: a mistyped code is a payment EUSA's bank cannot route, and
+  adding one is a single entry there. EUSA's revised form (vendored 2026-09-07) has its own
+  PAYMENT CURRENCY field, so the currency is stated on the paperwork rather than assumed.
+  **That revision moved every field below the amount down one row**, so check
+  `InternationalXlsx`'s cell constants against their A1 references before trusting them after any
+  future re-vendoring — a wrong one writes the nominal code into the cost-centre cell, silently.
+  The amount cell still carries a hardcoded "£" copied from the domestic form, so a NON-sterling
+  amount is written with a plain number format instead; GBP keeps it, being then correct.
+- **The submitter enters the invoice amount only; finance types the GBP equivalent at review.** Enforced
   structurally — a blank `amount` is a *blocking* approval reason, and those guards run BEFORE the
   ex-VAT one or a blank GBP amount reports the ex-VAT message instead.
 - **`effective_has_bank_details?` is rail-aware, and that is what gates approval.** It reads

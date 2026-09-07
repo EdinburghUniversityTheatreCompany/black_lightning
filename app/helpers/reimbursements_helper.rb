@@ -91,10 +91,13 @@ module ReimbursementsHelper
     )}"
   end
 
-  CURRENCY_SYMBOLS = { "EUR" => "€" }.freeze
+  # Only where the symbol is unambiguous in a British context. The Nordic
+  # kroner all share "kr" and the dollars all share "$", so those keep their ISO
+  # code: "CAD 500.00" is plainer than a "$" that could be four currencies.
+  CURRENCY_SYMBOLS = { "EUR" => "€", "GBP" => "£", "USD" => "US$", "JPY" => "¥" }.freeze
 
-  # Falls back to the ISO code plus a space ("USD 12.50"), which is unambiguous
-  # if unlovely — better than printing a euro sign over a currency that is not.
+  # Falls back to the ISO code plus a space ("SEK 12.50"), which is unambiguous
+  # if unlovely — better than printing one currency's sign over another's figure.
   def reimbursements_currency_symbol(currency)
     CURRENCY_SYMBOLS.fetch(currency.to_s, "#{currency} ".lstrip)
   end

@@ -18,25 +18,84 @@ module Reimbursements
       RubyXL::Parser.parse_buffer(bytes)["FORM"]
     end
 
-    def cell(sheet, row, col)
-      sheet.sheet_data[row][col]
+    # Addressed the way the template is, so an assertion can be checked against
+    # EUSA's form by eye. EUSA moved every field below the amount down a row when
+    # they added PAYMENT CURRENCY, and row/column pairs hid that completely.
+    def cell(sheet, ref)
+      column = ref[/\A[A-Z]+/].chars.reduce(0) { |n, ch| (n * 26) + (ch.ord - 64) } - 1
+      sheet.sheet_data[ref[/\d+\z/].to_i - 1][column]
     end
 
-    test "writes the eight payment cells" do
+    test "writes the nine payment cells" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      assert_equal "Ausland GmbH", cell(sheet, 7, 2).value
-      assert_equal "Invoice 4711 (festival insurance)", cell(sheet, 8, 2).value
-      assert_in_delta 266.69, cell(sheet, 9, 2).value, 0.001
-      assert_equal "432540", cell(sheet, 10, 2).value
-      assert_equal "F40", cell(sheet, 10, 4).value
-      assert_equal "DEUTDEFF500", cell(sheet, 11, 2).value
-      assert_equal "DE89370400440532013000", cell(sheet, 11, 4).value
+      assert_equal "Ausland GmbH", cell(sheet, "C8").value
+      assert_equal "Invoice 4711 (festival insurance)", cell(sheet, "C9").value
+      assert_in_delta 266.69, cell(sheet, "C10").value, 0.001
+      assert_equal "EUR", cell(sheet, "C11").value
+      assert_equal "432540", cell(sheet, "C12").value
+      assert_equal "F40", cell(sheet, "E12").value
+      assert_equal "DEUTDEFF500", cell(sheet, "C13").value
+      assert_equal "DE89370400440532013000", cell(sheet, "E13").value
+    end
+
+    # --- Currency ------------------------------------------------------------
+    #
+    # EUSA added PAYMENT CURRENCY to their form themselves, and dropped the "€"
+    # that used to be baked into the amount label. The currency is now a stated
+    # field rather than an assumption, which is what lets the portal carry more
+    # than euros.
+
+    test "the currency is written as text" do
+      # C11 arrives carrying a "£"#,##0.00 format, copied from an amount cell.
+      # A currency CODE rendered through a currency format is asking for trouble.
+      sheet = parsed(InternationalXlsx.new.generate(payment))
+
+      assert_equal "@", cell(sheet, "C11").number_format.format_code
+    end
+
+    test "a non-euro currency is carried through" do
+      sheet = parsed(InternationalXlsx.new.generate(payment(currency: "USD", amount: BigDecimal("500"))))
+
+      assert_equal "USD", cell(sheet, "C11").value
+      assert_in_delta 500.0, cell(sheet, "C10").value, 0.001
+    end
+
+    test "the currency is normalised to an upper-case code" do
+      sheet = parsed(InternationalXlsx.new.generate(payment(currency: " usd ")))
+
+      assert_equal "USD", cell(sheet, "C11").value
+    end
+
+    test "refuses a blank currency" do
+      # The amount label no longer names one, so a blank here leaves EUSA an
+      # amount with no unit at all.
+      error = assert_raises(InternationalXlsx::TemplateError) do
+        InternationalXlsx.new.generate(payment(currency: ""))
+      end
+      assert_match(/currency/i, error.message)
+    end
+
+    # The amount cell still carries the £ format EUSA copied from the domestic
+    # form. Left alone it renders a EUR payment as "£266.69" directly above a
+    # cell reading EUR — a contradiction on the face of the form, about money.
+    test "a non-sterling amount drops the pound symbol" do
+      sheet = parsed(InternationalXlsx.new.generate(payment(currency: "EUR")))
+
+      assert_equal "#,##0.00", cell(sheet, "C10").number_format.format_code
+    end
+
+    test "a sterling amount keeps the pound symbol" do
+      # An international supplier can invoice in GBP, and then the template's
+      # own format is right.
+      sheet = parsed(InternationalXlsx.new.generate(payment(currency: "GBP")))
+
+      assert_equal '"£"#,##0.00', cell(sheet, "C10").number_format.format_code
     end
 
     test "the date required is written as a real date" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
-      value = cell(sheet, 9, 4).value
+      value = cell(sheet, "E10").value
 
       # rubyXL hands back a Date/DateTime for a date-formatted cell; either way
       # it must be a date and not the ISO string, or Excel shows text where the
@@ -51,19 +110,19 @@ module Reimbursements
     test "the amount is numeric so the authorisation formulas still resolve" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      assert_kind_of Numeric, cell(sheet, 9, 2).value
-      assert_equal "IF(C10<=999.99, LISTS!A9,LISTS!A12)", cell(sheet, 17, 2).formula.expression
-      assert_equal "IF(C10>=1000,LISTS!A11,LISTS!A12)", cell(sheet, 18, 2).formula.expression
-      assert_equal "IF(C10>=10000,LISTS!A13,LISTS!A12)", cell(sheet, 17, 4).formula.expression
+      assert_kind_of Numeric, cell(sheet, "C10").value
+      assert_equal "IF(C10<=999.99, LISTS!A9,LISTS!A12)", cell(sheet, "C19").formula.expression
+      assert_equal "IF(C10>=1000,LISTS!A11,LISTS!A12)", cell(sheet, "C20").formula.expression
+      assert_equal "IF(C10>=10000,LISTS!A13,LISTS!A12)", cell(sheet, "E19").formula.expression
     end
 
     # rubyXL's add_cell REPLACES the cell and drops the style the template
-    # applied, so the amount would render as a bare number in a form whose
-    # every other figure is currency-formatted.
+    # applied. The date cell is the clearest witness: written with add_cell it
+    # would render as a serial number instead of a date.
     test "writing preserves the template's own cell formatting" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      assert_equal '"£"#,##0.00', cell(sheet, 9, 2).number_format.format_code
+      assert_equal "m/d/yyyy", cell(sheet, "E10").number_format.format_code
     end
 
     test "BIC and IBAN are written as text" do
@@ -71,14 +130,14 @@ module Reimbursements
       # on these two cells from whichever form it was copied out of.
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      assert_equal "@", cell(sheet, 11, 2).number_format.format_code
-      assert_equal "@", cell(sheet, 11, 4).number_format.format_code
+      assert_equal "@", cell(sheet, "C13").number_format.format_code
+      assert_equal "@", cell(sheet, "E13").number_format.format_code
     end
 
     test "the IBAN is written grouped, as a human checks it" do
       sheet = parsed(InternationalXlsx.new.generate(payment, format_iban: true))
 
-      assert_equal "DE89 3704 0044 0532 0130 00", cell(sheet, 11, 4).value
+      assert_equal "DE89 3704 0044 0532 0130 00", cell(sheet, "E13").value
     end
 
     # xlsx caches each formula's last computed value beside the formula, and
@@ -102,21 +161,20 @@ module Reimbursements
     test "no formula carries a stale cached value from the sample payment" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      [ [ 17, 2 ], [ 18, 2 ], [ 17, 4 ] ].each do |row, column|
-        cell = cell(sheet, row, column)
-        assert cell.formula, "expected a formula at #{row},#{column}"
-        assert_empty cell.value.to_s,
-                     "the cached value at #{row},#{column} is the sample payment's answer"
+      %w[C19 C20 E19].each do |ref|
+        cell = cell(sheet, ref)
+        assert cell.formula, "expected a formula at #{ref}"
+        assert_empty cell.value.to_s, "the cached value at #{ref} is a stale answer"
       end
     end
 
     test "the template's own furniture is left alone" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
-      assert_equal "PAYEE:", cell(sheet, 7, 1).value
-      assert_equal "NOT REQUIRED", cell(sheet, 13, 2).value
-      assert_equal "YES", cell(sheet, 13, 4).value
-      assert_equal "HEAD OF FINANCE AND BUSINESS REPORTING", cell(sheet, 21, 2).value
+      assert_equal "PAYEE:", cell(sheet, "B8").value
+      assert_equal "NOT REQUIRED", cell(sheet, "C15").value
+      assert_equal "YES", cell(sheet, "E15").value
+      assert_equal "HEAD OF FINANCE AND BUSINESS REPORTING", cell(sheet, "C23").value
     end
 
     test "the LISTS sheet the formulas depend on survives" do
@@ -134,8 +192,8 @@ module Reimbursements
         payment(payee_name: "=cmd|'/c calc'!A1", description: "+SUM(A1:A9)")
       ))
 
-      assert_equal "'=cmd|'/c calc'!A1", cell(sheet, 7, 2).value
-      assert_equal "'+SUM(A1:A9)", cell(sheet, 8, 2).value
+      assert_equal "'=cmd|'/c calc'!A1", cell(sheet, "C8").value
+      assert_equal "'+SUM(A1:A9)", cell(sheet, "C9").value
     end
 
     # --- Refusals -----------------------------------------------------------
@@ -184,8 +242,8 @@ module Reimbursements
       first = parsed(builder.generate(payment(payee_name: "First Supplier")))
       second = parsed(builder.generate(payment(payee_name: "Second Supplier")))
 
-      assert_equal "First Supplier", cell(first, 7, 2).value
-      assert_equal "Second Supplier", cell(second, 7, 2).value
+      assert_equal "First Supplier", cell(first, "C8").value
+      assert_equal "Second Supplier", cell(second, "C8").value
     end
   end
 end

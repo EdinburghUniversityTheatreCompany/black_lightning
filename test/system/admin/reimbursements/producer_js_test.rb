@@ -93,13 +93,13 @@ module Admin
         assert_no_selector "label", text: "Payee sort code", visible: true
       end
 
-      test "an international claim submits on the euro amount alone" do
+      test "an international claim submits on the invoice amount alone, in euros by default" do
         visit new_admin_reimbursements_expense_path
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
-        fill_in "Amount (€, as printed on the invoice)", with: "266.69"
+        fill_in "Amount, as printed on the invoice", with: "266.69"
         tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "Festival insurance"
         fill_in "Payment reference", with: "INS-2026"
@@ -112,7 +112,34 @@ module Admin
         expense = ::Reimbursements::Expense.order(:id).last
         assert expense.international?
         assert_equal BigDecimal("266.69"), expense.foreign_amount
+        assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency,
+                     "the picker opens on euros, the common case"
         assert_nil expense.amount, "finance supplies the GBP figure at review"
+      end
+
+      # EUSA's revised form carries a PAYMENT CURRENCY field, so the portal is
+      # not limited to euros: whatever the producer picks is what their bank is
+      # told to pay in.
+      test "a producer can pick a currency other than euros" do
+        visit new_admin_reimbursements_expense_path
+
+        attach_file "reimbursements_expense_form_receipts",
+                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
+        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select "USD", select_id: "reimbursements_expense_form_foreign_currency"
+        fill_in "Amount, as printed on the invoice", with: "500.00"
+        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        fill_in "Description", with: "US touring insurance"
+        fill_in "Payment reference", with: "INS-USD"
+        fill_in "Payee account name", with: "Stateside Insurance Inc"
+        fill_in "Payee IBAN", with: "DE89 3704 0044 0532 0130 00"
+        fill_in "Payee BIC / SWIFT code", with: "DEUTDEFF500"
+        click_on "Submit expense"
+
+        assert_text "Expense submitted", wait: 5
+        expense = ::Reimbursements::Expense.order(:id).last
+        assert_equal "USD", expense.foreign_currency
+        assert_equal BigDecimal("500.00"), expense.foreign_amount
       end
 
       # An Invoice pays the supplier, so the payee trio stops being optional.

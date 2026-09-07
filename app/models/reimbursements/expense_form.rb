@@ -31,7 +31,8 @@ module Reimbursements
                   :sort_code_override, :account_number_override,
                   :vat_acknowledged, :save_as_draft,
                   :large_amount_acknowledged, :expense_receipt_count,
-                  :payment_method, :foreign_amount, :iban_override, :bic_override
+                  :payment_method, :foreign_amount, :foreign_currency,
+                  :iban_override, :bic_override
     attr_writer :receipts, :require_receipts, :internal
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
@@ -53,6 +54,9 @@ module Reimbursements
       super
       self.expense_type = Expense::TYPE_REIMBURSEMENT if expense_type.blank?
       self.payment_method = Expense::PAYMENT_METHOD_UK_BACS if payment_method.blank?
+      # Euros are the common case by a distance, so the picker opens on them
+      # rather than on a blank the submitter has to notice.
+      self.foreign_currency = Expense::CURRENCY_EUR if foreign_currency.blank?
     end
 
     def international?
@@ -148,10 +152,10 @@ module Reimbursements
         account_number_override: BankDetails.normalize_account_number(account_number_override.to_s.strip),
         payment_method: payment_method,
         foreign_amount: foreign_amount_decimal,
-        # Stamped from the rail rather than asked for: EUR is the only currency
-        # this handles, and storing it makes the figure self-describing when a
-        # second one is added.
-        foreign_currency: (Expense::CURRENCY_EUR if international?),
+        # Only stamped on the international rail: a UK claim has no foreign
+        # figure for it to describe, and a stray code beside a GBP amount reads
+        # as a claim about that amount.
+        foreign_currency: (foreign_currency.to_s.strip.upcase.presence if international?),
         iban_override: BankDetails.normalize_iban(iban_override.to_s.strip),
         bic_override: BankDetails.normalize_bic(bic_override.to_s.strip)
       }
@@ -170,6 +174,7 @@ module Reimbursements
         account_number_override: expense.account_number_override,
         payment_method: expense.payment_method,
         foreign_amount: expense.foreign_amount&.to_s("F"),
+        foreign_currency: expense.foreign_currency,
         iban_override: expense.iban_override,
         bic_override: expense.bic_override,
         require_receipts: false
@@ -244,6 +249,9 @@ module Reimbursements
     # reclaimable UK VAT, so the whole amount hits the budget and
     # Expense mirrors it automatically.
     def international_amounts_valid
+      unless Expense::FOREIGN_CURRENCIES.include?(foreign_currency.to_s.strip.upcase)
+        errors.add(:foreign_currency, "must be one of the currencies listed.")
+      end
       return if foreign_amount_decimal.present? && foreign_amount_decimal.positive?
 
       errors.add(:foreign_amount, "must be a positive amount, as printed on the invoice.")

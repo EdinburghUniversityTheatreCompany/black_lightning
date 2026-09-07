@@ -81,12 +81,18 @@ module Reimbursements
     PAYMENT_METHOD_INTERNATIONAL = "international".freeze
     PAYMENT_METHODS = [ PAYMENT_METHOD_UK_BACS, PAYMENT_METHOD_INTERNATIONAL ].freeze
 
-    # The one currency the international rail handles today. EUSA's form is
-    # labelled in euros and their bank quotes us a euro price; adding another
-    # means deciding what an unconverted figure means to every budget rollup,
-    # so it is a deliberate decision rather than a new string.
+    # Currencies the international rail accepts. EUSA's revised form carries a
+    # PAYMENT CURRENCY field of its own, so the currency is stated on the
+    # paperwork rather than assumed, and the portal is not limited to euros.
+    #
+    # A fixed list rather than free text: the submitter is a producer, not a
+    # treasurer, and a mistyped code is a payment their bank cannot route.
+    # Adding one is a single entry here — the form, the form object and the
+    # generator all read this list.
     CURRENCY_EUR = "EUR".freeze
-    FOREIGN_CURRENCIES = [ CURRENCY_EUR ].freeze
+    FOREIGN_CURRENCIES = %w[
+      EUR USD GBP CHF SEK NOK DKK PLN CZK CAD AUD NZD JPY
+    ].freeze
 
     # Third-party "pay a supplier directly" bank details, encrypted at rest.
     # Non-deterministic (the default) — the money path reads the
@@ -126,6 +132,7 @@ module Reimbursements
     validates :status, inclusion: { in: Status.all }
     validates :expense_type, inclusion: { in: TYPES }
     validates :payment_method, inclusion: { in: PAYMENT_METHODS }
+    validates :foreign_currency, inclusion: { in: FOREIGN_CURRENCIES }, allow_blank: true
 
     # auto_number backs the human-facing "Expense #N" label. It continues from
     # the highest number on record rather than tracking the PK, so the numbers

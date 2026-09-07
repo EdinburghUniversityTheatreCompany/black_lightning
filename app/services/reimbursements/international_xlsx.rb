@@ -17,11 +17,11 @@ module Reimbursements
   #   the amount would lose its currency format. (BacsXlsx has exactly this
   #   bug on its own amount column — see plans/off-topic-improvements.md.)
   #
-  # Worth knowing: the template's amount cell is labelled "AMOUNT €" but
-  # carries a £ number format, and its authorisation formulas compare that
-  # euro figure against GBP thresholds. Both are EUSA's, in their template,
-  # and are deliberately left as they are — this fills their form, it does not
-  # correct it.
+  # Worth knowing: the authorisation formulas compare the amount against GBP
+  # thresholds whatever currency it is in. That is EUSA's, in their template,
+  # and is deliberately left alone — this fills their form, it does not correct
+  # it. The one presentation change made here is the amount's currency format,
+  # for the reason given at PLAIN_AMOUNT_FORMAT.
   class InternationalXlsx
     # One payment destined for one form. +amount+ is in +currency+ (the figure
     # EUSA's bank pays the supplier), NOT the GBP equivalent the budget counts.
@@ -33,17 +33,29 @@ module Reimbursements
 
     # 0-based [row, column] of each cell we fill, matching the template's own
     # B/C/D/E layout: labels in column B and D, values in C and E.
+    #
+    # EUSA revised the form (vendored 2026-09-07) to add PAYMENT CURRENCY, which
+    # pushed everything below the amount down one row. Check these against the
+    # A1 references before assuming a future revision left them alone — a wrong
+    # one writes a nominal code into the cost-centre cell, silently.
     CELL_PAYEE = [ 7, 2 ].freeze          # C8
     CELL_DESCRIPTION = [ 8, 2 ].freeze    # C9
     CELL_AMOUNT = [ 9, 2 ].freeze         # C10
     CELL_DATE_REQUIRED = [ 9, 4 ].freeze  # E10
-    CELL_NOMINAL_CODE = [ 10, 2 ].freeze  # C11
-    CELL_COST_CENTRE = [ 10, 4 ].freeze   # E11
-    CELL_BIC = [ 11, 2 ].freeze           # C12
-    CELL_IBAN = [ 11, 4 ].freeze          # E12
+    CELL_CURRENCY = [ 10, 2 ].freeze      # C11
+    CELL_NOMINAL_CODE = [ 11, 2 ].freeze  # C12
+    CELL_COST_CENTRE = [ 11, 4 ].freeze   # E12
+    CELL_BIC = [ 12, 2 ].freeze           # C13
+    CELL_IBAN = [ 12, 4 ].freeze          # E13
 
     # Excel's builtin text number format.
     TEXT_FORMAT = "@".freeze
+    # A plain two-decimal number, for an amount that is not in sterling. The
+    # template's amount cell carries a hardcoded "£" copied from the domestic
+    # form, which since EUSA added PAYMENT CURRENCY sits directly above a cell
+    # saying otherwise — a EUR 266.69 payment rendered "£266.69" next to "EUR".
+    PLAIN_AMOUNT_FORMAT = "#,##0.00".freeze
+    STERLING = "GBP".freeze
 
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_international_payment_template.xlsx").freeze
@@ -135,6 +147,10 @@ module Reimbursements
 
       raise TemplateError, "an international payment needs a BIC/SWIFT code." if payment.bic.blank?
 
+      # The amount label names no currency since EUSA's 2026-09 revision, so a
+      # blank here hands them a figure with no unit at all.
+      raise TemplateError, "an international payment needs a payment currency." if payment.currency.blank?
+
       # The last point anything checks the number before EUSA's bank acts on
       # it, and by then the money has moved.
       return if BankDetails.valid_iban?(payment.iban)
@@ -148,9 +164,11 @@ module Reimbursements
       # the BACS spreadsheet's are.
       write(sheet, CELL_PAYEE, CellSanitizer.sanitize(payment.payee_name))
       write(sheet, CELL_DESCRIPTION, CellSanitizer.sanitize(payment.description))
-      # Numeric, so the template's currency format renders it and the three
-      # authorisation formulas can compare against it.
+      currency = payment.currency.to_s.strip.upcase
+      # Numeric, so the three authorisation formulas can compare against it.
       write(sheet, CELL_AMOUNT, payment.amount.to_f)
+      apply_amount_format(sheet, currency)
+      text(sheet, CELL_CURRENCY, currency)
       write(sheet, CELL_DATE_REQUIRED, payment.date_required)
       write(sheet, CELL_NOMINAL_CODE, CellSanitizer.sanitize(payment.nominal_code))
       write(sheet, CELL_COST_CENTRE, CellSanitizer.sanitize(payment.cost_centre))
@@ -170,6 +188,15 @@ module Reimbursements
       return cell.change_contents(value) if cell
 
       sheet.add_cell(row, column, value)
+    end
+
+    # Sterling keeps the template's own "£" format, which is then correct: an
+    # international supplier can invoice in GBP. Anything else drops the symbol
+    # rather than printing one currency's sign over another's figure.
+    def apply_amount_format(sheet, currency)
+      return if currency == STERLING
+
+      sheet[CELL_AMOUNT.first][CELL_AMOUNT.last].set_number_format(PLAIN_AMOUNT_FORMAT)
     end
 
     # A cell pinned to literal text. The template carries leftover

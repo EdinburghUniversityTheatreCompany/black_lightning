@@ -138,9 +138,17 @@
           hits the budget. The submitter knows what the invoice says and nothing
           about the rate EUSA's bank will get, so finance enters the GBP
           equivalent when they review it — and cannot approve without it. %>
-      <%= f.input :foreign_amount, label: "Amount (€, as printed on the invoice)", required: form.international?,
-            hint: "The invoice total in euros. Finance works out the pound equivalent when " \
-                  "they review this, so you don't need to convert it.",
+      <%# Not marked required and carrying no rail_required: the picker opens on
+          EUR and offers no blank, so it can never be submitted empty. simple_form
+          also refuses include_blank: false on a required field. %>
+      <%= f.input :foreign_currency, label: "Currency", required: false,
+            collection: Reimbursements::Expense::FOREIGN_CURRENCIES, include_blank: false,
+            hint: "The currency the invoice is in. EUSA's form states it, so their bank pays " \
+                  "the supplier in it.",
+            input_html: { required: false } %>
+      <%= f.input :foreign_amount, label: "Amount, as printed on the invoice", required: form.international?,
+            hint: "The invoice total in the currency above. Finance works out the pound " \
+                  "equivalent when they review this, so you don't need to convert it.",
             input_html: { inputmode: "decimal", required: false, data: { rail_required: true } } %>
     </div>
 

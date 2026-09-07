@@ -59,8 +59,10 @@ so the GRAND TOTAL `SUM` is unaffected) and logged in
 
 ## Settled decisions
 
-1. **EUR only.** No USD yet. `C10` receives the **EUR** amount, matching the template's label and
-   its worked example.
+1. ~~EUR only~~ — **superseded 2026-09-07.** EUSA revised the form to carry a PAYMENT CURRENCY
+   field of its own and dropped the "€" from the amount label, so the submitter now picks the
+   currency from `Expense::FOREIGN_CURRENCIES` (defaulting to EUR). A fixed list, not free text:
+   a mistyped code is a payment their bank cannot route.
 2. **`payment_method` is the discriminator, not currency.** Currency and payment rail are
    different facts and they come apart — an international supplier can invoice in GBP, and you
    still need IBAN + this form. Deriving "is international" from `currency != "GBP"` bakes in an
