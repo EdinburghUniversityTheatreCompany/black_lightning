@@ -9,11 +9,18 @@ module Reimbursements
   # expense resolves its centre through its budget), it sends, independently:
   #   1. a pending reminder — Pending submissions stuck awaiting approval
   #      (>PENDING_REMINDER_DAYS); these never reach the Approved queue.
+  #      Claims still awaiting a budget owner's sign-off are EXCLUDED: they are
+  #      not finance's to act on yet, so nagging finance about them only buries
+  #      the ones that are.
   #   2. an approved reminder — everything in the Approved queue, ready to be
   #      built into a batch. Claims that ReviewSupport.needs_attention flags are
   #      listed with their reasons rather than replacing the reminder, so one
   #      problem claim never hides the rest of the queue.
-  # Either reminder is skipped when it has nothing to say. Failures go to
+  #   3. an owner sign-off reminder — one email per BUDGET OWNER (not to the
+  #      operator recipients) naming the claims waiting on them. This is the
+  #      other half of excluding them above: the reminder moves to the person who
+  #      can actually act, rather than disappearing.
+  # Any reminder is skipped when it has nothing to say. Failures go to
   # Honeybadger + a failure email.
   #
   # The run-day is recorded only when EVERY reminder this run decided to send
@@ -108,8 +115,13 @@ module Reimbursements
     # one, so don't rewrite this into a boolean expression.
     def deliver_reminders(cost_centre, recipients, dry_run:, today:)
       claims = claims_for(cost_centre)
-      [ remind_stale_pending(cost_centre, recipients, claims.select(&:pending?),
-                             today: today, dry_run: dry_run),
+      pending = claims.select(&:pending?)
+      # Split once, and share the split: the two reminders must never disagree
+      # about which claims are finance's and which are still an owner's.
+      gated_ids = OwnerReview.unmet_gate_expense_ids(pending)
+      awaiting_owner, finances = pending.partition { |e| gated_ids.include?(e.record_id) }
+      [ remind_stale_pending(cost_centre, recipients, finances, today: today, dry_run: dry_run),
+        remind_budget_owners(cost_centre, awaiting_owner, today: today, dry_run: dry_run),
         remind_approved(cost_centre, recipients, claims.select(&:approved?),
                         today: today, dry_run: dry_run) ].all?
     end
@@ -149,6 +161,8 @@ module Reimbursements
     # Returns true when nothing needed sending or the alert went out; false only
     # when a send was attempted and failed (see #notify). run_for gates the
     # run-day record on it, so "nothing to say" must not read as a failure.
+    # +pending+ here is finance's half of the Pending queue: claims still awaiting
+    # a budget owner are handled by #remind_budget_owners instead.
     def remind_stale_pending(cost_centre, recipients, pending, today:, dry_run:)
       cutoff = today.to_time(:utc) - PENDING_REMINDER_DAYS.days
       stale = pending.select { |e| e.submitted_at && e.submitted_at <= cutoff }
@@ -172,6 +186,65 @@ module Reimbursements
       return 0 if expense.submitted_at.nil?
 
       ((today.to_time(:utc) - expense.submitted_at) / 1.day).floor
+    end
+
+    # --- Budget owner sign-off reminder -----------------------------------
+
+    # One email per owner, listing every claim of theirs awaiting sign-off. Sent
+    # to the OWNER's own address, not to the cost centre's notification email:
+    # this is personal work on a specific person's budgets.
+    #
+    # No age threshold, unlike #remind_stale_pending — a claim awaiting your
+    # sign-off is new work assigned to you, so it is named on the first due
+    # run-day and re-named every run-day until it is endorsed or rejected.
+    #
+    # Same return contract as the other two reminders: true when nothing needed
+    # sending or every send succeeded, false only when a send was attempted and
+    # failed. An owner with no email address counts as "nothing to send" rather
+    # than a failure — there is no address to retry tomorrow, and the claim is
+    # already visible on the Review page's Awaiting owner tab for finance to
+    # override.
+    def remind_budget_owners(cost_centre, awaiting_owner, today:, dry_run:)
+      by_owner = claims_by_owner(awaiting_owner)
+      return true if by_owner.empty?
+
+      Rails.logger.info("Nightly: #{awaiting_owner.size} claim(s) awaiting sign-off from " \
+                        "#{by_owner.size} owner(s) for #{cost_centre.key}")
+      return true if dry_run
+
+      # map, not all?, so every owner is ATTEMPTED even when an earlier send
+      # fails — the same reason #deliver_reminders builds an array literal.
+      by_owner.map { |owner, claims| remind_one_owner(cost_centre, owner, claims, today) }.all?
+    end
+
+    def remind_one_owner(cost_centre, owner, claims, today)
+      rows = claims.sort_by { |claim| claim.submitted_at || Time.current }.map do |claim|
+        { auto_number: claim.auto_number, payee_name: claim.person&.name.to_s,
+          amount: format("%.2f", claim.amount || 0), budget_name: claim.budget&.name.to_s,
+          description: claim.description.to_s, age_days: pending_age_days(claim, today) }
+      end
+
+      notify(cost_centre, [ owner.email ]) do |emailer, to|
+        emailer.owner_sign_off_reminder(to: to, greeting_name: GreetingName.for(owner),
+                                        rows: rows, run_date: run_date(today))
+      end
+    end
+
+    # Claims grouped by the owner who has to sign each one off. A claim with
+    # several owners is named to ALL of them: any one endorsement satisfies the
+    # gate (OwnerReview), so telling only one of them would leave the claim stuck
+    # whenever that person is away.
+    #
+    # Owners with no email address are dropped here rather than deeper in, so
+    # +remind_budget_owners+'s "nothing to send" check sees the truth.
+    def claims_by_owner(awaiting_owner)
+      people = store.people.index_by(&:record_id)
+      awaiting_owner.each_with_object(Hash.new { |h, k| h[k] = [] }) do |claim, by_owner|
+        claim.budget.owner_ids.each do |owner_id|
+          owner = people[owner_id]
+          by_owner[owner] << claim if owner&.email.present?
+        end
+      end
     end
 
     # --- Approved queue reminder ------------------------------------------

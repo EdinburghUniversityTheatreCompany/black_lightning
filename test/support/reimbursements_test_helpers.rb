@@ -193,6 +193,7 @@ module ReimbursementsTestHelpers
     end
 
     def pending_reminder(**k) = record(:pending_reminder, k)
+    def owner_sign_off_reminder(**k) = record(:owner_sign_off_reminder, k)
     def approved_ready(**k) = record(:approved_ready, k)
     def batch_ready(**k) = record(:batch_ready, k)
     def failure(**k) = record(:failure, k)

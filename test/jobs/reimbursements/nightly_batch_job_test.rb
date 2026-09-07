@@ -40,6 +40,23 @@ module Reimbursements
                                     submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
     end
 
+    # A budget with an owner who is NOT the submitter, so OwnerReview's gate
+    # applies and the claim is awaiting that owner's sign-off.
+    def owner_person
+      @owner_person ||= create_reimbursements_person(name: "Olive Owner",
+                                                     email: "olive@example.com")
+    end
+
+    def owned_budget
+      @owned_budget ||= create_reimbursements_budget(name: "Owned Set", nominal_code: "4100",
+                                                     owners: [ owner_person ])
+    end
+
+    def gated_pending(days_ago: 5)
+      create_reimbursements_expense(person: payee, budget: owned_budget, status: Status::PENDING,
+                                    submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
+    end
+
     setup do
       @notifier = FakeNotifier.new
       NightlyBatchJob.checker_builder = -> { FakeChecker.new }
@@ -102,6 +119,96 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       assert_empty mailer_calls(:pending_reminder)
+    end
+
+    # --- Branch 2b: owner sign-off reminder --------------------------------
+    # A claim awaiting a budget owner is not finance's to act on, so it is kept
+    # out of their stale-pending reminder and the owners are emailed instead.
+
+    test "a claim awaiting a budget owner is left out of the finance reminder" do
+      gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:pending_reminder),
+                   "finance is not reminded about a claim that is not theirs yet"
+    end
+
+    test "emails each budget owner the claims awaiting their sign-off" do
+      claim = gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
+      assert_equal [ owner_person.email ], reminder[:to]
+      assert_equal "Olive", reminder[:greeting_name]
+      assert_equal [ claim.auto_number ], reminder[:rows].map { |row| row[:auto_number] }
+      assert_equal owned_budget.name, reminder[:rows].first[:budget_name]
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a claim awaiting sign-off is reminded with no age threshold" do
+      # Submitted today: finance's reminder waits PENDING_REMINDER_DAYS, but a
+      # claim newly assigned to an owner is reminded on the first due run-day.
+      gated_pending(days_ago: 0)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal 1, mailer_calls(:owner_sign_off_reminder).size
+    end
+
+    test "an endorsed claim reminds nobody" do
+      claim = gated_pending(days_ago: 5)
+      OwnerEndorsement.create!(expense_record_id: claim.record_id,
+                               budget_record_id: owned_budget.record_id,
+                               endorsed_by_person_id: owner_person.record_id,
+                               endorsed_amount: claim.amount, endorsed_at: Time.current)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      # It is finance's now, and it is stale, so they get their reminder.
+      assert_equal 1, mailer_calls(:pending_reminder).size
+    end
+
+    test "a claim on an ownerless budget reminds no owner and stays finance's" do
+      pending_expense(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      assert_equal 1, mailer_calls(:pending_reminder).size
+    end
+
+    test "one email per owner, listing every claim awaiting them" do
+      first = gated_pending(days_ago: 5)
+      second = gated_pending(days_ago: 2)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
+      assert_equal [ first.auto_number, second.auto_number ].sort,
+                   reminder[:rows].map { |row| row[:auto_number] }.sort
+    end
+
+    test "an owner with no email address is skipped rather than raising" do
+      owner_person.update!(email: nil)
+      gated_pending(days_ago: 5)
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      # Nothing was sent, but nothing failed either, so the run still records.
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a failed owner reminder does not record the run-day" do
+      @notifier = FakeNotifier.new(fail_only: [ :owner_sign_off_reminder ])
+      gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
     # --- Branch 3: needs-attention is flagged, never held back ------------

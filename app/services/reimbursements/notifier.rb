@@ -71,6 +71,25 @@ module Reimbursements
       )
     end
 
+    # Budget owner: the claims charged to their budgets that are waiting on their
+    # sign-off. Addressed to ONE owner (finance's reminders go to a shared
+    # mailbox; this one is personal work), hence +to+ and +greeting_name+ rather
+    # than the +recipients+ the operator reminders take.
+    #
+    # No age threshold behind it, unlike #pending_reminder: a claim awaiting your
+    # sign-off is new work assigned to you, so it is named on the first run-day
+    # after it arrives.
+    def owner_sign_off_reminder(to:, greeting_name:, rows:, run_date:)
+      count = rows.size
+      send_email(
+        to: to,
+        subject: "#{@cost_centre.subject_prefix} #{count} #{'claim'.pluralize(count)} " \
+                 "#{count == 1 ? 'needs' : 'need'} your sign-off (#{run_date})",
+        template: "reimbursements/emails/owner_sign_off_reminder",
+        assigns: { greeting_name: greeting_name, rows: rows, run_date: run_date }
+      )
+    end
+
     # Operator: everything sitting in the Approved queue, ready to be built into
     # a batch. Rows carrying a non-empty :flags need a look on the Review page
     # first; they are still listed, and still counted in the total, because this

@@ -1,0 +1,38 @@
+<p>Hi <%= @greeting_name %>,</p>
+
+<p>
+  <%= @rows.size %> <%= "claim".pluralize(@rows.size) %> charged to
+  <%= @rows.size == 1 ? "a budget you own" : "budgets you own" %>
+  <%= @rows.size == 1 ? "is" : "are" %> waiting for your <strong>sign-off</strong>.
+  The finance team can't approve <%= @rows.size == 1 ? "it" : "them" %> or pay the producer
+  until you confirm the spend was agreed.
+</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th scope="col">#</th><th scope="col">Claimant</th><th scope="col">Amount</th>
+      <th scope="col">Budget</th><th scope="col">Description</th><th scope="col">Waiting</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @rows.each do |row| %>
+      <tr>
+        <td>#<%= row[:auto_number] %></td>
+        <td><%= row[:payee_name] %></td>
+        <td><%= reimbursements_money(row[:amount]) %></td>
+        <td><%= row[:budget_name] %></td>
+        <td><%= row[:description] %></td>
+        <td><%= row[:age_days] %> <%= "day".pluralize(row[:age_days]) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p>
+  Open <strong>My Budgets</strong> in the reimbursements portal to endorse or reject
+  <%= @rows.size == 1 ? "it" : "each one" %>. If something here isn't right, reject it with a
+  reason and the producer will be told why.
+</p>
+
+<p>Best,<br><%= @cost_centre.automated_sign_off %></p>
