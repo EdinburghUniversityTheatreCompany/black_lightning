@@ -124,9 +124,9 @@ flowchart TD
 
 ## Status
 
-**Phases 1-5 are built** (2026-09-06, branch `intl-payments`). Phase 6 (reconcile correcting the
-GBP estimate) and IBAN/BIC on the finance expense-edit form are NOT done. The EUSA questions below
-are still open and none of them blocks what shipped.
+**All six phases are built**, plus the finance expense-edit form (2026-09-07) and EUSA's
+revised multi-currency template. The one EUSA question below is still open and does not block
+anything; production needs the deploy and its migration.
 
 Two things were found by generating a real form and reading it back, rather than by the tests:
 

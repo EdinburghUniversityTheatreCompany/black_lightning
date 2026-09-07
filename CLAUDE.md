@@ -662,6 +662,11 @@ is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK c
   apply and the Actuals index's manual "Link to claim". It marks the claim Paid AND corrects an
   international claim's amount to what EUSA charged, so the budget stops quoting the estimate.
   A UK amount is never overwritten: it is what the producer spent, not a guess.
+- **Every finance surface reads the rail's own pair, and forgetting one is silent.** The
+  expense-edit form's all-or-nothing override rule read the UK trio, so an international claim
+  (payee name, no sort code) was **refused outright** with a message naming fields that rail does
+  not use — no international claim could be edited at all. `reimbursements_effective_modulus_badge`
+  had the same shape, badging every one of them "Bank: Missing" with its IBAN on screen.
 - **A hidden input carrying HTML `required` silently breaks the whole form.** The browser refuses to
   submit and reports a control it cannot scroll to, so Submit just stops working — two producer
   system tests caught this and nothing else did. `required:` follows the ACTIVE rail at render time

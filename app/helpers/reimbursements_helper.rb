@@ -33,8 +33,23 @@ module ReimbursementsHelper
   end
 
   def reimbursements_effective_modulus_badge(expense, checker: Reimbursements::ModulusCheck.default_checker)
+    return reimbursements_iban_badge(expense) if expense.international?
+
     payee = EffectivePayee.new(expense.effective_sort_code, expense.effective_account_number)
     reimbursements_modulus_badge(payee, checker: checker)
+  end
+
+  # The international rail's equivalent signal. There is no modulus check to
+  # run — it is a UK sort-code algorithm — and reading the UK pair for a payee
+  # who has neither badged every international claim "Missing" while its IBAN
+  # sat right there. A stored IBAN has already passed its mod-97 check on the
+  # way in, so its presence IS the verdict.
+  def reimbursements_iban_badge(expense)
+    unless expense.effective_iban.present? && expense.effective_bic.present?
+      return render(BadgeComponent.new(type: :warning, pill: true).with_content("Missing"))
+    end
+
+    render(BadgeComponent.new(type: :success, pill: true).with_content("IBAN"))
   end
 
   # Pill badge for one Settings access-check row: OK green, FAIL red, SKIP grey

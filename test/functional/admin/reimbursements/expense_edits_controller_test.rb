@@ -637,6 +637,120 @@ module Admin
         assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
+      # --- The international rail ---------------------------------------------
+
+      def international_expense(status: "Pending", **attrs)
+        expense_at(status).tap do |e|
+          e.update!(payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+                    foreign_amount: BigDecimal("266.69"),
+                    foreign_currency: ::Reimbursements::Expense::CURRENCY_EUR,
+                    payee_name_override: "Ausland GmbH",
+                    iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500", **attrs)
+        end
+      end
+
+      def international_params(expense, **overrides)
+        { id: expense.record_id, amount: "230.00", amount_excl_vat: "230.00",
+          description: "Festival insurance", budget_record_id: @budget.record_id,
+          payee_name_override: "Ausland GmbH",
+          iban_override: "DE89 3704 0044 0532 0130 00", bic_override: "deutdeff500",
+          foreign_amount: "266.69", foreign_currency: "EUR" }.merge(overrides)
+      end
+
+      # The all-or-nothing override rule reads the UK trio, and an international
+      # claim has a payee name with no sort code — so saving one refused with a
+      # message naming fields the rail does not use.
+      test "update saves an international claim instead of demanding a sort code" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense)
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal "Ausland GmbH", expense.reload.payee_name_override
+      end
+
+      test "update edits the IBAN and BIC, normalising both" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, iban_override: "NL91 ABNA 0417 1643 00",
+                                                             bic_override: " abnanl2a ")
+
+        settled = expense.reload
+        assert_equal "NL91ABNA0417164300", settled.iban_override
+        assert_equal "ABNANL2A", settled.bic_override
+      end
+
+      test "update edits the invoice amount and its currency" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, foreign_amount: "500.00",
+                                                             foreign_currency: "USD")
+
+        settled = expense.reload
+        assert_equal BigDecimal("500.00"), settled.foreign_amount
+        assert_equal "USD", settled.foreign_currency
+      end
+
+      # The last point anything checks the number before EUSA's bank acts on it.
+      test "update rejects an IBAN that fails its check digits, writes nothing" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, iban_override: "DE88 3704 0044 0532 0130 00")
+
+        assert_response :unprocessable_content
+        assert_match(/IBAN/i, response.body)
+        assert_equal "DE89370400440532013000", expense.reload.iban_override, "nothing was written"
+      end
+
+      test "update rejects a malformed BIC, writes nothing" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, bic_override: "DEUTDEFF5")
+
+        assert_response :unprocessable_content
+        assert_match(/BIC/i, response.body)
+        assert_equal "DEUTDEFF500", expense.reload.bic_override, "nothing was written"
+      end
+
+      test "update rejects an unlisted currency, writes nothing" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, foreign_currency: "XYZ")
+
+        assert_response :unprocessable_content
+        assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.reload.foreign_currency
+      end
+
+      # Same all-or-nothing rule as the UK rail, over the pair this one routes on.
+      test "update rejects a half-filled international trio" do
+        expense = international_expense
+        sign_in @user
+
+        patch :update, params: international_params(expense, bic_override: "")
+
+        assert_response :unprocessable_content
+        assert_match(/all three/i, response.body)
+      end
+
+      # A Paid claim records what EUSA already did; its supplier details may
+      # never have been captured, so it must stay editable without inventing any.
+      test "update leaves a Paid international claim editable with blank overrides" do
+        expense = international_expense(status: "Paid", payee_name_override: "",
+                                        iban_override: "", bic_override: "")
+        sign_in @user
+
+        patch :update, params: international_params(expense, payee_name_override: "",
+                                                             iban_override: "", bic_override: "")
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+      end
+
       test "update rejects a malformed sort code override, re-renders edit 422, writes nothing" do
         expense = expense_at("Pending")
         sign_in @user

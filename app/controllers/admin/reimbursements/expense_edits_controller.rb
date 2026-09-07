@@ -66,7 +66,7 @@ module Admin
         expense = find_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        ) || bank_detail_override_error || expense_type_error(expense) ||
+        ) || bank_detail_override_error(expense) || expense_type_error(expense) ||
               budget_record_id_error(params[:budget_record_id])
         if error
           load_edit(expense)
@@ -183,8 +183,19 @@ module Admin
           # are always the identical string, matching ExpenseForm's pattern.
           sort_code_override: ::Reimbursements::BankDetails.format_sort_code(params[:sort_code_override].to_s),
           account_number_override:
-            ::Reimbursements::BankDetails.normalize_account_number(params[:account_number_override].to_s)
+            ::Reimbursements::BankDetails.normalize_account_number(params[:account_number_override].to_s),
+          # Same rule as the pair above: store exactly the normalised string
+          # #bank_detail_override_error validated, so what was checked and what
+          # reaches EUSA's form are the identical value.
+          iban_override: ::Reimbursements::BankDetails.normalize_iban(params[:iban_override].to_s),
+          bic_override: ::Reimbursements::BankDetails.normalize_bic(params[:bic_override].to_s),
+          foreign_currency: params[:foreign_currency].to_s.strip.upcase
         }
+        # The invoice figure, which is what EUSA's bank actually pays. Written
+        # only when a positive value is given, like excl-VAT below: a blank
+        # means "not edited here", not "clear it".
+        foreign = ::Reimbursements::AmountValidation.amount(params[:foreign_amount])
+        attrs[:foreign_amount] = foreign if foreign&.positive?
         # Only write excl-VAT when a positive value is given (0 means "not yet
         # known", leave the field alone), mirroring the Review save.
         excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
@@ -203,18 +214,41 @@ module Admin
       # party's partial bank details onto the payee's own remaining fields —
       # an internally-inconsistent pair that still passes each field's own
       # format check in isolation.
-      def bank_detail_override_error
+      def bank_detail_override_error(expense)
         payee_name = params[:payee_name_override].to_s
-        sort_code = params[:sort_code_override].to_s
-        account_number = params[:account_number_override].to_s
-
-        # Length first: the model caps this too (so the ciphertext fits its
-        # column), and without a check here an over-long value would reach
-        # store.update_expense! and raise RecordInvalid instead of redirecting
-        # back with a fixable message.
         if payee_name.length > ::Reimbursements::BankDetails::PAYEE_NAME_MAX_LENGTH
           return "Payee name override #{::Reimbursements::BankDetails::PAYEE_NAME_HINT}"
         end
+
+        expense.international? ? international_override_error(payee_name) : uk_override_error(payee_name)
+      end
+
+      # The international rail routes on an IBAN and a BIC, so the UK trio rule
+      # read fields it never fills: a claim with a payee name and no sort code
+      # was refused outright, with a message naming fields that do not apply.
+      def international_override_error(payee_name)
+        iban = params[:iban_override].to_s
+        bic = params[:bic_override].to_s
+
+        unless ::Reimbursements::Expense::FOREIGN_CURRENCIES.include?(params[:foreign_currency].to_s.strip.upcase)
+          return "Payment currency must be one of the currencies listed."
+        end
+        if iban.present? && !::Reimbursements::BankDetails.valid_iban?(iban)
+          return "Payee IBAN #{::Reimbursements::BankDetails::IBAN_HINT}"
+        end
+        if bic.present? && !::Reimbursements::BankDetails.valid_bic?(bic)
+          return "Payee BIC #{::Reimbursements::BankDetails::BIC_HINT}"
+        end
+        return nil unless ::Reimbursements::BankDetails.overrides_incomplete?(payee_name, iban, bic)
+
+        "To pay someone abroad, fill in all three overrides: payee name, IBAN and BIC, " \
+          "not just one or two."
+      end
+
+      def uk_override_error(payee_name)
+        sort_code = params[:sort_code_override].to_s
+        account_number = params[:account_number_override].to_s
+
         if sort_code.present? && !::Reimbursements::BankDetails.valid_sort_code?(sort_code)
           return "Sort code override #{::Reimbursements::BankDetails::SORT_CODE_HINT}"
         end
@@ -242,15 +276,21 @@ module Admin
         return nil unless type == ::Reimbursements::Expense::TYPE_INVOICE
         return nil unless ::Reimbursements::ReviewSupport.attention_actionable?(expense)
 
+        second, third =
+          if expense.international?
+            [ params[:iban_override].to_s, params[:bic_override].to_s ]
+          else
+            [ params[:sort_code_override].to_s, params[:account_number_override].to_s ]
+          end
         unless ::Reimbursements::BankDetails.overrides_missing?(
-          params[:payee_name_override].to_s, params[:sort_code_override].to_s,
-          params[:account_number_override].to_s
+          params[:payee_name_override].to_s, second, third
         )
           return nil
         end
 
-        "An Invoice pays the supplier directly, so it needs the payee overrides: name, sort " \
-          "code and account number. Without them this would pay #{expense.person&.name.presence || 'the submitter'} " \
+        fields = expense.international? ? "name, IBAN and BIC" : "name, sort code and account number"
+        "An Invoice pays the supplier directly, so it needs the payee overrides: #{fields}. " \
+          "Without them this would pay #{expense.person&.name.presence || 'the submitter'} " \
           "instead. Use Reimbursement if they paid the bill themselves."
       end
 
