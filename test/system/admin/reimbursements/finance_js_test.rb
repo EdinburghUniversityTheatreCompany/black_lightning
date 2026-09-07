@@ -503,7 +503,11 @@ module Admin
         owned = create_reimbursements_budget(name: "Owned", nominal_code: "4100", owners: [ owner ])
         expense = seed_expense(status: "Pending", budget: owned, description: "Original wording")
 
-        visit admin_reimbursements_review_path
+        # The claim is charged to a budget Olga owns and was not submitted by
+        # her, so its owner gate is unmet and it sits on the Awaiting owner tab
+        # -- not the default To approve one. That tab is where the override
+        # form this test drives lives.
+        visit admin_reimbursements_review_path(tab: "awaiting_owner")
 
         fill_in "Description", with: "Edited then abandoned"
         click_button "Approve (override sign-off)"
