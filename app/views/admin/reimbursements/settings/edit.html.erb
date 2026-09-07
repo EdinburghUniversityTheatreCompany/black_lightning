@@ -18,18 +18,19 @@
       check after changing it.
     </p>
 
-    <%= f.input :notification_role_id, label: "Notification recipients (role)",
-          collection: selectable_roles, label_method: :name, value_method: :id,
-          include_blank: "Select a role", input_html: { class: "simple-select2" },
-          wrapper_html: { class: (@cost_centre.notification_role_empty? ? "mb-2" : "mb-4") },
-          hint: "Everyone in this role gets this cost centre's nightly reminders — claims stuck " \
-                "awaiting approval, and the queue ready to batch. Nobody outside it does." %>
-    <% if @cost_centre.notification_role_empty? %>
+    <%= f.input :notification_email, label: "Notification email",
+          placeholder: "finance@bedlamfringe.co.uk",
+          wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
+          hint: "This cost centre's own finance mailbox. It gets the nightly reminders — claims " \
+                "stuck awaiting approval, and the queue ready to batch. Separate several " \
+                "addresses with semicolons. (A claim waiting on a budget owner is emailed to " \
+                "that owner instead, not here.)" %>
+    <% if @cost_centre.notification_recipients_empty? %>
       <div class="mb-4">
         <%= render AlertComponent.new(type: :warning) do %>
-          <strong>This role has no members</strong>, so nobody gets this cost centre's reminders.
-          The nightly logs a warning and retries rather than marking the day handled, so nothing is
-          lost &mdash; but nothing is sent either.
+          <strong>Nobody gets this cost centre's reminders</strong> until an address is set here.
+          The nightly logs a warning and retries rather than marking the day handled, so nothing
+          is lost &mdash; but nothing is sent either.
         <% end %>
       </div>
     <% end %>

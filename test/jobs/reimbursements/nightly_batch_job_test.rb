@@ -11,6 +11,12 @@ module Reimbursements
     THURSDAY = Date.new(2026, 7, 9)
     WEDNESDAY = Date.new(2026, 7, 8)
 
+    # Operator recipients come from each cost centre's own notification_email,
+    # not from the finance permission grid. FRINGE_EMAIL is what the fixture
+    # carries; SECOND_EMAIL is for the hand-built second centres below.
+    FRINGE_EMAIL = "finance@bedlamfringe.invalid".freeze
+    SECOND_EMAIL = "finance@second.invalid".freeze
+
     class FakeChecker
       def check(_sort, _account) = MC::VALID
     end
@@ -40,6 +46,23 @@ module Reimbursements
                                     submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
     end
 
+    # A budget with an owner who is NOT the submitter, so OwnerReview's gate
+    # applies and the claim is awaiting that owner's sign-off.
+    def owner_person
+      @owner_person ||= create_reimbursements_person(name: "Olive Owner",
+                                                     email: "olive@example.com")
+    end
+
+    def owned_budget
+      @owned_budget ||= create_reimbursements_budget(name: "Owned Set", nominal_code: "4100",
+                                                     owners: [ owner_person ])
+    end
+
+    def gated_pending(days_ago: 5)
+      create_reimbursements_expense(person: payee, budget: owned_budget, status: Status::PENDING,
+                                    submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
+    end
+
     setup do
       @notifier = FakeNotifier.new
       NightlyBatchJob.checker_builder = -> { FakeChecker.new }
@@ -50,11 +73,6 @@ module Reimbursements
         @notifier.instance_variable_set(:@mailbox, cost_centre.send_mailbox)
         @notifier
       end
-
-      # Operator recipients come from the cost centre's notification role, not
-      # from the finance permission grid. The fixture role is empty on purpose,
-      # so every test that expects mail to go out says so here.
-      roles(:fringe_finance_admin).users << users(:member)
     end
 
     teardown do
@@ -102,6 +120,104 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       assert_empty mailer_calls(:pending_reminder)
+    end
+
+    # --- Branch 2b: owner sign-off reminder --------------------------------
+    # A claim awaiting a budget owner is not finance's to act on, so it is kept
+    # out of their stale-pending reminder and the owners are emailed instead.
+
+    test "a claim awaiting a budget owner is left out of the finance reminder" do
+      gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:pending_reminder),
+                   "finance is not reminded about a claim that is not theirs yet"
+    end
+
+    test "emails each budget owner the claims awaiting their sign-off" do
+      claim = gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
+      assert_equal [ owner_person.email ], reminder[:to]
+      assert_equal "Olive", reminder[:greeting_name]
+      assert_equal [ claim.auto_number ], reminder[:rows].map { |row| row[:auto_number] }
+      assert_equal owned_budget.name, reminder[:rows].first[:budget_name]
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a claim awaiting sign-off is reminded with no age threshold" do
+      # Submitted today: finance's reminder waits PENDING_REMINDER_DAYS, but a
+      # claim newly assigned to an owner is reminded on the first due run-day.
+      gated_pending(days_ago: 0)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal 1, mailer_calls(:owner_sign_off_reminder).size
+    end
+
+    test "an endorsed claim reminds nobody" do
+      claim = gated_pending(days_ago: 5)
+      OwnerEndorsement.create!(expense_record_id: claim.record_id,
+                               budget_record_id: owned_budget.record_id,
+                               endorsed_by_person_id: owner_person.record_id,
+                               endorsed_amount: claim.amount, endorsed_at: Time.current)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      # It is finance's now, and it is stale, so they get their reminder.
+      assert_equal 1, mailer_calls(:pending_reminder).size
+    end
+
+    test "a claim on an ownerless budget reminds no owner and stays finance's" do
+      pending_expense(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      assert_equal 1, mailer_calls(:pending_reminder).size
+    end
+
+    test "one email per owner, listing every claim awaiting them" do
+      first = gated_pending(days_ago: 5)
+      second = gated_pending(days_ago: 2)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
+      assert_equal [ first.auto_number, second.auto_number ].sort,
+                   reminder[:rows].map { |row| row[:auto_number] }.sort
+    end
+
+    test "an owner with no email address is skipped rather than raising" do
+      owner_person.update!(email: nil)
+      gated_pending(days_ago: 5)
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_empty mailer_calls(:owner_sign_off_reminder)
+      # Nothing was sent, but nothing failed either, so the run still records.
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a failed owner reminder is best effort and still records the run-day" do
+      # An owner's dead address must not withhold the run-day, which would
+      # re-send FINANCE's reminders tomorrow over a failure that was never
+      # theirs. Contrast the pending/approved reminders, which DO gate it.
+      @notifier = FakeNotifier.new(fail_only: [ :owner_sign_off_reminder ])
+      gated_pending(days_ago: 5)
+      pending_expense(days_ago: 5)
+
+      events = capture_honeybadger_events { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+      # Best effort, not silent: the failure is still reported.
+      assert_includes events.map(&:first), "reimbursements.owner_reminder_failed"
+      # Finance's own reminder went out regardless.
+      assert_equal 1, mailer_calls(:pending_reminder).size
     end
 
     # --- Branch 3: needs-attention is flagged, never held back ------------
@@ -165,16 +281,16 @@ module Reimbursements
       second = create_reimbursements_cost_centre(key: "extra", name: "Second Society", eusa_code: "X99",
                                                  receive_mailbox: "in@second.co.uk",
                                                  send_mailbox: "send@second.co.uk",
-                                                 notification_users: [ users(:committee) ])
+                                                 notification_email: SECOND_EMAIL)
       assert_not_equal CostCentre.default, second
       approved_expense
       pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_equal [ [ users(:member).email ] ], mailer_calls(:approved_ready).map { |(_, k)| k[:recipients] },
+      assert_equal [ [ FRINGE_EMAIL ] ], mailer_calls(:approved_ready).map { |(_, k)| k[:recipients] },
                    "the claims belong to the default centre, so only its recipients hear about them"
-      assert_equal [ [ users(:member).email ] ], mailer_calls(:pending_reminder).map { |(_, k)| k[:recipients] }
+      assert_equal [ [ FRINGE_EMAIL ] ], mailer_calls(:pending_reminder).map { |(_, k)| k[:recipients] }
       assert_equal THURSDAY, second.reload.last_nightly_run_on,
                    "the second cost centre still records its own nightly run"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on,
@@ -317,7 +433,7 @@ module Reimbursements
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_includes mailer_calls(:approved_ready).sole.last[:recipients], users(:member).email
+      assert_includes mailer_calls(:approved_ready).sole.last[:recipients], FRINGE_EMAIL
     end
 
     test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the recipient list" do
@@ -331,11 +447,12 @@ module Reimbursements
       ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL")
     end
 
-    test "an empty notification role sends nothing and does not record the run" do
+    test "no notification address sends nothing and does not record the run" do
       # The old behaviour counted "nobody to email" as delivered, which recorded
       # the run-day and lost the alert forever. Leaving it unrecorded means
-      # tomorrow's run tries again and keeps alarming until the role is filled.
-      roles(:fringe_finance_admin).users.clear
+      # tomorrow's run tries again and keeps alarming until an address is set.
+      # update_columns because presence is validated on the model.
+      CostCentre.default.update_columns(notification_email: nil)
       approved_expense
 
       events = capture_honeybadger_events do
@@ -347,10 +464,10 @@ module Reimbursements
       assert_includes events.map(&:first), "reimbursements.nightly_no_recipients"
     end
 
-    test "REIMBURSEMENTS_OPERATOR_EMAIL still overrides an empty notification role" do
+    test "REIMBURSEMENTS_OPERATOR_EMAIL still overrides a missing address" do
       # The divert-everything switch must reach the send, not be cut off by the
-      # empty-role guard in front of it.
-      roles(:fringe_finance_admin).users.clear
+      # no-recipients guard in front of it.
+      CostCentre.default.update_columns(notification_email: nil)
       ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = "ops@example.com"
       approved_expense
 
@@ -368,7 +485,7 @@ module Reimbursements
       termtime = create_reimbursements_cost_centre(
         key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
-        notification_users: [ users(:committee) ], nightly_run_days: [ 4 ]
+        notification_email: SECOND_EMAIL, nightly_run_days: [ 4 ]
       )
       termtime_budget = create_reimbursements_budget(name: "Termtime props")
       termtime_budget.update!(cost_centre: termtime)
@@ -384,8 +501,8 @@ module Reimbursements
       assert_equal 2, ready.size
 
       by_recipient = ready.to_h { |(_name, kwargs)| [ kwargs[:recipients].sort, kwargs[:expenses] ] }
-      fringe_rows = by_recipient.fetch([ users(:member).email ])
-      termtime_rows = by_recipient.fetch([ users(:committee).email ])
+      fringe_rows = by_recipient.fetch([ FRINGE_EMAIL ])
+      termtime_rows = by_recipient.fetch([ SECOND_EMAIL ])
 
       assert_equal [ fringe_claim.auto_number ], fringe_rows.map { |row| row[:auto_number] }
       assert_equal [ termtime_claim.auto_number ], termtime_rows.map { |row| row[:auto_number] }
@@ -398,7 +515,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       ready = mailer_calls(:approved_ready).sole.last
-      assert_equal [ users(:member).email ], ready[:recipients]
+      assert_equal [ FRINGE_EMAIL ], ready[:recipients]
       assert_equal 1, ready[:expenses].size
     end
 
@@ -406,7 +523,7 @@ module Reimbursements
       termtime = create_reimbursements_cost_centre(
         key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
-        notification_users: [ users(:committee) ], nightly_run_days: [ 4 ]
+        notification_email: SECOND_EMAIL, nightly_run_days: [ 4 ]
       )
       # The default centre is NOT due today, so the old skip_unscoped_cost_centre
       # guard would have silenced termtime entirely.
@@ -418,7 +535,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       ready = mailer_calls(:approved_ready).sole.last
-      assert_equal [ users(:committee).email ], ready[:recipients]
+      assert_equal [ SECOND_EMAIL ], ready[:recipients]
       assert_equal THURSDAY, termtime.reload.last_nightly_run_on
     end
   end

@@ -85,6 +85,39 @@ module Reimbursements
       assert_match "SharePoint down", failure[:html]
     end
 
+    test "owner_sign_off_reminder greets the owner and lists their claims" do
+      notifier, graph = build
+
+      notifier.owner_sign_off_reminder(
+        to: [ "olive@example.com" ], greeting_name: "Olive", run_date: "9 July 2026",
+        rows: [ { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Owned Set",
+                  description: "Timber", age_days: 5 } ]
+      )
+
+      mail = graph.send_mails.sole
+      assert_equal MAILBOX, mail[:mailbox]
+      assert_equal [ "olive@example.com" ], mail[:to]
+      assert_match(/1 claim needs your sign-off \(9 July 2026\)/, mail[:subject])
+      assert_match "Hi Olive,", mail[:html]
+      assert_match "Owned Set", mail[:html]
+      assert_match "Timber", mail[:html]
+      assert_match "12.50", mail[:html]
+      assert_match "5 day", mail[:html]
+      assert_match "My Budgets", mail[:html]
+    end
+
+    test "owner_sign_off_reminder pluralises its subject for several claims" do
+      notifier, graph = build
+      row = { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Set",
+              description: "Timber", age_days: 5 }
+
+      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
+                                       rows: [ row, row.merge(auto_number: 8) ],
+                                       run_date: "9 July 2026")
+
+      assert_match(/2 claims need your sign-off/, graph.send_mails.sole[:subject])
+    end
+
     test "operator alert subjects reflect run_date, not wall-clock today" do
       notifier, graph = build
 
@@ -129,6 +162,8 @@ module Reimbursements
                                      line_items: [ row ], bacs_date: Date.new(2026, 5, 13))
       notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
                                 threshold_days: 3)
+      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
+                                       rows: [ row ], run_date: "9 July 2026")
       notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "40.00",
                               run_date: "9 July 2026")
       notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50",
@@ -141,7 +176,7 @@ module Reimbursements
         assert_not_includes mail[:html], "Bedlam",
                             "the body of #{mail[:subject].inspect} hardcodes the Fringe cost centre"
       end
-      operator_subjects = graph.send_mails.map { |mail| mail[:subject] }.last(4)
+      operator_subjects = graph.send_mails.map { |mail| mail[:subject] }.last(5)
       assert(operator_subjects.all? { |subject| subject.start_with?("[Termtime Payments]") },
              "operator subjects must share one cost-centre-derived prefix: #{operator_subjects.inspect}")
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"

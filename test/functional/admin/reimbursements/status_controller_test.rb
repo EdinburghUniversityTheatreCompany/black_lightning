@@ -161,8 +161,10 @@ module Admin
 
       # --- Notification recipients ------------------------------------------
 
-      test "flags a cost centre whose notification role has no members" do
-        ::Reimbursements::CostCentre.default.notification_role.users.clear
+      test "flags a cost centre with no notification address" do
+        # update_columns, not update!: presence is validated on the model, so
+        # this is the only way to reproduce a row that predates the validation.
+        ::Reimbursements::CostCentre.default.update_columns(notification_email: nil)
         sign_in @user
 
         get :show
@@ -171,38 +173,25 @@ module Admin
         assert_includes response.body, "No notification recipients"
       end
 
-      test "does not flag a cost centre whose notification role has members" do
-        @cost_centre.notification_role.users << users(:member)
+      test "does not flag a cost centre that has one" do
+        @cost_centre.update!(notification_email: "finance@bedlamfringe.co.uk")
         sign_in @user
 
         get :show
 
         assert_response :success
         assert_not_includes response.body, "No notification recipients"
+        assert_includes response.body, "finance@bedlamfringe.co.uk"
       end
 
-      # users(:committee) is the file's stand-in for someone without the finance
-      # permission (see the gating tests above); users(:member) can't play that
-      # part here because setup grants it that very permission.
-      test "flags a notification-role member who lacks the finance permission" do
-        @cost_centre.notification_role.users << users(:committee)
+      test "counts several addresses" do
+        @cost_centre.update!(notification_email: "finance@b.co; business@b.co")
         sign_in @user
 
         get :show
 
         assert_response :success
-        assert_includes response.body, "cannot open the finance screens"
-        assert_includes response.body, users(:committee).full_name
-      end
-
-      test "does not flag a notification-role member who holds the finance permission" do
-        @cost_centre.notification_role.users << users(:member)
-        sign_in @user
-
-        get :show
-
-        assert_response :success
-        assert_not_includes response.body, "cannot open the finance screens"
+        assert_includes response.body, "2 addresses"
       end
 
       test "run answers a turbo stream that updates the results in place" do

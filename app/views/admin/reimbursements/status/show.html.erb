@@ -27,29 +27,18 @@
   </p>
   <ul class="flex flex-col gap-3">
     <% @cost_centres.each do |cost_centre| %>
-      <% members = cost_centre.notification_role&.users.to_a %>
-      <% unpermitted = members.reject { |user| finance_user_ids.include?(user.id) } %>
+      <% addresses = cost_centre.notification_emails %>
       <li class="text-sm">
         <div class="flex items-center gap-2">
-          <%= render(BadgeComponent.new(type: members.any? ? :info : :danger, pill: true)
-                                   .with_content(members.any? ? pluralize(members.size, "member") : "No notification recipients")) %>
+          <%= render(BadgeComponent.new(type: addresses.any? ? :info : :danger, pill: true)
+                                   .with_content(addresses.any? ? pluralize(addresses.size, "address") : "No notification recipients")) %>
           <span><strong><%= cost_centre.name %></strong></span>
-          <% if cost_centre.notification_role %>
-            <span class="text-gray-500"><%= cost_centre.notification_role.name %></span>
-          <% end %>
+          <span class="text-gray-500"><%= addresses.to_sentence %></span>
         </div>
-        <% if members.empty? %>
+        <% if addresses.empty? %>
           <p class="text-xs text-danger mt-1">
             Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
             than marking the day handled, so nothing is lost — but nothing is sent either.
-          </p>
-        <% end %>
-        <% if unpermitted.any? %>
-          <p class="text-xs text-warning mt-1">
-            <%= unpermitted.map(&:full_name).to_sentence %>
-            <%= unpermitted.one? ? "is" : "are" %> in this role but
-            <strong>cannot open the finance screens</strong>, so the reminders will point at claims
-            they can't see. Grant them "Manage reimbursements finance" or remove them from the role.
           </p>
         <% end %>
       </li>

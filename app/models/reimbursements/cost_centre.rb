@@ -12,12 +12,12 @@
 #  last_nightly_run_on           :date
 #  name                          :string(255)      not null
 #  nightly_run_days              :string(255)      default("[2,4]"), not null
+#  notification_email            :string(255)
 #  receive_mailbox               :string(255)      not null
 #  send_mailbox                  :string(255)      not null
 #  sharepoint_site_url           :string(255)
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
-#  notification_role_id          :integer
 #  sharepoint_bacs_drive_id      :string(255)
 #  sharepoint_bacs_folder_id     :string(255)
 #  sharepoint_receipts_drive_id  :string(255)
@@ -25,12 +25,7 @@
 #
 # Indexes
 #
-#  index_reimbursements_cost_centres_on_key                   (key) UNIQUE
-#  index_reimbursements_cost_centres_on_notification_role_id  (notification_role_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (notification_role_id => roles.id)
+#  index_reimbursements_cost_centres_on_key  (key) UNIQUE
 #
 module Reimbursements
   ##
@@ -56,16 +51,11 @@ module Reimbursements
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
     serialize :nightly_run_days, coder: JSON
 
-    # Who gets this centre's operator reminders. A Role, so a committee handover
-    # is the same gesture as every other handover and the members are real
-    # accounts that cannot rot into someone who has left. These finance roles are
-    # deliberately NOT part of the annual Role#archive sweep.
-    #
-    # Optional at the association level; the requirement is the explicit
-    # validation below, so the error hangs off :notification_role -- the
-    # attribute the Settings form labels -- rather than off belongs_to's own
-    # message.
-    belongs_to :notification_role, class_name: "Role", optional: true
+    # +notification_email+ holds one or more addresses separated by ";" (the
+    # Outlook convention the business manager will type) or ",". Both are
+    # accepted because a list typed as one and read as the other would silently
+    # send the whole thing to a single unroutable address.
+    NOTIFICATION_EMAIL_SEPARATOR = /[;,]/
 
     # The +key+ is the URL slug (`param: :key`, `find_by!(key:)`), so it must be
     # URL-safe. Derive it from the name by default (create form leaves it blank),
@@ -78,9 +68,9 @@ module Reimbursements
                     allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
     # Required: a cost centre whose reminders reach nobody leaves a producer
-    # waiting indefinitely with nothing on screen to explain it. The Settings
-    # forms collect it on both create and update.
-    validates :notification_role, presence: true
+    # waiting indefinitely with nothing on screen to explain it.
+    validates :notification_email, presence: true
+    validate :notification_email_addresses_are_valid
     # Prevents a duplicate-mailbox/code misconfiguration once a second cost
     # centre is seeded — e.g. two rows accidentally sharing one receive
     # mailbox would make MailboxPollJob attribute every email-in receipt to
@@ -148,11 +138,19 @@ module Reimbursements
       eusa_recipient.presence || DEFAULT_EUSA_RECIPIENT
     end
 
-    # No role, or a role nobody is in -- either way this centre's reminders would
-    # reach nobody. The nightly warns and refuses to record the run-day rather
-    # than going quiet, and the Integration Status page badges it.
-    def notification_role_empty?
-      notification_role.nil? || notification_role.users.empty?
+    # The addresses typed into +notification_email+, in order, blanks and
+    # duplicates dropped. Empty (never nil) when the column is blank, which is
+    # what makes it safe for NotificationRecipients to test with .any?.
+    def notification_emails
+      notification_email.to_s.split(NOTIFICATION_EMAIL_SEPARATOR).map(&:strip).compact_blank.uniq
+    end
+
+    # Nowhere to send this centre's reminders. Presence-validated above, so this
+    # only catches a row that predates the validation or was written around it
+    # (update_columns). The nightly warns and refuses to record the run-day
+    # rather than going quiet, and the Integration Status page badges it.
+    def notification_recipients_empty?
+      notification_emails.empty?
     end
 
     # --- Copy derived from this cost centre -------------------------------
@@ -235,8 +233,16 @@ module Reimbursements
     end
 
     # Record a completed run so nightly_due? won't fire again for this run-day.
+    #
+    # update_column, not update!: this is a bookkeeping stamp on one column, and
+    # it must not be blocked by an unrelated validation elsewhere on the row.
+    # With notification_email presence-validated, an update! here would RAISE for
+    # a centre whose address is blank -- which is exactly the centre the
+    # REIMBURSEMENTS_OPERATOR_EMAIL override exists to keep working. The job
+    # decides whether a run counts as delivered (see NightlyBatchJob#run_for);
+    # the model must not veto writing that decision down.
     def record_nightly_run!(date = Date.current)
-      update!(last_nightly_run_on: date)
+      update_column(:last_nightly_run_on, date)
     end
 
     private
@@ -252,6 +258,15 @@ module Reimbursements
     # section). An explicit key is left untouched so it can be overridden.
     def derive_key_from_name
       self.key = name.to_s.parameterize if key.blank? && name.present?
+    end
+
+    # Every address in the list, so one typo in a three-address list is caught
+    # rather than quietly dropping that recipient's mail forever.
+    def notification_email_addresses_are_valid
+      invalid = notification_emails.reject { |address| address.match?(URI::MailTo::EMAIL_REGEXP) }
+      return if invalid.empty?
+
+      errors.add(:notification_email, "is not a valid email address: #{invalid.to_sentence}")
     end
 
     def nightly_run_days_are_weekday_numbers
