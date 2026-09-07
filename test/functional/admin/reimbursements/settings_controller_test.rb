@@ -500,6 +500,22 @@ module Admin
         assert_equal "new-venue-2027", CC.find_by(eusa_code: "NV7").key
       end
 
+      test "create accepts a notification email in place of a role" do
+        sign_in @user
+
+        post :create, params: { cost_centre: {
+          name: "Mailbox Only", eusa_code: "MBO",
+          receive_mailbox: "mbo-in@example.co", send_mailbox: "mbo-out@example.co",
+          notification_email: "finance@bedlamfringe.co.uk; business@bedlamtheatre.co.uk"
+        } }
+
+        created = CC.find_by(eusa_code: "MBO")
+        assert_not_nil created
+        assert_nil created.notification_role
+        assert_equal [ "finance@bedlamfringe.co.uk", "business@bedlamtheatre.co.uk" ],
+                     created.notification_emails
+      end
+
       test "create honours a manual key override from the Advanced section" do
         sign_in @user
 
@@ -528,7 +544,28 @@ module Admin
         assert_equal role, CC.default.reload.notification_role
       end
 
-      test "create without a notification role creates nothing" do
+      test "update sets the notification email" do
+        sign_in @user
+
+        patch :update, params: { key: CC.default.key,
+                                 cost_centre: { notification_email: "finance@bedlamfringe.co.uk",
+                                                nightly_run_days: %w[2 4] } }
+
+        assert_equal [ "finance@bedlamfringe.co.uk" ], CC.default.reload.notification_emails
+      end
+
+      test "update rejects a mistyped notification email without saving" do
+        sign_in @user
+        CC.default.update!(notification_email: "finance@bedlamfringe.co.uk")
+
+        patch :update, params: { key: CC.default.key,
+                                 cost_centre: { notification_email: "finance@b.co; nope",
+                                                nightly_run_days: %w[2 4] } }
+
+        assert_equal "finance@bedlamfringe.co.uk", CC.default.reload.notification_email
+      end
+
+      test "create with neither a notification email nor a role creates nothing" do
         sign_in @user
 
         assert_no_difference -> { CC.count } do

@@ -105,7 +105,9 @@ module Reimbursements
       cost_centre.send_mailbox = "also not an email"
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :send_mailbox
-      assert_includes cost_centre.errors.attribute_names, :notification_role
+      # Neither a notification address nor a role was given either, and that is
+      # its own error rather than a silent pass.
+      assert_includes cost_centre.errors.attribute_names, :notification_email
     end
 
     test "rejects a mistyped eusa_recipient, but blank is still allowed" do
@@ -242,6 +244,71 @@ module Reimbursements
                               notification_role: role)
 
       assert_not_predicate centre, :notification_role_empty?
+    end
+
+    # --- Notification email ------------------------------------------------
+
+    test "notification_emails splits on semicolons and commas, stripping and de-duplicating" do
+      centre = CostCentre.new(notification_email: " finance@b.co ;business@b.co,\nfinance@b.co ;; ")
+
+      assert_equal [ "finance@b.co", "business@b.co" ], centre.notification_emails
+    end
+
+    test "notification_emails is empty when the column is blank" do
+      assert_empty CostCentre.new(notification_email: nil).notification_emails
+      assert_empty CostCentre.new(notification_email: "  ").notification_emails
+    end
+
+    test "a notification email is valid on its own, with no role" do
+      centre = CostCentre.new(key: "ne1", name: "NE One", eusa_code: "NE1",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_email: "finance@b.co")
+
+      assert centre.valid?, centre.errors.full_messages.to_sentence
+    end
+
+    test "a cost centre with neither an email nor a role is invalid" do
+      centre = CostCentre.new(key: "ne2", name: "NE Two", eusa_code: "NE2",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
+
+      assert_not centre.valid?
+      assert_includes centre.errors.attribute_names, :notification_email
+    end
+
+    test "one mistyped address in the list invalidates the whole field" do
+      centre = CostCentre.new(key: "ne3", name: "NE Three", eusa_code: "NE3",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_email: "finance@b.co; not-an-email")
+
+      assert_not centre.valid?
+      assert_includes centre.errors.attribute_names, :notification_email
+    end
+
+    test "notification_recipients_empty? follows the email when one is set" do
+      centre = CostCentre.new(key: "ne4", name: "NE Four", eusa_code: "NE4",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_email: "finance@b.co")
+
+      assert_predicate centre, :notification_role_empty?
+      assert_not_predicate centre, :notification_recipients_empty?
+    end
+
+    test "notification_recipients_empty? falls back to the role when no email is set" do
+      role = Role.create!(name: "NE Five Finance Admin")
+      role.users << users(:member)
+      centre = CostCentre.new(key: "ne5", name: "NE Five", eusa_code: "NE5",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_role: role)
+
+      assert_not_predicate centre, :notification_recipients_empty?
+    end
+
+    test "notification_recipients_empty? is true with no email and an empty role" do
+      centre = CostCentre.new(key: "ne6", name: "NE Six", eusa_code: "NE6",
+                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
+                              notification_role: Role.create!(name: "NE Six Finance Admin"))
+
+      assert_predicate centre, :notification_recipients_empty?
     end
   end
 end

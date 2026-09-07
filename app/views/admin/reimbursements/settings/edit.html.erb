@@ -18,18 +18,26 @@
       check after changing it.
     </p>
 
-    <%= f.input :notification_role_id, label: "Notification recipients (role)",
+    <%# The address leads; the role below it is only consulted when this is blank. %>
+    <%= f.input :notification_email, label: "Notification email",
+          placeholder: "finance@bedlamfringe.co.uk",
+          hint: "This cost centre's own finance mailbox. It gets the nightly reminders — claims " \
+                "awaiting a budget owner, claims stuck awaiting approval, and the queue ready to " \
+                "batch. Separate several addresses with semicolons." %>
+
+    <%= f.input :notification_role_id, label: "Notification recipients (role, fallback)",
           collection: selectable_roles, label_method: :name, value_method: :id,
           include_blank: "Select a role", input_html: { class: "simple-select2" },
-          wrapper_html: { class: (@cost_centre.notification_role_empty? ? "mb-2" : "mb-4") },
-          hint: "Everyone in this role gets this cost centre's nightly reminders — claims stuck " \
-                "awaiting approval, and the queue ready to batch. Nobody outside it does." %>
-    <% if @cost_centre.notification_role_empty? %>
+          wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
+          hint: "Used only when no notification email is set above. Everyone in this role then " \
+                "gets the reminders, and nobody outside it does." %>
+    <% if @cost_centre.notification_recipients_empty? %>
       <div class="mb-4">
         <%= render AlertComponent.new(type: :warning) do %>
-          <strong>This role has no members</strong>, so nobody gets this cost centre's reminders.
-          The nightly logs a warning and retries rather than marking the day handled, so nothing is
-          lost &mdash; but nothing is sent either.
+          <strong>Nobody gets this cost centre's reminders</strong> &mdash; there is no notification
+          email, and the fallback role is unset or has no members. The nightly logs a warning and
+          retries rather than marking the day handled, so nothing is lost &mdash; but nothing is
+          sent either.
         <% end %>
       </div>
     <% end %>

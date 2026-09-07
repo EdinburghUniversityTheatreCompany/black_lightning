@@ -24,11 +24,11 @@ module Reimbursements
   # re-sends it every night. That is the intended direction — duplicates over
   # silence — so don't "fix" it by loosening the .all? in #deliver_reminders.
   #
-  # Operator recipients: the members of the cost centre's own notification role
-  # (CostCentre#notification_role), resolved through NotificationRecipients,
-  # which keeps the whole-portal REIMBURSEMENTS_OPERATOR_EMAIL override ahead of
-  # it. A centre whose role is empty sends nothing, warns, and does NOT record
-  # the run-day, so it keeps alarming rather than going quiet.
+  # Operator recipients: the cost centre's own notification email, falling back
+  # to its notification role, resolved through NotificationRecipients, which
+  # keeps the whole-portal REIMBURSEMENTS_OPERATOR_EMAIL override ahead of both.
+  # A centre with neither sends nothing, warns, and does NOT record the run-day,
+  # so it keeps alarming rather than going quiet.
   #
   # A +dry_run+ logs the same decisions without sending email or recording the
   # run — so it can be triggered safely to preview.
@@ -94,8 +94,8 @@ module Reimbursements
 
     def warn_no_recipients(cost_centre)
       Rails.logger.warn("Nightly: #{cost_centre.key} has no notification recipients — " \
-                        "its reminders went nowhere. Add people to the " \
-                        "#{cost_centre.notification_role&.name.inspect} role.")
+                        "its reminders went nowhere. Set its notification email, or add people " \
+                        "to the #{cost_centre.notification_role&.name.inspect} fallback role.")
       Honeybadger.event("reimbursements.nightly_no_recipients",
                         cost_centre: cost_centre.key,
                         notification_role: cost_centre.notification_role&.name)

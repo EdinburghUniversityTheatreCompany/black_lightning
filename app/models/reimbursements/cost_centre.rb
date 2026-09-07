@@ -12,6 +12,7 @@
 #  last_nightly_run_on           :date
 #  name                          :string(255)      not null
 #  nightly_run_days              :string(255)      default("[2,4]"), not null
+#  notification_email            :string(255)
 #  receive_mailbox               :string(255)      not null
 #  send_mailbox                  :string(255)      not null
 #  sharepoint_site_url           :string(255)
@@ -56,16 +57,22 @@ module Reimbursements
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
     serialize :nightly_run_days, coder: JSON
 
-    # Who gets this centre's operator reminders. A Role, so a committee handover
-    # is the same gesture as every other handover and the members are real
-    # accounts that cannot rot into someone who has left. These finance roles are
-    # deliberately NOT part of the annual Role#archive sweep.
+    # The FALLBACK for who gets this centre's operator reminders, used only when
+    # +notification_email+ is blank. A Role, so a committee handover is the same
+    # gesture as every other handover and the members are real accounts that
+    # cannot rot into someone who has left. These finance roles are deliberately
+    # NOT part of the annual Role#archive sweep.
     #
     # Optional at the association level; the requirement is the explicit
-    # validation below, so the error hangs off :notification_role -- the
-    # attribute the Settings form labels -- rather than off belongs_to's own
-    # message.
+    # validation below, so the error hangs off the attribute the Settings form
+    # labels rather than off belongs_to's own message.
     belongs_to :notification_role, class_name: "Role", optional: true
+
+    # +notification_email+ holds one or more addresses separated by ";" (the
+    # Outlook convention the business manager will type) or ",". Both are
+    # accepted because a list typed as one and read as the other would silently
+    # send the whole thing to a single unroutable address.
+    NOTIFICATION_EMAIL_SEPARATOR = /[;,]/
 
     # The +key+ is the URL slug (`param: :key`, `find_by!(key:)`), so it must be
     # URL-safe. Derive it from the name by default (create form leaves it blank),
@@ -77,10 +84,12 @@ module Reimbursements
                               message: "may only contain lowercase letters, numbers and hyphens" },
                     allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
-    # Required: a cost centre whose reminders reach nobody leaves a producer
-    # waiting indefinitely with nothing on screen to explain it. The Settings
-    # forms collect it on both create and update.
-    validates :notification_role, presence: true
+    # One of the two is required: a cost centre whose reminders reach nobody
+    # leaves a producer waiting indefinitely with nothing on screen to explain
+    # it. The error hangs off :notification_email because that is the field the
+    # Settings forms now lead with; the role is the fallback.
+    validate :has_somewhere_to_send_reminders
+    validate :notification_email_addresses_are_valid
     # Prevents a duplicate-mailbox/code misconfiguration once a second cost
     # centre is seeded — e.g. two rows accidentally sharing one receive
     # mailbox would make MailboxPollJob attribute every email-in receipt to
@@ -148,11 +157,27 @@ module Reimbursements
       eusa_recipient.presence || DEFAULT_EUSA_RECIPIENT
     end
 
-    # No role, or a role nobody is in -- either way this centre's reminders would
-    # reach nobody. The nightly warns and refuses to record the run-day rather
-    # than going quiet, and the Integration Status page badges it.
+    # The addresses typed into +notification_email+, in order, blanks and
+    # duplicates dropped. Empty (never nil) when the column is blank, which is
+    # what makes it safe for NotificationRecipients to test with .any?.
+    def notification_emails
+      notification_email.to_s.split(NOTIFICATION_EMAIL_SEPARATOR).map(&:strip).compact_blank.uniq
+    end
+
+    # No role, or a role nobody is in. Kept distinct from
+    # +notification_recipients_empty?+ because the Settings form and the Status
+    # page still speak about the ROLE specifically ("this role has no members"),
+    # which is only worth saying when the role is what is being used.
     def notification_role_empty?
       notification_role.nil? || notification_role.users.empty?
+    end
+
+    # Nowhere at all to send this centre's reminders: no address typed, and the
+    # role fallback is unset or empty. The nightly warns and refuses to record
+    # the run-day rather than going quiet, and the Integration Status page
+    # badges it.
+    def notification_recipients_empty?
+      notification_emails.empty? && notification_role_empty?
     end
 
     # --- Copy derived from this cost centre -------------------------------
@@ -252,6 +277,26 @@ module Reimbursements
     # section). An explicit key is left untouched so it can be overridden.
     def derive_key_from_name
       self.key = name.to_s.parameterize if key.blank? && name.present?
+    end
+
+    # Presence of EITHER route. Deliberately not a check on
+    # notification_recipients_empty?: an empty role is a configuration gap the
+    # Settings page and the nightly both surface loudly, but it must not block
+    # saving the row -- a centre saved with a role whose members are added a
+    # minute later is the normal order to work in.
+    def has_somewhere_to_send_reminders
+      return if notification_emails.any? || notification_role.present?
+
+      errors.add(:notification_email, "must be set, or a notification role chosen")
+    end
+
+    # Every address in the list, so one typo in a three-address list is caught
+    # rather than quietly dropping that recipient's mail forever.
+    def notification_email_addresses_are_valid
+      invalid = notification_emails.reject { |address| address.match?(URI::MailTo::EMAIL_REGEXP) }
+      return if invalid.empty?
+
+      errors.add(:notification_email, "is not a valid email address: #{invalid.to_sentence}")
     end
 
     def nightly_run_days_are_weekday_numbers

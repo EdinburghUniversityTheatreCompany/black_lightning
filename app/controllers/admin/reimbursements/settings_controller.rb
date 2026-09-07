@@ -119,14 +119,14 @@ module Admin
       # operator override it.
       def create_params
         params.require(:cost_centre).permit(
-          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox, :notification_role_id
+          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox, :notification_role_id, :notification_email
         )
       end
 
       def settings_params
         permitted = params.require(:cost_centre).permit(
           :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_contact_name, :eusa_signature_name,
-          :sharepoint_site_url, :notification_role_id
+          :sharepoint_site_url, :notification_role_id, :notification_email
         )
         permitted[:nightly_run_days] = normalized_run_days
         permitted

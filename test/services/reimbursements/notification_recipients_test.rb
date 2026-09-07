@@ -2,10 +2,10 @@ require "test_helper"
 
 module Reimbursements
   class NotificationRecipientsTest < ActiveSupport::TestCase
-    def centre_with(role)
+    def centre_with(role, notification_email: nil)
       CostCentre.new(key: "nrt", name: "NRT", eusa_code: "NRT",
                      receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                     notification_role: role)
+                     notification_role: role, notification_email: notification_email)
     end
 
     test "returns the notification role's members' emails" do
@@ -50,6 +50,34 @@ module Reimbursements
       role.users << blank
 
       assert_equal [ users(:member).email ], NotificationRecipients.for(centre_with(role))
+    end
+
+    test "the notification email wins over the role" do
+      role = Role.create!(name: "NRT Superseded")
+      role.users << users(:member)
+      centre = centre_with(role, notification_email: "finance@bedlamfringe.co.uk")
+
+      assert_equal [ "finance@bedlamfringe.co.uk" ], NotificationRecipients.for(centre)
+    end
+
+    test "splits a multi-address notification email on semicolons and commas" do
+      centre = centre_with(nil, notification_email: "finance@b.co; business@b.co,  finance@b.co ")
+
+      assert_equal [ "finance@b.co", "business@b.co" ], NotificationRecipients.for(centre)
+    end
+
+    test "falls back to the role when the notification email is blank" do
+      role = Role.create!(name: "NRT Fallback")
+      role.users << users(:member)
+
+      assert_equal [ users(:member).email ], NotificationRecipients.for(centre_with(role, notification_email: "  "))
+    end
+
+    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the notification email too" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ],
+                     NotificationRecipients.for(centre_with(nil, notification_email: "finance@b.co"))
+      end
     end
 
     private

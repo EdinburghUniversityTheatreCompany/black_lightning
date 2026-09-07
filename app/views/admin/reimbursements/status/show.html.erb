@@ -27,18 +27,28 @@
   </p>
   <ul class="flex flex-col gap-3">
     <% @cost_centres.each do |cost_centre| %>
-      <% members = cost_centre.notification_role&.users.to_a %>
+      <% addresses = cost_centre.notification_emails %>
+      <%# The role is the fallback, so its members only matter (and only get
+          checked for the finance permission) when no address is set. %>
+      <% members = addresses.any? ? [] : cost_centre.notification_role&.users.to_a %>
       <% unpermitted = members.reject { |user| finance_user_ids.include?(user.id) } %>
       <li class="text-sm">
         <div class="flex items-center gap-2">
-          <%= render(BadgeComponent.new(type: members.any? ? :info : :danger, pill: true)
-                                   .with_content(members.any? ? pluralize(members.size, "member") : "No notification recipients")) %>
+          <% if addresses.any? %>
+            <%= render(BadgeComponent.new(type: :info, pill: true)
+                                     .with_content(pluralize(addresses.size, "address"))) %>
+          <% else %>
+            <%= render(BadgeComponent.new(type: members.any? ? :info : :danger, pill: true)
+                                     .with_content(members.any? ? pluralize(members.size, "member") : "No notification recipients")) %>
+          <% end %>
           <span><strong><%= cost_centre.name %></strong></span>
-          <% if cost_centre.notification_role %>
-            <span class="text-gray-500"><%= cost_centre.notification_role.name %></span>
+          <% if addresses.any? %>
+            <span class="text-gray-500"><%= addresses.to_sentence %></span>
+          <% elsif cost_centre.notification_role %>
+            <span class="text-gray-500"><%= cost_centre.notification_role.name %> (fallback role)</span>
           <% end %>
         </div>
-        <% if members.empty? %>
+        <% if cost_centre.notification_recipients_empty? %>
           <p class="text-xs text-danger mt-1">
             Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
             than marking the day handled, so nothing is lost — but nothing is sent either.
