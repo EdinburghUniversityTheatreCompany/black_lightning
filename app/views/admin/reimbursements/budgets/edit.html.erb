@@ -88,7 +88,8 @@
                     <%= hidden_field_tag :forecast_id, forecast.record_id %>
                     <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount,
                           id: "edit_amount_#{forecast.record_id}", html_class: "w-40" do %>
-                      <%= number_field_tag :amount, forecast.amount, step: "0.01", id: "edit_amount_#{forecast.record_id}",
+                      <%= number_field_tag :amount, reimbursements_amount_value(forecast.amount),
+                                           step: "0.01", id: "edit_amount_#{forecast.record_id}",
                                            class: input_classes %>
                     <% end %>
                     <%= render "shared/form/field", label: "Date", name: :date,

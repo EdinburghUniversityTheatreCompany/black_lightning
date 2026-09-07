@@ -118,6 +118,21 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_equal "£1,234.50", reimbursements_money("1234.50")
   end
 
+  test "reimbursements_amount_value pads a decimal column's value to 2dp" do
+    # A BigDecimal's own to_s renders "100.0" into a number input, a pence
+    # short of the figure reimbursements_money prints beside it.
+    assert_equal "100.00", reimbursements_amount_value(BigDecimal("100"))
+    assert_equal "12.50", reimbursements_amount_value(BigDecimal("12.5"))
+  end
+
+  test "reimbursements_amount_value carries no delimiter or unit a number input would reject" do
+    assert_equal "1234.50", reimbursements_amount_value(BigDecimal("1234.5"))
+  end
+
+  test "reimbursements_amount_value renders nil as nil, leaving the input empty" do
+    assert_nil reimbursements_amount_value(nil)
+  end
+
   test "reasons_popover is blank when there are no reasons" do
     assert_equal "", reimbursements_reasons_popover(reasons: [], key: "x", label: "Needs attention",
                                                      heading: "Needs attention:")

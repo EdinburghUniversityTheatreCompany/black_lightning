@@ -670,7 +670,9 @@ module Admin
         assert_response :success
         assert_equal @forecast.record_id, assigns(:editing_forecast_id)
         assert_select "input[name=forecast_id][value=#{@forecast.record_id}]"
-        assert_select "input[name=amount][value=?]", "800.0"
+        # 2dp, not the BigDecimal's own "800.0" — the input sits beside
+        # figures reimbursements_money prints to the penny.
+        assert_select "input[name=amount][value=?]", "800.00"
       end
 
       test "updating a forecast writes the corrected values" do

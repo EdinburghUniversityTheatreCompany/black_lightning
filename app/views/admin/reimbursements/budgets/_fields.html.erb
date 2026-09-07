@@ -15,7 +15,7 @@
                      class: input_classes %>
     <% end %>
     <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
-      <%= number_field_tag :initial_budget, initial_budget, step: "0.01", class: input_classes %>
+      <%= number_field_tag :initial_budget, reimbursements_amount_value(initial_budget), step: "0.01", class: input_classes %>
     <% end %>
     <% if cost_centres.size > 1 %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>

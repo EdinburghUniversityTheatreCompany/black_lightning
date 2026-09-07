@@ -66,6 +66,17 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # The same amount as the VALUE of a `step: 0.01` number input. A decimal
+  # column hands the view a BigDecimal, whose to_s an input renders as "100.0"
+  # or "12.5" — a pence column short of the figure printed everywhere else.
+  # No delimiter and no unit: a number input rejects both, and a rejected value
+  # renders as an empty box, so this is deliberately not reimbursements_money.
+  def reimbursements_amount_value(amount)
+    return if amount.nil?
+
+    format("%.2f", amount)
+  end
+
   # The amount EUSA is being asked to PAY, in the currency they pay it in.
   #
   # For an international claim that is the foreign figure on their form, not

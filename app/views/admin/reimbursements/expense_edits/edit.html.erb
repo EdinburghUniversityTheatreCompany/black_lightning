@@ -96,10 +96,10 @@
 
           <div class="grid gap-4 sm:grid-cols-2">
             <%= render "shared/form/field", label: "Amount (GBP)", name: :amount do %>
-              <%= number_field_tag :amount, @expense.amount, step: 0.01, min: 0, class: input_classes %>
+              <%= number_field_tag :amount, reimbursements_amount_value(@expense.amount), step: 0.01, min: 0, class: input_classes %>
             <% end %>
             <%= render "shared/form/field", label: "Amount excl. VAT (GBP)", name: :amount_excl_vat do %>
-              <%= number_field_tag :amount_excl_vat, @expense.amount_excl_vat, step: 0.01, min: 0,
+              <%= number_field_tag :amount_excl_vat, reimbursements_amount_value(@expense.amount_excl_vat), step: 0.01, min: 0,
                                    class: input_classes %>
             <% end %>
           </div>

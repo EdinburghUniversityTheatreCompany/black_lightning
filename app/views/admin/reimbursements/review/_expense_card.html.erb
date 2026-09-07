@@ -189,7 +189,7 @@
           bank actually charged. It has to be filled in before the claim can be approved.
         </p>
       <% end %>
-      <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
+      <%= number_field_tag :amount, reimbursements_amount_value(expense.amount), step: 0.01, min: 0, id: "amount_#{expense.record_id}",
                            class: input_classes %>
     </div>
     <div>
@@ -197,7 +197,7 @@
           gross automatically and asking for it would invite a deduction nobody
           can claim. %>
       <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: FormStyles::LABEL %>
-      <%= number_field_tag :amount_excl_vat, expense.amount_excl_vat, step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
+      <%= number_field_tag :amount_excl_vat, reimbursements_amount_value(expense.amount_excl_vat), step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
                            class: input_classes %>
     </div>
     <div class="sm:col-span-2">
