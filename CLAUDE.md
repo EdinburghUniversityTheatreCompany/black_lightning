@@ -424,6 +424,17 @@ survive as historical import provenance and are never written. Spec + plan in
   supplier we never captured. That form is also the only place `expense_type` can be changed
   after submission (and the only one offering From EUSA), so a mis-typed claim no longer needs
   the producer to withdraw and resubmit.
+- **The Review queue has THREE tabs, and `to_approve` is the default** (`ReviewController::TABS`).
+  Awaiting owner holds the claims whose owner gate is unmet; To approve is finance's queue and
+  keeps the Ready / Needs attention split, which now means a DATA problem only. Every link into
+  the page from elsewhere carries no `?tab=` at all, so an unrecognised value must fall back to
+  `to_approve` — and `pending`, the value the tab used to have, is aliased to it for old
+  bookmarks. The owner-gate lookup sits in `#index`, not `#load_queue`, because the CSV download
+  follows the tab on screen and `#load_queue` is HTML-only. A claim on a budget with no owners
+  (or no budget) never reaches the new tab: `OwnerReview.gate_applies?` is already false for it,
+  so it goes straight to finance. The new tab renders the full card so the finance override stays
+  reachable, but deliberately has NO bulk toolbar — bulk approve skips every gated claim, so it
+  could only ever report "0 approved".
 - **`:base` errors are rendered by `shared/pages/_form`**, not by simple_form: `f.error_notification`
   is only the generic "review the problems below" banner and has no field to hang a base error
   under. Anything added with `errors.add(:base, …)` on a form rendered through that partial is
@@ -441,12 +452,23 @@ survive as historical import provenance and are never written. Spec + plan in
   **The VAT soft-block in `ExpenseForm` stays a soft block**, now triggered only by the ex-VAT
   amount not being below the total (`vat_itemised` was extractor-written and went with it).
 - **The nightly job reminds, it never gates** (`Reimbursements::NightlyBatchJob`). It submits
-  nothing and builds no batch — Build Batch is operator-initiated. Per due run-day it sends two
-  independent reminders for the default cost centre: stale **Pending** claims awaiting approval,
-  and the whole **Approved** queue ready to batch. Claims `ReviewSupport.needs_attention` flags
-  are listed inside the approved reminder *with their reasons*, never held back: the older
-  behaviour swapped the whole list for a "manual review" email, so one problem claim hid every
-  other claim from the operator. A reminder with nothing to say counts as delivered.
+  nothing and builds no batch — Build Batch is operator-initiated. Per due run-day it sends three
+  independent reminders: stale **Pending** claims awaiting approval, the whole **Approved** queue
+  ready to batch, and one **owner sign-off** reminder per budget owner. Claims
+  `ReviewSupport.needs_attention` flags are listed inside the approved reminder *with their
+  reasons*, never held back: the older behaviour swapped the whole list for a "manual review"
+  email, so one problem claim hid every other claim from the operator. A reminder with nothing to
+  say counts as delivered.
+  - **The Pending queue is split, and both halves must read it the same way.** Claims whose owner
+    gate is unmet are excluded from finance's stale-pending reminder and sent to the OWNERS
+    instead (`remind_budget_owners`, addressed to `Person#email`, greeted via `GreetingName`).
+    The job and `ReviewController` both partition on `OwnerReview.unmet_gate_expense_ids`, so the
+    email and the Review page's tabs cannot disagree about whose queue a claim is in.
+  - **The owner reminder has NO age threshold**, unlike finance's `PENDING_REMINDER_DAYS`: a
+    claim awaiting your sign-off is new work assigned to you, so it is named on the first due
+    run-day and re-named every run-day until endorsed or rejected. A claim with several owners is
+    named to ALL of them (any one endorsement satisfies the gate, so telling one would strand it
+    while that person is away); an owner with no email is skipped rather than failing the run.
   - **`record_nightly_run!` is gated on EVERY reminder having sent**, from one call site. That
     write marks the run-day handled forever (`nightly_due?` skips it) and there is no retry
     queue behind these alerts, so a half-sent run must be retried whole — at the cost of
@@ -454,15 +476,21 @@ survive as historical import provenance and are never written. Spec + plan in
     nightly, which is the intended direction (duplicates over silence). Both reminders are
     always *attempted*: `deliver_reminders` collects them into an array and calls `.all?`
     precisely so the calls cannot short-circuit. Don't rewrite it into a boolean expression.
-  - **Recipients are the cost centre's own `notification_role`, not the finance permission**
-    (`Reimbursements::NotificationRecipients`). That permission still gates every finance
-    SCREEN globally — a Fringe admin can open a termtime claim, they just aren't emailed about
-    it. `REIMBURSEMENTS_OPERATOR_EMAIL` stays whole-portal and overrides both. `roles.id` is a
-    legacy INTEGER primary key, so `notification_role_id` is `:integer`.
-  - **An empty role does NOT record the run-day.** The old code returned "delivered" for no
-    recipients, which marked the day handled forever and lost the alert; it now warns, fires a
+  - **Operator recipients are the cost centre's own `notification_email` — its shared finance
+    mailbox — falling back to `notification_role`** (`Reimbursements::NotificationRecipients`),
+    not the finance permission. That permission still gates every finance SCREEN globally — a
+    Fringe admin can open a termtime claim, they just aren't emailed about it.
+    `REIMBURSEMENTS_OPERATOR_EMAIL` stays whole-portal and overrides both. The role is kept as a
+    fallback rather than dropped because every centre configured before that column existed has
+    one, and removing it would silently stop their reminders on deploy; one of the two is
+    required. `notification_email` holds several addresses separated by `;` or `,`, each
+    format-validated so a typo in a list fails the save instead of quietly losing that
+    recipient's mail. `roles.id` is a legacy INTEGER primary key, so `notification_role_id` is
+    `:integer`.
+  - **No recipients at all does NOT record the run-day.** The old code returned "delivered" for
+    no recipients, which marked the day handled forever and lost the alert; it now warns, fires a
     `reimbursements.nightly_no_recipients` Honeybadger event, and retries tomorrow. Integration
-    Status badges it, and also flags role members lacking the finance permission.
+    Status badges it, and also flags fallback-role members lacking the finance permission.
   - **A claim whose budget names no cost centre falls to the DEFAULT centre**, not to nobody
     (`claims_by_cost_centre_id`) — the same leniency as `DatabaseStore#in_year`. A claim
     reminded to the wrong admins is visible and correctable; one reminded to nobody leaves a

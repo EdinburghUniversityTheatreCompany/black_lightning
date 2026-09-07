@@ -238,6 +238,8 @@ module Reimbursements
     # Owners with no email address are dropped here rather than deeper in, so
     # +remind_budget_owners+'s "nothing to send" check sees the truth.
     def claims_by_owner(awaiting_owner)
+      return {} if awaiting_owner.empty?
+
       people = store.people.index_by(&:record_id)
       awaiting_owner.each_with_object(Hash.new { |h, k| h[k] = [] }) do |claim, by_owner|
         claim.budget.owner_ids.each do |owner_id|
