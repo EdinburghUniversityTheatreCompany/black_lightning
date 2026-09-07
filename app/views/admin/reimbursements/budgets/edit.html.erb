@@ -54,7 +54,9 @@
     <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount, html_class: "w-40" do %>
       <%= number_field_tag :amount, nil, step: "0.01", class: input_classes %>
     <% end %>
-    <%= render "shared/form/field", label: "Date", name: :date do %>
+    <%# html_class: "" drops the partial's default mb-4 — in an items-end row it
+        would float this field above its neighbours, which pass their own class. %>
+    <%= render "shared/form/field", label: "Date", name: :date, html_class: "" do %>
       <%= date_field_tag :date, Date.current, class: input_classes(width: nil) %>
     <% end %>
     <%= render "shared/form/field", label: "Reason / notes", name: :reason, html_class: "grow" do %>
@@ -89,7 +91,8 @@
                       <%= number_field_tag :amount, forecast.amount, step: "0.01", id: "edit_amount_#{forecast.record_id}",
                                            class: input_classes %>
                     <% end %>
-                    <%= render "shared/form/field", label: "Date", name: :date, id: "edit_date_#{forecast.record_id}" do %>
+                    <%= render "shared/form/field", label: "Date", name: :date,
+                          id: "edit_date_#{forecast.record_id}", html_class: "" do %>
                       <%= date_field_tag :date, forecast.date, id: "edit_date_#{forecast.record_id}",
                                          class: input_classes(width: nil) %>
                     <% end %>

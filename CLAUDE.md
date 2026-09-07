@@ -94,6 +94,10 @@ error and hint below). Never type `border border-gray-300 rounded …` into a vi
   (it POSTs straight to the action); only a browser test clicking the real button catches it.
 - `shared/back_link` is the "← All …" line above a card; `shared/form/paste_or_upload` is the
   paste-box-plus-file-input pair the budget import, climate import and Reconcile share.
+- **`shared/form/field`'s `html_class` DEFAULTS to `mb-4`, and passing any class replaces it.** In a
+  one-line `flex items-end` row that margin lifts the field a clear 16px above its neighbours, so a
+  field with no width class of its own needs an explicit `html_class: ""` — the sibling that passes
+  `w-40` or `grow` has silently dropped the margin already.
 - **A select Tom Select will take over must carry only `simple-select2`.** Tom Select copies the
   `<select>`'s classes onto its `.ts-wrapper`, which already draws the box, so `border … w-72` on
   the select renders a box inside a box. simple_form's `CollectionSelectInput` strips the classes
