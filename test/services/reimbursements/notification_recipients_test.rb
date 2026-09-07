@@ -2,81 +2,42 @@ require "test_helper"
 
 module Reimbursements
   class NotificationRecipientsTest < ActiveSupport::TestCase
-    def centre_with(role, notification_email: nil)
+    def centre_with(notification_email)
       CostCentre.new(key: "nrt", name: "NRT", eusa_code: "NRT",
                      receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                     notification_role: role, notification_email: notification_email)
+                     notification_email: notification_email)
     end
 
-    test "returns the notification role's members' emails" do
-      role = Role.create!(name: "NRT Finance Admin")
-      role.users << users(:member)
-
-      assert_equal [ users(:member).email ], NotificationRecipients.for(centre_with(role))
+    test "returns the cost centre's notification addresses" do
+      assert_equal [ "finance@bedlamfringe.co.uk" ],
+                   NotificationRecipients.for(centre_with("finance@bedlamfringe.co.uk"))
     end
 
-    test "returns an empty array for a role with no members" do
-      assert_empty NotificationRecipients.for(centre_with(Role.create!(name: "NRT Empty")))
+    test "splits a multi-address notification email on semicolons and commas" do
+      centre = centre_with("finance@b.co; business@b.co,  finance@b.co ")
+
+      assert_equal [ "finance@b.co", "business@b.co" ], NotificationRecipients.for(centre)
     end
 
-    test "returns an empty array when no role is set" do
+    test "returns an empty array when no address is set" do
       assert_empty NotificationRecipients.for(centre_with(nil))
+      assert_empty NotificationRecipients.for(centre_with("  "))
     end
 
     test "returns an empty array for a nil cost centre" do
       assert_empty NotificationRecipients.for(nil)
     end
 
-    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the role entirely" do
-      role = Role.create!(name: "NRT Overridden")
-      role.users << users(:member)
-
-      with_operator_email("ops@example.com") do
-        assert_equal [ "ops@example.com" ], NotificationRecipients.for(centre_with(role))
-      end
-    end
-
-    test "the override applies even when the centre has no role" do
-      with_operator_email("ops@example.com") do
-        assert_equal [ "ops@example.com" ], NotificationRecipients.for(centre_with(nil))
-      end
-    end
-
-    test "de-duplicates and drops blanks" do
-      role = Role.create!(name: "NRT Dupes")
-      blank = users(:committee)
-      blank.update_columns(email: "")
-      role.users << users(:member)
-      role.users << blank
-
-      assert_equal [ users(:member).email ], NotificationRecipients.for(centre_with(role))
-    end
-
-    test "the notification email wins over the role" do
-      role = Role.create!(name: "NRT Superseded")
-      role.users << users(:member)
-      centre = centre_with(role, notification_email: "finance@bedlamfringe.co.uk")
-
-      assert_equal [ "finance@bedlamfringe.co.uk" ], NotificationRecipients.for(centre)
-    end
-
-    test "splits a multi-address notification email on semicolons and commas" do
-      centre = centre_with(nil, notification_email: "finance@b.co; business@b.co,  finance@b.co ")
-
-      assert_equal [ "finance@b.co", "business@b.co" ], NotificationRecipients.for(centre)
-    end
-
-    test "falls back to the role when the notification email is blank" do
-      role = Role.create!(name: "NRT Fallback")
-      role.users << users(:member)
-
-      assert_equal [ users(:member).email ], NotificationRecipients.for(centre_with(role, notification_email: "  "))
-    end
-
-    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the notification email too" do
+    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the address entirely" do
       with_operator_email("ops@example.com") do
         assert_equal [ "ops@example.com" ],
-                     NotificationRecipients.for(centre_with(nil, notification_email: "finance@b.co"))
+                     NotificationRecipients.for(centre_with("finance@bedlamfringe.co.uk"))
+      end
+    end
+
+    test "the override applies even when the centre has no address" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ], NotificationRecipients.for(centre_with(nil))
       end
     end
 

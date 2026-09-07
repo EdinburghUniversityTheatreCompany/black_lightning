@@ -18,7 +18,6 @@
 #  sharepoint_site_url           :string(255)
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
-#  notification_role_id          :integer
 #  sharepoint_bacs_drive_id      :string(255)
 #  sharepoint_bacs_folder_id     :string(255)
 #  sharepoint_receipts_drive_id  :string(255)
@@ -26,12 +25,7 @@
 #
 # Indexes
 #
-#  index_reimbursements_cost_centres_on_key                   (key) UNIQUE
-#  index_reimbursements_cost_centres_on_notification_role_id  (notification_role_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (notification_role_id => roles.id)
+#  index_reimbursements_cost_centres_on_key  (key) UNIQUE
 #
 module Reimbursements
   ##
@@ -57,17 +51,6 @@ module Reimbursements
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
     serialize :nightly_run_days, coder: JSON
 
-    # The FALLBACK for who gets this centre's operator reminders, used only when
-    # +notification_email+ is blank. A Role, so a committee handover is the same
-    # gesture as every other handover and the members are real accounts that
-    # cannot rot into someone who has left. These finance roles are deliberately
-    # NOT part of the annual Role#archive sweep.
-    #
-    # Optional at the association level; the requirement is the explicit
-    # validation below, so the error hangs off the attribute the Settings form
-    # labels rather than off belongs_to's own message.
-    belongs_to :notification_role, class_name: "Role", optional: true
-
     # +notification_email+ holds one or more addresses separated by ";" (the
     # Outlook convention the business manager will type) or ",". Both are
     # accepted because a list typed as one and read as the other would silently
@@ -84,11 +67,9 @@ module Reimbursements
                               message: "may only contain lowercase letters, numbers and hyphens" },
                     allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
-    # One of the two is required: a cost centre whose reminders reach nobody
-    # leaves a producer waiting indefinitely with nothing on screen to explain
-    # it. The error hangs off :notification_email because that is the field the
-    # Settings forms now lead with; the role is the fallback.
-    validate :has_somewhere_to_send_reminders
+    # Required: a cost centre whose reminders reach nobody leaves a producer
+    # waiting indefinitely with nothing on screen to explain it.
+    validates :notification_email, presence: true
     validate :notification_email_addresses_are_valid
     # Prevents a duplicate-mailbox/code misconfiguration once a second cost
     # centre is seeded — e.g. two rows accidentally sharing one receive
@@ -164,20 +145,12 @@ module Reimbursements
       notification_email.to_s.split(NOTIFICATION_EMAIL_SEPARATOR).map(&:strip).compact_blank.uniq
     end
 
-    # No role, or a role nobody is in. Kept distinct from
-    # +notification_recipients_empty?+ because the Settings form and the Status
-    # page still speak about the ROLE specifically ("this role has no members"),
-    # which is only worth saying when the role is what is being used.
-    def notification_role_empty?
-      notification_role.nil? || notification_role.users.empty?
-    end
-
-    # Nowhere at all to send this centre's reminders: no address typed, and the
-    # role fallback is unset or empty. The nightly warns and refuses to record
-    # the run-day rather than going quiet, and the Integration Status page
-    # badges it.
+    # Nowhere to send this centre's reminders. Presence-validated above, so this
+    # only catches a row that predates the validation or was written around it
+    # (update_columns). The nightly warns and refuses to record the run-day
+    # rather than going quiet, and the Integration Status page badges it.
     def notification_recipients_empty?
-      notification_emails.empty? && notification_role_empty?
+      notification_emails.empty?
     end
 
     # --- Copy derived from this cost centre -------------------------------
@@ -260,8 +233,16 @@ module Reimbursements
     end
 
     # Record a completed run so nightly_due? won't fire again for this run-day.
+    #
+    # update_column, not update!: this is a bookkeeping stamp on one column, and
+    # it must not be blocked by an unrelated validation elsewhere on the row.
+    # With notification_email presence-validated, an update! here would RAISE for
+    # a centre whose address is blank -- which is exactly the centre the
+    # REIMBURSEMENTS_OPERATOR_EMAIL override exists to keep working. The job
+    # decides whether a run counts as delivered (see NightlyBatchJob#run_for);
+    # the model must not veto writing that decision down.
     def record_nightly_run!(date = Date.current)
-      update!(last_nightly_run_on: date)
+      update_column(:last_nightly_run_on, date)
     end
 
     private
@@ -277,17 +258,6 @@ module Reimbursements
     # section). An explicit key is left untouched so it can be overridden.
     def derive_key_from_name
       self.key = name.to_s.parameterize if key.blank? && name.present?
-    end
-
-    # Presence of EITHER route. Deliberately not a check on
-    # notification_recipients_empty?: an empty role is a configuration gap the
-    # Settings page and the nightly both surface loudly, but it must not block
-    # saving the row -- a centre saved with a role whose members are added a
-    # minute later is the normal order to work in.
-    def has_somewhere_to_send_reminders
-      return if notification_emails.any? || notification_role.present?
-
-      errors.add(:notification_email, "must be set, or a notification role chosen")
     end
 
     # Every address in the list, so one typo in a three-address list is caught

@@ -63,7 +63,7 @@ module Reimbursements
     test "accepts a lowercase-hyphen-digit slug as the key" do
       cc = CostCentre.new(name: "X", key: "venue-2027", eusa_code: "BK2",
         receive_mailbox: "bk2-in@b.co", send_mailbox: "bk2-out@b.co",
-        notification_role: roles(:fringe_finance_admin))
+        notification_email: "bk2@b.co")
       assert cc.valid?, cc.errors.full_messages.to_sentence
     end
 
@@ -113,7 +113,7 @@ module Reimbursements
     test "rejects a mistyped eusa_recipient, but blank is still allowed" do
       cost_centre = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
         receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co",
-        eusa_recipient: "not-an-email", notification_role: roles(:fringe_finance_admin))
+        eusa_recipient: "not-an-email", notification_email: "termtime@b.co")
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :eusa_recipient
 
@@ -160,7 +160,7 @@ module Reimbursements
 
       fresh = CostCentre.create!(key: "roundtrip", name: "RT", eusa_code: "RT1",
         receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [ 1, 3, 5 ],
-        notification_role: roles(:fringe_finance_admin))
+        notification_email: "rt@b.co")
       assert_equal [ 1, 3, 5 ], CostCentre.find(fresh.id).nightly_run_days
     end
 
@@ -219,33 +219,6 @@ module Reimbursements
       assert_equal Date.new(2026, 7, 9), cc.reload.last_nightly_run_on
     end
 
-    # --- Notification role -------------------------------------------------
-
-    test "notification_role_empty? is true with no role at all" do
-      centre = CostCentre.new(key: "nr1", name: "NR One", eusa_code: "NR1",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
-
-      assert_predicate centre, :notification_role_empty?
-    end
-
-    test "notification_role_empty? is true for a role with no users" do
-      centre = CostCentre.new(key: "nr2", name: "NR Two", eusa_code: "NR2",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_role: Role.create!(name: "NR Two Finance Admin"))
-
-      assert_predicate centre, :notification_role_empty?
-    end
-
-    test "notification_role_empty? is false once the role has a member" do
-      role = Role.create!(name: "NR Three Finance Admin")
-      role.users << users(:member)
-      centre = CostCentre.new(key: "nr3", name: "NR Three", eusa_code: "NR3",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_role: role)
-
-      assert_not_predicate centre, :notification_role_empty?
-    end
-
     # --- Notification email ------------------------------------------------
 
     test "notification_emails splits on semicolons and commas, stripping and de-duplicating" do
@@ -259,7 +232,7 @@ module Reimbursements
       assert_empty CostCentre.new(notification_email: "  ").notification_emails
     end
 
-    test "a notification email is valid on its own, with no role" do
+    test "a notification email is all a cost centre needs to be valid" do
       centre = CostCentre.new(key: "ne1", name: "NE One", eusa_code: "NE1",
                               receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
                               notification_email: "finance@b.co")
@@ -267,7 +240,7 @@ module Reimbursements
       assert centre.valid?, centre.errors.full_messages.to_sentence
     end
 
-    test "a cost centre with neither an email nor a role is invalid" do
+    test "a cost centre with no notification email is invalid" do
       centre = CostCentre.new(key: "ne2", name: "NE Two", eusa_code: "NE2",
                               receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
 
@@ -284,31 +257,12 @@ module Reimbursements
       assert_includes centre.errors.attribute_names, :notification_email
     end
 
-    test "notification_recipients_empty? follows the email when one is set" do
-      centre = CostCentre.new(key: "ne4", name: "NE Four", eusa_code: "NE4",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_email: "finance@b.co")
+    test "notification_recipients_empty? follows the addresses" do
+      with_address = CostCentre.new(notification_email: "finance@b.co")
+      without = CostCentre.new(notification_email: nil)
 
-      assert_predicate centre, :notification_role_empty?
-      assert_not_predicate centre, :notification_recipients_empty?
-    end
-
-    test "notification_recipients_empty? falls back to the role when no email is set" do
-      role = Role.create!(name: "NE Five Finance Admin")
-      role.users << users(:member)
-      centre = CostCentre.new(key: "ne5", name: "NE Five", eusa_code: "NE5",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_role: role)
-
-      assert_not_predicate centre, :notification_recipients_empty?
-    end
-
-    test "notification_recipients_empty? is true with no email and an empty role" do
-      centre = CostCentre.new(key: "ne6", name: "NE Six", eusa_code: "NE6",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_role: Role.create!(name: "NE Six Finance Admin"))
-
-      assert_predicate centre, :notification_recipients_empty?
+      assert_not_predicate with_address, :notification_recipients_empty?
+      assert_predicate without, :notification_recipients_empty?
     end
   end
 end

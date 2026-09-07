@@ -406,9 +406,8 @@ module Admin
       # (f) The new-cost-centre form creates a row and lands on its settings
       # page. Plain fill + submit is safe here — this form has no markdown editor.
       #
-      # The notification role is REQUIRED, so leaving it unset re-renders the
-      # form; picking it here is also the only browser coverage of the Tom
-      # Select picker itself.
+      # The notification email is REQUIRED, so leaving it blank re-renders the
+      # form.
       test "creating a cost centre from the form lands on its settings page" do
         visit admin_reimbursements_settings_path
         click_on "New cost centre"
@@ -417,7 +416,7 @@ module Admin
         fill_in "EUSA cost-centre code", with: "STV"
         fill_in "Receive mailbox (email-in)", with: "stv-in@example.co"
         fill_in "Send-from mailbox (drafts)", with: "stv-out@example.co"
-        tom_select "Fringe Finance Admin", select_id: "cost_centre_notification_role_id"
+        fill_in "Notification email", with: "stv-finance@example.co"
         click_on "Create cost centre"
 
         # Auto-derived slug drives the settings URL we land on.
@@ -427,7 +426,7 @@ module Admin
         created = ::Reimbursements::CostCentre.find_by(eusa_code: "STV")
         assert_equal "system-test-venue", created.key
         assert_equal "stv-in@example.co", created.receive_mailbox
-        assert_equal roles(:fringe_finance_admin), created.notification_role
+        assert_equal [ "stv-finance@example.co" ], created.notification_emails
       end
 
       # (g) Editing a Review card then hitting Approve must not silently drop the

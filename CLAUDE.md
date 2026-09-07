@@ -468,7 +468,12 @@ survive as historical import provenance and are never written. Spec + plan in
     claim awaiting your sign-off is new work assigned to you, so it is named on the first due
     run-day and re-named every run-day until endorsed or rejected. A claim with several owners is
     named to ALL of them (any one endorsement satisfies the gate, so telling one would strand it
-    while that person is away); an owner with no email is skipped rather than failing the run.
+    while that person is away); an owner with no email is skipped.
+  - **The owner reminder is BEST EFFORT and sits outside the `.all?`** that gates
+    `record_nightly_run!`. One budget owner's dead address must not withhold the run-day, which
+    would re-send FINANCE's reminders tomorrow over a failure that was never theirs. Failures are
+    counted and reported (`reimbursements.owner_reminder_failed`) rather than swallowed, and the
+    claim stays on Review's Awaiting owner tab either way.
   - **`record_nightly_run!` is gated on EVERY reminder having sent**, from one call site. That
     write marks the run-day handled forever (`nightly_due?` skips it) and there is no retry
     queue behind these alerts, so a half-sent run must be retried whole — at the cost of
@@ -476,21 +481,24 @@ survive as historical import provenance and are never written. Spec + plan in
     nightly, which is the intended direction (duplicates over silence). Both reminders are
     always *attempted*: `deliver_reminders` collects them into an array and calls `.all?`
     precisely so the calls cannot short-circuit. Don't rewrite it into a boolean expression.
-  - **Operator recipients are the cost centre's own `notification_email` — its shared finance
-    mailbox — falling back to `notification_role`** (`Reimbursements::NotificationRecipients`),
-    not the finance permission. That permission still gates every finance SCREEN globally — a
-    Fringe admin can open a termtime claim, they just aren't emailed about it.
-    `REIMBURSEMENTS_OPERATOR_EMAIL` stays whole-portal and overrides both. The role is kept as a
-    fallback rather than dropped because every centre configured before that column existed has
-    one, and removing it would silently stop their reminders on deploy; one of the two is
-    required. `notification_email` holds several addresses separated by `;` or `,`, each
-    format-validated so a typo in a list fails the save instead of quietly losing that
-    recipient's mail. `roles.id` is a legacy INTEGER primary key, so `notification_role_id` is
-    `:integer`.
-  - **No recipients at all does NOT record the run-day.** The old code returned "delivered" for
-    no recipients, which marked the day handled forever and lost the alert; it now warns, fires a
+  - **Operator recipients are the cost centre's own `notification_email`** — its shared finance
+    mailbox (`finance@bedlamfringe.co.uk`, `business@bedlamtheatre.co.uk`) — not the finance
+    permission. That permission still gates every finance SCREEN globally: a Fringe admin can
+    open a termtime claim, they just aren't emailed about it. `REIMBURSEMENTS_OPERATOR_EMAIL`
+    stays whole-portal and overrides it. The column holds several addresses separated by `;` or
+    `,`, each format-validated so a typo in a list fails the save instead of quietly losing that
+    recipient's mail. **The `notification_role` this replaced was dropped** (2026-09-07); its
+    migration backfills each centre's address from that role's members' emails first, so nobody
+    who was being emailed stops being emailed.
+  - **`record_nightly_run!` writes with `update_column`, not `update!`.** It is a bookkeeping
+    stamp on one column and must not be vetoed by an unrelated validation on the row —
+    `notification_email` being presence-validated made `update!` RAISE for exactly the centre
+    (blank address) that `REIMBURSEMENTS_OPERATOR_EMAIL` exists to keep working. The JOB decides
+    whether a run counts as delivered; the model must not refuse to write that decision down.
+  - **No recipients does NOT record the run-day.** The old code returned "delivered" for no
+    recipients, which marked the day handled forever and lost the alert; it now warns, fires a
     `reimbursements.nightly_no_recipients` Honeybadger event, and retries tomorrow. Integration
-    Status badges it, and also flags fallback-role members lacking the finance permission.
+    Status badges it.
   - **A claim whose budget names no cost centre falls to the DEFAULT centre**, not to nobody
     (`claims_by_cost_centre_id`) — the same leniency as `DatabaseStore#in_year`. A claim
     reminded to the wrong admins is visible and correctable; one reminded to nobody leaves a

@@ -478,7 +478,7 @@ module Admin
           post :create, params: { cost_centre: {
             name: "Bedlam Termtime", eusa_code: "BED",
             receive_mailbox: "termtime-in@example.co", send_mailbox: "termtime-out@example.co",
-            notification_role_id: roles(:fringe_finance_admin).id
+            notification_email: "business@bedlamtheatre.co.uk"
           } }
         end
 
@@ -494,13 +494,13 @@ module Admin
         post :create, params: { cost_centre: {
           name: "New Venue 2027", eusa_code: "NV7",
           receive_mailbox: "nv-in@example.co", send_mailbox: "nv-out@example.co",
-          notification_role_id: roles(:fringe_finance_admin).id
+          notification_email: "nv-finance@example.co"
         } }
 
         assert_equal "new-venue-2027", CC.find_by(eusa_code: "NV7").key
       end
 
-      test "create accepts a notification email in place of a role" do
+      test "create accepts several notification addresses" do
         sign_in @user
 
         post :create, params: { cost_centre: {
@@ -511,7 +511,6 @@ module Admin
 
         created = CC.find_by(eusa_code: "MBO")
         assert_not_nil created
-        assert_nil created.notification_role
         assert_equal [ "finance@bedlamfringe.co.uk", "business@bedlamtheatre.co.uk" ],
                      created.notification_emails
       end
@@ -522,31 +521,17 @@ module Admin
         post :create, params: { cost_centre: {
           name: "Some Long Name", key: "shortkey", eusa_code: "SLN",
           receive_mailbox: "sln-in@example.co", send_mailbox: "sln-out@example.co",
-          notification_role_id: roles(:fringe_finance_admin).id
+          notification_email: "sln-finance@example.co"
         } }
 
         assert_equal "shortkey", CC.find_by(eusa_code: "SLN").key
       end
 
-      # The picker is a Tom Select widget (.simple-select2), which Capybara's
-      # `select` cannot drive -- it hides the underlying <select>. The parameter
-      # plumbing is what matters here, so it is covered at request level.
-      test "update sets the notification role" do
-        sign_in @user
-        role = Role.create!(name: "Termtime Finance Admin")
-
-        # nightly_run_days must be sent: settings_params rewrites a missing key
-        # to [], which fails the weekday-numbers validation and aborts the save.
-        patch :update, params: { key: CC.default.key,
-                                 cost_centre: { notification_role_id: role.id,
-                                                nightly_run_days: %w[2 4] } }
-
-        assert_equal role, CC.default.reload.notification_role
-      end
-
       test "update sets the notification email" do
         sign_in @user
 
+        # nightly_run_days must be sent: settings_params rewrites a missing key
+        # to [], which fails the weekday-numbers validation and aborts the save.
         patch :update, params: { key: CC.default.key,
                                  cost_centre: { notification_email: "finance@bedlamfringe.co.uk",
                                                 nightly_run_days: %w[2 4] } }
@@ -565,7 +550,7 @@ module Admin
         assert_equal "finance@bedlamfringe.co.uk", CC.default.reload.notification_email
       end
 
-      test "create with neither a notification email nor a role creates nothing" do
+      test "create with no notification email creates nothing" do
         sign_in @user
 
         assert_no_difference -> { CC.count } do

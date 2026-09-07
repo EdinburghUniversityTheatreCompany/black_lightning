@@ -31,11 +31,12 @@ module Reimbursements
   # re-sends it every night. That is the intended direction — duplicates over
   # silence — so don't "fix" it by loosening the .all? in #deliver_reminders.
   #
-  # Operator recipients: the cost centre's own notification email, falling back
-  # to its notification role, resolved through NotificationRecipients, which
-  # keeps the whole-portal REIMBURSEMENTS_OPERATOR_EMAIL override ahead of both.
-  # A centre with neither sends nothing, warns, and does NOT record the run-day,
-  # so it keeps alarming rather than going quiet.
+  # Operator recipients: the cost centre's own notification email, resolved
+  # through NotificationRecipients, which keeps the whole-portal
+  # REIMBURSEMENTS_OPERATOR_EMAIL override ahead of it. A centre with none sends
+  # nothing, warns, and does NOT record the run-day, so it keeps alarming rather
+  # than going quiet. (The owner sign-off reminder is addressed separately, to
+  # each budget owner.)
   #
   # A +dry_run+ logs the same decisions without sending email or recording the
   # run — so it can be triggered safely to preview.
@@ -101,11 +102,8 @@ module Reimbursements
 
     def warn_no_recipients(cost_centre)
       Rails.logger.warn("Nightly: #{cost_centre.key} has no notification recipients — " \
-                        "its reminders went nowhere. Set its notification email, or add people " \
-                        "to the #{cost_centre.notification_role&.name.inspect} fallback role.")
-      Honeybadger.event("reimbursements.nightly_no_recipients",
-                        cost_centre: cost_centre.key,
-                        notification_role: cost_centre.notification_role&.name)
+                        "its reminders went nowhere. Set its notification email in Settings.")
+      Honeybadger.event("reimbursements.nightly_no_recipients", cost_centre: cost_centre.key)
       nil
     end
 
@@ -120,8 +118,13 @@ module Reimbursements
       # about which claims are finance's and which are still an owner's.
       gated_ids = OwnerReview.unmet_gate_expense_ids(pending)
       awaiting_owner, finances = pending.partition { |e| gated_ids.include?(e.record_id) }
+      # Best effort, and deliberately OUTSIDE the .all? below: one budget owner's
+      # dead address must not withhold the run-day, which would re-send FINANCE's
+      # reminders tomorrow over a failure that was never theirs. Each failed send
+      # is logged and reported, and the claim stays on Review's Awaiting owner tab
+      # for finance to override either way, so nothing is silently lost.
+      remind_budget_owners(cost_centre, awaiting_owner, today: today, dry_run: dry_run)
       [ remind_stale_pending(cost_centre, recipients, finances, today: today, dry_run: dry_run),
-        remind_budget_owners(cost_centre, awaiting_owner, today: today, dry_run: dry_run),
         remind_approved(cost_centre, recipients, claims.select(&:approved?),
                         today: today, dry_run: dry_run) ].all?
     end
@@ -198,23 +201,32 @@ module Reimbursements
     # sign-off is new work assigned to you, so it is named on the first due
     # run-day and re-named every run-day until it is endorsed or rejected.
     #
-    # Same return contract as the other two reminders: true when nothing needed
-    # sending or every send succeeded, false only when a send was attempted and
-    # failed. An owner with no email address counts as "nothing to send" rather
-    # than a failure — there is no address to retry tomorrow, and the claim is
-    # already visible on the Review page's Awaiting owner tab for finance to
-    # override.
+    # UNLIKE the other two reminders, this one's result does not gate the
+    # run-day (see #deliver_reminders), so it returns nothing meaningful. An
+    # owner with no email address is skipped outright: there is no address to
+    # retry tomorrow.
     def remind_budget_owners(cost_centre, awaiting_owner, today:, dry_run:)
       by_owner = claims_by_owner(awaiting_owner)
-      return true if by_owner.empty?
+      return if by_owner.empty?
 
       Rails.logger.info("Nightly: #{awaiting_owner.size} claim(s) awaiting sign-off from " \
                         "#{by_owner.size} owner(s) for #{cost_centre.key}")
-      return true if dry_run
+      return if dry_run
 
-      # map, not all?, so every owner is ATTEMPTED even when an earlier send
-      # fails — the same reason #deliver_reminders builds an array literal.
-      by_owner.map { |owner, claims| remind_one_owner(cost_centre, owner, claims, today) }.all?
+      # map, not each with a short-circuit: every owner is ATTEMPTED even when an
+      # earlier send fails — the same reason #deliver_reminders builds an array
+      # literal rather than a boolean expression.
+      failed = by_owner.map { |owner, claims| remind_one_owner(cost_centre, owner, claims, today) }
+                       .count(false)
+      return if failed.zero?
+
+      # Reported rather than swallowed: the send is best effort, but an address
+      # that never works would otherwise leave those owners silently un-nagged
+      # for the rest of the run.
+      Rails.logger.warn("Nightly: #{failed} owner sign-off reminder(s) failed to send " \
+                        "for #{cost_centre.key}")
+      Honeybadger.event("reimbursements.owner_reminder_failed",
+                        cost_centre: cost_centre.key, failed: failed)
     end
 
     def remind_one_owner(cost_centre, owner, claims, today)

@@ -36,14 +36,9 @@
     <%= f.input :notification_email, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           hint: "This cost centre's own finance mailbox, which gets its nightly reminders. " \
-                "Separate several addresses with semicolons. Set this or a fallback role — a cost " \
-                "centre whose reminders reach nobody leaves producers waiting with nothing on " \
-                "screen to explain it." %>
-
-    <%= f.input :notification_role_id, label: "Notification recipients (role, fallback)",
-          collection: selectable_roles, label_method: :name, value_method: :id,
-          include_blank: "Select a role", input_html: { class: "simple-select2" },
-          hint: "Used only when no notification email is set above." %>
+                "Separate several addresses with semicolons. Required — a cost centre whose " \
+                "reminders reach nobody leaves producers waiting with nothing on screen to " \
+                "explain it." %>
 
     <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
       <%# required: false because the model derives the key from the name when it
