@@ -6,7 +6,7 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "Preview: #{@financial_year.label}") do %>
+<%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}") do %>
   <p class="mb-4 text-sm text-gray-600">
     Nothing has been written yet. Check the lines below, then confirm at the bottom.
   </p>
@@ -78,7 +78,7 @@
   <% if @import.absent_budgets.any? %>
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       <p class="font-medium">
-        <%= pluralize(@import.absent_budgets.size, "budget") %> already in <%= @financial_year.label %>
+        <%= pluralize(@import.absent_budgets.size, "budget") %> already in <%= selected_financial_year.label %>
         <%= @import.absent_budgets.one? ? "isn't" : "aren't" %> in this sheet.
       </p>
       <p class="text-gray-600">
@@ -111,11 +111,15 @@
     </p>
   <% end %>
 
-  <%= form_with url: apply_admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+  <%= form_with url: apply_admin_reimbursements_budget_import_path,
                 method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
     <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
-        previewed — including an upload, which has no file to re-send. %>
+        previewed — including an upload, which has no file to re-send. The
+        destination travels with it: apply resolves the year and cost centre
+        from params exactly as this step did, so it cannot land in a different
+        pair than the one previewed here. %>
     <%= hidden_field_tag :pasted_text, @import.to_tsv %>
+    <%= hidden_field_tag :year, selected_financial_year&.key %>
     <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
     <%# Only the parts that are actually happening: "Import 0 new budgets and 1
         changed figure" reads as a mistake. %>

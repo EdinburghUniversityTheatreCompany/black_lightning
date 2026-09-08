@@ -138,15 +138,30 @@ ChaosRails::Application.routes.draw do
       # next year can be set up without disturbing the one being paid out of.
       resources :financial_years, only: %i[index new create edit update], param: :key do
         member { post :activate }
-
-        # Import a year's budgets from the committee's spreadsheet:
-        # paste/upload -> preview -> apply, the shape Reconcile already uses.
-        resource :budget_import, only: %i[show], controller: "budget_imports" do
-          post :preview
-          post :apply
-          get  :template
-        end
       end
+
+      # Import budgets from the committee's spreadsheet: paste/upload ->
+      # preview -> apply, the shape Reconcile already uses.
+      #
+      # TOP LEVEL, not nested under a year, because a budget line is identified
+      # by name within one (financial year, cost centre) and financial years are
+      # orthogonal to cost centres — so the wizard needs BOTH coordinates and
+      # neither owns it. Both ride the query string (`?year=` reusing
+      # FinanceController's selector, `?cost_centre_id=`), which lets every
+      # entry point prefill whichever side it knows: the year from a financial
+      # year or the budgets index, the cost centre from its settings page.
+      resource :budget_import, only: %i[show], controller: "budget_imports" do
+        post :preview
+        post :apply
+        get  :template
+      end
+
+      # Bookmarks of the old year-nested wizard. Only the GET is worth keeping:
+      # the POST steps are reached from the form, never typed.
+      get "financial_years/:financial_year_key/budget_import",
+          to: redirect { |path_params, _request|
+            "/admin/reimbursements/budget_import?year=#{CGI.escape(path_params[:financial_year_key])}"
+          }
 
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
