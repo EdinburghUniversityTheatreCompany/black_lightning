@@ -213,3 +213,14 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
                folder: @cost_centre.bacs_folder %>
   </div>
 <% end %>
+
+<%= render CardComponent.new(title: "Budgets", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    Set this cost centre's budgets up from the committee's spreadsheet — paste it or upload the
+    .xlsx, check what it would do, then confirm. You pick the financial year in the wizard, so the
+    same sheet can be imported into next year while this one is still being paid out of.
+  </p>
+  <%= link_to "Import budgets into #{@cost_centre.name}",
+              admin_reimbursements_budget_import_path(cost_centre_id: @cost_centre.id),
+              class: btn_classes(:secondary, :sm) %>
+<% end %>
