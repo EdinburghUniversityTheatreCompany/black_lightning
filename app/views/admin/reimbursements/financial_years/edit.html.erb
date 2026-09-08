@@ -33,8 +33,9 @@
     rather than duplicated.
   </p>
   <div class="flex flex-wrap gap-3">
+    <%# Prefills the year; the cost centre is picked in the wizard. %>
     <%= link_to "Import budgets",
-                admin_reimbursements_financial_year_budget_import_path(@financial_year.key),
+                admin_reimbursements_budget_import_path(year: @financial_year.key),
                 class: btn_classes(:primary) %>
     <%= link_to "View this year's budgets",
                 admin_reimbursements_budgets_path(year: @financial_year.key),

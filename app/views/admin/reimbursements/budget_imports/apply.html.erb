@@ -1,6 +1,6 @@
 <%# Same frame as the earlier steps — see show.html.erb. %>
 <%= turbo_frame_tag "budget_import" do %>
-<%= render CardComponent.new(title: "Imported into #{@financial_year.label}") do %>
+<%= render CardComponent.new(title: "Imported into #{selected_financial_year.label}") do %>
   <ul class="mb-4 list-disc pl-5 text-sm">
     <li><strong><%= pluralize(@result.created, "budget") %></strong> created.</li>
     <li>
@@ -21,18 +21,18 @@
 
   <div class="flex flex-wrap gap-3">
     <%= link_to "See the budgets",
-                admin_reimbursements_budgets_path(year: @financial_year.key),
+                admin_reimbursements_budgets_path(year: selected_financial_year.key),
                 class: btn_classes(:primary) %>
     <%= link_to "Import another sheet", import_path, class: btn_classes(:secondary) %>
-    <% unless @financial_year.active? %>
+    <% unless selected_financial_year.active? %>
       <%= link_to "Financial years", admin_reimbursements_financial_years_path,
                   class: btn_classes(:secondary) %>
     <% end %>
   </div>
 
-  <% unless @financial_year.active? %>
+  <% unless selected_financial_year.active? %>
     <p class="mt-4 text-sm text-gray-600">
-      <%= @financial_year.label %> is still a draft — submitters won't see these budgets until you
+      <%= selected_financial_year.label %> is still a draft — submitters won't see these budgets until you
       make it the active year.
     </p>
   <% end %>

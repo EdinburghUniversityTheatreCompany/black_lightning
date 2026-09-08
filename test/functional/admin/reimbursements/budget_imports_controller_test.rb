@@ -22,38 +22,110 @@ module Admin
       end
 
       def preview_params(text, **extra)
-        { financial_year_key: @year.key, pasted_text: text,
+        { year: @year.key, pasted_text: text,
           cost_centre_id: @cost_centre.id }.merge(extra)
       end
 
       # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
-        get :show, params: { financial_year_key: @year.key }
+        get :show, params: { year: @year.key }
         assert_redirected_to new_user_session_path
       end
 
       test "denies members without the finance permission" do
         sign_in users(:committee)
-        get :show, params: { financial_year_key: @year.key }
+        get :show, params: { year: @year.key }
         assert_response :forbidden
       end
 
-      test "404s on an unknown year" do
+      # No longer a 404: the year is a selector param, not a path segment, so it
+      # follows FinanceController's rule — never show a DIFFERENT year's money as
+      # though it were the one asked for, so say so and fall back to the active
+      # year. Which year is being imported into is then on screen in the select,
+      # and travels explicitly through preview into apply.
+      test "an unknown year falls back to the active year and says so" do
+        active = FY.create!(label: "Fringe 2026", active: true)
         sign_in @user
-        get :show, params: { financial_year_key: "no-such-year" }
-        assert_response :not_found
+
+        get :show, params: { year: "no-such-year" }
+
+        assert_response :success
+        assert_equal active, assigns(:selected_financial_year)
+        assert_match(/no-such-year/, response.body)
       end
 
       # --- Step 1: the form --------------------------------------------------
 
+      # --- Entering from either side ----------------------------------------
+      # Financial years are orthogonal to cost centres, so the wizard needs both
+      # and neither is a path segment. Each entry point prefills the side it
+      # knows and the operator picks the other.
+
+      test "show defaults to the active year when the link named none" do
+        active = FY.create!(label: "Fringe 2026", active: true)
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_equal active, assigns(:selected_financial_year)
+      end
+
+      test "show preselects the cost centre a settings-page link named" do
+        centre = create_reimbursements_cost_centre(key: "termtime", name: "Termtime",
+                                                   eusa_code: "BED")
+        sign_in @user
+
+        get :show, params: { cost_centre_id: centre.id }
+
+        assert_response :success
+        assert_equal centre, assigns(:selected_cost_centre)
+      end
+
+      test "show says so when no financial year is set up at all" do
+        FY.delete_all
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_nil assigns(:selected_financial_year)
+        assert_match(/No financial year is set up yet/, response.body)
+      end
+
+      test "preview writes nothing and refuses when no financial year exists" do
+        FY.delete_all
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          post :preview, params: { pasted_text: tsv("Props\t4000\tExpense\t1200\t\t"),
+                                   cost_centre_id: @cost_centre.id }
+        end
+
+        assert_response :unprocessable_entity
+        assert_nil assigns(:import)
+      end
+
+      # The destination travels through the preview, so apply cannot land in a
+      # different (year, cost centre) pair than the one that was shown.
+      test "apply imports into the year the preview carried, not the active one" do
+        FY.create!(label: "Fringe 2026", active: true)
+        sign_in @user
+
+        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
+
+        assert_response :success
+        assert_equal @year, ::Reimbursements::Budget.find_by(name: "Props").financial_year
+      end
+
       test "show renders the paste/upload form for the year" do
         sign_in @user
 
-        get :show, params: { financial_year_key: @year.key }
+        get :show, params: { year: @year.key }
 
         assert_response :success
-        assert_equal @year, assigns(:financial_year)
+        assert_equal @year, assigns(:selected_financial_year)
       end
 
       # Turbo Drive REJECTS a non-redirect response to a form POST and discards
@@ -64,7 +136,7 @@ module Admin
       test "every wizard step renders inside the turbo frame" do
         sign_in @user
 
-        get :show, params: { financial_year_key: @year.key }
+        get :show, params: { year: @year.key }
         assert_match(/turbo-frame id="budget_import"/, response.body)
 
         post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
@@ -189,7 +261,7 @@ module Admin
         file = fixture_file_upload_xlsx([ HEADERS.split("\t"),
                                           [ "Props", "4000", "Expense", "1200", "", "" ] ])
 
-        post :preview, params: { financial_year_key: @year.key, cost_centre_id: @cost_centre.id,
+        post :preview, params: { year: @year.key, cost_centre_id: @cost_centre.id,
                                  file: file }
 
         assert_response :success
@@ -204,7 +276,7 @@ module Admin
       test "the template download names the columns the importer reads" do
         sign_in @user
 
-        get :template, params: { financial_year_key: @year.key, format: :csv }
+        get :template, params: { format: :csv }
 
         assert_response :success
         assert_match "Budget", response.body
