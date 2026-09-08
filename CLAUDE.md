@@ -349,6 +349,15 @@ survive as historical import provenance and are never written. Spec + plan in
   preview → apply. **Stateless like Reconcile**: an upload is normalised to canonical TSV
   (`BudgetImport#to_tsv`, escaping tabs/newlines inside a cell) and carried through the preview in
   a hidden field, so apply re-parses and re-validates rather than trusting the preview.
+  - **Both coordinates are query params on ONE top-level route**
+    (`/admin/reimbursements/budget_import?year=&cost_centre_id=`), never a path segment: years are
+    orthogonal to cost centres, so nesting under either hides the other from the entry points that
+    know it. `?year=` is FinanceController's own selector, so the store is already year-scoped.
+    Entry points prefill the half they know — a financial year, the budgets index (its selected
+    year), a cost centre's settings page (that centre).
+  - **The page `<h1>` must not name the year.** It sits OUTSIDE the wizard's Turbo Frame, so a
+    preview of a year other than the one the page loaded with left the heading and the card
+    stating different years. Each step's heading, inside the frame, names its own.
   - Buckets, matched by name within one `(financial year, cost centre)`: **create / revise /
     unchanged / invalid**, plus `absent_budgets` (in the year, not in the sheet) which is
     **reported and never deleted** — a budget's claims and history hang off it.
