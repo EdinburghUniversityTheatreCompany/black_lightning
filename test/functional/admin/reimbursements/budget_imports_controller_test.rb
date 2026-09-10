@@ -282,6 +282,36 @@ module Admin
         assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find_by(name: "Props").initial_budget
       end
 
+      # The preview marks the text it carries as this class's own escaped output.
+      # Without the marker apply unescapes the operator's own paste, and a name
+      # typed "Costume\next week" is stored with a real newline in it.
+      test "the preview marks the sheet it carries as canonical" do
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
+
+        assert_select "input[name=?][value=?]", "canonical", "1"
+      end
+
+      test "apply leaves a backslash the operator typed alone" do
+        sign_in @user
+
+        post :apply, params: preview_params(tsv("Costume\\next week\t4000\tExpense\t1200\t\t"))
+
+        assert_response :success
+        assert_equal "Costume\\next week", ::Reimbursements::Budget.sole.name
+      end
+
+      test "apply unescapes the sheet the preview carried" do
+        sign_in @user
+
+        post :apply, params: preview_params(tsv("Costume\\nrepairs\t4000\tExpense\t1200\t\t"),
+                                            canonical: "1")
+
+        assert_response :success
+        assert_equal "Costume\nrepairs", ::Reimbursements::Budget.sole.name
+      end
+
       test "the template download names the columns the importer reads" do
         sign_in @user
 

@@ -387,6 +387,11 @@ survive as historical import provenance and are never written. Spec + plan in
   preview → apply. **Stateless like Reconcile**: an upload is normalised to canonical TSV
   (`BudgetImport#to_tsv`, escaping tabs/newlines inside a cell) and carried through the preview in
   a hidden field, so apply re-parses and re-validates rather than trusting the preview.
+  - **Only the preview's OWN TSV is unescaped**, marked by a `canonical` hidden field it renders
+    and `ReadsImportSource#input_type` reads back as `:canonical_tsv`. Unescaping every input
+    rewrote a typed `Costume\next week` with a real newline before storing it AND before matching
+    it, so a revision arrived as a create beside the line it meant to update. Both wizards share
+    the flag; one that renders no marker reads everything as `:paste`.
   - **Both coordinates are query params on ONE top-level route**
     (`/admin/reimbursements/budget_import?year=&cost_centre_id=`), never a path segment: years are
     orthogonal to cost centres, so nesting under either hides the other from the entry points that

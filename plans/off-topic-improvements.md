@@ -558,6 +558,26 @@ money path, which a settled claim never re-enters), but it is recorded on the wr
 the column means adding IBAN/BIC/foreign-amount/currency columns with it — four more headings for
 a case that is one claim at a time, so the normal form is the better route today.
 
+### `:canonical_tsv` is a marker `ImportParsing#parse_data` doesn't know
+
+Both wizards now pass `input_type: :canonical_tsv` and each translates it to `:paste` itself
+(`@rows = parse_data(data, @escaped ? :paste : input_type)`) before the concern sees it, because
+`parse_data`'s `case` has only `:paste` and `:xlsx` and its `else` records "Unknown input type" and
+returns **zero rows** — an import that silently previews nothing rather than erroring. The concern
+owns the escaping half of this contract, so it should own the input type too: `when :paste,
+:canonical_tsv then parse_tsv(data)`, and the `@escaped` assignment would be the includer's only
+line. A third wizard that forgets the translation gets the empty preview with nothing on screen to
+explain it.
+
+### `escape_cell` is applied to every cell, `unescape_cell` only to `TEXT_FIELDS`
+
+Both wizards' `tsv_row` escapes all columns on the way out, but the way back only unescapes the
+handful listed in `TEXT_FIELDS` — so a backslash in any other column survives the preview
+DOUBLED (`4\000` becomes `4\\000`). Harmless today: every other column is a parsed amount, date,
+enum or email by then, and a committee typing a backslash into a nominal code or a budget type
+already gets a row error naming it. But the asymmetry is not stated anywhere and the safe reading
+is either to escape only the fields that are unescaped, or to unescape everything.
+
 ### `ImportParsing#find_column`'s substring fallback is a loaded gun for any wide sheet
 
 It matches any header *containing* a keyword, so on a sheet whose fields are near-anagrams
@@ -567,15 +587,6 @@ refused, and the mapping shown in the preview. `BudgetImport` and the membership
 it. Neither is known to be wrong today (their sheets are narrow), but `BudgetImport`'s
 `COLUMNS[:name]` ends in a bare `%w[budget]` and its `:amount` in a bare `%w[total]`, which is the
 same shape. Worth porting `ExpenseImport`'s matcher into the concern and moving all three onto it.
-
-### `BudgetImport` unescapes the operator's own paste
-
-Same defect `ExpenseImport` just fixed: `normalize_row` runs `unescape_cell` over `name` and
-`notes` whatever the source, so a budget note typed as `C:\temp\notes.txt` is stored with a real
-tab. The mechanism is already in place — `ReadsImportSource#input_type` returns `:canonical_tsv`
-when the form posts a `canonical` marker — so the fix is a `hidden_field_tag :canonical, "1"` in
-the budget import's preview plus an `@escaped` flag on the model. Left out here to keep this
-branch's diff to the wizard it is about.
 
 ### The `import_key` comparison folds case but not accents
 
