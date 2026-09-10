@@ -70,6 +70,7 @@ module NavigationHelper
     children << { title: "Review", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" } if can? :manage, :reimbursements_finance
     children << { title: "Expenses", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" } if can? :manage, :reimbursements_finance
     children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance
+    children << { title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project" } if can? :manage, :reimbursements_finance
     children << { title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" } if can? :manage, :reimbursements_finance
     children << { title: "Budget Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie" } if can? :manage, :reimbursements_finance
     children << { title: "Budget Updates", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus" } if can? :manage, :reimbursements_finance

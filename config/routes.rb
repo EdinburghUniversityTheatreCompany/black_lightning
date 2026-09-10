@@ -116,6 +116,11 @@ ChaosRails::Application.routes.draw do
       delete "my_budgets/:expense_id/withdraw", to: "my_budgets#withdraw", as: :withdraw_my_budget
       patch  "my_budgets/:expense_id/reject", to: "my_budgets#reject", as: :reject_my_budget
 
+      # Areas: the parent grouping a show/project's budget lines hang off, with
+      # its budgets edited inline here as nested fields (see Area's
+      # accepts_nested_attributes_for :budgets).
+      resources :areas, only: %i[index new create edit update]
+
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index new create edit update] do

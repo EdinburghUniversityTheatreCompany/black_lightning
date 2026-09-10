@@ -1,0 +1,24 @@
+<%# locals: (f:) %>
+<%# One budget line row inside an area's edit form. shared/form/sections/_nested_fields
+    builds this row's builder as a SimpleForm::FormBuilder (SimpleForm patches
+    simple_fields_for onto every FormBuilder, plain or not), even though the
+    outer form is a hand-rolled form_with — so f.input works here exactly as
+    it does inside a simple_form_for block. %>
+<div class="flex flex-wrap items-end gap-3 border-b border-gray-100 py-3 last:border-b-0">
+  <div class="w-56">
+    <%= f.input :name, label: "Name", wrapper_html: { class: "mb-0" } %>
+  </div>
+  <div class="w-40">
+    <%= f.input :nominal_code, label: "Nominal code", wrapper_html: { class: "mb-0" } %>
+  </div>
+  <% unless f.object.new_record? %>
+    <%# Sets area_id to "" on submit — the same unchecked-value trick
+        Rails' own check_box uses, repurposed to blank a foreign key instead
+        of toggling a boolean. Detaching nils the budget's area_id rather
+        than deleting it: its claims and history hang off it. %>
+    <label class="mb-2 inline-flex items-center gap-2 text-sm text-gray-700">
+      <%= f.check_box :area_id, {}, "", f.object.area_id.to_s %>
+      Detach from this area
+    </label>
+  <% end %>
+</div>

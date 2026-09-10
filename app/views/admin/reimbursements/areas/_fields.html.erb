@@ -1,0 +1,37 @@
+<%# locals: (form:, people:, owner_ids:, cost_centres: [], cost_centre_id: nil) %>
+<%# The area's own fields via simple_form — Area is genuinely model-backed
+    (the controller assigns straight onto @area and saves), so this follows
+    CLAUDE.md's "model-backed forms use simple_form" rule rather than the
+    flat form_with convention the store-mediated Budget form uses. Shared by
+    new and edit; the cost centre picker only exists on new and only when
+    there is a choice to make. %>
+<%= form.input :name, label: "Name" %>
+<%= form.input :initial_budget, label: "Agreed total (£)",
+      input_html: { step: "0.01", value: reimbursements_amount_value(form.object.initial_budget) } %>
+
+<% if cost_centres.size > 1 %>
+  <%= form.input :cost_centre_id, collection: cost_centres, label_method: :name, value_method: :id,
+        selected: cost_centre_id, include_blank: false, label: "Cost centre" %>
+<% end %>
+
+<%= form.input :active, as: :boolean, label: "Active" %>
+
+<fieldset aria-describedby="owner_ids_hint" class="mb-4">
+  <legend class="<%= FormStyles::LABEL %>">Owners</legend>
+  <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select, same as
+      the budget form's owners fieldset. Area has no owner_ids= writer — the
+      controller syncs owners through store.sync_area_owners! — so this only
+      needs the #owner_ids reader collection_check_boxes pre-checks against. %>
+  <div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
+    <%= form.collection_check_boxes(:owner_ids, people, :record_id,
+          ->(person) { person.name.presence || person.email },
+          { checked: owner_ids }) do |b| %>
+      <%= b.label(class: "flex items-center gap-2 text-sm text-gray-700") do %>
+        <%= b.check_box(class: checkbox_classes) %><%= b.text %>
+      <% end %>
+    <% end %>
+  </div>
+  <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this area.</p>
+</fieldset>
+
+<%= form.input :notes, label: "Notes", input_html: { rows: 3 } %>

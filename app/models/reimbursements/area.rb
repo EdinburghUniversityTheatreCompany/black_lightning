@@ -45,6 +45,16 @@ module Reimbursements
                          inverse_of: :area
 
     validates :name, presence: true
+    # Areas are matched by name within one (financial year, cost centre) —
+    # the backfill and the (future) importer both bind a budget to its parent
+    # this way. The composite index on the same three columns is deliberately
+    # NOT unique: MySQL allows several NULLs through a unique index, and an
+    # area created before a year or centre is assigned has NULLs in exactly
+    # those two columns, so only this model validation catches a same-name
+    # collision there.
+    validates :name, uniqueness: { scope: [ :financial_year_id, :cost_centre_id ] }
+
+    accepts_nested_attributes_for :budgets, allow_destroy: false, reject_if: :all_blank
 
     # Owner links are People record id STRINGS, mirroring Budget#owner_ids —
     # OwnerReview and the budgets UI compare them against person.record_id.

@@ -95,6 +95,7 @@ class Admin::PermissionsController < AdminController
     @models = (ApplicationRecord.descendants + [ Admin::Debt, Season, Doorkeeper::Application ] - [ MarketingCreatives::CategoryInfo, Admin::Proposals::Proposal, OpportunityRole, Reimbursements::BatchAttempt, Reimbursements::OwnerEndorsement,
                   Reimbursements::Person, Reimbursements::PaymentDetails, Reimbursements::Budget,
                   Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
+                  Reimbursements::Area, Reimbursements::AreaOwner,
                   Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
                   Reimbursements::FinancialYear, Reimbursements::CostCentre,
                   Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq
