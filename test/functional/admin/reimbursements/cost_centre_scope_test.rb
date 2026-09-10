@@ -23,7 +23,8 @@ module Admin
 
       included do
         setup do
-          @user = grant_reimbursements_finance(users(:member))
+          grant_finance_permission(users(:member))
+          @user = users(:member)
           sign_in @user
 
           @fringe = ::Reimbursements::CostCentre.default
