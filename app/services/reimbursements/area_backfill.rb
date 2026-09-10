@@ -13,16 +13,28 @@ module Reimbursements
     # Idempotent: a second run touches only budgets still without an area (the
     # scope excludes anything already homed, this run or an earlier one) and
     # only seeds owners for an area that has none yet.
+    #
+    # Wrapped in one transaction: MySQL gives migrations no DDL transaction
+    # (AbstractMysqlAdapter#supports_ddl_transactions? is false, so
+    # Migration#use_transaction? never wraps this run automatically), and a
+    # mid-run exception must not leave some budgets homed to an area whose
+    # owners were never seeded — that area's claims would silently stop
+    # hitting the owner gate, with nothing on screen to say so.
     def self.run!(scope: Budget.all)
-      scope.where(area_id: nil).find_each do |budget|
-        match = NAME_PATTERN.match(budget.name.to_s)
-        next if match.nil?
+      ActiveRecord::Base.transaction do
+        area_ids = []
 
-        area = find_or_create_area(budget, match[:area].strip)
-        budget.update_column(:area_id, area.id)
+        scope.where(area_id: nil).find_each do |budget|
+          match = NAME_PATTERN.match(budget.name.to_s)
+          next if match.nil?
+
+          area = find_or_create_area(budget, match[:area].strip)
+          budget.update_column(:area_id, area.id)
+          area_ids << area.id
+        end
+
+        seed_owners!(area_ids.uniq)
       end
-
-      seed_owners!
     end
 
     def self.find_or_create_area(budget, name)
@@ -35,8 +47,14 @@ module Reimbursements
     # An area with no owners means its budgets' claims silently stop hitting the
     # owner gate — the worst way to get this wrong. Seed from the union of the
     # children's, and KEEP their rows so the backfill has a true reverse.
-    def self.seed_owners!
-      Area.includes(budgets: :own_owners).find_each do |area|
+    #
+    # Scoped to the areas THIS run actually touched — run!(scope:) exists so a
+    # cost-centre-only backfill is possible, and seeding every area regardless
+    # would reach outside that caller's intent.
+    def self.seed_owners!(area_ids)
+      return if area_ids.empty?
+
+      Area.where(id: area_ids).includes(budgets: :own_owners).find_each do |area|
         next if area.owner_ids.any?
 
         person_ids = area.budgets.flat_map { |b| b.own_owners.map(&:id) }.uniq
