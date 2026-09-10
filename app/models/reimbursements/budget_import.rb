@@ -60,6 +60,14 @@ module Reimbursements
         # matching it here would read that column as the area name too.
         contains: [ "area name" ]
       },
+      area_budget: {
+        label: "Area Budget",
+        # Both multi-word, so neither collides with the bare "area" (the name
+        # column above) or "budget" (the line-name column below) — the same
+        # rule that keeps "area name" out of THIS field's own contains list.
+        exact: [ "area budget", "area total" ],
+        contains: [ "area budget", "area total" ]
+      },
       name: {
         label: "Budget",
         exact: [ "budget name", "name", "line", "category", "budget" ],
@@ -128,6 +136,7 @@ module Reimbursements
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
+      report_area_total_conflicts
     end
 
     # Names are matched case- and space-insensitively: a committee retypes
@@ -159,19 +168,40 @@ module Reimbursements
       end
     end
 
-    # {name:, cost_centre:, financial_year:} for every area the sheet names
-    # that doesn't already exist here — matched the same way a budget line is
-    # matched (by name within one financial year and cost centre), and never
-    # deleted for the same reason #absent_budgets is reported and never
-    # touched: a show's claims and history hang off its lines.
+    # {name:, cost_centre:, financial_year:, initial_budget:} for every area
+    # the sheet names that doesn't already exist here — matched the same way a
+    # budget line is matched (by name within one financial year and cost
+    # centre), and never deleted for the same reason #absent_budgets is
+    # reported and never touched: a show's claims and history hang off its
+    # lines.
     #
     # Reads every entry the sheet actually kept (create/revise/unchanged), not
     # only #creates: an area can be named on a line that matches an EXISTING
     # budget too, and a typo on an :invalid row must not mint a spurious area
     # while the whole import is blocked anyway.
+    #
+    # +initial_budget+ is written ONLY here, on create — an area that already
+    # exists (excluded above) keeps its own figure, the same write-once rule
+    # Budget#initial_budget follows. #area_total_conflicts is what stops two
+    # different Area Budget cells for the same area picking one arbitrarily.
     def area_creates
-      first_seen_names.except(*@existing_areas_by_name.keys).values.map do |name|
-        { name: name, cost_centre: cost_centre, financial_year: financial_year }
+      totals = area_budget_totals
+      first_seen_names.except(*@existing_areas_by_name.keys).map do |key, name|
+        { name: name, cost_centre: cost_centre, financial_year: financial_year,
+          initial_budget: totals[key]&.first }
+      end
+    end
+
+    # [{ area_name:, values: [] }] for every area the sheet gives more than one
+    # distinct, non-blank Area Budget figure — the column repeats down every
+    # row of the area, so two different values within one sheet can't both be
+    # what the committee agreed. #valid? refuses the whole import over this,
+    # the same way an unreadable Amount does, rather than picking one.
+    def area_total_conflicts
+      area_budget_totals.filter_map do |key, values|
+        next if values.size <= 1
+
+        { area_name: first_seen_names[key], values: values }
       end
     end
 
@@ -284,6 +314,8 @@ module Reimbursements
         when :unreadable then row[:raw_amount].to_s
         else row[:amount].to_s("F")
         end
+      when :area_budget
+        row[:area_budget].nil? ? "" : row[:area_budget].to_s("F")
       when :owner_emails
         Array(row[:owner_emails]).join("; ")
       else
@@ -302,6 +334,12 @@ module Reimbursements
       amount = parse_amount(raw_amount)
       {
         area: text(raw, :area).strip.presence,
+        # Lenient like the amount column's own blank case, not blocking like
+        # its unreadable one: a mistyped Area Budget cell is caught by
+        # #area_total_conflicts as soon as a later row for the same area
+        # reads differently, so nothing is lost by treating it as unstated
+        # here rather than failing the whole sheet over one cell.
+        area_budget: AmountParser.parse(cell(raw, :area_budget)),
         name: text(raw, :name).strip,
         nominal_code: cell(raw, :nominal_code).to_s.strip,
         budget_type: normalize_type(cell(raw, :budget_type)),
@@ -438,6 +476,33 @@ module Reimbursements
         next if entry.area_name.blank?
 
         names[self.class.match_key(entry.area_name)] ||= entry.area_name
+      end
+    end
+
+    # #match_key(area name) => the DISTINCT, non-blank Area Budget amounts the
+    # sheet gives that area — in the order they're first seen, so #area_creates
+    # can take the single one it expects and #area_total_conflicts can name
+    # every one of a genuine disagreement. Same :invalid exclusion as
+    # #first_seen_names, for the same reason.
+    def area_budget_totals
+      (@entries - entries_in(:invalid)).each_with_object(Hash.new { |h, k| h[k] = [] }) do |entry, totals|
+        next if entry.area_name.blank?
+
+        value = entry.row[:area_budget]
+        next if value.nil?
+
+        key = self.class.match_key(entry.area_name)
+        totals[key] << value unless totals[key].include?(value)
+      end
+    end
+
+    def report_area_total_conflicts
+      area_total_conflicts.each do |conflict|
+        amounts = conflict[:values].map { |value| value.to_s("F") }
+                                   .to_sentence(last_word_connector: " and ")
+        @errors << "#{conflict[:area_name].inspect} has more than one Area Budget figure in " \
+                   "this sheet (#{amounts}). Make every line for the area agree, or leave the " \
+                   "column blank."
       end
     end
 

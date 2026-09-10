@@ -294,6 +294,53 @@ module Reimbursements
       assert_nil import.creates.first[:area_id]
     end
 
+    # --- The area's agreed total ---------------------------------------------
+    # The column repeats down every row of an area, because the sheet has one
+    # row per budget line rather than one per area.
+
+    test "the area's total is read once from the repeated column" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+        Cogito\t1200\tCogito: Other\t432320\tExpense\t800
+      TSV
+
+      assert_equal 1, import.area_creates.size
+      assert_equal 1200, import.area_creates.first[:initial_budget]
+    end
+
+    test "two different totals for one area block the import" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+        Cogito\t1500\tCogito: Other\t432320\tExpense\t800
+      TSV
+
+      assert_not import.valid?
+      assert_match(/Cogito/, import.errors.join(" "))
+    end
+
+    test "a typed £1,200 is stored as 1200, not 0" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t£1,200\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_equal 1200, import.area_creates.first[:initial_budget]
+    end
+
+    test "an area that already exists keeps its own figure, write-once on create" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year, initial_budget: 1000)
+      import = build_import(<<~TSV, existing_areas: [ area ])
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert import.valid?
+      assert_empty import.area_creates
+    end
+
     # --- Owners --------------------------------------------------------------
 
     test "owner emails link to people" do

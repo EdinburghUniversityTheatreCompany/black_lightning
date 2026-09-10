@@ -272,6 +272,34 @@ module Admin
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Cogito: Marketing").area_id
       end
 
+      test "apply writes the Area Budget column as the new area's agreed total" do
+        sign_in @user
+
+        post :apply, params: preview_params(
+          "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
+        )
+
+        assert_response :success
+        area = ::Reimbursements::Area.find_by(name: "Cogito")
+        assert_equal BigDecimal("1200"), area.initial_budget
+      end
+
+      test "apply is blocked when the sheet gives one area two different totals" do
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Area.count } do
+          post :apply, params: preview_params(
+            "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\n" \
+            "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\n" \
+            "Cogito\t1500\tCogito: Other\t432320\tExpense\t800"
+          )
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/Cogito/, assigns(:import).errors.to_sentence)
+      end
+
       # --- Step 3: apply -----------------------------------------------------
 
       test "apply creates the year's budgets" do
