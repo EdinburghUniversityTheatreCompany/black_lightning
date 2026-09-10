@@ -28,30 +28,70 @@ module Reimbursements
   # the figure the committee agreed" however many times the sheet is re-sent.
   class BudgetImport
     include ImportParsing
+    include StrictColumnMatching
 
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :budget, :owner_ids, :unknown_owner_emails, :error,
                        keyword_init: true)
 
-    # Canonical headers — what #to_tsv writes and what the downloadable template
-    # carries. Reading is more forgiving than this (see the COLUMNS keywords).
-    TSV_HEADERS = [ "Budget", "Nominal code", "Type", "Amount", "Owner emails", "Notes" ].freeze
-
-    # Header keywords per field, most specific first, fed to ImportParsing's
-    # #find_column (exact match, then "header contains all these words").
+    # One entry per column, in the order #to_tsv writes them: +label+ is the
+    # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
+    # substring and is multi-word only (see the class note below).
     #
-    # "budget" is last for the name and absent from the amount on purpose: a
-    # sheet whose columns are "Budget" and "Amount" must read the first as the
-    # line's name, and one with "Budget name" and "Budget" would otherwise pick
-    # the same column for both.
-    COLUMNS = {
-      name: [ %w[budget\ name], %w[name], %w[line], %w[category], %w[budget] ],
-      nominal_code: [ %w[nominal\ code], %w[nominal], %w[code] ],
-      budget_type: [ %w[budget\ type], %w[type] ],
-      amount: [ %w[amount], %w[initial\ budget], %w[forecast], %w[total] ],
-      owner_emails: [ %w[owner\ emails], %w[owner\ email], %w[owners], %w[owner] ],
-      notes: [ %w[notes], %w[description], %w[comment] ]
+    # A heading not listed here is simply not found, which reads as "the sheet
+    # has no X column" for the required field and a blank for an optional one —
+    # the safe direction, since a column read as the WRONG field is silent
+    # while one not read at all is stated.
+    #
+    # **Columns are matched here, NOT through ImportParsing#find_column**, whose
+    # "any header containing the keyword" fallback is the class of bug
+    # ExpenseImport was fixed for in September 2026: "budget" is a bare
+    # single-word keyword for +name+, so once a header like "Area Budget"
+    # exists on the sheet (Phase 2b), a bare-keyword fallback could read it as
+    # the line's own name. So: EXACT names first, then MULTI-WORD phrases
+    # only — a bare word is never a substring hint — and two fields resolving
+    # to one column is a blocking error naming both, rather than a silent pick.
+    FIELDS = {
+      name: {
+        label: "Budget",
+        exact: [ "budget name", "name", "line", "category", "budget" ],
+        contains: [ "budget name" ]
+      },
+      nominal_code: {
+        label: "Nominal code",
+        exact: [ "nominal code", "nominal", "code" ],
+        contains: [ "nominal code" ]
+      },
+      budget_type: {
+        label: "Type",
+        exact: [ "budget type", "type" ],
+        contains: [ "budget type" ]
+      },
+      amount: {
+        label: "Amount",
+        exact: [ "amount", "initial budget", "forecast", "total" ],
+        contains: [ "initial budget" ]
+      },
+      owner_emails: {
+        label: "Owner emails",
+        exact: [ "owner emails", "owner email", "owners", "owner" ],
+        contains: [ "owner emails", "owner email" ]
+      },
+      notes: {
+        label: "Notes",
+        exact: [ "notes", "description", "comment" ],
+        contains: []
+      }
     }.freeze
+
+    # Canonical headers — what #to_tsv writes and what the downloadable
+    # template carries. Reading is more forgiving than this (see FIELDS).
+    TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
+
+    # The only column a sheet must carry — nominal code, type, amount and
+    # owners can all be blank or defaulted, but a line with no name has
+    # nothing to create or match against.
+    REQUIRED_FIELDS = %i[name].freeze
 
     # Owner cells hold one or more addresses, separated however the committee
     # felt like separating them.
@@ -185,69 +225,90 @@ module Reimbursements
       ([ TSV_HEADERS.join("\t") ] + @rows.map { |row| tsv_row(row) }).join("\n")
     end
 
+    # Canonical heading => the sheet's own heading it was read from (nil when
+    # the sheet has no such column). Rendered by the preview: keyword matching
+    # can only ever be nearly right, and stating what was read is worth more
+    # than any amount of tuning.
+    def column_mapping
+      FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
+    end
+
     private
 
+    def header_for
+      @header_for ||= {}
+    end
+
     def tsv_row(row)
-      [ row[:name], row[:nominal_code], row[:budget_type],
-        amount_cell(row), Array(row[:owner_emails]).join("; "), row[:notes] ]
-        .map { |value| escape_cell(value) }.join("\t")
+      FIELDS.each_key.map { |field| escape_cell(cell_for(row, field)) }.join("\t")
     end
 
     # An unreadable amount is carried on VERBATIM. The preview re-renders from
     # this text after a blocked apply, so replacing it with a blank would hide
     # the very cell the operator has to go and fix.
-    def amount_cell(row)
-      case row[:amount]
-      when nil then ""
-      when :unreadable then row[:raw_amount].to_s
-      else row[:amount].to_s("F")
+    def cell_for(row, field)
+      case field
+      when :amount
+        case row[:amount]
+        when nil then ""
+        when :unreadable then row[:raw_amount].to_s
+        else row[:amount].to_s("F")
+        end
+      when :owner_emails
+        Array(row[:owner_emails]).join("; ")
+      else
+        row[field].to_s
       end
     end
 
     # One normalised row per sheet line. Called by ImportParsing's parsers.
     # Returns nil for a wholly blank line so trailing sheet padding is ignored
     # rather than reported as thirty nameless budgets.
-    def normalize_row(row)
-      return nil if row.values.all?(&:blank?)
+    def normalize_row(raw)
+      @header_for ||= resolve_headers(raw.keys)
+      return nil if raw.values.all?(&:blank?)
 
-      @name_column_present ||= header_for?(row, :name)
-      raw_amount = column(row, :amount)
+      raw_amount = cell(raw, :amount)
       amount = parse_amount(raw_amount)
       {
-        name: text(row, :name).strip,
-        nominal_code: column(row, :nominal_code).to_s.strip,
-        budget_type: normalize_type(column(row, :budget_type)),
+        name: text(raw, :name).strip,
+        nominal_code: cell(raw, :nominal_code).to_s.strip,
+        budget_type: normalize_type(cell(raw, :budget_type)),
         amount: amount,
         # Only kept when it couldn't be read, so the error can quote what was
         # actually typed. Keeping it always would make a row that survived a
         # TSV round-trip ("£1,200" -> "1200.0") differ from the row it came
         # from, for no gain.
         raw_amount: (raw_amount.to_s.strip if amount == :unreadable),
-        owner_emails: split_emails(column(row, :owner_emails)),
-        notes: text(row, :notes)
+        owner_emails: split_emails(cell(raw, :owner_emails)),
+        notes: text(raw, :notes)
       }
+    end
+
+    def cell(raw, field)
+      raw[header_for[field]]
     end
 
     # Escape sequences are undone only for text that came back from #to_tsv —
     # never for the operator's own paste, where a backslash is a backslash.
-    def text(row, field)
-      value = column(row, field)
+    def text(raw, field)
+      value = cell(raw, field)
       @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value.to_s
     end
 
-    # Whether the sheet carries a column for +field+ at all, judged on the
-    # header alone so an empty cell isn't mistaken for a missing column.
-    def header_for?(row, field)
-      keywords = COLUMNS.fetch(field).flatten
-      row.keys.any? { |key| keywords.any? { |keyword| key.to_s.downcase.include?(keyword) } }
+    # --- Which column is which -----------------------------------------------
+
+    def resolve_headers(headers)
+      FIELDS.transform_values { |spec| match_header(headers, spec) }
     end
 
-    def column(row, field)
-      COLUMNS.fetch(field).each do |keywords|
-        value = find_column(row, *keywords)
-        return value if value.present?
-      end
-      nil
+    # Two fields reading the same column is refused rather than resolved: which
+    # of them the operator meant is exactly what cannot be guessed, and picking
+    # one writes the wrong value into a name or a figure with nothing on screen
+    # to say so.
+    def ambiguous_columns
+      header_for.compact.group_by { |_field, header| header }
+                .select { |_header, pairs| pairs.size > 1 }
     end
 
     # Blank stays blank ("no figure given"); anything unreadable becomes the
@@ -274,18 +335,35 @@ module Reimbursements
     def categorize
       return [] if @rows.empty?
 
-      # No name column at all is one problem with the sheet, not thirty broken
-      # lines. Judged on the HEADERS, not on the values: a sheet that does have
-      # a Budget column but left one cell empty gets that row flagged by itself.
-      unless @name_column_present
-        @errors << "Couldn't find a budget name column. Name one of the columns " \
-                   "#{COLUMNS.fetch(:name).flatten.map(&:inspect).to_sentence(last_word_connector: ' or ')}, " \
-                   "or start from the template."
-        return []
-      end
+      # A problem with the SHEET is one problem, not thirty broken lines.
+      report_ambiguous_columns
+      report_missing_columns
+      return [] if @errors.any?
 
       duplicated = duplicated_names
       @rows.map { |row| entry_for(row, duplicated) }
+    end
+
+    def report_ambiguous_columns
+      ambiguous_columns.each do |header, pairs|
+        labels = pairs.map { |field, _| FIELDS.fetch(field)[:label] }
+        @errors << "The column #{header.inspect} would be read as both " \
+                   "#{labels.to_sentence(last_word_connector: ' and ')}. Rename one of them, " \
+                   "or start from the template."
+      end
+    end
+
+    # Judged on the HEADERS, not the values: a sheet that does have a Budget
+    # column but left one cell empty gets that row flagged by itself, not the
+    # whole sheet rejected.
+    def report_missing_columns
+      missing = REQUIRED_FIELDS.reject { |field| header_for[field] }
+                               .map { |field| FIELDS.fetch(field)[:label] }
+      return if missing.empty?
+
+      @errors << "Couldn't find a budget name column. Name one of the columns " \
+                 "#{FIELDS.fetch(:name)[:exact].map(&:inspect).to_sentence(last_word_connector: ' or ')}, " \
+                 "or start from the template."
     end
 
     def entry_for(row, duplicated)

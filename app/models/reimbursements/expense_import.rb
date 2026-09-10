@@ -39,6 +39,7 @@ module Reimbursements
   # preview STATES the column read for each field.
   class ExpenseImport
     include ImportParsing
+    include StrictColumnMatching
 
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
@@ -298,25 +299,6 @@ module Reimbursements
 
     def resolve_headers(headers)
       FIELDS.transform_values { |spec| match_header(headers, spec) }
-    end
-
-    # Punctuation and case carry no meaning in a spreadsheet heading, so
-    # "E-mail", "e mail" and "EMAIL" are one name. Every FIELDS entry is
-    # written in this normalised form already.
-    def normalize_header(value)
-      value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
-    end
-
-    def match_header(headers, spec)
-      spec[:exact].each do |name|
-        found = headers.find { |header| normalize_header(header) == name }
-        return found if found
-      end
-      spec[:contains].each do |phrase|
-        found = headers.find { |header| normalize_header(header).include?(phrase) }
-        return found if found
-      end
-      nil
     end
 
     # Two fields reading the same column is refused rather than resolved: which

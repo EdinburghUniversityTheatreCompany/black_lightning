@@ -129,6 +129,33 @@ module Reimbursements
       assert_match(/budget name/i, import.errors.to_sentence)
     end
 
+    # --- Strict column matching -----------------------------------------------
+    # Ported from ExpenseImport (fixed there September 2026): a bare keyword
+    # ("budget") must never be read as a substring hint, or a sheet naming both
+    # "Budget" and a column ending in "Budget" can read the wrong one as the
+    # line's name — and two fields resolving to one column must be refused
+    # rather than guessed.
+
+    test "a bare word is never read as a substring hint" do
+      headers = "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\tOwner emails\tNotes"
+      row = "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\t\t"
+      import = build_import([ headers, row ].join("\n"))
+
+      assert_equal "Cogito: Marketing", import.entries.first.row[:name],
+                   "the name must come from the Budget column, not from Area Budget"
+    end
+
+    test "two fields resolving to one column is refused, not guessed" do
+      headers = "Initial budget name\tNominal code\tType\tOwner emails"
+      row = "Props\t4000\tExpense\t"
+      import = build_import([ headers, row ].join("\n"))
+
+      assert_not import.valid?
+      assert_match(/read as both/i, import.errors.to_sentence)
+      assert_match(/Budget/, import.errors.to_sentence)
+      assert_match(/Amount/, import.errors.to_sentence)
+    end
+
     # --- Buckets -------------------------------------------------------------
 
     test "a line that matches nothing is a create" do

@@ -180,6 +180,17 @@ module Admin
         assert_nil assigns(:import)
       end
 
+      # Keyword matching can only ever be nearly right, so the preview states
+      # what it actually read — the thing that makes a mis-mapping visible.
+      test "preview states which column each field was read from" do
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
+
+        assert_match(/Columns read from your sheet/, response.body)
+        assert_select "td", text: "Nominal code"
+      end
+
       test "preview links an unknown owner email to the register-a-person form" do
         sign_in @user
 
