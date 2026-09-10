@@ -156,6 +156,17 @@ ChaosRails::Application.routes.draw do
         get  :template
       end
 
+      # Import claims that were settled outside the portal: paste/upload ->
+      # preview -> apply, the same shape and the same two query-string
+      # coordinates as the budget import above. A claim is charged to a budget
+      # matched by name within one (financial year, cost centre), so it needs
+      # exactly the pair that wizard needs, for exactly the same reason.
+      resource :expense_import, only: %i[show], controller: "expense_imports" do
+        post :preview
+        post :apply
+        get  :template
+      end
+
       # Bookmarks of the old year-nested wizard. Only the GET is worth keeping:
       # the POST steps are reached from the form, never typed.
       get "financial_years/:financial_year_key/budget_import",

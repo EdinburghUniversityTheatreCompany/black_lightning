@@ -1,0 +1,30 @@
+<%# Same frame as the earlier steps — see show.html.erb. %>
+<%= turbo_frame_tag "expense_import" do %>
+<%= render CardComponent.new(title: "Imported into #{selected_financial_year.label}") do %>
+  <ul class="mb-4 list-disc pl-5 text-sm">
+    <li><strong><%= pluralize(@created.size, "claim") %></strong> created.</li>
+    <% skipped = @import.entries_in(:already_imported) %>
+    <% if skipped.any? %>
+      <li>
+        <strong><%= pluralize(skipped.size, "line") %></strong> skipped — already imported
+        under the same reference.
+      </li>
+    <% end %>
+  </ul>
+
+  <% if @created.any? %>
+    <p class="mb-4 text-sm text-gray-600">
+      Numbered
+      <%= @created.map { |expense| "##{expense.auto_number}" }.to_sentence %>.
+      No receipts were imported and nobody was emailed: importing is bookkeeping, not a
+      submission.
+    </p>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "See the expenses", admin_reimbursements_expense_edits_path,
+                class: btn_classes(:primary) %>
+    <%= link_to "Import another sheet", import_path, class: btn_classes(:secondary) %>
+  </div>
+<% end %>
+<% end %>
