@@ -254,7 +254,7 @@ module Reimbursements
     test "to_tsv re-parses to the same rows" do
       original = build_import(tsv("Props\t4000\tExpense\t£1,200\talice@example.com\tSome notes"))
 
-      round_tripped = build_import(original.to_tsv)
+      round_tripped = build_import(original.to_tsv, input_type: :canonical_tsv)
 
       assert_equal original.entries.map(&:row), round_tripped.entries.map(&:row)
     end
@@ -267,10 +267,48 @@ module Reimbursements
                             [ "Props", "4000", "Expense", "100", "", "one\ttwo\nthree" ] ])
       import = build_import(file, input_type: :xlsx)
 
-      round_tripped = build_import(import.to_tsv)
+      round_tripped = build_import(import.to_tsv, input_type: :canonical_tsv)
 
       assert_equal import.entries.map(&:row), round_tripped.entries.map(&:row)
+      assert_equal "one\ttwo\nthree", round_tripped.entries.sole.row[:notes]
       assert_equal 1, round_tripped.entries.size
+    end
+
+    # A pasted sheet can't hold either character — parse_tsv splits on them —
+    # so they only ever arrive from an xlsx cell, already escaped, and must
+    # leave escaped or one stray tab shifts every later column on the re-parse.
+    test "an escaped cell coming back from the preview is unescaped once" do
+      import = build_import(tsv("Costume\\nrepairs\t4000\tExpense\t100\t\tone\\ttwo"),
+                            input_type: :canonical_tsv)
+
+      assert_equal "Costume\nrepairs", import.entries.sole.row[:name]
+      assert_equal "one\ttwo", import.entries.sole.row[:notes]
+
+      again = build_import(import.to_tsv, input_type: :canonical_tsv)
+
+      assert_equal "Costume\nrepairs", again.entries.sole.row[:name]
+      assert_equal "one\ttwo", again.entries.sole.row[:notes]
+    end
+
+    # The same bytes read as the operator's own paste, where a backslash is a
+    # backslash. Only the preview's hidden field is this class's own output.
+    test "a backslash in the operator's own paste is left alone" do
+      import = build_import(tsv("Costume\\next week\t4000\tExpense\t100\t\tC:\\temp\\report.pdf"))
+
+      assert_equal "Costume\\next week", import.entries.sole.row[:name]
+      assert_equal "C:\\temp\\report.pdf", import.entries.sole.row[:notes]
+    end
+
+    # The name is what an existing budget is MATCHED on, so rewriting it turns a
+    # revision into a create — a second line beside the one it meant to update.
+    test "a pasted backslash name still matches the budget it names" do
+      existing = create_reimbursements_budget(name: "Costume\\next week", initial_budget: 1000,
+                                              cost_centre: @cost_centre, financial_year: @year)
+
+      import = build_import(tsv("Costume\\next week\t4000\tExpense\t1200\t\t"),
+                            existing_budgets: [ existing ])
+
+      assert_equal :revise, import.entries.sole.bucket
     end
 
     private

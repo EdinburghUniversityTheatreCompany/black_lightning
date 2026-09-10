@@ -57,15 +57,26 @@ module Reimbursements
     # felt like separating them.
     OWNER_SEPARATOR = /[,;\s]+/
 
+    # Fields whose cells may hold a tab or a newline, so must be unescaped when
+    # the text came back from #to_tsv. See @escaped below.
+    TEXT_FIELDS = %i[name notes].freeze
+
     attr_reader :entries, :financial_year, :cost_centre
 
+    # +input_type+ is :paste (the operator's own text), :xlsx (an upload), or
+    # :canonical_tsv — this class's own #to_tsv output coming back from the
+    # preview's hidden field, which is the ONLY input whose cells carry escape
+    # sequences. Unescaping the operator's paste instead rewrote a typed
+    # "C:\temp\report.pdf" with a real tab before storing it — and before
+    # matching it against an existing budget's name.
     def initialize(data, input_type:, financial_year:, cost_centre:, existing_budgets: [], people: [])
       @errors = []
       @financial_year = financial_year
       @cost_centre = cost_centre
+      @escaped = input_type == :canonical_tsv
       @existing_by_name = existing_budgets.index_by { |budget| self.class.match_key(budget.name) }
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
-      @rows = parse_data(data, input_type)
+      @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
     end
 
@@ -193,7 +204,7 @@ module Reimbursements
       raw_amount = column(row, :amount)
       amount = parse_amount(raw_amount)
       {
-        name: unescape_cell(column(row, :name)).strip,
+        name: text(row, :name).strip,
         nominal_code: column(row, :nominal_code).to_s.strip,
         budget_type: normalize_type(column(row, :budget_type)),
         amount: amount,
@@ -203,8 +214,15 @@ module Reimbursements
         # from, for no gain.
         raw_amount: (raw_amount.to_s.strip if amount == :unreadable),
         owner_emails: split_emails(column(row, :owner_emails)),
-        notes: unescape_cell(column(row, :notes))
+        notes: text(row, :notes)
       }
+    end
+
+    # Escape sequences are undone only for text that came back from #to_tsv —
+    # never for the operator's own paste, where a backslash is a backslash.
+    def text(row, field)
+      value = column(row, field)
+      @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value.to_s
     end
 
     # Whether the sheet carries a column for +field+ at all, judged on the
