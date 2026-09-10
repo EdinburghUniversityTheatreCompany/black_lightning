@@ -461,3 +461,28 @@ Fix: use `sheet[row][col].change_contents(value)` (keeps the existing style) ins
 
 Blocking: nothing, beyond wanting a regression test that asserts the written amount cell's
 number format is the template's and not `General`.
+
+## A Tom Select `<select>` carrying layout classes draws a box inside a box (noticed 2026-09-10)
+
+CLAUDE.md's "Admin forms" section states the rule: a select Tom Select will take over must carry
+only `simple-select2`, because Tom Select copies the `<select>`'s classes onto its `.ts-wrapper`,
+which already draws the box. `app/views/admin/debt_checkers/_user_lookup.html.erb:17` breaks it —
+`class: "simple-select2 w-full"`. Worth a sweep for other hand-written `simple-select2` classes
+carrying width/border utilities (simple_form's `CollectionSelectInput` strips them for you, so only
+the hand-rolled `select_tag` / `input_html:` cases can be wrong).
+
+Blocking: nothing — needs a browser look to confirm the doubled box actually renders on that page
+before changing it.
+
+## The shared user picker is gated on an Event-specific permission (noticed 2026-09-10)
+
+`app/views/shared/form/_user_field.erb:1` defaults `all_users:` to `can?(:add_non_members, Event)`,
+whose grid description is "Add non-members to events, mainly for archiving purposes"
+(`app/controllers/admin/permissions_controller.rb:92`). That partial is rendered from five
+unrelated forms — team-member credits, maintenance credits, staffing jobs, marketing-creatives
+profiles, shared debt — so whether a non-member is pickable on a *staffing* form is decided by an
+*event-archiving* permission. Either the permission should be renamed to what it actually governs,
+or each caller should pass the `all_users:` its own screen needs (`_debt_form.erb` already passes
+`all_users: true` for exactly this reason).
+
+Blocking: it is a permissions change, so it needs Mick's call on which of the two readings is right.
