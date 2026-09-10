@@ -30,5 +30,23 @@ module Reimbursements
       area = create_reimbursements_area(name: "Improverts")
       assert_nil area.remaining
     end
+
+    test "an area with no budgets at all has zero committed and allocated" do
+      area = create_reimbursements_area(name: "Empty", initial_budget: 1_000)
+      assert_equal 0, area.committed_amount
+      assert_equal 0, area.allocated
+      assert_equal 1_000, area.unallocated
+    end
+
+    test "an area whose budgets have no figure reports zero allocated and the whole total unallocated" do
+      area = create_reimbursements_area(name: "Unallocated", initial_budget: 500)
+      # Create budgets with no initial_budget and no forecast
+      create_reimbursements_budget(name: "Line A", area: area)
+      create_reimbursements_budget(name: "Line B", area: area)
+
+      assert_equal 0, area.allocated
+      assert_equal 500, area.unallocated
+      assert_equal 0, area.committed_amount
+    end
   end
 end
