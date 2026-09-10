@@ -129,6 +129,19 @@ module Reimbursements
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
                             dependent: :nullify, inverse_of: :expense
 
+    # A claim carries no cost-centre column: which pot pays it is a property of
+    # the budget it is charged to, so it moves with the budget rather than
+    # having to be kept in step with it. nil for a claim with no budget yet (an
+    # email-in draft) or a budget nobody has placed — every reader treats that
+    # as "unplaced", never as a centre of its own.
+    def cost_centre
+      budget&.cost_centre
+    end
+
+    def cost_centre_id
+      budget&.cost_centre_id
+    end
+
     validates :status, inclusion: { in: Status.all }
     validates :expense_type, inclusion: { in: TYPES }
     validates :payment_method, inclusion: { in: PAYMENT_METHODS }

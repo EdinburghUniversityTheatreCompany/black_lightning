@@ -26,8 +26,15 @@ module Reimbursements
     # one store per request, so the memoized lists can never disagree with it.
     attr_reader :financial_year
 
-    def initialize(financial_year: nil)
+    # The cost centre the finance screens are scoped to, or nil for "every
+    # centre" — which is what an unscoped store (jobs, the producer surfaces)
+    # and a finance page with no ?cost_centre= both get. Set once at
+    # construction, for the same reason the year is.
+    attr_reader :cost_centre
+
+    def initialize(financial_year: nil, cost_centre: nil)
       @financial_year = financial_year
+      @cost_centre = cost_centre
     end
 
     # Attribute-vocabulary translations onto AR columns; everything else in
@@ -44,6 +51,22 @@ module Reimbursements
     def expenses
       @expenses ||= Expense.includes(:budget, :batch, person: :payment_details)
                            .with_attached_receipt_files.to_a
+    end
+
+    # The selected cost centre's expenses. An expense carries no cost-centre
+    # column of its own — it resolves one through its budget (Expense
+    # #cost_centre_id), which +expenses+ already preloads, so this costs no
+    # extra query.
+    def expenses_for_cost_centre
+      expenses_in_cost_centre(cost_centre)
+    end
+
+    # The same narrowing against an EXPLICIT centre, for the money path: Build
+    # Batch (controller preview and BuildBatchJob) builds one centre's batch and
+    # must never sweep another centre's approved claims into it, whatever the
+    # on-screen selector happens to say.
+    def expenses_in_cost_centre(centre)
+      in_cost_centre(expenses, centre, &:cost_centre_id)
     end
 
     # A person's expenses, newest submission first.
@@ -82,6 +105,13 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
+    # Every configured cost centre, by name. Memoized like every other list, so
+    # the exporters' id->centre lookup costs one query per request however many
+    # rows they name a centre on.
+    def cost_centres
+      @cost_centres ||= CostCentre.order(:name).to_a
+    end
+
     # Every budget, every financial year, with the owners + forecasts every
     # caller needs. Deliberately WITHOUT the actuals preload: most callers (the
     # producer's budget <select>, the review queue's over-budget check, the
@@ -103,7 +133,7 @@ module Reimbursements
     # An unscoped store (jobs, the producer surfaces) sees every budget, which
     # is also what a database whose rows predate financial years needs.
     def budgets_for_year
-      @budgets_for_year ||= scoped_to_year(budgets)
+      @budgets_for_year ||= scoped_to_cost_centre(scoped_to_year(budgets), &:cost_centre_id)
     end
 
     # Budgets with their EUSA actuals preloaded, for the two places that show the
@@ -114,8 +144,9 @@ module Reimbursements
     #
     # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
-      @budgets_with_actuals ||= scoped_to_year(
-        Budget.includes(:owners, :forecasts, :eusa_actuals, expenses: :eusa_actuals).to_a
+      @budgets_with_actuals ||= scoped_to_cost_centre(
+        scoped_to_year(Budget.includes(:owners, :forecasts, :eusa_actuals, expenses: :eusa_actuals).to_a),
+        &:cost_centre_id
       )
     end
 
@@ -123,6 +154,13 @@ module Reimbursements
     # the selected one. A finance user browsing next year's draft lines must not
     # be able to file (or convert an EUSA row into) a claim against a year the
     # portal hasn't switched to yet.
+    #
+    # Deliberately NOT cost-centre scoped either, however tempting it looks
+    # sitting between two scoped readers. This is the submitter's budget picker,
+    # and it is the SAME list Review's picker, the actuals->expense conversion
+    # and the finance expense-edit form draw from: narrowing it to whichever
+    # centre finance happens to have selected would quietly stop a producer
+    # filing against the other one.
     def active_budgets
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:name)
     end
@@ -152,8 +190,9 @@ module Reimbursements
     # Sorted by nominal code, then date, so finance can see which budget each
     # row probably belongs to.
     def unattributed_actuals
-      eusa_actuals.reject { |a| a.offset? || a[:expense_id].present? || a[:budget_id].present? }
-                  .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
+      eusa_actuals_for_cost_centre
+        .reject { |a| a.offset? || a[:expense_id].present? || a[:budget_id].present? }
+        .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 
     def update_budget!(record_id, attrs)
@@ -345,6 +384,23 @@ module Reimbursements
       @batches ||= Batch.order(:id).to_a
     end
 
+    # The selected cost centre's batches. A Batch carries no cost-centre column;
+    # it takes its centre from the expenses it holds, which is exact now that a
+    # batch is built for one centre over that centre's claims only. A batch
+    # holding nothing (or only unplaced claims) has no centre and so shows under
+    # every one, the same leniency #in_cost_centre applies everywhere else.
+    def batches_for_cost_centre
+      return batches if cost_centre.nil?
+
+      centre_ids = expenses.each_with_object(Hash.new { |h, k| h[k] = Set.new }) do |expense, map|
+        map[expense.batch_id] << expense.cost_centre_id if expense.batch_id.present?
+      end
+      batches.select do |batch|
+        ids = centre_ids[batch.record_id]
+        ids.empty? || ids.include?(nil) || ids.include?(cost_centre.id)
+      end
+    end
+
     def find_batch_by_draft_message_id(message_id)
       return nil if message_id.blank?
 
@@ -417,6 +473,15 @@ module Reimbursements
 
     def eusa_actuals
       @eusa_actuals ||= EusaActual.includes(:expense, :budget).to_a
+    end
+
+    # The selected cost centre's ledger rows, for the Actuals browser and its
+    # CSV. +eusa_actuals+ itself stays unscoped: it is the reconcile wizard's
+    # dedup pool and its already-reconciled lookup, both of which attribute
+    # per ROW and would silently re-import another centre's rows off a narrowed
+    # pool.
+    def eusa_actuals_for_cost_centre
+      in_cost_centre(eusa_actuals, cost_centre, &:cost_centre_id)
     end
 
     # Actuals already imported for a given EUSA period (P1..P12), used to dedup
@@ -596,6 +661,39 @@ module Reimbursements
       return records if year.nil?
 
       records.select { |record| record.financial_year_id.nil? || record.financial_year_id == year.id }
+    end
+
+    # --- Cost-centre scoping -------------------------------------------------
+
+    # +records+ narrowed to this store's cost centre, +block+ answering each
+    # record's own centre id. A store with no centre ("All cost centres", every
+    # job, the producer surfaces) gets the lot.
+    def scoped_to_cost_centre(records, &block)
+      in_cost_centre(records, cost_centre, &block)
+    end
+
+    # +records+ belonging to +centre+, treating a record with NO cost centre as
+    # belonging to it.
+    #
+    # That leniency is the same rule #in_year states for financial years, and
+    # for the same reason: cost_centre_id is nullable on every table that has it
+    # and predates this scoping, so a portal whose rows were written before the
+    # column existed would show a finance user an EMPTY budget list, an empty
+    # ledger and an empty review queue the moment they picked a centre — with
+    # nothing on screen to say why. An unplaced row shown under the centre being
+    # viewed is visible and correctable; hidden money is not.
+    #
+    # It is a filter, so an unplaced row may appear under more than one centre.
+    # NightlyBatchJob deliberately uses the stricter "unplaced falls to the
+    # DEFAULT centre" rule instead, because a reminder has to be addressed to
+    # exactly one set of recipients — a filter has no such obligation.
+    def in_cost_centre(records, centre, &block)
+      return records if centre.nil?
+
+      records.select do |record|
+        id = block.call(record)
+        id.nil? || id == centre.id
+      end
     end
 
     # nil values are dropped (email-in gaps); the sharepoint URL array joins
