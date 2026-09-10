@@ -323,6 +323,22 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The area owns and its budgets inherit.** `Budget#owners` resolves through the area when
     it has one; `own_owners` is the budget's own rows, KEPT (not deleted) so the backfill is
     reversible, and the area's owners win wherever both exist.
+  - **Ownership is EDITED on the area, and every writer must write `own_owners`.** `#owners`
+    reads through the area, so a screen that offers an editable owner list for an area-bound
+    budget reads one table and writes another: the budget form renders the inherited owners
+    read-only and omits `owner_ids` from its params entirely, and the importer compares
+    `own_owners` (comparing `owner_ids` could never converge, so it re-reported the same sync
+    for ever). A blank list is the dangerous one — `where.not(person_id: [])` is `WHERE 1=1`.
+  - **An area naming nobody switches its budgets' sign-off gate OFF** — `OwnerReview
+    .gate_applies?` is false with no owners, so a budget with its own owner attached to an
+    ownerless area stops needing endorsement entirely. Both forms warn.
+  - **A budget inherits its area's cost centre and financial year** (`before_validation` on
+    Budget, filling blanks only, so it can never move a placed line). The area form's nested
+    rows carry only a name and a code, and an unstamped line is lenient-scoped into EVERY
+    year's and EVERY centre's list and into every producer's picker.
+  - **The area `<select>` must always offer the budget's own area.** It is drawn from
+    `areas_for_year` (scoped) while `area_id` writes unscoped and `""` detaches, so an area
+    from another year read "— none —" and any Save silently detached it.
   - **A forecast belongs to exactly one of a budget or an area** (model validation + a MySQL
     CHECK constraint — the app pins mysql:8.4 everywhere, so CHECK is enforced). An area
     forecast revises the show's agreed total, a budget forecast a category's allocation. It
