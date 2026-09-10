@@ -1,6 +1,30 @@
 # Grouping a show's spend across nominal codes — options
 
-**Status:** options paper, no decision taken. Written 2026-09-10 against `157624fa`.
+**Status: DECIDED — Option D** (Mick, 2026-09-10). Written against `157624fa`; needs a spec next.
+
+The decision turned on production data rather than on the models. Mick initially chose B, on the
+grounds that A/D's budget sprawl was not worth it and that rewrite cost is no constraint while the
+portal is still being prototyped — both fair. Two facts from the live database changed it:
+
+1. **The sprawl already exists, and the grouping is already in the names.** 17 of Fringe's 31
+   budgets are named `Area: Category` — BF Marketing (4 lines), Improverts (3), Cogito (2),
+   Last Orders (2), Venue (2), Tech (2), Utilities (2). The other 14 are genuine standalone
+   overheads (payroll, NI, Contingency, Consumables, PRS/PPL). D adds a record for the prefix
+   that is already there; it does not create rows. Termtime encodes the same concept differently
+   — "Semester 1 Shows", "Committee Budgets", "Subcommittee Budgets", "Utilities", "Extras That
+   Are Weird" all import with no amount, because they are section headers with their lines
+   beneath. Two cost centres, two hand-rolled conventions, both working around the same missing
+   concept.
+2. **B would have lost a distinction the current structure carries.** For all three shows,
+   `X: Marketing` and `X: Other` carry the SAME nominal code (`432320`). The Marketing/Other
+   split is not encoded in the nominal code at all — it lives in the budget name. So "one budget
+   per show, code on the transaction" has nothing left for that axis to live on, unless the
+   expense gains a category field beside its code, at which point the category is doing the
+   Area's job per-transaction.
+
+**Backfill is close to free:** split the budget name on the colon (stripping whitespace —
+`"Improverts:  Retreat"` has two spaces) and 17 of 31 budgets sort themselves into 7 areas with
+no human judgement. The 14 without a colon stay area-less, correctly.
 
 ## The problem, precisely
 
@@ -122,20 +146,83 @@ figure and no single owner — those stay per budget, and the label is a reporti
 
 **Costs** almost nothing; a day, and reversible.
 
+### Option D — Area, with budgets found-or-created (added after Mick's 2026-09-10 note)
+
+Option A's data model, without Option A's setup burden. `Budget` stays the (area, nominal code)
+pair; what changes is that nobody has to pre-create one. A submitter picks their **show**, then a
+category:
+
+- the area already has a budget for that category → the claim goes there, as today;
+- it doesn't → the portal creates one **with no `initial_budget`**, and it renders as *unbudgeted
+  spend within the area*. That is information, not a gap: it says this show spent against a
+  category the committee never budgeted for. The business manager can attach a figure later, or
+  leave it.
+
+The committee's spreadsheet still creates the budgets it knows about, with their agreed figures,
+through the importer that already exists. `initial_budget`-is-write-once already gives the right
+semantics for a line that gets budgeted after the fact.
+
+**What it costs:** the per-cost-centre code list below, because a category the area does not yet
+have must be nameable from somewhere.
+
+**What it doesn't cost:** nobody checks a nominal code per transaction (B's burden), and nobody
+pre-creates a budget per (show × code) (A's burden).
+
+## The labour trade is the real axis
+
+Mick's framing, and it is sharper than the data-model comparison:
+
+| | who does the work | when | bulk-able? |
+|---|---|---|---|
+| **A** | business manager creates a budget per (show × code) | once per show, at budget time | **yes** — the spreadsheet import already does it |
+| **B** | business manager checks the code on every transaction | every claim, forever | no |
+| **D** | nobody, in the common case | — | n/a |
+
+A's cost is front-loaded and importable. B's is per-claim and cannot be batched. That asymmetry,
+not the elegance of the model, is what should decide this.
+
+## Nominal codes mean different things in different cost centres
+
+Also Mick's, and it is a cost that lands almost entirely on B.
+
+**Today a nominal code is never rendered with a label** — it appears as a bare number everywhere
+(`budgets/index.html.erb:55` shows `name · code`; Reconcile and the EUSA email print the code
+alone). So the human label for a code *is the budget's name*, and because a budget belongs to a
+cost centre, per-centre labelling already exists at no cost.
+
+- **A and D keep that**: the budget name is the label, already scoped.
+- **B loses it**: once the code lives on the expense, it needs its own lookup — and it cannot be
+  `code → label`, it must be **`(cost_centre, code) → label`**, the same code carrying different
+  names in different centres. That table has to exist and be maintained before anyone can pick
+  from a dropdown.
+
+D needs that table too, but only for the "category this area hasn't used yet" case, and a wrong
+pick there creates a visibly unbudgeted line rather than a mis-coded payment.
+
 ## Recommendation
 
-**Option A.** The grouping people want is a Bedlam concept, and Option A adds it as a Bedlam-side
-layer without touching the EUSA-facing structure that the BACS file, the exports and Reconcile all
-depend on. It is additive, it ships dark, and it is the only one of the three that answers all
-three parts of the ask without putting a new obligation on every claim.
+**Option D** — which is Option A's data model, so the diagram above still describes it; what D
+adds is that the portal creates the (area, code) budget instead of the business manager.
+
+The grouping people want is a Bedlam concept, and A/D add it as a Bedlam-side layer without
+touching the EUSA-facing structure the BACS file, the exports and Reconcile all depend on. Both
+ship dark and leave every existing budget behaving exactly as it does. D is the one to build
+because the only serious objection to A — that somebody has to create a budget line for every
+category a show turns out to spend on — is answered by creating it on demand, and the line it
+creates carries a true statement (this was not budgeted for) rather than a guess.
 
 Option B is the better model in the abstract and I would not argue against it in a greenfield
-portal, but it buys its elegance by making per-expense coding mandatory and rewriting the overview
-and the income-side reconcile match. That is a lot of risk to take on for a structure whose
-current pain is "the overview has two rows where I want one".
+portal. But it buys its elegance three times over: per-expense coding becomes mandatory when
+nobody does it today, it needs a `(cost_centre, code) → label` table built and maintained before
+the dropdown can exist, and it puts a per-transaction check on the business manager that cannot be
+batched. That is a lot to take on for a structure whose current pain is "the overview has two rows
+where I want one".
 
 Option C is worth naming only as the fallback if the appetite is small: it delivers the visibility
 and none of the control.
+
+**If D's find-or-create feels too magic**, A is the honest fallback and nothing is wasted — D is A
+plus one lookup, so building A first and adding find-or-create later is a clean order.
 
 **A door worth leaving open, not walking through now:** there is currently *zero* linkage between
 the reimbursements module and the main app's `Event`/show domain — grepped in both directions,
@@ -159,3 +246,13 @@ way that forecloses it.
    how a re-import should treat it.
 4. **Does an area belong to one cost centre?** Almost certainly yes (a show is funded from one
    pot), which makes it a clean child of the cost-centre scoping work.
+5. **Under D, who may bring a new budget line into being by claiming against it?** Any submitter
+   (fewest blocks, but a producer's mis-pick creates a row) or finance only (safer, but it is the
+   very approval step D exists to remove)? A middle reading: any submitter may, and the new line
+   is flagged on the Review queue until someone with the finance permission has looked at it —
+   the claim is never held up, but the line does not pass unseen.
+6. **Where does the `(cost_centre, code, label)` list come from, and who keeps it current?**
+   EUSA's chart of accounts is the source, but nothing in this repo has ever held it. Seeded once
+   from the codes already in use (`Budget.distinct.pluck(:nominal_code)` per centre, labelled from
+   the budget names) is the cheap start, but it needs an owner or it rots — and a rotted list is
+   worse than no list, because it silently steers spend to a dead code.
