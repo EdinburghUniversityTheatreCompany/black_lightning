@@ -334,6 +334,57 @@ module Admin
         end
       end
 
+      # Same shape as #seed_paged_budgets below, but every budget belongs to
+      # ONE area — the fixture for the page-boundary test that follows.
+      # Alphabetically-named for the same reason: page 1 (50/page) is
+      # deterministic, so "Budget 001".."Budget 050" land on it and
+      # "Budget 051".."Budget 060" spill to page 2.
+      def seed_paged_area_budgets(count, area:)
+        ::Reimbursements::Expense.delete_all
+        ::Reimbursements::BudgetForecast.delete_all
+        ::Reimbursements::BudgetOwner.delete_all
+        ::Reimbursements::Budget.delete_all
+        (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n), area: area) }
+      end
+
+      # The subtotal in the area's header always covers EVERY line linked to
+      # it (area.budgets, unscoped — the same total Area#committed_amount and
+      # #allocated already sum over), not just the rows visible on this page.
+      # With 60 lines under one area and a 50-per-page index, page 1 renders
+      # only 50 of them under a subtotal that covers all 60 — this is the case
+      # the note exists to disclose, with real pagination doing the hiding
+      # rather than a stub.
+      test "an area whose lines straddle the page boundary states how many are shown" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Big Area")
+        seed_paged_area_budgets(60, area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_match(/50 of 60 lines shown/, elements.first.text)
+        end
+      end
+
+      # The common case: nothing states a line count when every one of the
+      # area's lines fits on the page — a permanent "X of X lines shown" would
+      # be noise on every ordinary area, and this is what stops a future edit
+      # from dropping the `visible_count < total_count` guard unnoticed.
+      test "an area whose lines all fit on the page states nothing" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Small Area")
+        create_reimbursements_budget(name: "Small Area: One", area: area)
+        create_reimbursements_budget(name: "Small Area: Two", area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_no_match(/lines shown/, elements.first.text)
+        end
+      end
+
       # Builds +area_count+ areas with +budgets_per_area+ budgets each, every
       # budget carrying an expense (so Budget#committed_amount queries) and a
       # forecast (so Budget#projected_amount/Area#allocated queries) — a
