@@ -221,6 +221,6 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
     same sheet can be imported into next year while this one is still being paid out of.
   </p>
   <%= link_to "Import budgets into #{@cost_centre.name}",
-              admin_reimbursements_budget_import_path(cost_centre_id: @cost_centre.id),
+              admin_reimbursements_budget_import_path(cost_centre: @cost_centre.key),
               class: btn_classes(:secondary, :sm) %>
 <% end %>

@@ -53,9 +53,9 @@
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             hint: "Which pot these budgets belong to.", html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,
-                       options_from_collection_for_select(cost_centres, :id, :name,
+                       options_from_collection_for_select(selectable_cost_centres, :id, :name,
                                                           selected_cost_centre&.id ||
-                                                            cost_centres.first&.id),
+                                                            selectable_cost_centres.first&.id),
                        class: input_classes %>
       <% end %>
 

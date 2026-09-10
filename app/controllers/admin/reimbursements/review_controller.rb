@@ -29,7 +29,11 @@ module Admin
         @title = "Review Expenses"
         @tab = resolve_tab
 
-        expenses = store.expenses
+        # Every tab, its count and its CSV come off ONE list, so the tab labels
+        # can never disagree with what the tab shows. An expense has no cost
+        # centre of its own — it resolves one through its budget (see
+        # Expense#cost_centre_id), which the store already preloads.
+        expenses = store.expenses_for_cost_centre
         @pending = expenses.select(&:pending?)
         @approved = expenses.select { |e| e.status == ::Reimbursements::Status::APPROVED }
         # Split the Pending queue in two BEFORE the format branch: the CSV

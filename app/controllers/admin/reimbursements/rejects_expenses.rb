@@ -22,14 +22,16 @@ module Admin
         notified
       end
 
-      # Send the rejection via Graph (from the cost centre's send mailbox), but
-      # never let a send failure block the rejection itself: a failed send just
-      # returns false so the caller leaves rejection_notified unstamped.
+      # Send the rejection via Graph, from the send mailbox of THIS CLAIM's cost
+      # centre — not the portal's first centre, which is where every rejection
+      # used to come from whoever it belonged to. Never let a send failure block
+      # the rejection itself: a failed send just returns false so the caller
+      # leaves rejection_notified unstamped.
       def notify_rejection(expense, reason)
         email = expense.person&.email
         return false if email.blank?
 
-        notifier.rejection(
+        notifier_for(expense.cost_centre).rejection(
           to: email,
           greeting_name: ::Reimbursements::GreetingName.for(expense.person),
           auto_number: expense.auto_number,

@@ -22,7 +22,7 @@ module Admin
 
       def index
         @title = "Batch history"
-        @batches = store.batches.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
+        @batches = store.batches_for_cost_centre.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
         respond_to do |format|
           format.html { load_history }
           # One row per batch, summarising its expenses (Exports::Batches).
@@ -171,9 +171,13 @@ module Admin
         # In-flight/failed/no-op builds (and completed-with-warnings) from the
         # last week — a cleanly completed attempt is redundant with its Batch
         # row, but these have no other in-app trace.
-        @batch_attempts = ::Reimbursements::BatchAttempt.needing_attention
-                                                        .where(created_at: 7.days.ago..)
-                                                        .includes(:cost_centre).recent_first
+        attempts = ::Reimbursements::BatchAttempt.needing_attention
+                                                 .where(created_at: 7.days.ago..)
+                                                 .includes(:cost_centre).recent_first
+        # BatchAttempt carries its own cost_centre_id (NOT NULL), so this one
+        # needs no leniency: every attempt row knows which pot it was built for.
+        attempts = attempts.where(cost_centre_id: selected_cost_centre.id) if selected_cost_centre
+        @batch_attempts = attempts
       end
 
       def processed_expenses

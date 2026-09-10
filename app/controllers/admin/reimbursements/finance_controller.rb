@@ -11,6 +11,7 @@ module Admin
       skip_before_action :authorize_reimbursements!
       before_action :authorize_finance!
       before_action :resolve_financial_year!
+      before_action :resolve_cost_centre!
 
       # Injection seam for tests: the modulus checker (from the vendored Pay.UK
       # rule files in production; a fake in functional tests). Shared by every
@@ -24,7 +25,8 @@ module Admin
       # BuildBatchJob/NightlyBatchJob's own memoized +graph+).
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
-      helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years
+      helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years,
+                    :selected_cost_centre, :selectable_cost_centres
 
       # A page of records for an index view. One shared page size (50) across
       # every finance list, so a future change to it is a single edit.
@@ -69,6 +71,58 @@ module Admin
       # which is the state a pre-financial-year database is in.
       def selectable_financial_years
         @selectable_financial_years ||= ::Reimbursements::FinancialYear.recent_first.to_a
+      end
+
+      # --- Cost-centre selector ---------------------------------------------
+      # URL-as-state: ?cost_centre=termtime on the finance lists, exactly as
+      # ?year= works on the budget screens. CostCentre is `param: :key`, so the
+      # key is the readable coordinate.
+      #
+      # NO centre selected means EVERY centre, which is both what the portal did
+      # before this existed (so every bookmark and every link with no
+      # ?cost_centre= keeps its meaning) and the only default that cannot hide
+      # money: CostCentre.default is `order(:id).first`, so defaulting to it
+      # would silently empty the second centre's screens for the people who work
+      # in it.
+      #
+      # ?cost_centre_id=<id> is the shape the budget-import wizard shipped with
+      # and is deep-linked from Settings and the budgets index; it is still
+      # honoured so those links and any bookmark of them keep working. The key
+      # wins when both are present.
+
+      def resolve_cost_centre!
+        requested_key = params[:cost_centre].presence
+        requested_id = params[:cost_centre_id].presence
+        @selected_cost_centre =
+          if requested_key
+            find_cost_centre_by_key(requested_key)
+          elsif requested_id
+            selectable_cost_centres.find { |centre| centre.id.to_s == requested_id.to_s }
+          end
+      end
+
+      # An unknown key must never quietly show a DIFFERENT centre's money as
+      # though it were the requested one — say so, then fall back to all
+      # centres, which is the only fallback that adds nothing the operator
+      # didn't ask for.
+      def find_cost_centre_by_key(requested)
+        centre = selectable_cost_centres.find { |c| c.key == requested }
+        return centre if centre
+
+        flash.now[:alert] = "There's no cost centre called #{requested.inspect}. " \
+                            "Showing every cost centre instead."
+        nil
+      end
+
+      def selected_cost_centre
+        @selected_cost_centre
+      end
+
+      # Every configured cost centre, for the selector. Read straight off the
+      # model rather than the store, because this runs in a before_action that
+      # decides how the store is built.
+      def selectable_cost_centres
+        @selectable_cost_centres ||= ::Reimbursements::CostCentre.order(:name).to_a
       end
 
       def modulus_checker
