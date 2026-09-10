@@ -318,6 +318,32 @@ survive as historical import provenance and are never written. Spec + plan in
     `store.budgets_with_actuals` does (budgets index/overview + the Budgets export sheet).
     Don't "fix" a caller by switching it: the producer's budget `<select>` used to load the
     whole expenses + actuals ledger to draw a dropdown.
+- **Areas** (`Reimbursements::Area`, `Admin::Reimbursements::AreasController`) group a show's
+  budget lines under one agreed total and one owner set.
+  - **The area owns and its budgets inherit.** `Budget#owners` resolves through the area when
+    it has one; `own_owners` is the budget's own rows, KEPT (not deleted) so the backfill is
+    reversible, and the area's owners win wherever both exist.
+  - **A forecast belongs to exactly one of a budget or an area** (model validation + a MySQL
+    CHECK constraint — the app pins mysql:8.4 everywhere, so CHECK is enforced). An area
+    forecast revises the show's agreed total, a budget forecast a category's allocation. It
+    can't be area-only: 14 of the 31 live Fringe budgets have no area, Contingency among them.
+  - **`remaining` and `unallocated` are nil, never zero, when nobody agreed a total** — the
+    state every backfilled area starts in; a 0 there would read as "fully overspent".
+  - **The backfill is a SERVICE, not migration code** (`Reimbursements::AreaBackfill`), because
+    test/CI databases are schema-loaded so a data migration never runs there and could never be
+    tested. Its `down` REFUSES when the area tree shows signs of hand-editing.
+  - **Area figures must be read off `store.areas`** (unscoped, preloads
+    `budgets: [:expenses, :forecasts]`), never off `budget.area` — whose `budgets` collection
+    is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31).
+  - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
+    paginated and scoped — the row states when fewer lines are visible than exist.
+  - **Area names are unique within one (financial year, cost centre)** by model validation —
+    the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
+    NULLs through a unique index, and an area with no year/centre yet has NULLs in both.
+  - **`strong_migrations` blocks `add_reference … foreign_key:` on a populated table** — the
+    areas/area-forecast migrations use the gem's own MySQL pattern (`add_reference` then
+    `add_foreign_key` inside `safety_assured` with `SET SESSION foreign_key_checks = 0/1`);
+    `safety_assured` must wrap the `execute` calls too, not just `add_foreign_key`.
 - **Financial years** (`Reimbursements::FinancialYear`, `Admin::Reimbursements::FinancialYearsController`).
   Each Fringe recurs with its own budgets; a year is built as a **draft** (create → import its
   budgets → check) and switched to with `activate!`, never a checkbox on the edit form —
