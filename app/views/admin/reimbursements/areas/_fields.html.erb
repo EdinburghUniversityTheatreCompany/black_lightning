@@ -32,6 +32,17 @@
     <% end %>
   </div>
   <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this area.</p>
+  <% if form.object.persisted? && owner_ids.empty? %>
+    <%# An area with no owners reports none for every budget under it, and
+        OwnerReview.gate_applies? is false with no owners — so its claims skip
+        owner endorsement, the nightly job never names them and Review's
+        Awaiting-owner tab never shows them. Warned in the spirit of the
+        budgets index's "No owner" badge. %>
+    <p class="mt-1 text-sm text-warning">
+      Nobody is ticked, so claims on this area's budget lines
+      skip budget-owner sign-off entirely.
+    </p>
+  <% end %>
 </fieldset>
 
 <%= form.input :notes, label: "Notes", input_html: { rows: 3 } %>

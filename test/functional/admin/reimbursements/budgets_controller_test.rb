@@ -866,6 +866,22 @@ module Admin
                       "an area-bound budget must not offer an editable owners list"
         assert_includes response.body, "Alice Owner"
         assert_select "a[href=?]", edit_admin_reimbursements_area_path(area.record_id)
+        assert_no_match(/skip budget-owner sign-off/, response.body)
+      end
+
+      # Attaching a line to an ownerless area switches its sign-off gate off
+      # (OwnerReview.gate_applies? is false with no owners), which is the worst
+      # way to get ownership wrong — so the form that can do it says so.
+      test "the budget form warns when its area has no owners" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_match(/skip budget-owner sign-off/, response.body)
       end
 
       test "a Save on an area-bound budget cannot rewrite its own owner rows" do

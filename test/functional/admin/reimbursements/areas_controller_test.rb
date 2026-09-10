@@ -67,6 +67,29 @@ module Admin
         assert_nil budget.reload.area
       end
 
+      # An area with no owners switches its budgets' sign-off gate OFF entirely
+      # (OwnerReview.gate_applies? is false with no owners), so say so where it
+      # is set — the spirit of the budgets index's "No owner" badge.
+      test "the area form warns when the area has no owners" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        get :edit, params: { id: area.record_id }
+
+        assert_response :success
+        assert_match(/skip budget-owner sign-off/, response.body)
+      end
+
+      test "the area form does not warn when the area has an owner" do
+        person = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ person.id ])
+
+        get :edit, params: { id: area.record_id }
+
+        assert_response :success
+        assert_no_match(/skip budget-owner sign-off/, response.body)
+      end
+
       # --- Nested budget rows -------------------------------------------------
       # DatabaseStore#in_year and #in_cost_centre are deliberately lenient, so a
       # line stamped with neither shows up in EVERY year's and EVERY centre's

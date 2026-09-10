@@ -61,6 +61,14 @@
         <%= link_to "edit on the area", edit_admin_reimbursements_area_path(owners_from_area.record_id),
               class: "text-primary underline" %>
       </p>
+      <% if owner_names.empty? %>
+        <%# An area naming nobody switches the gate OFF for every line under it
+            (OwnerReview.gate_applies? is false with no owners), so the form
+            that can attach a line to one says so. %>
+        <p class="mt-1 text-sm text-warning">
+          This area names nobody, so claims on this line skip budget-owner sign-off entirely.
+        </p>
+      <% end %>
     </div>
   <% else %>
     <fieldset aria-describedby="owner_ids_hint">
