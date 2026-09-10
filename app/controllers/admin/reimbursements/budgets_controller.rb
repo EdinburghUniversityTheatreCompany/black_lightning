@@ -23,6 +23,12 @@ module Admin
         # one of the two readers that pays for the actuals preload.
         sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
         @people_by_id = store.people.index_by(&:record_id)
+        # The unscoped, fully-preloaded id->Area lookup (owners, and each
+        # area's budgets' expenses/forecasts) — the grouped index reads every
+        # area figure off THESE objects, never off budget.area, or each
+        # area's committed_amount/allocated would N+1 across its budgets'
+        # expenses and forecasts.
+        @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
           format.html { @budgets = paginate(sorted) }
           format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }

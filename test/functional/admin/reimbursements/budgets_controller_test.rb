@@ -302,6 +302,124 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/budgets?format=csv"
       end
 
+      # --- Area grouping ------------------------------------------------------
+
+      test "the index groups budgets under their area and lists the rest separately" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
+        create_reimbursements_budget(name: "Cogito: Marketing", area: area, initial_budget: 400)
+        create_reimbursements_budget(name: "Contingency", initial_budget: 1_000)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do
+          assert_select "td", text: /Cogito: Marketing/
+        end
+        assert_select "[data-area='none']" do
+          assert_select "td", text: /Contingency/
+        end
+      end
+
+      test "an area with no agreed total renders no Remaining figure, not a misleading zero" do
+        sign_in @user
+        area = create_reimbursements_area(name: "No total yet")
+        create_reimbursements_budget(name: "No total yet: Set", area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_no_match(/Remaining/, elements.first.text)
+        end
+      end
+
+      # Builds +area_count+ areas with +budgets_per_area+ budgets each, every
+      # budget carrying an expense (so Budget#committed_amount queries) and a
+      # forecast (so Budget#projected_amount/Area#allocated queries) — a
+      # single area with a single budget can't tell a preloaded read from an
+      # N+1, since both cost one query either way.
+      def seed_areas_with_budgets(area_count:, budgets_per_area:)
+        ::Reimbursements::Expense.delete_all
+        ::Reimbursements::BudgetForecast.delete_all
+        ::Reimbursements::BudgetOwner.delete_all
+        ::Reimbursements::Budget.delete_all
+        ::Reimbursements::Area.delete_all
+
+        area_count.times do |a|
+          area = create_reimbursements_area(name: "Area #{a}", initial_budget: 1_000)
+          budgets_per_area.times do |n|
+            budget = create_reimbursements_budget(name: "Area #{a}: Line #{n}", area: area,
+                                                  initial_budget: 100)
+            budget.forecasts.create!(amount: 150, date: Date.new(2026, 5, 1), reason: "plan")
+            create_reimbursements_expense(budget: budget, status: ::Reimbursements::Status::APPROVED,
+                                          amount_excl_vat: 50, amount: 60, receipt: false)
+          end
+        end
+      end
+
+      # Quadrupling the row count (2 areas/4 budgets -> 4 areas/16 budgets)
+      # must not multiply the query count: DatabaseStore#areas preloads each
+      # area's owners and its budgets' expenses/forecasts in a handful of
+      # fixed queries, however many rows there are.
+      test "the index's query count does not grow with the number of areas or budgets" do
+        sign_in @user
+
+        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
+        small_queries = count_queries { get :index }
+
+        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
+        large_queries = count_queries { get :index }
+
+        assert_operator large_queries, :<=, small_queries + 5,
+                        "expected roughly the same query count for 4 budgets (#{small_queries}) " \
+                        "and 16 budgets (#{large_queries}) across 2x the areas"
+      end
+
+      # Negative control for the assertion above: reading Area#committed_amount
+      # / #allocated off Areas loaded WITHOUT the preload (as a bare
+      # `Area.all` would be, the mistake the brief warns against — reading
+      # budget.area's own #budgets association, or store.areas without its
+      # `budgets: %i[expenses forecasts]` include) costs a query per budget's
+      # expenses plus a query per budget's forecasts. This proves the positive
+      # assertion above isn't vacuously true — an unpreloaded read really does
+      # scale with row count, and the preloaded one really doesn't.
+      test "negative control: an unpreloaded area read DOES scale with the number of areas/budgets" do
+        sign_in @user
+
+        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
+        small_areas = ::Reimbursements::Area.all.to_a
+        small_queries = count_queries { small_areas.each { |a| a.committed_amount; a.allocated } }
+
+        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
+        large_areas = ::Reimbursements::Area.all.to_a
+        large_queries = count_queries { large_areas.each { |a| a.committed_amount; a.allocated } }
+
+        assert_operator small_queries, :>, 4,
+                        "expected reading committed_amount/allocated off unpreloaded areas to cost " \
+                        "a query per budget even at the smaller size (got #{small_queries})"
+        assert_operator large_queries, :>, small_queries,
+                        "expected the unpreloaded read to scale with the row count: " \
+                        "#{small_queries} queries for 4 budgets vs #{large_queries} for 16"
+      end
+
+      # Schema-introspection queries (the first touch of a table in a test
+      # run) are excluded, or whichever test happens to run first absorbs
+      # them and the comparison between two sizes becomes noise instead of
+      # signal — measured: without this exclusion the SAME scenario read
+      # 45 queries first and 31 second, entirely from schema-cache warmup.
+      def count_queries(&block)
+        count = 0
+        callback = lambda do |*, payload|
+          next if payload[:name] == "SCHEMA"
+          next if payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
+
+          count += 1
+        end
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+        count
+      end
+
       test "a forecast amount typed with a comma or a pound sign is read" do
         sign_in @user
 

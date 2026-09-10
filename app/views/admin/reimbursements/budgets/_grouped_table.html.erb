@@ -1,0 +1,57 @@
+<%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:, people_by_id:) %>
+<div class="table-scroll">
+  <table class="table table-hover table-sticky-head">
+    <thead>
+      <tr>
+        <% headers.each do |header| %>
+          <th scope="col"><%= header %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <% ordered_area_ids.each do |area_id| %>
+      <% area = areas_by_id[area_id] %>
+      <tbody data-area="<%= area_id %>">
+        <tr class="bg-gray-50">
+          <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left py-2">
+            <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span class="font-semibold text-base"><%= area.name %></span>
+              <span class="text-sm text-gray-600">
+                Projected <%= reimbursements_money(area.projected_amount) %>
+              </span>
+              <span class="text-sm text-gray-600">
+                Allocated <%= reimbursements_money(area.allocated) %>
+                <% unless area.unallocated.nil? %>
+                  &middot; <%= reimbursements_money(area.unallocated) %> not yet allocated
+                <% end %>
+              </span>
+              <span class="text-sm text-gray-600">
+                Committed <%= reimbursements_money(area.committed_amount) %>
+              </span>
+              <%# Nil means nobody agreed a total (every backfilled area starts
+                  here) — rendering "£0.00" there would read as fully overspent,
+                  so it is left out entirely rather than shown as a zero. %>
+              <% unless area.remaining.nil? %>
+                <span class="text-sm <%= "text-danger font-medium" if area.remaining.negative? %>">
+                  Remaining <%= reimbursements_money(area.remaining) %>
+                </span>
+              <% end %>
+            </div>
+          </th>
+        </tr>
+        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: budgets_by_area_id[area_id],
+              as: :budget, locals: { people_by_id: people_by_id } %>
+      </tbody>
+    <% end %>
+    <% if none_budgets.present? %>
+      <tbody data-area="none">
+        <tr class="bg-gray-50">
+          <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left font-semibold py-2">
+            Not in an area
+          </th>
+        </tr>
+        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: none_budgets,
+              as: :budget, locals: { people_by_id: people_by_id } %>
+      </tbody>
+    <% end %>
+  </table>
+</div>
