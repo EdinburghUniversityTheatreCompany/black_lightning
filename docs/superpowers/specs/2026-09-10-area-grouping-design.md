@@ -254,17 +254,51 @@ a lenient filter.
    Both levels having a revision log is meaningful rather than redundant: an **area** forecast
    revises the show's agreed total, a **budget** forecast revises how much of it a category is
    allocated. `Budget#variance` keeps its current meaning untouched.
-2. **Should the backfill rename `Cogito: Marketing` to `Marketing`?** Left out above
-   deliberately. It is what makes the grouping read well, and it is also a rewrite of every
-   label in the same migration as the structural change.
+2. ~~Should the backfill rename `Cogito: Marketing` to `Marketing`?~~ **RESOLVED: yes, but as its
+   own PHASE 2 migration, not in the backfill** (Mick, 2026-09-10).
+
+   It cannot go in the Phase 1 backfill, because that shipped and runs on the next deploy. More
+   importantly the two must stay separate for a reason worth stating: the backfill's `down`
+   refuses when "an Area's name is not reproducible as the colon-prefix of at least one of its
+   own budgets", and **renaming trips exactly that guard**. That is correct rather than a
+   problem — once the prefix is stripped, the area's name is the only place the grouping lives,
+   so the backfill genuinely cannot be unwound.
+
+   The chain still reverses in order, which is why this works: the rename's own `down`
+   reconstructs `"#{area.name}: #{budget.name}"` losslessly, and once it has, the backfill's
+   `down` passes its guard again. So `db:rollback:primary STEP=n` unwinds rename → backfill
+   correctly, and neither migration alone can leave the tree in a state the other refuses to
+   touch.
+
+   A budget with no area is never renamed. A name that does not start with its own area's name
+   plus a colon is left alone (someone edited it by hand; that is not this migration's to
+   rewrite).
 3. ~~Who owns the nominal code list?~~ **RESOLVED: the cost centre's finance admin, maintained
    on the cost centre edit page** (Mick, 2026-09-10). See the section above.
 
-4. **Does the area's `Area Budget` column belong in the sheet at all**, now that areas are
-   hand-editable? Setting an authoritative total in two places (a repeated spreadsheet column and
-   the area form) is the kind of split that goes stale. The alternative is that the sheet names
-   areas and the totals are set in the portal. Not blocking — the import can ship without the
-   column and gain it later.
+4. ~~Does the area's `Area Budget` column belong in the sheet?~~ **RESOLVED: yes** (Mick,
+   2026-09-10). The committee agrees a show's total in the spreadsheet, so that is where it comes
+   from; the area form edits it afterwards. It repeats down the rows of an area, and **two
+   different values for one area is a blocking error**, not last-one-wins — consistent with the
+   importer's rule that an unreadable amount stops the whole import. Write-once on create, like a
+   budget's `initial_budget`, so a re-import logs a revision rather than rewriting the agreed
+   figure.
+
+5. ~~Whom does the sheet's owner column name when a line has an area?~~ **RESOLVED: the AREA**
+   (Mick, 2026-09-10) — "once there's an area the owner of a budget line is moot and we only look
+   at the area", which is exactly what `Budget#owners` does. So the importer syncs the **area's**
+   owners for a line that has one, and the budget's own rows only for a line that does not. This
+   is what closes the half-fix Phase 1 left behind, where the sheet's named owner landed on rows
+   nobody reads and got no sign-off gate.
+
+   **One consequence needs a rule, and I am taking the union unless overruled:** the sheet has one
+   owner column per LINE, so three lines under "Cogito" can name three different people. The
+   area's owners become the **union** of what its lines name. That matches what the Phase 1
+   backfill already did when seeding an area from its children, and it is the forgiving
+   direction — any one owner satisfies the gate, so an extra owner can endorse while a missing one
+   strands the claim. The cost is that a stale name on one line quietly gains sign-off authority
+   over the whole show, which is why the preview must SHOW the resulting owner set per area rather
+   than only counting syncs.
 
 ## Out of scope
 
