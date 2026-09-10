@@ -38,7 +38,26 @@ module Reimbursements
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
     has_many :budgets, class_name: "Reimbursements::Budget", dependent: :nullify,
                        inverse_of: :area
+    has_many :area_ownerships, class_name: "Reimbursements::AreaOwner", dependent: :destroy,
+                               inverse_of: :area
+    has_many :owners, through: :area_ownerships, source: :person
 
     validates :name, presence: true
+
+    # Owner links are People record id STRINGS, mirroring Budget#owner_ids —
+    # OwnerReview and the budgets UI compare them against person.record_id.
+    def owner_ids
+      owners.map(&:record_id)
+    end
+
+    # Diff-syncs the owners join table to exactly +person_ids+ (numeric ids) —
+    # the sync path for the area edit form and the importer.
+    def sync_owner_ids!(person_ids)
+      person_ids = person_ids.map(&:to_i)
+      area_ownerships.where.not(person_id: person_ids).destroy_all
+      (person_ids - area_ownerships.pluck(:person_id)).each do |person_id|
+        area_ownerships.create!(person_id: person_id)
+      end
+    end
   end
 end

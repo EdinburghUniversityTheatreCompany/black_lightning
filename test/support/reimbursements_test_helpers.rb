@@ -58,7 +58,7 @@ module ReimbursementsTestHelpers
                                             cost_centre: cost_centre,
                                             financial_year: financial_year,
                                             area: area)
-    Array(owners).each { |person| budget.owners << person }
+    Array(owners).each { |person| budget.own_owners << person }
     budget
   end
 

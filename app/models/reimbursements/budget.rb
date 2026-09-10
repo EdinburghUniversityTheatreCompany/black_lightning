@@ -64,19 +64,30 @@ module Reimbursements
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
                                  dependent: :destroy, inverse_of: :budget
-    has_many :owners, through: :budget_ownerships, source: :person
+    # The rows on the budget itself. Read directly ONLY when the budget has no
+    # area — the backfill leaves them in place so it can be reversed, so a
+    # budget in an area has both, and the area's are the live ones (#owners).
+    has_many :own_owners, through: :budget_ownerships, source: :person
 
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
-    # Owner links are People record id STRINGS, because OwnerReview and the
-    # budgets UI compare them against person.record_id.
+    # The area owns and its budgets inherit; a budget with no area owns
+    # itself. Owner links are People record id STRINGS, because OwnerReview
+    # and the budgets UI compare them against person.record_id.
+    def owners
+      area ? area.owners : own_owners
+    end
+
     def owner_ids
       owners.map(&:record_id)
     end
 
-    # Diff-syncs the owners join table to exactly +person_ids+ (numeric ids)
-    # — the one sync path for the store's budget edit and the importer.
+    # Diff-syncs the budget's OWN owners join table to exactly +person_ids+
+    # (numeric ids) — the one sync path for the store's budget edit and the
+    # importer. Writes here regardless of whether the budget is in an area:
+    # the rows are the reversible record described on #own_owners, not the
+    # live read.
     def sync_owner_ids!(person_ids)
       person_ids = person_ids.map(&:to_i)
       budget_ownerships.where.not(person_id: person_ids).destroy_all

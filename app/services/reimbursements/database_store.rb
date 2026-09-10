@@ -116,7 +116,7 @@ module Reimbursements
     end
 
     def find_budget(record_id)
-      Budget.includes(:owners, :forecasts).find_by(id: record_id)
+      Budget.includes(:forecasts, :own_owners, area: :owners).find_by(id: record_id)
     end
 
     def find_batch(record_id)
@@ -148,7 +148,7 @@ module Reimbursements
     # of EUSA credits matching their income line. The screens that LIST a year's
     # budgets use #budgets_for_year.
     def budgets
-      @budgets ||= Budget.includes(:owners, :forecasts).to_a
+      @budgets ||= Budget.includes(:forecasts, :own_owners, area: :owners).to_a
     end
 
     # The selected financial year's budgets — what the budget screens list.
@@ -167,7 +167,7 @@ module Reimbursements
     # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped_to_cost_centre(
-        scoped_to_year(Budget.includes(:owners, :forecasts, :eusa_actuals, expenses: :eusa_actuals).to_a),
+        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, area: :owners, expenses: :eusa_actuals).to_a),
         &:cost_centre_id
       )
     end
