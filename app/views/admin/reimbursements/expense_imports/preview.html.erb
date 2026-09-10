@@ -30,7 +30,8 @@
                   is the operator's job — and the link has to actually go
                   somewhere. %>
               <%= link_to "Register them on the People screen",
-                          new_admin_reimbursements_person_path, class: "underline font-medium" %>.
+                          new_admin_reimbursements_person_path, class: "underline font-medium",
+                          data: { turbo_frame: "_top" } %>.
             <% end %>
           </li>
         <% end %>

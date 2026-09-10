@@ -5,7 +5,10 @@
     — the buttons render a perfectly good page server-side that never reaches
     the screen. Inside the frame a direct render is valid. %>
 <%= turbo_frame_tag "budget_import" do %>
-<%= render "shared/back_link", text: "All budgets",
+<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
+    Turbo Frame navigates THE FRAME, and a destination with no matching frame
+    lands as "Content missing" instead of the page. %>
+<%= render "shared/back_link", text: "All budgets", turbo_frame: "_top",
            path: admin_reimbursements_budgets_path(year: selected_financial_year&.key) %>
 
 <%# Flash lives in the layout, outside this frame, so a frame-only response
@@ -35,7 +38,7 @@
       Only the budget name is required.
       <%= link_to "Download a template",
                   template_admin_reimbursements_budget_import_path(format: :csv),
-                  class: "text-primary underline" %>.
+                  class: "text-primary underline", data: { turbo_frame: "_top" } %>.
     </p>
 
     <div class="flex flex-col gap-4">

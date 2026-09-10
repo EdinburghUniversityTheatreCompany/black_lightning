@@ -22,8 +22,11 @@
   <% end %>
 
   <div class="flex flex-wrap gap-3">
+<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
+    Turbo Frame navigates THE FRAME, and a destination with no matching frame
+    lands as "Content missing" instead of the page. %>
     <%= link_to "See the expenses", admin_reimbursements_expense_edits_path,
-                class: btn_classes(:primary) %>
+                class: btn_classes(:primary), data: { turbo_frame: "_top" } %>
     <%= link_to "Import another sheet", import_path, class: btn_classes(:secondary) %>
   </div>
 <% end %>

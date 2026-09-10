@@ -4,7 +4,10 @@
     paste. OUTSIDE a frame Turbo Drive rejects non-redirect form responses and
     silently discards them. %>
 <%= turbo_frame_tag "expense_import" do %>
-<%= render "shared/back_link", text: "All expenses",
+<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
+    Turbo Frame navigates THE FRAME, and a destination with no matching frame
+    lands as "Content missing" instead of the page. %>
+<%= render "shared/back_link", text: "All expenses", turbo_frame: "_top",
            path: admin_reimbursements_expense_edits_path %>
 
 <%# Flash lives in the layout, outside this frame, so a frame-only response
@@ -40,7 +43,7 @@
       twice.
       <%= link_to "Download a template",
                   template_admin_reimbursements_expense_import_path(format: :csv),
-                  class: "text-primary underline" %>.
+                  class: "text-primary underline", data: { turbo_frame: "_top" } %>.
     </p>
 
     <div class="flex flex-col gap-4">
