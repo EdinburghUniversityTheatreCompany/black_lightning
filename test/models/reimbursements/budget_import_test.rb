@@ -373,16 +373,29 @@ module Reimbursements
     # reported and never deleted. Ticked by default, like Reconcile's
     # offsetting pairs; unticking leaves the hand-made grouping alone.
 
-    test "a sheet naming a different area than the budget currently has reports a re-home" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: improverts,
-                                            cost_centre: @cost_centre, financial_year: @year)
+    def cogito_area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                                 financial_year: @year)
 
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito, improverts ])
+    # A "Cogito: Marketing" line and the import of a one-row sheet filing it
+    # under +cell+ ("" for a sheet that says nothing). +area+ is where the line
+    # sits NOW; +existing_areas+ is what the year already holds. Returns both,
+    # because most of these tests assert on the budget's own id.
+    def marketing_re_home(area: nil, cell: "Cogito", existing_areas: [], initial_budget: nil)
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                            initial_budget: initial_budget,
+                                            cost_centre: @cost_centre, financial_year: @year)
+      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: existing_areas)
         Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
+        #{cell}\tCogito: Marketing\t432320\tExpense\t400
       TSV
+      [ budget, import ]
+    end
+
+    test "a sheet naming a different area than the budget currently has reports a re-home" do
+      cogito = cogito_area
+      improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                              financial_year: @year)
+      budget, import = marketing_re_home(area: improverts, existing_areas: [ cogito, improverts ])
 
       re_home = import.re_homes.sole
       assert_equal budget.record_id, re_home[:budget_id]
@@ -391,14 +404,8 @@ module Reimbursements
     end
 
     test "a line already in the area the sheet names reports no re-home" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: cogito,
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito ])
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      cogito = cogito_area
+      _budget, import = marketing_re_home(area: cogito, existing_areas: [ cogito ])
 
       assert_empty import.re_homes
     end
@@ -408,13 +415,7 @@ module Reimbursements
     # attach a budget to it — only :create lines carry an area_id. A re-home
     # FROM NIL is what attaches them.
     test "a matched line with no area at all is a re-home from nowhere" do
-      budget = create_reimbursements_budget(name: "Cogito: Marketing",
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ])
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      budget, import = marketing_re_home
 
       re_home = import.re_homes.sole
       assert_equal budget.record_id, re_home[:budget_id]
@@ -430,26 +431,14 @@ module Reimbursements
     # A blank cell means "the sheet says nothing", the same reading bucket_for
     # gives a blank Amount — never "move this line out of its area".
     test "a budget in an area whose sheet leaves the Area cell blank is not a re-home" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: cogito,
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito ])
-        Area\tBudget\tNominal code\tType\tAmount
-        \tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      cogito = cogito_area
+      _budget, import = marketing_re_home(area: cogito, cell: "", existing_areas: [ cogito ])
 
       assert_empty import.re_homes
     end
 
     test "a line with no area on either side is not a re-home" do
-      budget = create_reimbursements_budget(name: "Cogito: Marketing",
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ])
-        Area\tBudget\tNominal code\tType\tAmount
-        \tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      _budget, import = marketing_re_home(cell: "")
 
       assert_empty import.re_homes
     end
@@ -468,14 +457,8 @@ module Reimbursements
     # Same buckets as #adoptions and #owner_syncs: a matched line is matched
     # whether or not its figure moved.
     test "a re-home does not depend on the figure having moved" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", initial_budget: 400,
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito ])
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      cogito = cogito_area
+      budget, import = marketing_re_home(initial_budget: 400, existing_areas: [ cogito ])
 
       assert_equal :unchanged, import.entries.sole.bucket
       assert_equal [ budget.record_id ], import.re_homes.map { |r| r[:budget_id] }
@@ -486,14 +469,7 @@ module Reimbursements
     # Keyed by budget id, not row position: a re-import with the rows reordered
     # must not apply a tick to a different line.
     test "the re-home checkbox key is the budget id" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing",
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito ])
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      budget, import = marketing_re_home(existing_areas: [ cogito_area ])
 
       assert_equal budget.record_id, import.re_homes.sole[:key]
       assert_equal "Cogito: Marketing", import.re_homes.sole[:budget_name]
@@ -502,14 +478,9 @@ module Reimbursements
     # Case and stray spaces are how a committee retypes an area name, so the
     # same match_key a budget line uses decides whether the line has moved.
     test "a re-typed area name is the same area, not a re-home" do
-      cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: cogito,
-                                            cost_centre: @cost_centre, financial_year: @year)
-
-      import = build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: [ cogito ])
-        Area\tBudget\tNominal code\tType\tAmount
-        cogito \tCogito: Marketing\t432320\tExpense\t400
-      TSV
+      cogito = cogito_area
+      _budget, import = marketing_re_home(area: cogito, cell: "cogito ",
+                                          existing_areas: [ cogito ])
 
       assert_empty import.re_homes
     end
