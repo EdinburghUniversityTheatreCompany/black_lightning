@@ -24,12 +24,23 @@ module Reimbursements
       # The Budgets sheet carries the EUSA-actual rollup per line, so it reads the
       # actuals-preloaded list; every other caller of store.budgets deliberately
       # does not pay for that preload.
+      #
+      # EVERY sheet reads its cost-centre-scoped reader, so the workbook is one
+      # coherent view: under ?cost_centre= the Budgets sheet was the only scoped
+      # one, which left claims, ledger rows and batches from other pots sitting
+      # beside budgets that could not account for them — the sheets no longer
+      # added up to each other. With no centre selected every one of these
+      # returns the whole portal, so the default download is unchanged.
+      #
+      # People is the exception and stays whole: a payee has no cost centre (see
+      # Exports::People), and the same person claims from whichever pot their
+      # claim's budget belongs to.
       SHEETS = [
-        [ Expenses, :expenses ],
-        [ Actuals, :eusa_actuals ],
+        [ Expenses, :expenses_for_cost_centre ],
+        [ Actuals, :eusa_actuals_for_cost_centre ],
         [ Budgets, :budgets_with_actuals ],
         [ People, :people ],
-        [ Batches, :batches ]
+        [ Batches, :batches_for_cost_centre ]
       ].freeze
 
       def initialize(store:, checker: nil)

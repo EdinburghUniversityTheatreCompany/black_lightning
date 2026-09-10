@@ -37,12 +37,25 @@ module ReimbursementsTestHelpers
                                        **attrs)
   end
 
+  # The SECOND cost centre, which the fixtures deliberately don't carry: a
+  # second fixture row makes CostCentre.default resolve to whichever label
+  # FixtureSet.identify hashes lower, and deletes the one-centre world the
+  # reconcile tests pin as a business rule. Every test that needs a two-centre
+  # portal builds it through here, so they agree on what the second pot is.
+  def create_second_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
+                                               eusa_code: "BED", **attrs)
+    create_reimbursements_cost_centre(key: key, name: name, eusa_code: eusa_code,
+                                      receive_mailbox: "in@bedlamtheatre.invalid",
+                                      send_mailbox: "out@bedlamtheatre.invalid", **attrs)
+  end
+
   def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
                                    budget_type: "Expense", initial_budget: nil, notes: nil,
-                                   owners: [])
+                                   owners: [], cost_centre: nil)
     budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
                                             active: active, budget_type: budget_type,
-                                            initial_budget: initial_budget, notes: notes)
+                                            initial_budget: initial_budget, notes: notes,
+                                            cost_centre: cost_centre)
     Array(owners).each { |person| budget.owners << person }
     budget
   end

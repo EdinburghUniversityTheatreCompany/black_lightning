@@ -74,7 +74,8 @@ module Admin
         return render_blocked_preview unless @import.valid? && selected_cost_centre
 
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
-                                        owner_syncs: @import.owner_syncs, note: import_note,
+                                        owner_syncs: @import.owner_syncs,
+                                        adoptions: @import.adoptions, note: import_note,
                                         created_by: current_user)
         render :apply
       end
@@ -123,7 +124,7 @@ module Admin
       def destination_available?
         if selected_financial_year.nil?
           flash.now[:alert] = NO_FINANCIAL_YEAR_ALERT
-        elsif cost_centres.empty?
+        elsif selectable_cost_centres.empty?
           flash.now[:alert] = NO_COST_CENTRE_ALERT
         else
           return true
@@ -144,18 +145,6 @@ module Admin
         render :preview, status: :unprocessable_entity
       end
 
-      def selected_cost_centre
-        return @selected_cost_centre if defined?(@selected_cost_centre)
-
-        @selected_cost_centre = cost_centres.find { |centre| centre.id.to_s == params[:cost_centre_id].to_s }
-      end
-      helper_method :selected_cost_centre
-
-      def cost_centres
-        @cost_centres ||= ::Reimbursements::CostCentre.order(:name).to_a
-      end
-      helper_method :cost_centres
-
       # Names the import in the forecast history, so a figure that moved can be
       # traced back to the spreadsheet that moved it.
       def import_note
@@ -166,7 +155,7 @@ module Admin
       # import comes back to the form the operator filled in, not a blank one.
       def import_path
         admin_reimbursements_budget_import_path(
-          year: selected_financial_year&.key, cost_centre_id: selected_cost_centre&.id
+          year: selected_financial_year&.key, cost_centre: selected_cost_centre&.key
         )
       end
       helper_method :import_path

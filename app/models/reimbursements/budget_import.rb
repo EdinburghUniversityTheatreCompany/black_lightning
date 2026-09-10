@@ -102,6 +102,31 @@ module Reimbursements
       end
     end
 
+    # Matched budgets that belong to no cost centre yet — this import ADOPTS
+    # them into the one it is being run for.
+    #
+    # The lenient scoping that lets a legacy unplaced line be MATCHED at all
+    # (DatabaseStore#in_cost_centre) also puts it in every centre's list, so
+    # without adoption two committees' sheets would take turns revising the same
+    # "Venue hire" row, each overwriting the other's forecast, and neither
+    # centre would ever get a line of its own — while Budget#variance quietly
+    # measured drift against a figure nobody agreed. Adopting on the first
+    # import claims the row (keeping its claims and its forecast history, which
+    # creating a fresh line beside it would strand), and the second centre no
+    # longer matches it, so it creates its own.
+    #
+    # Same shape and same buckets as #owner_syncs: a matched line is matched
+    # whether or not its figure moved, so this must not depend on :revise alone.
+    def adoptions
+      return [] if cost_centre.nil?
+
+      (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+        next if entry.budget.cost_centre_id
+
+        { budget_id: entry.budget.record_id, cost_centre: cost_centre }
+      end
+    end
+
     # Owner lists for budgets that already exist. The sheet is the committee's
     # own record of who runs what, so a re-import keeps it current — but only
     # where the sheet actually named someone, since an empty owner column means

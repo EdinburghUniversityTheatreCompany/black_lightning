@@ -132,7 +132,8 @@ module Admin
         row = rows.find { |r| r[0] == "Props" }
         assert_equal "4000", row[1]
         assert_in_delta 1000.0, row[4], 0.001
-        assert_equal "Pat Producer", row.last, "owners"
+        assert_equal "Pat Producer", row[::Reimbursements::Exports::Budgets::HEADERS.index("Owners")],
+                     "owners"
       end
 
       test "the Actuals and Batches sheets carry their rows" do

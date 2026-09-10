@@ -10,6 +10,10 @@ module Reimbursements
     # eyeball-match a row against a BACS submission or a bank statement, and a
     # masked pair can't be used to move money. The BACS spreadsheet EUSA
     # actually pays from is the one place that still carries full numbers.
+    #
+    # The one exporter with NO "Cost centre" column, because a payee has no cost
+    # centre: the same person claims from whichever pot the budget on their
+    # claim belongs to. The centre travels on the Expenses sheet instead.
     class People < Base
       HEADERS = [ "Name", "Email", "Sort code", "Account number",
                   "Modulus check", "Verified" ].freeze

@@ -25,17 +25,20 @@ module Admin
       # subclass and the real collaborator runs instead. Two suites writing the same seam on
       # different classes therefore pass alone and fail whenever they share a process.
       #
-      # The store seam takes the financial year the request is scoped to (nil
-      # here — see #selected_financial_year). A test fake that ignores scoping
-      # is written as `->(**) { fake }`.
+      # The store seam takes the two axes the request is scoped to — the
+      # financial year and the cost centre (both nil here; see
+      # #selected_financial_year / #selected_cost_centre). A test fake that
+      # ignores scoping is written as `->(**) { fake }`.
       #
       # Named, because a test that has swapped the seam has to put THIS back:
-      # restoring it with a hand-written `-> { build_store }` drops the year
-      # argument, and class_attribute makes that replacement stick for the rest
-      # of the process — so every later year-scoped page in that worker quietly
-      # renders every year's budgets at once.
+      # restoring it with a hand-written `-> { build_store }` drops both
+      # arguments, and class_attribute makes that replacement stick for the rest
+      # of the process — so every later scoped page in that worker quietly
+      # renders every year's and every cost centre's budgets at once.
       DEFAULT_STORE_BUILDER =
-        ->(financial_year: nil) { ::Reimbursements.build_store(financial_year: financial_year) }
+        ->(financial_year: nil, cost_centre: nil) {
+          ::Reimbursements.build_store(financial_year: financial_year, cost_centre: cost_centre)
+        }
 
       class_attribute :store_builder, default: DEFAULT_STORE_BUILDER
       # The Graph-backed email notifier (from the cost centre's send mailbox).
@@ -49,8 +52,20 @@ module Admin
 
       private
 
-      def notifier
-        @notifier ||= notifier_builder.call(cost_centre: ::Reimbursements::CostCentre.default)
+      # The notifier for the cost centre that owns +expense+ — its send mailbox
+      # is the address the producer's rejection email comes FROM and replies to.
+      # Built per cost centre, not once per request: a single memoized notifier
+      # on CostCentre.default sent every claim's mail out of centre #1's mailbox
+      # whoever it belonged to. Memoized by centre id so a run of rejections
+      # still builds one notifier per centre, not one per claim.
+      #
+      # An unplaced claim (no budget, or a budget with no centre) falls back to
+      # the default centre: an email from the wrong mailbox is visible and
+      # answerable, whereas raising here would block the rejection itself.
+      def notifier_for(cost_centre)
+        centre = cost_centre || ::Reimbursements::CostCentre.default
+        @notifiers ||= {}
+        @notifiers[centre&.id] ||= notifier_builder.call(cost_centre: centre)
       end
 
       def authorize_reimbursements!
@@ -58,7 +73,8 @@ module Admin
       end
 
       def store
-        @store ||= store_builder.call(financial_year: selected_financial_year)
+        @store ||= store_builder.call(financial_year: selected_financial_year,
+                                      cost_centre: selected_cost_centre)
       end
 
       # The producer surfaces are never year-scoped. A submitter files against
@@ -66,6 +82,15 @@ module Admin
       # and their own past claims must stay visible whatever year finance is
       # looking at. FinanceController overrides this with the ?year= selector.
       def selected_financial_year
+        nil
+      end
+
+      # Nor are they cost-centre scoped: a producer's own claims may be spread
+      # across as many centres as they have filed in, and the budget picker they
+      # file against is the ACTIVE year's list, which is centre-blind on
+      # purpose. FinanceController overrides this with the ?cost_centre=
+      # selector.
+      def selected_cost_centre
         nil
       end
 

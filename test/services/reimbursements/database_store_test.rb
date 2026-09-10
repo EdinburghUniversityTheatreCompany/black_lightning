@@ -5,6 +5,8 @@ module Reimbursements
   # Reimbursements.build_store); these lock its public API and attribute
   # vocabulary.
   class DatabaseStoreTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     def store = @store ||= DatabaseStore.new
 
     def create_person(name: "Pat", email: "pat@example.com", sort_code: nil, account_number: nil)
@@ -622,6 +624,158 @@ module Reimbursements
       BudgetUpdate.create!(effective_date: Date.new(2026, 1, 1), financial_year: last_year)
 
       assert_equal [ mine.id ], scoped_store(this_year).budget_updates.map(&:id)
+    end
+
+    # --- Cost-centre scoping -------------------------------------------------
+
+    def centre_store(centre) = DatabaseStore.new(cost_centre: centre)
+
+    def second_cost_centre = create_second_reimbursements_cost_centre
+
+    test "budgets_for_year lists only the store's cost centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = Budget.create!(name: "Props", cost_centre: fringe)
+      Budget.create!(name: "Termtime props", cost_centre: termtime)
+
+      assert_equal [ mine.id ], centre_store(fringe).budgets_for_year.map(&:id)
+    end
+
+    test "a budget with no cost centre is in every centre's scope" do
+      unplaced = Budget.create!(name: "Unplaced")
+
+      # The same leniency as the financial-year scoping: a row written before
+      # cost centres existed must not vanish from every screen at once.
+      assert_includes centre_store(second_cost_centre).budgets_for_year.map(&:id), unplaced.id
+    end
+
+    test "budgets stays unscoped by cost centre so a name lookup still resolves" do
+      termtime = second_cost_centre
+      theirs = Budget.create!(name: "Termtime props", cost_centre: termtime)
+
+      assert_includes centre_store(CostCentre.default).budgets.map(&:id), theirs.id
+    end
+
+    test "active_budgets is deliberately NOT cost-centre scoped" do
+      termtime = second_cost_centre
+      theirs = Budget.create!(name: "Termtime props", active: true, cost_centre: termtime)
+
+      assert_includes centre_store(CostCentre.default).active_budgets.map(&:id), theirs.id
+    end
+
+    test "budgets_with_actuals is scoped to the store's cost centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = Budget.create!(name: "Props", cost_centre: fringe)
+      Budget.create!(name: "Termtime props", cost_centre: termtime)
+
+      assert_equal [ mine.id ], centre_store(fringe).budgets_with_actuals.map(&:id)
+    end
+
+    test "expenses_for_cost_centre resolves an expense's centre through its budget" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = Expense.create!(status: Status::PENDING,
+                             budget: Budget.create!(name: "Props", cost_centre: fringe))
+      Expense.create!(status: Status::PENDING,
+                      budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
+      unplaced = Expense.create!(status: Status::PENDING)
+
+      assert_equal [ mine.id, unplaced.id ].sort,
+                   centre_store(fringe).expenses_for_cost_centre.map(&:id).sort
+    end
+
+    test "expenses stays unscoped by cost centre" do
+      termtime = second_cost_centre
+      theirs = Expense.create!(status: Status::PENDING,
+                               budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
+
+      assert_includes centre_store(CostCentre.default).expenses.map(&:id), theirs.id
+    end
+
+    test "the money path owns an unplaced claim once, not once per centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      unplaced = Expense.create!(status: Status::APPROVED)
+      theirs = Expense.create!(status: Status::APPROVED,
+                               budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
+
+      # The screens' filter shows it under both — that is safe, it pays nobody.
+      assert_includes centre_store(fringe).expenses_for_cost_centre.map(&:id), unplaced.id
+      assert_includes centre_store(termtime).expenses_for_cost_centre.map(&:id), unplaced.id
+
+      # Build Batch must not: two centres selecting one claim can build it into
+      # two BACS spreadsheets and two live EUSA drafts (limits_concurrency is
+      # keyed per centre, so those builds do not serialise), and EUSA pays twice.
+      assert_includes store.expenses_owned_by_cost_centre(fringe).map(&:id), unplaced.id
+      assert_not_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), unplaced.id
+      assert_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), theirs.id
+    end
+
+    test "the money path refuses to answer without a cost centre" do
+      # "No cost centre" cannot mean "every centre" on a path that pays people,
+      # and an empty answer would silently build an empty batch.
+      assert_raises(ArgumentError) { store.expenses_owned_by_cost_centre(nil) }
+    end
+
+    test "eusa_actuals_for_cost_centre scopes on the row's own cost centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = EusaActual.create!(narrative: "Ours", debit: 10, cost_centre: fringe)
+      EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
+      unplaced = EusaActual.create!(narrative: "Legacy", debit: 10)
+
+      assert_equal [ mine.id, unplaced.id ].sort,
+                   centre_store(fringe).eusa_actuals_for_cost_centre.map(&:id).sort
+    end
+
+    test "eusa_actuals stays unscoped so the reconcile dedup pool is whole" do
+      termtime = second_cost_centre
+      theirs = EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
+
+      assert_includes centre_store(CostCentre.default).eusa_actuals.map(&:id), theirs.id
+    end
+
+    test "unattributed_actuals is scoped to the store's cost centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = EusaActual.create!(narrative: "Ours", debit: 10, cost_centre: fringe)
+      EusaActual.create!(narrative: "Theirs", debit: 10, cost_centre: termtime)
+
+      assert_equal [ mine.id ], centre_store(fringe).unattributed_actuals.map(&:id)
+    end
+
+    test "batches_for_cost_centre reads each batch's centre off its expenses" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      mine = Batch.create!(name: "Fringe run")
+      theirs = Batch.create!(name: "Termtime run")
+      empty = Batch.create!(name: "No expenses yet")
+      Expense.create!(status: Status::SUBMITTED, batch: mine,
+                      budget: Budget.create!(name: "Props", cost_centre: fringe))
+      Expense.create!(status: Status::SUBMITTED, batch: theirs,
+                      budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
+
+      ids = centre_store(fringe).batches_for_cost_centre.map(&:id)
+      assert_includes ids, mine.id
+      assert_includes ids, empty.id
+      assert_not_includes ids, theirs.id
+    end
+
+    test "import_budgets! adopts an unplaced budget into the importing centre" do
+      termtime = second_cost_centre
+      unplaced = Budget.create!(name: "Venue hire")
+      placed = Budget.create!(name: "Props", cost_centre: CostCentre.default)
+
+      store.import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "Import", created_by: nil,
+        adoptions: [ { budget_id: unplaced.record_id, cost_centre: termtime },
+                     { budget_id: placed.record_id, cost_centre: termtime } ]
+      )
+
+      assert_equal termtime.id, unplaced.reload.cost_centre_id
+      # Never re-homes a line another pot already owns, even if asked to.
+      assert_equal CostCentre.default.id, placed.reload.cost_centre_id
     end
 
     # --- import_budgets! -----------------------------------------------------

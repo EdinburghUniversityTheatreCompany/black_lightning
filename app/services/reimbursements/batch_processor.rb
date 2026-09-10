@@ -274,6 +274,23 @@ module Reimbursements
       batch_id = batch&.record_id
       expenses.select do |expense|
         urls = urls_by_expense.fetch(expense.record_id, [])
+        # Re-read before writing. This run picked its Approved set minutes ago,
+        # and +limits_concurrency+ on BuildBatchJob serialises builds of the SAME
+        # cost centre only — so a concurrent build of another centre may have
+        # claimed this expense in between. Writing SUBMITTED unconditionally
+        # would stamp it a second time and email its producer twice about money
+        # that is only being paid once. The ownership rule in
+        # DatabaseStore#expenses_owned_by_cost_centre is what stops two centres
+        # selecting the same claim at all; this is the belt to that braces, and
+        # it also catches a claim a human re-typed mid-run.
+        current = @store.find_expense(expense.record_id)
+        unless current&.status == Status::APPROVED
+          result.errors << "ALREADY CLAIMED: expense #{expense.auto_number} is no longer Approved " \
+            "(now #{current&.status || 'deleted'}), so something else has taken it since this batch " \
+            "was selected. It IS in this run's EUSA draft (#{result.eusa_draft_web_link}) — check it " \
+            "is not about to be paid twice before you send that draft."
+          next false
+        end
         with_write_retry do
           @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch_id,
                                  submitted_to_eusa_date: result.bacs_date,

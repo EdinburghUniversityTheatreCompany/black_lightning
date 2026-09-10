@@ -13,7 +13,7 @@ module Reimbursements
     # the BACS spreadsheet.
     class Batches < Base
       HEADERS = [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
-                  "EUSA draft", "SharePoint backup" ].freeze
+                  "EUSA draft", "SharePoint backup", "Cost centre" ].freeze
       SHEET_NAME = "Batches".freeze
       SLUG = "batches".freeze
 
@@ -24,8 +24,19 @@ module Reimbursements
         [
           iso_date(batch.date_sent), batch.name, expenses.size,
           total(expenses, :amount), total(expenses, :amount_excl_vat),
-          batch.eusa_draft_created ? "Yes" : "No", batch.sharepoint_backup_url
+          batch.eusa_draft_created ? "Yes" : "No", batch.sharepoint_backup_url,
+          batch_cost_centre_name(expenses)
         ]
+      end
+
+      # A Batch carries no cost-centre column: it takes its centre from the
+      # expenses it holds, which is exact now that a batch is built for one
+      # centre over that centre'''s claims only. A batch holding nothing, or only
+      # unplaced claims, leaves the cell empty rather than guessing at the
+      # default centre — an export is read as a record, not as a reminder.
+      def batch_cost_centre_name(expenses)
+        ids = expenses.filter_map(&:cost_centre_id).uniq
+        ids.one? ? cost_centre_name(ids.first) : nil
       end
 
       def total(expenses, field)

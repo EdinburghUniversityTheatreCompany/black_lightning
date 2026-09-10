@@ -10,7 +10,8 @@ module Reimbursements
     # account number exist only on the BACS spreadsheet that goes to EUSA.
     class Expenses < Base
       HEADERS = [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
-                  "Description", "Payment reference", "Submitted", "Needs attention" ].freeze
+                  "Description", "Payment reference", "Submitted", "Needs attention",
+                  "Cost centre" ].freeze
       SHEET_NAME = "Expenses".freeze
       SLUG = "expenses".freeze
 
@@ -21,7 +22,8 @@ module Reimbursements
           expense.auto_number, expense.status, expense.effective_payee_name,
           expense.budget&.name, expense.amount, expense.amount_excl_vat,
           expense.description, expense.payment_reference,
-          iso_date(expense.submitted_at), attention_reasons(expense).join("; ")
+          iso_date(expense.submitted_at), attention_reasons(expense).join("; "),
+          cost_centre_name(expense.cost_centre_id)
         ]
       end
 

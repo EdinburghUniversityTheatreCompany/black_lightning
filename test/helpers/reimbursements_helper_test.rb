@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ReimbursementsHelperTest < ActionView::TestCase
+  include ReimbursementsTestHelpers
+
   Expense = ::Reimbursements::Expense
   Person = ::Reimbursements::Person
   Budget = ::Reimbursements::Budget
@@ -181,5 +183,35 @@ class ReimbursementsHelperTest < ActionView::TestCase
   test "producer status badge falls back to the raw status for an unknown value" do
     html = reimbursements_producer_status_badge("Weird")
     assert_includes html, "Weird"
+  end
+
+  # --- Who a producer writes to ------------------------------------------
+  # CostCentre.default is order(:id).first, so it names an ARBITRARY pot the
+  # moment a second one exists — and a termtime producer sent to the Fringe
+  # mailbox writes to a team that has never seen their claim.
+
+  test "the contact link names the cost centre of the claim it is shown beside" do
+    termtime = create_second_reimbursements_cost_centre
+
+    assert_includes reimbursements_contact_link(termtime), "in@bedlamtheatre.invalid"
+  end
+
+  test "the contact link answers from the sole centre when a claim names none" do
+    assert_includes reimbursements_contact_link, ::Reimbursements::CostCentre.sole_configured.contact_email
+  end
+
+  test "with a choice to make and no claim to ask, it says words rather than a wrong mailbox" do
+    create_second_reimbursements_cost_centre
+
+    assert_equal "the finance team", reimbursements_contact_link
+  end
+
+  test "email-in names every configured mailbox, since each files into its own pot" do
+    create_second_reimbursements_cost_centre
+
+    links = reimbursements_receive_mailbox_links
+
+    assert_includes links, "in@bedlamtheatre.invalid"
+    assert_includes links, ::Reimbursements::CostCentre.default.receive_mailbox
   end
 end

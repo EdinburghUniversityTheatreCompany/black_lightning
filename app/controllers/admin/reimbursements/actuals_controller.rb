@@ -22,7 +22,10 @@ module Admin
 
       def index
         @title = "EUSA Actuals"
-        actuals = store.eusa_actuals
+        # The SELECTED cost centre's rows (all of them when no centre is
+        # picked). Not store.eusa_actuals, which stays whole because the
+        # reconcile wizard deduplicates and matches against it per row.
+        actuals = store.eusa_actuals_for_cost_centre
         @periods = actuals.map(&:period).reject(&:blank?).uniq.sort
         @period = params[:period].to_s.strip
         actuals = actuals.select { |a| a.period == @period } if @period.present?
