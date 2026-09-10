@@ -69,5 +69,34 @@ module Reimbursements
     end
 
     def projected_amount = current_forecast || initial_budget
+
+    # The spend its budgets have committed — Approved, Submitted and Paid, ex-VAT,
+    # exactly as Budget#committed_amount counts it.
+    def committed_amount
+      @committed_amount ||= budgets.sum(&:committed_amount)
+    end
+
+    # What is left of the AGREED total. Nil when nobody agreed one, rather than
+    # reading as the whole spend being over budget.
+    def remaining
+      return nil if projected_amount.nil?
+
+      projected_amount - committed_amount
+    end
+
+    # How much of the total has been split out into category lines. Lines with no
+    # agreed figure are skipped, not counted as zero.
+    def allocated
+      @allocated ||= budgets.filter_map(&:projected_amount).sum
+    end
+
+    # The part of the agreed total not yet assigned to a category — NOT spare money.
+    def unallocated
+      return nil if projected_amount.nil?
+
+      projected_amount - allocated
+    end
+
+    def income? = budgets.any?(&:income?)
   end
 end
