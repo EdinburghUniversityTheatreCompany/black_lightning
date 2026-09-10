@@ -73,7 +73,12 @@ module Reimbursements
     end
 
     # Latest wins, by date then id — the same rule Budget#current_forecast uses
-    # (app/models/reimbursements/budget.rb).
+    # (app/models/reimbursements/budget.rb). Plain `||=` is fine on a nil result
+    # here: calling #max_by on the forecasts association loads and caches it
+    # regardless, so a re-run only repeats the in-memory sort. Budget's sibling
+    # needs `return @x if defined?(@x)` because its unpreloaded branch issues a
+    # fresh query each time instead of going through the cached association —
+    # don't "fix" this one to match without checking that first.
     def current_forecast
       @current_forecast ||= forecasts.max_by { |f| [ f.date || Date.new(0), f.id ] }&.amount
     end

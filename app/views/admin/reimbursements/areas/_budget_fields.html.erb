@@ -1,9 +1,5 @@
 <%# locals: (f:) %>
-<%# One budget line row inside an area's edit form. shared/form/sections/_nested_fields
-    builds this row's builder as a SimpleForm::FormBuilder (SimpleForm patches
-    simple_fields_for onto every FormBuilder, plain or not), even though the
-    outer form is a hand-rolled form_with — so f.input works here exactly as
-    it does inside a simple_form_for block. %>
+<%# One budget line row inside an area's edit form (simple_form_for; see areas/_fields.html.erb). %>
 <div class="flex flex-wrap items-end gap-3 border-b border-gray-100 py-3 last:border-b-0">
   <div class="w-56">
     <%= f.input :name, label: "Name", wrapper_html: { class: "mb-0" } %>

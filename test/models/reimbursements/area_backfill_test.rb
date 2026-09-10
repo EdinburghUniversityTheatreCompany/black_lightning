@@ -76,13 +76,11 @@ module Reimbursements
       assert_equal [ bob.record_id ], first_area.reload.owner_ids
     end
 
-    # MySQL gives a migration no DDL transaction (AbstractMysqlAdapter never
-    # overrides supports_ddl_transactions?, so it defaults to false and
-    # Migration#use_transaction? never wraps `up` automatically) — run! must
-    # supply its own. Proved with a REAL failure, not a mock: a budget name
-    # whose area segment strips to blank makes Area's presence validation
-    # raise partway through find_each, with no mocking library available to
-    # inject a failure more surgically.
+    # MySQL gives a migration no automatic DDL transaction, so run! must supply
+    # its own. Proved with a REAL failure, not a mock: a budget name whose area
+    # segment strips to blank makes Area's presence validation raise partway
+    # through find_each, with no mocking library available to inject a failure
+    # more surgically.
     test "a mid-run failure rolls back every change — no budget is left homed" do
       a = create_reimbursements_budget(name: "Cogito: Marketing")
       create_reimbursements_budget(name: " : Something") # area segment strips to "" -> Area validation raises

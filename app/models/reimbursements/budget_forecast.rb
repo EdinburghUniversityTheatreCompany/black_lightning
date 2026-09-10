@@ -29,8 +29,8 @@
 #
 module Reimbursements
   ##
-  # A versioned projected-expenditure update for a budget. The latest row
-  # (date desc) is the budget's current_forecast.
+  # A versioned projected-expenditure update for a budget OR an area. The
+  # latest row (date desc) is the owner's current_forecast.
   class BudgetForecast < ApplicationRecord
     include RecordId
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true, inverse_of: :forecasts
@@ -58,8 +58,9 @@ module Reimbursements
 
     private
 
-    # Enforced in the model rather than as a DB check constraint: MySQL's CHECK
-    # support varies by version here, and a validation gives the operator a message.
+    # Belt and braces on top of the CHECK constraint added in
+    # AllowAreaBudgetForecasts: this gives the operator a readable message,
+    # the constraint catches a write that bypasses AR validations.
     def belongs_to_exactly_one_owner
       return if budget_id.present? ^ area_id.present?
 

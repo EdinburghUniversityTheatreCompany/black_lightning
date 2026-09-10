@@ -14,12 +14,10 @@ module Reimbursements
     # scope excludes anything already homed, this run or an earlier one) and
     # only seeds owners for an area that has none yet.
     #
-    # Wrapped in one transaction: MySQL gives migrations no DDL transaction
-    # (AbstractMysqlAdapter#supports_ddl_transactions? is false, so
-    # Migration#use_transaction? never wraps this run automatically), and a
-    # mid-run exception must not leave some budgets homed to an area whose
-    # owners were never seeded — that area's claims would silently stop
-    # hitting the owner gate, with nothing on screen to say so.
+    # One transaction: MySQL gives migrations no automatic DDL transaction, so
+    # without it a mid-run exception could leave budgets homed to an area whose
+    # owners were never seeded — silently breaking that area's owner gate with
+    # nothing on screen to explain it.
     def self.run!(scope: Budget.all)
       ActiveRecord::Base.transaction do
         area_ids = []

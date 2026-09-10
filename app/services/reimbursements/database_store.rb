@@ -260,6 +260,9 @@ module Reimbursements
       area
     end
 
+    # Unused: AreasController#update writes through @area directly, because
+    # area_columns can't carry budgets_attributes. Kept for parity with
+    # create_area! and because it's the store's own API for the write it names.
     def update_area!(record_id, attrs)
       area = Area.find(record_id)
       area.update!(area_columns(attrs))
@@ -818,8 +821,6 @@ module Reimbursements
       end
     end
 
-    # nil values are dropped (email-in gaps); the sharepoint URL array joins
-    # into the newline column.
     # Whether a foreign-key violation on an expense write was the BUDGET link
     # specifically. MySQL names the constraint, not the column, and an expense
     # links to a person, a batch and a financial year as well — so the answer
@@ -830,6 +831,8 @@ module Reimbursements
       record_id.present? && !Budget.exists?(record_id)
     end
 
+    # nil values are dropped (email-in gaps); the sharepoint URL array joins
+    # into the newline column.
     def expense_columns(attrs)
       attrs.compact.each_with_object({}) do |(key, value), columns|
         case key

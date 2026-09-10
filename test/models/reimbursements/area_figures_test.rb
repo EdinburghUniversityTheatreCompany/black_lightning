@@ -40,7 +40,6 @@ module Reimbursements
 
     test "an area whose budgets have no figure reports zero allocated and the whole total unallocated" do
       area = create_reimbursements_area(name: "Unallocated", initial_budget: 500)
-      # Create budgets with no initial_budget and no forecast
       create_reimbursements_budget(name: "Line A", area: area)
       create_reimbursements_budget(name: "Line B", area: area)
 

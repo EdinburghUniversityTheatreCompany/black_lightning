@@ -11,25 +11,18 @@
     <% ordered_area_ids.each do |area_id| %>
       <% area = areas_by_id[area_id] %>
       <% visible_count = budgets_by_area_id[area_id].size %>
-      <%# area.budgets is preloaded (store.areas' `budgets: %i[expenses forecasts]`
-          include), so .size reads the loaded array rather than issuing a COUNT —
-          this must not cost a query, or the "does not grow" test above would
-          catch it. It is the area's TRUE total (every line ever linked to it,
-          same scope Area#committed_amount/#allocated already sum over), not
-          just this year/cost-centre's — the figures beside it are that same
-          true total, so the note has to compare against it too, or it would
-          understate what the subtotal covers whenever a page boundary OR a
-          year/cost-centre filter hides one of the area's lines. %>
+      <%# area.budgets is preloaded (store.areas), so .size reads the loaded
+          array rather than issuing a COUNT — the "does not grow" test above
+          checks that. It's every line ever linked to the area (the same scope
+          Area#committed_amount/#allocated sum over), matching the figures
+          beside it, not just this page's slice. %>
       <% total_count = area.budgets.size %>
       <tbody data-area="<%= area_id %>">
         <tr class="bg-gray-50">
           <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left py-2">
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <span class="font-semibold text-base"><%= area.name %></span>
-              <%# The figures below are the area's TRUE total (every line linked to
-                  it), while the rows under this header are only the ones that fit
-                  THIS page — silent whenever they agree, so the common case (one
-                  page, every line) shows nothing extra. %>
+              <%# Only shown when this page hides some of the area's lines. %>
               <% if visible_count < total_count %>
                 <span class="text-sm text-gray-500">
                   <%= visible_count %> of <%= pluralize(total_count, "line") %> shown
