@@ -97,7 +97,11 @@
       </p>
       <p>
         The import will go ahead without <%= @import.unknown_owner_emails.one? ? "that owner" : "those owners" %>.
-        Add them on the People screen and set the owners on the budget afterwards.
+        <%# Never auto-created from a bare email (BudgetImport), so this is the
+            operator's job — and the link has to actually go somewhere. %>
+        <%= link_to "Register #{@import.unknown_owner_emails.one? ? 'them' : 'each of them'} on the People screen",
+                    new_admin_reimbursements_person_path, class: "underline font-medium" %>
+        and set the owners on the budget afterwards.
       </p>
     </div>
   <% end %>
