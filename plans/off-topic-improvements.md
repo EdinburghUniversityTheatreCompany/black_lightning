@@ -533,3 +533,27 @@ Reconcile is per-ROW by design and must stay so. The finance Expenses list (`Exp
 #index`) and Budget updates render no selector, so a `?cost_centre=` in their URL scopes
 `budgets_for_year` but not their own lists — harmless, but inconsistent. Worth deciding whether
 they get the selector too.
+
+### Every import wizard needs a Turbo-Frame escape rule, not per-link vigilance
+
+Fixed here: all five links out of the budget-import wizard rendered "Content missing" when
+clicked, because a link inside a Turbo Frame navigates the frame and none of those destinations
+carries one. `shared/back_link` now takes `turbo_frame:` and each link passes `_top`, with a
+system test per wizard — but nothing *stops* the next link being added without it. A lint rule
+(herb, or a system test that walks every link inside a `turbo_frame_tag` in these views) would.
+Reconcile is currently clean only because both its links point back at itself.
+
+### An imported expense keeps `submitted_at` = now unless the sheet dates it
+
+`Expense`'s `before_create` stamps `submitted_at ||= Time.current`, so a 2019 claim imported with
+no "Date submitted" column reads as submitted today. Harmless for the terminal statuses (nothing
+reminds about them) and the column exists for anyone who has the real dates, but a historical
+import that skips it leaves the expenses list sorted as if the whole ledger arrived at once.
+
+### The expense import writes UK BACS claims only
+
+`Reimbursements::ExpenseImport` has no `payment_method` column, so every imported claim is
+`uk_bacs`. A historical *international* claim imports fine (its IBAN/BIC are only read on the
+money path, which a settled claim never re-enters), but it is recorded on the wrong rail. Adding
+the column means adding IBAN/BIC/foreign-amount/currency columns with it — four more headings for
+a case that is one claim at a time, so the normal form is the better route today.
