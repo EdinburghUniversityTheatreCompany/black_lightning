@@ -1,4 +1,4 @@
-<%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil) %>
+<%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil, areas: [], area_id: nil) %>
 <%# The budget fields, shared by new (values from params) and edit (values
     from the budget). The cost centre picker only exists on new and only when
     there is a choice to make. %>
@@ -16,6 +16,15 @@
     <% end %>
     <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
       <%= number_field_tag :initial_budget, reimbursements_amount_value(initial_budget), step: "0.01", class: input_classes %>
+    <% end %>
+    <%= render "shared/form/field", label: "Area", name: :area_id,
+          hint: "Leave blank for a standalone line like Contingency or payroll." do %>
+      <%# input_classes, not simple-select2: the Type and Cost centre selects on
+          this form are already plain styled ones, and a lone Tom Select widget
+          among them would read as a different kind of control. %>
+      <%= select_tag :area_id,
+            options_from_collection_for_select(areas, :record_id, :name, area_id),
+            include_blank: "— none —", class: input_classes %>
     <% end %>
     <% if cost_centres.size > 1 %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>

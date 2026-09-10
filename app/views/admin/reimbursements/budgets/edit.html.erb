@@ -9,7 +9,8 @@
     <%= render "fields", form: form, people: @people,
           name: @budget.name, nominal_code: @budget.nominal_code, budget_type: @budget.budget_type,
           initial_budget: @budget.initial_budget, notes: @budget.notes,
-          active: @budget.active, owner_ids: @budget.owner_ids %>
+          active: @budget.active, owner_ids: @budget.owner_ids,
+          areas: @areas, area_id: @budget.area_id %>
   <% end %>
 <% end %>
 

@@ -49,6 +49,7 @@ module Admin
         @title = "New budget"
         @people = store.people
         @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+        @areas = store.areas_for_year
       end
 
       def create
@@ -57,6 +58,7 @@ module Admin
           @title = "New budget"
           @people = store.people
           @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+          @areas = store.areas_for_year
           flash.now[:alert] = error
           return render(:new, status: :unprocessable_entity)
         end
@@ -70,6 +72,7 @@ module Admin
       def edit
         @title = "Budget: #{@budget.name}"
         @people = store.people
+        @areas = store.areas_for_year
         @forecasts = store.budget_forecasts(@budget.record_id)
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
         # edit form (no JS), so a mistyped forecast can be corrected in place.
@@ -77,6 +80,7 @@ module Admin
       end
 
       def update
+        @areas = store.areas_for_year
         attrs = budget_params
         if (error = budget_validation_error(attrs))
           return redirect_to(edit_path, alert: error)
@@ -167,7 +171,8 @@ module Admin
           notes: params[:notes].to_s,
           budget_type: params[:budget_type].presence || budget.budget_type,
           active: params[:active].present?,
-          owner_ids: Array(params[:owner_ids]).reject(&:blank?)
+          owner_ids: Array(params[:owner_ids]).reject(&:blank?),
+          area_id: params[:area_id].presence   # "" becomes nil, which detaches the budget
         }
         initial = parse_decimal(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?

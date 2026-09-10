@@ -241,7 +241,12 @@ module Reimbursements
 
     def update_budget!(record_id, attrs)
       budget = Budget.find(record_id)
-      attrs = attrs.compact
+      # NOT attrs.compact: area_id may be a deliberate nil (detaching the budget
+      # from its area), and compact would silently drop that key so the write
+      # never reaches budget.update! at all. The only other optional attribute,
+      # initial_budget, is left out of the hash entirely when unset rather than
+      # sent as nil, so there's nothing else here for compact to have protected.
+      attrs = attrs.dup
       owner_ids = attrs.delete(:owner_ids)
       budget.update!(attrs)
       budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?)) unless owner_ids.nil?

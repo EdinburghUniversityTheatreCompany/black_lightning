@@ -610,6 +610,31 @@ module Admin
         assert_empty @props.reload.owner_ids
       end
 
+      test "a budget can be moved between areas from its own form" do
+        sign_in @user
+
+        from = create_reimbursements_area(name: "Cogito")
+        to = create_reimbursements_area(name: "Improverts")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: from)
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code, area_id: to.record_id }
+
+        assert_equal to, budget.reload.area
+      end
+
+      test "clearing the area detaches the budget" do
+        sign_in @user
+
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code, area_id: "" }
+
+        assert_nil budget.reload.area
+      end
+
       # --- Forecast create ---------------------------------------------------
 
       test "adding a forecast creates a linked Budget Forecasts record" do
