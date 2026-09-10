@@ -573,6 +573,9 @@ module Admin
       assert_empty @unlinked.reload.linked_expense_ids
     end
 
+    # The budget is checked against the list this page's own picker offered, so
+    # a line deleted between the page loading and the submit is a fixable form
+    # error rather than a foreign-key 500 on create_expense!.
     test "create_expense rejects a budget that no longer exists" do
       sign_in @user
 
@@ -585,7 +588,30 @@ module Admin
       end
 
       assert_response :unprocessable_entity
-      assert_match(/no longer exists/i, assigns(:form).errors[:budget_record_id].to_sentence)
+      assert_match(/no longer available/i, assigns(:form).errors[:budget_record_id].to_sentence)
+      assert_empty @unlinked.reload.linked_expense_ids
+    end
+
+    # And one still on the books but retired. It satisfies the foreign key, so
+    # this never raised — it quietly booked an EUSA charge against a budget
+    # finance had taken out of use.
+    test "create_expense rejects a budget that has been deactivated" do
+      retired = create_reimbursements_budget(name: "Last year's props", nominal_code: "4900",
+                                             active: false)
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: @unlinked.record_id,
+          reimbursements_expense_form: { budget_record_id: retired.record_id,
+                                         description: "Room hire",
+                                         payment_reference: "J000001234" }
+        }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer available/i, assigns(:form).errors[:budget_record_id].to_sentence)
+      assert_empty @unlinked.reload.linked_expense_ids
     end
 
     test "create_expense refuses an offsetting row" do
