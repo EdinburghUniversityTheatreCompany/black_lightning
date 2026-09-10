@@ -340,9 +340,39 @@ survive as historical import provenance and are never written. Spec + plan in
     and the strict reading would empty the budget list and every submitter's budget picker with
     nothing on screen to explain it.
   - **`BaseController::DEFAULT_STORE_BUILDER` exists so a test can put the seam back.** The
-    store seam now takes `financial_year:`; restoring it by hand as `-> { build_store }` drops
-    the argument, and `class_attribute` makes that stick for the rest of the process — every
-    later year-scoped page in that worker then renders every year's budgets at once.
+    store seam takes `financial_year:` AND `cost_centre:`; restoring it by hand as
+    `-> { build_store }` drops both, and `class_attribute` makes that stick for the rest of the
+    process — every later scoped page in that worker then renders every year's and every cost
+    centre's budgets at once. A fake that ignores scoping is written `->(**) { fake }`.
+- **Cost centres** (`Reimbursements::CostCentre`, `?cost_centre=<key>`). One pot's budgets,
+  claims, ledger rows, batches and mailboxes. The selector is
+  `FinanceController#resolve_cost_centre!`, rendered by
+  `shared/_cost_centre_selector` on Budgets index + overview, Actuals, Review and Batch history.
+  - **No `?cost_centre=` means EVERY centre, and that is the only safe default.**
+    `CostCentre.default` is `order(:id).first`, so defaulting to it would silently empty the
+    second centre's screens for the people who work in it. `?cost_centre_id=<id>` is still
+    honoured beside the key for the budget-import wizard's links; the key wins.
+  - **`CostCentre.default` names an arbitrary pot the moment a second row exists.** Never reach
+    for it where the right answer is knowable (the claim's centre, the batch's, the page's
+    selector), and never on a path that moves money or emails a producer — that was the whole
+    class of bug fixed on 2026-09-10 (Build Batch, the reopen draft mailbox, every rejection
+    email, the producer contact line). `.sole_configured` is the "there is genuinely nothing to
+    choose" read.
+  - **An unplaced row (nil `cost_centre_id`) is in EVERY centre's scope** (`DatabaseStore
+    #in_cost_centre`), the same leniency `#in_year` states. It is a filter, so an unplaced row may
+    appear twice; `NightlyBatchJob` uses the stricter "falls to the DEFAULT centre" rule instead,
+    because a reminder has to be addressed to exactly one recipient list.
+  - **Which reads are scoped is the design.** `budgets_for_year` / `budgets_with_actuals` /
+    `unattributed_actuals` / `expenses_for_cost_centre` / `eusa_actuals_for_cost_centre` /
+    `batches_for_cost_centre` are; **`budgets`, `expenses`, `eusa_actuals` and `active_budgets`
+    are NOT** — the first three are id→record lookups and Reconcile's per-row pools, and
+    `active_budgets` is every submitter's budget picker.
+  - **An Expense has no cost-centre column**; it resolves one through its budget
+    (`Expense#cost_centre_id`, preloaded by `store.expenses`). **A Batch has none either** and
+    takes its centre from the expenses it holds — so anything reading it (the reopen draft
+    mailbox) must read it BEFORE the revert unlinks them.
+  - Review's three tabs, their counts and the CSV all come off ONE scoped list, or the page lies.
+
 - **Setting a year up = importing the committee's spreadsheet** (`Reimbursements::BudgetImport`,
   `Admin::Reimbursements::BudgetImportsController`, `DatabaseStore#import_budgets!`). Paste TSV or
   upload .xlsx (both via the shared `ImportParsing` concern, as the membership import does) →
@@ -551,7 +581,10 @@ survive as historical import provenance and are never written. Spec + plan in
   seams on `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test
   helper `message` — it collides with Minitest's internal `message(msg, ending)`. A dev
   shell's fnox-exported `REIMBURSEMENTS_*` vars leak real credentials into tests — strip
-  them when running the suite by hand.
+  them when running the suite by hand. A two-cost-centre world is built with
+  `create_second_reimbursements_cost_centre` — never a second fixture row (see the nightly
+  job's note above), and never inline, because `jscpd` gates duplication at 0 and three
+  tests repeating the same setup block trips it.
 - **BACS batch invariants** (`Reimbursements::BatchProcessor`): the vendored xlsx
   template (`lib/reimbursements/templates/EUSA_BACS_template.xlsx`) caps a batch at
   `BacsXlsx::MAX_ROWS` (200) data rows — its GRAND TOTAL formula and the Authorisation
@@ -577,7 +610,9 @@ survive as historical import provenance and are never written. Spec + plan in
   through `Reimbursements::CellSanitizer`** — the shared formula-injection guard that
   `BacsXlsx` uses too. `Base#add_sheet` pins every String cell to Axlsx `:string`, or a
   numeric-looking identifier is coerced to a number (nominal code `041000` → 41000,
-  period `03` → 3). **Bank details in an export are masked to their last four digits**
+  period `03` → 3). Every exporter that can name a cost centre carries the column and
+  **appends** it, so a saved formula keeps pointing at the same column; `People` has none,
+  because a payee has no cost centre. **Bank details in an export are masked to their last four digits**
   via `BankDetails.mask` (also used by the People notes audit line); only the BACS
   spreadsheet EUSA pays from carries full numbers.
 - **Receipts are served by the app, never over ActiveStorage's routes**

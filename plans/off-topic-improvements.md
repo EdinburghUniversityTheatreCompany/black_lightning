@@ -461,3 +461,51 @@ Fix: use `sheet[row][col].change_contents(value)` (keeps the existing style) ins
 
 Blocking: nothing, beyond wanting a regression test that asserts the written amount cell's
 number format is the template's and not `General`.
+
+---
+
+## Cost-centre scoping pass (2026-09-10) — noticed, out of scope
+
+### `Reimbursements::BudgetImport` matched budget names across cost centres
+
+`BudgetImportsController#build_import` passes `store.budgets_for_year` as `existing_budgets`, and
+`BudgetImport` indexes it by name only — despite the documented contract being "matched by name
+within one `(financial year, cost centre)`". With two centres both running a budget called "Props",
+a Fringe import would have matched termtime's line and logged a revision against it.
+
+Fixed *incidentally* by this branch, because `budgets_for_year` is now cost-centre scoped and the
+wizard's `?cost_centre_id=` feeds the store's scope. It is worth a test of its own naming that
+rule, rather than resting on a scoping side effect: if `budgets_for_year` were ever unscoped again,
+this silently regresses to matching across pots.
+
+### `expense_edits/edit.html.erb` trips `erb-no-duplicate-branch-elements`
+
+Two herb-lint hints (non-gating, autocorrectable with `herb lint --fix`): the
+`<div class="grid gap-4 sm:grid-cols-2">` wrapper is repeated in both branches of the UK/
+international rail conditional. Lifting it outside the conditional is the suggested fix; check
+that it does not change which fields the rail-toggling Stimulus controller can see, since that
+form's `data-rail-required` handling reads the surrounding structure.
+
+### `NightlyBatchJob` and the store disagree about unplaced claims, deliberately
+
+`claims_by_cost_centre_id` files a claim with no cost centre under `CostCentre.default`;
+`DatabaseStore#in_cost_centre` shows it under every centre. Both are right for their job (a
+reminder needs one recipient list, a filter does not), and both are commented — but it is two rules
+for one question. If cost centres ever become mandatory on a budget, collapse them into one.
+
+### Batches still have no `cost_centre_id` column
+
+`reimbursements_batches` has none while `reimbursements_batch_attempts` has one NOT NULL. Every
+reader here derives the batch's centre from the expenses it holds, which is exact now that Build
+Batch builds for one centre only — but it is a derivation that goes stale the instant a reopen
+unlinks the expenses (which is why the reopen path resolves the mailbox before reverting) and
+returns nothing for a batch whose expenses were deleted. A `cost_centre_id` column, nullable then
+backfilled from the expenses then made NOT NULL, would make it a fact. Not done here because it
+needs the user's sign-off on the migration and the derivation is correct today.
+
+### Reconcile, Expenses and Budget updates are not cost-centre scoped
+
+Reconcile is per-ROW by design and must stay so. The finance Expenses list (`ExpenseEditsController
+#index`) and Budget updates render no selector, so a `?cost_centre=` in their URL scopes
+`budgets_for_year` but not their own lists — harmless, but inconsistent. Worth deciding whether
+they get the selector too.
