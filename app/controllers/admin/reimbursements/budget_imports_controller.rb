@@ -30,6 +30,8 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class BudgetImportsController < FinanceController
+      include ReadsImportSource
+
       NO_COST_CENTRE_ALERT =
         "No cost centre is set up yet, so there's nothing to attach these budgets to. " \
         "Add one under Settings first.".freeze
@@ -94,27 +96,6 @@ module Admin
           financial_year: selected_financial_year, cost_centre: selected_cost_centre,
           existing_budgets: store.budgets_for_year, people: store.people
         )
-      end
-
-      # An uploaded file on this request, otherwise the pasted (or carried-over)
-      # text. Apply only ever sees text: the preview carried the upload on.
-      def import_source
-        uploaded_file || params[:pasted_text].to_s
-      end
-
-      def input_type = uploaded_file ? :xlsx : :paste
-
-      def uploaded_file
-        file = params[:file]
-        file.respond_to?(:path) ? file : nil
-      end
-
-      def source_present?
-        return true if uploaded_file
-        return true if params[:pasted_text].to_s.strip.present?
-
-        flash.now[:alert] = NOTHING_PASTED_ALERT
-        false
       end
 
       # Whether there is anything to import INTO at all. Distinct from "the

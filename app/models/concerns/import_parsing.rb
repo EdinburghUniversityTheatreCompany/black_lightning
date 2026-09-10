@@ -39,6 +39,27 @@ module ImportParsing
     result
   end
 
+  # --- Canonical TSV out ---------------------------------------------------
+  #
+  # The other half of parsing, for the stateless wizards (budget import,
+  # expense import): an upload is normalised to TSV and carried into apply in a
+  # hidden field, so apply re-parses rather than trusting the preview. A tab or
+  # newline INSIDE an xlsx cell has to survive that round trip escaped, or one
+  # stray character shifts every later column when apply re-parses.
+
+  ESCAPES = { "\\" => "\\\\", "\t" => "\\t", "\n" => "\\n" }.freeze
+  UNESCAPES = { "\\" => "\\", "t" => "\t", "n" => "\n" }.freeze
+
+  # Block-form gsub throughout: the replacement-string form would read a
+  # backslash in the replacement as a backreference.
+  def escape_cell(value)
+    value.to_s.delete("\r").gsub(/[\\\t\n]/) { |char| ESCAPES.fetch(char) }
+  end
+
+  def unescape_cell(value)
+    value.to_s.gsub(/\\(.)/) { UNESCAPES.fetch(::Regexp.last_match(1), ::Regexp.last_match(0)) }
+  end
+
   def parse_data(data, input_type)
     case input_type
     when :paste

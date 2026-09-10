@@ -167,19 +167,6 @@ module Reimbursements
       end
     end
 
-    ESCAPES = { "\\" => "\\\\", "\t" => "\\t", "\n" => "\\n" }.freeze
-    UNESCAPES = { "\\" => "\\", "t" => "\t", "n" => "\n" }.freeze
-
-    # Block-form gsub throughout: the replacement-string form would read a
-    # backslash in the replacement as a backreference.
-    def escape_cell(value)
-      value.to_s.delete("\r").gsub(/[\\\t\n]/) { |char| ESCAPES.fetch(char) }
-    end
-
-    def unescape_cell(value)
-      value.to_s.gsub(/\\(.)/) { UNESCAPES.fetch(::Regexp.last_match(1), ::Regexp.last_match(0)) }
-    end
-
     # One normalised row per sheet line. Called by ImportParsing's parsers.
     # Returns nil for a wholly blank line so trailing sheet padding is ignored
     # rather than reported as thirty nameless claims.

@@ -29,6 +29,8 @@ module Admin
     # via FinanceController. Producers never see this: it writes claims in
     # somebody else's name, at any status, with no receipt.
     class ExpenseImportsController < FinanceController
+      include ReadsImportSource
+
       NO_COST_CENTRE_ALERT =
         "No cost centre is set up yet, so there's nothing to attach these claims to. " \
         "Add one under Settings first.".freeze
@@ -102,27 +104,6 @@ module Admin
           budgets: store.budgets_for_year, people: store.people,
           existing_expenses: store.expenses
         )
-      end
-
-      # An uploaded file on this request, otherwise the pasted (or carried-over)
-      # text. Apply only ever sees text: the preview carried the upload on.
-      def import_source
-        uploaded_file || params[:pasted_text].to_s
-      end
-
-      def input_type = uploaded_file ? :xlsx : :paste
-
-      def uploaded_file
-        file = params[:file]
-        file.respond_to?(:path) ? file : nil
-      end
-
-      def source_present?
-        return true if uploaded_file
-        return true if params[:pasted_text].to_s.strip.present?
-
-        flash.now[:alert] = NOTHING_PASTED_ALERT
-        false
       end
 
       # Whether there is anything to import INTO at all — a portal with no
