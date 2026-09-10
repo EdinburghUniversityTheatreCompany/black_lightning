@@ -281,12 +281,13 @@ module Reimbursements
 
     # What an applied budget import did, for the confirmation screen.
     ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, :areas_created,
-                              keyword_init: true)
+                              :re_homed, keyword_init: true)
 
     # Applies a confirmed BudgetImport: creates the areas the sheet named that
     # don't exist yet, creates the new budget lines (attaching each to its
-    # area), logs the revised figures as ONE budget update, and re-syncs
-    # owners on lines that already existed.
+    # area), moves the matched lines whose re-home the operator left ticked
+    # into the area the sheet names, logs the revised figures as ONE budget
+    # update, and re-syncs owners on lines that already existed.
     #
     # All-or-nothing, unlike the reconcile wizard's per-row rescue. A half
     # imported budget list has no audit value and no obvious repair — the
@@ -304,7 +305,7 @@ module Reimbursements
     # not-yet-existing) can be resolved to the new area's id before the budget
     # row is written.
     def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
-                        area_creates: [])
+                        area_creates: [], re_homes: [])
       result = nil
       Budget.transaction do
         areas_by_name = area_creates.to_h do |attrs|
@@ -312,6 +313,12 @@ module Reimbursements
         end
         created = creates.map { |attrs| create_budget!(resolve_area(attrs, areas_by_name)) }
         adoptions.each { |adoption| adopt_budget!(adoption[:budget_id], adoption[:cost_centre]) }
+        # Only the re-homes the operator left ticked reach here — the
+        # controller filters the import's own list by the ticked keys, so an
+        # untick leaves the hand-made grouping exactly as it is.
+        re_homes.each do |re_home|
+          re_home_budget!(re_home[:budget_id], resolve_area(re_home, areas_by_name)[:area_id])
+        end
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
         update = if revisions.any?
                    create_budget_update!(effective_date: Date.current, note: note,
@@ -319,7 +326,7 @@ module Reimbursements
         end
         result = ImportResult.new(created: created.size, revised: revisions.size,
                                   owners_synced: owner_syncs.size, budget_update: update,
-                                  areas_created: areas_by_name.size)
+                                  areas_created: areas_by_name.size, re_homed: re_homes.size)
       end
       bust_budgets!
       bust_areas!
@@ -344,6 +351,21 @@ module Reimbursements
       budget = Budget.find(record_id)
       budget.update!(cost_centre: cost_centre) if budget.cost_centre_id.nil?
       bust_budgets!
+      budget
+    end
+
+    # Moves a matched budget into the area the sheet names — the confirmed half
+    # of BudgetImport#re_homes. Unlike adopt_budget!, this deliberately has no
+    # "only when it's blank" guard: moving a line that already sits in another
+    # area is the whole point, and the operator ticked it knowing what it was
+    # in (the preview states "from -> to"). +area_id+ nil is never reached from
+    # the importer, which skips a blank Area cell rather than reading it as
+    # "move this line out of its area".
+    def re_home_budget!(record_id, area_id)
+      budget = Budget.find(record_id)
+      budget.update!(area_id: area_id)
+      bust_budgets!
+      bust_areas!
       budget
     end
 
@@ -778,10 +800,12 @@ module Reimbursements
       @areas_for_year = nil
     end
 
-    # Swaps a create's +area_name:+ (an area this import is about to create)
-    # for the +area_id:+ of the row just created for it. A create naming an
-    # area that already existed carries +area_id:+ straight from
-    # BudgetImport#creates and passes through untouched.
+    # Swaps a line's +area_name:+ (an area this import is about to create) for
+    # the +area_id:+ of the row just created for it. A line naming an area that
+    # already existed carries +area_id:+ straight from BudgetImport#creates or
+    # #re_homes and passes through untouched. Shared by both, so a re-home into
+    # a brand-new area resolves the same way a create does — which is what
+    # stops #area_creates minting an area with nothing in it on a re-import.
     def resolve_area(attrs, areas_by_name)
       attrs = attrs.dup
       area_name = attrs.delete(:area_name)

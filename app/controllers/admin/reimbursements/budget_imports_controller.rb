@@ -78,6 +78,7 @@ module Admin
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
                                         adoptions: @import.adoptions, area_creates: @import.area_creates,
+                                        re_homes: ticked_re_homes,
                                         note: import_note, created_by: current_user)
         render :apply
       end
@@ -113,6 +114,24 @@ module Admin
         end
 
         false
+      end
+
+      # The re-homes the operator left TICKED. Each one renders as a ticked
+      # checkbox alongside one blank hidden entry, so the parameter is always
+      # present when the bucket was shown: an absent key means unticked, never
+      # "we didn't ask".
+      #
+      # Selected out of this apply's OWN re-parsed list, so a key that matches
+      # nothing here — the sheet edited between the two steps, the budget
+      # deleted, a hand-made request — simply doesn't move anything. Unticked
+      # and unmatched both read as "leave the grouping alone", which is the
+      # safe direction and the same rule Reconcile gives its pair keys.
+      def ticked_re_homes
+        keys = params[:re_home_budget_ids]
+        return [] unless keys.is_a?(Array)
+
+        ticked = keys.map(&:to_s).compact_blank.to_set
+        @import.re_homes.select { |re_home| ticked.include?(re_home[:key].to_s) }
       end
 
       # Re-render the preview with the problems shown rather than redirecting:

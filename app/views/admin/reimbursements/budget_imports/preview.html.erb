@@ -159,8 +159,7 @@
     </div>
   </details>
 
-  <%= form_with url: apply_admin_reimbursements_budget_import_path,
-                method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
+  <%= form_with url: apply_admin_reimbursements_budget_import_path, method: :post, class: "mt-6" do %>
     <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
         previewed — including an upload, which has no file to re-send. The
         destination travels with it: apply resolves the year and cost centre
@@ -173,16 +172,58 @@
     <%= hidden_field_tag :canonical, "1" %>
     <%= hidden_field_tag :year, selected_financial_year&.key %>
     <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
-    <%# Only the parts that are actually happening: "Import 0 new budgets and 1
-        changed figure" reads as a mistake. %>
-    <% parts = [] %>
-    <% parts << pluralize(@import.entries_in(:create).size, "new budget") if @import.entries_in(:create).any? %>
-    <% parts << pluralize(@import.revisions.size, "changed figure") if @import.revisions.any? %>
-    <%= submit_tag parts.any? ? "Import #{parts.to_sentence}" : "Nothing to import",
-                   class: btn_classes(:primary),
-                   disabled: !@import.valid? || parts.empty?,
-                   data: { disable_with: "Importing…" } %>
-    <%= link_to "Cancel", import_path, class: btn_classes(:secondary) %>
+    <%# The re-home tickboxes and the Import button are ONE form: the lines you
+        leave ticked are the lines that move. Same shape as Reconcile's
+        offsetting pairs, and reported rather than applied on sight for the
+        same reason absent budgets are never deleted — somebody grouped that
+        line by hand, and the sheet doesn't get to overrule it silently. %>
+    <% if @import.re_homes.any? %>
+      <div class="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p class="font-medium">
+          <%= pluralize(@import.re_homes.size, "budget") %>
+          <%= @import.re_homes.one? ? "is" : "are" %> in a different area than this sheet names.
+        </p>
+        <p>
+          Leave a line ticked to follow the sheet. Untick it if somebody moved that line on
+          purpose — nothing else about the line changes either way.
+        </p>
+        <%# Always posted, so an untick is a real "no" rather than a missing parameter. %>
+        <%= hidden_field_tag "re_home_budget_ids[]", "", id: nil %>
+        <ul class="mt-2 space-y-1">
+          <% @import.re_homes.each do |re_home| %>
+            <% checkbox_id = "re-home-#{re_home[:key]}" %>
+            <li class="flex items-center gap-2">
+              <%# Keyed by BUDGET ID, not row position: a re-import with the
+                  rows reordered must not land this tick on a different line. %>
+              <%= check_box_tag "re_home_budget_ids[]", re_home[:key], true,
+                                id: checkbox_id, class: checkbox_classes %>
+              <%= label_tag checkbox_id, class: "cursor-pointer" do %>
+                <strong><%= re_home[:budget_name] %></strong> —
+                <%= re_home[:from_area_name].presence || "no area" %> &rarr; <%= re_home[:to_area_name] %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <%# Only the parts that are actually happening: "Import 0 new budgets and 1
+          changed figure" reads as a mistake. Areas and moved lines are counted
+          too, or a re-import that only adds an Area column to lines that
+          already exist reads "Nothing to import" with the button disabled —
+          which is exactly the sheet this bucket exists for. %>
+      <% parts = [] %>
+      <% parts << pluralize(@import.area_creates.size, "new area") if @import.area_creates.any? %>
+      <% parts << pluralize(@import.entries_in(:create).size, "new budget") if @import.entries_in(:create).any? %>
+      <% parts << pluralize(@import.revisions.size, "changed figure") if @import.revisions.any? %>
+      <% parts << pluralize(@import.re_homes.size, "moved line") if @import.re_homes.any? %>
+      <%= submit_tag parts.any? ? "Import #{parts.to_sentence}" : "Nothing to import",
+                     class: btn_classes(:primary),
+                     disabled: !@import.valid? || parts.empty?,
+                     data: { disable_with: "Importing…" } %>
+      <%= link_to "Cancel", import_path, class: btn_classes(:secondary) %>
+    </div>
   <% end %>
 <% end %>
 <% end %>

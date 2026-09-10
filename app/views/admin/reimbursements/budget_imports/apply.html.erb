@@ -10,6 +10,12 @@
       <strong><%= pluralize(@result.revised, "figure") %></strong>
       revised<%= " (logged as one budget update)" if @result.budget_update %>.
     </li>
+    <% if @result.re_homed.positive? %>
+      <li>
+        <strong><%= pluralize(@result.re_homed, "budget") %></strong> moved into the area the
+        sheet named.
+      </li>
+    <% end %>
     <% if @result.owners_synced.positive? %>
       <li><strong><%= pluralize(@result.owners_synced, "budget") %></strong> had their owners updated.</li>
     <% end %>

@@ -300,6 +300,115 @@ module Admin
         assert_match(/Cogito/, assigns(:import).errors.to_sentence)
       end
 
+      # --- Re-homing a line the sheet disagrees with ---------------------------
+      # Reported, ticked by default, and only applied for the keys that come
+      # back — the same shape as Reconcile's offsetting pairs.
+
+      AREA_HEADERS = "Area\tBudget\tNominal code\tType\tAmount".freeze
+
+      # One matched line, currently in +area+ (nil for none), on a sheet that
+      # names "Cogito".
+      def marketing_in(area)
+        create_reimbursements_budget(name: "Cogito: Marketing", area: area, initial_budget: 400,
+                                     cost_centre: @cost_centre, financial_year: @year)
+      end
+
+      def cogito_sheet = "#{AREA_HEADERS}\nCogito\tCogito: Marketing\t432320\tExpense\t400"
+
+      test "preview reports a re-home as a ticked checkbox keyed by budget id" do
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+        budget = marketing_in(improverts)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_sheet)
+
+        assert_response :success
+        assert_select "input[type=checkbox][name='re_home_budget_ids[]']" \
+                      "[value=?][checked=checked]", budget.record_id
+        assert_select "label[for=?]", "re-home-#{budget.record_id}", text: /Improverts.+Cogito/m
+      end
+
+      test "apply moves a ticked line into the area the sheet names" do
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+        budget = marketing_in(improverts)
+        sign_in @user
+
+        post :apply, params: preview_params(cogito_sheet,
+                                            re_home_budget_ids: [ "", budget.record_id ])
+
+        assert_response :success
+        assert_equal cogito.id, budget.reload.area_id
+      end
+
+      # An unticked line is left exactly as it was — the whole reason this is a
+      # bucket rather than something the import just does.
+      test "apply leaves an unticked re-home alone" do
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+        budget = marketing_in(improverts)
+        sign_in @user
+
+        post :apply, params: preview_params(cogito_sheet, re_home_budget_ids: [ "" ])
+
+        assert_response :success
+        assert_equal improverts.id, budget.reload.area_id
+      end
+
+      # A key that matches nothing here reads as unticked, never as "move
+      # something else" — the safe direction, as Reconcile's pair keys are.
+      test "apply ignores a re-home key that matches no line in this sheet" do
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+        budget = marketing_in(improverts)
+        sign_in @user
+
+        post :apply, params: preview_params(cogito_sheet, re_home_budget_ids: [ "999999" ])
+
+        assert_equal improverts.id, budget.reload.area_id
+      end
+
+      # THE RE-IMPORT: a committee adds an Area column to a sheet they have
+      # imported before, so every line is already here and NOTHING is a create.
+      # Without the re-home bucket #area_creates mints the area and no budget
+      # is ever attached to it — only a :create line carries an area_id.
+      test "a re-import that gains an Area column attaches the existing lines to the new area" do
+        budget = marketing_in(nil)
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::Area.count }, 1 do
+          post :apply, params: preview_params(cogito_sheet,
+                                              re_home_budget_ids: [ "", budget.record_id ])
+        end
+
+        assert_response :success
+        area = ::Reimbursements::Area.find_by(name: "Cogito")
+        assert_equal area.id, budget.reload.area_id
+        assert_equal 1, assigns(:result).re_homed
+      end
+
+      # Nothing creates and nothing revises on that re-import, so without the
+      # moved lines in the count the button reads "Nothing to import" and is
+      # disabled — the sheet this whole bucket exists for could not be applied.
+      test "preview offers to import a sheet whose only change is the area" do
+        marketing_in(nil)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_sheet)
+
+        assert_empty assigns(:import).entries_in(:create)
+        assert_empty assigns(:import).revisions
+        assert_select "input[type=submit][value=?]", "Import 1 new area and 1 moved line" do
+          assert_select "[disabled]", false
+        end
+      end
+
       # --- Step 3: apply -----------------------------------------------------
 
       test "apply creates the year's budgets" do

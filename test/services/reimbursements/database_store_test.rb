@@ -913,6 +913,44 @@ module Reimbursements
       assert_equal 1, Area.where(name: "Cogito").count
     end
 
+    # The re-home path shares #resolve_area with the creates, so a line moved
+    # into an area this same import is creating resolves the same way — which
+    # is what stops a re-import (every line matched, nothing created) leaving
+    # the sheet's new area with no budget in it.
+    test "import_budgets! moves a re-homed budget into an area the same import creates" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+      budget = Budget.create!(name: "Cogito: Marketing", financial_year: year,
+                              cost_centre: cost_centre)
+
+      result = scoped_store(year).import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
+        area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ],
+        re_homes: [ { budget_id: budget.record_id, area_name: "Cogito" } ]
+      )
+
+      assert_equal Area.find_by(name: "Cogito").id, budget.reload.area_id
+      assert_equal 1, result.re_homed
+    end
+
+    test "import_budgets! moves a re-homed budget out of the area it was in" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+      improverts = create_reimbursements_area(name: "Improverts", cost_centre: cost_centre,
+                                              financial_year: year)
+      cogito = create_reimbursements_area(name: "Cogito", cost_centre: cost_centre,
+                                          financial_year: year)
+      budget = Budget.create!(name: "Cogito: Marketing", financial_year: year,
+                              cost_centre: cost_centre, area: improverts)
+
+      scoped_store(year).import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
+        re_homes: [ { budget_id: budget.record_id, area_id: cogito.record_id } ]
+      )
+
+      assert_equal cogito.id, budget.reload.area_id
+    end
+
     test "import_budgets! re-syncs owners on budgets that already existed" do
       year = FinancialYear.create!(label: "Fringe 2027")
       alice = Person.create!(name: "Alice", email: "alice@example.com")

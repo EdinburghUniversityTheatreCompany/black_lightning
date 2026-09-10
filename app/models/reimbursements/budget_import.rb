@@ -238,6 +238,50 @@ module Reimbursements
       end
     end
 
+    # Matched lines the sheet puts in a DIFFERENT area than they are in now —
+    # reported for the operator to confirm, never applied on sight. Somebody
+    # moved that budget on purpose, through the area form or the budget form's
+    # picker, so this is the same temperament #absent_budgets already has: the
+    # sheet is the committee's record, but a hand-made grouping is somebody's
+    # decision, and the sheet is not allowed to overrule it silently.
+    #
+    # [{ budget_id:, budget_name:, from_area_name:, to_area_name:, key: }],
+    # plus the +area_id:+ / +area_name:+ pair #creates carries — the target is
+    # an id when the area is already here and a NAME when this same import is
+    # about to create it, and import_budgets! resolves the name inside its
+    # transaction exactly as it does for a create.
+    #
+    # +key+ is the checkbox value, and it is the BUDGET ID rather than a row
+    # position: a re-import with the rows reordered must not land a tick on a
+    # different line. (Reconcile keys its offsetting pairs by row content plus
+    # an occurrence index only because its rows have no id of their own.)
+    #
+    # Same buckets as #adoptions and #owner_syncs — a matched line is matched
+    # whether or not its figure moved.
+    #
+    # A re-home FROM NIL is the case that stops #area_creates minting orphans:
+    # on a re-import every line already exists, and only a :create line carries
+    # an area_id, so an area named on a sheet whose lines all match would
+    # otherwise be created with no budget in it. That is the common shape —
+    # a committee adding an Area column to a sheet they have imported before.
+    #
+    # A budget that HAS an area whose sheet leaves the cell BLANK is not a
+    # re-home to nowhere: a blank cell means "the sheet says nothing", the same
+    # reading bucket_for gives a blank Amount.
+    def re_homes
+      (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+        next if entry.area_name.blank?
+
+        key = self.class.match_key(entry.area_name)
+        current = entry.budget.area
+        next if current && self.class.match_key(current.name) == key
+
+        { budget_id: entry.budget.record_id, budget_name: entry.budget.name,
+          from_area_name: current&.name, to_area_name: first_seen_names[key],
+          key: entry.budget.record_id }.merge(area_attrs_for(entry))
+      end
+    end
+
     # Owner lists for budgets that already exist. The sheet is the committee's
     # own record of who runs what, so a re-import keeps it current — but only
     # where the sheet actually named someone, since an empty owner column means
