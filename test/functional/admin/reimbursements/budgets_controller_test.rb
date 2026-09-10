@@ -803,6 +803,83 @@ module Admin
 
         assert_nil budget.reload.area
       end
+      # --- Owners on an area-bound budget ------------------------------------
+      # The area owns and its budgets inherit, so Budget#owners READS the area's
+      # owners while sync_owner_ids! WRITES the budget's own rows. An editable
+      # owners fieldset here would therefore read one table and write another:
+      # ownership is edited on the AREA, and this form must not offer the list
+      # at all (nor let owner_ids reach the store) for an area-bound budget.
+
+      test "an area-bound budget's owners are read-only, with a link to the area" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ @alice.id ])
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_select "input[type=checkbox][name='owner_ids[]']", false,
+                      "an area-bound budget must not offer an editable owners list"
+        assert_includes response.body, "Alice Owner"
+        assert_select "a[href=?]", edit_admin_reimbursements_area_path(area.record_id)
+      end
+
+      test "a Save on an area-bound budget cannot rewrite its own owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        # Finance moved ownership to Alice on the AREA form; the budget's own
+        # row (Bob) is the one the backfill kept so it can be reversed.
+        area.sync_owner_ids!([ @alice.id ])
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        # Exactly what the old form posted while someone fixed the nominal code:
+        # the AREA's owners, on their way into the BUDGET's own rows.
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: "4321", area_id: area.record_id,
+                                 owner_ids: [ @alice.record_id ] }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_equal "4321", budget.reload.nominal_code, "the edit itself must still land"
+        assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
+                     "the posted owner list must be ignored, not written to own_owners"
+        assert_equal [ @alice.record_id ], budget.owner_ids, "the area still owns"
+      end
+
+      test "a Save on a budget in an ownerless area cannot destroy its own owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        # An ownerless area renders nothing ticked, so any Save posted an empty
+        # list — and [] compiles to where.not(person_id: []) i.e. WHERE 1=1,
+        # wiping the last record of who owned the line.
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code,
+                                 area_id: area.record_id, owner_ids: [ "" ] }
+
+        assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id)
+      end
+
+      test "a budget with no area keeps its editable owners fieldset" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_response :success
+        assert_select "fieldset legend", text: "Owners"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}]"
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", active: "1",
+                                 owner_ids: [ @bob.record_id ] }
+
+        assert_equal [ @bob.record_id ], @props.reload.own_owners.map(&:record_id)
+        assert_equal [ @bob.record_id ], @props.owner_ids
+      end
 
       # --- Forecast create ---------------------------------------------------
 

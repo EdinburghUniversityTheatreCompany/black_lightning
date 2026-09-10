@@ -166,9 +166,9 @@ module Admin
       end
 
       # Operator-editable budget attributes. Rollups/formulas are never written.
-      # +active+ (visible-to-submitters) and +owner_ids+ come from a checkbox and
-      # a multi-select, so absence means "off" / "none". +initial_budget+ is only
-      # sent when a valid number is given, so a blank field can't zero it.
+      # +active+ (visible-to-submitters) comes from a checkbox, so absence means
+      # "off". +initial_budget+ is only sent when a valid number is given, so a
+      # blank field can't zero it.
       def budget_params(budget = @budget)
         attrs = {
           name: params[:name].to_s.strip,
@@ -176,9 +176,19 @@ module Admin
           notes: params[:notes].to_s,
           budget_type: params[:budget_type].presence || budget.budget_type,
           active: params[:active].present?,
-          owner_ids: Array(params[:owner_ids]).reject(&:blank?),
           area_id: params[:area_id].presence   # "" becomes nil, which detaches the budget
         }
+        # Ownership is edited on the AREA, so an area-bound budget's form shows
+        # its inherited owners read-only and NOTHING it posts may be written:
+        # Budget#owner_ids reads the area's owners while sync_owner_ids! writes
+        # the budget's own rows, so a Save that carried the area's list would
+        # delete the own-owner rows the backfill kept in order to be
+        # reversible, and an ownerless area's empty list would delete them all
+        # (where.not(person_id: []) compiles to WHERE 1=1). Omitting the KEY,
+        # not sending [], is what stops update_budget! syncing at all.
+        unless budget.area_id
+          attrs[:owner_ids] = Array(params[:owner_ids]).reject(&:blank?)
+        end
         initial = parse_decimal(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?
         attrs
