@@ -6,7 +6,11 @@
 </p>
 
 <div class="mb-4 flex items-center justify-between gap-3">
-  <%= link_to "Build a new batch", new_admin_reimbursements_batch_path, class: btn_classes(:primary, :sm) %>
+  <%# Carries the selector's choice through: a batch is built for ONE cost
+      centre, and the one on screen is the one the operator means. %>
+  <%= link_to "Build a new batch",
+        new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
+        class: btn_classes(:primary, :sm) %>
   <%= link_to "Download CSV",
               admin_reimbursements_batches_path(request.query_parameters.merge(format: :csv)),
               class: btn_classes(:secondary, :sm) %>

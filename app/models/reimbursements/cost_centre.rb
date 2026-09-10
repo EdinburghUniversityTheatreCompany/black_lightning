@@ -88,8 +88,22 @@ module Reimbursements
     # The primary cost centre (Fringe today). Multi-cost-centre flows iterate
     # .all; .default is for the single-cost-centre call sites that predate the
     # per-cost-centre work (mailbox poll, mailbox client).
+    #
+    # It is order(:id).first, so it is an ARBITRARY centre the moment a second
+    # row exists. Never reach for it where the right answer is knowable — the
+    # claim's own centre, the batch's, the page's ?cost_centre= — and never on a
+    # path that MOVES money or emails a producer. See .sole_configured for the
+    # "there is genuinely nothing to choose" case.
     def self.default
       order(:id).first
+    end
+
+    # The one configured cost centre, or nil once there is a choice to make.
+    # Producer-facing copy uses this to answer "who do I write to?" without
+    # guessing: with one centre the answer is unambiguous, and with two it has
+    # to come from the claim rather than from the table.
+    def self.sole_configured
+      all.to_a.then { |centres| centres.one? ? centres.first : nil }
     end
 
     # Where renamed receipts land, or nil until configured (Settings).

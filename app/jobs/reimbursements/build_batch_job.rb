@@ -64,7 +64,11 @@ module Reimbursements
       # build still leaves a History trace.
       attempt ||= BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
                                        triggered_by_email: Array(operator_emails).compact_blank.first)
-      approved = store.expenses.select { |expense| expense.status == Status::APPROVED }
+      # THIS cost centre's approved claims. Selecting from the whole portal put
+      # every other centre's approved claims into this centre's BACS
+      # spreadsheet, paid out of its pot.
+      approved = store.expenses_in_cost_centre(cost_centre)
+                      .select { |expense| expense.status == Status::APPROVED }
       if approved.empty?
         Rails.logger.info("Build batch: no approved expenses for #{cost_centre.key} — nothing to build")
         attempt.resolve!(status: "nothing_to_build")

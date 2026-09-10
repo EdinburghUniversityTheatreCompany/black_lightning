@@ -3,7 +3,7 @@
     Finish this draft and submit it below.
   <% else %>
     You can edit this claim while it's still waiting for review. Once the finance team
-    picks it up, contact <%= reimbursements_contact_link %> for changes.
+    picks it up, contact <%= reimbursements_contact_link(@expense.cost_centre) %> for changes.
   <% end %>
 </p>
 

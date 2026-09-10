@@ -142,12 +142,28 @@ module ReimbursementsHelper
   end
 
   # Who a submitter writes to about a claim finance has already picked up.
-  # Read from the cost centre rather than hardcoded, so a second cost centre
-  # points at a mailbox its own finance team actually reads. Falls back to
-  # plain words rather than an empty mailto when no cost centre is configured.
-  def reimbursements_contact_link
-    email = Reimbursements::CostCentre.default&.contact_email
+  #
+  # Addressed to THAT CLAIM's cost centre, which is the only mailbox whose
+  # finance team can answer about it — CostCentre.default is order(:id).first,
+  # so a termtime producer used to be sent to the Fringe mailbox. An unplaced
+  # claim (no budget yet) has no centre to name, and with several configured
+  # there is no honest single answer, so it falls back to plain words rather
+  # than to a mailbox that will not recognise the claim.
+  def reimbursements_contact_link(cost_centre = nil)
+    centre = cost_centre || Reimbursements::CostCentre.sole_configured
+    email = centre&.contact_email
     email.present? ? mail_to(email) : "the finance team"
+  end
+
+  # Every mailbox a receipt may be emailed to, as a sentence — email-in
+  # attributes an inbound receipt by the mailbox it arrived at, so with two
+  # cost centres both addresses are live and naming only the first would send a
+  # termtime receipt into the Fringe queue.
+  def reimbursements_receive_mailbox_links
+    links = Reimbursements::CostCentre.order(:name).filter_map do |centre|
+      mail_to(centre.receive_mailbox) if centre.receive_mailbox.present?
+    end
+    safe_join(links, " or ".html_safe) if links.any?
   end
 
   # Debits less credits over a set of EUSA ledger rows (offsetting legs
