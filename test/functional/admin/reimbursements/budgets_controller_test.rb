@@ -803,6 +803,48 @@ module Admin
 
         assert_nil budget.reload.area
       end
+
+      # The <select> offers store.areas_for_year (year- AND centre-scoped)
+      # while area_id writes unscoped, where "" means detach. So whenever the
+      # budget's own area is outside the rendered set the select read
+      # "— none —", and ANY Save — one changing only the notes — nilled a link
+      # nobody touched.
+      test "the area select offers the budget's own area even from another year" do
+        sign_in @user
+        this_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        area = create_reimbursements_area(name: "Cogito", financial_year: next_year)
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_equal this_year, assigns(:selected_financial_year)
+        assert_select "select#area_id option[value=?][selected]", area.record_id
+      end
+
+      test "an ordinary Save keeps a link to an area outside the selected year" do
+        sign_in @user
+        ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        area = create_reimbursements_area(name: "Cogito", financial_year: next_year)
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        # Post what the RENDERED form posts, so this cannot pass by typing an
+        # area_id the browser would never have sent.
+        get :edit, params: { id: budget.record_id }
+        selected = css_select("select#area_id option[selected]").first
+        posted = selected ? selected["value"] : ""
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code,
+                                 notes: "Only the notes changed", area_id: posted }
+
+        budget.reload
+        assert_equal "Only the notes changed", budget.notes
+        assert_equal area, budget.area, "a Save touching only the notes must not detach the area"
+      end
+
       # --- Owners on an area-bound budget ------------------------------------
       # The area owns and its budgets inherit, so Budget#owners READS the area's
       # owners while sync_owner_ids! WRITES the budget's own rows. An editable

@@ -42,6 +42,25 @@ module Admin
         assert_text "Budget saved"
         assert_nil budget.reload.area
       end
+
+      # The compound path, clicked: the select is year- and centre-scoped while
+      # area_id writes unscoped, so an area the picker does not offer read
+      # "— none —" and an unrelated Save detached the budget.
+      test "a Save that changes only the notes keeps an area from another year" do
+        ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        area = create_reimbursements_area(name: "Cogito", financial_year: next_year)
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        visit edit_admin_reimbursements_budget_path(budget.record_id)
+        fill_in "Notes", with: "Checked with the committee"
+        click_on "Save budget"
+
+        assert_text "Budget saved"
+        budget.reload
+        assert_equal "Checked with the committee", budget.notes
+        assert_equal area, budget.area
+      end
     end
   end
 end

@@ -78,7 +78,12 @@ module Admin
       def edit
         @title = "Budget: #{@budget.name}"
         @people = store.people
-        @areas = store.areas_for_year
+        # The budget's OWN area is always offered, however the page is scoped.
+        # areas_for_year is year- and cost-centre-scoped while area_id writes
+        # unscoped ("" detaches), so an area outside the rendered set left the
+        # select reading "— none —" and any Save — one changing only the
+        # notes — nilled a link nobody touched.
+        @areas = (store.areas_for_year + [ @budget.area ]).compact.uniq
         @forecasts = store.budget_forecasts(@budget.record_id)
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
         # edit form (no JS), so a mistyped forecast can be corrected in place.
@@ -175,9 +180,13 @@ module Admin
           nominal_code: params[:nominal_code].to_s.strip,
           notes: params[:notes].to_s,
           budget_type: params[:budget_type].presence || budget.budget_type,
-          active: params[:active].present?,
-          area_id: params[:area_id].presence   # "" becomes nil, which detaches the budget
+          active: params[:active].present?
         }
+        # A form that renders the picker always posts it, so an ABSENT param is
+        # a caller that never offered the field — "no change", the same guard
+        # budget_type has. A posted "" is still the deliberate detach the
+        # select's "— none —" option means.
+        attrs[:area_id] = params[:area_id].presence if params.key?(:area_id)
         # Ownership is edited on the AREA, so an area-bound budget's form shows
         # its inherited owners read-only and NOTHING it posts may be written:
         # Budget#owner_ids reads the area's owners while sync_owner_ids! writes
