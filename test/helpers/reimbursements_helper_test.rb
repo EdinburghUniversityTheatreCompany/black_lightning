@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ReimbursementsHelperTest < ActionView::TestCase
+  include ReimbursementsTestHelpers
+
   Expense = ::Reimbursements::Expense
   Person = ::Reimbursements::Person
   Budget = ::Reimbursements::Budget
@@ -189,11 +191,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
   # mailbox writes to a team that has never seen their claim.
 
   test "the contact link names the cost centre of the claim it is shown beside" do
-    termtime = ::Reimbursements::CostCentre.create!(
-      key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-      receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid",
-      notification_email: "termtime@example.invalid"
-    )
+    termtime = create_second_reimbursements_cost_centre
 
     assert_includes reimbursements_contact_link(termtime), "in@bedlamtheatre.invalid"
   end
@@ -203,21 +201,13 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "with a choice to make and no claim to ask, it says words rather than a wrong mailbox" do
-    ::Reimbursements::CostCentre.create!(
-      key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-      receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid",
-      notification_email: "termtime@example.invalid"
-    )
+    create_second_reimbursements_cost_centre
 
     assert_equal "the finance team", reimbursements_contact_link
   end
 
   test "email-in names every configured mailbox, since each files into its own pot" do
-    ::Reimbursements::CostCentre.create!(
-      key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-      receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid",
-      notification_email: "termtime@example.invalid"
-    )
+    create_second_reimbursements_cost_centre
 
     links = reimbursements_receive_mailbox_links
 

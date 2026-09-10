@@ -23,18 +23,11 @@ module Admin
 
       included do
         setup do
-          finance = Role.create!(name: "Business Manager")
-          finance.permissions << Permission.create(action: "manage",
-                                                   subject_class: "reimbursements_finance")
-          users(:member).add_role("Business Manager")
-          @user = users(:member)
+          @user = grant_reimbursements_finance(users(:member))
           sign_in @user
 
           @fringe = ::Reimbursements::CostCentre.default
-          @termtime = create_reimbursements_cost_centre(
-            key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-            receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid"
-          )
+          @termtime = create_second_reimbursements_cost_centre
 
           @payee = create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
                                                 sort_code: "203045", account_number: "44444444")

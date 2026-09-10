@@ -37,6 +37,26 @@ module ReimbursementsTestHelpers
                                        **attrs)
   end
 
+  # The SECOND cost centre, which the fixtures deliberately don't carry: a
+  # second fixture row makes CostCentre.default resolve to whichever label
+  # FixtureSet.identify hashes lower, and deletes the one-centre world the
+  # reconcile tests pin as a business rule. Every test that needs a two-centre
+  # portal builds it through here, so they agree on what the second pot is.
+  def create_second_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
+                                               eusa_code: "BED", **attrs)
+    create_reimbursements_cost_centre(key: key, name: name, eusa_code: eusa_code,
+                                      receive_mailbox: "in@bedlamtheatre.invalid",
+                                      send_mailbox: "out@bedlamtheatre.invalid", **attrs)
+  end
+
+  # Give +user+ the finance grid permission every operator surface is gated on.
+  def grant_reimbursements_finance(user, role_name: "Business Manager")
+    role = ::Role.create!(name: role_name)
+    role.permissions << ::Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
+    user.add_role(role_name)
+    user
+  end
+
   def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
                                    budget_type: "Expense", initial_budget: nil, notes: nil,
                                    owners: [], cost_centre: nil)

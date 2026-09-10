@@ -17,17 +17,10 @@ module Admin
       tests ReviewController
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage",
-                                                 subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
-        sign_in users(:member)
+        sign_in grant_reimbursements_finance(users(:member))
 
         @fringe = ::Reimbursements::CostCentre.default
-        @termtime = create_reimbursements_cost_centre(
-          key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-          receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid"
-        )
+        @termtime = create_second_reimbursements_cost_centre
 
         @graph = FakeGraphClient.new
         ReviewController.notifier_builder =
@@ -79,16 +72,9 @@ module Admin
       tests BatchesController
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage",
-                                                 subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
-        sign_in users(:member)
+        sign_in grant_reimbursements_finance(users(:member))
 
-        @termtime = create_reimbursements_cost_centre(
-          key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-          receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid"
-        )
+        @termtime = create_second_reimbursements_cost_centre
         @graph = FakeGraphClient.new
         BatchesController.graph_builder = -> { @graph }
       end
