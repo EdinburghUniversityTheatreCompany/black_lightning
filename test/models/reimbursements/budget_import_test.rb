@@ -329,6 +329,31 @@ module Reimbursements
       assert_equal 1200, import.area_creates.first[:initial_budget]
     end
 
+    # An unreadable Area Budget is a BLOCKING row error, the same as an
+    # unreadable Amount — reading it as "unstated" would create the area with
+    # no agreed total and nobody told, which is silent wrong money.
+    test "an unreadable Area Budget blocks the import and the message names the area" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t£1,2OO\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_not import.valid?
+      assert_match(/Cogito/, import.entries.sole.error)
+    end
+
+    # Blank is legitimate and must stay legitimate: an area with no agreed
+    # total is the normal state for every area Phase 1's backfill created.
+    test "a blank Area Budget still imports fine and leaves the area's initial_budget nil" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert import.valid?
+      assert_nil import.area_creates.first[:initial_budget]
+    end
+
     test "an area that already exists keeps its own figure, write-once on create" do
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1000)

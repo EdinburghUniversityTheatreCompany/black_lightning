@@ -315,7 +315,11 @@ module Reimbursements
         else row[:amount].to_s("F")
         end
       when :area_budget
-        row[:area_budget].nil? ? "" : row[:area_budget].to_s("F")
+        case row[:area_budget]
+        when nil then ""
+        when :unreadable then row[:raw_area_budget].to_s
+        else row[:area_budget].to_s("F")
+        end
       when :owner_emails
         Array(row[:owner_emails]).join("; ")
       else
@@ -332,14 +336,16 @@ module Reimbursements
 
       raw_amount = cell(raw, :amount)
       amount = parse_amount(raw_amount)
+      raw_area_budget = cell(raw, :area_budget)
+      area_budget = parse_amount(raw_area_budget)
       {
         area: text(raw, :area).strip.presence,
-        # Lenient like the amount column's own blank case, not blocking like
-        # its unreadable one: a mistyped Area Budget cell is caught by
-        # #area_total_conflicts as soon as a later row for the same area
-        # reads differently, so nothing is lost by treating it as unstated
-        # here rather than failing the whole sheet over one cell.
-        area_budget: AmountParser.parse(cell(raw, :area_budget)),
+        # Same blank/unreadable split as :amount, via the same #parse_amount —
+        # blank (nothing typed) stays nil, the normal state for an area with no
+        # agreed total yet; unreadable ("£1,2OO") is a BLOCKING row error, not
+        # silently read as unstated, because that would be an area created
+        # with no agreed total and nobody told. #row_error below reports it.
+        area_budget: area_budget,
         name: text(raw, :name).strip,
         nominal_code: cell(raw, :nominal_code).to_s.strip,
         budget_type: normalize_type(cell(raw, :budget_type)),
@@ -349,6 +355,7 @@ module Reimbursements
         # TSV round-trip ("£1,200" -> "1200.0") differ from the row it came
         # from, for no gain.
         raw_amount: (raw_amount.to_s.strip if amount == :unreadable),
+        raw_area_budget: (raw_area_budget.to_s.strip if area_budget == :unreadable),
         owner_emails: split_emails(cell(raw, :owner_emails)),
         notes: text(raw, :notes)
       }
@@ -461,9 +468,20 @@ module Reimbursements
           "unique within a year, so it isn't clear which figure is meant."
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
+      elsif row[:area_budget] == :unreadable
+        "#{row[:raw_area_budget].inspect} isn't an amount for #{area_label(row)}'s Area Budget. " \
+          "Leave it blank if the total isn't agreed yet."
       elsif Budget::TYPES.exclude?(row[:budget_type])
         "#{row[:budget_type].inspect} isn't a budget type. Use #{Budget::TYPES.to_sentence(last_word_connector: ' or ')}."
       end
+    end
+
+    # For the unreadable-Area-Budget row error: names the area when the row
+    # gives one, so the operator knows which show's total is wrong even
+    # though the bad row is (necessarily) reported by itself rather than
+    # grouped with the area's other rows the way #area_total_conflicts does.
+    def area_label(row)
+      row[:area].presence&.inspect || "this line"
     end
 
     # Area names as the sheet actually typed them, keyed by #match_key and kept
