@@ -21,10 +21,10 @@ module Reimbursements
       ([ HEADERS ] + rows).join("\n")
     end
 
-    def build_import(data, input_type: :paste, existing_budgets: [], people: [])
+    def build_import(data, input_type: :paste, existing_budgets: [], existing_areas: [], people: [])
       BudgetImport.new(data, input_type: input_type, financial_year: @year,
                              cost_centre: @cost_centre, existing_budgets: existing_budgets,
-                             people: people)
+                             existing_areas: existing_areas, people: people)
     end
 
     # A "Props" line inside an area BOB owns, plus Alice, who the committee's
@@ -254,6 +254,44 @@ module Reimbursements
 
       assert_predicate import, :valid?
       assert_equal 1, import.missing_nominal_codes.size
+    end
+
+    # --- Areas -----------------------------------------------------------------
+    # Matched by name within one (financial year, cost centre) — the same rule
+    # a budget line uses, and the rule AreaBackfill used. Areas are never
+    # deleted by an import, for the reason absent_budgets is reported and
+    # never deleted: a show's claims and history hang off its lines.
+
+    test "a line naming an area that does not exist creates it" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_equal [ "Cogito" ], import.area_creates.map { |a| a[:name] }
+      assert_equal @cost_centre, import.area_creates.first[:cost_centre]
+      assert_equal @year, import.area_creates.first[:financial_year]
+    end
+
+    test "a line naming an existing area attaches to it rather than creating a second" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+      import = build_import(<<~TSV, existing_areas: [ area ])
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_empty import.area_creates
+      assert_equal area.record_id, import.creates.first[:area_id]
+    end
+
+    test "a line with a blank Area column is left area-less" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        \tContingency\t\tExpense\t1000
+      TSV
+
+      assert_empty import.area_creates
+      assert_nil import.creates.first[:area_id]
     end
 
     # --- Owners --------------------------------------------------------------

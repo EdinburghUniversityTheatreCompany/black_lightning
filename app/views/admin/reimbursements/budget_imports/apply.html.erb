@@ -2,6 +2,9 @@
 <%= turbo_frame_tag "budget_import" do %>
 <%= render CardComponent.new(title: "Imported into #{selected_financial_year.label}") do %>
   <ul class="mb-4 list-disc pl-5 text-sm">
+    <% if @result.areas_created.positive? %>
+      <li><strong><%= pluralize(@result.areas_created, "area") %></strong> created.</li>
+    <% end %>
     <li><strong><%= pluralize(@result.created, "budget") %></strong> created.</li>
     <li>
       <strong><%= pluralize(@result.revised, "figure") %></strong>

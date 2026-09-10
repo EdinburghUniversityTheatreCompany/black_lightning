@@ -32,7 +32,7 @@ module Reimbursements
 
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :budget, :owner_ids, :unknown_owner_emails, :error,
-                       keyword_init: true)
+                       :area_name, keyword_init: true)
 
     # One entry per column, in the order #to_tsv writes them: +label+ is the
     # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
@@ -52,6 +52,14 @@ module Reimbursements
     # only — a bare word is never a substring hint — and two fields resolving
     # to one column is a blocking error naming both, rather than a silent pick.
     FIELDS = {
+      area: {
+        label: "Area",
+        exact: [ "area" ],
+        # NOT "area": a bare word is never a substring hint (see the class
+        # note above). Task 3's "Area Budget" header contains this phrase, and
+        # matching it here would read that column as the area name too.
+        contains: [ "area name" ]
+      },
       name: {
         label: "Budget",
         exact: [ "budget name", "name", "line", "category", "budget" ],
@@ -99,7 +107,7 @@ module Reimbursements
 
     # Fields whose cells may hold a tab or a newline, so must be unescaped when
     # the text came back from #to_tsv. See @escaped below.
-    TEXT_FIELDS = %i[name notes].freeze
+    TEXT_FIELDS = %i[name notes area].freeze
 
     attr_reader :entries, :financial_year, :cost_centre
 
@@ -109,12 +117,14 @@ module Reimbursements
     # sequences. Unescaping the operator's paste instead rewrote a typed
     # "C:\temp\report.pdf" with a real tab before storing it — and before
     # matching it against an existing budget's name.
-    def initialize(data, input_type:, financial_year:, cost_centre:, existing_budgets: [], people: [])
+    def initialize(data, input_type:, financial_year:, cost_centre:, existing_budgets: [],
+                  existing_areas: [], people: [])
       @errors = []
       @financial_year = financial_year
       @cost_centre = cost_centre
       @escaped = input_type == :canonical_tsv
       @existing_by_name = existing_budgets.index_by { |budget| self.class.match_key(budget.name) }
+      @existing_areas_by_name = existing_areas.index_by { |area| self.class.match_key(area.name) }
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
@@ -134,14 +144,34 @@ module Reimbursements
 
     def entries_in(bucket) = @entries.select { |entry| entry.bucket == bucket }
 
-    # Attributes for each new budget, ready for the store.
+    # Attributes for each new budget, ready for the store. A line naming an
+    # AREA carries either +area_id:+ (an area already in this year/centre) or
+    # +area_name:+ (one the sheet is about to create) — never both, and
+    # neither when the Area column was left blank. import_budgets! resolves
+    # +area_name:+ to an id once #area_creates has run, inside its transaction.
     def creates
       entries_in(:create).map do |entry|
         { name: entry.row[:name], nominal_code: entry.row[:nominal_code],
           budget_type: entry.row[:budget_type], initial_budget: entry.row[:amount],
           notes: entry.row[:notes], active: true,
           financial_year: financial_year, cost_centre: cost_centre,
-          owner_ids: entry.owner_ids }
+          owner_ids: entry.owner_ids }.merge(area_attrs_for(entry))
+      end
+    end
+
+    # {name:, cost_centre:, financial_year:} for every area the sheet names
+    # that doesn't already exist here — matched the same way a budget line is
+    # matched (by name within one financial year and cost centre), and never
+    # deleted for the same reason #absent_budgets is reported and never
+    # touched: a show's claims and history hang off its lines.
+    #
+    # Reads every entry the sheet actually kept (create/revise/unchanged), not
+    # only #creates: an area can be named on a line that matches an EXISTING
+    # budget too, and a typo on an :invalid row must not mint a spurious area
+    # while the whole import is blocked anyway.
+    def area_creates
+      first_seen_names.except(*@existing_areas_by_name.keys).values.map do |name|
+        { name: name, cost_centre: cost_centre, financial_year: financial_year }
       end
     end
 
@@ -271,6 +301,7 @@ module Reimbursements
       raw_amount = cell(raw, :amount)
       amount = parse_amount(raw_amount)
       {
+        area: text(raw, :area).strip.presence,
         name: text(raw, :name).strip,
         nominal_code: cell(raw, :nominal_code).to_s.strip,
         budget_type: normalize_type(cell(raw, :budget_type)),
@@ -368,7 +399,7 @@ module Reimbursements
 
     def entry_for(row, duplicated)
       owners, unknown = resolve_owners(row)
-      base = { row: row, owner_ids: owners, unknown_owner_emails: unknown }
+      base = { row: row, owner_ids: owners, unknown_owner_emails: unknown, area_name: row[:area] }
       error = row_error(row, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
@@ -395,6 +426,28 @@ module Reimbursements
       elsif Budget::TYPES.exclude?(row[:budget_type])
         "#{row[:budget_type].inspect} isn't a budget type. Use #{Budget::TYPES.to_sentence(last_word_connector: ' or ')}."
       end
+    end
+
+    # Area names as the sheet actually typed them, keyed by #match_key and kept
+    # in the order they first appear — so a re-typed "cogito " on a later line
+    # doesn't shadow the casing #area_creates should hand the store. Excludes
+    # :invalid entries (a typo there must not mint an area for a row that will
+    # never be written).
+    def first_seen_names
+      (@entries - entries_in(:invalid)).each_with_object({}) do |entry, names|
+        next if entry.area_name.blank?
+
+        names[self.class.match_key(entry.area_name)] ||= entry.area_name
+      end
+    end
+
+    # +area_id:+ for a line naming an area already here, +area_name:+ for one
+    # this import is about to create, or neither for an area-less line.
+    def area_attrs_for(entry)
+      return {} if entry.area_name.blank?
+
+      existing = @existing_areas_by_name[self.class.match_key(entry.area_name)]
+      existing ? { area_id: existing.record_id } : { area_name: entry.area_name }
     end
 
     def duplicated_names

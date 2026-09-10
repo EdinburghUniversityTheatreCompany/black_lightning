@@ -39,6 +39,7 @@
       <table class="min-w-full text-sm">
         <thead>
           <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Area</th>
             <th class="py-1 pr-4">Budget</th>
             <th class="py-1 pr-4">Nominal code</th>
             <th class="py-1 pr-4">Type</th>
@@ -50,6 +51,14 @@
         <tbody>
           <% entries.each do |entry| %>
             <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4">
+                <% if entry.area_name.present? %>
+                  <%= entry.area_name %>
+                  <% if bucket == :create && @import.area_creates.any? { |a| a[:name] == entry.area_name } %>
+                    <span class="text-amber-700">(new)</span>
+                  <% end %>
+                <% end %>
+              </td>
               <td class="py-1 pr-4"><%= entry.row[:name] %></td>
               <td class="py-1 pr-4 font-mono">
                 <%= entry.row[:nominal_code].presence || content_tag(:span, "(none)", class: "text-amber-700") %>

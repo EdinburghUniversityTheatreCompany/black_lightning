@@ -280,11 +280,13 @@ module Reimbursements
     end
 
     # What an applied budget import did, for the confirmation screen.
-    ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, keyword_init: true)
+    ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, :areas_created,
+                              keyword_init: true)
 
-    # Applies a confirmed BudgetImport: creates the new lines, logs the revised
-    # figures as ONE budget update, and re-syncs owners on lines that already
-    # existed.
+    # Applies a confirmed BudgetImport: creates the areas the sheet named that
+    # don't exist yet, creates the new budget lines (attaching each to its
+    # area), logs the revised figures as ONE budget update, and re-syncs
+    # owners on lines that already existed.
     #
     # All-or-nothing, unlike the reconcile wizard's per-row rescue. A half
     # imported budget list has no audit value and no obvious repair — the
@@ -296,10 +298,19 @@ module Reimbursements
     # Revisions go through create_budget_update! rather than rewriting
     # initial_budget, so the spreadsheet's revision lands in the forecast
     # history with the import named as its note.
-    def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [])
+    #
+    # Areas are created FIRST, inside this same transaction, so a +creates+
+    # entry carrying +area_name:+ (BudgetImport#area_creates named it as
+    # not-yet-existing) can be resolved to the new area's id before the budget
+    # row is written.
+    def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
+                        area_creates: [])
       result = nil
       Budget.transaction do
-        created = creates.map { |attrs| create_budget!(attrs) }
+        areas_by_name = area_creates.to_h do |attrs|
+          [ ::Reimbursements::BudgetImport.match_key(attrs[:name]), create_area!(attrs) ]
+        end
+        created = creates.map { |attrs| create_budget!(resolve_area(attrs, areas_by_name)) }
         adoptions.each { |adoption| adopt_budget!(adoption[:budget_id], adoption[:cost_centre]) }
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
         update = if revisions.any?
@@ -307,9 +318,11 @@ module Reimbursements
                                          created_by: created_by, forecasts: revisions)
         end
         result = ImportResult.new(created: created.size, revised: revisions.size,
-                                  owners_synced: owner_syncs.size, budget_update: update)
+                                  owners_synced: owner_syncs.size, budget_update: update,
+                                  areas_created: areas_by_name.size)
       end
       bust_budgets!
+      bust_areas!
       result
     end
 
@@ -763,6 +776,17 @@ module Reimbursements
     def bust_areas!
       @areas = nil
       @areas_for_year = nil
+    end
+
+    # Swaps a create's +area_name:+ (an area this import is about to create)
+    # for the +area_id:+ of the row just created for it. A create naming an
+    # area that already existed carries +area_id:+ straight from
+    # BudgetImport#creates and passes through untouched.
+    def resolve_area(attrs, areas_by_name)
+      attrs = attrs.dup
+      area_name = attrs.delete(:area_name)
+      attrs[:area_id] = areas_by_name.fetch(::Reimbursements::BudgetImport.match_key(area_name)).id if area_name
+      attrs
     end
 
     # --- Financial-year scoping ---------------------------------------------

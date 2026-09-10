@@ -878,6 +878,41 @@ module Reimbursements
       assert_equal 0, BudgetUpdate.count
     end
 
+    test "import_budgets! creates the areas the sheet names before the budgets that reference them" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+
+      result = scoped_store(year).import_budgets!(
+        creates: [ { name: "Cogito: Marketing", nominal_code: "4000", budget_type: "Expense",
+                     active: true, financial_year: year, cost_centre: cost_centre,
+                     owner_ids: [], area_name: "Cogito" } ],
+        revisions: [], owner_syncs: [], note: "x", created_by: nil,
+        area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ]
+      )
+
+      area = Area.find_by(name: "Cogito")
+      assert_not_nil area
+      assert_equal area.id, Budget.find_by(name: "Cogito: Marketing").area_id
+      assert_equal 1, result.areas_created
+    end
+
+    test "import_budgets! attaches a create to an area passed by id, creating none" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+      area = create_reimbursements_area(name: "Cogito", cost_centre: cost_centre, financial_year: year)
+
+      result = scoped_store(year).import_budgets!(
+        creates: [ { name: "Cogito: Marketing", nominal_code: "4000", budget_type: "Expense",
+                     active: true, financial_year: year, cost_centre: cost_centre,
+                     owner_ids: [], area_id: area.record_id } ],
+        revisions: [], owner_syncs: [], note: "x", created_by: nil
+      )
+
+      assert_equal area.id, Budget.find_by(name: "Cogito: Marketing").area_id
+      assert_equal 0, result.areas_created
+      assert_equal 1, Area.where(name: "Cogito").count
+    end
+
     test "import_budgets! re-syncs owners on budgets that already existed" do
       year = FinancialYear.create!(label: "Fringe 2027")
       alice = Person.create!(name: "Alice", email: "alice@example.com")

@@ -77,8 +77,8 @@ module Admin
 
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
-                                        adoptions: @import.adoptions, note: import_note,
-                                        created_by: current_user)
+                                        adoptions: @import.adoptions, area_creates: @import.area_creates,
+                                        note: import_note, created_by: current_user)
         render :apply
       end
 
@@ -94,7 +94,8 @@ module Admin
         @import = ::Reimbursements::BudgetImport.new(
           import_source, input_type: input_type,
           financial_year: selected_financial_year, cost_centre: selected_cost_centre,
-          existing_budgets: store.budgets_for_year, people: store.people
+          existing_budgets: store.budgets_for_year, existing_areas: store.areas_for_year,
+          people: store.people
         )
       end
 

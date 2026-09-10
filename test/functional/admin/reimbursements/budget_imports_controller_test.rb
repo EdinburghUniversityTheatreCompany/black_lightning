@@ -213,6 +213,52 @@ module Admin
         assert_empty assigns(:import).entries_in(:revise)
       end
 
+      # --- Areas ---------------------------------------------------------------
+
+      test "preview states a new area will be created" do
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+        )
+
+        assert_response :success
+        assert_equal [ "Cogito" ], assigns(:import).area_creates.map { |a| a[:name] }
+        assert_match(/Cogito/, response.body)
+      end
+
+      test "apply creates the area named on the sheet and attaches the budget to it" do
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::Area.count }, 1 do
+          post :apply, params: preview_params(
+            "Area\tBudget\tNominal code\tType\tAmount\n" \
+            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+          )
+        end
+
+        assert_response :success
+        area = ::Reimbursements::Area.find_by(name: "Cogito")
+        assert_equal @year, area.financial_year
+        assert_equal @cost_centre, area.cost_centre
+        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Cogito: Marketing").area_id
+      end
+
+      test "apply attaches to an existing area rather than creating a second" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Area.count } do
+          post :apply, params: preview_params(
+            "Area\tBudget\tNominal code\tType\tAmount\n" \
+            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+          )
+        end
+
+        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Cogito: Marketing").area_id
+      end
+
       # --- Step 3: apply -----------------------------------------------------
 
       test "apply creates the year's budgets" do
