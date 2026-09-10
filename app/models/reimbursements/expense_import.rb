@@ -10,72 +10,47 @@ module Reimbursements
   # and carried through the preview in a hidden field. Nothing is kept in the
   # session or on disk, and apply re-parses and re-validates from scratch.
   #
-  # THE BUCKETS:
+  # Buckets: +create+, +already_imported+ (a Reference already on record,
+  # reported and never re-created) and +invalid+, which blocks the WHOLE import
+  # — all-or-nothing like import_budgets!, because a half-imported ledger has no
+  # audit value and re-running after a fix is cheap.
   #
-  #   create           a claim this portal has never seen
-  #   already_imported a reference already on record — reported, never re-created
-  #   invalid          unreadable; blocks the WHOLE import
+  # No Person is ever created from a bare email (BudgetImport#resolve_owners
+  # states the rule); the error points the operator at the People screen.
   #
-  # ALL-OR-NOTHING, like import_budgets! and unlike Reconcile's per-row rescue:
-  # an unreadable amount, an unknown payee, an unknown budget or a bad status
-  # stops everything and names the offending rows. A half-imported ledger has no
-  # audit value, and re-running after a fix is cheap because the Reference
-  # column makes the whole sheet idempotent.
+  # **Double apply** is stopped by the sheet's own Reference, written to
+  # `expenses.import_key` behind a UNIQUE index. The wizard is stateless so a
+  # second click re-posts the same sheet, and a claim has no natural key the way
+  # a budget line has its name. The pre-flight read below keeps the preview
+  # honest; the index is what holds when that read goes stale.
   #
-  # NO Person is ever created from a bare email — the rule BudgetImport's
-  # #resolve_owners states. The operator registers the payee on the People
-  # screen, which the error points them at.
+  # **Every rule comes from ExpenseForm**, because the Expense model validates
+  # almost nothing — so each line goes through the same form the submission form
+  # uses, with `internal` set as ExpenseForm.from_actual sets it.
   #
-  # WHAT STOPS A DOUBLE APPLY. The wizard is stateless, so a second click
-  # re-posts the same sheet; a claim has no natural key the way a budget line
-  # has its name, so the sheet carries one. Every row's Reference is written to
-  # expenses.import_key, which has a UNIQUE index — the pre-flight read below
-  # keeps the preview honest, and the index is what actually holds when that
-  # read goes stale (a double submit, or two operators).
-  #
-  # EVERY RULE COMES FROM ExpenseForm. The Expense model validates almost
-  # nothing (person, budget, batch and financial year are all optional; status,
-  # type and payment method have DB defaults), so an importer that wrote rows
-  # directly would enforce nothing at all. Each line is validated through the
-  # same form object the submission form uses, with `internal` set as
-  # ExpenseForm.from_actual sets it — a claim imported here has no receipt, no
-  # itemised VAT and nobody to tick a soft block's acknowledgement.
-  #
-  # HOW COLUMNS ARE MATCHED, and why not through ImportParsing#find_column.
-  # That helper falls back to "any header CONTAINING the keyword", which is
-  # fine for the membership import's flat name/email sheet and quietly
-  # catastrophic here, because this sheet's fields are near-anagrams of each
-  # other. Read through it, a "Payment reference" column answered to the dedupe
-  # key (so a payee's repeated BACS reference silently collapsed two different
-  # claims into one) and an "Account number" column answered to the expense
-  # number (so a supplier's account number was written as auto_number, and
-  # Expense's before_create then numbered every later claim in the portal from
-  # 66,374,959). Neither is catchable downstream.
-  #
-  # So the matching here is: EXACT header names first (case- and
-  # punctuation-insensitive), then only MULTI-WORD phrases as substrings — a
-  # single bare word is never a substring hint. On top of that, two fields
-  # resolving to the same column is a blocking error rather than a silent pick,
-  # and the preview STATES the column read for each field, which is what turns
-  # every remaining mis-mapping from invisible into obvious.
+  # **Columns are matched here, NOT through ImportParsing#find_column**, whose
+  # "any header containing the keyword" fallback is catastrophic on a sheet
+  # whose fields are near-anagrams: read through it, "Payment reference"
+  # answered to the dedupe key (collapsing two of a payee's claims into one) and
+  # "Account number" answered to the expense number (numbering every later claim
+  # in the portal from 66,374,959). Neither is catchable downstream. So: EXACT
+  # names first, then MULTI-WORD phrases only — a bare word is never a substring
+  # hint — two fields resolving to one column is a blocking error, and the
+  # preview STATES the column read for each field.
   class ExpenseImport
     include ImportParsing
 
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
 
-    # One entry per column, in the order #to_tsv writes them and the template
-    # carries them.
+    # One entry per column, in the order #to_tsv writes them: +label+ is the
+    # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
+    # substring and is multi-word only (see the class note).
     #
-    #   label     the canonical heading
-    #   exact     header names matched WHOLE, after normalisation
-    #   contains  phrases matched as substrings — MULTI-WORD ONLY, because a
-    #             bare word is a substring of some other field's heading
-    #
-    # Anything not listed is simply not found, which surfaces as "the sheet has
-    # no X column" for a required field and as a blank for an optional one.
-    # That is the safe direction: a column read as the wrong field is silent,
-    # a column not read at all is stated.
+    # A heading not listed here is simply not found, which reads as "the sheet
+    # has no X column" for a required field and a blank for an optional one —
+    # the safe direction, since a column read as the WRONG field is silent
+    # while one not read at all is stated.
     FIELDS = {
       reference: {
         label: "Reference",
@@ -210,18 +185,15 @@ module Reimbursements
       @entries = categorize
     end
 
-    # References are compared the way the UNIQUE index on import_key compares
-    # them — the column is utf8mb4_unicode_ci, so "OLD-1" and "old-1" are one
-    # key to MySQL. Comparing case-sensitively here previewed them as two
-    # creates, and the insert then rolled the WHOLE sheet back with an error
-    # blaming a concurrent operator; previewing again showed the same two rows,
-    # so the import could never succeed.
+    # Compared the way the UNIQUE index does: import_key is utf8mb4_unicode_ci,
+    # so "OLD-1" and "old-1" are ONE key to MySQL. Comparing case-sensitively
+    # previewed them as two creates and then rolled the whole sheet back
+    # forever, blaming a concurrent operator that did not exist.
     #
-    # The collation also folds ACCENTS, which this does not — a sheet mixing
-    # "réf-1" and "ref-1" still dead-ends, so #apply's rescue names renaming the
-    # reference as the fix. Folding them here instead would be the dangerous
-    # direction: over-matching buckets a genuinely new claim as already
-    # imported and drops it silently.
+    # The collation also folds ACCENTS and this deliberately does not: a sheet
+    # mixing "réf-1" and "ref-1" still dead-ends (#apply's rescue names the fix),
+    # because over-matching would bucket a genuinely new claim as already
+    # imported and drop it silently — the far worse direction.
     def self.key_match(value) = value.to_s.strip.downcase.presence
 
     # Nothing is written unless every row is readable. See the class comment.
