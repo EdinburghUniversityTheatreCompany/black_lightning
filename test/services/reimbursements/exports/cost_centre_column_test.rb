@@ -13,10 +13,7 @@ module Reimbursements
 
       setup do
         @fringe = CostCentre.default
-        @termtime = create_reimbursements_cost_centre(
-          key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-          receive_mailbox: "in@bedlamtheatre.invalid", send_mailbox: "out@bedlamtheatre.invalid"
-        )
+        @termtime = create_second_reimbursements_cost_centre
         @store = DatabaseStore.new
       end
 
@@ -64,6 +61,39 @@ module Reimbursements
         batch = Batch.create!(name: "Empty run")
 
         assert_nil cell(Batches.new(store: DatabaseStore.new), [ batch ], "Cost centre")
+      end
+
+      # Under ?cost_centre= the Budgets sheet used to be the only scoped one, so
+      # the workbook carried claims, ledger rows and batches from other pots
+      # beside budgets that could not account for them — the sheets no longer
+      # added up to each other.
+      test "every workbook sheet reads the same cost-centre scope" do
+        scoped = DatabaseStore.new(cost_centre: @termtime)
+        readers = Workbook::SHEETS.to_h { |exporter, method| [ exporter, method ] }
+
+        assert_equal :expenses_for_cost_centre, readers[Expenses]
+        assert_equal :eusa_actuals_for_cost_centre, readers[Actuals]
+        assert_equal :budgets_with_actuals, readers[Budgets]
+        assert_equal :batches_for_cost_centre, readers[Batches]
+        # The one exception: a payee has no cost centre.
+        assert_equal :people, readers[People]
+        readers.each_value { |method| assert_respond_to scoped, method }
+      end
+
+      test "a scoped workbook carries only the selected centre's claims" do
+        require "caxlsx"
+        create_reimbursements_expense(receipt: false, description: "Fringe claim",
+                                      budget: create_reimbursements_budget(name: "Fringe props",
+                                                                           cost_centre: @fringe))
+        create_reimbursements_expense(receipt: false, description: "Termtime claim",
+                                      budget: create_reimbursements_budget(name: "Termtime props",
+                                                                           cost_centre: @termtime))
+
+        store = DatabaseStore.new(cost_centre: @termtime)
+        rows = store.public_send(Workbook::SHEETS.first.last).map(&:description)
+
+        assert_includes rows, "Termtime claim"
+        assert_not_includes rows, "Fringe claim"
       end
 
       test "People has no cost-centre column, because a payee has no cost centre" do
