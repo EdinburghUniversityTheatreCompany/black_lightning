@@ -13,18 +13,21 @@
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  airtable_record_id :string(255)
+#  area_id            :bigint
 #  cost_centre_id     :bigint
 #  financial_year_id  :bigint
 #
 # Indexes
 #
 #  index_reimbursements_budgets_on_airtable_record_id  (airtable_record_id) UNIQUE
+#  index_reimbursements_budgets_on_area_id             (area_id)
 #  index_reimbursements_budgets_on_cost_centre_id      (cost_centre_id)
 #  index_reimbursements_budgets_on_financial_year_id   (financial_year_id)
 #  index_reimbursements_budgets_on_nominal_code        (nominal_code)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (area_id => reimbursements_areas.id)
 #  fk_rails_...  (cost_centre_id => reimbursements_cost_centres.id)
 #  fk_rails_...  (financial_year_id => reimbursements_financial_years.id)
 #
@@ -50,6 +53,7 @@ module Reimbursements
 
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
+    belongs_to :area, class_name: "Reimbursements::Area", optional: true, inverse_of: :budgets
     has_many :expenses, class_name: "Reimbursements::Expense",
                         dependent: :nullify, inverse_of: :budget
     # Income budgets carry their reconciled EUSA credits directly on budget_id;
@@ -60,19 +64,45 @@ module Reimbursements
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
                                  dependent: :destroy, inverse_of: :budget
-    has_many :owners, through: :budget_ownerships, source: :person
+    # The rows on the budget itself. Read directly ONLY when the budget has no
+    # area — the backfill leaves them in place so it can be reversed, so a
+    # budget in an area has both, and the area's are the live ones (#owners).
+    has_many :own_owners, through: :budget_ownerships, source: :person
 
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
-    # Owner links are People record id STRINGS, because OwnerReview and the
-    # budgets UI compare them against person.record_id.
+    # A line created inside its area's form carries only a name and a nominal
+    # code, so it would land with no cost centre and no financial year — and
+    # DatabaseStore#in_year / #in_cost_centre are deliberately lenient, so an
+    # unstamped line appears in EVERY year's and EVERY centre's list and
+    # (active by default) in every producer's budget picker in both centres.
+    # The area is the line's parent, so inherit its coordinates here rather
+    # than in one controller: every present and future path that hangs a
+    # budget off an area gets it. Only ever fills a BLANK, so it can never
+    # move a line out of the pot that already owns it — the same rule as
+    # DatabaseStore#adopt_budget!. A consequence worth stating, since it is a
+    # write nobody asked for: an unstamped legacy line already in an area gets
+    # stamped by the next unrelated Save. That is the intended direction (the
+    # area is its parent, and it is what adopt_budget! does on an import).
+    before_validation :inherit_area_scoping
+
+    # The area owns and its budgets inherit; a budget with no area owns
+    # itself. Owner links are People record id STRINGS, because OwnerReview
+    # and the budgets UI compare them against person.record_id.
+    def owners
+      area ? area.owners : own_owners
+    end
+
     def owner_ids
       owners.map(&:record_id)
     end
 
-    # Diff-syncs the owners join table to exactly +person_ids+ (numeric ids)
-    # — the one sync path for the store's budget edit and the importer.
+    # Diff-syncs the budget's OWN owners join table to exactly +person_ids+
+    # (numeric ids) — the one sync path for the store's budget edit and the
+    # importer. Writes here regardless of whether the budget is in an area:
+    # the rows are the reversible record described on #own_owners, not the
+    # live read.
     def sync_owner_ids!(person_ids)
       person_ids = person_ids.map(&:to_i)
       budget_ownerships.where.not(person_id: person_ids).destroy_all
@@ -181,6 +211,13 @@ module Reimbursements
     end
 
     private
+
+    def inherit_area_scoping
+      return if area_id.nil? || area.nil?
+
+      self.cost_centre_id ||= area.cost_centre_id
+      self.financial_year_id ||= area.financial_year_id
+    end
 
     # Income booked straight against an Income budget (budget_id set), credits
     # less debits: a debit on an income line is income handed back.

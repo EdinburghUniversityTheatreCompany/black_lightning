@@ -113,9 +113,8 @@ module Admin
         offerable_budgets.map(&:record_id)
       end
 
-      # Re-render the submitter's own form with everything they entered. Losing
-      # a filled-in claim is most of the harm in every failure here, so no path
-      # out of create/update may do anything else.
+      # No path out of create/update may skip this: losing a filled-in claim is
+      # most of the harm in every failure here.
       def render_form(template, title)
         @title = title
         @budgets = offerable_budgets

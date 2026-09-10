@@ -1,4 +1,4 @@
-<%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil) %>
+<%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil, areas: [], area_id: nil, owners_from_area: nil) %>
 <%# The budget fields, shared by new (values from params) and edit (values
     from the budget). The cost centre picker only exists on new and only when
     there is a choice to make. %>
@@ -17,6 +17,15 @@
     <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
       <%= number_field_tag :initial_budget, reimbursements_amount_value(initial_budget), step: "0.01", class: input_classes %>
     <% end %>
+    <%= render "shared/form/field", label: "Area", name: :area_id,
+          hint: "Leave blank for a standalone line like Contingency or payroll." do %>
+      <%# input_classes, not simple-select2: the Type and Cost centre selects on
+          this form are already plain styled ones, and a lone Tom Select widget
+          among them would read as a different kind of control. %>
+      <%= select_tag :area_id,
+            options_from_collection_for_select(areas, :record_id, :name, area_id),
+            include_blank: "— none —", class: input_classes %>
+    <% end %>
     <% if cost_centres.size > 1 %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
         <%= select_tag :cost_centre_id,
@@ -31,22 +40,55 @@
     Visible to submitters
   </label>
 
-  <fieldset aria-describedby="owner_ids_hint">
-    <legend class="<%= FormStyles::LABEL %>">Owners</legend>
-    <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
-        collection_check_boxes emits the empty hidden field itself, so unticking
-        everyone still clears the owners. %>
-    <div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
-      <%= form.collection_check_boxes(:owner_ids, people, :record_id,
-            ->(person) { person.name.presence || person.email },
-            { checked: owner_ids }) do |b| %>
-        <%= b.label(class: "flex items-center gap-2 text-sm text-gray-700") do %>
-          <%= b.check_box(class: checkbox_classes) %><%= b.text %>
+  <% if owners_from_area %>
+    <%# READ-ONLY, and deliberately so. The area owns and its budgets inherit,
+        so Budget#owners READS the area's owners while sync_owner_ids! WRITES
+        the budget's own rows — an editable list here reads one table and
+        writes another, deleting the own-owner rows the backfill kept so it
+        can be reversed (silently, since the screen keeps showing the area's
+        owners). BudgetsController#budget_params omits owner_ids entirely for
+        an area-bound budget, so nothing posted from here can be written
+        either. Ownership is edited on the AREA. %>
+    <div>
+      <p class="<%= FormStyles::LABEL %>">Owners</p>
+      <% owner_names = owners_from_area.owners.map { |person| person.name.presence || person.email } %>
+      <p class="text-sm text-gray-700">
+        <% if owner_names.any? %>
+          Owned by <%= owner_names.to_sentence %> —
+        <% else %>
+          <%= render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner")) %> —
         <% end %>
+        <%= link_to "edit on the area", edit_admin_reimbursements_area_path(owners_from_area.record_id),
+              class: "text-primary underline" %>
+      </p>
+      <% if owner_names.empty? %>
+        <%# An area naming nobody switches the gate OFF for every line under it
+            (OwnerReview.gate_applies? is false with no owners), so the form
+            that can attach a line to one says so. %>
+        <p class="mt-1 text-sm text-warning">
+          This area names nobody, so claims on this line skip budget-owner sign-off entirely.
+        </p>
       <% end %>
     </div>
-    <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this budget.</p>
-  </fieldset>
+  <% else %>
+    <fieldset aria-describedby="owner_ids_hint">
+      <legend class="<%= FormStyles::LABEL %>">Owners</legend>
+      <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
+          collection_check_boxes emits the empty hidden field itself, so unticking
+          everyone still clears the owners. %>
+      <div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
+        <%= form.collection_check_boxes(:owner_ids, people, :record_id,
+              ->(person) { person.name.presence || person.email },
+              { checked: owner_ids }) do |b| %>
+          <%= b.label(class: "flex items-center gap-2 text-sm text-gray-700") do %>
+            <%= b.check_box(class: checkbox_classes) %><%= b.text %>
+          <% end %>
+        <% end %>
+      </div>
+      <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this budget.
+        A line placed in an area takes its owners from the area, and they are set there.</p>
+    </fieldset>
+  <% end %>
 
   <%= render "shared/form/field", label: "Notes", name: :notes do %>
     <%= text_area_tag :notes, notes, rows: 3, class: input_classes %>

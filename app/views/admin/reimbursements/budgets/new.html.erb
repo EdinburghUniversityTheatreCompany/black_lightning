@@ -22,6 +22,7 @@
           name: params[:name], nominal_code: params[:nominal_code], budget_type: params[:budget_type],
           initial_budget: params[:initial_budget], notes: params[:notes],
           active: params[:active].present? || params[:name].blank?,
-          owner_ids: Array(params[:owner_ids]), cost_centre_id: params[:cost_centre_id] || selected_cost_centre&.id %>
+          owner_ids: Array(params[:owner_ids]), cost_centre_id: params[:cost_centre_id] || selected_cost_centre&.id,
+          areas: @areas, area_id: params[:area_id] %>
   <% end %>
 <% end %>

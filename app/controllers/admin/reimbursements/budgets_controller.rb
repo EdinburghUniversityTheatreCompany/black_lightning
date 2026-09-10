@@ -23,6 +23,12 @@ module Admin
         # one of the two readers that pays for the actuals preload.
         sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
         @people_by_id = store.people.index_by(&:record_id)
+        # The unscoped, fully-preloaded id->Area lookup (owners, and each
+        # area's budgets' expenses/forecasts) — the grouped index reads every
+        # area figure off THESE objects, never off budget.area, or each
+        # area's committed_amount/allocated would N+1 across its budgets'
+        # expenses and forecasts.
+        @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
           format.html { @budgets = paginate(sorted) }
           format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
@@ -49,6 +55,7 @@ module Admin
         @title = "New budget"
         @people = store.people
         @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+        @areas = store.areas_for_year
       end
 
       def create
@@ -57,6 +64,7 @@ module Admin
           @title = "New budget"
           @people = store.people
           @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
+          @areas = store.areas_for_year
           flash.now[:alert] = error
           return render(:new, status: :unprocessable_entity)
         end
@@ -70,6 +78,12 @@ module Admin
       def edit
         @title = "Budget: #{@budget.name}"
         @people = store.people
+        # The budget's OWN area is always offered, however the page is scoped.
+        # areas_for_year is year- and cost-centre-scoped while area_id writes
+        # unscoped ("" detaches), so an area outside the rendered set left the
+        # select reading "— none —" and any Save — one changing only the
+        # notes — nilled a link nobody touched.
+        @areas = (store.areas_for_year + [ @budget.area ]).compact.uniq
         @forecasts = store.budget_forecasts(@budget.record_id)
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
         # edit form (no JS), so a mistyped forecast can be corrected in place.
@@ -157,18 +171,33 @@ module Admin
       end
 
       # Operator-editable budget attributes. Rollups/formulas are never written.
-      # +active+ (visible-to-submitters) and +owner_ids+ come from a checkbox and
-      # a multi-select, so absence means "off" / "none". +initial_budget+ is only
-      # sent when a valid number is given, so a blank field can't zero it.
+      # +active+ (visible-to-submitters) comes from a checkbox, so absence means
+      # "off". +initial_budget+ is only sent when a valid number is given, so a
+      # blank field can't zero it.
       def budget_params(budget = @budget)
         attrs = {
           name: params[:name].to_s.strip,
           nominal_code: params[:nominal_code].to_s.strip,
           notes: params[:notes].to_s,
           budget_type: params[:budget_type].presence || budget.budget_type,
-          active: params[:active].present?,
-          owner_ids: Array(params[:owner_ids]).reject(&:blank?)
+          active: params[:active].present?
         }
+        # A form that renders the picker always posts it, so an ABSENT param is
+        # a caller that never offered the field — "no change", the same guard
+        # budget_type has. A posted "" is still the deliberate detach the
+        # select's "— none —" option means.
+        attrs[:area_id] = params[:area_id].presence if params.key?(:area_id)
+        # Ownership is edited on the AREA, so an area-bound budget's form shows
+        # its inherited owners read-only and NOTHING it posts may be written:
+        # Budget#owner_ids reads the area's owners while sync_owner_ids! writes
+        # the budget's own rows, so a Save that carried the area's list would
+        # delete the own-owner rows the backfill kept in order to be
+        # reversible, and an ownerless area's empty list would delete them all
+        # (where.not(person_id: []) compiles to WHERE 1=1). Omitting the KEY,
+        # not sending [], is what stops update_budget! syncing at all.
+        unless budget.area_id
+          attrs[:owner_ids] = Array(params[:owner_ids]).reject(&:blank?)
+        end
         initial = parse_decimal(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?
         attrs

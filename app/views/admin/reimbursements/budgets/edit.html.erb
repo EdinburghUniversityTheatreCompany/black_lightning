@@ -6,10 +6,14 @@
       <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
     <% end %>
 
+    <%# owner_ids is the budget's OWN rows, which is what this form writes —
+        never @budget.owner_ids, which resolves through the area. An
+        area-bound budget renders them read-only instead (owners_from_area). %>
     <%= render "fields", form: form, people: @people,
           name: @budget.name, nominal_code: @budget.nominal_code, budget_type: @budget.budget_type,
           initial_budget: @budget.initial_budget, notes: @budget.notes,
-          active: @budget.active, owner_ids: @budget.owner_ids %>
+          active: @budget.active, owner_ids: @budget.own_owners.map(&:record_id),
+          areas: @areas, area_id: @budget.area_id, owners_from_area: @budget.area %>
   <% end %>
 <% end %>
 

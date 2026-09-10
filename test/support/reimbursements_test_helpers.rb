@@ -51,14 +51,26 @@ module ReimbursementsTestHelpers
 
   def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
                                    budget_type: "Expense", initial_budget: nil, notes: nil,
-                                   owners: [], cost_centre: nil, financial_year: nil)
+                                   owners: [], cost_centre: nil, financial_year: nil, area: nil)
     budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
                                             active: active, budget_type: budget_type,
                                             initial_budget: initial_budget, notes: notes,
                                             cost_centre: cost_centre,
-                                            financial_year: financial_year)
-    Array(owners).each { |person| budget.owners << person }
+                                            financial_year: financial_year,
+                                            area: area)
+    Array(owners).each { |person| budget.own_owners << person }
     budget
+  end
+
+  # An area — the parent a show's budget lines can hang off. cost_centre and
+  # financial_year default the way create_reimbursements_budget's do.
+  def create_reimbursements_area(name:, cost_centre: nil, financial_year: nil, **attrs)
+    Reimbursements::Area.create!(
+      name: name,
+      cost_centre: cost_centre,
+      financial_year: financial_year || Reimbursements::FinancialYear.current,
+      **attrs
+    )
   end
 
   def create_reimbursements_expense(person: nil, budget: nil, batch: nil,

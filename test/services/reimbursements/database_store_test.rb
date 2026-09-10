@@ -1038,5 +1038,154 @@ module Reimbursements
 
       assert_equal expense.id, actual.reload[:expense_id]
     end
+
+    # --- Areas -----------------------------------------------------------
+
+    test "areas is unscoped and areas_for_year is scoped to year and cost centre" do
+      other = create_second_reimbursements_cost_centre
+      mine = create_reimbursements_area(name: "Cogito", cost_centre: CostCentre.default)
+      theirs = create_reimbursements_area(name: "Panto", cost_centre: other)
+
+      store = DatabaseStore.new(
+        financial_year: FinancialYear.current,
+        cost_centre: CostCentre.default
+      )
+
+      assert_includes store.areas, theirs, "areas is an id->record lookup and must not be narrowed"
+      assert_includes store.areas_for_year, mine
+      assert_not_includes store.areas_for_year, theirs
+    end
+
+    test "areas_for_year returns every area when the store has no year or centre" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      create_reimbursements_area(name: "Cogito", financial_year: year)
+      create_reimbursements_area(name: "Unstamped", financial_year: nil)
+
+      assert_equal 2, store.areas_for_year.size
+    end
+
+    test "an area with no financial year or cost centre counts as belonging to every one" do
+      unplaced = create_reimbursements_area(name: "Unplaced", financial_year: nil, cost_centre: nil)
+
+      assert_includes scoped_store(FinancialYear.create!(label: "Fringe 2027")).areas_for_year.map(&:id),
+                       unplaced.id
+      assert_includes centre_store(second_cost_centre).areas_for_year.map(&:id), unplaced.id
+    end
+
+    test "find_area reads the row directly, unaffected by a stale memoized list" do
+      store.areas # memoize empty
+      area = create_reimbursements_area(name: "Cogito")
+
+      assert_equal area.id, store.find_area(area.record_id).id
+      assert_nil store.find_area("999999")
+    end
+
+    # The area edit page reads Area#committed_amount and #allocated, which call
+    # the equivalent Budget readers per line — so without the same preload
+    # #areas carries, the one screen those figures exist for pays two queries
+    # per budget line.
+    test "find_area preloads each budget line's expenses and forecasts" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+      create_reimbursements_expense(budget: budget, receipt: false)
+      budget.forecasts.create!(amount: 100, date: Date.current, reason: "x")
+
+      found = store.find_area(area.record_id)
+      line = found.budgets.first
+
+      assert_predicate found.budgets, :loaded?
+      assert_predicate found.association(:owners), :loaded?
+      assert_predicate line.association(:expenses), :loaded?
+      assert_predicate line.association(:forecasts), :loaded?
+    end
+
+    test "create_area! writes the permitted columns" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+
+      area = store.create_area!(name: "Cogito", initial_budget: BigDecimal("500"),
+                                notes: "Autumn show", active: true,
+                                cost_centre: cost_centre, financial_year: year)
+
+      assert_equal "Cogito", area.name
+      assert_equal BigDecimal("500"), area.initial_budget
+      assert_equal "Autumn show", area.notes
+      assert_equal cost_centre, area.cost_centre
+      assert_equal year, area.financial_year
+    end
+
+    test "create_area! busts the memoized lists so a same-request relist sees it" do
+      store.areas # memoize the empty list in
+      store.areas_for_year # memoize the empty scoped list in
+
+      created = store.create_area!(name: "Cogito")
+
+      assert_includes store.areas.map(&:id), created.id
+      assert_includes store.areas_for_year.map(&:id), created.id
+    end
+
+    test "update_area! updates the row and busts the memoized lists" do
+      area = create_reimbursements_area(name: "Cogito")
+      store.areas # memoize the stale name in
+
+      updated = store.update_area!(area.record_id, name: "Cogito Renamed",
+                                   initial_budget: BigDecimal("750"))
+
+      assert_equal "Cogito Renamed", updated.name
+      assert_equal BigDecimal("750"), updated.initial_budget
+      assert_equal "Cogito Renamed", store.areas.find { |a| a.id == area.id }.name
+    end
+
+    test "sync_area_owners! diff-syncs the owners join table" do
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      bob = Person.create!(name: "Bob", email: "bob@example.com")
+      area = create_reimbursements_area(name: "Cogito")
+      area.sync_owner_ids!([ alice.id ])
+      store.areas # memoize the stale owner list in
+
+      store.sync_area_owners!(area.record_id, [ bob.id ])
+
+      assert_equal [ bob.record_id ], area.reload.owner_ids
+      assert_equal [ bob.record_id ], store.areas.find { |a| a.id == area.id }.owner_ids
+    end
+
+    test "sync_area_owners! drops blank ids, the shape a multi-checkbox param takes" do
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      area = create_reimbursements_area(name: "Cogito")
+
+      # A Rails multi-checkbox posts a blank hidden default alongside any ticked
+      # boxes. Area#sync_owner_ids! does person_ids.map(&:to_i) with no
+      # filtering, so an unguarded blank becomes 0 and create!(person_id: 0)
+      # raises ActiveRecord::InvalidForeignKey against reimbursements_area_owners.
+      store.sync_area_owners!(area.record_id, [ "", alice.id.to_s ])
+
+      assert_equal [ alice.record_id ], area.reload.owner_ids
+    end
+
+    test "areas preloads owners and its budgets' expenses and forecasts" do
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      2.times do |i|
+        area = create_reimbursements_area(name: "Show #{i}")
+        area.sync_owner_ids!([ alice.id ])
+        budget = create_reimbursements_budget(name: "Props #{i}", area: area)
+        Expense.create!(budget: budget, status: Status::PAID, amount_excl_vat: 10)
+        BudgetForecast.create!(budget: budget, amount: 100, date: Date.current, reason: "x")
+      end
+
+      loaded = DatabaseStore.new.areas
+
+      # Area#committed_amount and #allocated each call the equivalent Budget
+      # reader per budget, which in turn reads the budget's expenses/forecasts
+      # associations — without the preload an areas index N+1s once per budget
+      # per area, per figure.
+      assert_queries_count(0) do
+        assert_equal 2, loaded.size
+        loaded.each do |area|
+          area.owner_ids
+          area.committed_amount
+          area.allocated
+        end
+      end
+    end
   end
 end

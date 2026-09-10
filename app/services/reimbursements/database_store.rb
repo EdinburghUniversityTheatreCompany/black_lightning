@@ -116,7 +116,15 @@ module Reimbursements
     end
 
     def find_budget(record_id)
-      Budget.includes(:owners, :forecasts).find_by(id: record_id)
+      Budget.includes(:forecasts, :own_owners, area: :owners).find_by(id: record_id)
+    end
+
+    # Preloaded exactly as #areas is: the area edit page reads
+    # Area#committed_amount and #allocated, which call the equivalent Budget
+    # readers per line — so without the budgets' expenses and forecasts, the
+    # one screen those figures exist for pays two queries per budget line.
+    def find_area(record_id)
+      Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).find_by(id: record_id)
     end
 
     def find_batch(record_id)
@@ -148,7 +156,7 @@ module Reimbursements
     # of EUSA credits matching their income line. The screens that LIST a year's
     # budgets use #budgets_for_year.
     def budgets
-      @budgets ||= Budget.includes(:owners, :forecasts).to_a
+      @budgets ||= Budget.includes(:forecasts, :own_owners, area: :owners).to_a
     end
 
     # The selected financial year's budgets — what the budget screens list.
@@ -167,7 +175,7 @@ module Reimbursements
     # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped_to_cost_centre(
-        scoped_to_year(Budget.includes(:owners, :forecasts, :eusa_actuals, expenses: :eusa_actuals).to_a),
+        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, area: :owners, expenses: :eusa_actuals).to_a),
         &:cost_centre_id
       )
     end
@@ -185,6 +193,24 @@ module Reimbursements
     # filing against the other one.
     def active_budgets
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:name)
+    end
+
+    # Every area, every year — an id->record lookup, for exactly the reason
+    # #budgets is unscoped: narrowing it blanks the area name on another
+    # year's or another centre's claim.
+    #
+    # Preloads each area's budgets' expenses and forecasts too: Area#committed_amount
+    # and #allocated each call the equivalent Budget reader per budget, which
+    # reads the budget's own expenses/forecasts associations, so without this an
+    # areas index or a grouped budgets index would pay one or two queries per
+    # budget, per area, per render.
+    def areas
+      @areas ||= Area.includes(:owners, budgets: %i[expenses forecasts]).to_a
+    end
+
+    # The areas the budget screens LIST.
+    def areas_for_year
+      @areas_for_year ||= scoped_to_cost_centre(scoped_to_year(areas), &:cost_centre_id)
     end
 
     # Budgets grouped by nominal code for the overview page, ordered by code
@@ -219,12 +245,38 @@ module Reimbursements
 
     def update_budget!(record_id, attrs)
       budget = Budget.find(record_id)
-      attrs = attrs.compact
+      # NOT attrs.compact: area_id may be a deliberate nil (detaching the budget
+      # from its area), and compact would silently drop that key so the write
+      # never reaches budget.update! at all. The only other optional attribute,
+      # initial_budget, is left out of the hash entirely when unset rather than
+      # sent as nil, so there's nothing else here for compact to have protected.
+      attrs = attrs.dup
       owner_ids = attrs.delete(:owner_ids)
       budget.update!(attrs)
       budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?)) unless owner_ids.nil?
       bust_budgets!
       budget
+    end
+
+    def create_area!(attrs)
+      area = Area.create!(area_columns(attrs))
+      bust_areas!
+      area
+    end
+
+    # Unused: AreasController#update writes through @area directly, because
+    # area_columns can't carry budgets_attributes. Kept for parity with
+    # create_area! and because it's the store's own API for the write it names.
+    def update_area!(record_id, attrs)
+      area = Area.find(record_id)
+      area.update!(area_columns(attrs))
+      bust_areas!
+      area
+    end
+
+    def sync_area_owners!(record_id, person_ids)
+      Area.find(record_id).sync_owner_ids!(Array(person_ids).reject(&:blank?))
+      bust_areas!
     end
 
     # What an applied budget import did, for the confirmation screen.
@@ -708,6 +760,11 @@ module Reimbursements
       @budgets_with_actuals = nil
     end
 
+    def bust_areas!
+      @areas = nil
+      @areas_for_year = nil
+    end
+
     # --- Financial-year scoping ---------------------------------------------
 
     # +records+ narrowed to this store's financial year. An unscoped store (a
@@ -768,8 +825,6 @@ module Reimbursements
       end
     end
 
-    # nil values are dropped (email-in gaps); the sharepoint URL array joins
-    # into the newline column.
     # Whether a foreign-key violation on an expense write was the BUDGET link
     # specifically. MySQL names the constraint, not the column, and an expense
     # links to a person, a batch and a financial year as well — so the answer
@@ -780,6 +835,8 @@ module Reimbursements
       record_id.present? && !Budget.exists?(record_id)
     end
 
+    # nil values are dropped (email-in gaps); the sharepoint URL array joins
+    # into the newline column.
     def expense_columns(attrs)
       attrs.compact.each_with_object({}) do |(key, value), columns|
         case key
@@ -802,6 +859,12 @@ module Reimbursements
         else columns[key] = value
         end
       end
+    end
+
+    AREA_FIELDS = %i[name initial_budget notes active cost_centre financial_year].freeze
+
+    def area_columns(attrs)
+      attrs.slice(*AREA_FIELDS).compact
     end
   end
 end

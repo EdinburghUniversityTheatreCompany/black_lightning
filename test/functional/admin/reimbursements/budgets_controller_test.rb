@@ -302,6 +302,175 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/budgets?format=csv"
       end
 
+      # --- Area grouping ------------------------------------------------------
+
+      test "the index groups budgets under their area and lists the rest separately" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
+        create_reimbursements_budget(name: "Cogito: Marketing", area: area, initial_budget: 400)
+        create_reimbursements_budget(name: "Contingency", initial_budget: 1_000)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do
+          assert_select "td", text: /Cogito: Marketing/
+        end
+        assert_select "[data-area='none']" do
+          assert_select "td", text: /Contingency/
+        end
+      end
+
+      test "an area with no agreed total renders no Remaining figure, not a misleading zero" do
+        sign_in @user
+        area = create_reimbursements_area(name: "No total yet")
+        create_reimbursements_budget(name: "No total yet: Set", area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_no_match(/Remaining/, elements.first.text)
+        end
+      end
+
+      # Same shape as #seed_paged_budgets below, but every budget belongs to
+      # ONE area — the fixture for the page-boundary test that follows.
+      # Alphabetically-named for the same reason: page 1 (50/page) is
+      # deterministic, so "Budget 001".."Budget 050" land on it and
+      # "Budget 051".."Budget 060" spill to page 2.
+      def seed_paged_area_budgets(count, area:)
+        ::Reimbursements::Expense.delete_all
+        ::Reimbursements::BudgetForecast.delete_all
+        ::Reimbursements::BudgetOwner.delete_all
+        ::Reimbursements::Budget.delete_all
+        (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n), area: area) }
+      end
+
+      # The subtotal in the area's header always covers EVERY line linked to
+      # it (area.budgets, unscoped — the same total Area#committed_amount and
+      # #allocated already sum over), not just the rows visible on this page.
+      # With 60 lines under one area and a 50-per-page index, page 1 renders
+      # only 50 of them under a subtotal that covers all 60 — this is the case
+      # the note exists to disclose, with real pagination doing the hiding
+      # rather than a stub.
+      test "an area whose lines straddle the page boundary states how many are shown" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Big Area")
+        seed_paged_area_budgets(60, area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_match(/50 of 60 lines shown/, elements.first.text)
+        end
+      end
+
+      # The common case: nothing states a line count when every one of the
+      # area's lines fits on the page — a permanent "X of X lines shown" would
+      # be noise on every ordinary area, and this is what stops a future edit
+      # from dropping the `visible_count < total_count` guard unnoticed.
+      test "an area whose lines all fit on the page states nothing" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Small Area")
+        create_reimbursements_budget(name: "Small Area: One", area: area)
+        create_reimbursements_budget(name: "Small Area: Two", area: area)
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-area='#{area.record_id}']" do |elements|
+          assert_no_match(/lines shown/, elements.first.text)
+        end
+      end
+
+      # Builds +area_count+ areas with +budgets_per_area+ budgets each, every
+      # budget carrying an expense (so Budget#committed_amount queries) and a
+      # forecast (so Budget#projected_amount/Area#allocated queries) — a
+      # single area with a single budget can't tell a preloaded read from an
+      # N+1, since both cost one query either way.
+      def seed_areas_with_budgets(area_count:, budgets_per_area:)
+        ::Reimbursements::Expense.delete_all
+        ::Reimbursements::BudgetForecast.delete_all
+        ::Reimbursements::BudgetOwner.delete_all
+        ::Reimbursements::Budget.delete_all
+        ::Reimbursements::Area.delete_all
+
+        area_count.times do |a|
+          area = create_reimbursements_area(name: "Area #{a}", initial_budget: 1_000)
+          budgets_per_area.times do |n|
+            budget = create_reimbursements_budget(name: "Area #{a}: Line #{n}", area: area,
+                                                  initial_budget: 100)
+            budget.forecasts.create!(amount: 150, date: Date.new(2026, 5, 1), reason: "plan")
+            create_reimbursements_expense(budget: budget, status: ::Reimbursements::Status::APPROVED,
+                                          amount_excl_vat: 50, amount: 60, receipt: false)
+          end
+        end
+      end
+
+      # Quadrupling the row count (2 areas/4 budgets -> 4 areas/16 budgets)
+      # must not multiply the query count: DatabaseStore#areas preloads each
+      # area's owners and its budgets' expenses/forecasts in a handful of
+      # fixed queries, however many rows there are.
+      test "the index's query count does not grow with the number of areas or budgets" do
+        sign_in @user
+
+        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
+        small_queries = count_queries { get :index }
+
+        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
+        large_queries = count_queries { get :index }
+
+        assert_operator large_queries, :<=, small_queries + 5,
+                        "expected roughly the same query count for 4 budgets (#{small_queries}) " \
+                        "and 16 budgets (#{large_queries}) across 2x the areas"
+      end
+
+      # Negative control for the assertion above: reading Area#committed_amount
+      # / #allocated off Areas loaded WITHOUT the preload (as a bare
+      # `Area.all` would be, the mistake the brief warns against — reading
+      # budget.area's own #budgets association, or store.areas without its
+      # `budgets: %i[expenses forecasts]` include) costs a query per budget's
+      # expenses plus a query per budget's forecasts. This proves the positive
+      # assertion above isn't vacuously true — an unpreloaded read really does
+      # scale with row count, and the preloaded one really doesn't.
+      test "negative control: an unpreloaded area read DOES scale with the number of areas/budgets" do
+        sign_in @user
+
+        seed_areas_with_budgets(area_count: 2, budgets_per_area: 2)
+        small_areas = ::Reimbursements::Area.all.to_a
+        small_queries = count_queries { small_areas.each { |a| a.committed_amount; a.allocated } }
+
+        seed_areas_with_budgets(area_count: 4, budgets_per_area: 4)
+        large_areas = ::Reimbursements::Area.all.to_a
+        large_queries = count_queries { large_areas.each { |a| a.committed_amount; a.allocated } }
+
+        assert_operator small_queries, :>, 4,
+                        "expected reading committed_amount/allocated off unpreloaded areas to cost " \
+                        "a query per budget even at the smaller size (got #{small_queries})"
+        assert_operator large_queries, :>, small_queries,
+                        "expected the unpreloaded read to scale with the row count: " \
+                        "#{small_queries} queries for 4 budgets vs #{large_queries} for 16"
+      end
+
+      # Schema-introspection queries (the first touch of a table in a test
+      # run) are excluded, or whichever test happens to run first absorbs
+      # them and the comparison between two sizes becomes noise instead of
+      # signal — measured: without this exclusion the SAME scenario read
+      # 45 queries first and 31 second, entirely from schema-cache warmup.
+      def count_queries(&block)
+        count = 0
+        callback = lambda do |*, payload|
+          next if payload[:name] == "SCHEMA"
+          next if payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
+
+          count += 1
+        end
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+        count
+      end
+
       test "a forecast amount typed with a comma or a pound sign is read" do
         sign_in @user
 
@@ -608,6 +777,166 @@ module Admin
                                  budget_type: "Expense", active: "1" }
 
         assert_empty @props.reload.owner_ids
+      end
+
+      test "a budget can be moved between areas from its own form" do
+        sign_in @user
+
+        from = create_reimbursements_area(name: "Cogito")
+        to = create_reimbursements_area(name: "Improverts")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: from)
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code, area_id: to.record_id }
+
+        assert_equal to, budget.reload.area
+      end
+
+      test "clearing the area detaches the budget" do
+        sign_in @user
+
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code, area_id: "" }
+
+        assert_nil budget.reload.area
+      end
+
+      # The <select> offers store.areas_for_year (year- AND centre-scoped)
+      # while area_id writes unscoped, where "" means detach. So whenever the
+      # budget's own area is outside the rendered set the select read
+      # "— none —", and ANY Save — one changing only the notes — nilled a link
+      # nobody touched.
+      test "the area select offers the budget's own area even from another year" do
+        sign_in @user
+        this_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        area = create_reimbursements_area(name: "Cogito", financial_year: next_year)
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_equal this_year, assigns(:selected_financial_year)
+        assert_select "select#area_id option[value=?][selected]", area.record_id
+      end
+
+      test "an ordinary Save keeps a link to an area outside the selected year" do
+        sign_in @user
+        ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")
+        area = create_reimbursements_area(name: "Cogito", financial_year: next_year)
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        # Post what the RENDERED form posts, so this cannot pass by typing an
+        # area_id the browser would never have sent.
+        get :edit, params: { id: budget.record_id }
+        selected = css_select("select#area_id option[selected]").first
+        posted = selected ? selected["value"] : ""
+
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code,
+                                 notes: "Only the notes changed", area_id: posted }
+
+        budget.reload
+        assert_equal "Only the notes changed", budget.notes
+        assert_equal area, budget.area, "a Save touching only the notes must not detach the area"
+      end
+
+      # --- Owners on an area-bound budget ------------------------------------
+      # The area owns and its budgets inherit, so Budget#owners READS the area's
+      # owners while sync_owner_ids! WRITES the budget's own rows. An editable
+      # owners fieldset here would therefore read one table and write another:
+      # ownership is edited on the AREA, and this form must not offer the list
+      # at all (nor let owner_ids reach the store) for an area-bound budget.
+
+      test "an area-bound budget's owners are read-only, with a link to the area" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ @alice.id ])
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_select "input[type=checkbox][name='owner_ids[]']", false,
+                      "an area-bound budget must not offer an editable owners list"
+        assert_includes response.body, "Alice Owner"
+        assert_select "a[href=?]", edit_admin_reimbursements_area_path(area.record_id)
+        assert_no_match(/skip budget-owner sign-off/, response.body)
+      end
+
+      # Attaching a line to an ownerless area switches its sign-off gate off
+      # (OwnerReview.gate_applies? is false with no owners), which is the worst
+      # way to get ownership wrong — so the form that can do it says so.
+      test "the budget form warns when its area has no owners" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        get :edit, params: { id: budget.record_id }
+
+        assert_response :success
+        assert_match(/skip budget-owner sign-off/, response.body)
+      end
+
+      test "a Save on an area-bound budget cannot rewrite its own owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        # Finance moved ownership to Alice on the AREA form; the budget's own
+        # row (Bob) is the one the backfill kept so it can be reversed.
+        area.sync_owner_ids!([ @alice.id ])
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        # Exactly what the old form posted while someone fixed the nominal code:
+        # the AREA's owners, on their way into the BUDGET's own rows.
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: "4321", area_id: area.record_id,
+                                 owner_ids: [ @alice.record_id ] }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_equal "4321", budget.reload.nominal_code, "the edit itself must still land"
+        assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
+                     "the posted owner list must be ignored, not written to own_owners"
+        assert_equal [ @alice.record_id ], budget.owner_ids, "the area still owns"
+      end
+
+      test "a Save on a budget in an ownerless area cannot destroy its own owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                              owners: [ @bob ])
+
+        # An ownerless area renders nothing ticked, so any Save posted an empty
+        # list — and [] compiles to where.not(person_id: []) i.e. WHERE 1=1,
+        # wiping the last record of who owned the line.
+        patch :update, params: { id: budget.record_id, name: budget.name,
+                                 nominal_code: budget.nominal_code,
+                                 area_id: area.record_id, owner_ids: [ "" ] }
+
+        assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id)
+      end
+
+      test "a budget with no area keeps its editable owners fieldset" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_response :success
+        assert_select "fieldset legend", text: "Owners"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}]"
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", active: "1",
+                                 owner_ids: [ @bob.record_id ] }
+
+        assert_equal [ @bob.record_id ], @props.reload.own_owners.map(&:record_id)
+        assert_equal [ @bob.record_id ], @props.owner_ids
       end
 
       # --- Forecast create ---------------------------------------------------

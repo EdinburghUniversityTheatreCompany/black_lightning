@@ -1,0 +1,45 @@
+<%= render "admin/reimbursements/shared/year_selector" %>
+<%= render "admin/reimbursements/shared/cost_centre_selector" %>
+
+<p class="mb-3 text-gray-600">
+  A show, project or heading several budget lines belong to. An area holds the agreed total
+  and the owners; its budgets carry the nominal code and an optional split of that total.
+</p>
+
+<p class="mb-3 flex flex-wrap gap-2">
+  <%= link_to "New area",
+        new_admin_reimbursements_area_path(year: selected_financial_year&.key,
+                                           cost_centre: selected_cost_centre&.key),
+        class: btn_classes(:primary, :sm) %>
+</p>
+
+<% if @areas.total_count.zero? %>
+  <%= render CardComponent.new(title: @title) do %>
+    <p class="py-4 text-center text-gray-600">No areas found.</p>
+  <% end %>
+<% else %>
+  <% headers = [ "Area", "Agreed total", "Committed", "Remaining", "Budget lines", "Owners", "" ] %>
+  <% field_sets = @areas.map do |area|
+       remaining_class = "text-danger font-medium" if area.remaining&.negative?
+       owners = budget_owner_names(area, @people_by_id).presence ||
+                content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
+       edit = link_to("Edit", edit_admin_reimbursements_area_path(area.record_id),
+                      "aria-label": "Edit #{area.name}", class: btn_classes(:secondary, :sm))
+       {
+         fields: [
+           area,
+           content_tag(:span, area.name, class: "font-medium"),
+           reimbursements_money(area.projected_amount),
+           reimbursements_money(area.committed_amount),
+           content_tag(:span, reimbursements_money(area.remaining), class: remaining_class),
+           area.budgets.size,
+           owners,
+           edit
+         ]
+       }
+     end %>
+  <%= render "shared/pages/index_results",
+        resources: @areas, resource_class: ::Reimbursements::Area,
+        headers: headers, field_sets: field_sets,
+        include_edit_button: false, include_link_to_item: false, include_pagination: true %>
+<% end %>
