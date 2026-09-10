@@ -5,7 +5,8 @@ module Admin
     # emails, bank details): a duplicate
     # name/email banner, a live modulus badge on each person's bank details,
     # inline editing of sort code / account number (with a timestamped audit
-    # line appended to notes), and a Mark-verified action.
+    # line appended to notes), a Mark-verified action, and a form that
+    # registers an existing user account as a payee.
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`),
     # distinct from the producer portal's `:access, :reimbursements`.
@@ -19,6 +20,37 @@ module Admin
         end
       end
 
+      # GET /admin/reimbursements/people/new
+      def new
+        @title = "Register a person"
+      end
+
+      # POST /admin/reimbursements/people
+      #
+      # Registers an existing user account as a payee. Bank details are NOT
+      # collected: a budget owner may never log in and never claim a penny
+      # (BudgetOwner joins Budget to Person with no user involved), and until
+      # this form existed a Person only came into being when a producer saved
+      # bank details or filed a claim — so finance could not name an owner who
+      # had done neither.
+      def create
+        user = ::User.find_by(id: params[:user_id])
+        return render_new_error("Pick a user account to register.") if user.nil?
+
+        # PersonLink owns the resolution (stored link, then email, remembering
+        # the match) AND the creation. Asking it twice rather than restating
+        # either half is what keeps the stored-link column the store's
+        # knowledge — and it is what stops a second Person being created for
+        # someone the registry already holds under their email.
+        existing = person_link.person_for(user)
+        return redirect_to_existing(user, existing) if existing
+
+        person = person_link.ensure_person!(user)
+        redirect_to admin_reimbursements_people_path,
+                    notice: "#{person.name} is now in the registry. They can be given a budget " \
+                            "to own; bank details are only needed if they claim."
+      end
+
       def update
         @person = find_or_404(:find_person)
 
@@ -26,6 +58,21 @@ module Admin
       end
 
       private
+
+      # Already registered — say which record they resolved to and go to the
+      # registry, rather than minting a duplicate the index would then have to
+      # flag (PeopleSupport.find_duplicate_people).
+      def redirect_to_existing(user, person)
+        redirect_to admin_reimbursements_people_path,
+                    alert: "#{user.name_or_email} is already in the registry as " \
+                           "#{person.name.presence || person.email}."
+      end
+
+      def render_new_error(message)
+        @title = "Register a person"
+        @error = message
+        render :new, status: :unprocessable_entity
+      end
 
       def load_registry
         people = store.people

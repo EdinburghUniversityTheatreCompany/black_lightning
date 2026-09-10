@@ -180,6 +180,18 @@ module Admin
         assert_nil assigns(:import)
       end
 
+      # The preview tells the operator to add the unmatched owner "on the People
+      # screen". That instruction was impossible to follow until the registry
+      # grew a form, so it has to actually link there now.
+      test "preview links an unknown owner email to the register-a-person form" do
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\tnobody@example.com\t"))
+
+        assert_equal [ "nobody@example.com" ], assigns(:import).unknown_owner_emails
+        assert_includes response.body, new_admin_reimbursements_person_path
+      end
+
       test "preview scopes matching to the year being imported into, not the active year" do
         active_year = FY.create!(label: "Fringe 2026", active: true)
         other = create_reimbursements_budget(name: "Props", initial_budget: 1000)

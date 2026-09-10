@@ -18,7 +18,9 @@
   <% end %>
 <% end %>
 
-<div class="mb-2 flex items-center justify-end">
+<div class="mb-2 flex flex-wrap items-center justify-end gap-2">
+  <%= link_to "Register a person", new_admin_reimbursements_person_path,
+              class: btn_classes(:primary, :sm) %>
   <%= link_to "Download CSV",
               admin_reimbursements_people_path(request.query_parameters.merge(format: :csv)),
               title: "Bank details are masked to their last four digits",

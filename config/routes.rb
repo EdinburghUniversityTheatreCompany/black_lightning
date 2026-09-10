@@ -106,7 +106,7 @@ ChaosRails::Application.routes.draw do
         end
       end
       resource :payment_details, only: %i[edit update]
-      resources :people, only: %i[index update]
+      resources :people, only: %i[index new create update]
 
       # Budget-owner review (Phase E): budgets the signed-in owner is
       # responsible for, with a blocking endorse action on pending expenses
