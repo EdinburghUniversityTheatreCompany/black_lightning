@@ -140,20 +140,15 @@ module Admin
       # exact for a batch built since Build Batch became single-centre, and a
       # GUESS for anything older.
       #
-      # Which is why this is a LIST and not an answer. Every batch built before
-      # cost centres existed drafted into the default centre's mailbox whatever
-      # its claims say, so a legacy batch holding one placed termtime claim
-      # derives "termtime" and would look in a mailbox that never held its
-      # draft. GraphClient#draft_message? fails CLOSED, so that mis-guess reads
-      # as "already sent — do not reopen", which is untrue and, being derived
-      # from stored data, would never stop being untrue. Probing the derived
-      # centre and then the default costs one extra Graph read and cannot get
-      # stuck.
+      # Which is why this is a LIST. Every older batch drafted into the default
+      # centre's mailbox whatever its claims say, and GraphClient#draft_message?
+      # fails CLOSED — so one wrong guess reads as "already sent, do not reopen",
+      # untrue and, being derived from stored data, permanently untrue. Derived
+      # centre then default costs one extra Graph read and cannot get stuck.
       #
-      # Unplaced claims are dropped from the derivation (rather than falling to
-      # the default centre as the money path makes them): they say nothing about
-      # where a draft was written, and the default is already the last
-      # candidate.
+      # Unplaced claims are dropped from the derivation rather than falling to
+      # the default as the money path makes them: they say nothing about where a
+      # draft was written, and the default is already the last candidate.
       def draft_mailboxes(linked_expenses)
         ids = linked_expenses.filter_map(&:cost_centre_id).uniq
         derived = ids.one? && store.cost_centres.find { |centre| centre.id == ids.first }
@@ -189,16 +184,12 @@ module Admin
                            "manually instead of rebuilding."
       end
 
-      # A batch is ONE cost centre's BACS submission — its spreadsheet, its EUSA
-      # draft and its sender mailbox all belong to that centre — so the centre
-      # has to be settled before the form is drawn.
-      #
-      # It comes from the page's own ?cost_centre= selector, falling back to the
-      # sole configured centre when there is only one (the state the portal is
-      # in today, where there is nothing to choose). It deliberately does NOT
-      # fall back to CostCentre.default once a second centre exists: that is
-      # order(:id).first, so Build Batch used to put termtime's approved claims
-      # into a Fringe batch, paid out of Fringe's pot, from Fringe's mailbox.
+      # A batch is ONE centre's BACS submission — spreadsheet, EUSA draft and
+      # sender mailbox all belong to it — so the centre is settled before the
+      # form is drawn: the page's ?cost_centre=, else the sole configured centre.
+      # Never CostCentre.default once a second centre exists; that is
+      # order(:id).first, which is how termtime's claims came to be paid out of
+      # Fringe's pot, from Fringe's mailbox.
       def require_cost_centre
         @cost_centre = selected_cost_centre || sole_cost_centre
         return if @cost_centre
@@ -214,22 +205,17 @@ module Admin
       end
 
       # ASK, rather than bounce. The sidebar's "Build Batch" entry carries no
-      # cost centre and never can — it is one link on every admin page — so with
-      # a second centre configured a redirect here would make Build Batch
-      # unreachable from the only place most operators start. Each centre is a
-      # link into this same action carrying ?cost_centre=, so the form is one
-      # click away and the URL still says which pot it is for.
+      # cost centre and never can (one link on every admin page), so redirecting
+      # here would make Build Batch unreachable from where most operators start.
       def render_cost_centre_chooser
         @title = "Build batch"
         render :choose_cost_centre
       end
 
-      # The Approved claims THIS BATCH's cost centre is responsible for paying,
-      # never the whole portal's — and read through the money path's OWNERSHIP
-      # rule, not the screens' lenient filter, so an unplaced claim belongs to
-      # exactly one centre and cannot be built into two drafts. The preview here
-      # and BuildBatchJob's own re-selection ask the same question, so what the
-      # operator confirms is what gets built.
+      # Read through the money path's OWNERSHIP rule, not the screens' lenient
+      # filter, so an unplaced claim cannot be built into two drafts. The same
+      # question BuildBatchJob re-asks, so what the operator confirms is what
+      # gets built.
       def approved_expenses
         store.expenses_owned_by_cost_centre(@cost_centre)
              .select { |expense| expense.status == ::Reimbursements::Status::APPROVED }

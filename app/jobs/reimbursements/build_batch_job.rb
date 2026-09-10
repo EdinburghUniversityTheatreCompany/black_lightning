@@ -64,12 +64,10 @@ module Reimbursements
       # build still leaves a History trace.
       attempt ||= BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
                                        triggered_by_email: Array(operator_emails).compact_blank.first)
-      # The approved claims THIS cost centre OWNS. Selecting from the whole
-      # portal put every other centre's approved claims into this centre's BACS
-      # spreadsheet, paid out of its pot; reading the screens' lenient filter
-      # instead would let an unplaced claim be built by both centres, and
-      # +limits_concurrency+ is keyed per centre so those builds do not
-      # serialise. See DatabaseStore#expenses_owned_by_cost_centre.
+      # The approved claims THIS centre OWNS — not the whole portal's (which
+      # paid other centres' claims out of this pot) and not the screens' lenient
+      # filter (which lets two centres build the same claim).
+      # See DatabaseStore#expenses_owned_by_cost_centre.
       approved = store.expenses_owned_by_cost_centre(cost_centre)
                       .select { |expense| expense.status == Status::APPROVED }
       if approved.empty?

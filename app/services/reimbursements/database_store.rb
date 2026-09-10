@@ -53,37 +53,28 @@ module Reimbursements
                            .with_attached_receipt_files.to_a
     end
 
-    # The selected cost centre's expenses, for the SCREENS (Review and its
-    # tabs). An expense carries no cost-centre column of its own — it resolves
-    # one through its budget (Expense#cost_centre_id), which +expenses+ already
-    # preloads, so this costs no extra query.
-    #
-    # Lenient: an unplaced claim shows under every centre. See
-    # #expenses_owned_by_cost_centre for why the money path must not read it
-    # this way.
+    # The selected centre's expenses, for the SCREENS. Lenient: an unplaced
+    # claim shows under every centre — see #expenses_owned_by_cost_centre for
+    # why the money path must not read it this way. An expense resolves its
+    # centre through its budget, which +expenses+ preloads.
     def expenses_for_cost_centre
       in_cost_centre(expenses, cost_centre, &:cost_centre_id)
     end
 
-    # Every claim +centre+ is RESPONSIBLE FOR PAYING — what Build Batch (the
-    # form's preview and BuildBatchJob's own re-selection) reads.
+    # Every claim +centre+ is RESPONSIBLE FOR PAYING — what Build Batch reads.
     #
-    # THE RULE, stated once: a read-only filter may be lenient, but anything
-    # that MOVES MONEY must assign each claim to exactly one owner.
+    # THE RULE, stated here and pointed at from everywhere else: a read-only
+    # filter may be lenient, but anything that MOVES MONEY must assign each
+    # claim to exactly one owner. Under the lenient filter an unplaced claim
+    # belongs to every centre at once, and BuildBatchJob's +limits_concurrency+
+    # key is per cost centre — so two centres' builds do not serialise, and the
+    # same claim reaches two BACS spreadsheets and two live EUSA drafts. EUSA
+    # pays twice. An unplaced claim therefore falls to the DEFAULT centre, the
+    # rule NightlyBatchJob#claims_by_cost_centre_id already uses to decide who
+    # is REMINDED: the centre told about a claim is the centre that can pay it.
     #
-    # Under the lenient filter an unplaced claim (no budget, or a budget with no
-    # centre) belongs to every centre at once, and BuildBatchJob's
-    # +limits_concurrency+ key is per cost centre — so two centres' builds do
-    # not serialise against each other, and the same claim can be built into two
-    # BACS spreadsheets and two live EUSA drafts. EUSA then pays it twice. So
-    # here an unplaced claim falls to the DEFAULT centre, which is the same rule
-    # NightlyBatchJob#claims_by_cost_centre_id uses to decide who is REMINDED
-    # about it: the centre that is told about a claim is the centre that can pay
-    # it, and no claim is owned twice.
-    #
-    # Raises rather than defaulting on a nil centre: "no cost centre" cannot
-    # mean "every centre" on this path, and answering [] instead would silently
-    # build an empty batch. Both callers resolve a centre before asking.
+    # Raises on a nil centre rather than defaulting: "no centre" cannot mean
+    # "every centre" here, and [] would silently build an empty batch.
     def expenses_owned_by_cost_centre(centre)
       raise ArgumentError, "a batch is built for one cost centre; none was given" if centre.nil?
 
