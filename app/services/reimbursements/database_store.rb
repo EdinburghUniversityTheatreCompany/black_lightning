@@ -53,20 +53,42 @@ module Reimbursements
                            .with_attached_receipt_files.to_a
     end
 
-    # The selected cost centre's expenses. An expense carries no cost-centre
-    # column of its own — it resolves one through its budget (Expense
-    # #cost_centre_id), which +expenses+ already preloads, so this costs no
-    # extra query.
+    # The selected cost centre's expenses, for the SCREENS (Review and its
+    # tabs). An expense carries no cost-centre column of its own — it resolves
+    # one through its budget (Expense#cost_centre_id), which +expenses+ already
+    # preloads, so this costs no extra query.
+    #
+    # Lenient: an unplaced claim shows under every centre. See
+    # #expenses_owned_by_cost_centre for why the money path must not read it
+    # this way.
     def expenses_for_cost_centre
-      expenses_in_cost_centre(cost_centre)
+      in_cost_centre(expenses, cost_centre, &:cost_centre_id)
     end
 
-    # The same narrowing against an EXPLICIT centre, for the money path: Build
-    # Batch (controller preview and BuildBatchJob) builds one centre's batch and
-    # must never sweep another centre's approved claims into it, whatever the
-    # on-screen selector happens to say.
-    def expenses_in_cost_centre(centre)
-      in_cost_centre(expenses, centre, &:cost_centre_id)
+    # Every claim +centre+ is RESPONSIBLE FOR PAYING — what Build Batch (the
+    # form's preview and BuildBatchJob's own re-selection) reads.
+    #
+    # THE RULE, stated once: a read-only filter may be lenient, but anything
+    # that MOVES MONEY must assign each claim to exactly one owner.
+    #
+    # Under the lenient filter an unplaced claim (no budget, or a budget with no
+    # centre) belongs to every centre at once, and BuildBatchJob's
+    # +limits_concurrency+ key is per cost centre — so two centres' builds do
+    # not serialise against each other, and the same claim can be built into two
+    # BACS spreadsheets and two live EUSA drafts. EUSA then pays it twice. So
+    # here an unplaced claim falls to the DEFAULT centre, which is the same rule
+    # NightlyBatchJob#claims_by_cost_centre_id uses to decide who is REMINDED
+    # about it: the centre that is told about a claim is the centre that can pay
+    # it, and no claim is owned twice.
+    #
+    # Raises rather than defaulting on a nil centre: "no cost centre" cannot
+    # mean "every centre" on this path, and answering [] instead would silently
+    # build an empty batch. Both callers resolve a centre before asking.
+    def expenses_owned_by_cost_centre(centre)
+      raise ArgumentError, "a batch is built for one cost centre; none was given" if centre.nil?
+
+      default_id = CostCentre.default&.id
+      expenses.select { |expense| (expense.cost_centre_id || default_id) == centre.id }
     end
 
     # A person's expenses, newest submission first.
@@ -684,9 +706,12 @@ module Reimbursements
     # viewed is visible and correctable; hidden money is not.
     #
     # It is a filter, so an unplaced row may appear under more than one centre.
-    # NightlyBatchJob deliberately uses the stricter "unplaced falls to the
-    # DEFAULT centre" rule instead, because a reminder has to be addressed to
-    # exactly one set of recipients — a filter has no such obligation.
+    # That is safe HERE and nowhere else: see #expenses_owned_by_cost_centre for
+    # the money path's stricter "unplaced falls to the DEFAULT centre" rule, and
+    # why a lenient read on a path that moves money pays the same claim twice.
+    # NightlyBatchJob#claims_by_cost_centre_id uses that same strict rule, for
+    # the same reason in the other direction: a reminder has to reach exactly
+    # one set of recipients.
     def in_cost_centre(records, centre, &block)
       return records if centre.nil?
 

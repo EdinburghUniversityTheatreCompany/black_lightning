@@ -57,10 +57,15 @@
   <% end %>
 
   <%= form_with url: admin_reimbursements_batches_path, method: :post do %>
+    <%# Which pot this batch pays, carried in the FORM and not merely in the URL
+        that drew it: #create re-resolves the centre from the request, and a POST
+        carries no query string, so without this the submit arrived with nothing
+        and bounced the operator straight back to History. %>
+    <%= hidden_field_tag :cost_centre, @cost_centre.key %>
     <%= render CardComponent.new(title: "EUSA email", html_class: "mt-4") do |card| %>
       <% card.with_footer do %>
         <%= render "shared/form/actions", submit: "Create draft and process batch",
-              cancel_path: admin_reimbursements_batches_path,
+              cancel_path: admin_reimbursements_batches_path(cost_centre: @cost_centre.key),
               submit_html: { data: { turbo_confirm: "Create the EUSA draft and mark #{@expenses.size} " \
                                                     "#{'expense'.pluralize(@expenses.size)} as Submitted?" } },
               note: "Processing will: generate the xlsx, upload it and every receipt to SharePoint, " \

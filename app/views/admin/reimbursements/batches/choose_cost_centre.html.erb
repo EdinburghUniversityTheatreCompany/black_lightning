@@ -1,0 +1,14 @@
+<p class="mb-3 text-gray-600">
+  A batch pays one cost centre's claims, on its own BACS spreadsheet, out of its own mailbox.
+  Pick the pot this batch is for.
+</p>
+
+<%= render CardComponent.new(title: "Which cost centre?") do %>
+  <div class="flex flex-wrap gap-3">
+    <% selectable_cost_centres.each do |centre| %>
+      <%= link_to "#{centre.name} (#{centre.eusa_code})",
+            new_admin_reimbursements_batch_path(cost_centre: centre.key),
+            class: btn_classes(:primary) %>
+    <% end %>
+  </div>
+<% end %>

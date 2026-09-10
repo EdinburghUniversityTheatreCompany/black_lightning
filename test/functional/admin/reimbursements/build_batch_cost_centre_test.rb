@@ -20,7 +20,8 @@ module Admin
       tests BatchesController
 
       setup do
-        @user = grant_reimbursements_finance(users(:member))
+        grant_finance_permission(users(:member))
+        @user = users(:member)
         sign_in @user
 
         @fringe = ::Reimbursements::CostCentre.default
@@ -46,11 +47,30 @@ module Admin
         assert_equal @termtime, assigns(:cost_centre)
       end
 
-      test "with several centres and none chosen, it refuses rather than picking one" do
+      # ASKS rather than bounces: the sidebar's Build Batch link carries no cost
+      # centre and never can, so a redirect here made the feature unreachable
+      # from the only place most operators start.
+      test "with several centres and none chosen, it asks which rather than picking one" do
+        get :new
+
+        assert_response :success
+        assert_template :choose_cost_centre
+        assert_nil assigns(:cost_centre)
+        assert_nil assigns(:expenses), "nothing is previewed before a pot is chosen"
+      end
+
+      test "with no cost centre configured at all there is nothing to ask" do
+        [ @fringe_claim, @termtime_claim ].each do |claim|
+          budget = claim.budget
+          claim.destroy!
+          budget.destroy!
+        end
+        ::Reimbursements::CostCentre.destroy_all
+
         get :new
 
         assert_redirected_to admin_reimbursements_batches_path
-        assert_match(/choose which cost centre/i, flash[:alert])
+        assert_match(/no cost centre configured/i, flash[:alert])
       end
 
       test "with one centre configured there is nothing to choose" do

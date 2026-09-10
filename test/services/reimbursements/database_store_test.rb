@@ -5,6 +5,8 @@ module Reimbursements
   # Reimbursements.build_store); these lock its public API and attribute
   # vocabulary.
   class DatabaseStoreTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     def store = @store ||= DatabaseStore.new
 
     def create_person(name: "Pat", email: "pat@example.com", sort_code: nil, account_number: nil)
@@ -628,12 +630,7 @@ module Reimbursements
 
     def centre_store(centre) = DatabaseStore.new(cost_centre: centre)
 
-    def second_cost_centre
-      CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-                         receive_mailbox: "in@bedlamtheatre.invalid",
-                         send_mailbox: "out@bedlamtheatre.invalid",
-                         notification_email: "termtime@example.invalid")
-    end
+    def second_cost_centre = create_second_reimbursements_cost_centre
 
     test "budgets_for_year lists only the store's cost centre" do
       fringe = CostCentre.default
@@ -694,6 +691,31 @@ module Reimbursements
                                budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
 
       assert_includes centre_store(CostCentre.default).expenses.map(&:id), theirs.id
+    end
+
+    test "the money path owns an unplaced claim once, not once per centre" do
+      fringe = CostCentre.default
+      termtime = second_cost_centre
+      unplaced = Expense.create!(status: Status::APPROVED)
+      theirs = Expense.create!(status: Status::APPROVED,
+                               budget: Budget.create!(name: "Termtime props", cost_centre: termtime))
+
+      # The screens' filter shows it under both — that is safe, it pays nobody.
+      assert_includes centre_store(fringe).expenses_for_cost_centre.map(&:id), unplaced.id
+      assert_includes centre_store(termtime).expenses_for_cost_centre.map(&:id), unplaced.id
+
+      # Build Batch must not: two centres selecting one claim can build it into
+      # two BACS spreadsheets and two live EUSA drafts (limits_concurrency is
+      # keyed per centre, so those builds do not serialise), and EUSA pays twice.
+      assert_includes store.expenses_owned_by_cost_centre(fringe).map(&:id), unplaced.id
+      assert_not_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), unplaced.id
+      assert_includes store.expenses_owned_by_cost_centre(termtime).map(&:id), theirs.id
+    end
+
+    test "the money path refuses to answer without a cost centre" do
+      # "No cost centre" cannot mean "every centre" on a path that pays people,
+      # and an empty answer would silently build an empty batch.
+      assert_raises(ArgumentError) { store.expenses_owned_by_cost_centre(nil) }
     end
 
     test "eusa_actuals_for_cost_centre scopes on the row's own cost centre" do

@@ -93,9 +93,8 @@ module Admin
         # own, so its mailbox is read off the expenses it holds — and the revert
         # is what unlinks them. Read afterwards, every reopen would fall back to
         # the default centre and look for the draft in the wrong mailbox.
-        mailbox = draft_mailbox(linked)
-        return blocked_by_unconfirmed_draft if batch.draft_message_id.present? &&
-                                               !confirmed_still_draft?(batch, mailbox)
+        mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked))
+        return blocked_by_unconfirmed_draft if batch.draft_message_id.present? && mailbox.nil?
 
         linked.each { |expense| store.revert_expense_to_approved!(expense.record_id) }
         store.delete_batch!(batch.record_id)
@@ -136,21 +135,40 @@ module Admin
           alert: "Delete the old EUSA draft in Outlook manually before sending the rebuilt one." }
       end
 
-      # The mailbox holding a batch's EUSA draft — the send mailbox of the centre
-      # it was built for, not the portal's first centre, which is where every
-      # reopen used to go looking (and where deleting a draft would have found
-      # nothing, or worse, someone else's).
+      # Where a batch's EUSA draft might be, best guess first. A Batch carries no
+      # cost-centre column, so the centre is read off the expenses it holds —
+      # exact for a batch built since Build Batch became single-centre, and a
+      # GUESS for anything older.
       #
-      # A Batch carries no cost-centre column, so the centre comes from the
-      # expenses it holds, which is exact now that a batch is built for one
-      # centre only. A batch of unplaced claims (or one whose expenses have
-      # gone) falls back to the default centre rather than to nowhere: a draft
-      # this app can't locate is a draft nobody deletes.
-      def draft_mailbox(linked_expenses)
+      # Which is why this is a LIST and not an answer. Every batch built before
+      # cost centres existed drafted into the default centre's mailbox whatever
+      # its claims say, so a legacy batch holding one placed termtime claim
+      # derives "termtime" and would look in a mailbox that never held its
+      # draft. GraphClient#draft_message? fails CLOSED, so that mis-guess reads
+      # as "already sent — do not reopen", which is untrue and, being derived
+      # from stored data, would never stop being untrue. Probing the derived
+      # centre and then the default costs one extra Graph read and cannot get
+      # stuck.
+      #
+      # Unplaced claims are dropped from the derivation (rather than falling to
+      # the default centre as the money path makes them): they say nothing about
+      # where a draft was written, and the default is already the last
+      # candidate.
+      def draft_mailboxes(linked_expenses)
         ids = linked_expenses.filter_map(&:cost_centre_id).uniq
-        centre = (ids.one? && store.cost_centres.find { |c| c.id == ids.first }) ||
-                 ::Reimbursements::CostCentre.default
-        centre&.send_mailbox
+        derived = ids.one? && store.cost_centres.find { |centre| centre.id == ids.first }
+        [ derived, ::Reimbursements::CostCentre.default ]
+          .select { |centre| centre.respond_to?(:send_mailbox) }
+          .filter_map { |centre| centre.send_mailbox.presence }.uniq
+      end
+
+      # The first candidate that still holds this batch's draft, or nil if none
+      # does — which is the "it may already have been sent" refusal, now reached
+      # only after every mailbox the draft could be in has been asked.
+      def mailbox_holding_draft(batch, mailboxes)
+        return mailboxes.first if batch.draft_message_id.blank?
+
+        mailboxes.find { |mailbox| confirmed_still_draft?(batch, mailbox) }
       end
 
       # Reopen must never revert expenses out of a batch whose EUSA draft was
@@ -185,27 +203,35 @@ module Admin
         @cost_centre = selected_cost_centre || sole_cost_centre
         return if @cost_centre
 
-        redirect_to admin_reimbursements_batches_path, alert: build_batch_centre_alert
+        return render_cost_centre_chooser if selectable_cost_centres.any?
+
+        redirect_to admin_reimbursements_batches_path,
+                    alert: "No cost centre configured. Seed one before building a batch."
       end
 
       def sole_cost_centre
         selectable_cost_centres.one? ? selectable_cost_centres.first : nil
       end
 
-      def build_batch_centre_alert
-        if selectable_cost_centres.empty?
-          "No cost centre configured. Seed one before building a batch."
-        else
-          "Choose which cost centre this batch is for first — a batch pays one pot's claims, " \
-          "out of that pot's mailbox."
-        end
+      # ASK, rather than bounce. The sidebar's "Build Batch" entry carries no
+      # cost centre and never can — it is one link on every admin page — so with
+      # a second centre configured a redirect here would make Build Batch
+      # unreachable from the only place most operators start. Each centre is a
+      # link into this same action carrying ?cost_centre=, so the form is one
+      # click away and the URL still says which pot it is for.
+      def render_cost_centre_chooser
+        @title = "Build batch"
+        render :choose_cost_centre
       end
 
-      # The Approved claims of THIS BATCH's cost centre, never the whole
-      # portal's: the preview here and BuildBatchJob's own re-selection both
-      # narrow the same way, so what the operator confirms is what gets built.
+      # The Approved claims THIS BATCH's cost centre is responsible for paying,
+      # never the whole portal's — and read through the money path's OWNERSHIP
+      # rule, not the screens' lenient filter, so an unplaced claim belongs to
+      # exactly one centre and cannot be built into two drafts. The preview here
+      # and BuildBatchJob's own re-selection ask the same question, so what the
+      # operator confirms is what gets built.
       def approved_expenses
-        store.expenses_in_cost_centre(@cost_centre)
+        store.expenses_owned_by_cost_centre(@cost_centre)
              .select { |expense| expense.status == ::Reimbursements::Status::APPROVED }
       end
 
