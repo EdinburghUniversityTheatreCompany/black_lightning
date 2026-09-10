@@ -373,13 +373,6 @@ module Admin
       assert_includes response.body, new_admin_reimbursements_person_path
     end
 
-    # --- Registering an existing user account ------------------------------
-    #
-    # A budget owner may never log in and never claim a penny (BudgetOwner
-    # joins Budget to Person with no user involved), but until now a Person
-    # only came into being when a producer saved bank details or filed a
-    # claim. Finance can register one directly, with no bank details asked for.
-
     test "new requires the finance permission" do
       sign_in users(:committee)
 

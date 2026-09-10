@@ -20,28 +20,21 @@ module Admin
         end
       end
 
-      # GET /admin/reimbursements/people/new
       def new
         @title = "Register a person"
       end
 
-      # POST /admin/reimbursements/people
-      #
-      # Registers an existing user account as a payee. Bank details are NOT
-      # collected: a budget owner may never log in and never claim a penny
-      # (BudgetOwner joins Budget to Person with no user involved), and until
-      # this form existed a Person only came into being when a producer saved
+      # No bank details are collected: a budget owner may never claim a penny,
+      # and before this form a Person only came into being when a producer saved
       # bank details or filed a claim — so finance could not name an owner who
       # had done neither.
       def create
         user = ::User.find_by(id: params[:user_id])
         return render_new_error("Pick a user account to register.") if user.nil?
 
-        # PersonLink owns the resolution (stored link, then email, remembering
-        # the match) AND the creation. Asking it twice rather than restating
-        # either half is what keeps the stored-link column the store's
-        # knowledge — and it is what stops a second Person being created for
-        # someone the registry already holds under their email.
+        # Asked rather than reimplemented: PersonLink resolves by stored link
+        # THEN email, so this also catches someone the registry already holds
+        # under their address but has never linked.
         existing = person_link.person_for(user)
         return redirect_to_existing(user, existing) if existing
 
@@ -59,9 +52,8 @@ module Admin
 
       private
 
-      # Already registered — say which record they resolved to and go to the
-      # registry, rather than minting a duplicate the index would then have to
-      # flag (PeopleSupport.find_duplicate_people).
+      # Name the record they resolved to, rather than minting a duplicate the
+      # index would then have to flag (PeopleSupport.find_duplicate_people).
       def redirect_to_existing(user, person)
         redirect_to admin_reimbursements_people_path,
                     alert: "#{user.name_or_email} is already in the registry as " \

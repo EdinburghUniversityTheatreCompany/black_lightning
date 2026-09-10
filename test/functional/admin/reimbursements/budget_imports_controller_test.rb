@@ -180,9 +180,6 @@ module Admin
         assert_nil assigns(:import)
       end
 
-      # The preview tells the operator to add the unmatched owner "on the People
-      # screen". That instruction was impossible to follow until the registry
-      # grew a form, so it has to actually link there now.
       test "preview links an unknown owner email to the register-a-person form" do
         sign_in @user
 
