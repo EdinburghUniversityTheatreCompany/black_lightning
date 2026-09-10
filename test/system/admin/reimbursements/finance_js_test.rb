@@ -403,6 +403,17 @@ module Admin
         wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
       end
 
+      # A remote-source Tom Select (data-remote-source) loads nothing until the
+      # operator types, and the dropdown_input plugin puts the search box inside
+      # the dropdown rather than in the control. So: open it, type, then click
+      # the option the AJAX round trip brought back.
+      def tom_select_remote(query, option_text, select_id:)
+        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
+        wrapper.find(".ts-control").click
+        wrapper.find(".ts-dropdown input").set(query)
+        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first, wait: 5).click
+      end
+
       # (f) The new-cost-centre form creates a row and lands on its settings
       # page. Plain fill + submit is safe here — this form has no markdown editor.
       #
@@ -625,6 +636,28 @@ module Admin
 
         assert_selector "input#account_number_#{@person.record_id}[type='text']"
         assert_equal "66374958", find_field("Account number").value
+      end
+
+      # --- Registering a user as a payee --------------------------------------
+      #
+      # A request test cannot see form STRUCTURE (form_with opened inside the
+      # CardComponent puts the footer's submit button outside the <form>, and
+      # the button then silently does nothing), and it cannot drive the Tom
+      # Select user picker at all. Both are what this covers.
+      test "finance registers an existing user account as a payee, with no bank details" do
+        visit admin_reimbursements_people_path
+        click_on "Register a person"
+
+        tom_select_remote "Cyclops", "Cyclops Cat", select_id: "user_id"
+        click_on "Add to the registry"
+
+        assert_current_path admin_reimbursements_people_path, wait: 5
+        assert_text "Cyclops Cat"
+
+        registered = ::Reimbursements::Person.find_by(email: users(:user).email)
+        assert_not_nil registered, "the submit button must actually submit the form"
+        assert_nil registered.payment_details, "no bank details are collected here"
+        assert_equal registered.id, users(:user).reload.reimbursements_person_id
       end
 
       # --- Linking an EUSA row to a claim -------------------------------------

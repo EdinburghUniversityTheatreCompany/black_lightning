@@ -364,6 +364,123 @@ module Admin
       assert_includes response.body, "Download CSV"
       assert_includes response.body, "/admin/reimbursements/people?format=csv"
     end
+
+    test "index links to the register-a-person form" do
+      sign_in @user
+
+      get :index
+
+      assert_includes response.body, new_admin_reimbursements_person_path
+    end
+
+    # --- Registering an existing user account ------------------------------
+    #
+    # A budget owner may never log in and never claim a penny (BudgetOwner
+    # joins Budget to Person with no user involved), but until now a Person
+    # only came into being when a producer saved bank details or filed a
+    # claim. Finance can register one directly, with no bank details asked for.
+
+    test "new requires the finance permission" do
+      sign_in users(:committee)
+
+      get :new
+
+      assert_response :forbidden
+    end
+
+    test "create requires the finance permission" do
+      sign_in users(:committee)
+
+      assert_no_difference -> { ::Reimbursements::Person.count } do
+        post :create, params: { user_id: users(:user).id }
+      end
+
+      assert_response :forbidden
+    end
+
+    test "new renders the user picker" do
+      sign_in @user
+
+      get :new
+
+      assert_response :success
+      assert_select "select#user_id"
+    end
+
+    test "create registers the chosen user as a person" do
+      sign_in @user
+      chosen = users(:user)
+
+      assert_difference -> { ::Reimbursements::Person.count }, 1 do
+        post :create, params: { user_id: chosen.id }
+      end
+
+      assert_redirected_to admin_reimbursements_people_path
+      person = ::Reimbursements::Person.order(:id).last
+      assert_equal chosen.full_name, person.name
+      assert_equal chosen.email, person.email
+      assert_equal person.id, chosen.reload.reimbursements_person_id,
+                   "the PersonLink must be remembered for next time"
+    end
+
+    test "a registered person needs no bank details and reads as unverified" do
+      sign_in @user
+
+      post :create, params: { user_id: users(:user).id }
+
+      person = ::Reimbursements::Person.order(:id).last
+      assert_nil person.payment_details
+      assert_not person.bank_details?
+      assert_not person.verified
+    end
+
+    test "create says so and creates nothing when the user is already linked" do
+      sign_in @user
+      chosen = users(:user)
+      existing = create_reimbursements_person(name: "Already There", email: "already@example.com")
+      chosen.update_column(:reimbursements_person_id, existing.id)
+
+      assert_no_difference -> { ::Reimbursements::Person.count } do
+        post :create, params: { user_id: chosen.id }
+      end
+
+      assert_redirected_to admin_reimbursements_people_path
+      assert_match(/already/i, flash[:alert].to_s + flash[:notice].to_s)
+    end
+
+    test "create matches an unlinked person on email instead of duplicating them" do
+      sign_in @user
+      chosen = users(:user)
+      existing = create_reimbursements_person(name: "Cyclops Cat", email: chosen.email)
+
+      assert_no_difference -> { ::Reimbursements::Person.count } do
+        post :create, params: { user_id: chosen.id }
+      end
+
+      assert_redirected_to admin_reimbursements_people_path
+      assert_equal existing.id, chosen.reload.reimbursements_person_id
+    end
+
+    test "create with no user chosen re-renders the form and writes nothing" do
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Person.count } do
+        post :create, params: { user_id: "" }
+      end
+
+      assert_response :unprocessable_entity
+      assert_select "select#user_id"
+    end
+
+    test "create with an unknown user id re-renders the form and writes nothing" do
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Person.count } do
+        post :create, params: { user_id: "999999" }
+      end
+
+      assert_response :unprocessable_entity
+    end
   end
   end
 end
