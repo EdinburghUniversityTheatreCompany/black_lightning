@@ -249,6 +249,48 @@ module Reimbursements
       assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ], import.owner_syncs
     end
 
+    # DatabaseStore#sync_budget_owners! writes the budget's OWN rows, so the
+    # "has this already been synced?" comparison has to read the same rows.
+    # Comparing the area-resolved Budget#owner_ids can never converge: the
+    # sheet's owner is written to own_owners, #owners keeps returning the
+    # area's, and every later re-import reports the identical sync again.
+    test "a matched budget in an area is compared against its OWN owner rows" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
+      area = create_reimbursements_area(name: "Cogito", financial_year: @year,
+                                        cost_centre: @cost_centre)
+      area.sync_owner_ids!([ bob.id ])
+      budget = create_reimbursements_budget(name: "Props", initial_budget: 1000, area: area,
+                                            owners: [ alice ], financial_year: @year,
+                                            cost_centre: @cost_centre)
+
+      import = build_import(tsv("Props\t4000\tExpense\t1000\talice@example.com\t"),
+                            existing_budgets: [ budget ], people: [ alice, bob ])
+
+      assert_empty import.owner_syncs,
+                   "Alice is already the budget's own owner — there is nothing to write"
+    end
+
+    test "an owner sync inside an area converges: a re-import reports it once" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
+      area = create_reimbursements_area(name: "Cogito", financial_year: @year,
+                                        cost_centre: @cost_centre)
+      area.sync_owner_ids!([ bob.id ])
+      budget = create_reimbursements_budget(name: "Props", initial_budget: 1000, area: area,
+                                            financial_year: @year, cost_centre: @cost_centre)
+      sheet = tsv("Props\t4000\tExpense\t1000\talice@example.com\t")
+
+      first = build_import(sheet, existing_budgets: [ budget ], people: [ alice, bob ])
+      assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ],
+                   first.owner_syncs
+
+      DatabaseStore.new.sync_budget_owners!(budget.record_id, [ alice.id.to_s ])
+
+      second = build_import(sheet, existing_budgets: [ budget.reload ], people: [ alice, bob ])
+      assert_empty second.owner_syncs, "the same sync must not be reported for ever"
+    end
+
     # --- Round-tripping an upload through the preview -------------------------
 
     test "to_tsv re-parses to the same rows" do

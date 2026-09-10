@@ -142,10 +142,20 @@ module Reimbursements
     # own record of who runs what, so a re-import keeps it current — but only
     # where the sheet actually named someone, since an empty owner column means
     # "not stated", not "nobody".
+    #
+    # Compared against the budget's OWN owner rows, because that is what
+    # DatabaseStore#sync_budget_owners! writes. Budget#owner_ids resolves
+    # through the area when there is one, so comparing it could never
+    # converge: the apply would write the sheet's owner into own_owners,
+    # #owners would keep returning the area's, and every later re-import
+    # would report the identical sync for ever. Whether the sheet's owner
+    # column should instead target the AREA for a line that has one is a
+    # separate (Phase 2) question — this only makes the comparison agree with
+    # the write.
     def owner_syncs
       (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
         next if entry.owner_ids.empty?
-        next if entry.budget.owner_ids.map(&:to_s).sort == entry.owner_ids.sort
+        next if entry.budget.own_owners.map(&:record_id).sort == entry.owner_ids.map(&:to_s).sort
 
         { budget_id: entry.budget.record_id, owner_ids: entry.owner_ids }
       end
