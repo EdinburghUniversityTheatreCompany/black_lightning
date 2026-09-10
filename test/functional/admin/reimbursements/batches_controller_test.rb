@@ -262,7 +262,7 @@ module Admin
 
         rows = CSV.parse(response.body)
         assert_equal [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
-                       "EUSA draft", "SharePoint backup" ], rows.first
+                       "EUSA draft", "SharePoint backup", "Cost centre" ], rows.first
         assert_equal 2, rows.size, "header + the single batch"
 
         batch = rows[1]

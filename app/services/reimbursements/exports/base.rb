@@ -112,6 +112,23 @@ module Reimbursements
       def expense_by_id
         @expense_by_id ||= store.expenses.index_by(&:record_id)
       end
+
+      # Which pot a row belongs to. Every exporter that can answer it carries
+      # the column, because an export is where two centres''' figures are most
+      # easily added together by hand: a spreadsheet with no centre column
+      # cannot be pivoted by one. Resolved through a memoized map rather than a
+      # per-row association read, so it costs one query for the whole file.
+      # Blank (not "-") when nothing places the row, matching how every other
+      # empty cell is written.
+      def cost_centre_name(cost_centre_id)
+        return nil if cost_centre_id.nil?
+
+        cost_centre_by_id[cost_centre_id]&.name
+      end
+
+      def cost_centre_by_id
+        @cost_centre_by_id ||= store.cost_centres.index_by(&:id)
+      end
     end
   end
 end

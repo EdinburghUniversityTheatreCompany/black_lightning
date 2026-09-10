@@ -16,7 +16,7 @@ module Reimbursements
     # that net to zero can also be filtered out entirely.
     class Actuals < Base
       HEADERS = [ "Date", "Type", "Description", "Amount", "Budget",
-                  "Linked expense", "Period", "Status" ].freeze
+                  "Linked expense", "Period", "Status", "Cost centre" ].freeze
       SHEET_NAME = "Actuals".freeze
       SLUG = "actuals".freeze
 
@@ -32,7 +32,8 @@ module Reimbursements
           budget_by_id[actual.linked_budget_ids.first]&.name,
           expense_by_id[actual.linked_expense_ids.first]&.auto_number,
           actual.period,
-          actual.reconciliation_status.presence&.capitalize
+          actual.reconciliation_status.presence&.capitalize,
+          cost_centre_name(actual.cost_centre_id)
         ]
       end
 

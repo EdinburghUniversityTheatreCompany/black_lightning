@@ -25,7 +25,8 @@ module Reimbursements
     class Budgets < Base
       HEADERS = [ "Budget", "Nominal code", "Type", "Visible", "Initial", "Current forecast",
                   "Projected", "Committed", "Pipeline", "Paid (portal)", "EUSA actual",
-                  "Expected outturn", "Remaining", "Variance", "Owners" ].freeze
+                  "Expected outturn", "Remaining", "Variance", "Owners",
+                  "Cost centre" ].freeze
       SHEET_NAME = "Budgets".freeze
       SLUG = "budgets".freeze
 
@@ -38,7 +39,8 @@ module Reimbursements
           budget.initial_budget, budget.current_forecast, budget.projected_amount,
           budget.committed_amount, budget.pipeline_amount, budget.paid_portal_amount,
           budget.eusa_actual_amount, budget.expected_outturn,
-          budget.remaining, budget.variance, owner_names(budget)
+          budget.remaining, budget.variance, owner_names(budget),
+          cost_centre_name(budget.cost_centre_id)
         ]
       end
 

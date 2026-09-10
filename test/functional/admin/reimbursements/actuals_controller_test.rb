@@ -197,7 +197,7 @@ module Admin
 
       rows = CSV.parse(response.body)
       assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period",
-                     "Status" ],
+                     "Status", "Cost centre" ],
                    rows.first
       assert_equal 4, rows.size, "header + three actuals"
 
