@@ -35,6 +35,23 @@ module Reimbursements
       assert_equal area.id, budget.reload.area_id
     end
 
+    # Area.delete_all bypasses has_many :forecasts, dependent: :destroy, so an
+    # area whose agreed total was revised (a forecast, not initial_budget) got
+    # past both other guards and died on a raw Mysql2 FK violation instead of
+    # the friendly refusal.
+    test "down refuses when an area carries a forecast of its own" do
+      budget = create_reimbursements_budget(name: "Cogito: Marketing")
+      AreaBackfill.run!
+      area = budget.reload.area
+      BudgetForecast.create!(area: area, amount: 750, date: Date.current, reason: "Committee")
+
+      error = assert_raises(ActiveRecord::IrreversibleMigration) { BackfillReimbursementsAreas.new.down }
+      assert_match(/forecast/, error.message)
+
+      assert_equal 1, Area.count
+      assert_equal area.id, budget.reload.area_id
+    end
+
     test "down still unwinds a pristine backfill" do
       alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
       a = create_reimbursements_budget(name: "Cogito: Marketing")

@@ -18,6 +18,15 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
     hand_totalled = Reimbursements::Area.where.not(initial_budget: nil).pluck(:name)
     concerns << "areas with a hand-set initial_budget (#{hand_totalled.join(', ')})" if hand_totalled.any?
 
+    # Area.delete_all below bypasses has_many :forecasts, dependent: :destroy,
+    # so an area whose agreed total has been revised would otherwise get past
+    # both other guards and die on a raw FK violation. A revision to an agreed
+    # total is finance's work either way, the same thing
+    # 20260911100200_allow_area_budget_forecasts refuses to drop.
+    forecast_revised = Reimbursements::Area.joins(:forecasts).distinct.pluck(:name)
+    concerns << "areas carrying a forecast of their own (#{forecast_revised.join(', ')})" if
+      forecast_revised.any?
+
     fabricated = []
     Reimbursements::Area.includes(:budgets).find_each do |area|
       reproducible = area.budgets.any? do |budget|

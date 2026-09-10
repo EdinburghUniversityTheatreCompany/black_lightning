@@ -1080,6 +1080,25 @@ module Reimbursements
       assert_nil store.find_area("999999")
     end
 
+    # The area edit page reads Area#committed_amount and #allocated, which call
+    # the equivalent Budget readers per line — so without the same preload
+    # #areas carries, the one screen those figures exist for pays two queries
+    # per budget line.
+    test "find_area preloads each budget line's expenses and forecasts" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+      create_reimbursements_expense(budget: budget, receipt: false)
+      budget.forecasts.create!(amount: 100, date: Date.current, reason: "x")
+
+      found = store.find_area(area.record_id)
+      line = found.budgets.first
+
+      assert_predicate found.budgets, :loaded?
+      assert_predicate found.association(:owners), :loaded?
+      assert_predicate line.association(:expenses), :loaded?
+      assert_predicate line.association(:forecasts), :loaded?
+    end
+
     test "create_area! writes the permitted columns" do
       year = FinancialYear.create!(label: "Fringe 2027")
       cost_centre = CostCentre.default

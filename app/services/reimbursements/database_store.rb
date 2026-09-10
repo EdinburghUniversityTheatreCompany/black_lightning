@@ -119,8 +119,12 @@ module Reimbursements
       Budget.includes(:forecasts, :own_owners, area: :owners).find_by(id: record_id)
     end
 
+    # Preloaded exactly as #areas is: the area edit page reads
+    # Area#committed_amount and #allocated, which call the equivalent Budget
+    # readers per line — so without the budgets' expenses and forecasts, the
+    # one screen those figures exist for pays two queries per budget line.
     def find_area(record_id)
-      Area.includes(:owners, :budgets, :forecasts).find_by(id: record_id)
+      Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).find_by(id: record_id)
     end
 
     def find_batch(record_id)
