@@ -48,5 +48,16 @@ module Reimbursements
       assert_equal 500, area.unallocated
       assert_equal 0, area.committed_amount
     end
+
+    test "an area with budgets but no agreed total has nil remaining and unallocated" do
+      # Realistic backfill state: children exist but no total was agreed
+      area = create_reimbursements_area(name: "Realistic")
+      create_reimbursements_budget(name: "Line A", area: area)
+      create_reimbursements_budget(name: "Line B", area: area)
+
+      assert_nil area.remaining
+      assert_nil area.unallocated
+      assert_equal 0, area.allocated
+    end
   end
 end
