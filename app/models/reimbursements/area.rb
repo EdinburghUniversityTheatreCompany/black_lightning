@@ -41,6 +41,8 @@ module Reimbursements
     has_many :area_ownerships, class_name: "Reimbursements::AreaOwner", dependent: :destroy,
                                inverse_of: :area
     has_many :owners, through: :area_ownerships, source: :person
+    has_many :forecasts, class_name: "Reimbursements::BudgetForecast", dependent: :destroy,
+                         inverse_of: :area
 
     validates :name, presence: true
 
@@ -59,5 +61,13 @@ module Reimbursements
         area_ownerships.create!(person_id: person_id)
       end
     end
+
+    # Latest wins, by date then id — the same rule Budget#current_forecast uses
+    # (app/models/reimbursements/budget.rb).
+    def current_forecast
+      @current_forecast ||= forecasts.max_by { |f| [ f.date || Date.new(0), f.id ] }&.amount
+    end
+
+    def projected_amount = current_forecast || initial_budget
   end
 end

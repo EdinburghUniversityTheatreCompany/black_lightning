@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_100200) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -750,15 +750,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100100) do
   create_table "reimbursements_budget_forecasts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "airtable_record_id"
     t.decimal "amount", precision: 12, scale: 2
-    t.bigint "budget_id", null: false
+    t.bigint "area_id"
+    t.bigint "budget_id"
     t.bigint "budget_update_id"
     t.datetime "created_at", null: false
     t.date "date"
     t.text "reason"
     t.datetime "updated_at", null: false
     t.index ["airtable_record_id"], name: "index_reimbursements_budget_forecasts_on_airtable_record_id", unique: true
+    t.index ["area_id"], name: "index_reimbursements_budget_forecasts_on_area_id"
     t.index ["budget_id"], name: "index_reimbursements_budget_forecasts_on_budget_id"
     t.index ["budget_update_id"], name: "index_reimbursements_budget_forecasts_on_budget_update_id"
+    t.check_constraint "(`budget_id` is null) <> (`area_id` is null)", name: "budget_forecasts_exactly_one_owner"
   end
 
   create_table "reimbursements_budget_owners", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -1242,6 +1245,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100100) do
   add_foreign_key "reimbursements_areas", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_areas", "reimbursements_financial_years", column: "financial_year_id"
   add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_budget_forecasts", "reimbursements_areas", column: "area_id"
   add_foreign_key "reimbursements_budget_forecasts", "reimbursements_budget_updates", column: "budget_update_id"
   add_foreign_key "reimbursements_budget_forecasts", "reimbursements_budgets", column: "budget_id"
   add_foreign_key "reimbursements_budget_owners", "reimbursements_budgets", column: "budget_id"
