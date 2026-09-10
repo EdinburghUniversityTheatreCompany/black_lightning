@@ -568,15 +568,6 @@ it. Neither is known to be wrong today (their sheets are narrow), but `BudgetImp
 `COLUMNS[:name]` ends in a bare `%w[budget]` and its `:amount` in a bare `%w[total]`, which is the
 same shape. Worth porting `ExpenseImport`'s matcher into the concern and moving all three onto it.
 
-### `BudgetImport` unescapes the operator's own paste
-
-Same defect `ExpenseImport` just fixed: `normalize_row` runs `unescape_cell` over `name` and
-`notes` whatever the source, so a budget note typed as `C:\temp\notes.txt` is stored with a real
-tab. The mechanism is already in place — `ReadsImportSource#input_type` returns `:canonical_tsv`
-when the form posts a `canonical` marker — so the fix is a `hidden_field_tag :canonical, "1"` in
-the budget import's preview plus an `@escaped` flag on the model. Left out here to keep this
-branch's diff to the wizard it is about.
-
 ### The `import_key` comparison folds case but not accents
 
 `ExpenseImport.key_match` downcases, matching the common `OLD-1`/`old-1` case; the column's
