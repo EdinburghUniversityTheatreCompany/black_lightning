@@ -37,6 +37,9 @@ erDiagram
     BUDGET ||--o{ BUDGET_OWNER : "owned by (only when area-less)"
     COST_CENTRE ||--o{ NOMINAL_CODE : "labels"
     BUDGET }o--o| NOMINAL_CODE : "by code string, no FK"
+    AREA ||--o{ BUDGET_FORECAST : "revises the total"
+    BUDGET ||--o{ BUDGET_FORECAST : "revises the allocation"
+    BUDGET_UPDATE ||--o{ BUDGET_FORECAST : "one meeting, both kinds"
 
     AREA {
         string name "matched within (year, centre)"
@@ -55,6 +58,12 @@ erDiagram
         bigint cost_centre_id
         string code "unique within a centre"
         string label "means different things per centre"
+    }
+    BUDGET_FORECAST {
+        decimal amount
+        bigint budget_id "nullable"
+        bigint area_id "nullable - exactly one of the two"
+        bigint budget_update_id
     }
 ```
 
@@ -124,10 +133,26 @@ lines are.
 - `initial_budget` on an area is **write-once on create**, like a budget's, so a re-import logs a
   revision rather than rewriting the figure the committee agreed. See the open question below on
   where that revision is recorded.
-- **The sheet is the source of truth, so a mis-filed line is corrected by re-importing** — there
-  is no admin screen for moving a budget between areas in v1. Areas themselves get a minimal
-  admin edit (name, figure, owners, active), because the seven backfilled areas exist before any
-  sheet has an `Area` column.
+### Managing areas by hand (v1)
+
+The sheet is the normal route, but not the only one — the seven backfilled areas exist before any
+sheet has an `Area` column, and a mis-filed line should not need a re-import to correct.
+
+- **The area's edit form carries its budgets as nested fields**
+  (`accepts_nested_attributes_for :budgets`, rendered through `shared/form/sections/_nested_fields`
+  — and unlike `ticket_prices`, these are a real association, so no `template_object:` is needed).
+  Add a line to an area, edit its name/code/figure, and detach one, all in one form.
+- **A budget's own edit form gains an area picker**, so a line can be moved from the other
+  direction. Both routes write the same `area_id`.
+- Detaching a budget sets `area_id` to nil; it does not delete anything. A budget with no area
+  behaves as it does today.
+
+**A hand move is NOT silently reverted by the next import.** When the sheet's `Area` column
+disagrees with a budget's current area, the import reports it as a **re-home** in the preview —
+its own bucket, ticked by default, alongside create/revise/unchanged — rather than applying it
+silently. This follows the importer's existing temperament: `absent_budgets` are reported and
+never deleted, and an unplaced line is adopted rather than quietly shared. Somebody moved that
+budget on purpose, and the sheet should have to say so out loud before undoing it.
 
 ## Find-or-create, and the nominal code list
 
@@ -139,7 +164,14 @@ agreed figure, which reads on every screen as *unbudgeted spend within this area
 `Reimbursements::NominalCode` — `cost_centre_id`, `code`, `label`, `active`; unique on
 `(cost_centre_id, code)`. **Per centre, because the same code means different things in
 different pots** (Mick, 2026-09-10). Seeded from the codes already in use per centre, labelled
-from the budget names that carry them; maintained on a small admin screen.
+from the budget names that carry them.
+
+**Maintained on the cost centre's own edit page** (Mick, 2026-09-10) — `SettingsController`,
+which is already the CostCentre CRUD under another name, and already the place its mailboxes,
+EUSA code and nightly run-days live. Nested fields beside those, the same vocabulary as the area
+form. **The list is owned by that centre's finance admin**, which is the answer to "who keeps it
+current": the person who owns the pot owns its chart of accounts, and it sits on the page they
+already visit to configure the centre.
 
 Rules:
 
@@ -203,21 +235,36 @@ a lenient filter.
 
 ## Open questions for review
 
-1. **Where is a revision to an area's total recorded?** A budget's revisions are
-   `BudgetForecast` rows under a `BudgetUpdate`, which is what makes `variance` mean "drift from
-   the figure the committee agreed". An area needs the same or its authoritative figure has no
-   audit trail. Three options: make `budget_forecasts.budget_id` nullable and add `area_id` with
-   a check that exactly one is set (cleanest, but alters a populated table); a parallel
-   `area_forecasts` table (no change to existing data, but near-duplicate code, and `jscpd` gates
-   duplication at 0); or **v1 ships with no area-level revision log** and the total is simply
-   editable, with the audit deferred. **Recommendation: the nullable `budget_id` + `area_id`
-   check**, because the alternative is two forecast concepts that will drift.
+1. ~~Where is a revision to an area's total recorded?~~ **RESOLVED: a forecast attaches to
+   either.** `budget_forecasts.budget_id` becomes nullable, `area_id` is added, and a check
+   constraint requires exactly one of the two. `BudgetUpdate` is unchanged and groups both kinds,
+   so one committee meeting stays one update.
+
+   Mick asked whether forecasts should simply *become* area forecasts. They can't, and the
+   production data is why: **14 of Fringe's 31 budgets have no area** — Hourly payroll, NI
+   contributions, Consumables, PRS/PPL, Contingency — and they need revising like any other line.
+   Contingency is the proof: it is the one budget Maysan's 2026-09-08 import revised. A
+   pure area-level forecast log could only express that by inventing a single-child area for each
+   of those 14 overheads, which is a fake grouping created to satisfy a table.
+
+   The alternative of a parallel `area_forecasts` table was rejected for two reasons: `jscpd`
+   gates duplication at 0 and the model would be a near-copy, and more importantly two forecast
+   concepts drift — the day one gains a `reason` or an effective-date rule, the other won't.
+
+   Both levels having a revision log is meaningful rather than redundant: an **area** forecast
+   revises the show's agreed total, a **budget** forecast revises how much of it a category is
+   allocated. `Budget#variance` keeps its current meaning untouched.
 2. **Should the backfill rename `Cogito: Marketing` to `Marketing`?** Left out above
    deliberately. It is what makes the grouping read well, and it is also a rewrite of every
    label in the same migration as the structural change.
-3. **Who owns the nominal code list?** It is seeded once from codes in use, but EUSA's chart of
-   accounts moves. A stale list silently steers new spend to a dead code, which is worse than
-   having no list.
+3. ~~Who owns the nominal code list?~~ **RESOLVED: the cost centre's finance admin, maintained
+   on the cost centre edit page** (Mick, 2026-09-10). See the section above.
+
+4. **Does the area's `Area Budget` column belong in the sheet at all**, now that areas are
+   hand-editable? Setting an authoritative total in two places (a repeated spreadsheet column and
+   the area form) is the kind of split that goes stale. The alternative is that the sheet names
+   areas and the totals are set in the portal. Not blocking — the import can ship without the
+   column and gain it later.
 
 ## Out of scope
 
