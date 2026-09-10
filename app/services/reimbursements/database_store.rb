@@ -119,6 +119,10 @@ module Reimbursements
       Budget.includes(:forecasts, :own_owners, area: :owners).find_by(id: record_id)
     end
 
+    def find_area(record_id)
+      Area.includes(:owners, :budgets, :forecasts).find_by(id: record_id)
+    end
+
     def find_batch(record_id)
       Batch.find_by(id: record_id)
     end
@@ -187,6 +191,24 @@ module Reimbursements
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:name)
     end
 
+    # Every area, every year — an id->record lookup, for exactly the reason
+    # #budgets is unscoped: narrowing it blanks the area name on another
+    # year's or another centre's claim.
+    #
+    # Preloads each area's budgets' expenses and forecasts too: Area#committed_amount
+    # and #allocated each call the equivalent Budget reader per budget, which
+    # reads the budget's own expenses/forecasts associations, so without this an
+    # areas index or a grouped budgets index would pay one or two queries per
+    # budget, per area, per render.
+    def areas
+      @areas ||= Area.includes(:owners, budgets: %i[expenses forecasts]).to_a
+    end
+
+    # The areas the budget screens LIST.
+    def areas_for_year
+      @areas_for_year ||= scoped_to_cost_centre(scoped_to_year(areas), &:cost_centre_id)
+    end
+
     # Budgets grouped by nominal code for the overview page, ordered by code
     # with the blank-code bucket ("(none)") sorted last. Built from
     # #budgets_with_actuals, since the overview shows the EUSA-actual rollup for
@@ -225,6 +247,22 @@ module Reimbursements
       budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?)) unless owner_ids.nil?
       bust_budgets!
       budget
+    end
+
+    def create_area!(attrs)
+      Area.create!(area_columns(attrs))
+    end
+
+    def update_area!(record_id, attrs)
+      area = Area.find(record_id)
+      area.update!(area_columns(attrs))
+      bust_areas!
+      area
+    end
+
+    def sync_area_owners!(record_id, person_ids)
+      Area.find(record_id).sync_owner_ids!(person_ids)
+      bust_areas!
     end
 
     # What an applied budget import did, for the confirmation screen.
@@ -708,6 +746,11 @@ module Reimbursements
       @budgets_with_actuals = nil
     end
 
+    def bust_areas!
+      @areas = nil
+      @areas_for_year = nil
+    end
+
     # --- Financial-year scoping ---------------------------------------------
 
     # +records+ narrowed to this store's financial year. An unscoped store (a
@@ -802,6 +845,12 @@ module Reimbursements
         else columns[key] = value
         end
       end
+    end
+
+    AREA_FIELDS = %i[name initial_budget notes active cost_centre financial_year].freeze
+
+    def area_columns(attrs)
+      attrs.slice(*AREA_FIELDS).compact
     end
   end
 end
