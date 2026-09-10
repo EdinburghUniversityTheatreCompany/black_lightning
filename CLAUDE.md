@@ -611,6 +611,13 @@ survive as historical import provenance and are never written. Spec + plan in
   is entitled to it. The People registry is the exception: its fields hold the real values
   so they can be edited, so they are `type="password"` toggled to text — masking the value
   would invite saving `****4958` as an account number.
+- **Finance registers a payee from a USER ACCOUNT, and collects no bank details doing it**
+  (`PeopleController#new/#create`). A budget owner may never log in and never claim
+  (`BudgetOwner` needs no user), so "Unverified, no modulus badge" is the correct end state —
+  don't add a bank-details step to this form. It goes through `PersonLink#ensure_person!`, and
+  asks `person_for` first so a user the registry already holds under their email is reported
+  rather than duplicated. Nothing here weakens `BudgetImport`'s rule that no Person is ever
+  auto-created from a bare email; the preview just links to this form now.
 - **Reconcile emails nobody, by decision (removed 2026-08-12).** Marking an expense Paid there
   used to send the producer a "EUSA has paid your expense" note (`Notifier#payment_confirmation`
   plus its template, both gone). Reconciliation runs off EUSA's monthly actuals export, which
