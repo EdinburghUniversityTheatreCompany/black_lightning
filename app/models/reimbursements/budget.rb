@@ -81,7 +81,10 @@ module Reimbursements
     # than in one controller: every present and future path that hangs a
     # budget off an area gets it. Only ever fills a BLANK, so it can never
     # move a line out of the pot that already owns it — the same rule as
-    # DatabaseStore#adopt_budget!.
+    # DatabaseStore#adopt_budget!. A consequence worth stating, since it is a
+    # write nobody asked for: an unstamped legacy line already in an area gets
+    # stamped by the next unrelated Save. That is the intended direction (the
+    # area is its parent, and it is what adopt_budget! does on an import).
     before_validation :inherit_area_scoping
 
     # The area owns and its budgets inherit; a budget with no area owns

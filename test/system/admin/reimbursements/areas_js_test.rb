@@ -53,7 +53,7 @@ module Admin
         end
         click_on "Save"
 
-        assert_text "Every budget line needs a name and a nominal code"
+        assert_text "A new budget line needs a name and a nominal code"
         assert_empty area.reload.budgets
       end
     end

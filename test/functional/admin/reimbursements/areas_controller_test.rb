@@ -111,6 +111,57 @@ module Admin
         assert_equal centre.id, budget.cost_centre_id
       end
 
+      # This form posts EVERY child row, not just the one being edited, so a
+      # rule requiring a nominal code of all of them locks an area holding one
+      # code-less line out of its own form: its name, agreed total, owners and
+      # notes, AND the "Detach from this area" control that would remove the
+      # offending line. A blank code is supported state — the importer allows
+      # it and the overview has a "(none)" bucket for it — so this is reachable
+      # with ordinary data, the backfill's included.
+      test "an area holding a code-less line can still be saved" do
+        area = create_reimbursements_area(name: "Cogito")
+        line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
+                                            area: area)
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito Autumn",
+          budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "" } }
+        }
+
+        assert_redirected_to edit_admin_reimbursements_area_path(area.record_id)
+        assert_equal "Cogito Autumn", area.reload.name
+      end
+
+      test "a code-less line can still be detached from its area" do
+        area = create_reimbursements_area(name: "Cogito")
+        line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
+                                            area: area)
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "",
+                                         area_id: "" } }
+        }
+
+        assert_nil line.reload.area_id
+      end
+
+      # An existing row's NAME is a different matter from its code: Budget
+      # validates the name, so a blank one is never supported state and reaches
+      # save!, which raises and 500s the form.
+      test "blanking an existing line's name is rejected rather than raising" do
+        area = create_reimbursements_area(name: "Cogito")
+        line = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { id: line.id, name: " ", nominal_code: "432320" } }
+        }
+
+        assert_response :unprocessable_entity
+        assert_equal "Cogito: Marketing", line.reload.name
+      end
+
       test "a budget line with no nominal code is rejected, not filed under (none)" do
         area = create_reimbursements_area(name: "Cogito")
 

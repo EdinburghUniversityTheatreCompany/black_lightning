@@ -137,29 +137,43 @@ module Admin
         source.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
       end
 
-      # Every budget row the operator actually filled in needs both a name and
-      # a nominal code — the same rule BudgetsController#budget_validation_error
-      # applies to a budget's own form. Budget validates the name (so a blank
-      # one reached save! and 500'd the form) and deliberately does NOT
-      # validate the code (the importer allows a blank one), so both belong
-      # here. A row posting neither key (a detach-only params hash) and the
-      # blank "Add" template row (dropped by reject_if: :all_blank) are skipped.
+      # Budget itself validates only the name, so what a budget row may leave
+      # blank is decided here. A row posting neither field is absent rather
+      # than incomplete (a detach-only params hash).
       def budget_rows_error
         rows = permitted_budgets_attributes
         return nil if rows.blank?
-        return nil unless rows.each_value.any? { |row| incomplete_budget_row?(row) }
 
-        "Every budget line needs a name and a nominal code."
+        rows.each_value.filter_map { |row| budget_row_error(row) }.first
       end
 
-      # Half-filled: one of the two given, the other blank. A row carrying
-      # neither key is absent rather than incomplete (a detach-only params
-      # hash), and one with both blank is the "Add" template row.
-      def incomplete_budget_row?(row)
-        return false unless row.key?("name") || row.key?("nominal_code")
-        return false if row[:name].blank? && row[:nominal_code].blank?
+      # A NEW line typed here needs both fields, the intent
+      # BudgetsController#budget_validation_error has for a budget's own form.
+      # An EXISTING child is checked only for its NAME, and the difference
+      # matters: this form posts EVERY child row, not just the one being
+      # edited, so requiring a nominal code of all of them locks an area
+      # holding one code-less line out of its own form entirely — its name,
+      # agreed total, owners and notes, AND the "Detach from this area"
+      # control that would remove the offending line. A blank code is
+      # supported state (BudgetImport#missing_nominal_codes allows it and the
+      # overview has a "(none)" bucket for it), so that is reachable with
+      # ordinary data. A blank NAME never is: Budget validates it, so letting
+      # one through reaches save!, which raises and 500s the form instead of
+      # reporting anything the operator can act on.
+      def budget_row_error(row)
+        return nil unless row.key?("name") || row.key?("nominal_code")
 
-        row[:name].blank? || row[:nominal_code].blank?
+        if row[:id].present?
+          return "A budget line's name can't be blank." if row[:name].blank?
+
+          return nil
+        end
+        # Both blank on a new row is the untouched "Add" template row, which
+        # reject_if: :all_blank drops.
+        return nil if row[:name].blank? && row[:nominal_code].blank?
+        return nil if row[:name].present? && row[:nominal_code].present?
+
+        "A new budget line needs a name and a nominal code."
       end
 
       # Optional: with one cost centre configured there is nothing to choose,
