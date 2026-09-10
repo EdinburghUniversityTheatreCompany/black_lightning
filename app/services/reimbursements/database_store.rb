@@ -353,6 +353,33 @@ module Reimbursements
       expense
     end
 
+    # Finance's historical-claims sheet, written as ONE transaction — the rule
+    # import_budgets! follows, and for the same reason: a half-imported ledger
+    # has no audit value and there is nothing on screen to say which half
+    # landed. ExpenseImport has already validated every row through ExpenseForm,
+    # so a raise here is a race (a double-submitted apply, or two operators),
+    # and rolling the lot back is what makes re-running it after a fix safe.
+    #
+    # The rows carrying a number FROM THE SHEET go in first. auto_number is
+    # uniquely indexed and create_expense! assigns MAX+1 to a row without one,
+    # so an auto-numbered row inserted first can walk straight into a number a
+    # later row is about to claim — and create_expense! deliberately does not
+    # retry past a collision on a number it was handed, calling that real data
+    # corruption rather than something to paper over.
+    #
+    # Nothing here notifies anyone: an import is bookkeeping, not an event.
+    # Every producer email in this portal is sent by BatchProcessor, the nightly
+    # reminders or an explicit reject — none of which a create can reach.
+    def import_expenses!(rows:)
+      created = nil
+      Expense.transaction do
+        numbered, unnumbered = rows.partition { |attrs| attrs[:auto_number].present? }
+        created = (numbered + unnumbered).map { |attrs| create_expense!(attrs) }
+      end
+      bust_expenses!
+      created
+    end
+
     # Hard-delete; only used for a producer discarding their own draft — the
     # caller gates on status.
     def delete_expense!(record_id)

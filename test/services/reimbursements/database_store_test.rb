@@ -862,6 +862,68 @@ module Reimbursements
       assert_equal [ alice.record_id ], budget.reload.owner_ids
     end
 
+    # --- import_expenses! ----------------------------------------------------
+
+    test "import_expenses! creates one claim per row, in one transaction" do
+      pat = create_person
+      budget = Budget.create!(name: "Props")
+
+      created = store.import_expenses!(rows: [
+        expense_row(pat, budget, key: "OLD-1"), expense_row(pat, budget, key: "OLD-2")
+      ])
+
+      assert_equal 2, created.size
+      assert_equal %w[OLD-1 OLD-2], Expense.order(:id).pluck(:import_key)
+    end
+
+    test "import_expenses! writes nothing at all when one row fails" do
+      pat = create_person
+      budget = Budget.create!(name: "Props")
+      Expense.create!(status: Status::PAID, import_key: "OLD-2")
+
+      assert_no_difference -> { Expense.count } do
+        assert_raises ActiveRecord::RecordNotUnique do
+          store.import_expenses!(rows: [
+            expense_row(pat, budget, key: "OLD-1"), expense_row(pat, budget, key: "OLD-2")
+          ])
+        end
+      end
+    end
+
+    # The sheet's own numbers are inserted BEFORE the rows that need one
+    # assigned, or MAX+1 walks straight into a number the sheet is about to
+    # claim — and create_expense! never retries past a number it was handed.
+    test "import_expenses! honours the sheet's expense numbers without colliding" do
+      pat = create_person
+      budget = Budget.create!(name: "Props")
+
+      store.import_expenses!(rows: [
+        expense_row(pat, budget, key: "OLD-1"),
+        expense_row(pat, budget, key: "OLD-2").merge(auto_number: 1)
+      ])
+
+      assert_equal [ 1, 2 ], Expense.order(:auto_number).pluck(:auto_number)
+    end
+
+    test "import_expenses! sends nothing and enqueues nothing" do
+      pat = create_person
+      budget = Budget.create!(name: "Props")
+
+      assert_no_enqueued_jobs do
+        assert_no_emails do
+          store.import_expenses!(rows: [ expense_row(pat, budget, key: "OLD-1") ])
+        end
+      end
+    end
+
+    def expense_row(person, budget, key:)
+      { person_record_id: person.record_id, budget_record_id: budget.record_id,
+        status: Status::PAID, amount: BigDecimal("12.50"),
+        amount_excl_vat: BigDecimal("12.50"), description: "Fake blood",
+        payment_reference: "PROPS PAT", expense_type: Expense::TYPE_REIMBURSEMENT,
+        payment_method: Expense::PAYMENT_METHOD_UK_BACS, import_key: key }
+    end
+
     test "create_budget_update! stamps the store's year, not just the active one" do
       FinancialYear.create!(label: "Fringe 2026", active: true)
       draft = FinancialYear.create!(label: "Fringe 2027")
