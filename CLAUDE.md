@@ -431,8 +431,26 @@ survive as historical import provenance and are never written. Spec + plan in
   - **A row carrying an `Expense number` is inserted BEFORE the rows without one.** `auto_number`
     is uniquely indexed and `create_expense!` assigns MAX+1 to a row without one — and never
     retries past a collision on a number it was handed, calling that real data corruption.
-  - **The import emails nobody, and neither does creating an expense anywhere.** Every producer
-    email comes from `BatchProcessor`, `NightlyBatchJob` or an explicit reject.
+  - **It does NOT match columns through `ImportParsing#find_column`.** That fallback matches any
+    header *containing* a keyword, and this sheet's fields are near-anagrams: read through it a
+    "Payment reference" column answered to the dedupe key (collapsing two of a payee's claims into
+    one) and an "Account number" column answered to the expense number (numbering every later
+    claim in the portal from 66,374,959). `FIELDS` matches EXACT names first, then MULTI-WORD
+    substrings only; two fields resolving to one column is a blocking error; and **the preview
+    states the column read for each field**, which is the only thing that makes a remaining
+    mis-mapping visible. A test file that builds its sheet from `TSV_HEADERS` cannot catch any of
+    this — the realistic-heading tests are the ones that matter.
+  - **References are compared downcased**, because the `import_key` index is
+    `utf8mb4_unicode_ci`: comparing case-sensitively previewed `OLD-1` and `old-1` as two creates
+    and then rolled the whole sheet back, unrecoverably. The collation also folds accents and this
+    does not — deliberately, since over-matching would drop a new claim silently.
+  - **Escape sequences are undone only for `:canonical_tsv`**, the preview's own hidden field —
+    never for the operator's paste, where a typed `C:\temp\report.pdf` is a path, not a tab.
+  - **The import emails nobody, but what it WRITES decides what happens next.** Every producer
+    email comes from `BatchProcessor`, `NightlyBatchJob` or an explicit reject — so a row imported
+    Approved goes on the next BACS spreadsheet (EUSA pays it again) and emails its payee, and a
+    Pending one is named to its budget owners nightly. The preview and the apply screen both count
+    the non-terminal rows and say so; don't reword those into a flat "nothing was emailed".
 - **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless its
   destination carries the same frame — otherwise Turbo replaces the wizard with "Content
   missing". All five escape links out of the budget import shipped broken this way;

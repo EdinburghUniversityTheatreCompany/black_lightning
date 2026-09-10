@@ -16,9 +16,26 @@
     <p class="mb-4 text-sm text-gray-600">
       Numbered
       <%= @created.map { |expense| "##{expense.auto_number}" }.to_sentence %>.
-      No receipts were imported and nobody was emailed: importing is bookkeeping, not a
-      submission.
+      No receipts were imported, and this import sent no email.
     </p>
+  <% end %>
+
+  <% live = @created.reject { |expense| ::Reimbursements::ExpenseImport::SETTLED_STATUSES.include?(expense.status) } %>
+  <% if live.any? %>
+    <%# The import itself emails nobody, but what it wrote decides what happens
+        next — and saying "nobody was emailed" full stop read as a promise about
+        tomorrow night that it could not keep. %>
+    <div class="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p class="font-medium">
+        <%= pluralize(live.size, "claim") %> went into the LIVE queue.
+      </p>
+      <p>
+        <%= live.map { |expense| "##{expense.auto_number} (#{expense.status})" }.to_sentence %>.
+        An Approved claim will be put on the next BACS spreadsheet for this cost centre — EUSA
+        pays it again — and its payee emailed; a Pending one is in Review now and its budget
+        owners are reminded nightly. Change the status on the claim if that isn't what you meant.
+      </p>
+    </div>
   <% end %>
 
   <div class="flex flex-wrap gap-3">

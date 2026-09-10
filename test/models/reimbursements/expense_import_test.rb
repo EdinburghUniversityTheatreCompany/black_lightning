@@ -42,6 +42,130 @@ module Reimbursements
                               people: [ @payee ], existing_expenses: existing_expenses)
     end
 
+    # --- A sheet finance actually has --------------------------------------
+    #
+    # Every other test here builds its sheet from TSV_HEADERS, which is the one
+    # input the column matcher cannot get wrong. These use the headings a real
+    # spreadsheet carries, which is where it did.
+
+    REAL_HEADERS = "Claim ID\tStatus\tPayee email\tBudget\tAmount\t" \
+                   "Payment reference\tDescription\tPayee name\tSort code\t" \
+                   "Account number\tNotes".freeze
+
+    def real_sheet(*rows) = ([ REAL_HEADERS ] + rows).join("\n")
+
+    def real_row(id, amount: "120.00", payment_reference: "PROPS ALICE", account: "66374958")
+      [ id, Status::PAID, "alice@example.com", "Props", amount,
+        payment_reference, "Fake blood #{id}", "Stage Supplies Ltd", "08-99-99",
+        account, "Petty cash" ].join("\t")
+    end
+
+    # The BACS reference repeats across a payee's claims by design, so reading
+    # it as the dedupe key either blocks the sheet naming a column the operator
+    # never mapped, or buckets a later genuinely-different claim as already
+    # imported and drops it.
+    test "the dedupe key comes from the sheet's own id column, never Payment reference" do
+      import = build_import(real_sheet(real_row("2019-014"), real_row("2019-015")))
+
+      assert import.valid?, import.entries.map(&:error).compact.to_sentence
+      assert_equal %w[2019-014 2019-015], import.creates.map { |attrs| attrs[:import_key] }
+    end
+
+    # A supplier's account number parses as an Integer, isn't taken and isn't
+    # duplicated, so nothing downstream catches it — and Expense's before_create
+    # then numbers every later claim in the portal from 66,374,959.
+    test "an Account number column is never read as the expense number" do
+      import = build_import(real_sheet(real_row("2019-014")))
+
+      assert import.valid?
+      assert_not import.creates.sole.key?(:auto_number)
+      assert_equal "66374958", import.creates.sole[:account_number_override]
+    end
+
+    test "a Notes column is never read as the expense number" do
+      import = build_import(real_sheet(real_row("2019-014")))
+
+      assert_not import.creates.sole.key?(:auto_number)
+    end
+
+    # Keyword tuning can only ever be nearly right, so the preview states what
+    # it read. This is the reader for it.
+    test "the import reports which column it read for each field" do
+      import = build_import(real_sheet(real_row("2019-014")))
+
+      assert_equal "Claim ID", import.column_mapping.fetch("Reference")
+      assert_equal "Payment reference", import.column_mapping.fetch("Payment reference")
+      assert_equal "Account number", import.column_mapping.fetch("Account number")
+      assert_nil import.column_mapping.fetch("Expense number")
+    end
+
+    # "Total amount excl VAT" reads as both the gross and the net — a plausible
+    # heading, and exactly the case where picking one silently charges the wrong
+    # figure to a budget.
+    test "two fields resolving to one column block the import, naming both" do
+      headers = "Reference\tStatus\tPayee email\tBudget\tTotal amount excl VAT"
+      import = build_import([ headers,
+                              "R1\tPaid\talice@example.com\tProps\t120" ].join("\n"))
+
+      assert_not import.valid?
+      assert_match(/Total amount excl VAT/, import.errors.to_sentence)
+      assert_match(/Amount and Amount excl VAT/, import.errors.to_sentence)
+    end
+
+    test "a sheet whose columns each read as one field is not reported ambiguous" do
+      import = build_import(real_sheet(real_row("2019-014")))
+
+      assert import.valid?, import.errors.to_sentence
+    end
+
+    # --- The unique index folds case; the pre-flight read has to too ---------
+
+    test "a reference differing only in case is already imported, not a second create" do
+      existing = create_reimbursements_expense(person: @payee, budget: @budget, receipt: false,
+                                               import_key: "OLD-1")
+
+      import = build_import(tsv(row(reference: "old-1")), existing_expenses: [ existing ])
+
+      assert import.valid?
+      assert_equal :already_imported, import.entries.sole.bucket
+      assert_empty import.creates
+    end
+
+    test "two references differing only in case block the sheet" do
+      import = build_import(tsv(row(reference: "OLD-1"), row(reference: "old-1")))
+
+      assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+    end
+
+    # --- A reference too long for its column ---------------------------------
+
+    test "a reference longer than the column blocks the import instead of 500ing" do
+      import = build_import(tsv(row(reference: "R" * 300)))
+
+      assert_not import.valid?
+      assert_match(/too long/i, import.entries.sole.error)
+    end
+
+    # --- Escaping belongs to the round trip, not to the operator's paste ------
+
+    test "a backslash typed in a pasted cell is stored verbatim" do
+      import = build_import(tsv(row(description: "Receipt at C:\\temp\\report.pdf")))
+
+      assert import.valid?
+      assert_equal "Receipt at C:\\temp\\report.pdf", import.creates.sole[:description]
+    end
+
+    # --- What happens to a claim imported live -------------------------------
+
+    test "claims imported at a live status are counted, so the preview can warn" do
+      import = build_import(tsv(row(reference: "OLD-1", status: Status::APPROVED),
+                                row(reference: "OLD-2", status: Status::PENDING),
+                                row(reference: "OLD-3", status: Status::PAID)))
+
+      assert_equal %w[OLD-1 OLD-2], import.live_entries.map { |e| e.row[:reference] }
+    end
+
     # --- The happy path ------------------------------------------------------
 
     test "a well-formed line becomes one create carrying the parsed amount" do
@@ -338,13 +462,22 @@ module Reimbursements
     # so they only ever arrive from an xlsx cell, already escaped, and must
     # leave escaped or one stray tab shifts every later column on the re-parse.
     test "a cell holding a tab or a newline survives the round trip into apply" do
-      import = build_import(tsv(row(description: "Blood\\tand\\nglitter")))
+      import = build_import(tsv(row(description: "Blood\\tand\\nglitter")),
+                            input_type: :canonical_tsv)
       assert_equal "Blood\tand\nglitter", import.entries.sole.row[:description]
 
-      again = build_import(import.to_tsv)
+      again = build_import(import.to_tsv, input_type: :canonical_tsv)
 
       assert_equal "Blood\tand\nglitter", again.entries.sole.row[:description]
       assert again.valid?
+    end
+
+    # The same bytes read as the operator's own paste, where a backslash is a
+    # backslash. Only the preview's hidden field is this class's own output.
+    test "the same escape sequence in a pasted cell is left alone" do
+      import = build_import(tsv(row(description: "Blood\\tand glitter")))
+
+      assert_equal "Blood\\tand glitter", import.entries.sole.row[:description]
     end
 
     test "an unreadable amount is carried on verbatim so the operator can see it" do

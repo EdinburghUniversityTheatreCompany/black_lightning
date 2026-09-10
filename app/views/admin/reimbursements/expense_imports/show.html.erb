@@ -29,15 +29,15 @@
     <% end %>
 
     <p class="mb-4 text-sm text-gray-600">
-      Paste the sheet of claims that were settled outside the portal (including its header row),
-      or upload the .xlsx. Nothing is written yet — the next screen shows exactly what would be
-      created, and you confirm from there. Receipts aren't imported: attach any you have to the
-      claim afterwards.
+      Paste the sheet of claims the portal doesn't have (including its header row), or upload
+      the .xlsx. Nothing is written yet — the next screen shows exactly what would be created,
+      which column it read for each field, and what will happen to any claim imported at a live
+      status. Receipts aren't imported: attach any you have to the claim afterwards.
     </p>
 
     <p class="mb-4 text-sm text-gray-600">
       Columns read: <strong><%= ::Reimbursements::ExpenseImport::TSV_HEADERS.to_sentence %></strong>.
-      <strong><%= ::Reimbursements::ExpenseImport::REQUIRED_FIELDS.keys.to_sentence %></strong>
+      <strong><%= ::Reimbursements::ExpenseImport.required_labels.to_sentence %></strong>
       are required on every line — the reference is your own sheet's id for the claim (a row
       number will do), and it's what stops importing the same sheet twice creating everything
       twice.

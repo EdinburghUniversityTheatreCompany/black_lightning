@@ -21,7 +21,16 @@ module Admin
         uploaded_file || params[:pasted_text].to_s
       end
 
-      def input_type = uploaded_file ? :xlsx : :paste
+      # :canonical_tsv is this wizard's OWN #to_tsv output coming back from the
+      # preview's hidden field — the only input whose cells carry escape
+      # sequences. A wizard that renders the `canonical` marker opts in; one
+      # that does not keeps reading everything as :paste.
+      def input_type
+        return :xlsx if uploaded_file
+        return :canonical_tsv if params[:canonical].present?
+
+        :paste
+      end
 
       # params[:file] is a String on a form submitted with the picker left
       # empty, which answers neither #path nor #read.

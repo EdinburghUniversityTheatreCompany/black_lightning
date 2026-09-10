@@ -41,10 +41,18 @@ module Admin
 
       NOTHING_PASTED_ALERT = "Paste the claims sheet, or choose an .xlsx file, first.".freeze
 
+      # Deliberately does NOT assert what happened. Two things reach here: a
+      # genuine race (somebody imported the same sheet meanwhile), and a
+      # reference that collides with one already stored only under the column's
+      # utf8mb4_unicode_ci collation — which folds ACCENTS as well as case,
+      # while the pre-flight read folds case alone. Blaming a concurrent
+      # operator for the second is a dead end: previewing again shows the same
+      # rows and the import can never succeed. Naming the fix covers both.
       RACED_ALERT =
-        "Nothing was imported: one of those references had already been used, so somebody " \
-        "else imported this sheet while you were looking at it. Preview it again to see " \
-        "what is left.".freeze
+        "Nothing was imported: one of those references is already on a claim in the portal. " \
+        "Either somebody imported this sheet while you were looking at it — preview it again " \
+        "to see what is left — or a reference differs from one already imported only by an " \
+        "accent, which the database counts as the same. Renaming it fixes that.".freeze
 
       # Names no year, for the same reason the budget import's doesn't: the
       # <h1> sits OUTSIDE the wizard's Turbo Frame, so a preview of a different

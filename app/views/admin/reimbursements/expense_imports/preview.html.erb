@@ -94,6 +94,70 @@
     </div>
   <% end %>
 
+  <% live = @import.live_entries %>
+  <% if live.any? %>
+    <%# Importing a live claim is legitimate — finance may be importing a queue
+        rather than a history — but it is the opposite of what the rest of this
+        screen implies, so it is stated rather than left to be discovered on the
+        next batch run. %>
+    <div class="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p class="font-medium">
+        <%= pluralize(live.size, "claim") %> here
+        <%= live.one? ? "is" : "are" %> being imported into the LIVE queue, not as history.
+      </p>
+      <ul class="mt-1 list-disc pl-5">
+        <li>
+          An <strong>Approved</strong> claim goes on the next BACS spreadsheet built for this
+          cost centre — <strong>EUSA pays it again</strong> — and its payee is emailed to say so.
+        </li>
+        <li>
+          A <strong>Pending</strong> or <strong>Draft</strong> claim lands in the Review queue,
+          and its budget owners are named in the nightly sign-off reminder until they act.
+        </li>
+      </ul>
+      <p class="mt-1">
+        Only <strong>Submitted</strong>, <strong>Paid</strong> and <strong>Rejected</strong> are
+        pure bookkeeping. Affected:
+        <%= live.map { |entry| entry.row[:reference] }.to_sentence %>.
+      </p>
+    </div>
+  <% end %>
+
+  <%# What the matcher read, stated. Keyword matching can only ever be nearly
+      right, and a column read as the wrong field is otherwise invisible — a
+      "Payment reference" column read as the dedupe key silently collapsed two
+      claims into one, and an "Account number" read as the expense number
+      corrupted the numbering of every later claim in the portal. %>
+  <details class="mt-4 text-sm">
+    <summary class="cursor-pointer text-gray-600">
+      Columns read from your sheet (check these before importing)
+    </summary>
+    <div class="mt-2 overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Field</th>
+            <th class="py-1 pr-4">Read from</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.column_mapping.each do |label, header| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4"><%= label %></td>
+              <td class="py-1 pr-4">
+                <% if header %>
+                  <span class="font-mono"><%= header %></span>
+                <% else %>
+                  <span class="text-gray-500">not in this sheet</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
   <%= form_with url: apply_admin_reimbursements_expense_import_path,
                 method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
     <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
@@ -102,6 +166,10 @@
         from params exactly as this step did, so it cannot land in a different
         pair than the one previewed here. %>
     <%= hidden_field_tag :pasted_text, @import.to_tsv %>
+    <%# Marks the text above as this class's OWN escaped output, so apply
+        unescapes it. Without it a backslash the operator typed is unescaped as
+        though we had written it. %>
+    <%= hidden_field_tag :canonical, "1" %>
     <%= hidden_field_tag :year, selected_financial_year&.key %>
     <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
     <%= submit_tag creates.any? ? "Import #{pluralize(creates.size, 'claim')}" : "Nothing to import",

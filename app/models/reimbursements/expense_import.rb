@@ -5,7 +5,7 @@ module Reimbursements
   # pure function of its inputs, so the preview and the apply that follows it
   # can each build one from the same text and be certain they agree.
   #
-  # Pasted TSV and uploaded xlsx both come in through ImportParsing, exactly as
+  # Pasted TSV and uploaded xlsx both come in through ImportParsing, as
   # BudgetImport does, and an upload is normalised straight to TSV (#to_tsv)
   # and carried through the preview in a hidden field. Nothing is kept in the
   # session or on disk, and apply re-parses and re-validates from scratch.
@@ -40,56 +40,132 @@ module Reimbursements
   # same form object the submission form uses, with `internal` set as
   # ExpenseForm.from_actual sets it — a claim imported here has no receipt, no
   # itemised VAT and nobody to tick a soft block's acknowledgement.
+  #
+  # HOW COLUMNS ARE MATCHED, and why not through ImportParsing#find_column.
+  # That helper falls back to "any header CONTAINING the keyword", which is
+  # fine for the membership import's flat name/email sheet and quietly
+  # catastrophic here, because this sheet's fields are near-anagrams of each
+  # other. Read through it, a "Payment reference" column answered to the dedupe
+  # key (so a payee's repeated BACS reference silently collapsed two different
+  # claims into one) and an "Account number" column answered to the expense
+  # number (so a supplier's account number was written as auto_number, and
+  # Expense's before_create then numbered every later claim in the portal from
+  # 66,374,959). Neither is catchable downstream.
+  #
+  # So the matching here is: EXACT header names first (case- and
+  # punctuation-insensitive), then only MULTI-WORD phrases as substrings — a
+  # single bare word is never a substring hint. On top of that, two fields
+  # resolving to the same column is a blocking error rather than a silent pick,
+  # and the preview STATES the column read for each field, which is what turns
+  # every remaining mis-mapping from invisible into obvious.
   class ExpenseImport
     include ImportParsing
 
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
 
-    # Canonical headers — what #to_tsv writes and what the downloadable template
-    # carries. Reading is more forgiving than this (see the COLUMNS keywords).
-    TSV_HEADERS = [
-      "Reference", "Status", "Payee email", "Budget", "Amount", "Amount excl VAT",
-      "Description", "Payment reference", "Type", "Expense number", "Date submitted",
-      "Date paid", "Payee name", "Sort code", "Account number"
-    ].freeze
-
-    # The only columns a sheet must carry, canonical heading to the field it
-    # stands for. The rest are optional, and several (Type, the payee trio)
-    # exist so a claim that needs them is importable at all rather than because
-    # a typical sheet carries them. Keyed this way so a MISSING one can be
-    # looked for under every keyword its field answers to, not just its
-    # canonical spelling.
-    REQUIRED_FIELDS = {
-      "Reference" => :reference, "Status" => :status, "Payee email" => :payee_email,
-      "Budget" => :budget, "Amount" => :amount
-    }.freeze
-
-    # Header keywords per field, most specific first, fed to ImportParsing's
-    # #find_column (exact match, then "header contains all these words").
+    # One entry per column, in the order #to_tsv writes them and the template
+    # carries them.
     #
-    # Ordering matters wherever two headers share a word. "Amount excl VAT" is
-    # listed before the bare "amount" so a sheet carrying both doesn't read the
-    # same column twice; "Payment reference" comes before "Reference" for the
-    # same reason, and the import key's own keywords deliberately exclude
-    # "payment".
-    COLUMNS = {
-      reference: [ %w[reference\ id], %w[our\ ref], %w[claim\ ref], %w[row\ id], %w[reference] ],
-      status: [ %w[status], %w[state] ],
-      payee_email: [ %w[payee\ email], %w[claimant\ email], %w[submitter\ email], %w[email] ],
-      budget: [ %w[budget\ name], %w[budget], %w[category] ],
-      amount_excl_vat: [ %w[excl\ vat], %w[ex\ vat], %w[net\ amount], %w[net] ],
-      amount: [ %w[gross\ amount], %w[total\ amount], %w[amount], %w[gross], %w[total] ],
-      description: [ %w[description], %w[what\ for], %w[details], %w[narrative] ],
-      payment_reference: [ %w[payment\ reference], %w[bacs\ reference], %w[payment\ ref] ],
-      expense_type: [ %w[expense\ type], %w[type], %w[kind] ],
-      auto_number: [ %w[expense\ number], %w[claim\ number], %w[number], %w[no] ],
-      submitted_on: [ %w[date\ submitted], %w[submitted], %w[date\ claimed] ],
-      paid_on: [ %w[date\ paid], %w[paid], %w[payment\ date] ],
-      payee_name_override: [ %w[payee\ name], %w[pay\ to], %w[supplier] ],
-      sort_code_override: [ %w[sort\ code], %w[sortcode] ],
-      account_number_override: [ %w[account\ number], %w[account\ no], %w[account] ]
+    #   label     the canonical heading
+    #   exact     header names matched WHOLE, after normalisation
+    #   contains  phrases matched as substrings — MULTI-WORD ONLY, because a
+    #             bare word is a substring of some other field's heading
+    #
+    # Anything not listed is simply not found, which surfaces as "the sheet has
+    # no X column" for a required field and as a blank for an optional one.
+    # That is the safe direction: a column read as the wrong field is silent,
+    # a column not read at all is stated.
+    FIELDS = {
+      reference: {
+        label: "Reference",
+        exact: [ "reference", "ref", "id", "claim id", "claim ref", "claim reference",
+                 "row id", "our ref", "our reference", "sheet ref", "reference id" ],
+        contains: [ "claim reference", "our reference", "reference id", "sheet reference" ]
+      },
+      status: {
+        label: "Status",
+        exact: [ "status", "state" ],
+        contains: [ "claim status", "expense status", "payment status" ]
+      },
+      payee_email: {
+        label: "Payee email",
+        exact: [ "payee email", "email", "e mail", "email address", "payee", "claimant" ],
+        contains: [ "payee email", "payee e mail", "claimant email", "claimant e mail",
+                    "submitter email", "submitter e mail" ]
+      },
+      budget: {
+        label: "Budget",
+        exact: [ "budget", "budget name", "budget line", "category" ],
+        contains: [ "budget name", "budget line", "budget category" ]
+      },
+      amount: {
+        label: "Amount",
+        exact: [ "amount", "total", "gross", "gross amount", "total amount", "amount gross" ],
+        contains: [ "gross amount", "total amount", "amount incl vat", "amount including vat" ]
+      },
+      amount_excl_vat: {
+        label: "Amount excl VAT",
+        exact: [ "amount excl vat", "excl vat", "ex vat", "net", "net amount", "amount net" ],
+        contains: [ "excl vat", "excluding vat", "ex vat", "net amount", "amount net" ]
+      },
+      description: {
+        label: "Description",
+        exact: [ "description", "details", "narrative", "purpose", "what for" ],
+        contains: [ "what for", "what it was for" ]
+      },
+      payment_reference: {
+        label: "Payment reference",
+        exact: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ],
+        contains: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ]
+      },
+      expense_type: {
+        label: "Type",
+        exact: [ "type", "kind", "expense type", "claim type" ],
+        contains: [ "expense type", "claim type" ]
+      },
+      auto_number: {
+        label: "Expense number",
+        exact: [ "expense number", "claim number", "expense no", "claim no", "number", "no" ],
+        contains: [ "expense number", "claim number" ]
+      },
+      submitted_on: {
+        label: "Date submitted",
+        exact: [ "date submitted", "submitted", "date claimed", "claimed", "date" ],
+        contains: [ "date submitted", "submitted on", "date claimed", "date of claim" ]
+      },
+      paid_on: {
+        label: "Date paid",
+        exact: [ "date paid", "paid", "payment date", "date of payment" ],
+        contains: [ "date paid", "paid on", "payment date", "date of payment" ]
+      },
+      payee_name_override: {
+        label: "Payee name",
+        exact: [ "payee name", "pay to", "supplier", "supplier name" ],
+        contains: [ "payee name", "supplier name", "pay to" ]
+      },
+      sort_code_override: {
+        label: "Sort code",
+        exact: [ "sort code", "sortcode" ],
+        contains: [ "sort code" ]
+      },
+      account_number_override: {
+        label: "Account number",
+        exact: [ "account number", "account no", "account" ],
+        contains: [ "account number", "account no", "bank account" ]
+      }
     }.freeze
+
+    TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
+
+    # The only columns a sheet must carry. The rest are optional, and several
+    # (Type, the payee trio) exist so a claim that needs them is importable at
+    # all rather than because a typical sheet carries them.
+    REQUIRED_FIELDS = %i[reference status payee_email budget amount].freeze
+
+    # Fields whose cells may hold a tab or a newline, so must be unescaped when
+    # the text came back from #to_tsv. See @escaped below.
+    TEXT_FIELDS = %i[reference budget description payment_reference payee_name_override].freeze
 
     # Statuses a row may name, matched case-insensitively so a sheet saying
     # "paid" lands where the operator plainly meant it to.
@@ -102,20 +178,51 @@ module Reimbursements
     # inherits the stricter rule rather than the looser one.
     SETTLED_STATUSES = [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].freeze
 
+    # expenses.import_key is a string(255). Checked here so an over-long
+    # reference is a row the operator can fix, rather than a ValueTooLong
+    # raised mid-transaction — which surfaces inside the wizard's Turbo Frame
+    # as a 500 with the paste lost.
+    IMPORT_KEY_LIMIT = 255
+
+    # The required columns by their canonical heading, for the form's copy.
+    def self.required_labels
+      REQUIRED_FIELDS.map { |field| FIELDS.fetch(field)[:label] }
+    end
+
     attr_reader :entries, :financial_year, :cost_centre
 
+    # +input_type+ is :paste (the operator's own text), :xlsx (an upload), or
+    # :canonical_tsv — this class's own #to_tsv output coming back from the
+    # preview's hidden field, which is the ONLY input whose cells carry escape
+    # sequences. Unescaping the operator's paste instead rewrote a typed
+    # "C:\temp\report.pdf" with a real tab before storing it.
     def initialize(data, input_type:, financial_year:, cost_centre:, budgets: [], people: [],
                    existing_expenses: [])
       @errors = []
       @financial_year = financial_year
       @cost_centre = cost_centre
+      @escaped = input_type == :canonical_tsv
       @budgets_by_name = budgets.index_by { |budget| BudgetImport.match_key(budget.name) }
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
-      @imported_keys = existing_expenses.filter_map { |e| e.import_key.presence }.to_set
+      @imported_keys = existing_expenses.filter_map { |e| self.class.key_match(e.import_key) }.to_set
       @taken_numbers = existing_expenses.filter_map(&:auto_number).to_set
-      @rows = parse_data(data, input_type)
+      @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
     end
+
+    # References are compared the way the UNIQUE index on import_key compares
+    # them — the column is utf8mb4_unicode_ci, so "OLD-1" and "old-1" are one
+    # key to MySQL. Comparing case-sensitively here previewed them as two
+    # creates, and the insert then rolled the WHOLE sheet back with an error
+    # blaming a concurrent operator; previewing again showed the same two rows,
+    # so the import could never succeed.
+    #
+    # The collation also folds ACCENTS, which this does not — a sheet mixing
+    # "réf-1" and "ref-1" still dead-ends, so #apply's rescue names renaming the
+    # reference as the fix. Folding them here instead would be the dangerous
+    # direction: over-matching buckets a genuinely new claim as already
+    # imported and drops it silently.
+    def self.key_match(value) = value.to_s.strip.downcase.presence
 
     # Nothing is written unless every row is readable. See the class comment.
     def valid?
@@ -129,6 +236,25 @@ module Reimbursements
       entries_in(:create).map(&:attrs)
     end
 
+    # Claims about to be created at a status the portal still acts on. The
+    # preview says out loud what will happen to them: an Approved claim goes on
+    # the next BACS spreadsheet for its cost centre — EUSA pays it a second
+    # time — and its producer is emailed; a Pending or Draft one lands in Review
+    # and is named to its budget owners on the next nightly run-day. That is a
+    # legitimate thing to want (finance may be importing a live queue), but it
+    # is the opposite of the "bookkeeping only" the rest of this screen implies.
+    def live_entries
+      entries_in(:create).reject { |entry| SETTLED_STATUSES.include?(entry.row[:status]) }
+    end
+
+    # Canonical heading => the sheet's own heading it was read from (nil when
+    # the sheet has no such column). Rendered by the preview: keyword matching
+    # can only ever be nearly right, and stating what was read is worth more
+    # than any amount of tuning.
+    def column_mapping
+      FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
+    end
+
     # The sheet as canonical TSV, for the hidden field that carries an upload
     # from the preview into apply. Tabs and newlines inside a cell are escaped
     # rather than dropped: an xlsx cell really can contain them, and one stray
@@ -139,79 +265,97 @@ module Reimbursements
 
     private
 
+    def header_for
+      @header_for ||= {}
+    end
+
     def tsv_row(row)
-      [ row[:reference], row[:status], row[:payee_email], row[:budget],
-        amount_cell(row, :amount), amount_cell(row, :amount_excl_vat),
-        row[:description], row[:payment_reference], row[:expense_type],
-        row[:auto_number], date_cell(row, :submitted_on), date_cell(row, :paid_on),
-        row[:payee_name_override], row[:sort_code_override], row[:account_number_override] ]
-        .map { |value| escape_cell(value) }.join("\t")
+      FIELDS.each_key.map { |field| escape_cell(cell_for(row, field)) }.join("\t")
     end
 
     # An unreadable value is carried on VERBATIM. The preview re-renders from
     # this text after a blocked apply, so replacing it with a blank would hide
     # the very cell the operator has to go and fix.
-    def amount_cell(row, field)
-      case row[field]
+    def cell_for(row, field)
+      value = row[field]
+      case value
       when nil then ""
       when :unreadable then row[:"raw_#{field}"].to_s
-      else row[field].to_s("F")
-      end
-    end
-
-    def date_cell(row, field)
-      case row[field]
-      when nil then ""
-      when :unreadable then row[:"raw_#{field}"].to_s
-      else row[field].iso8601
+      when BigDecimal then value.to_s("F")
+      when Date then value.iso8601
+      else value.to_s
       end
     end
 
     # One normalised row per sheet line. Called by ImportParsing's parsers.
     # Returns nil for a wholly blank line so trailing sheet padding is ignored
     # rather than reported as thirty nameless claims.
-    def normalize_row(row)
-      return nil if row.values.all?(&:blank?)
+    def normalize_row(raw)
+      @header_for ||= resolve_headers(raw.keys)
+      return nil if raw.values.all?(&:blank?)
 
-      @headers_seen ||= row.keys
-      amount = parse_amount(column(row, :amount))
-      excl_vat = parse_amount(column(row, :amount_excl_vat))
-      submitted_on = parse_date(column(row, :submitted_on))
-      paid_on = parse_date(column(row, :paid_on))
-      {
-        reference: unescape_cell(column(row, :reference)).strip,
-        status: normalize_status(column(row, :status)),
-        payee_email: column(row, :payee_email).to_s.strip.downcase,
-        budget: unescape_cell(column(row, :budget)).strip,
-        amount: amount,
-        raw_amount: (column(row, :amount).to_s.strip if amount == :unreadable),
-        amount_excl_vat: excl_vat,
-        raw_amount_excl_vat: (column(row, :amount_excl_vat).to_s.strip if excl_vat == :unreadable),
-        description: unescape_cell(column(row, :description)).strip,
-        payment_reference: unescape_cell(column(row, :payment_reference)).strip,
-        expense_type: normalize_type(column(row, :expense_type)),
-        auto_number: column(row, :auto_number).to_s.strip,
-        submitted_on: submitted_on,
-        raw_submitted_on: (column(row, :submitted_on).to_s.strip if submitted_on == :unreadable),
-        paid_on: paid_on,
-        raw_paid_on: (column(row, :paid_on).to_s.strip if paid_on == :unreadable),
-        payee_name_override: unescape_cell(column(row, :payee_name_override)).strip,
-        sort_code_override: column(row, :sort_code_override).to_s.strip,
-        account_number_override: column(row, :account_number_override).to_s.strip
-      }
+      row = FIELDS.each_key.to_h { |field| [ field, text(raw, field) ] }
+      %i[amount amount_excl_vat].each { |field| read_amount(row, field) }
+      %i[submitted_on paid_on].each { |field| read_date(row, field) }
+      row[:payee_email] = row[:payee_email].downcase
+      row[:status] = normalize_status(row[:status])
+      row[:expense_type] = normalize_type(row[:expense_type])
+      row
     end
 
-    def column(row, field)
-      COLUMNS.fetch(field).each do |keywords|
-        value = find_column(row, *keywords)
-        return value if value.present?
+    # Escape sequences are undone only for text that came back from #to_tsv —
+    # never for the operator's own paste, where a backslash is a backslash.
+    def text(raw, field)
+      value = raw[header_for[field]].to_s.strip
+      @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value
+    end
+
+    def read_amount(row, field)
+      raw = row[field]
+      row[field] = parse_amount(raw)
+      row[:"raw_#{field}"] = raw if row[field] == :unreadable
+    end
+
+    def read_date(row, field)
+      raw = row[field]
+      row[field] = parse_date(raw)
+      row[:"raw_#{field}"] = raw if row[field] == :unreadable
+    end
+
+    # --- Which column is which -----------------------------------------------
+
+    def resolve_headers(headers)
+      FIELDS.transform_values { |spec| match_header(headers, spec) }
+    end
+
+    # Punctuation and case carry no meaning in a spreadsheet heading, so
+    # "E-mail", "e mail" and "EMAIL" are one name. Every FIELDS entry is
+    # written in this normalised form already.
+    def normalize_header(value)
+      value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
+    end
+
+    def match_header(headers, spec)
+      spec[:exact].each do |name|
+        found = headers.find { |header| normalize_header(header) == name }
+        return found if found
+      end
+      spec[:contains].each do |phrase|
+        found = headers.find { |header| normalize_header(header).include?(phrase) }
+        return found if found
       end
       nil
     end
 
-    # Blank stays blank; anything unreadable becomes the :unreadable marker so
-    # the row can be flagged by name instead of silently importing as nil — the
-    # distinction AmountParser.parse! exists to make.
+    # Two fields reading the same column is refused rather than resolved: which
+    # of them the operator meant is exactly what cannot be guessed, and picking
+    # one writes the wrong value into a money or identity field with nothing on
+    # screen to say so.
+    def ambiguous_columns
+      header_for.compact.group_by { |_field, header| header }
+                .select { |_header, pairs| pairs.size > 1 }
+    end
+
     def parse_amount(raw)
       AmountParser.parse!(raw)
     rescue AmountParser::Error
@@ -230,15 +374,15 @@ module Reimbursements
     # Nil rather than "" for a blank, so #row_error can tell "no status typed"
     # from "a status I don't recognise" and say the right thing about each.
     def normalize_status(raw)
-      return nil if raw.to_s.strip.blank?
+      return nil if raw.blank?
 
-      STATUSES.find { |status| status.casecmp?(raw.to_s.strip) } || raw.to_s.strip
+      STATUSES.find { |status| status.casecmp?(raw) } || raw
     end
 
     def normalize_type(raw)
-      return Expense::TYPE_REIMBURSEMENT if raw.to_s.strip.blank?
+      return Expense::TYPE_REIMBURSEMENT if raw.blank?
 
-      Expense::TYPES.find { |type| type.casecmp?(raw.to_s.strip) } || raw.to_s.strip
+      Expense::TYPES.find { |type| type.casecmp?(raw) } || raw
     end
 
     # --- Categorisation ------------------------------------------------------
@@ -246,28 +390,32 @@ module Reimbursements
     def categorize
       return [] if @rows.empty?
 
-      # A column the whole sheet is missing is ONE problem with the sheet, not
-      # thirty broken lines — judged on the HEADERS, so a sheet that does have a
-      # Status column but left one cell empty gets that row flagged by itself.
-      missing = REQUIRED_FIELDS.keys.reject { |header| header_present?(header) }
-      if missing.any?
-        @errors << "The sheet has no #{missing.to_sentence} column#{'s' if missing.many?}. " \
-                   "Every claim needs #{missing.many? ? 'those' : 'that'} — start from the " \
-                   "template if you're not sure of the headings."
-        return []
-      end
+      # A problem with the SHEET is one problem, not thirty broken lines.
+      report_ambiguous_columns
+      report_missing_columns
+      return [] if @errors.any?
 
       duplicated = duplicated_values
       @rows.map { |row| entry_for(row, duplicated) }
     end
 
-    # Whether the sheet carries a column for +header+ at all, judged on the
-    # HEADERS and under every keyword that field answers to — so a sheet whose
-    # status column is headed "State" counts as having one.
-    def header_present?(header)
-      COLUMNS.fetch(REQUIRED_FIELDS.fetch(header)).flatten.any? do |keyword|
-        Array(@headers_seen).any? { |key| key.to_s.downcase.include?(keyword) }
+    def report_ambiguous_columns
+      ambiguous_columns.each do |header, pairs|
+        labels = pairs.map { |field, _| FIELDS.fetch(field)[:label] }
+        @errors << "The column #{header.inspect} would be read as both " \
+                   "#{labels.to_sentence(last_word_connector: ' and ')}. Rename one of them, " \
+                   "or start from the template."
       end
+    end
+
+    def report_missing_columns
+      missing = REQUIRED_FIELDS.reject { |field| header_for[field] }
+                               .map { |field| FIELDS.fetch(field)[:label] }
+      return if missing.empty?
+
+      @errors << "The sheet has no #{missing.to_sentence} column#{'s' if missing.many?}. " \
+                 "Every claim needs #{missing.many? ? 'those' : 'that'} — start from the " \
+                 "template if you're not sure of the headings."
     end
 
     def entry_for(row, duplicated)
@@ -278,7 +426,9 @@ module Reimbursements
       error = row_error(row, person, budget, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
-      return Entry.new(**base, bucket: :already_imported) if @imported_keys.include?(row[:reference])
+      if @imported_keys.include?(self.class.key_match(row[:reference]))
+        return Entry.new(**base, bucket: :already_imported)
+      end
 
       form = form_for(row, budget)
       unless form.valid?
@@ -294,23 +444,39 @@ module Reimbursements
     # Ordered cheapest-and-most-fundamental first, so a row missing its
     # reference is told that rather than being told about its budget.
     def row_error(row, person, budget, duplicated)
+      reference_error(row, duplicated) ||
+        status_error(row) ||
+        (payee_error(row) if person.nil?) ||
+        (budget_error(row) if budget.nil?) ||
+        value_error(row) ||
+        auto_number_error(row, duplicated)
+    end
+
+    def reference_error(row, duplicated)
       if row[:reference].blank?
         "This line has no reference. Give every claim one (its row number in your own sheet " \
           "will do) — it's what stops a second import creating the same claim twice."
-      elsif duplicated[:references].include?(row[:reference])
+      elsif row[:reference].length > IMPORT_KEY_LIMIT
+        "That reference is too long: #{row[:reference].length} characters, and the limit is " \
+          "#{IMPORT_KEY_LIMIT}."
+      elsif duplicated[:references].include?(self.class.key_match(row[:reference]))
         "#{row[:reference].inspect} is used by more than one line in this sheet, so a re-import " \
-          "couldn't tell them apart."
-      elsif row[:status].blank?
+          "couldn't tell them apart. (References are matched ignoring case.)"
+      end
+    end
+
+    def status_error(row)
+      if row[:status].blank?
         "This line has no status. Say what state the claim is in: " \
           "#{STATUSES.to_sentence(last_word_connector: ' or ')}."
       elsif STATUSES.exclude?(row[:status])
         "#{row[:status].inspect} isn't a status. Use " \
           "#{STATUSES.to_sentence(last_word_connector: ' or ')}."
-      elsif person.nil?
-        payee_error(row)
-      elsif budget.nil?
-        budget_error(row)
-      elsif row[:amount] == :unreadable
+      end
+    end
+
+    def value_error(row)
+      if row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount."
       elsif row[:amount_excl_vat] == :unreadable
         "#{row[:raw_amount_excl_vat].inspect} isn't an amount. Leave it blank to charge the " \
@@ -319,8 +485,6 @@ module Reimbursements
         "#{row[:raw_submitted_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
       elsif row[:paid_on] == :unreadable
         "#{row[:raw_paid_on].inspect} isn't a date. Use 2026-05-13 or 13/05/2026."
-      else
-        auto_number_error(row, duplicated)
       end
     end
 
@@ -365,7 +529,7 @@ module Reimbursements
     end
 
     def duplicated_values
-      references = @rows.map { |row| row[:reference] }.compact_blank
+      references = @rows.filter_map { |row| self.class.key_match(row[:reference]) }
                         .tally.select { |_ref, count| count > 1 }.keys.to_set
       numbers = @rows.filter_map { |row| Integer(row[:auto_number], 10) rescue nil }
                      .tally.select { |_number, count| count > 1 }.keys.to_set

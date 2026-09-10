@@ -34,11 +34,28 @@ module Admin
         login_as users(:member)
       end
 
+      teardown { Array(@xlsx_paths).each { |path| FileUtils.rm_f(path) } }
+
       def sheet(*rows) = ([ HEADERS ] + rows).join("\n")
 
-      def claim(reference, amount: "120.00", status: STATUS::PAID, payee: "alice@example.com")
-        [ reference, status, payee, "Props", amount, "100.00", "Fake blood #{reference}",
+      def claim(reference, amount: "120.00", status: STATUS::PAID, payee: "alice@example.com",
+                budget: "Props")
+        [ reference, status, payee, budget, amount, "100.00", "Fake blood #{reference}",
           "PROPS ALICE", "", "", "", "", "", "", "" ].join("\t")
+      end
+
+      def xlsx_row(reference) = claim(reference).split("\t")
+
+      # A real .xlsx on disk, so the upload goes through Roo exactly as the
+      # operator's would.
+      def xlsx_of(rows)
+        require "caxlsx"
+        package = Axlsx::Package.new
+        package.workbook.add_worksheet(name: "Claims") { |s| rows.each { |r| s.add_row r } }
+        path = Rails.root.join("tmp", "expense-import-#{SecureRandom.hex(4)}.xlsx")
+        File.binwrite(path, package.to_stream.read)
+        @xlsx_paths = (@xlsx_paths || []) << path
+        path.to_s
       end
 
       test "pasting a sheet previews it and the confirm button imports it" do
@@ -118,12 +135,85 @@ module Admin
         assert_text "Register a person"
       end
 
+      # The whole to_tsv round trip only runs on an upload — a paste never needs
+      # it — so covering it anywhere but a browser proves nothing about the file
+      # input, the multipart form or the hidden field the preview writes from it.
+      test "an uploaded xlsx previews and imports, carrying the sheet with no file to re-send" do
+        visit admin_reimbursements_expense_import_path
+
+        attach_file "file", xlsx_of([ ::Reimbursements::ExpenseImport::TSV_HEADERS,
+                                      xlsx_row("XL-1"), xlsx_row("XL-2") ])
+        click_on "Preview import"
+
+        assert_text "New claims (2)"
+
+        # There is no file on the apply request: everything the upload said has
+        # to be in the hidden field by now.
+        assert_includes find("input[name='pasted_text']", visible: false).value, "XL-1"
+
+        assert_difference -> { ::Reimbursements::Expense.count }, +2 do
+          click_on "Import 2 claims"
+          assert_text "Imported into Fringe 2027"
+        end
+
+        assert_equal %w[XL-1 XL-2],
+                     ::Reimbursements::Expense.order(:id).pluck(:import_key)
+      end
+
+      # Which pot a claim lands in is decided by the budget it is charged to, so
+      # picking the wrong centre imports against the wrong budgets — and the
+      # select is the only thing that says which.
+      test "picking a non-default cost centre imports against that centre's budgets" do
+        termtime = create_second_reimbursements_cost_centre
+        create_reimbursements_budget(name: "Termtime props", cost_centre: termtime,
+                                     financial_year: @year)
+        visit admin_reimbursements_expense_import_path
+
+        select termtime.name, from: "Cost centre"
+        fill_in "Paste the sheet", with: sheet(claim("TT-1", budget: "Termtime props"))
+        click_on "Preview import"
+
+        assert_text "Preview: Fringe 2027 — #{termtime.name}"
+        click_on "Import 1 claim"
+        assert_text "Imported into Fringe 2027"
+
+        assert_equal termtime, ::Reimbursements::Expense.sole.cost_centre
+      end
+
+      # The preview says what it read, so a mis-mapped column is visible rather
+      # than silent — which is how a "Payment reference" column came to be the
+      # dedupe key and an "Account number" column the expense number.
+      test "the preview states which column it read for each field" do
+        visit admin_reimbursements_expense_import_path
+
+        fill_in "Paste the sheet",
+                with: [ "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference",
+                        "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE" ].join("\n")
+        click_on "Preview import"
+
+        # A <summary>, so not a link or a button as far as click_on is concerned.
+        find("summary", text: "Columns read from your sheet").click
+
+        assert_text "Claim ID"
+        assert_text "not in this sheet"
+      end
+
+      test "a claim imported at a live status is called out before it is written" do
+        visit admin_reimbursements_expense_import_path
+
+        fill_in "Paste the sheet", with: sheet(claim("OLD-1", status: STATUS::APPROVED))
+        click_on "Preview import"
+
+        assert_text "EUSA pays it again"
+        assert_text "1 claim here is being imported into the LIVE queue"
+      end
+
       test "the finance expenses index links into the wizard" do
         visit admin_reimbursements_expense_edits_path
 
         click_on "Import expenses"
 
-        assert_text "Paste the sheet of claims that were settled outside the portal"
+        assert_text "Paste the sheet of claims the portal doesn't have"
       end
     end
   end
