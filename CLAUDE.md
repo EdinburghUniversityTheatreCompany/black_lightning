@@ -358,15 +358,35 @@ survive as historical import provenance and are never written. Spec + plan in
     class of bug fixed on 2026-09-10 (Build Batch, the reopen draft mailbox, every rejection
     email, the producer contact line). `.sole_configured` is the "there is genuinely nothing to
     choose" read.
-  - **An unplaced row (nil `cost_centre_id`) is in EVERY centre's scope** (`DatabaseStore
-    #in_cost_centre`), the same leniency `#in_year` states. It is a filter, so an unplaced row may
-    appear twice; `NightlyBatchJob` uses the stricter "falls to the DEFAULT centre" rule instead,
-    because a reminder has to be addressed to exactly one recipient list.
+  - **A read-only filter may be lenient; anything that MOVES MONEY must assign each claim
+    exactly one owner.** `DatabaseStore#in_cost_centre` puts an unplaced row (nil
+    `cost_centre_id`) in EVERY centre's scope — the same leniency `#in_year` states, and safe on a
+    screen. The money path reads `#expenses_owned_by_cost_centre` instead, where an unplaced claim
+    falls to the DEFAULT centre: `BuildBatchJob`'s `limits_concurrency` key is PER COST CENTRE, so
+    two centres' builds do not serialise and a claim owned by both can reach two BACS spreadsheets
+    and two live EUSA drafts. `NightlyBatchJob#claims_by_cost_centre_id` uses the same strict rule,
+    so the centre told about a claim is the centre that can pay it. `BatchProcessor#mark_submitted`
+    re-reads the claim and refuses to stamp one that is no longer Approved.
+  - **Build Batch's cost centre travels in a HIDDEN FIELD, not the URL.** The form posts to a bare
+    path, so a POST carries no query string and `#create` re-resolves the centre from the request —
+    without it the submit silently bounced to History. A request test cannot see this (it POSTs
+    whatever parameters it likes); `test/system/.../build_batch_cost_centre_js_test.rb` clicks the
+    real button. The sidebar's "Build Batch" link carries no centre and never can, so `new` renders
+    a **chooser** rather than redirecting.
+  - **A batch's mailbox is a GUESS for anything built before this, so reopen probes a LIST.** Every
+    older batch drafted into the default centre's mailbox whatever its claims say, and
+    `GraphClient#draft_message?` fails closed — so one wrong guess read as "may already have been
+    sent, do not reopen", untrue and inescapable. Derived centre first, then the default; refuse
+    only once both have been asked.
+  - **A budget import ADOPTS the unplaced line it matched** (`BudgetImport#adoptions`). The same
+    leniency that lets a legacy line be matched puts it in every centre's list, so without adoption
+    two committees revise one shared row forever and neither gets its own.
   - **Which reads are scoped is the design.** `budgets_for_year` / `budgets_with_actuals` /
     `unattributed_actuals` / `expenses_for_cost_centre` / `eusa_actuals_for_cost_centre` /
     `batches_for_cost_centre` are; **`budgets`, `expenses`, `eusa_actuals` and `active_budgets`
     are NOT** — the first three are id→record lookups and Reconcile's per-row pools, and
-    `active_budgets` is every submitter's budget picker.
+    `active_budgets` is every submitter's budget picker. **`Exports::Workbook` reads the scoped
+    reader for every sheet**, or its sheets stop adding up to each other; People has no centre.
   - **An Expense has no cost-centre column**; it resolves one through its budget
     (`Expense#cost_centre_id`, preloaded by `store.expenses`). **A Batch has none either** and
     takes its centre from the expenses it holds — so anything reading it (the reopen draft
