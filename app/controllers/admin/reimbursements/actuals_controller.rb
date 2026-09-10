@@ -47,7 +47,7 @@ module Admin
 
       def new_expense
         @title = "Create expense from EUSA actual"
-        @budgets = store.active_budgets
+        @budgets = offerable_budgets
         @form = ::Reimbursements::ExpenseForm.from_actual(@actual)
         @form.budget_record_id = budget_for_nominal_code(@actual.nominal_code)
       end
@@ -56,13 +56,20 @@ module Admin
         @form = ::Reimbursements::ExpenseForm.from_actual(@actual)
         # The ledger row owns the amount and the type; the operator only says
         # which budget it lands on and tidies the description/reference.
+        #
+        # The picker's own list is what the budget is checked against (the same
+        # rule the producer form uses), so a line deleted OR deactivated between
+        # this page loading and the operator submitting comes back as a fixable
+        # form error rather than a foreign-key 500 or a claim quietly charged to
+        # a retired budget.
+        @form.offerable_budget_ids = offerable_budget_ids
         @form.budget_record_id = conversion_params[:budget_record_id]
         @form.description = conversion_params[:description]
         @form.payment_reference = conversion_params[:payment_reference]
 
-        unless conversion_valid?
+        unless @form.valid?
           @title = "Create expense from EUSA actual"
-          @budgets = store.active_budgets
+          @budgets = offerable_budgets
           render :new_expense, status: :unprocessable_entity
           return
         end
@@ -84,6 +91,12 @@ module Admin
         redirect_to admin_reimbursements_actuals_path,
                     alert: "That row had already been converted to an expense, so nothing was " \
                            "created a second time."
+      rescue ::Reimbursements::DatabaseStore::BudgetGoneError
+        # And the same race on the budget link: the whole transaction rolled
+        # back, so the row is still convertible against another budget.
+        redirect_to admin_reimbursements_actuals_path,
+                    alert: "That budget was deleted while this page was open, so nothing was " \
+                           "created. Pick another budget and try again."
       end
 
       # Undo a mis-detected offsetting pair. The heuristic proposes pairs and the
@@ -176,13 +189,15 @@ module Admin
               .permit(:budget_record_id, :description, :payment_reference)
       end
 
-      def conversion_valid?
-        valid = @form.valid?
-        error = budget_record_id_error(@form.budget_record_id)
-        return valid if error.nil?
+      # The budgets this page's picker offers, memoized so the list the form is
+      # validated against is the list it displays — see the producer
+      # ExpensesController's reader of the same name.
+      def offerable_budgets
+        @budgets ||= store.active_budgets
+      end
 
-        @form.errors.add(:budget_record_id, error)
-        false
+      def offerable_budget_ids
+        offerable_budgets.map(&:record_id)
       end
 
       # The budget a nominal code unambiguously belongs to, so the operator
@@ -192,7 +207,7 @@ module Admin
       def budget_for_nominal_code(nominal_code)
         return nil if nominal_code.blank?
 
-        matching = store.active_budgets.select { |budget| budget.nominal_code == nominal_code }
+        matching = offerable_budgets.select { |budget| budget.nominal_code == nominal_code }
         matching.sole.record_id if matching.one?
       end
     end

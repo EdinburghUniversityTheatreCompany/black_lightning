@@ -48,6 +48,69 @@ module Reimbursements
       assert build_form(amount: "5000.00", save_as_draft: "1").valid?
     end
 
+    # --- The budget the picker offered ---------------------------------------
+    # Finance deletes and deactivates budgets as normal work, and every open
+    # submission form holds a live reference to whatever active_budgets returned
+    # when it was drawn. Validating the choice against the list the controller
+    # actually rendered covers both cases with one rule (Honeybadger 134234926).
+
+    test "rejects a budget that was not among the ones offered" do
+      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2" ])
+
+      assert_not form.valid?
+      assert_match(/no longer available/, form.errors[:budget_record_id].to_sentence)
+    end
+
+    test "accepts a budget that is among the ones offered" do
+      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2", "recBud1" ])
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    test "compares offered ids as strings, since a select posts a string" do
+      form = build_form(budget_record_id: "77", offerable_budget_ids: [ 77 ])
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    # Not every caller draws a picker: ExpenseImport resolves a real Budget row
+    # by name (legitimately an inactive or last-year one, for a settled claim),
+    # and from_actual prefills before the controller has a list. Those pass no
+    # offerable set and are not second-guessed here.
+    test "skips the check when the caller offered no list" do
+      assert build_form(budget_record_id: "recBud1").valid?
+    end
+
+    # A draft is a scratchpad, and refusing to save one loses the producer's
+    # typing over a field they are allowed to leave blank. So the stale budget
+    # is DROPPED and the draft saves, with the drop reported so the controller
+    # can say so rather than silently unsetting a field they picked.
+    test "a draft drops a stale budget instead of refusing to save" do
+      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2" ],
+                        save_as_draft: "1")
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_predicate form, :dropped_stale_budget?
+      assert_nil form.update_attrs[:budget_record_id]
+    end
+
+    test "a draft on an offered budget keeps it and reports no drop" do
+      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud1" ],
+                        save_as_draft: "1")
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_not_predicate form, :dropped_stale_budget?
+      assert_equal "recBud1", form.update_attrs[:budget_record_id]
+    end
+
+    test "a blank budget on a draft is not reported as a dropped one" do
+      form = build_form(budget_record_id: "", offerable_budget_ids: [ "recBud1" ],
+                        save_as_draft: "1")
+
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_not_predicate form, :dropped_stale_budget?
+    end
+
     test "requires all the airtable form's required fields" do
       form = ExpenseForm.new
       assert_not form.valid?

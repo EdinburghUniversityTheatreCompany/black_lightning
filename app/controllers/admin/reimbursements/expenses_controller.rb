@@ -20,21 +20,23 @@ module Admin
       def new
         @title = "New Expense"
         @form = ::Reimbursements::ExpenseForm.new
-        @budgets = store.active_budgets
+        @budgets = offerable_budgets
       end
 
       def create
-        @form = ::Reimbursements::ExpenseForm.new(expense_form_params)
-        unless @form.valid?
-          @title = "New Expense"
-          @budgets = store.active_budgets
-          render :new, status: :unprocessable_entity
-          return
-        end
+        @form = ::Reimbursements::ExpenseForm.new(
+          expense_form_params.merge(offerable_budget_ids: offerable_budget_ids)
+        )
+        return render_form(:new, "New Expense") unless @form.valid?
 
         person = person_link.ensure_person!(current_user)
         expense = store.create_expense!(@form.create_attrs(person.record_id))
         redirect_with_attachment_result(expense.record_id, created_notice)
+      rescue ::Reimbursements::DatabaseStore::BudgetGoneError
+        # The budget went between the form-level check and the insert. Same
+        # answer as the check itself: the form comes back with everything typed.
+        budget_gone_error
+        render_form(:new, "New Expense")
       end
 
       # Read-only view of the submitter's own claim at any status — so they can
@@ -48,7 +50,7 @@ module Admin
         @expense = find_own_editable_expense!(params[:id])
         @title = "Edit Expense"
         @form = ::Reimbursements::ExpenseForm.from_expense(@expense)
-        @budgets = store.active_budgets
+        @budgets = offerable_budgets
       end
 
       def update
@@ -57,18 +59,17 @@ module Admin
         # the expense already carries one before a non-draft submit.
         @form = ::Reimbursements::ExpenseForm.new(
           expense_form_params.merge(require_receipts: false,
-                                    expense_receipt_count: @expense.receipts.size)
+                                    expense_receipt_count: @expense.receipts.size,
+                                    offerable_budget_ids: offerable_budget_ids)
         )
-        unless @form.valid?
-          @title = "Edit Expense"
-          @budgets = store.active_budgets
-          render :edit, status: :unprocessable_entity
-          return
-        end
+        return render_form(:edit, "Edit Expense") unless @form.valid?
 
         store.update_expense!(@expense.record_id, @form.update_attrs)
         notice = @form.draft? ? "Draft saved." : "Expense updated."
-        redirect_with_attachment_result(@expense.record_id, notice)
+        redirect_with_attachment_result(@expense.record_id, "#{notice}#{dropped_budget_note}")
+      rescue ::Reimbursements::DatabaseStore::BudgetGoneError
+        budget_gone_error
+        render_form(:edit, "Edit Expense")
       end
 
       # Discard an unsent draft entirely. Only a Draft can be deleted — a
@@ -98,12 +99,52 @@ module Admin
                                       "You can still view it from your expenses list." }
       end
 
+      # The budgets the picker offers, memoized so the list the form is VALIDATED
+      # against and the list a re-rendered form RENDERS are one read. Finance
+      # deletes and deactivates budgets while these pages are open, so two reads
+      # in one request could legitimately disagree — and a form validated
+      # against a list it doesn't display can only produce an error the producer
+      # cannot act on.
+      def offerable_budgets
+        @budgets ||= store.active_budgets
+      end
+
+      def offerable_budget_ids
+        offerable_budgets.map(&:record_id)
+      end
+
+      # Re-render the submitter's own form with everything they entered. Losing
+      # a filled-in claim is most of the harm in every failure here, so no path
+      # out of create/update may do anything else.
+      def render_form(template, title)
+        @title = title
+        @budgets = offerable_budgets
+        render template, status: :unprocessable_entity
+      end
+
+      def budget_gone_error
+        @form.errors.add(:budget_record_id, "is no longer available — the finance team removed " \
+                                            "or retired it just now. Everything else you typed " \
+                                            "has been kept: pick another budget and submit again.")
+      end
+
       def created_notice
         if @form.draft?
-          "Draft saved. The finance team won't see it until you submit it."
+          "Draft saved. The finance team won't see it until you submit it.#{dropped_budget_note}"
         else
           "Expense submitted. You'll see status updates here."
         end
+      end
+
+      # A draft whose budget went while the form was open saves WITHOUT it
+      # rather than being refused (ExpenseForm#dropped_stale_budget?), so the
+      # notice has to say the field was cleared: a budget they picked silently
+      # coming back blank reads as the portal losing their choice.
+      def dropped_budget_note
+        return "" unless @form.dropped_stale_budget?
+
+        " The budget you'd picked is no longer available, so it has been cleared — " \
+          "pick another one before you submit."
       end
 
       # The expense exists by now, so an attachment failure must not 500

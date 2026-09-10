@@ -510,6 +510,18 @@ survive as historical import provenance and are never written. Spec + plan in
     hazard, and it crashed `database_consistency` on both models. Explicit plaintext length caps on
     the models do that job instead. Ciphertext runs roughly 2× plaintext plus envelope, which is
     why `payee_name_override` had to become TEXT.
+- **Every open submission form holds a live reference to a budget finance may delete.**
+  `active_budgets` builds the picker, and deleting or deactivating budgets is ordinary finance
+  work, so `ExpenseForm` validates the choice against the ids the controller actually RENDERED
+  (`offerable_budget_ids`) — one rule for both, and it cannot drift from the `<select>`. Deleted
+  used to 500 on the FK and lose the whole filled-in claim (HB 134234926); deactivated still
+  satisfies the FK and quietly charged a retired line. A **draft** is exempt: `update_attrs`
+  drops the stale id and it saves, because refusing it costs the producer their typing over a
+  field they may leave blank. `DatabaseStore::BudgetGoneError` is the belt and braces for a
+  delete landing between the validation and the insert. The finance **expense-edit** form is the
+  exception and keeps existence-only `budget_record_id_error`: it deliberately offers the
+  inactive budget a claim is already on.
+
 - **An Invoice claim must carry the third-party payee trio** (`ExpenseForm#invoice_without_payee?`).
   `expense_type == TYPE_INVOICE` means EUSA pays the supplier, so blank overrides are a money
   bug, not a gap: `EffectivePayee` falls back to the **submitter's own** bank details, which

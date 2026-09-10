@@ -33,7 +33,7 @@ module Reimbursements
                   :large_amount_acknowledged, :expense_receipt_count,
                   :payment_method, :foreign_amount, :foreign_currency,
                   :iban_override, :bic_override
-    attr_writer :receipts, :require_receipts, :internal, :settled
+    attr_writer :receipts, :require_receipts, :internal, :settled, :offerable_budget_ids
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
     # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
@@ -47,6 +47,7 @@ module Reimbursements
     validate :amounts_valid
     validate :receipts_valid
     validate :overrides_valid
+    validate :budget_still_offerable
     validate :vat_soft_block, unless: :skip_soft_blocks?
     validate :large_amount_soft_block, unless: :skip_soft_blocks?
 
@@ -69,6 +70,37 @@ module Reimbursements
 
     def draft?
       ActiveModel::Type::Boolean.new.cast(save_as_draft)
+    end
+
+    # The budget record ids the controller actually rendered into the picker,
+    # as strings (a <select> posts a string whatever the ids are).
+    #
+    # nil — the default — means the caller drew no picker, and its choice is not
+    # second-guessed: ExpenseImport resolves a real Budget row by NAME, which for
+    # a settled historical claim is legitimately an inactive or last-year line,
+    # and from_actual prefills before any controller has a list.
+    def offerable_budget_ids
+      @offerable_budget_ids&.map(&:to_s)
+    end
+
+    # The submitter picked a budget the picker no longer offers. Finance deletes
+    # budgets and sets them inactive as ordinary work, and every open submission
+    # form holds a live reference to whatever active_budgets returned when it was
+    # drawn — so validating against the list that was RENDERED catches both with
+    # one rule, and cannot drift from what the <select> contained.
+    def stale_budget?
+      offered = offerable_budget_ids
+      return false if offered.nil? || budget_record_id.blank?
+
+      offered.exclude?(budget_record_id.to_s)
+    end
+
+    # A draft saved with its stale budget dropped rather than refused. Read by
+    # the controller so the notice SAYS the budget went: a field the producer
+    # picked is blank again, and silently unsetting it reads as the portal
+    # losing their choice.
+    def dropped_stale_budget?
+      draft? && stale_budget?
     end
 
     # Set only by from_actual below (never a permitted parameter on the producer
@@ -158,7 +190,7 @@ module Reimbursements
     def update_attrs
       {
         status: draft? ? Status::DRAFT : Status::PENDING,
-        budget_record_id: budget_record_id.presence,
+        budget_record_id: (budget_record_id.presence unless stale_budget?),
         amount: amount_decimal,
         amount_excl_vat: amount_excl_vat_decimal,
         description: description.to_s.strip,
@@ -272,6 +304,23 @@ module Reimbursements
       return if foreign_amount_decimal.present? && foreign_amount_decimal.positive?
 
       errors.add(:foreign_amount, "must be a positive amount, as printed on the invoice.")
+    end
+
+    # A budget that went between this form being drawn and submitted. Refusing
+    # the SUBMIT is the point — the producer's typing is all still on the
+    # re-rendered form, whereas the foreign key raising here loses the claim
+    # outright (Honeybadger 134234926).
+    #
+    # A DRAFT is exempt: it is a scratchpad whose budget may be blank anyway, so
+    # #update_attrs drops the stale id and the draft saves. Refusing it would
+    # cost the producer their typing over a field they are allowed to leave
+    # empty, which is the harm this whole rule exists to prevent.
+    def budget_still_offerable
+      return if draft? || !stale_budget?
+
+      errors.add(:budget_record_id, "is no longer available — the finance team removed or " \
+                                    "retired it while you were filling this in. Everything else " \
+                                    "you typed has been kept: pick another budget and submit again.")
     end
 
     def receipts_valid
