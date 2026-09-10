@@ -618,3 +618,19 @@ it. Before adding the validation, run in production:
                            .count { |e| e.payee_name_override.blank? }
 
 If that is 0, scope the validation to `status_changed? && approved?` and ship it.
+
+### Review and the finance expense-edit form still check budget EXISTENCE only
+
+`budget_record_id_error` (FinanceController) answers "does this row exist", which is the right
+rule for the expense-edit form — it deliberately offers the inactive budget a claim is already
+on — but Review's picker is `active_budgets`, so a budget deactivated while the queue is open is
+still accepted there. Neither rescues `DatabaseStore::BudgetGoneError`, so a delete landing inside
+their race window is still a 500. Unchanged from before this fix, and both are finance's own
+screens (an operator retypes; no producer loses a claim), which is why it was left. Review wants
+`@form`-style offerable ids or an explicit `active` check; both want the rescue.
+
+### `owner_ids_error` has the same shape and the same race
+
+A Person deleted between a budget form being drawn and saved gets the same pre-flight check and
+the same unnamed foreign-key 500 behind it. `BudgetGoneError`'s sibling (`PersonGoneError`, or a
+shared `LinkGoneError`) would let the budget forms re-render instead. Not hit in production yet.
