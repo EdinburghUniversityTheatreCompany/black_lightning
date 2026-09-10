@@ -74,7 +74,8 @@ module Admin
         return render_blocked_preview unless @import.valid? && selected_cost_centre
 
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
-                                        owner_syncs: @import.owner_syncs, note: import_note,
+                                        owner_syncs: @import.owner_syncs,
+                                        adoptions: @import.adoptions, note: import_note,
                                         created_by: current_user)
         render :apply
       end

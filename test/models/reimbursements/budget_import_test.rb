@@ -27,6 +27,42 @@ module Reimbursements
                              people: people)
     end
 
+    # --- Adoption of unplaced budgets ---------------------------------------
+    # The lenient cost-centre scoping that lets a legacy line with no centre be
+    # matched at all also puts it in EVERY centre's list. Without adoption two
+    # committees' sheets take turns revising one shared row, each overwriting
+    # the other's forecast, and neither centre ever gets a line of its own.
+
+    test "a matched budget with no cost centre is adopted into this import's centre" do
+      unplaced = create_reimbursements_budget(name: "Venue hire", initial_budget: 1000)
+
+      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t"),
+                            existing_budgets: [ unplaced ])
+
+      assert_equal [ { budget_id: unplaced.record_id, cost_centre: @cost_centre } ],
+                   import.adoptions
+    end
+
+    test "adoption does not depend on the figure having moved" do
+      unplaced = create_reimbursements_budget(name: "Venue hire", initial_budget: 1200)
+
+      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t"),
+                            existing_budgets: [ unplaced ])
+
+      assert_equal :unchanged, import.entries.sole.bucket
+      assert_equal [ unplaced.record_id ], import.adoptions.map { |a| a[:budget_id] }
+    end
+
+    test "a budget that already names a cost centre is never re-homed" do
+      placed = create_reimbursements_budget(name: "Venue hire", initial_budget: 1000,
+                                            cost_centre: @cost_centre)
+
+      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t"),
+                            existing_budgets: [ placed ])
+
+      assert_empty import.adoptions
+    end
+
     # --- Parsing -------------------------------------------------------------
 
     test "reads a pasted sheet into rows" do

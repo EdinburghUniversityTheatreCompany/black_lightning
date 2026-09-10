@@ -244,10 +244,11 @@ module Reimbursements
     # Revisions go through create_budget_update! rather than rewriting
     # initial_budget, so the spreadsheet's revision lands in the forecast
     # history with the import named as its note.
-    def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:)
+    def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [])
       result = nil
       Budget.transaction do
         created = creates.map { |attrs| create_budget!(attrs) }
+        adoptions.each { |adoption| adopt_budget!(adoption[:budget_id], adoption[:cost_centre]) }
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
         update = if revisions.any?
                    create_budget_update!(effective_date: Date.current, note: note,
@@ -266,6 +267,17 @@ module Reimbursements
       owner_ids = attrs.delete(:owner_ids)
       budget = Budget.create!(attrs)
       budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?))
+      bust_budgets!
+      budget
+    end
+
+    # Claims a budget that belongs to no cost centre yet for +cost_centre+. Only
+    # ever called for a budget whose cost_centre_id is nil (see
+    # BudgetImport#adoptions), so it can never move a line out of the pot that
+    # already owns it.
+    def adopt_budget!(record_id, cost_centre)
+      budget = Budget.find(record_id)
+      budget.update!(cost_centre: cost_centre) if budget.cost_centre_id.nil?
       bust_budgets!
       budget
     end

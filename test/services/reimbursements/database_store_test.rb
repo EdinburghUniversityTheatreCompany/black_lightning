@@ -762,6 +762,22 @@ module Reimbursements
       assert_not_includes ids, theirs.id
     end
 
+    test "import_budgets! adopts an unplaced budget into the importing centre" do
+      termtime = second_cost_centre
+      unplaced = Budget.create!(name: "Venue hire")
+      placed = Budget.create!(name: "Props", cost_centre: CostCentre.default)
+
+      store.import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "Import", created_by: nil,
+        adoptions: [ { budget_id: unplaced.record_id, cost_centre: termtime },
+                     { budget_id: placed.record_id, cost_centre: termtime } ]
+      )
+
+      assert_equal termtime.id, unplaced.reload.cost_centre_id
+      # Never re-homes a line another pot already owns, even if asked to.
+      assert_equal CostCentre.default.id, placed.reload.cost_centre_id
+    end
+
     # --- import_budgets! -----------------------------------------------------
 
     test "import_budgets! creates budgets stamped with the year and cost centre" do
