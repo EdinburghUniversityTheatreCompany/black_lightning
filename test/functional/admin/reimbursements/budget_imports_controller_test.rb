@@ -215,17 +215,30 @@ module Admin
 
       # --- Areas ---------------------------------------------------------------
 
-      test "preview states a new area will be created" do
+      # The budget name is deliberately NOT "Cogito: Marketing" here (as the
+      # end-to-end apply tests below use) — it shares no substring with the
+      # area name, so an assertion that the rendered Area cell holds "Cogito"
+      # cannot be satisfied by the Budget cell instead. assert_select walks
+      # the table's actual structure (first <td> in the row) rather than
+      # grepping the whole response body, so deleting the Area column from
+      # preview.html.erb fails this test — see the report for the proof.
+      test "preview shows the area named on the sheet, marked as new" do
         sign_in @user
 
         post :preview, params: preview_params(
           "Area\tBudget\tNominal code\tType\tAmount\n" \
-          "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+          "Cogito\tMarketing\t432320\tExpense\t400"
         )
 
         assert_response :success
         assert_equal [ "Cogito" ], assigns(:import).area_creates.map { |a| a[:name] }
-        assert_match(/Cogito/, response.body)
+        # Scoped to the bucket table's own wrapper (div.overflow-x-auto with no
+        # other class) rather than "table tbody tr" generally, which also
+        # matches the "Columns read from your sheet" details table below it.
+        assert_select "div.overflow-x-auto:not(.mt-2) table tbody tr", 1 do
+          assert_select "td:first-child", text: /\ACogito\b/
+          assert_select "td:first-child span.text-amber-700", text: "(new)"
+        end
       end
 
       test "apply creates the area named on the sheet and attaches the budget to it" do
