@@ -408,6 +408,53 @@ survive as historical import provenance and are never written. Spec + plan in
     auto-created from a bare email. `import_budgets!` is all-or-nothing (unlike Reconcile's
     per-row rescue): a half-imported list has no audit value, and re-running after a fix is cheap
     because matching is by name.
+- **Importing settled claims** (`Reimbursements::ExpenseImport`,
+  `Admin::Reimbursements::ExpenseImportsController`, `DatabaseStore#import_expenses!`). Same
+  wizard shape and same two query-string coordinates as the budget import, reached from the
+  finance expenses index.
+  - **`Status` is a MANDATORY column and the importer never guesses.** Blank or unrecognised is a
+    blocking error, because the status decides everything that happens to the claim afterwards —
+    a row imported Approved enters Build Batch and emails its producer, one imported Paid never
+    does. All-or-nothing like `import_budgets!`, so an unreadable amount, an unknown payee, an
+    unknown budget or a bad status stops the lot naming the rows.
+  - **The sheet's `Reference` column is the double-apply guard**, written to
+    `expenses.import_key` behind a UNIQUE index. The wizard is stateless, so a second click
+    re-posts the same sheet, and a claim has NO natural key the way a budget line has its name.
+    The pre-flight read gives the preview its "already imported" bucket; the index is what holds
+    when that read goes stale, and the rescued `RecordNotUnique` re-renders the preview.
+  - **Every rule comes from `ExpenseForm`, because the model has none** — `person`, `budget`,
+    `batch` and `financial_year` are all optional and status/type/method have DB defaults, so
+    `Expense.create!({})` passes. The importer sets `internal` as `from_actual` does, plus a
+    second code-only flag **`settled`** which suppresses `invoice_without_payee?` /
+    `international_without_payee?` and NOTHING else: those exist because `EffectivePayee` falls
+    back to the submitter's own details on the money path, and Build Batch reads Approved alone.
+  - **A row carrying an `Expense number` is inserted BEFORE the rows without one.** `auto_number`
+    is uniquely indexed and `create_expense!` assigns MAX+1 to a row without one — and never
+    retries past a collision on a number it was handed, calling that real data corruption.
+  - **It does NOT match columns through `ImportParsing#find_column`.** That fallback matches any
+    header *containing* a keyword, and this sheet's fields are near-anagrams: read through it a
+    "Payment reference" column answered to the dedupe key (collapsing two of a payee's claims into
+    one) and an "Account number" column answered to the expense number (numbering every later
+    claim in the portal from 66,374,959). `FIELDS` matches EXACT names first, then MULTI-WORD
+    substrings only; two fields resolving to one column is a blocking error; and **the preview
+    states the column read for each field**, which is the only thing that makes a remaining
+    mis-mapping visible. A test file that builds its sheet from `TSV_HEADERS` cannot catch any of
+    this — the realistic-heading tests are the ones that matter.
+  - **References are compared downcased**, because the `import_key` index is
+    `utf8mb4_unicode_ci`: comparing case-sensitively previewed `OLD-1` and `old-1` as two creates
+    and then rolled the whole sheet back, unrecoverably. The collation also folds accents and this
+    does not — deliberately, since over-matching would drop a new claim silently.
+  - **Escape sequences are undone only for `:canonical_tsv`**, the preview's own hidden field —
+    never for the operator's paste, where a typed `C:\temp\report.pdf` is a path, not a tab.
+  - **The import emails nobody, but what it WRITES decides what happens next.** Every producer
+    email comes from `BatchProcessor`, `NightlyBatchJob` or an explicit reject — so a row imported
+    Approved goes on the next BACS spreadsheet (EUSA pays it again) and emails its payee, and a
+    Pending one is named to its budget owners nightly. The preview and the apply screen both count
+    the non-terminal rows and say so; don't reword those into a flat "nothing was emailed".
+- **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless its
+  destination carries the same frame — otherwise Turbo replaces the wizard with "Content
+  missing". All five escape links out of the budget import shipped broken this way;
+  `shared/back_link` takes a `turbo_frame:` local now, and only a browser test sees it.
 - **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma
   decimal). `.parse` → nil for anything unreadable; **`.parse!` distinguishes blank
   ("nothing typed", nil) from unreadable (raises)** — the batch budget-update form needs

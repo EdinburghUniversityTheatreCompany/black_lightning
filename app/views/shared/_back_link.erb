@@ -1,9 +1,16 @@
-<%# locals: (text:, path:) %>
+<%# locals: (text:, path:, turbo_frame: nil) %>
 <%# The "← Back to the list" line above a page's card. One partial so the
     arrow, colour and size match everywhere; the arrow is decoration and hidden
-    from screen readers, the text is the link's whole name. %>
+    from screen readers, the text is the link's whole name.
+
+    `turbo_frame: "_top"` is REQUIRED wherever this sits inside a Turbo Frame
+    and points at a page with no matching frame: a link inside a frame
+    navigates THE FRAME, and Turbo replaces it with "Content missing" rather
+    than loading the page. That is exactly what the import wizards' back links
+    did before this local existed. %>
 <p class="mb-3">
-  <%= link_to path, class: "text-sm text-primary underline" do %>
+  <%= link_to path, class: "text-sm text-primary underline",
+              data: { turbo_frame: turbo_frame }.compact do %>
     <span aria-hidden="true">←</span> <%= text %>
   <% end %>
 </p>

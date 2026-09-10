@@ -533,3 +533,77 @@ Reconcile is per-ROW by design and must stay so. The finance Expenses list (`Exp
 #index`) and Budget updates render no selector, so a `?cost_centre=` in their URL scopes
 `budgets_for_year` but not their own lists — harmless, but inconsistent. Worth deciding whether
 they get the selector too.
+
+### Every import wizard needs a Turbo-Frame escape rule, not per-link vigilance
+
+Fixed here: all five links out of the budget-import wizard rendered "Content missing" when
+clicked, because a link inside a Turbo Frame navigates the frame and none of those destinations
+carries one. `shared/back_link` now takes `turbo_frame:` and each link passes `_top`, with a
+system test per wizard — but nothing *stops* the next link being added without it. A lint rule
+(herb, or a system test that walks every link inside a `turbo_frame_tag` in these views) would.
+Reconcile is currently clean only because both its links point back at itself.
+
+### An imported expense keeps `submitted_at` = now unless the sheet dates it
+
+`Expense`'s `before_create` stamps `submitted_at ||= Time.current`, so a 2019 claim imported with
+no "Date submitted" column reads as submitted today. Harmless for the terminal statuses (nothing
+reminds about them) and the column exists for anyone who has the real dates, but a historical
+import that skips it leaves the expenses list sorted as if the whole ledger arrived at once.
+
+### The expense import writes UK BACS claims only
+
+`Reimbursements::ExpenseImport` has no `payment_method` column, so every imported claim is
+`uk_bacs`. A historical *international* claim imports fine (its IBAN/BIC are only read on the
+money path, which a settled claim never re-enters), but it is recorded on the wrong rail. Adding
+the column means adding IBAN/BIC/foreign-amount/currency columns with it — four more headings for
+a case that is one claim at a time, so the normal form is the better route today.
+
+### `ImportParsing#find_column`'s substring fallback is a loaded gun for any wide sheet
+
+It matches any header *containing* a keyword, so on a sheet whose fields are near-anagrams
+("Reference"/"Payment reference", "number"/"Account number") it silently reads the wrong column.
+`ExpenseImport` stopped using it — exact names first, multi-word substrings only, ambiguity
+refused, and the mapping shown in the preview. `BudgetImport` and the membership import still use
+it. Neither is known to be wrong today (their sheets are narrow), but `BudgetImport`'s
+`COLUMNS[:name]` ends in a bare `%w[budget]` and its `:amount` in a bare `%w[total]`, which is the
+same shape. Worth porting `ExpenseImport`'s matcher into the concern and moving all three onto it.
+
+### `BudgetImport` unescapes the operator's own paste
+
+Same defect `ExpenseImport` just fixed: `normalize_row` runs `unescape_cell` over `name` and
+`notes` whatever the source, so a budget note typed as `C:\temp\notes.txt` is stored with a real
+tab. The mechanism is already in place — `ReadsImportSource#input_type` returns `:canonical_tsv`
+when the form posts a `canonical` marker — so the fix is a `hidden_field_tag :canonical, "1"` in
+the budget import's preview plus an `@escaped` flag on the model. Left out here to keep this
+branch's diff to the wizard it is about.
+
+### The `import_key` comparison folds case but not accents
+
+`ExpenseImport.key_match` downcases, matching the common `OLD-1`/`old-1` case; the column's
+`utf8mb4_unicode_ci` collation also folds accents, so a sheet mixing `réf-1` and `ref-1` still
+dead-ends at the unique index. Deliberate: over-matching here would bucket a genuinely new claim
+as already imported and drop it silently, which is far worse than a blocked import. The apply
+rescue now names renaming the reference as the fix, so it is recoverable. The exact answer is to
+ask MySQL (`Expense.where(import_key: refs)`) rather than compare in Ruby, which means giving the
+model a DB-backed lookup instead of the `existing_expenses:` collection it takes today.
+
+### `ExpenseForm#settled` is an invariant stated in prose, not enforced
+
+It is safe because nothing returns an unbatched claim to Approved — `revert_expense_to_approved!`
+is only reached for a claim with a batch, and the finance edit form writes a fixed attribute hash
+with no `status` key. The day someone adds a "put this claim back in the queue" button that writes
+`status: Approved` through `store.update_expense!`, a settled Invoice imported without a payee
+trio becomes a payment to the producer instead of the supplier.
+
+NOT done here, on purpose. The obvious guard — a model validation refusing an Invoice at Approved
+with a blank trio — would also fire on `revert_expense_to_approved!` for any legacy batched Invoice
+that predates `invoice_without_payee?`, breaking batch reopen on a money path, and there is no way
+to check that from a dev machine. `ReviewSupport`/`approve_blocker` is the wrong home too: it
+returns `:skipped_wrong_status` for anything not Pending, so a re-queue button would never reach
+it. Before adding the validation, run in production:
+
+    Reimbursements::Expense.where(expense_type: Reimbursements::Expense::TYPE_INVOICE,
+                                  status: %w[Approved Submitted Paid])
+                           .count { |e| e.payee_name_override.blank? }
+
+If that is 0, scope the validation to `status_changed? && approved?` and ship it.

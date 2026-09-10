@@ -33,7 +33,7 @@ module Reimbursements
                   :large_amount_acknowledged, :expense_receipt_count,
                   :payment_method, :foreign_amount, :foreign_currency,
                   :iban_override, :bic_override
-    attr_writer :receipts, :require_receipts, :internal
+    attr_writer :receipts, :require_receipts, :internal, :settled
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
     # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
@@ -76,6 +76,23 @@ module Reimbursements
     # receipt, VAT and large-amount rules those exist to enforce on them.
     def internal?
       ActiveModel::Type::Boolean.new.cast(@internal)
+    end
+
+    # The claim records money that has already moved (or never will) — set only
+    # by ExpenseImport, for a row whose sheet says Submitted, Paid or Rejected,
+    # and never a permitted parameter anywhere.
+    #
+    # It suppresses the two "who is this actually paying?" blocks below and
+    # NOTHING else. Those exist because EffectivePayee falls back to the
+    # SUBMITTER's own bank details, so an Invoice with no payee trio pays the
+    # producer for a bill they never paid — but the only thing that reads those
+    # details is the money path, and Build Batch reads Approved claims alone. A
+    # settled claim can never enter it, so the block protects nothing there
+    # while refusing a historical invoice whose supplier's 2019 bank details
+    # nobody has. Every other rule — amounts, lengths, the all-or-nothing
+    # override trio — still applies.
+    def settled?
+      ActiveModel::Type::Boolean.new.cast(@settled)
     end
 
     # Anything in the receipts param that is not actually an uploaded file is
@@ -322,7 +339,8 @@ module Reimbursements
     # an Invoice: nobody on file has an IBAN by default, so falling back to the
     # submitter's own details would leave the form with nothing to send.
     def international_without_payee?
-      !draft? && BankDetails.overrides_missing?(payee_name_override, iban_override, bic_override)
+      !draft? && !settled? &&
+        BankDetails.overrides_missing?(payee_name_override, iban_override, bic_override)
     end
 
     # EffectivePayee falls back to the SUBMITTER's own bank details, so an
@@ -332,7 +350,7 @@ module Reimbursements
     # presence rule per field so a partly-filled trio reports the
     # all-or-nothing message once (above) instead of both.
     def invoice_without_payee?
-      expense_type == Expense::TYPE_INVOICE && !draft? &&
+      expense_type == Expense::TYPE_INVOICE && !draft? && !settled? &&
         BankDetails.overrides_missing?(payee_name_override, sort_code_override,
                                        account_number_override)
     end

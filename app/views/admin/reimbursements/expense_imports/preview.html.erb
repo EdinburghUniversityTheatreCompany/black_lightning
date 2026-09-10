@@ -1,0 +1,182 @@
+<%# Same frame as step 1 — see show.html.erb for why the wizard needs one. %>
+<%= turbo_frame_tag "expense_import" do %>
+<%= render "shared/back_link", text: "Start again", path: import_path %>
+
+<% if flash[:alert].present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
+<% end %>
+
+<%# The heading names its own destination. The page <h1> can't: it sits outside
+    this frame, so it still says whatever the page loaded with. %>
+<%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}" \
+                                    "#{" — #{selected_cost_centre.name}" if selected_cost_centre}") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    Nothing has been written yet. Check the lines below, then confirm at the bottom.
+  </p>
+
+  <% invalid = @import.entries_in(:invalid) %>
+  <% if invalid.any? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2">
+      <p class="font-medium text-red-800">
+        <%= pluralize(invalid.size, "line") %> can't be imported, so nothing can be imported yet.
+      </p>
+      <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
+        <% invalid.each do |entry| %>
+          <li>
+            <strong><%= entry.row[:reference].presence || "(no reference)" %></strong>:
+            <%= entry.error %>
+            <% if entry.person.nil? && entry.row[:payee_email].present? %>
+              <%# Never auto-created from a bare email (ExpenseImport), so this
+                  is the operator's job — and the link has to actually go
+                  somewhere. %>
+              <%= link_to "Register them on the People screen",
+                          new_admin_reimbursements_person_path, class: "underline font-medium",
+                          data: { turbo_frame: "_top" } %>.
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if @import.errors.any? %>
+    <div class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+      <%= @import.errors.to_sentence %>
+    </div>
+  <% end %>
+
+  <% creates = @import.entries_in(:create) %>
+  <% if creates.any? %>
+    <h3 class="mt-4 mb-2 font-medium">New claims (<%= creates.size %>)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Reference</th>
+            <th class="py-1 pr-4">Status</th>
+            <th class="py-1 pr-4">Payee</th>
+            <th class="py-1 pr-4">Budget</th>
+            <th class="py-1 pr-4 text-right">Amount</th>
+            <th class="py-1 pr-4">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% creates.each do |entry| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4 font-mono"><%= entry.row[:reference] %></td>
+              <td class="py-1 pr-4">
+                <%= render BadgeComponent.new(
+                      type: ::Reimbursements::Status.badge_variant(entry.row[:status]),
+                      pill: true).with_content(entry.row[:status]) %>
+              </td>
+              <td class="py-1 pr-4"><%= entry.person.name %></td>
+              <td class="py-1 pr-4"><%= entry.budget.name %></td>
+              <td class="py-1 pr-4 text-right"><%= number_to_currency(entry.row[:amount], unit: "£") %></td>
+              <td class="py-1 pr-4"><%= entry.row[:description] %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% imported = @import.entries_in(:already_imported) %>
+  <% if imported.any? %>
+    <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      <p class="font-medium">
+        <%= pluralize(imported.size, "line") %>
+        <%= imported.one? ? "has" : "have" %> been imported before and will be skipped.
+      </p>
+      <p class="text-gray-600">
+        Their references are already on claims in the portal:
+        <%= imported.map { |entry| entry.row[:reference] }.to_sentence %>.
+      </p>
+    </div>
+  <% end %>
+
+  <% live = @import.live_entries %>
+  <% if live.any? %>
+    <%# Importing a live claim is legitimate — finance may be importing a queue
+        rather than a history — but it is the opposite of what the rest of this
+        screen implies, so it is stated rather than left to be discovered on the
+        next batch run. %>
+    <div class="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p class="font-medium">
+        <%= pluralize(live.size, "claim") %> here
+        <%= live.one? ? "is" : "are" %> being imported into the LIVE queue, not as history.
+      </p>
+      <ul class="mt-1 list-disc pl-5">
+        <li>
+          An <strong>Approved</strong> claim goes on the next BACS spreadsheet built for this
+          cost centre — <strong>EUSA pays it again</strong> — and its payee is emailed to say so.
+        </li>
+        <li>
+          A <strong>Pending</strong> or <strong>Draft</strong> claim lands in the Review queue,
+          and its budget owners are named in the nightly sign-off reminder until they act.
+        </li>
+      </ul>
+      <p class="mt-1">
+        Only <strong>Submitted</strong>, <strong>Paid</strong> and <strong>Rejected</strong> are
+        pure bookkeeping. Affected:
+        <%= live.map { |entry| entry.row[:reference] }.to_sentence %>.
+      </p>
+    </div>
+  <% end %>
+
+  <%# What the matcher read, stated. Keyword matching can only ever be nearly
+      right, and a column read as the wrong field is otherwise invisible — a
+      "Payment reference" column read as the dedupe key silently collapsed two
+      claims into one, and an "Account number" read as the expense number
+      corrupted the numbering of every later claim in the portal. %>
+  <details class="mt-4 text-sm">
+    <summary class="cursor-pointer text-gray-600">
+      Columns read from your sheet (check these before importing)
+    </summary>
+    <div class="mt-2 overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Field</th>
+            <th class="py-1 pr-4">Read from</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.column_mapping.each do |label, header| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4"><%= label %></td>
+              <td class="py-1 pr-4">
+                <% if header %>
+                  <span class="font-mono"><%= header %></span>
+                <% else %>
+                  <span class="text-gray-500">not in this sheet</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <%= form_with url: apply_admin_reimbursements_expense_import_path,
+                method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
+    <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
+        previewed — including an upload, which has no file to re-send. The
+        destination travels with it: apply resolves the year and cost centre
+        from params exactly as this step did, so it cannot land in a different
+        pair than the one previewed here. %>
+    <%= hidden_field_tag :pasted_text, @import.to_tsv %>
+    <%# Marks the text above as this class's OWN escaped output, so apply
+        unescapes it. Without it a backslash the operator typed is unescaped as
+        though we had written it. %>
+    <%= hidden_field_tag :canonical, "1" %>
+    <%= hidden_field_tag :year, selected_financial_year&.key %>
+    <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>
+    <%= submit_tag creates.any? ? "Import #{pluralize(creates.size, 'claim')}" : "Nothing to import",
+                   class: btn_classes(:primary),
+                   disabled: !@import.valid? || creates.empty?,
+                   data: { disable_with: "Importing…" } %>
+    <%= link_to "Cancel", import_path, class: btn_classes(:secondary) %>
+  <% end %>
+<% end %>
+<% end %>
