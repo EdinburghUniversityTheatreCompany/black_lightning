@@ -16,7 +16,10 @@ module Admin
       end
 
       test "adds a budget line to an area in the browser" do
-        area = create_reimbursements_area(name: "Cogito")
+        year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027", active: true)
+        centre = ::Reimbursements::CostCentre.default
+        area = create_reimbursements_area(name: "Cogito", financial_year: year,
+                                          cost_centre: centre)
 
         visit edit_admin_reimbursements_area_path(area.record_id)
         click_on "Add budget line"
@@ -30,7 +33,28 @@ module Admin
         click_on "Save"
 
         assert_text "Area saved"
-        assert_equal "Cogito: Marketing", area.reload.budgets.last&.name
+        budget = area.reload.budgets.last
+        assert_equal "Cogito: Marketing", budget&.name
+        # The row posts only a name and a nominal code, so without inheriting
+        # the area's coordinates the line lands unstamped — and the lenient
+        # scoping then puts it in EVERY year's and EVERY centre's list, and in
+        # every producer's budget picker in both centres.
+        assert_equal year.id, budget.financial_year_id
+        assert_equal centre.id, budget.cost_centre_id
+      end
+
+      test "a budget line saved with no nominal code is refused in the browser" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        visit edit_admin_reimbursements_area_path(area.record_id)
+        click_on "Add budget line"
+        within all(".nested-form-wrapper").last do
+          fill_in "Name", with: "Cogito: Marketing"
+        end
+        click_on "Save"
+
+        assert_text "Every budget line needs a name and a nominal code"
+        assert_empty area.reload.budgets
       end
     end
   end

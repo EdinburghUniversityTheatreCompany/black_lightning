@@ -17,6 +17,13 @@ module Admin
     class AreasController < FinanceController
       before_action :set_area, only: %i[edit update]
 
+      # Only the fields areas/_budget_fields.html.erb actually renders.
+      # to_unsafe_h would accept any Budget column: a raw-string
+      # initial_budget would be cast by AR with to_d and store a "£1,200" as
+      # 0, and a posted cost_centre_id/financial_year_id could move the line
+      # into another pot or year.
+      BUDGET_ROW_FIELDS = %i[id name nominal_code area_id].freeze
+
       # GET /admin/reimbursements/areas
       def index
         @title = "Areas"
@@ -71,8 +78,8 @@ module Admin
         end
 
         @area.assign_attributes(attrs)
-        budgets_attrs = area_form_params[:budgets_attributes]
-        @area.budgets_attributes = budgets_attrs.to_unsafe_h if budgets_attrs
+        budgets_attrs = permitted_budgets_attributes
+        @area.budgets_attributes = budgets_attrs if budgets_attrs
         @area.save!
         store.sync_area_owners!(@area.record_id, Array(area_form_params[:owner_ids]).compact_blank)
         redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
@@ -119,7 +126,40 @@ module Admin
         return "That budget figure isn't a number I can read." if
           area_form_params[:initial_budget].present? && attrs[:initial_budget].nil?
 
-        owner_ids_error(area_form_params[:owner_ids])
+        owner_ids_error(area_form_params[:owner_ids]) || budget_rows_error
+      end
+
+      # The nested budget rows, filtered to the fields the form renders.
+      def permitted_budgets_attributes
+        source = area_form_params
+        return nil if source[:budgets_attributes].blank?
+
+        source.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
+      end
+
+      # Every budget row the operator actually filled in needs both a name and
+      # a nominal code — the same rule BudgetsController#budget_validation_error
+      # applies to a budget's own form. Budget validates the name (so a blank
+      # one reached save! and 500'd the form) and deliberately does NOT
+      # validate the code (the importer allows a blank one), so both belong
+      # here. A row posting neither key (a detach-only params hash) and the
+      # blank "Add" template row (dropped by reject_if: :all_blank) are skipped.
+      def budget_rows_error
+        rows = permitted_budgets_attributes
+        return nil if rows.blank?
+        return nil unless rows.each_value.any? { |row| incomplete_budget_row?(row) }
+
+        "Every budget line needs a name and a nominal code."
+      end
+
+      # Half-filled: one of the two given, the other blank. A row carrying
+      # neither key is absent rather than incomplete (a detach-only params
+      # hash), and one with both blank is the "Add" template row.
+      def incomplete_budget_row?(row)
+        return false unless row.key?("name") || row.key?("nominal_code")
+        return false if row[:name].blank? && row[:nominal_code].blank?
+
+        row[:name].blank? || row[:nominal_code].blank?
       end
 
       # Optional: with one cost centre configured there is nothing to choose,

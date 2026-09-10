@@ -72,6 +72,18 @@ module Reimbursements
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
+    # A line created inside its area's form carries only a name and a nominal
+    # code, so it would land with no cost centre and no financial year — and
+    # DatabaseStore#in_year / #in_cost_centre are deliberately lenient, so an
+    # unstamped line appears in EVERY year's and EVERY centre's list and
+    # (active by default) in every producer's budget picker in both centres.
+    # The area is the line's parent, so inherit its coordinates here rather
+    # than in one controller: every present and future path that hangs a
+    # budget off an area gets it. Only ever fills a BLANK, so it can never
+    # move a line out of the pot that already owns it — the same rule as
+    # DatabaseStore#adopt_budget!.
+    before_validation :inherit_area_scoping
+
     # The area owns and its budgets inherit; a budget with no area owns
     # itself. Owner links are People record id STRINGS, because OwnerReview
     # and the budgets UI compare them against person.record_id.
@@ -196,6 +208,13 @@ module Reimbursements
     end
 
     private
+
+    def inherit_area_scoping
+      return if area_id.nil? || area.nil?
+
+      self.cost_centre_id ||= area.cost_centre_id
+      self.financial_year_id ||= area.financial_year_id
+    end
 
     # Income booked straight against an Income budget (budget_id set), credits
     # less debits: a debit on an income line is income handed back.
