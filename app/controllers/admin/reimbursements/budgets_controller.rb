@@ -86,7 +86,6 @@ module Admin
       end
 
       def update
-        @areas = store.areas_for_year
         attrs = budget_params
         if (error = budget_validation_error(attrs))
           return redirect_to(edit_path, alert: error)
