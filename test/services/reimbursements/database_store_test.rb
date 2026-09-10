@@ -1095,6 +1095,16 @@ module Reimbursements
       assert_equal year, area.financial_year
     end
 
+    test "create_area! busts the memoized lists so a same-request relist sees it" do
+      store.areas # memoize the empty list in
+      store.areas_for_year # memoize the empty scoped list in
+
+      created = store.create_area!(name: "Cogito")
+
+      assert_includes store.areas.map(&:id), created.id
+      assert_includes store.areas_for_year.map(&:id), created.id
+    end
+
     test "update_area! updates the row and busts the memoized lists" do
       area = create_reimbursements_area(name: "Cogito")
       store.areas # memoize the stale name in
@@ -1118,6 +1128,19 @@ module Reimbursements
 
       assert_equal [ bob.record_id ], area.reload.owner_ids
       assert_equal [ bob.record_id ], store.areas.find { |a| a.id == area.id }.owner_ids
+    end
+
+    test "sync_area_owners! drops blank ids, the shape a multi-checkbox param takes" do
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      area = create_reimbursements_area(name: "Cogito")
+
+      # A Rails multi-checkbox posts a blank hidden default alongside any ticked
+      # boxes. Area#sync_owner_ids! does person_ids.map(&:to_i) with no
+      # filtering, so an unguarded blank becomes 0 and create!(person_id: 0)
+      # raises ActiveRecord::InvalidForeignKey against reimbursements_area_owners.
+      store.sync_area_owners!(area.record_id, [ "", alice.id.to_s ])
+
+      assert_equal [ alice.record_id ], area.reload.owner_ids
     end
 
     test "areas preloads owners and its budgets' expenses and forecasts" do

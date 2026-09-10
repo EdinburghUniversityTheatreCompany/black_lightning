@@ -250,7 +250,9 @@ module Reimbursements
     end
 
     def create_area!(attrs)
-      Area.create!(area_columns(attrs))
+      area = Area.create!(area_columns(attrs))
+      bust_areas!
+      area
     end
 
     def update_area!(record_id, attrs)
@@ -261,7 +263,7 @@ module Reimbursements
     end
 
     def sync_area_owners!(record_id, person_ids)
-      Area.find(record_id).sync_owner_ids!(person_ids)
+      Area.find(record_id).sync_owner_ids!(Array(person_ids).reject(&:blank?))
       bust_areas!
     end
 
