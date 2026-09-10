@@ -14,6 +14,7 @@
 #  foreign_amount          :decimal(12, 2)
 #  foreign_currency        :string(255)
 #  iban_override           :string(255)
+#  import_key              :string(255)
 #  nominal_code_override   :string(255)
 #  payee_name_override     :text(65535)
 #  payment_confirmed_date  :date
@@ -44,6 +45,7 @@
 #  index_reimbursements_expenses_on_batch_id            (batch_id)
 #  index_reimbursements_expenses_on_budget_id           (budget_id)
 #  index_reimbursements_expenses_on_financial_year_id   (financial_year_id)
+#  index_reimbursements_expenses_on_import_key          (import_key) UNIQUE
 #  index_reimbursements_expenses_on_person_id           (person_id)
 #  index_reimbursements_expenses_on_source_message_id   (source_message_id) UNIQUE
 #  index_reimbursements_expenses_on_status              (status)

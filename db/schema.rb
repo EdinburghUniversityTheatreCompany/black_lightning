@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -847,6 +847,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_130000) do
     t.decimal "foreign_amount", precision: 12, scale: 2
     t.string "foreign_currency"
     t.string "iban_override"
+    t.string "import_key"
     t.string "nominal_code_override"
     t.text "payee_name_override"
     t.date "payment_confirmed_date"
@@ -869,6 +870,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_130000) do
     t.index ["batch_id"], name: "index_reimbursements_expenses_on_batch_id"
     t.index ["budget_id"], name: "index_reimbursements_expenses_on_budget_id"
     t.index ["financial_year_id"], name: "index_reimbursements_expenses_on_financial_year_id"
+    t.index ["import_key"], name: "index_reimbursements_expenses_on_import_key", unique: true
     t.index ["person_id"], name: "index_reimbursements_expenses_on_person_id"
     t.index ["source_message_id"], name: "index_reimbursements_expenses_on_source_message_id", unique: true
     t.index ["status"], name: "index_reimbursements_expenses_on_status"

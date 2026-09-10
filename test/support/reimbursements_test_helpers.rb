@@ -51,11 +51,12 @@ module ReimbursementsTestHelpers
 
   def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
                                    budget_type: "Expense", initial_budget: nil, notes: nil,
-                                   owners: [], cost_centre: nil)
+                                   owners: [], cost_centre: nil, financial_year: nil)
     budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
                                             active: active, budget_type: budget_type,
                                             initial_budget: initial_budget, notes: notes,
-                                            cost_centre: cost_centre)
+                                            cost_centre: cost_centre,
+                                            financial_year: financial_year)
     Array(owners).each { |person| budget.owners << person }
     budget
   end
