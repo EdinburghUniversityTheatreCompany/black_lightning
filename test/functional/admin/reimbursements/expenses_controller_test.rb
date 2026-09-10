@@ -530,6 +530,110 @@ module Admin
       assert_equal "Pending", bare_draft.status
     end
 
+    # --- A budget that vanished while the form was open ----------------------
+    # The real incident (Honeybadger 134234926): a finance data fix deleted the
+    # budget the producer had already picked, and the submit 500ed on the
+    # foreign key, losing a claim that was completely filled in. Deleting and
+    # deactivating budgets are both ordinary finance work, so both must land the
+    # producer back on their own form.
+
+    # A separate budget, so deleting it can't take @expense's own row with it.
+    def spare_budget(**attrs)
+      create_reimbursements_budget(name: "Costumes", nominal_code: "4100", **attrs)
+    end
+
+    test "create re-renders keeping the input when the picked budget was deleted" do
+      sign_in @user
+      doomed = spare_budget
+      params = valid_form_params.merge(budget_record_id: doomed.record_id,
+                                       description: "Blood capsules and a wig")
+      doomed.destroy!
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer available/, response.body)
+      assert_includes response.body, "Blood capsules and a wig",
+                      "the producer's typing must survive the failed submit"
+      assert_includes response.body, "PROPS PAT"
+    end
+
+    test "create re-renders keeping the input when the picked budget was deactivated" do
+      sign_in @user
+      retired = spare_budget
+      params = valid_form_params.merge(budget_record_id: retired.record_id,
+                                       description: "Blood capsules and a wig")
+      retired.update!(active: false)
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer available/, response.body)
+      assert_includes response.body, "Blood capsules and a wig"
+    end
+
+    # A draft is a scratchpad the producer may leave incomplete, so a stale
+    # budget must not cost them their typing: the budget is dropped, the draft
+    # saves, and the notice says the budget went so they can re-pick it.
+    test "create as a draft drops the vanished budget and still saves" do
+      sign_in @user
+      doomed = spare_budget
+      params = valid_form_params.merge(budget_record_id: doomed.record_id,
+                                       description: "Half-finished", save_as_draft: "1")
+      doomed.destroy!
+
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_equal "Draft", expense.status
+      assert_nil expense.budget
+      assert_equal "Half-finished", expense.description
+      assert_match(/budget/i, flash[:notice])
+    end
+
+    test "update re-renders keeping the input when the picked budget was deleted" do
+      sign_in @user
+      doomed = spare_budget
+      params = valid_form_params.except(:receipts).merge(budget_record_id: doomed.record_id,
+                                                         description: "Edited description")
+      doomed.destroy!
+
+      patch :update, params: { id: @expense.record_id, reimbursements_expense_form: params }
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer available/, response.body)
+      assert_includes response.body, "Edited description"
+      assert_equal "Fake blood", @expense.reload.description, "nothing was written"
+    end
+
+    # Belt and braces: even with the form-level rule, a delete can land between
+    # the validation and the insert. The store names that race and the
+    # controller must render it as the same fixable form error, not a 500.
+    test "create renders the form when the store reports the budget gone mid-write" do
+      sign_in @user
+      store = ::Reimbursements::DatabaseStore.new
+      store.define_singleton_method(:create_expense!) do |*|
+        raise ::Reimbursements::DatabaseStore::BudgetGoneError
+      end
+      BaseController.store_builder = ->(**) { store }
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form:
+          valid_form_params.merge(description: "Raced away") }
+      end
+
+      assert_response :unprocessable_entity
+      assert_match(/no longer available/, response.body)
+      assert_includes response.body, "Raced away"
+    end
+
     test "update rejects invalid input without writing" do
       sign_in @user
 

@@ -104,6 +104,36 @@ module Reimbursements
       assert_nil expense[:payment_reference]
     end
 
+    # Belt and braces under ExpenseForm's offerable-budget rule. Finance deletes
+    # budgets while producers hold the submission form open, so the row can go
+    # between the form's check and this insert — and a raw
+    # ActiveRecord::InvalidForeignKey is a 500 that loses the whole claim
+    # (Honeybadger 134234926). Named, so the controller can re-render the form.
+    test "create_expense! raises BudgetGoneError when the budget vanished" do
+      pat = create_person
+      budget = Budget.create!(name: "Props")
+      gone_id = budget.record_id
+      budget.destroy!
+
+      assert_raises(DatabaseStore::BudgetGoneError) do
+        store.create_expense!(person_record_id: pat.record_id, budget_record_id: gone_id,
+                              status: Status::PENDING, amount: BigDecimal("12.5"))
+      end
+      assert_equal 0, Expense.count, "nothing may be written"
+    end
+
+    test "update_expense! raises BudgetGoneError when the budget vanished" do
+      expense = Expense.create!(status: Status::PENDING, amount: 5, description: "before")
+      budget = Budget.create!(name: "Props")
+      gone_id = budget.record_id
+      budget.destroy!
+
+      assert_raises(DatabaseStore::BudgetGoneError) do
+        store.update_expense!(expense.record_id, budget_record_id: gone_id, description: "after")
+      end
+      assert_equal "before", expense.reload.description, "the whole update must roll back"
+    end
+
     test "update_expense! drops nils but honours an explicit budget clear" do
       budget = Budget.create!(name: "Props")
       expense = Expense.create!(status: Status::PENDING, budget: budget, amount: 5)

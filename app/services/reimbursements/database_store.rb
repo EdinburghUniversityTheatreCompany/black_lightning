@@ -18,6 +18,15 @@ module Reimbursements
     # between the caller's check and the write (see create_expense_for_actual!).
     class NotConvertibleError < StandardError; end
 
+    # Raised instead of the raw foreign-key violation when the budget an expense
+    # names was deleted between the caller's check and the write. ExpenseForm's
+    # offerable-budget rule is what normally catches this, but finance deletes
+    # budgets while producers hold the submission form open (Honeybadger
+    # 134234926), so the delete can still land inside that window — and a
+    # Mysql2::Error there is a 500 that loses a filled-in claim. Named, so the
+    # controllers can re-render the form instead.
+    class BudgetGoneError < StandardError; end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -348,6 +357,10 @@ module Reimbursements
         raise if attrs.key?(:auto_number) || (attempts += 1) >= 3
 
         retry
+      rescue ActiveRecord::InvalidForeignKey
+        raise BudgetGoneError if budget_gone?(attrs)
+
+        raise
       end
       bust_expenses!
       expense
@@ -397,6 +410,10 @@ module Reimbursements
       expense.update!(columns)
       bust_expenses!
       expense
+    rescue ActiveRecord::InvalidForeignKey
+      raise BudgetGoneError if budget_gone?(attrs)
+
+      raise
     end
 
     def attach_receipt!(expense_record_id, filename:, content_type:, bytes:)
@@ -753,6 +770,16 @@ module Reimbursements
 
     # nil values are dropped (email-in gaps); the sharepoint URL array joins
     # into the newline column.
+    # Whether a foreign-key violation on an expense write was the BUDGET link
+    # specifically. MySQL names the constraint, not the column, and an expense
+    # links to a person, a batch and a financial year as well — so the answer
+    # comes from re-reading the row rather than from parsing the error, and any
+    # other broken link is re-raised as itself instead of being mislabelled.
+    def budget_gone?(attrs)
+      record_id = attrs[:budget_record_id]
+      record_id.present? && !Budget.exists?(record_id)
+    end
+
     def expense_columns(attrs)
       attrs.compact.each_with_object({}) do |(key, value), columns|
         case key

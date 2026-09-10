@@ -52,6 +52,65 @@ module Admin
         assert_equal 1, still_attached, "the receipt must survive the failed submit"
       end
 
+      # The real incident (Honeybadger 134234926): a finance data fix deleted a
+      # budget while a producer had the submission form open, so the picker held
+      # a live reference to a row that no longer existed and Submit 500ed on the
+      # foreign key — losing a completely filled-in claim. Only a browser test
+      # sees this properly: it posts exactly what the picker rendered, and it is
+      # the input surviving on the re-rendered page that matters most.
+      test "a budget deleted while the form is open fails the submit, not the claim" do
+        doomed = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
+        visit new_admin_reimbursements_expense_path
+
+        attach_file "reimbursements_expense_form_receipts",
+                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
+        fill_in "Amount (£, incl. VAT)", with: "42.00"
+        fill_in "Amount excl. VAT (£)", with: "35.00"
+        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
+        fill_in "Description", with: "Ruff, doublet and hose"
+        fill_in "Payment reference", with: "COSTUMES ACT1"
+
+        # The finance data fix, mid-form.
+        doomed.destroy!
+
+        click_on "Submit expense"
+
+        assert_text "no longer available", wait: 5
+        assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
+        # Everything they typed is still on the form, ready to re-submit against
+        # another budget.
+        assert_equal "Ruff, doublet and hose",
+                     find("#reimbursements_expense_form_description").value
+        assert_equal "COSTUMES ACT1",
+                     find("#reimbursements_expense_form_payment_reference").value
+        assert_equal "42.00", find("#reimbursements_expense_form_amount").value
+        assert_equal "35.00", find("#reimbursements_expense_form_amount_excl_vat").value
+      end
+
+      # A deactivated budget still satisfies the foreign key, so this one never
+      # 500ed — it silently accepted a claim against a line finance had retired.
+      test "a budget deactivated while the form is open is refused the same way" do
+        retired = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
+        visit new_admin_reimbursements_expense_path
+
+        attach_file "reimbursements_expense_form_receipts",
+                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
+        fill_in "Amount (£, incl. VAT)", with: "42.00"
+        fill_in "Amount excl. VAT (£)", with: "35.00"
+        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
+        fill_in "Description", with: "Ruff, doublet and hose"
+        fill_in "Payment reference", with: "COSTUMES ACT1"
+
+        retired.update!(active: false)
+
+        click_on "Submit expense"
+
+        assert_text "no longer available", wait: 5
+        assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
+        assert_equal "Ruff, doublet and hose",
+                     find("#reimbursements_expense_form_description").value
+      end
+
       # --- The international rail --------------------------------------------
 
       # The trap this exists for: a hidden input carrying `required` makes the
