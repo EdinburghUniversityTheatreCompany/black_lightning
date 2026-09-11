@@ -40,6 +40,17 @@ module Reimbursements
       assert area.errors[:budget_basis].present?
     end
 
+    # Standing in for the case a test cannot reach without DDL: the backfill
+    # creates areas through this model, and on a re-migrate after a rollback it
+    # runs BEFORE the migration that adds budget_basis — where a bare inclusion
+    # raises on an attribute that is not there and stops the whole chain, so
+    # the areas could be unwound but never put back.
+    test "an area whose basis attribute is not loaded still validates" do
+      area = create_reimbursements_area(name: "Cogito")
+
+      assert Area.select(:id, :name).find(area.id).valid?
+    end
+
     test "the words on the form are the words on the card" do
       assert_equal "Agreed total (expenses)",
                    create_reimbursements_area(name: "Show", budget_basis: "expenses").basis_label

@@ -1,6 +1,11 @@
 class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
   def up
     Reimbursements::AreaBackfill.run!
+    # The backfill re-homes only the lines whose NAME reproduces their area, so
+    # anything created, moved or imported into one is restored from what #down
+    # recorded instead. Nothing is recorded on a first run, which is every run
+    # that is not a re-migrate.
+    Reimbursements::AreaMembership.restore!
   end
 
   # Detach, then drop the areas this migration created. The budgets' own owner
@@ -44,8 +49,13 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
             "the area tree shows signs of hand-editing — #{concerns.join('; ')} — unwind by hand before rolling back"
     end
 
-    Reimbursements::Budget.where.not(area_id: nil).update_all(area_id: nil)
-    Reimbursements::AreaOwner.delete_all
-    Reimbursements::Area.delete_all
+    # Record before detaching, and in one transaction with it: a detach whose
+    # record did not land is exactly the silent loss this exists to stop.
+    ActiveRecord::Base.transaction do
+      Reimbursements::AreaMembership.record!
+      Reimbursements::Budget.where.not(area_id: nil).update_all(area_id: nil)
+      Reimbursements::AreaOwner.delete_all
+      Reimbursements::Area.delete_all
+    end
   end
 end

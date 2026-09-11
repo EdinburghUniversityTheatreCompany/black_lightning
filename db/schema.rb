@@ -789,6 +789,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
   create_table "reimbursements_budgets", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "airtable_record_id"
+    t.json "area_before_rollback"
     t.bigint "area_id"
     t.string "budget_type", default: "Expense", null: false
     t.bigint "cost_centre_id"

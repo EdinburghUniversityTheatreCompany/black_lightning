@@ -72,7 +72,12 @@ module Reimbursements
     BASIS_OPTIONS = BASIS_LABELS.map { |value, text| [ text, value ] }.freeze
 
     validates :name, presence: true
-    validates :budget_basis, inclusion: { in: BASES }
+    # has_attribute?, not a bare inclusion: BackfillReimbursementsAreas creates
+    # areas through this model, and on a re-migrate after a rollback it runs
+    # BEFORE the migration adding this column — where reading the attribute
+    # raises NoMethodError and stops the whole chain, so the areas can be
+    # unwound but never put back.
+    validates :budget_basis, inclusion: { in: BASES }, if: -> { has_attribute?(:budget_basis) }
     # Areas are matched by name within one (financial year, cost centre) —
     # the backfill and the (future) importer both bind a budget to its parent
     # this way. The composite index on the same three columns is deliberately

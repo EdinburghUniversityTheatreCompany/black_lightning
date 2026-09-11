@@ -5,6 +5,7 @@
 #
 #  id                      :bigint           not null, primary key
 #  active                  :boolean          default(TRUE), not null
+#  area_before_rollback    :json
 #  budget_type             :string(255)      default("Expense"), not null
 #  initial_budget          :decimal(12, 2)
 #  name                    :string(255)      default(""), not null
