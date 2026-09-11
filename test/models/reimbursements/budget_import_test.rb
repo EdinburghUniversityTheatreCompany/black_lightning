@@ -1468,6 +1468,17 @@ module Reimbursements
       assert_match(/Fringe 2026/, import.entries.sole.matched_area_label)
     end
 
+    # P1: an unmatched row has matched nothing to report, whatever its cell
+    # says. The first import of a financial year is nothing BUT create rows, so
+    # getting this wrong tells the operator that every line on the screen
+    # matched a line in no area.
+    test "a create states no matched line, however its Area cell reads" do
+      import = build_import(area_sheet("Cogito", "Marketing"))
+
+      assert_equal :create, import.entries.sole.bucket
+      assert_nil import.entries.sole.matched_area_label
+    end
+
     # The ordinary case says nothing: same area, same record, and a label there
     # would repeat the cell on every row of an ordinary filled-in sheet.
     test "a matched line in the area the sheet named is not labelled" do
@@ -1479,6 +1490,51 @@ module Reimbursements
                             existing_budgets: [ budget ], existing_areas: [ here ])
 
       assert_nil import.entries.sole.matched_area_label
+    end
+
+    # P2: the screen has to agree with #creates about where a row lands, or the
+    # operator's one chance to catch a wrong adoption shows an empty Area cell.
+    test "the preview reads an adopted create's area, and says it came from the name" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tSet\t432320\tExpense\t500
+        \tCogito: Marketing\t432330\tExpense\t600
+      TSV
+
+      adopted = import.entries.last
+      assert_equal "Cogito", import.area_name_for(adopted)
+      assert import.area_adopted?(adopted)
+      assert_not import.area_adopted?(import.entries.first), "that row's own cell says Cogito"
+    end
+
+    # M2: two lines by the ruling, so nothing is matched or merged — but a
+    # create in one panel and an absence in another, with nothing linking them,
+    # is a state the operator cannot resolve from the screen.
+    test "an absent line the sheet re-creates under its own prefix is named as superseded" do
+      cogito = area_named("Cogito")
+      loose = create_reimbursements_budget(name: "Cogito: Marketing", initial_budget: 400,
+                                           financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: [ loose ], existing_areas: [ cogito ])
+
+      assert_equal [ "Marketing" ], import.creates.map { |create| create[:name] }
+      assert_equal [ loose.record_id ], import.absent_budgets.map(&:record_id)
+      assert_equal [ loose.record_id ], import.superseded_absent_budgets.map(&:record_id)
+    end
+
+    # The legitimate pair must not be flagged: a show's "Marketing" created
+    # beside a standing one is exactly what the ruling allows.
+    test "an absent line that carries no prefix is not reported as superseded" do
+      cogito = area_named("Cogito")
+      loose = create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                           financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Cogito", "Props"),
+                            existing_budgets: [ loose ], existing_areas: [ cogito ])
+
+      assert_equal [ loose.record_id ], import.absent_budgets.map(&:record_id)
+      assert_empty import.superseded_absent_budgets
     end
 
     # N2: for a group the PREFIX named, "told apart by their area" invites an

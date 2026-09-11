@@ -52,9 +52,16 @@
           <% entries.each do |entry| %>
             <tr class="border-t border-gray-200">
               <td class="py-1 pr-4">
-                <% if entry.area_name.present? %>
-                  <%= entry.area_name %>
-                  <% if bucket == :create && @import.area_creates.any? { |a| a[:name] == entry.area_name } %>
+                <%# The area the line LANDS in, not only the cell the sheet
+                    typed: a row whose area was read off its own name shows an
+                    empty cell otherwise, for a line that will land in a show. %>
+                <% area_name = @import.area_name_for(entry) %>
+                <% if area_name.present? %>
+                  <%= area_name %>
+                  <% if @import.area_adopted?(entry) %>
+                    <span class="text-gray-600">(from its name)</span>
+                  <% end %>
+                  <% if bucket == :create && @import.area_creates.any? { |a| a[:name] == area_name } %>
                     <span class="text-amber-700">(new)</span>
                   <% end %>
                 <% end %>
@@ -141,6 +148,16 @@
             Other read "Marketing, Marketing, Other and Other". %>
         <%= @import.absent_budgets.map(&:display_name).to_sentence %>.
       </p>
+      <%# A create in the panel above and an absence here, with nothing linking
+          them, is the one state the operator cannot resolve from the screen. %>
+      <% if @import.superseded_absent_budgets.any? %>
+        <p class="mt-1 text-amber-800">
+          <%= @import.superseded_absent_budgets.map(&:display_name).to_sentence %>
+          <%= @import.superseded_absent_budgets.one? ? "carries" : "carry" %> an area's name as a
+          prefix, and this sheet creates the same line inside that area. Nothing is merged —
+          check whether the older line should be retired.
+        </p>
+      <% end %>
     </div>
   <% end %>
 

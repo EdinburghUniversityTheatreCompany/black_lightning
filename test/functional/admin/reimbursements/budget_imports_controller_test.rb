@@ -286,6 +286,44 @@ module Admin
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
 
+      # The rendered half of P1 and P2, on the sheet the adoption produces. The
+      # first import of a financial year is nothing but create rows, so a label
+      # that fires on them puts "matched: no area" against every line on screen.
+      test "the first import of a year states where each line lands and claims no match" do
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tSet\t432320\tExpense\t500\n" \
+          "\tCogito: Marketing\t432330\tExpense\t600"
+        )
+
+        assert_equal 2, assigns(:import).entries_in(:create).size
+        assert_select "div.overflow-x-auto:not(.mt-2) table tbody tr", 2 do
+          assert_select "td:first-child", text: /Cogito/
+        end
+        assert_select "td:first-child span.text-gray-600", text: "(from its name)"
+        assert_no_match(/matched:/, response.body)
+      end
+
+      # The M2 signal, rendered: the create sits in one panel and the absence in
+      # another, and nothing else on the screen connects them.
+      test "the absent panel names a line this sheet re-creates under its own prefix" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year)
+        create_reimbursements_budget(name: "Cogito: Marketing", initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tMarketing\t432320\tExpense\t400"
+        )
+
+        assert_equal [ area.id ], assigns(:import).creates.map { |create| create[:area_id].to_i }
+        assert_match(/this sheet creates the same line inside that area/, response.body)
+      end
+
       # THE TRANSITIONAL SHEET, end to end: a half-filled Area column, then the
       # same lines fully converted. Created as a loose "Cogito: Marketing" the
       # second sheet CREATES "Marketing" in Cogito beside it and reports the

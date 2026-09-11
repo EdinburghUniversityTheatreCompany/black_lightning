@@ -292,6 +292,17 @@ module Reimbursements
 
     def entries_in(bucket) = @entries.select { |entry| entry.bucket == bucket }
 
+    # The area this row lands in, for the PREVIEW to render — the cell where
+    # there is one, the area the name named where the importer adopted it. The
+    # screen has to agree with #creates about what a row means: it is the
+    # operator's only chance to catch a wrong adoption, and an adopted row
+    # otherwise shows an empty Area cell for a line that will land in a show.
+    def area_name_for(entry) = create_area_name(entry)
+
+    # Whether the area above was read off the row's NAME rather than its cell,
+    # which is the part the operator cannot see for themselves.
+    def area_adopted?(entry) = entry.area_name.blank? && area_name_for(entry).present?
+
     # Attributes for each new budget, ready for the store. A line naming an
     # AREA carries +area_id:+ (an area already here) or +area_name:+ (one the
     # sheet is about to create), never both; import_budgets! resolves the name
@@ -520,6 +531,18 @@ module Reimbursements
     def absent_budgets
       named = @entries.filter_map { |entry| entry.budget&.record_id }.to_set
       @existing_budgets.reject { |budget| named.include?(budget.record_id) }
+    end
+
+    # Absent lines this sheet is about to create again inside an area — a
+    # stored loose "Cogito: Marketing" against a sheet that has converted to
+    # Cogito | Marketing. They ARE two lines, which is the ruling, so nothing
+    # here matches or merges them. But a create in one panel and an absence in
+    # another, with nothing linking them, is a state the operator cannot
+    # resolve from the screen. Report, never block.
+    def superseded_absent_budgets
+      @superseded_absent_budgets ||= absent_budgets.select do |budget|
+        creates.any? { |create| supersedes?(create, budget) }
+      end
     end
 
     # What an apply will DO, keyed by the DatabaseStore#import_budgets! argument
@@ -1021,6 +1044,20 @@ module Reimbursements
       owner_targets[target_key(area, name_key)].present?
     end
 
+    # Only where the absent line's own name CARRIES the create's area as a
+    # prefix. Without that the reading fires on a legitimate pair — a show's
+    # "Marketing" created beside a standing one is exactly what the ruling
+    # allows, and flagging it would make the panel noise.
+    def supersedes?(create, budget)
+      area = create[:area_name] || @existing_areas_by_id[create[:area_id]]&.name
+      return false if area.blank?
+
+      bare = self.class.bare_name(budget.name, area)
+      return false if bare == budget.name
+
+      self.class.match_key(bare) == self.class.match_key(create[:name])
+    end
+
     def area_attrs_for(entry) = area_attrs_for_name(entry.area_name)
 
     def area_attrs_for_name(name)
@@ -1095,12 +1132,6 @@ module Reimbursements
                                  .uniq { |name| self.class.match_key(name) }
     end
 
-    # The area a row names, by its Area cell or by the prefix on its own name.
-    # ONE derivation, because grouping and creating disagreeing about what a row
-    # means is the seam behind every duplicate this class exists to prevent: a
-    # row that KEYS as Cogito's line must not then be created as a loose line
-    # whose name carries the prefix, or the next converted sheet creates the
-    # line again inside the area and reports the first one absent.
     # The area a CREATE lands in: its own Area cell, or — where the cell is
     # blank — the area the row's own NAME names, on exactly the terms #row_key
     # groups by. Grouping and creating disagreeing about what a row means is the
@@ -1138,7 +1169,12 @@ module Reimbursements
     # most needs telling about and the one a name comparison reads as agreement.
     # Qualified by year and centre only there, so the ordinary label stays short.
     def matched_area_label(area_name, budget)
-      matched = budget&.area
+      # An unmatched row has matched nothing to report, whatever its cell says.
+      # Without this the first import of a financial year — every row a create —
+      # tells the operator that each one matched a line in no area.
+      return if budget.nil?
+
+      matched = budget.area
       typed = area_name.presence
       return if typed.nil? && matched.nil?
       return "no area" if matched.nil?

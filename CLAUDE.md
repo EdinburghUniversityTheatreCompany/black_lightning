@@ -568,7 +568,19 @@ survive as historical import provenance and are never written. Spec + plan in
     `#matched_note` where the loose reading decided) wherever that differs from the Area cell the
     sheet typed. Without it a row matched to the loose line and one matched to the show's line
     render identically — same blank cell, same name — so "report, don't block" reported nothing
-    the operator could see on the row they typed.
+    the operator could see on the row they typed. **An unmatched row says nothing**, or the first
+    import of a financial year — every row a create — tells the operator each one matched a line
+    in no area.
+  - **The preview's Area column reads `#area_name_for`, the area a row LANDS in**, marking
+    `(from its name)` where the importer read it off the prefix rather than the cell. The screen
+    has to agree with `#creates` about what a row means: it is the operator's only chance to catch
+    a wrong adoption, and an adopted row otherwise shows an empty cell for a line that will land
+    in a show.
+  - **`#superseded_absent_budgets` links the two panels** where a create's (area, bare name)
+    matches an absent line whose own name carries that area as a prefix. They are two lines and
+    nothing is merged — that is the ruling — but a create in one panel and an absence in another,
+    with nothing connecting them, is the one state the operator cannot resolve from the screen.
+    The prefix has to be really there, or the reading fires on the legitimate pair.
   - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
     note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
     would read an `Area Budget` column as the line's own name (`budget`) *and* as the area (`area`).
