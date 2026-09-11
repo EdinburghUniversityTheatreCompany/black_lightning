@@ -73,6 +73,15 @@ module ReimbursementsTestHelpers
     )
   end
 
+  # A nominal code, defaulting to the fixture cost centre (as
+  # create_reimbursements_budget's cost_centre would if it weren't optional
+  # there) — NominalCode#cost_centre is required, so callers that don't care
+  # which centre still get a valid row.
+  def create_reimbursements_nominal_code(code:, cost_centre: nil, label: "Marketing", active: true)
+    Reimbursements::NominalCode.create!(code: code, label: label, active: active,
+                                        cost_centre: cost_centre || Reimbursements::CostCentre.default)
+  end
+
   def create_reimbursements_expense(person: nil, budget: nil, batch: nil,
                                     status: Reimbursements::Status::PENDING,
                                     amount: BigDecimal("12.5"),
