@@ -24,5 +24,27 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito")
       assert_equal area.id.to_s, area.record_id
     end
+
+    test "an area is a spend cap unless somebody says otherwise" do
+      # Every area that exists came from the Phase 1 backfill of show-shaped
+      # lines, and a spend cap never reports more room than there is. A
+      # committee's net allowance is one deliberate choice by a human.
+      assert_equal "expenses", create_reimbursements_area(name: "Cogito").budget_basis
+    end
+
+    test "the basis is one of the two the card can name" do
+      area = create_reimbursements_area(name: "Cogito")
+      area.budget_basis = "gross"
+
+      assert_not area.valid?
+      assert area.errors[:budget_basis].present?
+    end
+
+    test "the words on the form are the words on the card" do
+      assert_equal "Total expenses",
+                   create_reimbursements_area(name: "Show", budget_basis: "expenses").basis_label
+      assert_equal "Total net",
+                   create_reimbursements_area(name: "Committee", budget_basis: "net").basis_label
+    end
   end
 end

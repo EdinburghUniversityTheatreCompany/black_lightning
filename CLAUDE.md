@@ -387,10 +387,22 @@ survive as historical import provenance and are never written. Spec + plan in
     figure ("…left out of the totals below but already subtracted from the not-yet-allocated
     figure"), never the agreed total. A budget CAN hold an area from another year, which is
     what makes the two disagree.
-  - **An area holding BOTH budget types prints no allocation figure.** `Area#unallocated`
-    subtracts every line's projection from the agreed total with no type filter, so £1,000
-    agreed over £400 of spend and £800 of income renders -£200 — income netted against spend,
-    reading as over-allocation. `AreaRollup#unallocated` withholds it and the card says why.
+  - **An area declares what its agreed total is a total OF** (`areas.budget_basis`,
+    `Area::BASIS_LABELS`), because it is genuinely both: a SHOW gets a spend cap — the £800 it
+    raises buys it no more room — while a COMMITTEE gets a net allowance, where money raised
+    genuinely raises what it may spend. `expenses` leaves income lines out of `Area#allocated`
+    entirely; `net` subtracts them. Default `expenses` with **no backfill**: every area came from
+    the Phase 1 backfill of show-shaped lines, and a spend cap never reports more room than there
+    is. The two labels are the words on the FORM and the words on every card, so a finance user
+    picks what they read back.
+    - **The basis governs the AREA's agreed-total arithmetic ONLY.** `AreaRollup#by_type` keeps
+      its two separate subtotals on both bases — "what did this area spend" is a different
+      question from "how much room has it left", and only the second ever nets the types
+      together. Letting the basis reach `by_type` would break the standing rule that Expense and
+      Income budgets are never totalled.
+    - The overview's out-of-scope warning says an out-of-scope line is "already **counted in** the
+      not-yet-allocated figure", never "subtracted from" it: on a net-basis area an out-of-scope
+      INCOME line raises that figure.
   - **Area names are unique within one (financial year, cost centre)** by model validation —
     the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
     NULLs through a unique index, and an area with no year/centre yet has NULLs in both.

@@ -5,6 +5,7 @@
 #
 #  id                :bigint           not null, primary key
 #  active            :boolean          default(TRUE), not null
+#  budget_basis      :string(255)      default("expenses"), not null
 #  initial_budget    :decimal(12, 2)
 #  name              :string(255)      not null
 #  notes             :text(65535)
@@ -44,7 +45,21 @@ module Reimbursements
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast", dependent: :destroy,
                          inverse_of: :area
 
+    # What the agreed total is a total OF, and the words the card prints for
+    # it. A show's total is a SPEND CAP: the £800 it raises buys it no more
+    # room. A committee's is a NET allowance: money it raises genuinely raises
+    # what it may spend. The area declares which, because it is genuinely both
+    # (Mick, 2026-09-11) and neither reading can be derived from the lines.
+    #
+    # These two strings are the label everywhere the figure is shown — the
+    # overview card, the grouped index, the area's own financials — AND the
+    # two options on the form, so a finance user picks the words they will
+    # then read back.
+    BASIS_LABELS = { "expenses" => "Total expenses", "net" => "Total net" }.freeze
+    BASES = BASIS_LABELS.keys.freeze
+
     validates :name, presence: true
+    validates :budget_basis, inclusion: { in: BASES }
     # Areas are matched by name within one (financial year, cost centre) —
     # the backfill and the (future) importer both bind a budget to its parent
     # this way. The composite index on the same three columns is deliberately
@@ -101,8 +116,14 @@ module Reimbursements
 
     # How much of the total has been split out into category lines. Lines with no
     # agreed figure are skipped, not counted as zero.
+    #
+    # Read on the area's own basis, which is the ONLY arithmetic the basis
+    # governs: an income line is left out entirely of a spend cap and
+    # subtracted from a net allowance. It must not reach AreaRollup#by_type,
+    # whose two subtotals answer "what did this area spend", a different
+    # question that never nets the types together.
     def allocated
-      @allocated ||= budgets.filter_map(&:projected_amount).sum
+      @allocated ||= budgets.sum { |budget| allocation_of(budget) }
     end
 
     # The part of the agreed total not yet assigned to a category — NOT spare money.
@@ -113,5 +134,22 @@ module Reimbursements
     end
 
     def income? = budgets.any?(&:income?)
+
+    def net_basis? = budget_basis == "net"
+
+    def basis_label = BASIS_LABELS[budget_basis]
+
+    private
+
+    # An income line's share of the agreed total, signed by the basis: nothing
+    # on a spend cap, a credit on a net allowance. A line nobody has given a
+    # figure counts as nothing, not as zero spend.
+    def allocation_of(budget)
+      amount = budget.projected_amount
+      return 0 if amount.nil?
+      return amount unless budget.income?
+
+      net_basis? ? -amount : 0
+    end
   end
 end

@@ -666,7 +666,7 @@ module Admin
         assert_includes response.body, "£750.00"
         # The committee's agreed figure and what is left to split out of it
         # (5000 - 750), both read off the area rather than off its lines.
-        assert_includes response.body, "Agreed total £5,000.00"
+        assert_includes response.body, "Total expenses £5,000.00"
         assert_includes response.body, "£4,250.00 not yet allocated"
         # Props and the income line belong to no area, and still have to appear —
         # under a heading, never behind an empty state.
@@ -674,10 +674,10 @@ module Admin
         assert_not_includes response.body, "No budgets to group."
       end
 
-      test "overview never totals an area's expense and income lines together" do
+      test "overview allocates an area on its declared basis, never netting its subtotals" do
         sign_in @user
-        # An agreed total, so the one figure that would net the two types
-        # against each other is actually reached and can be asserted on.
+        # An agreed total, so the figure the basis governs is actually reached
+        # and can be asserted on.
         area = create_reimbursements_area(name: "Cogito", initial_budget: 1000)
         create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
                                      initial_budget: 410)
@@ -687,24 +687,30 @@ module Admin
         get :overview
 
         assert_response :success
-        rollup = assigns(:area_rollups).sole
-        spend, income = rollup.by_type
+        spend, income = assigns(:area_rollups).sole.by_type
         assert_equal BigDecimal("410"), spend.initial
         assert_equal BigDecimal("805"), income.initial
         assert_includes response.body, "Subtotal Cogito (Expense)"
         assert_includes response.body, "Subtotal Cogito (Income)"
         # 1,215 is neither the show's spend nor its income, so nothing says it.
         assert_not_includes response.body, "£1,215.00"
-        # Area#unallocated is 1000 - 410 - 805 = -215, spend netted against
-        # income and indistinguishable from real over-allocation. The agreed
-        # total still stands: it is one figure the committee agreed, not a sum.
-        assert_equal BigDecimal("-215"), rollup.area.unallocated
-        assert_nil rollup.unallocated
-        assert_includes response.body, "Agreed total £1,000.00"
-        assert_not_includes response.body, "-£215.00"
-        assert_not_includes response.body, "not yet allocated"
-        assert_includes response.body,
-                        "No allocation figure: this area holds both expense and income lines."
+        # A spend cap by default: the £805 of ticket income buys the show no
+        # more room, so 1,000 - 410 is what is left to split into lines.
+        assert_includes response.body, "Total expenses £1,000.00"
+        assert_includes response.body, "£590.00 not yet allocated"
+
+        # A committee's allowance nets, so the same £805 raises it: 1,000 - 410
+        # + 805. The two subtotals below are the same figures either way — the
+        # basis governs the area's own arithmetic and nothing else.
+        area.update!(budget_basis: "net")
+        get :overview
+
+        assert_response :success
+        assert_equal [ BigDecimal("410"), BigDecimal("805") ],
+                     assigns(:area_rollups).sole.by_type.map(&:initial)
+        assert_includes response.body, "Total net £1,000.00"
+        assert_includes response.body, "£1,395.00 not yet allocated"
+        assert_not_includes response.body, "£1,215.00"
       end
 
       test "an area with no agreed total shows no figure, never a zero" do
@@ -719,8 +725,8 @@ module Admin
 
         assert_response :success
         assert_select "th[scope=rowgroup] span.font-semibold", text: "Backfilled show"
-        # "Agreed total £0.00" would read as the show being fully overspent.
-        assert_not_includes response.body, "Agreed total"
+        # "Total expenses £0.00" would read as the show being fully overspent.
+        assert_not_includes response.body, "Total expenses"
         assert_not_includes response.body, "not yet allocated"
       end
 
@@ -747,8 +753,11 @@ module Admin
         # Pinned whole: the sentence's only job is to stop a finance user
         # misreading two disagreeing figures, so every clause has to be true.
         # The agreed total is named by neither: it counts no lines at all.
+        # "Counted in", not "subtracted from": on a net-basis area an
+        # out-of-scope INCOME line raises that figure instead of reducing it,
+        # and every clause of this sentence has to be true on both bases.
         assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
-                     "the totals below but already subtracted from the not-yet-allocated figure.",
+                     "the totals below but already counted in the not-yet-allocated figure.",
                      css_select("span.text-warning").sole.text.squish
 
         # With no agreed total there is no allocation figure on screen, so the

@@ -58,5 +58,40 @@ module Reimbursements
       assert_nil area.unallocated
       assert_equal 0, area.allocated
     end
+
+    test "an expenses-basis area ignores income when computing what is left" do
+      area = create_reimbursements_area(name: "Cogito show", initial_budget: 1_000,
+                                        budget_basis: "expenses")
+      create_reimbursements_budget(name: "Show marketing", area: area, initial_budget: 400,
+                                   budget_type: "Expense")
+      create_reimbursements_budget(name: "Show ticket income", area: area, initial_budget: 800,
+                                   budget_type: "Income")
+
+      assert_equal 400, area.allocated, "a show's income does not buy it more room"
+      assert_equal 600, area.unallocated
+    end
+
+    test "a net-basis area lets income raise the allowance" do
+      area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
+                                        budget_basis: "net")
+      create_reimbursements_budget(name: "Committee socials", area: area, initial_budget: 400,
+                                   budget_type: "Expense")
+      create_reimbursements_budget(name: "Committee raffle", area: area, initial_budget: 800,
+                                   budget_type: "Income")
+
+      assert_equal(-400, area.allocated, "money raised offsets money spent")
+      assert_equal 1_400, area.unallocated
+    end
+
+    test "an income line on a net-basis area with no agreed total still reports nil" do
+      # The backfilled state, on the basis that nets: a 0 here would read as
+      # fully overspent just as it would on a spend cap.
+      area = create_reimbursements_area(name: "Unbudgeted committee", budget_basis: "net")
+      create_reimbursements_budget(name: "Committee raffle 2", area: area, initial_budget: 800,
+                                   budget_type: "Income")
+
+      assert_nil area.unallocated
+      assert_equal(-800, area.allocated)
+    end
   end
 end

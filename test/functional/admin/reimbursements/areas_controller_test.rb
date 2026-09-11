@@ -50,6 +50,26 @@ module Admin
         assert_equal [ alice.record_id ], area.reload.owner_ids
       end
 
+      test "the form switches an area between a spend cap and a net allowance" do
+        area = create_reimbursements_area(name: "Committee")
+        assert_equal "expenses", area.budget_basis, "a backfilled area is a spend cap"
+
+        patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "net" }
+
+        assert_equal "net", area.reload.budget_basis
+      end
+
+      test "a basis the radio pair cannot offer is ignored, not saved" do
+        # save! would raise on Area's inclusion validation and 500 the form,
+        # losing everything else typed on it.
+        area = create_reimbursements_area(name: "Committee", budget_basis: "net")
+
+        patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "gross" }
+
+        assert_response :redirect
+        assert_equal "net", area.reload.budget_basis
+      end
+
       test "rejects a blank name" do
         assert_no_difference -> { ::Reimbursements::Area.count } do
           post :create, params: { name: "" }

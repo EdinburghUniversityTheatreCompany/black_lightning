@@ -28,8 +28,8 @@
     Computed from this area's own agreed total and the budget lines above.
   </p>
   <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-    <div><dt class="text-gray-500">Agreed total</dt><dd class="font-medium"><%= reimbursements_money(@area.projected_amount) %></dd></div>
-    <div><dt class="text-gray-500" title="How much of the agreed total has been split out into budget lines. Lines with no agreed figure of their own are skipped, not counted as zero.">Allocated to lines</dt><dd class="font-medium"><%= reimbursements_money(@area.allocated) %></dd></div>
+    <div><dt class="text-gray-500" title="The agreed figure, and what it is a total of — picked on the form above."><%= @area.basis_label %></dt><dd class="font-medium"><%= reimbursements_money(@area.projected_amount) %></dd></div>
+    <div><dt class="text-gray-500" title="How much of the agreed total has been split out into budget lines, on the basis picked above. Lines with no agreed figure of their own are skipped, not counted as zero.">Allocated to lines</dt><dd class="font-medium"><%= reimbursements_money(@area.allocated) %></dd></div>
     <div><dt class="text-gray-500" title="The part of the agreed total not yet assigned to a line — not spare money.">Unallocated</dt><dd class="font-medium"><%= reimbursements_money(@area.unallocated) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@area.committed_amount) %></dd></div>
     <div>

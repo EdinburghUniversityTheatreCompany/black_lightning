@@ -32,6 +32,14 @@ module Reimbursements
       assert_equal 800, rollup.by_type.find { |r| r.budget_type == "Income" }.initial
       # 1,200 is neither total spend nor net, so no rollup reports it.
       assert_empty rollup.by_type.select { |r| r.initial == BigDecimal("1200") }
+
+      # The basis governs the AREA's agreed-total arithmetic and nothing else.
+      # "What did this area spend" and "how much room has it left" are
+      # different questions, and only the second one nets.
+      before = rollup.by_type.map { |r| [ r.budget_type, r.initial, r.projected, r.committed ] }
+      area.update!(budget_basis: "net")
+      after = Reimbursements::AreaRollup.new(area: area.reload, budgets: area.budgets).by_type
+      assert_equal before, after.map { |r| [ r.budget_type, r.initial, r.projected, r.committed ] }
     end
 
     test "sums each metric across the area's lines, treating a nil figure as zero" do
@@ -94,23 +102,31 @@ module Reimbursements
       assert_nil totals.unallocated
     end
 
-    test "an area holding both budget types reports no allocation figure at all" do
+    test "an area holding both budget types allocates on its declared basis" do
       marketing = line(name: "Marketing", initial_budget: 400)
       line(name: "Ticket income", budget_type: "Income", initial_budget: 800)
 
-      totals = rollup
+      assert_equal "Total expenses", rollup.total_label
+      # A spend cap: the £800 raised buys the show no more room.
+      assert_equal BigDecimal("600"), rollup.unallocated
 
-      assert_predicate totals, :mixed_budget_types?
-      # Area#unallocated subtracts both with no type filter: 1000 - 400 - 800.
-      # A -200 on screen is indistinguishable from real over-allocation.
-      assert_equal BigDecimal("-200"), @area.unallocated
-      assert_nil totals.unallocated
-      # The agreed total is one figure the committee agreed, not a sum, so it
-      # survives.
-      assert_equal BigDecimal("1000"), totals.agreed
-      # Withheld on the strength of every line the area holds, not the ones on
-      # screen — the figure it guards is summed over all of them too.
-      assert_nil rollup([ marketing ]).unallocated
+      # A fresh read, not @area: the figures are memoized per instance, which
+      # is what makes store.areas one query instead of one per card.
+      @area.update!(budget_basis: "net")
+      netted = AreaRollup.new(area: Area.find(@area.id), budgets: [ marketing ])
+
+      # Read off every line the area holds, not the ones on screen: the figure
+      # is summed over all of them, which is what the card's out-of-scope row
+      # exists to say.
+      assert_equal BigDecimal("1400"), netted.unallocated
+      assert_equal "Total net", netted.total_label
+    end
+
+    test "the card names which figure it is showing" do
+      net = create_reimbursements_area(name: "Committee", budget_basis: "net")
+
+      assert_equal "Total expenses", AreaRollup.new(area: @area, budgets: []).total_label
+      assert_equal "Total net", AreaRollup.new(area: net, budgets: []).total_label
     end
 
     test "an area holding lines outside the screen's scope says how many are shown" do
@@ -142,7 +158,7 @@ module Reimbursements
       assert_nil totals.name
       assert_nil totals.agreed
       assert_nil totals.unallocated
-      assert_not totals.mixed_budget_types?
+      assert_nil totals.total_label
       assert_equal 0, totals.lines_out_of_scope
       assert_equal BigDecimal("50"), totals.initial
     end

@@ -8,7 +8,14 @@ module Reimbursements
   # The money columns cover the budgets HANDED IN — the ones the screen's year
   # and cost centre scope to. #agreed and #unallocated instead come off the area
   # itself, whose figures sum every line ever linked to it, in any year or
-  # centre. A budget CAN hold an area from another year, so the two readings can
+  # centre.
+  #
+  # The area's budget basis reaches #unallocated and #total_label and stops
+  # there: #by_type keeps its two separate subtotals on BOTH bases, because
+  # "what did this area spend" is a different question from "how much room has
+  # it left" and only the second one ever nets income against spend.
+  #
+  # A budget CAN hold an area from another year, so the two readings can
   # disagree: #lines_shown against #lines_total is what makes that visible
   # rather than silently dropping or silently counting the out-of-scope spend.
   AreaRollup = Struct.new(:area, :budgets, :budget_type, keyword_init: true) do
@@ -23,24 +30,17 @@ module Reimbursements
     # The part of that agreed total not yet split out into category lines. NOT
     # spare money, and nil for the same reason #agreed is.
     #
-    # Withheld entirely for an area holding both budget types: Area#unallocated
-    # subtracts every line's projection with no type filter, so £1,000 agreed
-    # over £400 of spend and £800 of income prints -£200 — indistinguishable
-    # from real over-allocation, and the one figure here that would net income
-    # against spend.
-    def unallocated
-      return nil if mixed_budget_types?
+    # Summed on the area's declared basis (Area#allocated), so an area holding
+    # both budget types has a defensible figure either way: a spend cap leaves
+    # its income lines out, a net allowance credits them. Phase 2a withheld
+    # this figure for such an area because there was no declared basis to read
+    # and netting was the only arithmetic on offer.
+    def unallocated = area&.unallocated
 
-      area&.unallocated
-    end
-
-    # Read against EVERY line the area holds, not the ones on screen: the figure
-    # this guards is summed over all of them too.
-    def mixed_budget_types?
-      return false if area.nil?
-
-      area.budgets.map(&:budget_type).uniq.size > 1
-    end
+    # What that agreed total is a total OF, in the words the area's own form
+    # offered. The unassigned group has no area and so names nothing, exactly
+    # as it reports no agreed total.
+    def total_label = area&.basis_label
 
     # Read off the GROUP rollup: a #by_type child holds one type's slice, so its
     # counts describe that slice rather than the area's place in the page's

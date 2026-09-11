@@ -43,6 +43,39 @@ module Admin
         assert_equal centre.id, budget.cost_centre_id
       end
 
+      # The basis is the one control on this form that changes a figure printed
+      # beside it, and a request test POSTing straight to #update sees neither
+      # the radio pair nor the card. Both live inside the same CardComponent
+      # trap the test above exists for: a control whose submit renders outside
+      # the <form> silently does nothing.
+      test "switching an area to a net allowance changes the figure on its card" do
+        area = create_reimbursements_area(name: "Committee", initial_budget: 1_000)
+        create_reimbursements_budget(name: "Socials", nominal_code: "432320", area: area,
+                                     initial_budget: 400)
+        create_reimbursements_budget(name: "Raffle", nominal_code: "810000", area: area,
+                                     budget_type: "Income", initial_budget: 800)
+
+        visit edit_admin_reimbursements_area_path(area.record_id)
+
+        within "dl" do
+          # A spend cap: the £800 raised buys the committee no more room.
+          assert_text "Total expenses"
+          assert_text "£600.00"
+        end
+
+        choose "Total net"
+        click_on "Save"
+
+        assert_text "Area saved"
+        assert_equal "net", area.reload.budget_basis
+        within "dl" do
+          # Netted: 1,000 - (400 - 800).
+          assert_text "Total net"
+          assert_text "£1,400.00"
+          assert_no_text "Total expenses"
+        end
+      end
+
       test "a budget line saved with no nominal code is refused in the browser" do
         area = create_reimbursements_area(name: "Cogito")
 

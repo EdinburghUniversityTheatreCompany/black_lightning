@@ -118,6 +118,12 @@ module Admin
         # save. Leaving the key out entirely keeps the current value.
         active = ActiveModel::Type::Boolean.new.cast(source[:active])
         attrs[:active] = active unless active.nil?
+        # Only ever one of the two the radio pair offers. Anything else is left
+        # out, keeping the current value, exactly as :active is above: Area
+        # validates the inclusion, so a junk value reaching save! would raise
+        # and 500 the form rather than report anything an operator can act on.
+        basis = source[:budget_basis].to_s
+        attrs[:budget_basis] = basis if ::Reimbursements::Area::BASES.include?(basis)
         attrs
       end
 
