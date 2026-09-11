@@ -11,8 +11,11 @@ module Reimbursements
       create_reimbursements_nominal_code(code: "432320", cost_centre: @centre, label: "Marketing")
     end
 
+    # Named for what it buys rather than for the code, so only the CODE pass can
+    # find it: a line called "Marketing" is found by the label pass too, and a
+    # test seeded that way passes with the code lookup gone.
     test "an existing line under the same area and code is found, not duplicated" do
-      existing = line(name: "Marketing", nominal_code: "432320")
+      existing = line(name: "Correx boards", nominal_code: "432320")
 
       found = find_or_create
 
