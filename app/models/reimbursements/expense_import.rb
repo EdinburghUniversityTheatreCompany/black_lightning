@@ -178,7 +178,17 @@ module Reimbursements
       @financial_year = financial_year
       @cost_centre = cost_centre
       @escaped = input_type == :canonical_tsv
-      @budgets_by_name = budgets.index_by { |budget| BudgetImport.match_key(budget.name) }
+      # Grouped under BOTH spellings, never index_by. The budget rename made
+      # same-named lines in different areas normal, and index_by kept the last
+      # one silently — a settled claim charged to an arbitrary show. A sheet
+      # still saying "Cogito: Marketing" has to find the renamed line too, and
+      # the spellings come from BudgetImport so the two importers cannot
+      # disagree about what a budget is called.
+      @budgets_by_name = budgets.each_with_object({}) do |budget, index|
+        BudgetImport.name_spellings(budget.name, budget.area&.name).each do |spelling|
+          (index[BudgetImport.match_key(spelling)] ||= []) << budget
+        end
+      end
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
       @imported_keys = existing_expenses.filter_map { |e| self.class.key_match(e.import_key) }.to_set
       @taken_numbers = existing_expenses.filter_map(&:auto_number).to_set
@@ -374,10 +384,11 @@ module Reimbursements
 
     def entry_for(row, duplicated)
       person = @people_by_email[row[:payee_email]]
-      budget = @budgets_by_name[BudgetImport.match_key(row[:budget])]
+      candidates = budgets_named(row[:budget])
+      budget = candidates.first if candidates.one?
       base = { row: row, person: person, budget: budget }
 
-      error = row_error(row, person, budget, duplicated)
+      error = row_error(row, person, budget, candidates, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
       if @imported_keys.include?(self.class.key_match(row[:reference]))
@@ -397,10 +408,11 @@ module Reimbursements
     # own coordinates (reference, status) and the two records it has to resolve.
     # Ordered cheapest-and-most-fundamental first, so a row missing its
     # reference is told that rather than being told about its budget.
-    def row_error(row, person, budget, duplicated)
+    def row_error(row, person, budget, candidates, duplicated)
       reference_error(row, duplicated) ||
         status_error(row) ||
         (payee_error(row) if person.nil?) ||
+        (ambiguous_budget_error(row, candidates) if candidates.many?) ||
         (budget_error(row) if budget.nil?) ||
         value_error(row) ||
         auto_number_error(row, duplicated)
@@ -453,6 +465,16 @@ module Reimbursements
         "#{row[:payee_email].inspect} isn't anyone on the People screen. Register them there " \
           "first — nobody is created from a bare email address."
       end
+    end
+
+    def budgets_named(name)
+      @budgets_by_name.fetch(BudgetImport.match_key(name), [])
+    end
+
+    def ambiguous_budget_error(row, candidates)
+      "#{row[:budget].inspect} matches more than one budget in #{destination_label} " \
+        "(#{candidates.map { |budget| BudgetImport.budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
+        "Name it as \"Area: Line\", or rename one of them."
     end
 
     def budget_error(row)

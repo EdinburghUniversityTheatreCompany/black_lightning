@@ -795,6 +795,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100400) do
     t.bigint "financial_year_id"
     t.decimal "initial_budget", precision: 12, scale: 2
     t.string "name", default: "", null: false
+    t.string "name_before_area_rename"
     t.string "nominal_code", default: "", null: false
     t.text "notes"
     t.datetime "updated_at", null: false

@@ -11,7 +11,10 @@ module Reimbursements
   # keeps nothing in the session and nothing on disk, and apply re-parses and
   # re-validates from scratch rather than trusting what the preview decided.
   #
-  # THE BUCKETS, matched by name within one (financial year, cost centre):
+  # THE BUCKETS. A line is matched within one (financial year, cost centre) by
+  # its AREA plus its bare name where the sheet names an area, and by its whole
+  # name otherwise — see .bare_name and #resolve_budget, which read both
+  # spellings of a name the area prefix was stripped from.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -208,6 +211,13 @@ module Reimbursements
     # The stored row knows its own area whether or not the SHEET names one, so a
     # line is indexed under both spellings and the committee's untouched old
     # file — prefixed names, no Area column — still finds "Marketing" in Cogito.
+    # Names the AREA alongside the name, because the collision is usually two
+    # identical names — "Marketing" twice says nothing an operator can act on.
+    # Shared with ExpenseImport, which resolves budgets by the same rule.
+    def self.budget_label(budget)
+      budget.area ? "#{budget.name.inspect} in #{budget.area.name}" : "#{budget.name.inspect} in no area"
+    end
+
     def self.name_spellings(name, area_name)
       return [ name.to_s ] if area_name.blank?
 
@@ -621,8 +631,8 @@ module Reimbursements
       report_missing_columns
       return [] if @errors.any?
 
-      duplicated = duplicated_names
-      flag_shared_budgets(@rows.map { |row| entry_for(row, duplicated) })
+      duplicates = duplicate_rows
+      flag_shared_budgets(@rows.each_index.map { |index| entry_for(index, duplicates) })
     end
 
     # Two rows that resolved to ONE stored line. #duplicated_names compares what
@@ -639,10 +649,10 @@ module Reimbursements
     end
 
     def shared_budget_error(entry, entries)
-      names = entries.select { |other| other.budget&.record_id == entry.budget.record_id }
-                     .map { |other| other.row[:name].inspect }.uniq
-      "#{names.to_sentence(last_word_connector: ' and ')} are the same budget line " \
-        "(#{budget_label(entry.budget)}). The sheet has to name it once."
+      rows = entries.select { |other| other.budget&.record_id == entry.budget.record_id }
+                    .map(&:row)
+      "#{self.class.budget_label(entry.budget)} is named more than once in this sheet " \
+        "(#{rows_phrase(rows)}), in more than one way. Name it once."
     end
 
     def report_ambiguous_columns
@@ -667,10 +677,11 @@ module Reimbursements
                  "or start from the template."
     end
 
-    def entry_for(row, duplicated)
+    def entry_for(index, duplicates)
+      row = @rows[index]
       owners, unknown = resolve_owners(row)
       base = { row: row, owner_ids: owners, unknown_owner_emails: unknown, area_name: row[:area] }
-      error = row_error(row, duplicated)
+      error = row_error(row, duplicates[index])
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
       budget, match_error = resolve_budget(row)
@@ -709,10 +720,9 @@ module Reimbursements
 
     def stored_under(index, key) = key.nil? ? [] : index.fetch(key, [])
 
-    def existing_area_for(name_key)
-      areas = @existing_areas_by_name.fetch(name_key, [])
-      areas.size == 1 ? areas.sole : nil
-    end
+    # Callers only reach this for an area #row_error let through, so at most one
+    # answers to the key. The refusal lives there, once.
+    def existing_area_for(name_key) = @existing_areas_by_name.fetch(name_key, []).first
 
     def colliding_areas(name_key)
       areas = @existing_areas_by_name.fetch(name_key, [])
@@ -735,14 +745,23 @@ module Reimbursements
 
     def ambiguous_match_error(row, budgets)
       "#{row[:name].inspect} matches more than one budget already here " \
-        "(#{budgets.map { |budget| budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
+        "(#{budgets.map { |budget| self.class.budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
         "Rename one of them so it's clear which line this figure is for."
     end
 
-    # Names the AREA alongside the name, because the collision is usually two
-    # identical names — "Marketing" twice says nothing an operator can act on.
-    def budget_label(budget)
-      budget.area ? "#{budget.name.inspect} in #{budget.area.name}" : "#{budget.name.inspect} in no area"
+    # Names the rows the operator has to go and look at. The preview's bullet
+    # shows the name and nothing else, so the AREA CELL is the part that tells
+    # two rows of one name apart — and where even that is the same, saying how
+    # many beats listing one label twice.
+    def rows_phrase(rows)
+      labels = rows.map { |row| row_label(row) }
+      return "#{labels.first}, #{labels.size} times" if labels.uniq.one?
+
+      labels.to_sentence(last_word_connector: " and ")
+    end
+
+    def row_label(row)
+      row[:area].present? ? "#{row[:name].inspect} (#{row[:area]})" : "#{row[:name].inspect} (no area)"
     end
 
     def group_by_keys(records)
@@ -759,12 +778,13 @@ module Reimbursements
       row[:amount] == budget.projected_amount ? :unchanged : :revise
     end
 
-    def row_error(row, duplicated)
+    def row_error(row, twins)
       if row[:name].blank?
         "This line has no budget name, so there's nothing to create or match it against."
-      elsif duplicated.include?(row_key(row))
-        "#{row[:name].inspect} appears more than once in this sheet — a budget name has to be " \
-          "unique within a year, so it isn't clear which figure is meant."
+      elsif twins.any?
+        "The same budget line is named more than once in this sheet " \
+          "(#{rows_phrase([ row ] + twins)}). Name it once — two lines are told apart by their " \
+          "area, not by the name alone."
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
       elsif row[:area_budget] == :unreadable
@@ -924,19 +944,63 @@ module Reimbursements
     # A sheet that has stopped typing prefixes writes "Marketing" once per show,
     # and those are different lines — which is what having areas is for. So a
     # row that names an area is identified BY that area, not by its name alone.
-    def row_key(row)
-      return nil if row[:name].blank?
+    def row_key(index)
+      @row_keys ||= {}
+      return @row_keys[index] if @row_keys.key?(index)
 
-      self.class.area_scoped_key(row[:name], row[:area]) || self.class.match_key(row[:name])
+      row = @rows[index]
+      @row_keys[index] =
+        if row[:name].blank?
+          nil
+        else
+          self.class.area_scoped_key(row[:name], row[:area]) ||
+            [ nil, self.class.match_key(row[:name]) ]
+        end
     end
 
-    # Two rows sharing that key are one line written twice — "Marketing" and
-    # "Cogito: Marketing" both under Cogito — and which of the two figures is
-    # meant is exactly what can't be guessed. Rows that reach one stored line by
-    # different spellings are caught after the fact, by #flag_shared_budgets.
-    def duplicated_names
-      @rows.filter_map { |row| row_key(row) }
-           .tally.select { |_key, count| count > 1 }.keys.to_set
+    # What an AREA-LESS row would be called under each area this sheet names.
+    # A half-filled Area column — one row carrying it, one not — is the most
+    # likely transitional sheet there is, and without this it imports as two
+    # budgets of one name with two agreed figures and the show's spend split
+    # between them. It never makes two area-less rows equal to each other:
+    # their own names are all they have to go on.
+    def alias_row_keys(index)
+      @alias_row_keys ||= {}
+      @alias_row_keys[index] ||= begin
+        row = @rows[index]
+        if row[:name].blank? || row[:area].present?
+          []
+        else
+          sheet_area_names.map { |area| self.class.area_scoped_key(row[:name], area) }
+        end
+      end
+    end
+
+    def sheet_area_names
+      @sheet_area_names ||= @rows.filter_map { |row| row[:area].presence }
+                                 .uniq { |name| self.class.match_key(name) }
+    end
+
+    # Row index => the other rows naming the same budget line. Quadratic over a
+    # committee's thirty-row sheet, and clearer than an index that has to answer
+    # two kinds of key.
+    def duplicate_rows
+      @rows.each_index.to_h do |index|
+        twins = @rows.each_index.reject { |other| other == index }
+                     .select { |other| same_line?(index, other) }
+        [ index, twins.map { |other| @rows[other] } ]
+      end
+    end
+
+    # Two rows are one line when they share a key that IDENTIFIES at least one
+    # of them — so an alias only ever matches a row that really does name that
+    # area.
+    def same_line?(index, other)
+      return false if row_key(index).nil? || row_key(other).nil?
+
+      shared = (([ row_key(index) ] + alias_row_keys(index)) &
+                ([ row_key(other) ] + alias_row_keys(other)))
+      shared.include?(row_key(index)) || shared.include?(row_key(other))
     end
 
     # People for the sheet's owner emails, plus the addresses that matched

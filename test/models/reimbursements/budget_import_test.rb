@@ -1069,7 +1069,9 @@ module Reimbursements
 
       assert_not import.valid?
       assert_equal 2, import.entries_in(:invalid).size
-      assert_match(/are the same budget line/, import.entries.first.error)
+      assert_match(/is named more than once in this sheet/, import.entries.first.error)
+      assert_match(/"Marketing" \(no area\) and "Cogito: Marketing" \(no area\)/,
+                   import.entries.first.error)
     end
 
     # --- Two lines that answer to one key ------------------------------------
@@ -1113,8 +1115,6 @@ module Reimbursements
       assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id
     end
 
-    # Nothing separates them here, and index_by used to keep whichever came
-    # last.
     test "two stored lines of one name block a sheet that cannot separate them" do
       shows = two_shows_running_marketing
 
@@ -1153,8 +1153,39 @@ module Reimbursements
 
       assert_not import.valid?
       assert_equal 2, import.entries_in(:invalid).size
-      assert(import.entries_in(:invalid).all? { |entry| entry.error.include?("appears more than once") },
+      assert(import.entries_in(:invalid).all? { |entry| entry.error.include?("named more than once") },
              "both rows name the same budget, which is the duplicate rule, not a match failure")
+    end
+
+    # A HALF-FILLED Area column is the most likely transitional sheet there is,
+    # and with nothing stored yet neither the duplicate check nor the matcher
+    # sees it: two budgets of one name, two agreed figures, the show's spend
+    # split between them.
+    test "the same name with an Area cell and without blocks the import" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        \tMarketing\t432330\tExpense\t600
+      TSV
+
+      assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+      assert_match(/"Marketing" \(Cogito\) and "Marketing" \(no area\)/,
+                   import.entries.first.error)
+    end
+
+    # It must not make two AREA-LESS rows equal to each other: their own names
+    # are all they have to go on, and these are two different budgets.
+    test "two area-less rows are told apart by their own names" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tSet\t432320\tExpense\t500
+        \tMarketing\t432330\tExpense\t600
+        \tCogito: Marketing\t432340\tExpense\t700
+      TSV
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal 3, import.entries_in(:create).size
     end
 
     # Two shows' lines in one sheet are NOT duplicates — the area separates
@@ -1188,7 +1219,8 @@ module Reimbursements
       assert_equal shows.values.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
     end
 
-    # Same name, same area, still one line typed twice.
+    # Same name, same area, still one line typed twice — and the message counts
+    # them rather than listing one label twice, which is all it could say.
     test "the same bare name under one area is still a duplicate" do
       shows = two_shows_running_marketing
 
@@ -1200,6 +1232,7 @@ module Reimbursements
 
       assert_not import.valid?
       assert_equal 2, import.entries_in(:invalid).size
+      assert_match(/"Marketing" \(Cogito\), 2 times/, import.entries.first.error)
     end
 
     # --- Two areas of one name -----------------------------------------------

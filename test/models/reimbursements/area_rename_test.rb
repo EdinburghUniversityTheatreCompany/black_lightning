@@ -57,8 +57,56 @@ module Reimbursements
       budget = create_reimbursements_budget(name: "cogito :  Marketing", area: area)
 
       Reimbursements::AreaRename.strip!
-
       assert_equal "Marketing", budget.reload.name
+
+      Reimbursements::AreaRename.restore!
+      assert_equal "cogito :  Marketing", budget.reload.name,
+                   "restore! puts back what was recorded, not what the rule would rebuild"
+    end
+
+    # THE ROW strip! REFUSED TO TOUCH. Restoring by rule re-prefixed it, which
+    # made its area reproducible from its budgets and disarmed the backfill's
+    # refusal — a guard turned into a silent delete.
+    test "restore! leaves a line it never stripped alone" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Rehearsal room hire", area: area)
+
+      Reimbursements::AreaRename.strip!
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Rehearsal room hire", budget.reload.name
+      assert_nil budget.name_before_area_rename
+    end
+
+    # Two lines in one area that would land on one name. A merge nobody asked
+    # for, and afterwards one line to every reader and to the matcher.
+    test "strip! refuses to collide two lines in one area" do
+      area = create_reimbursements_area(name: "Cogito")
+      bare = create_reimbursements_budget(name: "Marketing", area: area)
+      prefixed = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+      error = assert_raises(Reimbursements::AreaRename::CollisionError) do
+        Reimbursements::AreaRename.strip!
+      end
+      assert_match(/two lines in one area/, error.message)
+
+      assert_equal "Marketing", bare.reload.name
+      assert_equal "Cogito: Marketing", prefixed.reload.name, "nothing was written"
+    end
+
+    # A collision that was already there is not this migration's doing, and
+    # refusing over it would block the rename on data it cannot fix.
+    test "strip! tolerates a collision it did not create" do
+      area = create_reimbursements_area(name: "Cogito")
+      one = create_reimbursements_budget(name: "Marketing", area: area)
+      two = create_reimbursements_budget(name: "marketing", area: area)
+      moved = create_reimbursements_budget(name: "Cogito: Set", area: area)
+
+      Reimbursements::AreaRename.strip!
+
+      assert_equal "Set", moved.reload.name
+      assert_equal "Marketing", one.reload.name
+      assert_equal "marketing", two.reload.name
     end
 
     # Re-running either direction has to be safe: a migration that half-ran is
@@ -122,6 +170,26 @@ module Reimbursements
 
       error = assert_raises(ActiveRecord::IrreversibleMigration) { BackfillReimbursementsAreas.new.down }
       assert_match(/nothing in the backfill would have created/, error.message)
+    end
+
+    # THE TEST THAT MATTERS. An area nothing in the backfill would have created
+    # — finance made it, or the importer did — must still make the backfill's
+    # down refuse after a round trip. Restoring by rule re-prefixed its bare
+    # lines, fabricated the reproducibility and deleted the area.
+    test "a round trip leaves a hand-made area still unreproducible" do
+      derived = create_reimbursements_budget(name: "Cogito: Marketing")
+      AreaBackfill.run!
+      hand_made = create_reimbursements_area(name: "Improverts")
+      create_reimbursements_budget(name: "Retreat", area: hand_made)
+
+      Reimbursements::AreaRename.strip!
+      Reimbursements::AreaRename.restore!
+
+      error = assert_raises(ActiveRecord::IrreversibleMigration) { BackfillReimbursementsAreas.new.down }
+      assert_match(/nothing in the backfill would have created/, error.message)
+      assert_match(/Improverts/, error.message)
+      assert_equal "Cogito: Marketing", derived.reload.name
+      assert_equal 2, Area.count, "refusing means refusing"
     end
 
     test "the rename's down hands the backfill a tree it can unwind" do

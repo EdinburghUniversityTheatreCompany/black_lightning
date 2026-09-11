@@ -36,10 +36,55 @@ module Reimbursements
       ([ HEADERS ] + rows).join("\n")
     end
 
-    def build_import(data, input_type: :paste, existing_expenses: [])
+    def build_import(data, input_type: :paste, existing_expenses: [], budgets: [ @budget ])
       ExpenseImport.new(data, input_type: input_type, financial_year: @year,
-                              cost_centre: @cost_centre, budgets: [ @budget ],
+                              cost_centre: @cost_centre, budgets: budgets,
                               people: [ @payee ], existing_expenses: existing_expenses)
+    end
+
+    # A show's line after the area rename: the area holds the grouping and the
+    # budget is bare.
+    def marketing_in(show)
+      area = create_reimbursements_area(name: show, cost_centre: @cost_centre,
+                                        financial_year: @year)
+      create_reimbursements_budget(name: "Marketing", area: area, cost_centre: @cost_centre,
+                                   financial_year: @year)
+    end
+
+    # --- Budgets whose names the area rename changed -------------------------
+    # Settled claims come through here, so a budget resolved to the wrong show
+    # is real money on the wrong line with nothing on screen. The rename made
+    # same-named lines in different areas normal, and index_by kept the last.
+
+    test "a sheet still writing the prefix finds the renamed line" do
+      marketing = marketing_in("Cogito")
+
+      import = build_import(tsv(row(budget: "Cogito: Marketing")), budgets: [ marketing ])
+
+      assert_equal :create, import.entries.sole.bucket
+      assert_equal marketing.record_id, import.entries.sole.budget.record_id
+    end
+
+    test "a bare name two shows both answer to blocks the row" do
+      budgets = [ marketing_in("Cogito"), marketing_in("Improverts") ]
+
+      import = build_import(tsv(row(budget: "Marketing")), budgets: budgets)
+
+      assert_not import.valid?
+      error = import.entries.sole.error
+      assert_match(/matches more than one budget/, error)
+      assert_match(/in Cogito/, error)
+      assert_match(/in Improverts/, error)
+    end
+
+    test "naming the area with the line resolves it" do
+      cogito = marketing_in("Cogito")
+
+      import = build_import(tsv(row(budget: "Cogito: Marketing")),
+                            budgets: [ cogito, marketing_in("Improverts") ])
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal cogito.record_id, import.entries.sole.budget.record_id
     end
 
     # --- A sheet finance actually has --------------------------------------

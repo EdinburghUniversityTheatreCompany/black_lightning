@@ -3,19 +3,20 @@
 # Table name: reimbursements_budgets
 # Database name: primary
 #
-#  id                 :bigint           not null, primary key
-#  active             :boolean          default(TRUE), not null
-#  budget_type        :string(255)      default("Expense"), not null
-#  initial_budget     :decimal(12, 2)
-#  name               :string(255)      default(""), not null
-#  nominal_code       :string(255)      default(""), not null
-#  notes              :text(65535)
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  airtable_record_id :string(255)
-#  area_id            :bigint
-#  cost_centre_id     :bigint
-#  financial_year_id  :bigint
+#  id                      :bigint           not null, primary key
+#  active                  :boolean          default(TRUE), not null
+#  budget_type             :string(255)      default("Expense"), not null
+#  initial_budget          :decimal(12, 2)
+#  name                    :string(255)      default(""), not null
+#  name_before_area_rename :string(255)
+#  nominal_code            :string(255)      default(""), not null
+#  notes                   :text(65535)
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  airtable_record_id      :string(255)
+#  area_id                 :bigint
+#  cost_centre_id          :bigint
+#  financial_year_id       :bigint
 #
 # Indexes
 #
