@@ -20,11 +20,13 @@ module Reimbursements
   # blank, the one that is in NO area is the answer — that is how a show's
   # "Marketing" and a standing one stay two lines. Where several answer and
   # none of them is loose, the sheet has not said which show and the import
-  # stops rather than guessing. Where exactly ONE line answers it is matched,
-  # loose or not: a bare row against a show's only "Marketing" revises that
-  # line rather than creating a loose one beside it, which is asymmetric with
-  # the rule above and deliberate — it is what the committee's file does the
-  # day they stop typing prefixes without filling the Area column in.
+  # stops rather than guessing — and so it does where several of THEM are
+  # loose, since the reading needs exactly one line in no area, not merely one
+  # that is. Where exactly ONE line answers it is matched, loose or not: a bare
+  # row against a show's only "Marketing" revises that line rather than creating
+  # a loose one beside it, which is asymmetric with the rule above and
+  # deliberate — it is what the committee's file does the day they stop typing
+  # prefixes without filling the Area column in.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -47,19 +49,7 @@ module Reimbursements
     # +declined_namesakes+ are the lines #loose_match passed over, empty for
     # every ordinary row.
     Entry = Struct.new(:row, :bucket, :budget, :owner_ids, :unknown_owner_emails, :error,
-                       :area_name, :declined_namesakes, keyword_init: true) do
-      # The area of the line this row MATCHED, where that is not what the row's
-      # own Area cell says — nil when they agree, so an ordinary filled-in sheet
-      # gains nothing on screen. Two lines of one name are legitimate, so a row
-      # rendering only the cell and the name it typed cannot say which of them
-      # the figure is going to.
-      def matched_area_label
-        return if budget.nil?
-        return if BudgetImport.match_key(area_name) == BudgetImport.match_key(budget.area&.name)
-
-        budget.area&.name || "no area"
-      end
-
+                       :area_name, :declined_namesakes, :matched_area_label, keyword_init: true) do
       # Said on the row rather than in a panel: the operator who left the Area
       # cell blank is the one who skims the lists underneath.
       def matched_note
@@ -308,11 +298,13 @@ module Reimbursements
     # inside its transaction, once #area_creates has run.
     def creates
       entries_in(:create).map do |entry|
-        { name: entry.row[:name], nominal_code: entry.row[:nominal_code],
+        area_name = create_area_name(entry)
+        { name: self.class.bare_name(entry.row[:name], area_name),
+          nominal_code: entry.row[:nominal_code],
           budget_type: entry.row[:budget_type], initial_budget: entry.row[:amount],
           notes: entry.row[:notes], active: true,
           financial_year: financial_year, cost_centre: cost_centre,
-          owner_ids: entry.owner_ids }.merge(area_attrs_for(entry))
+          owner_ids: entry.owner_ids }.merge(area_attrs_for_name(area_name))
       end
     end
 
@@ -345,7 +337,8 @@ module Reimbursements
     # At PREVIEW time every re-home is ticked, so this and #area_creates agree,
     # and the preview's "(new)" markers can read the unnarrowed list.
     def area_creates_for(re_homes)
-      wanted = (entries_in(:create).map(&:area_name) + re_homes.map { |re_home| re_home[:area_name] })
+      wanted = (entries_in(:create).map { |entry| create_area_name(entry) } +
+                re_homes.map { |re_home| re_home[:area_name] })
                .compact_blank.map { |name| self.class.match_key(name) }.to_set
       area_creates.select { |attrs| wanted.include?(self.class.match_key(attrs[:name])) }
     end
@@ -753,7 +746,8 @@ module Reimbursements
       return Entry.new(**base, bucket: :invalid, error: match_error) if match_error
 
       Entry.new(**base, budget: budget, bucket: bucket_for(row, budget),
-                declined_namesakes: declined)
+                declined_namesakes: declined,
+                matched_area_label: matched_area_label(row[:area], budget))
     end
 
     # Which stored line this row is about, as [budget, error].
@@ -880,12 +874,24 @@ module Reimbursements
 
     # Every row in the group names the same area — by its Area cell or by the
     # prefix on its own name — or none of them does, since that is what made
-    # their keys equal. So there is no Area cell left to suggest, and naming it
-    # once is the only fix.
+    # their keys equal. Either way there is no Area cell left to suggest.
     def duplicate_rows_error(row, twins)
+      group = [ row ] + twins
       "The same budget line is named more than once in this sheet " \
-        "(#{rows_phrase([ row ] + twins)}). Name it once — two lines are told apart by their " \
-        "area, not by the name alone."
+        "(#{rows_phrase(group)}). #{duplicate_instruction(group)}"
+    end
+
+    # "Told apart by their area" is the wrong advice for a group the PREFIX
+    # named: those rows already agree about the area, and the label beside them
+    # reads "(no area)", so it invites an Area cell that would change nothing.
+    def duplicate_instruction(group)
+      prefixed = group.find { |row| row[:area].blank? && prefix_area_for(row[:name]) }
+      unless prefixed
+        return "Name it once — two lines are told apart by their area, not by the name alone."
+      end
+
+      "Name it once — #{prefixed[:name].inspect} already names " \
+        "#{prefix_area_for(prefixed[:name])}, so an Area cell would not tell them apart."
     end
 
     # For the unreadable-Area-Budget row error, which is necessarily reported
@@ -987,10 +993,11 @@ module Reimbursements
     # already in when the cell is blank. An empty triple for a line reaching no
     # area: its owners stay on the budget's own rows, the live read there.
     def resolve_owner_target(entry)
-      if entry.area_name.present?
-        key = self.class.match_key(entry.area_name)
+      name = create_area_name(entry)
+      if name.present?
+        key = self.class.match_key(name)
         existing = existing_area_for(key)
-        [ existing, target_key(existing, key), first_seen_names[key] ]
+        [ existing, target_key(existing, key), first_seen_names[key] || name ]
       elsif entry.budget&.area
         area = entry.budget.area
         [ area, target_key(area, nil), area.name ]
@@ -1014,11 +1021,13 @@ module Reimbursements
       owner_targets[target_key(area, name_key)].present?
     end
 
-    def area_attrs_for(entry)
-      return {} if entry.area_name.blank?
+    def area_attrs_for(entry) = area_attrs_for_name(entry.area_name)
 
-      existing = existing_area_for(self.class.match_key(entry.area_name))
-      existing ? { area_id: existing.record_id } : { area_name: entry.area_name }
+    def area_attrs_for_name(name)
+      return {} if name.blank?
+
+      existing = existing_area_for(self.class.match_key(name))
+      existing ? { area_id: existing.record_id } : { area_name: name }
     end
 
     def re_home_for(entry, key, current, existing)
@@ -1075,7 +1084,8 @@ module Reimbursements
     # stays a group-by and the twin relation stays an equivalence.
     #
     # At most one area can answer: #bare_name strips only an exact name match
-    # and #sheet_area_names is unique by that same key.
+    # and #sheet_area_names is unique by that same key, so #find is never a pick
+    # between candidates.
     def prefix_area_for(name)
       sheet_area_names.find { |area| self.class.bare_name(name, area) != name.to_s }
     end
@@ -1083,6 +1093,59 @@ module Reimbursements
     def sheet_area_names
       @sheet_area_names ||= @rows.filter_map { |row| row[:area].presence }
                                  .uniq { |name| self.class.match_key(name) }
+    end
+
+    # The area a row names, by its Area cell or by the prefix on its own name.
+    # ONE derivation, because grouping and creating disagreeing about what a row
+    # means is the seam behind every duplicate this class exists to prevent: a
+    # row that KEYS as Cogito's line must not then be created as a loose line
+    # whose name carries the prefix, or the next converted sheet creates the
+    # line again inside the area and reports the first one absent.
+    # The area a CREATE lands in: its own Area cell, or — where the cell is
+    # blank — the area the row's own NAME names, on exactly the terms #row_key
+    # groups by. Grouping and creating disagreeing about what a row means is the
+    # seam behind every duplicate this class exists to prevent: a row that KEYS
+    # as Cogito's line and is then created as a loose line carrying the prefix
+    # has the next converted sheet create the line again inside the area and
+    # report the first one absent — two lines for one, each with its own agreed
+    # figure, off the half-filled Area column.
+    #
+    # A MATCHED row keeps its cell alone. #re_homes and the owner targets read
+    # that, and moving a stored line into a show on the strength of a prefix is
+    # a larger claim than naming a new one — the conservative direction, and the
+    # one Phase 2a pinned for an out-of-scope area the owner column reaches.
+    #
+    # The name comes back in the sheet's FIRST-SEEN casing, as a re-home's does,
+    # so a prefix typed "cogito" cannot mint a second area beside a cell's
+    # "Cogito". The guard means some cell already named it, so it is always there.
+    def create_area_name(entry)
+      return entry.area_name if entry.area_name.present?
+      return unless entry.budget.nil?
+
+      prefix = prefix_area_for(entry.row[:name])
+      prefix && (first_seen_names[self.class.match_key(prefix)] || prefix)
+    end
+
+    # The line this row MATCHED, where that is not the area the row itself
+    # names — nil when they agree, so an ordinary filled-in sheet gains nothing
+    # on screen. Two lines of one name are legitimate now, so a row rendering
+    # only its own cell and typed name cannot say which of them the figure is
+    # going to.
+    #
+    # Compared by RECORD where both sides name an area, as #re_homes is:
+    # lenient year scoping puts an unstamped "Cogito" beside a real one and a
+    # budget can hold an area from another year, which is the case the operator
+    # most needs telling about and the one a name comparison reads as agreement.
+    # Qualified by year and centre only there, so the ordinary label stays short.
+    def matched_area_label(area_name, budget)
+      matched = budget&.area
+      typed = area_name.presence
+      return if typed.nil? && matched.nil?
+      return "no area" if matched.nil?
+      return matched.name if typed.nil? || self.class.match_key(typed) != self.class.match_key(matched.name)
+      return if existing_area_for(self.class.match_key(typed))&.record_id == matched.record_id
+
+      self.class.area_label(matched)
     end
 
     # Row index => the other rows naming the same budget line. A row that names

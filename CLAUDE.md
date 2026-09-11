@@ -542,7 +542,8 @@ survive as historical import provenance and are never written. Spec + plan in
     above, and it is narrow on purpose — a row that DID name an area, or a name that is itself a
     prefixed spelling (`Cogito: Marketing` typed against a loose line called exactly that), has
     pointed at a show already and still blocks, as do several area-bound lines with no loose one
-    among them. **Where exactly ONE line answers it is matched, loose or not** — a bare row
+    among them — and so do several LOOSE ones, since the reading needs exactly one line in no
+    area. **Where exactly ONE line answers it is matched, loose or not** — a bare row
     against a show's only `Marketing` revises that line rather than creating a loose one beside
     it. That asymmetry is deliberate: it is what the committee's file does the day they stop
     typing prefixes without filling the Area column in, and blocking it would refuse the whole
@@ -554,6 +555,15 @@ survive as historical import provenance and are never written. Spec + plan in
     committee sends. It normalises the row's OWN key; a row that claimed several keys would make
     the duplicate relation asymmetric and non-transitive, which is what Phase 2a's differential
     harness existed for.
+  - **A CREATE adopts that area too, and is stored under the BARE remainder** (`#create_area_name`,
+    read by `#creates` and by the owner routing). Grouping and creating disagreeing about what a
+    row means is the seam behind every duplicate here: keyed as Cogito's line but created loose
+    with the prefix in its name, the next fully-converted sheet creates the line again inside the
+    area and reports the first absent. A line is stored bare whichever column named its area —
+    `Budget#display_name` composes `"Cogito: Marketing"` back, so a stored prefix renders twice.
+    **A MATCHED row keeps its Area cell alone**: `#re_homes` and the owner targets read that, and
+    moving a stored line into a show on the strength of a prefix is a larger claim than naming a
+    new one.
   - **The preview states the line each row MATCHED** (`Entry#matched_area_label`, plus
     `#matched_note` where the loose reading decided) wherever that differs from the Area cell the
     sheet typed. Without it a row matched to the loose line and one matched to the show's line

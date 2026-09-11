@@ -1398,6 +1398,72 @@ module Reimbursements
       assert_match(/named more than once in this sheet/, import.entries.first.error)
     end
 
+    # N1: the normalisation has to reach CREATING, not only grouping. Created as
+    # a loose line carrying the prefix, the next fully-converted sheet creates
+    # "Marketing" inside Cogito and reports this one absent — two lines for one,
+    # each with its own agreed figure, off the likeliest transitional sheet.
+    test "a create adopts the area its own name names, and drops the prefix" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tSet\t432320\tExpense\t500
+        \tCogito: Marketing\t432330\tExpense\t600
+      TSV
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal [ %w[Set Cogito], %w[Marketing Cogito] ],
+                   import.creates.map { |create| [ create[:name], create[:area_name] ] }
+    end
+
+    # The same row's owner belongs to the AREA, since Budget#owners resolves
+    # through it — written to the line's own rows it is one no sign-off gate
+    # ever consults.
+    test "a create that adopts an area sends its owner there, not to its own rows" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+
+      import = build_import(<<~TSV, people: [ alice ])
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tSet\t432320\tExpense\t500\t
+        \tCogito: Marketing\t432330\tExpense\t600\talice@example.com
+      TSV
+
+      assert_equal [ "Cogito" ], import.area_owner_sets.map { |set| set[:area_name] }
+      assert_equal [ "Alice" ], import.area_owner_sets.sole[:owners].map { |owner| owner[:name] }
+    end
+
+    # A row that MATCHED keeps its Area cell alone: moving a stored line into a
+    # show on the strength of a prefix is a larger claim than naming a new one,
+    # and Phase 2a pinned the out-of-scope reading this would quietly change.
+    test "a matched row is not re-homed on the strength of its prefix" do
+      stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                         financial_year: FinancialYear.create!(label: "Fringe 2026"))
+      here = area_named("Cogito")
+      stranded = create_reimbursements_budget(name: "Cogito: Set", area: stale, initial_budget: 400,
+                                              cost_centre: @cost_centre, financial_year: @year)
+
+      import = build_import(<<~TSV, existing_budgets: [ stranded ], existing_areas: [ here ])
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        \tCogito: Set\t432330\tExpense\t600
+      TSV
+
+      assert_equal :revise, import.entries.last.bucket
+      assert_empty import.re_homes, "the cell is blank, so nothing asked for the line to move"
+    end
+
+    # N2: for a group the PREFIX named, "told apart by their area" invites an
+    # Area cell that would change nothing — the rows already agree about it.
+    test "the duplicate message does not suggest an Area cell the prefix already gave" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        \tCogito: Marketing\t432330\tExpense\t600
+      TSV
+
+      assert_match(/already names Cogito, so an Area cell would not tell them apart/,
+                   import.entries.first.error)
+      assert_no_match(/told apart by their area/, import.entries.first.error)
+    end
+
     # Only an area THE SHEET NAMES reads as a prefix: with no Cogito row above
     # them, these are lines whose names happen to carry a colon, and the third
     # row is what makes that observable — read as a prefix, the last two rows
@@ -1413,6 +1479,23 @@ module Reimbursements
 
       assert import.valid?, import.entries.filter_map(&:error).inspect
       assert_equal 3, import.entries_in(:create).size
+    end
+
+    # N5: several declined namesakes, so the note reads as a list rather than
+    # naming one line twice.
+    test "the loose reading names every namesake it passed over" do
+      shows = two_shows_running_marketing
+      loose = create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                           financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(tsv("Marketing\t432320\tExpense\t900\t\t"),
+                            existing_budgets: shows.values + [ loose ],
+                            existing_areas: areas_named(shows))
+
+      assert_equal loose.record_id, import.entries.sole.budget.record_id
+      assert_match(/"Marketing" in Improverts and "Marketing" in Cogito are named the same/,
+                   import.entries.sole.matched_note)
+      assert_match(/if you meant one of those/, import.entries.sole.matched_note)
     end
 
     # The reading is for a row that pointed at NO show. This one pointed at

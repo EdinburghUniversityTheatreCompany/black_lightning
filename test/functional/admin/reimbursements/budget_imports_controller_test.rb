@@ -280,7 +280,38 @@ module Admin
         area = ::Reimbursements::Area.find_by(name: "Cogito")
         assert_equal @year, area.financial_year
         assert_equal @cost_centre, area.cost_centre
-        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Cogito: Marketing").area_id
+        # Stored BARE: Budget#display_name composes "Cogito: Marketing" back, so
+        # keeping the prefix would render it twice — and the created line would
+        # carry the convention Phase 2a's rename exists to have removed.
+        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
+      end
+
+      # THE TRANSITIONAL SHEET, end to end: a half-filled Area column, then the
+      # same lines fully converted. Created as a loose "Cogito: Marketing" the
+      # second sheet CREATES "Marketing" in Cogito beside it and reports the
+      # first absent — two lines for one, each with its own agreed figure.
+      test "a half-filled Area column converges with the sheet that fills it in" do
+        sign_in @user
+
+        post :apply, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tSet\t432320\tExpense\t500\n" \
+          "\tCogito: Marketing\t432330\tExpense\t600"
+        )
+
+        area = ::Reimbursements::Area.find_by(name: "Cogito")
+        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing")&.area_id
+        assert_nil ::Reimbursements::Budget.find_by(name: "Cogito: Marketing")
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tSet\t432320\tExpense\t500\n" \
+          "Cogito\tMarketing\t432330\tExpense\t700"
+        )
+
+        assert_empty assigns(:import).entries_in(:create), "both lines already exist"
+        assert_empty assigns(:import).absent_budgets
+        assert_equal 1, assigns(:import).entries_in(:revise).size
       end
 
       test "apply attaches to an existing area rather than creating a second" do
@@ -294,7 +325,7 @@ module Admin
           )
         end
 
-        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Cogito: Marketing").area_id
+        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
 
       test "apply writes the Area Budget column as the new area's agreed total" do
