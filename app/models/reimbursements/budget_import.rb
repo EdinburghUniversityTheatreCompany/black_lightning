@@ -161,8 +161,8 @@ module Reimbursements
       name.to_s.strip.downcase.squeeze(" ")
     end
 
-    # +name+ with the "Area: " prefix of the naming convention areas replaced
-    # removed — but ONLY when that prefix is this line's own area's name.
+    # +name+ with its "Area: " prefix removed — the naming convention areas
+    # replaced — but ONLY when that prefix is this line's own area's name.
     # "Rehearsal room hire" under Cogito is somebody's own wording, and
     # "Improverts: Retreat" filed under Cogito names another show; neither is
     # this rule's to rewrite.
