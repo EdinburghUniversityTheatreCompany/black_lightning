@@ -1307,27 +1307,77 @@ module Reimbursements
              "both rows name the same budget, which is the duplicate rule, not a match failure")
     end
 
-    # A HALF-FILLED Area column is the most likely transitional sheet there is,
-    # and with nothing stored yet neither the duplicate check nor the matcher
-    # sees it: two budgets of one name, two agreed figures, the show's spend
-    # split between them.
-    test "the same name with an Area cell and without blocks the import" do
+    # --- A loose line and an area's line of one name --------------------------
+    # MICK'S RULING (2026-09-11): they are two lines. A Termtime overhead called
+    # "Marketing" beside a show's is a real pair, and the committee may write
+    # both. Phase 2a refused any sheet carrying both spellings — deliberately,
+    # as a holding position, because a fix round was the wrong place to decide
+    # what the committee is allowed to write.
+    #
+    # The AREA CELL is what disambiguates, and a row that names no area means
+    # the line that is in no area. Where nothing can say which show a bare name
+    # belongs to, the import still stops: that is the old sheet's shape, and
+    # guessing there is how 17 of 31 live lines duplicated.
+
+    test "the same name with an Area cell and without is two lines, not a collision" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount
         Cogito\tMarketing\t432320\tExpense\t500
         \tMarketing\t432330\tExpense\t600
       TSV
 
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal 2, import.entries_in(:create).size
+      assert_equal [ "Cogito" ], import.entries.filter_map { |entry| entry.area_name.presence }
+    end
+
+    test "a loose line and an area's line of the same name are two lines, not a collision" do
+      cogito = area_named("Cogito")
+      in_area = create_reimbursements_budget(name: "Marketing", area: cogito, initial_budget: 400,
+                                             financial_year: @year, cost_centre: @cost_centre)
+      loose = create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                           financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(<<~TSV, existing_budgets: [ in_area, loose ], existing_areas: [ cogito ])
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        \tMarketing\t432320\tExpense\t900
+      TSV
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal [ in_area.record_id, loose.record_id ].sort,
+                   import.entries_in(:revise).map { |entry| entry.budget.record_id }.sort
+      assert_empty import.re_homes, "neither row asks to move a line into another show"
+    end
+
+    # The row that must keep blocking: only area-bound lines answer to the name,
+    # and the sheet does not say which show it meant.
+    test "a bare name with no area cell still blocks when only area-bound lines could match" do
+      shows = two_shows_running_marketing
+
+      import = build_import(tsv("Marketing\t432320\tExpense\t500\t\t"),
+                            existing_budgets: shows.values, existing_areas: areas_named(shows))
+
+      assert_not import.valid?, "the sheet does not say which show this is"
+      assert_match(/matches more than one budget/, import.entries.sole.error)
+    end
+
+    # The reading is for a row that pointed at NO show. This one pointed at
+    # Cogito and missed, so taking the line that is in no area would move it
+    # into Cogito rather than revise the line the row meant.
+    test "a row naming an area does not fall back to the line that is in no area" do
+      improverts = area_named("Improverts")
+      in_area = create_reimbursements_budget(name: "Marketing", area: improverts, initial_budget: 400,
+                                             financial_year: @year, cost_centre: @cost_centre)
+      loose = create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                           financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: [ loose, in_area ], existing_areas: [ improverts ])
+
       assert_not import.valid?
-      assert_equal 2, import.entries_in(:invalid).size
-      assert_match(/"Marketing" \(Cogito\) and "Marketing" \(no area\)/,
-                   import.entries.first.error)
-      # "Name it once" would destroy a real line when the two genuinely ARE
-      # different — a Termtime overhead called Marketing beside a show's — and
-      # the area-less row is the only one that can say which it is.
-      assert_match(/Give the line with no area its own Area cell, or rename it/,
-                   import.entries.first.error)
-      assert_no_match(/Name it once/, import.entries.first.error)
+      assert_match(/matches more than one budget/, import.entries.sole.error)
+      assert_empty import.re_homes, "a blocked row moves nothing"
     end
 
     # Where every row already names an area (or none does), the area cell has

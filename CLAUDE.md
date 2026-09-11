@@ -536,6 +536,14 @@ survive as historical import provenance and are never written. Spec + plan in
     fresh `initial_budget`, the originals reported absent. The area qualifies the key, so two shows
     each running a "Marketing" line are two keys rather than one collision; two stored lines
     answering to one key **blocks and names them**, never a silent pick of the last.
+  - **A row whose Area cell is blank answers with the line that is in NO area** (`#loose_match`):
+    a show's `Marketing` and a standing one are two lines, and the blank cell is the only thing
+    that says which. It is the one narrow exception to the block above, and it is narrow on
+    purpose — a row that DID name an area, or a name that is itself a prefixed spelling
+    (`Cogito: Marketing` typed against a loose line called exactly that), has pointed at a show
+    already and still blocks. Where only area-bound lines answer a bare name, the sheet does not
+    say which show it meant and the import stops: that is the old sheet's shape, and guessing
+    there is how the 17 lines duplicated.
   - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
     note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
     would read an `Area Budget` column as the line's own name (`budget`) *and* as the area (`area`).

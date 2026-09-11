@@ -14,7 +14,10 @@ module Reimbursements
   # THE BUCKETS. A line is matched within one (financial year, cost centre) by
   # its AREA plus its bare name where the sheet names an area, and by its whole
   # name otherwise — .bare_name and #resolve_budget read both spellings of a
-  # name the area prefix was stripped from.
+  # name the area prefix was stripped from. A row naming no area answers with
+  # the line that is in no area, which is how a show's "Marketing" and a
+  # standing one stay two lines; where only area-bound lines answer, the sheet
+  # has not said which show and the import stops rather than guessing.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -133,8 +136,16 @@ module Reimbursements
       @existing_budgets = existing_budgets
       # Grouped, never index_by: a key several stored lines answer to is an
       # ambiguity to report, and index_by keeps the last one silently.
-      @existing_by_name = group_by_keys(existing_budgets) do |budget|
-        self.class.name_spellings(budget.name, budget.area&.name).map { |spelling| self.class.match_key(spelling) }
+      # Split by whether the spelling NAMES the line's area: "Cogito: Marketing"
+      # says which show and "Marketing" says only a name, which is the whole of
+      # what #resolve_budget has to go on when the sheet's Area cell is blank.
+      # Their union is every spelling, so nothing a line answered to before has
+      # stopped answering.
+      @existing_by_prefixed_name = group_by_keys(existing_budgets) do |budget|
+        spelling_keys(budget, naming_area: true)
+      end
+      @existing_by_bare_name = group_by_keys(existing_budgets) do |budget|
+        spelling_keys(budget, naming_area: false)
       end
       @existing_by_area_and_name = group_by_keys(existing_budgets) do |budget|
         [ self.class.area_scoped_key(budget.name, budget.area&.name) ]
@@ -716,10 +727,36 @@ module Reimbursements
       return [ nil, ambiguous_match_error(row, qualified) ] if qualified.size > 1
       return [ qualified.sole, nil ] if qualified.size == 1
 
-      plain = stored_under(@existing_by_name, self.class.match_key(row[:name]))
-      return [ nil, ambiguous_match_error(row, plain) ] if plain.size > 1
+      resolve_by_name(row)
+    end
 
-      [ plain.first, nil ]
+    # No area key placed this row, so its name is all there is to go on.
+    def resolve_by_name(row)
+      key = self.class.match_key(row[:name])
+      prefixed = stored_under(@existing_by_prefixed_name, key)
+      candidates = prefixed | stored_under(@existing_by_bare_name, key)
+      return [ candidates.first, nil ] if candidates.size <= 1
+
+      loose = loose_match(row, prefixed, candidates)
+      loose ? [ loose, nil ] : [ nil, ambiguous_match_error(row, candidates) ]
+    end
+
+    # Which of several same-named lines a row that pointed at NO show meant: the
+    # one that is in no show either. A loose "Marketing" and Cogito's are two
+    # lines — the committee runs a standing overhead beside a show's — and the
+    # blank Area cell is the only thing that tells them apart.
+    #
+    # Two rows get no such reading. One whose own Area cell names a show has
+    # pointed somewhere already, and answering with the loose line would move
+    # that line into the named show rather than revise the one it meant. And a
+    # name that is itself a PREFIXED spelling has named a show too: typed
+    # against a line literally called "Cogito: Marketing" AND Cogito's own
+    # "Marketing", it says two different things, and either answer is a guess.
+    def loose_match(row, prefixed, candidates)
+      return if row[:area].present? || prefixed.any?
+
+      loose = candidates.select { |budget| budget.area.nil? }
+      loose.first if loose.one?
     end
 
     def stored_under(index, key) = key.nil? ? [] : index.fetch(key, [])
@@ -759,6 +796,16 @@ module Reimbursements
       row[:area].present? ? "#{row[:name].inspect} (#{row[:area]})" : "#{row[:name].inspect} (no area)"
     end
 
+    # The keys a stored line answers to, taking only the spellings that do (or
+    # do not) name its own area. A spelling names the area exactly when the
+    # rename would take a prefix off it, so this cannot drift from .bare_name.
+    def spelling_keys(budget, naming_area:)
+      area_name = budget.area&.name
+      self.class.name_spellings(budget.name, area_name)
+          .select { |spelling| (self.class.bare_name(spelling, area_name) != spelling) == naming_area }
+          .map { |spelling| self.class.match_key(spelling) }
+    end
+
     def group_by_keys(records)
       records.each_with_object({}) do |record, index|
         yield(record).compact.uniq.each { |key| (index[key] ||= []) << record }
@@ -790,24 +837,13 @@ module Reimbursements
       end
     end
 
-    # Two rows of one name are ONE line here, which is right when the sheet
-    # types the same line twice and wrong when a Termtime overhead called
-    # "Marketing" sits beside a show's. Telling those apart needs the AREA
-    # cell, and only the area-less row can supply one — so "name it once",
-    # which would destroy a real line, is said only where every row in the
-    # group already names an area (or none of them does).
+    # Every row in the group names the same area (or none of them does), since
+    # that is what made their keys equal — so there is no Area cell left to
+    # suggest, and naming it once is the only fix.
     def duplicate_rows_error(row, twins)
-      group = [ row ] + twins
-      instruction =
-        if group.any? { |other| other[:area].blank? } && group.any? { |other| other[:area].present? }
-          "Give the line with no area its own Area cell, or rename it — two lines are told " \
-            "apart by their area, not by the name alone."
-        else
-          "Name it once — two lines are told apart by their area, not by the name alone."
-        end
-
       "The same budget line is named more than once in this sheet " \
-        "(#{rows_phrase(group)}). #{instruction}"
+        "(#{rows_phrase([ row ] + twins)}). Name it once — two lines are told apart by their " \
+        "area, not by the name alone."
     end
 
     # For the unreadable-Area-Budget row error, which is necessarily reported
@@ -985,57 +1021,21 @@ module Reimbursements
         end
     end
 
-    # What an AREA-LESS row would be called under each area this sheet names.
-    # A half-filled Area column is the likeliest transitional sheet there is,
-    # and without this it imports as two budgets of one name with the show's
-    # spend split between them. Two area-less rows are never made equal to each
-    # other: their own names are all they have to go on.
-    def alias_row_keys(index)
-      @alias_row_keys ||= {}
-      @alias_row_keys[index] ||= begin
-        row = @rows[index]
-        if row[:name].blank? || row[:area].present?
-          []
-        else
-          sheet_area_names.map { |area| self.class.area_scoped_key(row[:name], area) }
-        end
-      end
-    end
-
-    def sheet_area_names
-      @sheet_area_names ||= @rows.filter_map { |row| row[:area].presence }
-                                 .uniq { |name| self.class.match_key(name) }
-    end
-
-    # Row index => the other rows naming the same budget line.
-    #
-    # Two rows are one line when they share a key that IDENTIFIES at least one
-    # of them, so an alias only ever matches a row that really does name that
-    # area. Two groupings rather than every pair: rows that CLAIM a key (their
-    # own plus aliases) against rows that OWN one (their own alone).
+    # Row index => the other rows naming the same budget line. A row that names
+    # an area is identified BY that area, so two rows are the same line only
+    # when their keys are equal — a "Marketing" filed under Cogito and a
+    # "Marketing" filed under nothing are two lines the committee may write.
     def duplicate_rows
-      claimants = Hash.new { |index, key| index[key] = [] }
-      owners = Hash.new { |index, key| index[key] = [] }
+      groups = Hash.new { |index, key| index[key] = [] }
       @rows.each_index do |index|
-        next if row_key(index).nil?
-
-        owners[row_key(index)] << index
-        all_row_keys(index).each { |key| claimants[key] << index }
+        groups[row_key(index)] << index unless row_key(index).nil?
       end
 
       @rows.each_index.to_h do |index|
-        [ index, twins_of(index, claimants, owners).map { |other| @rows[other] } ]
+        twins = row_key(index).nil? ? [] : groups[row_key(index)] - [ index ]
+        [ index, twins.map { |other| @rows[other] } ]
       end
     end
-
-    def twins_of(index, claimants, owners)
-      return [] if row_key(index).nil?
-
-      (claimants[row_key(index)] |
-        all_row_keys(index).flat_map { |key| owners[key] }).sort - [ index ]
-    end
-
-    def all_row_keys(index) = [ row_key(index) ] + alias_row_keys(index)
 
     # People for the sheet's owner emails, plus the addresses that matched
     # nobody. Never creates a Person: a bare email would land as a person named
