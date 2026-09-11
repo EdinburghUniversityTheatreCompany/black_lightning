@@ -61,8 +61,9 @@ module Admin
       end
 
       def create
-        attrs = budget_params(::Reimbursements::Budget.new(budget_type: "Expense"))
-        if (error = budget_validation_error(attrs))
+        new_budget = ::Reimbursements::Budget.new(budget_type: "Expense")
+        attrs = budget_params(new_budget)
+        if (error = budget_validation_error(attrs, new_budget))
           @title = "New budget"
           @people = store.people
           @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
@@ -179,14 +180,28 @@ module Admin
       # The budget write path has no model-backed form object, so a blank
       # name/nominal code or a mangled budget_type param has to be caught here
       # or it reaches the store with no feedback to the operator.
-      def budget_validation_error(attrs)
+      def budget_validation_error(attrs, budget = @budget)
         return "Enter a budget name." if attrs[:name].blank?
         return "Enter a nominal code." if attrs[:nominal_code].blank?
         unless ::Reimbursements::Budget::TYPES.include?(attrs[:budget_type])
           return "Choose a valid budget type."
         end
 
-        owner_ids_error(attrs[:owner_ids])
+        owners_in_area_error(budget) || owner_ids_error(attrs[:owner_ids])
+      end
+
+      # The owners ticked on a form that is ALSO putting the line in an area
+      # would be written to own_owners, which Budget#owners never reads once
+      # there is an area — so they are refused rather than stored where nothing
+      # consults them. Only where the form OFFERED the list: a budget already
+      # in an area renders it read-only, and whatever a stale page posts there
+      # is ignored rather than refused (budget_params drops the key).
+      def owners_in_area_error(budget)
+        return nil if budget.area_id || posted_area_id.blank?
+        return nil if Array(params[:owner_ids]).reject(&:blank?).empty?
+
+        "A line in an area takes its owners from the area, so the people ticked here would " \
+          "never be read. Untick them and set them on the area, or leave Area blank."
       end
 
       # Operator-editable budget attributes. Rollups/formulas are never written.
@@ -214,12 +229,22 @@ module Admin
         # reversible, and an ownerless area's empty list would delete them all
         # (where.not(person_id: []) compiles to WHERE 1=1). Omitting the KEY,
         # not sending [], is what stops update_budget! syncing at all.
-        unless budget.area_id
+        # The area the line is BEING GIVEN, never only the one it already has:
+        # #create builds a Budget.new whose area_id is nil until these attrs
+        # are assigned, so reading the record alone let every owner ticked
+        # while creating a line inside an area through into own_owners.
+        unless budget.area_id || posted_area_id.present?
           attrs[:owner_ids] = Array(params[:owner_ids]).reject(&:blank?)
         end
         initial = parse_decimal(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?
         attrs
+      end
+
+      # The area this form is posting, or nil where it offered no picker at all
+      # ("" is the select's "— none —", a deliberate detach).
+      def posted_area_id
+        params[:area_id].presence
       end
 
       # Optional: with one cost centre configured there is nothing to choose,

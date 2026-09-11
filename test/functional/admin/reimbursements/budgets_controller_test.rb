@@ -1382,6 +1382,79 @@ module Admin
         assert_response :unprocessable_entity
       end
 
+      # --- Owners on a line going INTO an area -------------------------------
+      # The guard used to read budget.area_id on the Budget.new #create builds,
+      # which is nil before the posted area is assigned — so every owner ticked
+      # while creating a line inside an area was written to own_owners, the
+      # table Budget#owners never reads once the line has an area. The area
+      # owns and its budgets inherit, so the honest answer is to refuse and say
+      # where ownership is edited, not to write rows nothing consults.
+
+      test "create refuses a line going into an area while owners are ticked" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ @alice.id ])
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
+                                  active: "1", area_id: area.record_id,
+                                  owner_ids: [ @alice.record_id, @bob.record_id ] }
+        end
+
+        assert_response :unprocessable_entity
+        # flash.now is swept by the time a controller test can read `flash`, so
+        # assert on what the operator actually sees.
+        assert_match(/takes its owners from the area/, response.body)
+        assert_equal [ @alice.record_id ], area.reload.owners.map(&:record_id),
+                     "a refusal must not widen the area's own owner list either"
+      end
+
+      test "create inside an area with nobody ticked writes no own-owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ @alice.id ])
+
+        post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
+                                active: "1", area_id: area.record_id, owner_ids: [ "" ] }
+
+        budget = ::Reimbursements::Budget.find_by!(name: "Marketing")
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_empty budget.own_owners, "the area owns; nothing belongs in the budget's own rows"
+        assert_equal [ @alice.record_id ], budget.owner_ids
+      end
+
+      test "attaching an area on the edit form refuses while owners are ticked" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", active: "1", area_id: area.record_id,
+                                 owner_ids: [ @bob.record_id ] }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_match(/takes its owners from the area/, flash[:alert])
+        assert_nil @props.reload.area_id, "the area must not be attached by a refused Save"
+        assert_equal [ @alice.record_id ], @props.own_owners.reload.map(&:record_id)
+      end
+
+      # The dangerous half of the same post: an empty list reaches
+      # sync_owner_ids! as where.not(person_id: []), which is WHERE 1=1 — so
+      # attaching an area would delete the own-owner rows the backfill keeps in
+      # order to be reversible.
+      test "attaching an area with nobody ticked keeps the budget's own owner rows" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", active: "1", area_id: area.record_id,
+                                 owner_ids: [ "" ] }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        @props.reload
+        assert_equal area.id, @props.area_id
+        assert_equal [ @alice.record_id ], @props.own_owners.map(&:record_id)
+      end
+
       # --- Financial-year selector -------------------------------------------
 
       test "index shows the selected year's budgets, not every year's" do

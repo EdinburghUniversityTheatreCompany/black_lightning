@@ -2,7 +2,7 @@
 <%# The budget fields, shared by new (values from params) and edit (values
     from the budget). The cost centre picker only exists on new and only when
     there is a choice to make. %>
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4" data-controller="reimbursements-budget-area">
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <%= render "shared/form/field", label: "Name", name: :name do %>
       <%= text_field_tag :name, name, class: input_classes %>
@@ -24,7 +24,9 @@
           among them would read as a different kind of control. %>
       <%= select_tag :area_id,
             options_from_collection_for_select(areas, :record_id, :name, area_id),
-            include_blank: "— none —", class: input_classes %>
+            include_blank: "— none —", class: input_classes,
+            data: { reimbursements_budget_area_target: "area",
+                    action: "change->reimbursements-budget-area#areaChanged" } %>
     <% end %>
     <% if cost_centres.size > 1 %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
@@ -71,7 +73,14 @@
       <% end %>
     </div>
   <% else %>
-    <fieldset aria-describedby="owner_ids_hint">
+    <%# Disabled by the reimbursements-budget-area controller the moment an area
+        is chosen, because the area owns and its budgets inherit: the list would
+        write own_owners, which Budget#owners stops reading as soon as there is
+        an area. BudgetsController refuses such a post rather than storing rows
+        nothing consults, so with JavaScript off the operator is told; with it
+        on they never reach the refusal. %>
+    <fieldset aria-describedby="owner_ids_hint"
+              data-reimbursements-budget-area-target="owners">
       <legend class="<%= FormStyles::LABEL %>">Owners</legend>
       <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
           collection_check_boxes emits the empty hidden field itself, so unticking
@@ -88,6 +97,10 @@
       <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this budget.
         A line placed in an area takes its owners from the area, and they are set there.</p>
     </fieldset>
+    <p class="text-sm text-gray-700" hidden
+       data-reimbursements-budget-area-target="notice">
+      This line goes in an area, so it takes the area's owners — set them on the area itself.
+    </p>
   <% end %>
 
   <%= render "shared/form/field", label: "Notes", name: :notes do %>

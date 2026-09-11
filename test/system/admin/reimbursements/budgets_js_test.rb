@@ -43,6 +43,51 @@ module Admin
         assert_nil budget.reload.area
       end
 
+      # M8, clicked. The owners fieldset and the area picker are one control
+      # between them: a request test posts whatever params its author typed, so
+      # it can assert the server REFUSES owner_ids alongside an area but cannot
+      # see whether a browser sends them at all. A disabled fieldset submits
+      # none of its controls, which is what keeps the operator away from that
+      # refusal — and what leaves the budget's own owner rows untouched instead
+      # of synced to an empty list.
+      test "choosing an area on the new-budget form takes the owners list away" do
+        create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        area = create_reimbursements_area(name: "Cogito")
+
+        visit new_admin_reimbursements_budget_path
+        check "Alice Owner"
+        select "Cogito", from: "Area"
+
+        assert_text "it takes the area's owners"
+        fill_in "Name", with: "Marketing"
+        fill_in "Nominal code", with: "432320"
+        click_on "Create budget"
+
+        assert_text "Budget created"
+        budget = ::Reimbursements::Budget.find_by!(name: "Marketing")
+        assert_equal area, budget.area
+        assert_empty budget.own_owners,
+                     "the browser must send no owner_ids at all for a line going into an area"
+      end
+
+      # The other half of the same control: with no area chosen the list is the
+      # live one, so a green test above cannot be a fieldset that never enables.
+      test "a line in no area still saves the owners ticked on the same form" do
+        person = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        create_reimbursements_area(name: "Cogito")
+
+        visit new_admin_reimbursements_budget_path
+        check "Alice Owner"
+        fill_in "Name", with: "Contingency"
+        fill_in "Nominal code", with: "432340"
+        click_on "Create budget"
+
+        assert_text "Budget created"
+        budget = ::Reimbursements::Budget.find_by!(name: "Contingency")
+        assert_nil budget.area
+        assert_equal [ person.record_id ], budget.own_owners.map(&:record_id)
+      end
+
       # The compound path, clicked: the select is year- and centre-scoped while
       # area_id writes unscoped, so an area the picker does not offer read
       # "— none —" and an unrelated Save detached the budget.
