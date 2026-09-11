@@ -163,6 +163,20 @@ module Admin
         assert_not_includes titles, "Marketing"
       end
 
+      # The rowgroup heading above the row is not announced with the button, so
+      # three buttons reading "Edit Marketing" is genuinely ambiguous.
+      test "the grouped budgets index keeps bare row names but names the show on each Edit" do
+        sign_in @finance
+
+        get admin_reimbursements_budgets_path
+
+        assert_response :success
+        assert_equal [ "Edit Cogito — Marketing", "Edit Contingency", "Edit Improverts — Marketing" ],
+                     css_select("a[aria-label^='Edit ']").map { |link| link["aria-label"] }.sort
+        # The row itself stays bare: the area is the heading right above it.
+        assert_includes css_select("td span.font-medium").map { |cell| cell.text.strip }, "Marketing"
+      end
+
       test "the overview's nominal-code card names the show, and its area card does not repeat it" do
         sign_in @finance
 

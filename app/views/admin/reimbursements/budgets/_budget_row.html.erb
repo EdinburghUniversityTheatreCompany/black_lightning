@@ -59,6 +59,6 @@
   <td><%= owners %></td>
   <td>
     <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
-          "aria-label": "Edit #{budget.name}", class: btn_classes(:secondary, :sm)) %>
+          "aria-label": "Edit #{budget.display_name}", class: btn_classes(:secondary, :sm)) %>
   </td>
 </tr>
