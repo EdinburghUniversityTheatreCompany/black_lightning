@@ -21,6 +21,13 @@
   <% headers = [ "Area", "Agreed total", "Committed", "Remaining", "Budget lines", "Owners", "" ] %>
   <% field_sets = @areas.map do |area|
        remaining_class = "text-danger font-medium" if area.remaining&.negative?
+       # Two rows both reading £5,000.00 under this header mean different
+       # things, and this is the one screen that lists areas side by side. The
+       # qualifier is dropped where nobody agreed a total: "- (expenses)" reads
+       # as a claim about expenses rather than as a plan nobody has set, the
+       # same reason the grouped index suppresses the whole label there.
+       agreed = reimbursements_money(area.projected_amount)
+       agreed += " (#{area.basis_qualifier})" unless area.projected_amount.nil?
        owners = budget_owner_names(area, @people_by_id).presence ||
                 content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
        edit = link_to("Edit", edit_admin_reimbursements_area_path(area.record_id),
@@ -29,7 +36,7 @@
          fields: [
            area,
            content_tag(:span, area.name, class: "font-medium"),
-           reimbursements_money(area.projected_amount),
+           agreed,
            reimbursements_money(area.committed_amount),
            content_tag(:span, reimbursements_money(area.remaining), class: remaining_class),
            area.budgets.size,

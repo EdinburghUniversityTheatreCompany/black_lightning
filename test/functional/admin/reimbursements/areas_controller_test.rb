@@ -18,6 +18,29 @@ module Admin
         assert_response :forbidden
       end
 
+      # The one screen that lists areas side by side, under a bare "Agreed
+      # total" header: two rows both reading £5,000.00 mean different things
+      # unless the row says which.
+      test "the areas index states what each agreed total is a total of" do
+        create_reimbursements_area(name: "Cogito show", initial_budget: 5_000)
+        create_reimbursements_area(name: "Committee", initial_budget: 5_000,
+                                   budget_basis: "net")
+        create_reimbursements_area(name: "Unbudgeted")
+
+        get :index
+
+        assert_response :success
+        rows = css_select("tbody tr").map { |row| row.text.squish }
+        assert(rows.any? { |row| row.include?("Cogito show") && row.include?("£5,000.00 (expenses)") },
+               "the spend cap's row does not say so: #{rows.inspect}")
+        assert(rows.any? { |row| row.include?("Committee") && row.include?("£5,000.00 (net)") },
+               "the net allowance's row does not say so: #{rows.inspect}")
+        # "- (expenses)" would read as a claim about expenses rather than as a
+        # plan nobody has set yet.
+        assert(rows.any? { |row| row.include?("Unbudgeted") && !row.include?("(expenses)") },
+               "an area with no agreed total was qualified anyway: #{rows.inspect}")
+      end
+
       test "creates an area with its owners" do
         person = create_reimbursements_person(name: "Alice", email: "alice@example.com")
 

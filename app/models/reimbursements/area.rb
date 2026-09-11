@@ -63,8 +63,14 @@ module Reimbursements
     # One source for the words: the label on every card AND, through
     # BASIS_OPTIONS, the two radios on the form, so a finance user picks the
     # words they then read back.
-    BASIS_LABELS = { BASIS_EXPENSES => "Agreed total (expenses)",
-                     BASIS_NET => "Agreed total (net)" }.freeze
+    # The one word that separates the two, and the ONE place it is written.
+    # The areas index lists areas side by side under a bare "Agreed total"
+    # header, where two rows both reading £5,000.00 mean different things, so
+    # the qualifier goes on the cell — and it has to be the same word the label
+    # and the radio carry, or the index and the card name the same basis
+    # differently.
+    BASIS_QUALIFIERS = { BASIS_EXPENSES => "expenses", BASIS_NET => "net" }.freeze
+    BASIS_LABELS = BASIS_QUALIFIERS.transform_values { |word| "Agreed total (#{word})" }.freeze
     BASES = BASIS_LABELS.keys.freeze
     # simple_form wants [text, value] pairs; BASIS_LABELS is value => text.
     # Derived here rather than inverted in the view, which put the vocabulary
@@ -181,6 +187,8 @@ module Reimbursements
     def net_basis? = budget_basis == BASIS_NET
 
     def basis_label = BASIS_LABELS[budget_basis]
+
+    def basis_qualifier = BASIS_QUALIFIERS[budget_basis]
 
     private
 
