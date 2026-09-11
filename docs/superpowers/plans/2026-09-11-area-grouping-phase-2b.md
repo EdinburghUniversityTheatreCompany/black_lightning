@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give a cost centre a maintained list of nominal codes, let a claim find-or-create the budget line it belongs to, and close the five debts Phase 2a knowingly left behind.
+**Goal:** Give a cost centre a maintained list of nominal codes, let a claim find-or-create the budget line it belongs to, let an area declare whether its total is a spend cap or a net allowance, and close the five debts Phase 2a knowingly left behind.
 
 **Architecture:** `nominal_code` is a free-text string on `reimbursements_budgets` and `reimbursements_eusa_actuals` today, so nothing validates it and nothing lists it. Phase 2b introduces `Reimbursements::NominalCode` — rows owned by a cost centre and maintained by that centre's finance admin on the Settings page that already edits cost centres — and uses it to make a budget line find-or-createable from a claim, which is Option D's stated end state: a budget is found-or-created per `(area, code)`. The free-text column stays as the stored value; the model is the allow-list beside it, the same shape as `Expense::FOREIGN_CURRENCIES` being a fixed list rather than free text.
 
@@ -10,7 +10,7 @@
 
 **Spec:** [docs/superpowers/specs/2026-09-10-area-grouping-design.md](../specs/2026-09-10-area-grouping-design.md) — Phase 2b implements its "nominal code list lives on the cost centre edit page, owned by that centre's finance admin" resolution and the find-or-create half of Option D.
 
-**Phase 2a shipped and merged at `f058541e`** (36 commits). Its execution ledger, every ruling and all thirteen reviews are at `.superpowers/sdd/2026-09-10-area-grouping-phase-2a/`. **Read `final-review.md` and `final-rereview.md` before Task 5** — the two Criticals they found are the reason Task 5 exists.
+**Phase 2a shipped and merged at `f058541e`** (36 commits). Its execution ledger, every ruling and all thirteen reviews are at `.superpowers/sdd/2026-09-10-area-grouping-phase-2a/`. **Read `final-review.md` and `final-rereview.md` before Task 6** — the two Criticals they found are the reason Task 6 exists.
 
 ## Global Constraints
 
@@ -23,7 +23,7 @@
 - **Typed money goes through `Reimbursements::AmountParser`** and reaches the database as the parsed BigDecimal. AR casts a String to a decimal column with `to_d`, so a raw `"£1,200"` stores as **0**.
 - **A form opened INSIDE a `CardComponent` renders its submit outside the `<form>`** and the button silently does nothing. **Every form gets a browser test clicking the real control** — five defects across Phases 1 and 2a came from browsers posting different parameters than request tests do.
 - **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`**, or Turbo renders "Content missing".
-- **A budget is named to a human through `Budget#display_name`** (`"Cogito — Marketing"`), never `budget.name`. Names are legitimately non-unique since the Phase 2a rename — live data carries 3× `Marketing` on one nominal code. The bare name is correct **only** where the area is already beside it: a rowgroup heading, the overview's area card, an export's own Area column, the name field on the budget form.
+- **A budget is named to a human through `Budget#display_name`** (`"Cogito: Marketing"` — a COLON, so a label copied into the spreadsheet round-trips through `bare_name`), never `budget.name`. Names are legitimately non-unique since the Phase 2a rename — live data carries 3× `Marketing` on one nominal code. The bare name is correct **only** where the area is already beside it: a rowgroup heading, the overview's area card, an export's own Area column, the name field on the budget form.
 - **`Budget#owners` is `area ? area.owners : own_owners`.** Ownership is EDITED on the area; every writer must write `own_owners` or `area_owners`, never `owner_ids`, and **a blank list is the dangerous one** — `where.not(person_id: [])` compiles to `WHERE 1=1`.
 - **Area figures are read off `store.areas`** (unscoped, preloading `budgets: [:expenses, :forecasts]`), never off `budget.area`, whose `budgets` collection is unloaded. Measured: 32→31 queries versus 10→36.
 - **`remaining` and `unallocated` are nil, never zero**, when nobody agreed a total.
@@ -49,6 +49,8 @@
 | `app/controllers/admin/reimbursements/nominal_codes_controller.rb` | maintenance, nested under the cost centre it belongs to |
 | `app/views/admin/reimbursements/settings/_nominal_codes.html.erb` | the list + add/remove, on the Settings page that already edits cost centres |
 | `app/services/reimbursements/budget_finder.rb` | find-or-create a budget for `(area, code)` |
+| `app/models/reimbursements/area.rb` | `budget_basis` — a spend cap or a net allowance — and the arithmetic it governs |
+| `db/migrate/*_add_budget_basis_to_reimbursements_areas.rb` | the column, defaulting to `expenses` |
 | `app/controllers/admin/reimbursements/budgets_controller.rb` | the owner-discard fix (Phase 2a M8) |
 | `db/migrate/*_drop_name_before_area_rename.rb` | closes the rename's rollback window, deliberately and last |
 
@@ -379,7 +381,116 @@ Expected: PASS, the whole directory.
 
 ---
 
-### Task 5: The five debts Phase 2a left behind
+### Task 5: An area declares whether its total is a SPEND CAP or a NET result
+
+**Files:**
+- Modify: `app/models/reimbursements/area.rb`, `app/models/reimbursements/area_rollup.rb`
+- Create: `db/migrate/<stamp>_add_budget_basis_to_reimbursements_areas.rb`
+- Modify: `app/views/admin/reimbursements/budgets/_area_group.html.erb`, the area form
+- Test: `test/models/reimbursements/area_test.rb`, `test/models/reimbursements/area_rollup_test.rb`, `test/functional/admin/reimbursements/budgets_controller_test.rb`
+
+**Interfaces:**
+- Produces: `Area#budget_basis` (`"expenses"` | `"net"`), `Area#allocated` and `#unallocated` computed per basis, `AreaRollup#total_label`.
+
+**Mick's resolution (2026-09-11), which replaces Phase 2a's suppression:**
+
+> "Having a clearly marked 'total expenses' would be nice, but I can also imagine situations where we want
+> 'total net'. E.g., shows just have a fixed amount of money that they can spend regardless of what they earn,
+> but committee members have something closer to a net loss they're allowed to make, which can be higher if
+> they raise money in some way."
+
+So it is **both, and the area says which**. A show gets a spend cap — income does not buy it more room. A
+committee gets a net allowance — money it raises genuinely raises what it may spend.
+
+**Phase 2a suppressed the figure entirely for a mixed area** ("No allocation figure: this area holds both
+expense and income lines") because it could not tell these apart without inventing a semantic. **This task
+deletes that suppression**: with a declared basis there is always a defensible figure, and the label says
+which it is.
+
+- **`expenses`** — `allocated` is the sum of **Expense** lines only. Income lines are listed and totalled on
+  their own, NEVER netted off. The card reads **"Total expenses"**.
+- **`net`** — `allocated` is Expense **less** Income. Raising £500 raises the allowance by £500. The card
+  reads **"Total net"**.
+
+**Default `expenses`, and back-fill nothing.** Every area that exists today came from the Phase 1 backfill of
+show-shaped budget lines, and a spend cap is the safer reading: it never reports more room than there is. A
+committee area is then one checkbox away, made deliberately by a human.
+
+**`remaining` and `unallocated` stay nil, never zero, when nobody agreed a total** — unchanged, and it is
+still the state every backfilled area starts in.
+
+**Expense and Income are still never totalled together in the ROLLUP.** `#by_type` keeps its two subtotals on
+both bases; the basis governs only the area's own agreed-total arithmetic, which is a different question from
+"what did this area spend". Do not let the basis leak into `by_type`.
+
+- [ ] **Step 1: Write the failing test**
+
+```ruby
+test "an expenses-basis area ignores income when computing what is left" do
+  area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000, budget_basis: "expenses")
+  create_reimbursements_budget(name: "Marketing", area: area, initial_budget: 400, budget_type: "Expense")
+  create_reimbursements_budget(name: "Ticket income", area: area, initial_budget: 800, budget_type: "Income")
+
+  assert_equal 400, area.allocated, "a show's income does not buy it more room"
+  assert_equal 600, area.unallocated
+end
+
+test "a net-basis area lets income raise the allowance" do
+  area = create_reimbursements_area(name: "Committee", initial_budget: 1_000, budget_basis: "net")
+  create_reimbursements_budget(name: "Socials", area: area, initial_budget: 400, budget_type: "Expense")
+  create_reimbursements_budget(name: "Raffle", area: area, initial_budget: 800, budget_type: "Income")
+
+  assert_equal(-400, area.allocated, "money raised offsets money spent")
+  assert_equal 1_400, area.unallocated
+end
+
+test "unallocated is nil, never zero, when nobody agreed a total" do
+  area = create_reimbursements_area(name: "Cogito", initial_budget: nil)
+  create_reimbursements_budget(name: "Marketing", area: area, initial_budget: 400, budget_type: "Expense")
+
+  assert_nil area.unallocated, "0 would read as fully overspent"
+end
+
+test "the card names which figure it is showing" do
+  expenses = create_reimbursements_area(name: "Cogito", budget_basis: "expenses")
+  net = create_reimbursements_area(name: "Committee", budget_basis: "net")
+
+  assert_equal "Total expenses", Reimbursements::AreaRollup.new(area: expenses, budgets: []).total_label
+  assert_equal "Total net", Reimbursements::AreaRollup.new(area: net, budgets: []).total_label
+end
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `flock /tmp/bl-test.lock -c 'bin/rails test test/models/reimbursements/area_test.rb test/models/reimbursements/area_rollup_test.rb'`
+Expected: FAIL — no `budget_basis`.
+
+- [ ] **Step 3: The migration**
+
+A nullable-with-default string on a populated table. MySQL 8.4 adds this INSTANT, so no backfill pass is
+needed — but **write explicit `up`/`down` and run the rollback**, as every migration in this work has.
+
+```ruby
+add_column :reimbursements_areas, :budget_basis, :string, null: false, default: "expenses"
+```
+
+- [ ] **Step 4: The model and the rollup**
+
+`Area#allocated` branches on the basis; `AreaRollup#total_label` returns the words. **Delete Phase 2a's
+`mixed_budget_types?` suppression and its "No allocation figure" copy** — and delete the tests that pinned it,
+naming them in the report, since they pinned a behaviour this task deliberately replaces.
+
+- [ ] **Step 5: The area form**
+
+A radio pair, not a checkbox: two named states read better than one negated one, and the words on the form
+should be the words on the card. `FormStyles` / `shared/form/*`; **the form wraps the `CardComponent`.** Add a
+browser test clicking the real control and asserting the card's label changes.
+
+- [ ] **Step 6: Run both suites and commit**
+
+---
+
+### Task 6: The five debts Phase 2a left behind
 
 **This task is the reason to read Phase 2a's `final-review.md` first.** Each item below was found, ruled on, and deliberately deferred — none is a new idea.
 
@@ -408,7 +519,7 @@ Read them from `progress.md` rather than this list: `AreaRollup#by_type`'s child
 
 ---
 
-### Task 6: Close the rename's rollback window — LAST, and only on Mick's word
+### Task 7: Close the rename's rollback window — LAST, and only on Mick's word
 
 **Files:**
 - Create: `db/migrate/<stamp>_drop_name_before_area_rename.rb`
@@ -431,8 +542,17 @@ Read them from `progress.md` rather than this list: `AreaRollup#by_type`'s child
 
 ---
 
+## Resolved since Phase 2a
+
+- **Is an area's agreed total an EXPENSE budget? — BOTH, and the area says which** (Mick, 2026-09-11). A show
+  gets a spend cap regardless of what it earns; a committee gets a net allowance that money it raises genuinely
+  increases. **Task 5** implements it and deletes Phase 2a's suppression.
+- **What separates an area from its line in a displayed name? — a COLON**, not a dash (Mick, 2026-09-11;
+  shipped in `a78c7703`). It turned out to be correctness rather than style: a colon is what
+  `BudgetImport.bare_name` splits on, so a label copied off a screen into the committee's spreadsheet resolves
+  to the line it names, where a dash bucketed as a create.
+
 ## Open questions for Mick
 
-1. **Is an area's agreed total an EXPENSE budget?** Phase 2a suppressed the "not yet allocated" figure for an area holding both expense and income lines rather than answer this, because the honest label depends on what "an overall budget for a show" means. If it caps spending only, the Expense-only reading is right and the figure can come back.
-2. **Are a loose `Marketing` and Cogito's `Marketing` legitimately two lines?** Phase 2a blocks a sheet carrying both, which is safe but refuses a sheet the committee might reasonably write. Option D's end state suggests yes, they are distinct.
-3. **Is the mechanical closure worth building?** A test walking every reimbursements screen with two identically-named budgets seeded, failing on any bare name outside a rowgroup heading. Four sweeps each found sites the previous one missed; grepping cannot close that class. Expensive, and nobody has built it.
+1. **Are a loose `Marketing` and Cogito's `Marketing` legitimately two lines?** Phase 2a blocks a sheet carrying both, which is safe but refuses a sheet the committee might reasonably write. Option D's end state suggests yes, they are distinct.
+2. **Is the mechanical closure worth building?** A test walking every reimbursements screen with two identically-named budgets seeded, failing on any bare name outside a rowgroup heading. Four sweeps each found sites the previous one missed; grepping cannot close that class. Expensive, and nobody has built it.
