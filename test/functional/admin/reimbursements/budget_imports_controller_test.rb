@@ -490,18 +490,55 @@ module Admin
 
       # A NAMED list, not a count: the union is forgiving, so a stale address on
       # one line would otherwise gain sign-off authority over a whole show.
-      test "preview names who will sign off for the area, marking the additions" do
+      #
+      # All THREE qualifications in one sheet, because each renders differently
+      # and each was a real defect: an in-scope area (bare), one this import is
+      # about to create ("(new)" — whose spacing broke once, invisibly), and one
+      # reached through a blank Area cell that sits in another YEAR, which no
+      # re-home reports and which is otherwise indistinguishable from the first.
+      test "preview names who will sign off for each area, qualified and marking the additions" do
         area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                           financial_year: @year)
         area.sync_owner_ids!([ create_reimbursements_person(name: "Bob", email: "bob@example.com").id ])
         create_reimbursements_person(name: "Alice", email: "alice@example.com")
         marketing_in(area)
+        stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                           financial_year: FY.create!(label: "Fringe 2026"))
+        create_reimbursements_budget(name: "Cogito: Set", area: stale, initial_budget: 500,
+                                     cost_centre: @cost_centre, financial_year: @year)
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "#{cogito_owner_sheet('alice@example.com')}\n" \
+          "\tCogito: Set\t432320\tExpense\t500\tbob@example.com\n" \
+          "Improverts\tImproverts: Props\t432320\tExpense\t150\talice@example.com"
+        )
+
+        assert_select "li" do |items|
+          lines = items.map { |item| item.text.squish }
+          assert_includes lines, "Cogito: Bob, Alice (added)"
+          assert_includes lines, "Cogito (Fringe 2026): Bob (added)"
+          assert_includes lines, "Improverts (new): Alice (added)"
+        end
+      end
+
+      # The owner grant and the re-home tick are decoupled — unticking a move
+      # leaves the line alone but the area still gains the owner. That is the
+      # ruling, and it is not what an operator would guess from two controls on
+      # one screen, so the panel has to say it.
+      test "the owner panel says unticking a move does not hold the owner back" do
+        create_reimbursements_person(name: "Alice", email: "alice@example.com")
+        marketing_in(nil)
+        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
         sign_in @user
 
         post :preview, params: preview_params(cogito_owner_sheet("alice@example.com"))
 
-        assert_select "li" do |items|
-          assert_includes items.map { |item| item.text.squish }, "Cogito: Bob, Alice (added)"
+        assert_select "p" do |paragraphs|
+          assert paragraphs.any? { |p|
+            p.text.squish.include?("unticking a line leaves it where it is, but the area the " \
+                                   "sheet named still gains the owner named beside it")
+          }, "the panel must say the owner grant and the re-home tick are decoupled"
         end
       end
 

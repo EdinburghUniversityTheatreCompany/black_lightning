@@ -811,8 +811,41 @@ module Reimbursements
       set = import.area_owner_sets.sole
       assert_equal "Cogito", set[:area_name]
       assert_not set[:area_is_new]
+      assert_nil set[:area_scope]
       assert_equal({ "Bob" => false, "Alice" => true },
                    set[:owners].to_h { |owner| [ owner[:name], owner[:added] ] })
+    end
+
+    # The whole cost of the blank-cell reading is that it can write to an area
+    # nothing else on the page mentions — no re-home is reported for that line,
+    # so Task 4's qualified label never appears. Areas are named per show and
+    # shows recur, so the two Cogitos here are a real pair, and unqualified they
+    # render as two identical lines with no way to tell which gains whom.
+    test "an out-of-scope area the owner column reaches is qualified, not a second bare Cogito" do
+      stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                         financial_year: FinancialYear.create!(label: "Fringe 2026"))
+      here = area_named("Cogito")
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
+      stranded = create_reimbursements_budget(name: "Cogito: Set", area: stale,
+                                              cost_centre: @cost_centre, financial_year: @year)
+      placed = create_reimbursements_budget(name: "Cogito: Marketing", area: here,
+                                            cost_centre: @cost_centre, financial_year: @year)
+
+      sheet = <<~TSV
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        \tCogito: Set\t432320\tExpense\t500\tbob@example.com
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\talice@example.com
+      TSV
+      import = build_import(sheet, existing_budgets: [ stranded, placed ],
+                                   existing_areas: [ here ], people: [ alice, bob ])
+
+      assert_equal [ "Cogito", "Cogito" ], import.area_owner_sets.map { |set| set[:area_name] },
+                   "both areas are called Cogito — the qualification is all that separates them"
+      assert_equal({ "Fringe 2026" => [ "Bob" ], nil => [ "Alice" ] },
+                   import.area_owner_sets.to_h { |set|
+                     [ set[:area_scope], set[:owners].map { |owner| owner[:name] } ]
+                   })
     end
 
     # --- Round-tripping an upload through the preview -------------------------

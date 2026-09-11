@@ -379,18 +379,27 @@ module Reimbursements
     end
 
     # What each of those areas will END UP naming, for the preview:
-    # [{ area_name:, area_is_new:, owners: [{ name:, added: }] }].
+    # [{ area_name:, area_is_new:, area_scope:, owners: [{ name:, added: }] }].
     #
     # A NAMED LIST rather than a count, because the union is forgiving in both
     # directions: a stale address on one line otherwise gains sign-off authority
     # over a whole show with nothing on screen to say so. It shows the area's
     # existing owners alongside the ones these lines add — since a sync never
     # subtracts, that IS what the area will hold afterwards.
+    #
+    # +area_scope+ is the SAME qualification Task 4's re-home label carries, and
+    # it is what makes the blank-Area-cell reading safe to have. A blank cell
+    # targets the area the budget is already IN, which may legitimately be
+    # another year's (see #re_homes on why) — and that line reports no re-home,
+    # so nothing else on the page would mention the area at all. Unqualified,
+    # two different "Cogito"s in one sheet render as two identical lines and the
+    # operator cannot tell which show gains which person.
     def area_owner_sets
       owner_targets.each_value.map do |target|
         current = target[:area]&.owners || []
         added = target[:owner_ids] - current.map(&:record_id)
         { area_name: target[:area_name], area_is_new: target[:area].nil?,
+          area_scope: out_of_scope_label(target[:area]),
           owners: current.map { |person| { name: person.name, added: false } } +
                   added.map { |id| { name: @people_by_record_id[id]&.name, added: true } } }
       end

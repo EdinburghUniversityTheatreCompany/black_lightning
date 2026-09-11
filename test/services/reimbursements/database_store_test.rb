@@ -1018,9 +1018,20 @@ module Reimbursements
       assert_equal 0, result.area_owners_synced
     end
 
-    # Area#sync_owner_ids! is a diff sync, so an empty list would make its
-    # `where.not(person_id: [])` read as WHERE 1=1 and destroy every row.
-    test "add_area_owners! with nothing to add leaves the owners alone" do
+    # THE property, not the branch: an empty list means "the sheet named
+    # nobody", which must never read as "remove everyone".
+    #
+    # Its two defences are joint, and this goes red when BOTH are gone (checked):
+    # the union makes the list a superset before `if union.any?` is ever
+    # consulted, and the guard stops the bare list reaching Area#sync_owner_ids!
+    # — a DIFF sync, whose `where.not(person_id: [])` is WHERE 1=1. Neither
+    # alone reddens it, which is exactly why the guard is defence in depth and
+    # not a reachable bug: see the method's own comment. There is deliberately
+    # no test for the guarded branch by itself, because with the union in place
+    # it can only be entered by an ownerless area asked to add nothing — a
+    # no-op whose rows are scoped to that area either way, so no mutation of
+    # this code can make such a test fail.
+    test "add_area_owners! with an empty list removes nobody" do
       bob = Person.create!(name: "Bob", email: "bob@example.com")
       area = create_reimbursements_area(name: "Cogito")
       area.sync_owner_ids!([ bob.id ])

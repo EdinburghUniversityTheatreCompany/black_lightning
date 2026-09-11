@@ -406,8 +406,16 @@ module Reimbursements
     # apply runs against whatever the area holds now.
     #
     # Area#sync_owner_ids! is a DIFF sync, so it is only safe to hand it a
-    # superset — and never an empty list, which would make its
-    # `where.not(person_id: [])` read as WHERE 1=1 and destroy every row.
+    # SUPERSET of what the area holds. That is what the union above guarantees,
+    # and it is also why the `if union.any?` guard below cannot fire on an area
+    # that has owners: the union is empty only when the area had none, so
+    # `where.not(person_id: [])`'s WHERE 1=1 would have nothing to destroy. The
+    # guard is kept as defence in depth against the SHAPE — a later refactor
+    # that stopped unioning would reach it with a live owner list — and what is
+    # pinned is the PROPERTY ("an empty list removes nobody", in the store
+    # test), which goes red only when the union and the guard are both gone.
+    # The branch by itself cannot be tested: with the union in place nothing but
+    # an ownerless area can enter it.
     def add_area_owners!(record_id, owner_ids)
       area = Area.find(record_id)
       union = area.owner_ids.map(&:to_i) | Array(owner_ids).compact_blank.map(&:to_i)

@@ -128,11 +128,17 @@
       <p class="text-gray-600">
         An area's owners are everyone its lines name, and importing never removes one — any one
         of them can endorse a claim on the area's budgets. Remove an owner on the area itself.
+        Owners are separate from the moves above: unticking a line leaves it where it is, but
+        the area the sheet named still gains the owner named beside it.
       </p>
       <ul class="mt-2 space-y-1">
         <% owner_sets.each do |set| %>
+          <%# Mutually exclusive by construction: "new" means there is no record
+              yet, a scope means there is one and it sits outside this import's
+              year or cost centre. Same qualification as the re-home label. %>
+          <% qualifier = set[:area_scope] || ("new" if set[:area_is_new]) %>
           <li>
-            <strong><%= set[:area_name] %></strong><% if set[:area_is_new] %><span class="text-gray-600"> (new)</span><% end %>:
+            <strong><%= set[:area_name] %></strong><% if qualifier %><span class="text-gray-600"> (<%= qualifier %>)</span><% end %>:
             <%= safe_join(set[:owners].map do |owner|
                   if owner[:added]
                     content_tag(:span, "#{owner[:name]} (added)", class: "font-medium text-amber-800")
