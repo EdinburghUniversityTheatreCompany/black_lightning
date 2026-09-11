@@ -909,6 +909,241 @@ module Reimbursements
       assert_equal :revise, import.entries.sole.bucket
     end
 
+    # --- The sheet still writes the prefix the rename took off ----------------
+    # AreaRename.strip! rewrote "Cogito: Marketing" to "Marketing", and the
+    # committee's spreadsheet goes on saying "Cogito: Marketing" — through the
+    # deploy window at least, and for as long as they re-send the file they
+    # have. Matched on the whole name alone, every renamed line buckets as a
+    # CREATE: on the live Fringe data that is 17 of 31 budgets duplicated in one
+    # apply, each with a fresh initial_budget, the show's spend split across two
+    # lines and the original reported absent.
+    #
+    # So a line whose sheet names an AREA is matched on that area plus its bare
+    # name, in both spellings and both directions — the stored side is mid-rename
+    # for the length of a deploy window, and a name can be re-prefixed by hand
+    # long afterwards.
+
+    # A show whose lines have been through the rename: the area holds the
+    # grouping and its budgets are bare, while every sheet below still spells
+    # the prefix out.
+    def renamed_cogito(*names)
+      area = area_named("Cogito")
+      budgets = names.map do |name|
+        create_reimbursements_budget(name: "Cogito: #{name}", area: area, initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+      end
+      Reimbursements::AreaRename.strip!
+      [ area, budgets.map(&:reload) ]
+    end
+
+    # A one-line sheet filing +name+ under +cell+, the shape every test in this
+    # section needs and the one the two area columns actually matter for.
+    def area_sheet(cell, name, amount: 500)
+      <<~TSV
+        Area\tBudget\tNominal code\tType\tAmount
+        #{cell}\t#{name}\t432320\tExpense\t#{amount}
+      TSV
+    end
+
+    # The case the whole rule exists for: the sheet the committee already has,
+    # re-imported the day after the rename ships.
+    test "the sheet the committee already has still revises its renamed lines" do
+      area, budgets = renamed_cogito("Marketing", "Set")
+
+      import = build_import(<<~TSV, existing_budgets: budgets, existing_areas: [ area ])
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tCogito: Marketing\t432320\tExpense\t500
+        Cogito\tCogito: Set\t432330\tExpense\t600
+      TSV
+
+      assert_empty import.entries_in(:create), "every line already exists under its bare name"
+      assert_equal budgets.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
+      assert_empty import.absent_budgets
+      assert_empty import.re_homes, "the lines are already in the area the sheet names"
+    end
+
+    # The other direction: this row has not been renamed yet (or somebody
+    # re-prefixed it by hand) and the sheet has moved on to the bare name.
+    test "a bare sheet name matches a stored line that still carries the prefix" do
+      area = area_named("Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                            initial_budget: 400, financial_year: @year,
+                                            cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: [ budget ], existing_areas: [ area ])
+
+      assert_equal :revise, import.entries.sole.bucket
+      assert_equal budget.record_id, import.entries.sole.budget.record_id
+    end
+
+    test "the whitespace the rename tolerated is the whitespace matching tolerates" do
+      area = area_named("Improverts")
+      budget = create_reimbursements_budget(name: "Retreat", area: area, initial_budget: 400,
+                                            financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Improverts", "Improverts:  Retreat"),
+                            existing_budgets: [ budget ], existing_areas: [ area ])
+
+      assert_equal :revise, import.entries.sole.bucket
+    end
+
+    # The rename's fourth rule, stated for matching: only the line's OWN area's
+    # name comes off, so another show's prefix is part of the name.
+    test "a prefix that is not this line's area is not stripped" do
+      area = area_named("Cogito")
+      budget = create_reimbursements_budget(name: "Retreat", area: area, initial_budget: 400,
+                                            financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(area_sheet("Cogito", "Improverts: Retreat"),
+                            existing_budgets: [ budget ], existing_areas: [ area ])
+
+      assert_equal :create, import.entries.sole.bucket
+    end
+
+    test "an area-less line matches exactly as it always did" do
+      budget = create_reimbursements_budget(name: "Contingency", initial_budget: 400,
+                                            financial_year: @year, cost_centre: @cost_centre)
+
+      import = build_import(tsv("Contingency\t4000\tExpense\t500\t\t"),
+                            existing_budgets: [ budget ])
+
+      assert_equal :revise, import.entries.sole.bucket
+    end
+
+    # THE DELIBERATE LIMIT. The rule reads the sheet's own Area cell, so a sheet
+    # with no Area column at all matches whatever it matched before — a
+    # committee sending the untouched old file gets creates beside its lines,
+    # and has to add the column. Visible on the preview (a create plus the
+    # original in "not mentioned"), where a silent mis-match would not be.
+    test "a sheet with no area column matches what it always matched" do
+      area, budgets = renamed_cogito("Marketing")
+
+      import = build_import(tsv("Cogito: Marketing\t432320\tExpense\t500\t\t"),
+                            existing_budgets: budgets, existing_areas: [ area ])
+
+      assert_equal :create, import.entries.sole.bucket
+    end
+
+    # --- Two lines that answer to one key ------------------------------------
+    # Two shows each running a "Marketing" line is what stripping the prefixes
+    # leaves behind, and the bare name can no longer tell them apart. The area
+    # can, which is why the key carries it — and where even that doesn't
+    # separate them, the import stops and names the rows rather than picking
+    # one, the rule the strict column matcher already sets.
+
+    # Two shows each running a bare "Marketing" line, keyed by show. Improverts
+    # is built FIRST on purpose: a fallback to the plain name would answer with
+    # it, so a test asserting Cogito's line can only pass on the area key.
+    def two_shows_running_marketing
+      %w[Improverts Cogito].to_h do |show|
+        area = area_named(show)
+        [ show, create_reimbursements_budget(name: "Marketing", area: area, initial_budget: 400,
+                                             financial_year: @year, cost_centre: @cost_centre) ]
+      end
+    end
+
+    def areas_named(shows) = shows.values.map(&:area)
+
+    test "the sheet's area picks between two shows' lines of the same name" do
+      shows = two_shows_running_marketing
+
+      import = build_import(area_sheet("Cogito", "Cogito: Marketing"),
+                            existing_budgets: shows.values, existing_areas: areas_named(shows))
+
+      assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id
+      assert_equal [ shows["Improverts"].record_id ], import.absent_budgets.map(&:record_id)
+    end
+
+    # The bare spelling of the same sheet: the plain name answers to both shows
+    # now, and the area is the only thing separating them.
+    test "the area key beats a bare name both shows answer to" do
+      shows = two_shows_running_marketing
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: shows.values, existing_areas: areas_named(shows))
+
+      assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id
+    end
+
+    # Nothing separates them here, and index_by used to keep whichever came
+    # last.
+    test "two stored lines of one name block a sheet that cannot separate them" do
+      shows = two_shows_running_marketing
+
+      import = build_import(tsv("Marketing\t4000\tExpense\t500\t\t"),
+                            existing_budgets: shows.values)
+
+      assert_not import.valid?
+      assert_match(/matches more than one budget/, import.entries.sole.error)
+    end
+
+    test "an area holding two lines that collapse to one key blocks the import" do
+      area = area_named("Cogito")
+      budgets = [ "Marketing", "Cogito: Marketing" ].map do |name|
+        create_reimbursements_budget(name: name, area: area, initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+      end
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: budgets, existing_areas: [ area ])
+
+      assert_not import.valid?
+      # Names the AREA too: the collision is two identical names, and
+      # "Marketing" twice tells the operator nothing they can act on.
+      assert_match(/matches more than one budget/, import.entries.sole.error)
+      assert_match(/in Cogito/, import.entries.sole.error)
+    end
+
+    test "a sheet writing both spellings of one line blocks the import" do
+      area, budgets = renamed_cogito("Marketing")
+
+      import = build_import(<<~TSV, existing_budgets: budgets, existing_areas: [ area ])
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        Cogito\tCogito: Marketing\t432320\tExpense\t600
+      TSV
+
+      assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+      assert(import.entries_in(:invalid).all? { |entry| entry.error.include?("appears more than once") },
+             "both rows name the same budget, which is the duplicate rule, not a match failure")
+    end
+
+    # Two shows' lines in one sheet are NOT duplicates — the area separates
+    # them, and refusing here would block the state the rename leaves behind.
+    test "the same bare name under two areas is two lines, not a duplicate" do
+      shows = two_shows_running_marketing
+
+      import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tCogito: Marketing\t432320\tExpense\t500
+        Improverts\tImproverts: Marketing\t432330\tExpense\t600
+      TSV
+
+      assert import.valid?, import.errors.inspect
+      assert_equal shows.values.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
+    end
+
+    # A STATED LIMIT, pinned so changing it is deliberate. A budget name still
+    # has to be unique within the year, so the same BARE name under two areas
+    # is refused as a duplicate — which is the sheet a committee writes once
+    # they stop typing the prefix at all. Refusing is the loud direction (the
+    # rows are named and nothing is written), but it wants a ruling of its own
+    # before the sheet drops its prefixes.
+    test "the same bare name under two areas is still refused as a duplicate" do
+      shows = two_shows_running_marketing
+
+      import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        Improverts\tMarketing\t432330\tExpense\t600
+      TSV
+
+      assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+    end
+
     private
 
     def xlsx_fixture(rows)

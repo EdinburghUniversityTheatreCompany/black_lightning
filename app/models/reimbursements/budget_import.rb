@@ -131,7 +131,14 @@ module Reimbursements
       @financial_year = financial_year
       @cost_centre = cost_centre
       @escaped = input_type == :canonical_tsv
-      @existing_by_name = existing_budgets.index_by { |budget| self.class.match_key(budget.name) }
+      @existing_budgets = existing_budgets
+      # Grouped, never index_by: a key several stored lines answer to is an
+      # ambiguity to report, and index_by keeps the last one silently. See
+      # #resolve_budget for which of the two decides a match.
+      @existing_by_name = group_by_key(existing_budgets) { |budget| self.class.match_key(budget.name) }
+      @existing_by_area_and_name = group_by_key(existing_budgets) do |budget|
+        self.class.area_scoped_key(budget.name, budget.area&.name)
+      end
       @existing_areas_by_name = existing_areas.index_by { |area| self.class.match_key(area.name) }
       # By id as well as by name: #re_homes compares the budget's CURRENT area
       # to the sheet's target by record identity, and separately has to know
@@ -152,6 +159,43 @@ module Reimbursements
     # "Props" as "props " every other year.
     def self.match_key(name)
       name.to_s.strip.downcase.squeeze(" ")
+    end
+
+    # +name+ with the "Area: " prefix of the naming convention areas replaced
+    # removed — but ONLY when that prefix is this line's own area's name.
+    # "Rehearsal room hire" under Cogito is somebody's own wording, and
+    # "Improverts: Retreat" filed under Cogito names another show; neither is
+    # this rule's to rewrite.
+    #
+    # AreaRename rewrites the stored rows by this exact call, which is why the
+    # rule is stated once, here. The committee's spreadsheet keeps saying
+    # "Cogito: Marketing" long after the stored line became "Marketing", so a
+    # matcher reading only one spelling buckets the whole show as new lines —
+    # 17 of the 31 live Fringe budgets duplicated in one apply, each with a
+    # fresh initial_budget and the original reported as absent.
+    #
+    # The prefix is compared through #match_key, so the casing and spacing a
+    # committee happened to type never decides whether two spellings are one
+    # line.
+    def self.bare_name(name, area_name)
+      return name.to_s if area_name.blank?
+
+      prefix, colon, rest = name.to_s.partition(":")
+      return name.to_s if colon.empty? || rest.strip.empty?
+      return name.to_s unless match_key(prefix) == match_key(area_name)
+
+      rest.strip
+    end
+
+    # The key a line is matched on once the prefix is out of the way: its AREA
+    # plus its bare name. Qualified by the area, so two shows that each run a
+    # "Marketing" line are two keys rather than one collision — which is the
+    # state stripping the prefixes leaves behind. nil for a line that names no
+    # area, which is matched on its whole name exactly as it always was.
+    def self.area_scoped_key(name, area_name)
+      return nil if area_name.blank?
+
+      [ match_key(area_name), match_key(bare_name(name, area_name)) ]
     end
 
     # Nothing is written unless every row is readable — a partial import leaves
@@ -408,7 +452,7 @@ module Reimbursements
     # Lines already in this year that the sheet doesn't mention.
     def absent_budgets
       named = @entries.filter_map { |entry| entry.budget&.record_id }.to_set
-      @existing_by_name.values.reject { |budget| named.include?(budget.record_id) }
+      @existing_budgets.reject { |budget| named.include?(budget.record_id) }
     end
 
     def unknown_owner_emails
@@ -592,8 +636,61 @@ module Reimbursements
       error = row_error(row, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
-      budget = @existing_by_name[self.class.match_key(row[:name])]
+      budget, match_error = resolve_budget(row)
+      return Entry.new(**base, bucket: :invalid, error: match_error) if match_error
+
       Entry.new(**base, budget: budget, bucket: bucket_for(row, budget))
+    end
+
+    # Which stored line this row is about, as [budget, error].
+    #
+    # TWO SPELLINGS, so two lookups. A sheet still writing "Cogito: Marketing"
+    # and a stored line already renamed to "Marketing" are the same line, and so
+    # are the reverse — the stored side is mid-rename for the length of a deploy
+    # window, and somebody may re-prefix a name by hand long afterwards.
+    #
+    # THE AREA-QUALIFIED LOOKUP WINS, because it carries strictly more than the
+    # name does: the sheet said which show this line belongs to. Two shows that
+    # each run a "Marketing" line collide on the bare name and not on that key,
+    # which is the whole reason it exists.
+    #
+    # Neither lookup may GUESS. Several stored lines under the key that decides
+    # the match blocks the import naming them, the rule the strict column
+    # matcher already sets for two fields resolving to one column — an
+    # arbitrary pick here revises one show's figure against another's line.
+    def resolve_budget(row)
+      qualified = stored_under(@existing_by_area_and_name,
+                               self.class.area_scoped_key(row[:name], row[:area]))
+      return [ nil, ambiguous_match_error(row, qualified) ] if qualified.size > 1
+      return [ qualified.sole, nil ] if qualified.size == 1
+
+      plain = stored_under(@existing_by_name, self.class.match_key(row[:name]))
+      return [ nil, ambiguous_match_error(row, plain) ] if plain.size > 1
+
+      [ plain.first, nil ]
+    end
+
+    def stored_under(index, key) = key.nil? ? [] : index.fetch(key, [])
+
+    def ambiguous_match_error(row, budgets)
+      "#{row[:name].inspect} matches more than one budget already here " \
+        "(#{budgets.map { |budget| budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
+        "Rename one of them so it's clear which line this figure is for."
+    end
+
+    # Names the AREA alongside the name, because the collision is usually two
+    # identical names — "Marketing" twice says nothing an operator can act on.
+    def budget_label(budget)
+      budget.area ? "#{budget.name.inspect} in #{budget.area.name}" : "#{budget.name.inspect} in no area"
+    end
+
+    def group_by_key(budgets)
+      budgets.each_with_object({}) do |budget, index|
+        key = yield(budget)
+        next if key.nil?
+
+        (index[key] ||= []) << budget
+      end
     end
 
     def bucket_for(row, budget)
@@ -607,7 +704,7 @@ module Reimbursements
     def row_error(row, duplicated)
       if row[:name].blank?
         "This line has no budget name, so there's nothing to create or match it against."
-      elsif duplicated.include?(self.class.match_key(row[:name]))
+      elsif row_keys(row).any? { |key| duplicated.include?(key) }
         "#{row[:name].inspect} appears more than once in this sheet — a budget name has to be " \
           "unique within a year, so it isn't clear which figure is meant."
       elsif row[:amount] == :unreadable
@@ -764,9 +861,23 @@ module Reimbursements
       parts.join(", ").presence
     end
 
+    # The keys a row answers to — its whole name as typed, plus the
+    # area-qualified bare name when the sheet files it under an area. The same
+    # pair #resolve_budget matches on, so a sheet cannot contain two spellings
+    # of one line that the matcher would then have to choose between.
+    def row_keys(row)
+      return [] if row[:name].blank?
+
+      [ self.class.match_key(row[:name]),
+        self.class.area_scoped_key(row[:name], row[:area]) ].compact
+    end
+
+    # Two rows sharing EITHER key are one line written twice: "Marketing" and
+    # "Cogito: Marketing" both under Cogito name one budget, and which of the
+    # two figures is meant is exactly what can't be guessed.
     def duplicated_names
-      @rows.map { |row| self.class.match_key(row[:name]) }.reject(&:blank?)
-           .tally.select { |_name, count| count > 1 }.keys.to_set
+      @rows.flat_map { |row| row_keys(row) }
+           .tally.select { |_key, count| count > 1 }.keys.to_set
     end
 
     # People for the sheet's owner emails, plus the addresses that matched
