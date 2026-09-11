@@ -249,6 +249,15 @@ ChaosRails::Application.routes.draw do
       resources :settings, only: %i[index new create edit update], param: :key do
         member { post :test_access }
       end
+
+      # A cost centre's own chart of accounts, maintained from its Settings
+      # page. Scoped under that page's path and its `:key` param rather than
+      # nested under `resources :settings` (which would rename the param to
+      # `setting_key`), so the centre is found here exactly as
+      # SettingsController finds it.
+      scope "settings/:key" do
+        resources :nominal_codes, only: %i[index create update destroy]
+      end
     end
 
     # Mount MissionControl Jobs

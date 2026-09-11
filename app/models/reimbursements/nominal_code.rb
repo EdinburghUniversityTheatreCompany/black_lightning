@@ -37,5 +37,29 @@ module Reimbursements
     validates :code, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
+
+    # The budget lines this centre's list is answerable for: its own, plus the
+    # ones with NO centre of their own. An unplaced budget is lenient-scoped
+    # into EVERY centre's screens (DatabaseStore#in_cost_centre), so this
+    # centre's list is what labels its code there — the same rule
+    # NominalCodeSeed folds an unplaced code into the default centre by.
+    def self.budgets_for(cost_centre)
+      Budget.where(cost_centre_id: [ cost_centre&.id, nil ])
+    end
+
+    # How many of those budgets carry each of +codes+, keyed by the code
+    # DOWNCASED: the column is utf8mb4_unicode_ci, so a budget may carry the
+    # same code in another case and still be the same account.
+    def self.budget_counts(cost_centre, codes)
+      budgets_for(cost_centre).where(nominal_code: codes)
+                              .group(:nominal_code).count
+                              .transform_keys { |code| code.to_s.downcase }
+    end
+
+    # Whether a budget line already carries this code. What decides retire
+    # versus delete — read in #destroy, not from the button that was clicked.
+    def in_use?
+      self.class.budgets_for(cost_centre).exists?(nominal_code: code)
+    end
   end
 end

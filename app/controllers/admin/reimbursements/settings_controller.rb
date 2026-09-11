@@ -17,6 +17,10 @@ module Admin
     # via FinanceController.
     class SettingsController < FinanceController
       before_action :set_cost_centre, only: %i[edit update test_access]
+      # The nominal-codes panel on the edit page. Every action that can RENDER
+      # :edit needs the list, which is #update's refused-save path and
+      # #test_access's non-turbo response as well as #edit itself.
+      before_action :set_nominal_codes, only: %i[edit update test_access]
 
       # Which CostCentre columns each SharePoint destination writes.
       FOLDER_COLUMNS = {
@@ -86,6 +90,10 @@ module Admin
 
       def set_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.find_by!(key: params[:key])
+      end
+
+      def set_nominal_codes
+        @nominal_codes = ::Reimbursements::NominalCode.for_cost_centre(@cost_centre).to_a
       end
 
       def edit_path

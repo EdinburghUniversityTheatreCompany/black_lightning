@@ -1,0 +1,31 @@
+<%# locals: (cost_centre:, codes:) %>
+<%# The Settings page's window onto this cost centre's chart of accounts. A
+    summary and a way in, not a second editing surface: the list is maintained
+    on NominalCodesController#index, so there is one place a label is corrected. %>
+<% active = codes.count(&:active?) %>
+<% retired = codes.size - active %>
+<%= render CardComponent.new(title: "Nominal codes", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    The accounts <%= cost_centre.name %>'s budget lines are booked against, as EUSA's ledger names
+    them. Each label started as a guess taken from the budgets already carrying its code, so it is
+    worth reading them through once.
+  </p>
+
+  <% if codes.empty? %>
+    <div class="mb-3">
+      <%= render AlertComponent.new(type: :warning) do %>
+        <strong>No codes listed for <%= cost_centre.name %> yet.</strong>
+        Run <code>bin/rails reimbursements:nominal_code_seed</code> to fill the list from the codes
+        its budgets already carry (dry by default; <code>APPLY=1</code> writes), or add them by hand.
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-sm text-gray-600 mb-3">
+      <%= pluralize(active, "code") %> in the list<%= ", #{retired} retired" if retired.positive? %>.
+    </p>
+  <% end %>
+
+  <%= link_to "Manage nominal codes",
+              admin_reimbursements_nominal_codes_path(cost_centre.key),
+              class: btn_classes(:secondary, :sm) %>
+<% end %>

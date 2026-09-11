@@ -183,6 +183,22 @@ module Admin
         assert_includes response.body, "/permissions"
       end
 
+      test "edit shows this cost centre's nominal codes and a way in to maintain them" do
+        termtime = create_second_reimbursements_cost_centre
+        create_reimbursements_nominal_code(code: "432320", label: "Marketing",
+                                           cost_centre: @cost_centre)
+        create_reimbursements_nominal_code(code: "555555", label: "Termtime printing",
+                                           cost_centre: termtime)
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_equal [ "432320" ], assigns(:nominal_codes).map(&:code)
+        assert_includes response.body, "Manage nominal codes"
+        # The summary counts the centre being edited, not every centre's list.
+        assert_includes response.body, "1 code in the list"
+      end
+
       test "edit 404s for an unknown cost centre" do
         sign_in @user
         get :edit, params: { key: "nope" }
