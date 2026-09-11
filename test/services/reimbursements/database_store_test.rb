@@ -851,6 +851,51 @@ module Reimbursements
       assert_equal 1, result.revised
     end
 
+    # The spreadsheet is the committee's route for revising a show's AGREED
+    # TOTAL, and a revised Area Budget used to be silently dropped. It lands as
+    # a forecast on the AREA, under the same update as the line revisions —
+    # one committee meeting is one BudgetUpdate — and the area's own
+    # initial_budget stays write-once, so Area#projected_amount moves while the
+    # figure first agreed is still there to measure drift against.
+    test "import_budgets! logs a revised area total as an area forecast in the same update" do
+      year = FinancialYear.create!(label: "Fringe 2027", active: true)
+      area = Area.create!(name: "Cogito", initial_budget: BigDecimal("1000"), financial_year: year)
+      budget = Budget.create!(name: "Marketing", nominal_code: "432320",
+                              initial_budget: BigDecimal("400"), financial_year: year, area: area)
+
+      result = scoped_store(year).import_budgets!(
+        creates: [], revisions: [ { budget_id: budget.record_id, amount: BigDecimal("450") } ],
+        area_revisions: [ { area_id: area.record_id, amount: BigDecimal("1200") } ],
+        owner_syncs: [], note: "Revised at the budget meeting", created_by: nil
+      )
+
+      assert_equal 1, BudgetUpdate.count, "one meeting, one update across both levels"
+      forecasts = BudgetUpdate.sole.forecasts
+      assert_equal [ BigDecimal("450"), BigDecimal("1200") ], forecasts.map(&:amount).sort
+      area_forecast = forecasts.find { |forecast| forecast.area_id.present? }
+      assert_equal area.id, area_forecast.area_id
+      assert_nil area_forecast.budget_id, "a forecast belongs to a budget OR an area, never both"
+
+      area.reload
+      assert_equal BigDecimal("1000"), area.initial_budget
+      assert_equal BigDecimal("1200"), area.projected_amount
+      assert_equal 1, result.area_revised
+    end
+
+    test "import_budgets! writes an update for an area revision even with no line revisions" do
+      year = FinancialYear.create!(label: "Fringe 2027", active: true)
+      area = Area.create!(name: "Cogito", initial_budget: BigDecimal("1000"), financial_year: year)
+
+      scoped_store(year).import_budgets!(
+        creates: [], revisions: [],
+        area_revisions: [ { area_id: area.record_id, amount: BigDecimal("1200") } ],
+        owner_syncs: [], note: "x", created_by: nil
+      )
+
+      assert_equal 1, BudgetUpdate.count
+      assert_equal BigDecimal("1200"), area.reload.projected_amount
+    end
+
     test "import_budgets! rolls the whole sheet back when one line fails" do
       year = FinancialYear.create!(label: "Fringe 2027")
       good = { name: "Props", nominal_code: "4000", budget_type: "Expense", active: true,

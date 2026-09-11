@@ -371,6 +371,10 @@ module Reimbursements
       assert_nil import.area_creates.first[:initial_budget]
     end
 
+    # initial_budget is write-once on an area exactly as it is on a budget, so
+    # Area#variance keeps meaning "drift from the figure the committee agreed".
+    # The revised figure is not dropped, though — it is REPORTED and logged as
+    # a forecast, which is the twin of what a line revision does.
     test "an area that already exists keeps its own figure, write-once on create" do
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1000)
@@ -381,6 +385,68 @@ module Reimbursements
 
       assert import.valid?
       assert_empty import.area_creates
+      assert_equal [ { area_id: area.record_id, area_name: "Cogito",
+                       from: BigDecimal("1000"), amount: BigDecimal("1200") } ],
+                   import.area_revisions
+    end
+
+    test "an unchanged area total is not reported as a revision" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year, initial_budget: 1200)
+      import = build_import(<<~TSV, existing_areas: [ area ])
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_empty import.area_revisions
+    end
+
+    # A blank column says "leave the total alone", never "set it to nothing" —
+    # the same rule a blank Amount follows on a budget line.
+    test "a blank Area Budget is not a revision" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year, initial_budget: 1200)
+      import = build_import(<<~TSV, existing_areas: [ area ])
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_empty import.area_revisions
+    end
+
+    # Compared against #projected_amount, so a second re-import measures the
+    # sheet against the LAST forecast rather than re-reporting the same
+    # revision for ever — the convergence property the owner syncs needed too.
+    test "an area total revision converges: a re-import reports it once" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year, initial_budget: 1000)
+      sheet = <<~TSV
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      first = build_import(sheet, existing_areas: [ area ])
+      assert_equal 1, first.area_revisions.size
+
+      DatabaseStore.new.create_budget_update!(effective_date: Date.current, note: "x",
+                                              created_by: nil,
+                                              forecasts: first.area_revisions)
+
+      second = build_import(sheet, existing_areas: [ area.reload ])
+      assert_empty second.area_revisions, "the same revision must not be reported for ever"
+    end
+
+    test "an area with no agreed total yet takes the sheet's figure as a revision" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year)
+      import = build_import(<<~TSV, existing_areas: [ area ])
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      revision = import.area_revisions.sole
+      assert_nil revision[:from]
+      assert_equal BigDecimal("1200"), revision[:amount]
     end
 
     # --- Re-homing a line the sheet disagrees with ---------------------------

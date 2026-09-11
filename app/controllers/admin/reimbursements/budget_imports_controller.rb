@@ -83,6 +83,7 @@ module Admin
                                         area_owner_syncs: @import.area_owner_syncs,
                                         adoptions: @import.adoptions,
                                         area_creates: @import.area_creates_for(re_homes),
+                                        area_revisions: @import.area_revisions,
                                         re_homes: re_homes,
                                         note: import_note, created_by: current_user)
         render :apply

@@ -293,7 +293,7 @@ module Reimbursements
 
     # What an applied budget import did, for the confirmation screen.
     ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, :areas_created,
-                              :re_homed, :area_owners_synced, keyword_init: true)
+                              :re_homed, :area_owners_synced, :area_revised, keyword_init: true)
 
     # Applies a confirmed BudgetImport: creates the new lines, logs the revised
     # figures as ONE budget update, and re-syncs owners on lines that already
@@ -313,7 +313,7 @@ module Reimbursements
     # Areas are created FIRST in the same transaction, so a +creates+ or
     # +re_homes+ entry carrying +area_name:+ has an id to resolve to.
     def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
-                        area_creates: [], re_homes: [], area_owner_syncs: [])
+                        area_creates: [], re_homes: [], area_owner_syncs: [], area_revisions: [])
       result = nil
       area_owners_synced = 0
       Budget.transaction do
@@ -335,14 +335,19 @@ module Reimbursements
           add_area_owners!(area_id, sync[:owner_ids])
           area_owners_synced += 1
         end
-        update = if revisions.any?
+        # ONE update for both levels, which is what BudgetUpdate is for: one
+        # committee meeting revised a show's agreed total and its categories'
+        # allocations together.
+        forecasts = revisions + area_revisions
+        update = if forecasts.any?
                    create_budget_update!(effective_date: Date.current, note: note,
-                                         created_by: created_by, forecasts: revisions)
+                                         created_by: created_by, forecasts: forecasts)
         end
         result = ImportResult.new(created: created.size, revised: revisions.size,
                                   owners_synced: owner_syncs.size, budget_update: update,
                                   areas_created: areas_by_name.size, re_homed: re_homes.size,
-                                  area_owners_synced: area_owners_synced)
+                                  area_owners_synced: area_owners_synced,
+                                  area_revised: area_revisions.size)
       end
       bust_budgets!
       bust_areas!
@@ -438,9 +443,9 @@ module Reimbursements
     # Records a multi-budget revision in one gesture: a BudgetUpdate carrying
     # the shared effective_date + note + author, and one BudgetForecast per
     # entry linked to it (dated with the shared date, its reason set to the
-    # shared note). +forecasts+ is an array of {budget_id:, amount:} — the
-    # caller drops blank amounts. All-or-nothing: an invalid entry rolls the
-    # whole update back.
+    # shared note). +forecasts+ is an array of {budget_id:, amount:} or
+    # {area_id:, amount:} — the caller drops blank amounts. All-or-nothing: an
+    # invalid entry rolls the whole update back.
     def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
       update = nil
       BudgetUpdate.transaction do
@@ -449,9 +454,14 @@ module Reimbursements
         update = BudgetUpdate.create!(effective_date: effective_date, note: note,
                                       created_by: created_by,
                                       financial_year: financial_year || FinancialYear.current)
+        # An entry carries a budget_id OR an area_id, never both: a budget
+        # forecast revises one category's allocation, an area forecast the
+        # show's agreed total. BudgetForecast validates that (and a MySQL CHECK
+        # constraint enforces it).
         forecasts.each do |entry|
-          BudgetForecast.create!(budget_id: entry[:budget_id], amount: entry[:amount],
-                                 date: effective_date, reason: note, budget_update: update)
+          BudgetForecast.create!(budget_id: entry[:budget_id], area_id: entry[:area_id],
+                                 amount: entry[:amount], date: effective_date,
+                                 reason: note, budget_update: update)
         end
       end
       bust_budgets!

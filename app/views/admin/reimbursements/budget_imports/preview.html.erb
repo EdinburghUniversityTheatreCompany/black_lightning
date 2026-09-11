@@ -84,6 +84,39 @@
     </div>
   <% end %>
 
+  <%# The area-level twin of "Changed figures": the sheet is the committee's
+      route for revising a show's agreed total, so a revised Area Budget has to
+      be visible before it is applied. initial_budget stays write-once — this
+      lands as a forecast under the same budget update as the line revisions. %>
+  <% area_revisions = @import.area_revisions %>
+  <% if area_revisions.any? %>
+    <h3 class="mt-4 mb-2 font-medium">Changed area totals (<%= area_revisions.size %>)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">Area</th>
+            <th class="py-1 pr-4 text-right">Now</th>
+            <th class="py-1 pr-4 text-right">Becomes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% area_revisions.each do |revision| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4"><%= revision[:area_name] %></td>
+              <td class="py-1 pr-4 text-right">
+                <%= revision[:from] ? number_to_currency(revision[:from], unit: "£") : "—" %>
+              </td>
+              <td class="py-1 pr-4 text-right font-medium">
+                <%= number_to_currency(revision[:amount], unit: "£") %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
   <% if @import.absent_budgets.any? %>
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       <p class="font-medium">

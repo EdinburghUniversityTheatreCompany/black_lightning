@@ -552,6 +552,48 @@ module Admin
         assert_equal 1, assigns(:result).area_owners_synced
       end
 
+      # --- A revised area total ---------------------------------------------
+      # The sheet is where the committee agrees a show's total, so a changed
+      # Area Budget has to be visible before it is applied and has to actually
+      # land. It used to be dropped: not applied, not logged, not reported.
+
+      TOTAL_HEADERS = "Area\tArea Budget\tBudget\tNominal code\tType\tAmount".freeze
+
+      # The LINE's figure moves too (the stored line is 400), so the label has
+      # to carry both buckets and they cannot be mistaken for each other.
+      def cogito_total_sheet(total)
+        "#{TOTAL_HEADERS}\nCogito\t#{total}\tCogito: Marketing\t432320\tExpense\t450"
+      end
+
+      test "preview reports a revised area total with the figure it replaces" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year, initial_budget: 1000)
+        marketing_in(area)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_total_sheet(1200))
+
+        assert_response :success
+        assert_select "h3", text: "Changed area totals (1)"
+        assert_select "input[type=submit][value=?]",
+                      "Import 1 changed figure and 1 revised area total"
+      end
+
+      test "apply logs the revised area total as a forecast and keeps the agreed figure" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year, initial_budget: 1000)
+        marketing_in(area)
+        sign_in @user
+
+        post :apply, params: preview_params(cogito_total_sheet(1200))
+
+        area.reload
+        assert_equal BigDecimal("1000"), area.initial_budget
+        assert_equal BigDecimal("1200"), area.projected_amount
+        assert_equal 1, assigns(:result).area_revised
+        assert_select "li", text: /1 area total.*revised/m
+      end
+
       # "Cogito → Cogito" would read as a no-op, so the from side names the
       # year it is stranded in and the to side says it is about to be created.
       test "preview qualifies a re-home whose from and to areas share a name" do

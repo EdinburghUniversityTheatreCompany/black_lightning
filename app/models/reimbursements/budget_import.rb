@@ -291,6 +291,30 @@ module Reimbursements
       area_creates.select { |attrs| wanted.include?(self.class.match_key(attrs[:name])) }
     end
 
+    # {area_id:, area_name:, from:, amount:} per area the sheet gives a
+    # DIFFERENT agreed total than the one stored — the area-level twin of
+    # #revisions, logged as a forecast under the same BudgetUpdate.
+    #
+    # +initial_budget+ on an area stays write-once, exactly as a budget's is
+    # (#area_creates is the only thing that writes it), so Area#variance keeps
+    # meaning "drift from the figure the committee agreed". Before this a
+    # revised Area Budget on a re-import was not applied, not logged and not
+    # reported — and the spreadsheet IS the committee's route for revising a
+    # show's agreed total, so the revision silently did nothing.
+    #
+    # Compared against #projected_amount, which is what a budget revision is
+    # compared against: the latest forecast, falling back to the agreed figure.
+    def area_revisions
+      totals = area_budget_totals
+      first_seen_names.filter_map do |key, name|
+        amount = totals[key]&.first
+        area = existing_area_for(key)
+        next if amount.nil? || area.nil? || amount == area.projected_amount
+
+        { area_id: area.record_id, area_name: name, from: area.projected_amount, amount: amount }
+      end
+    end
+
     # Every area the sheet gives more than one distinct Area Budget figure.
     # The column repeats down the area's rows, so two values can't both be what
     # the committee agreed: #valid? refuses the whole import rather than
@@ -467,6 +491,7 @@ module Reimbursements
       { area_creates: [ "new area", area_creates_for(re_homes).size ],
         creates: [ "new budget", entries_in(:create).size ],
         revisions: [ "changed figure", revisions.size ],
+        area_revisions: [ "revised area total", area_revisions.size ],
         re_homes: [ "moved line", re_homes.size ],
         adoptions: [ "adopted line", adoptions.size ],
         owner_syncs: [ "owner update", owner_syncs.size ],

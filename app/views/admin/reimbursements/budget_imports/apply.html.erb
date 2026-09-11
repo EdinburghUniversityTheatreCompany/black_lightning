@@ -10,6 +10,13 @@
       <strong><%= pluralize(@result.revised, "figure") %></strong>
       revised<%= " (logged as one budget update)" if @result.budget_update %>.
     </li>
+    <% if @result.area_revised.positive? %>
+      <li>
+        <strong><%= pluralize(@result.area_revised, "area total") %></strong>
+        revised — logged as a forecast on the area, leaving the figure the committee first
+        agreed intact.
+      </li>
+    <% end %>
     <% if @result.re_homed.positive? %>
       <li>
         <strong><%= pluralize(@result.re_homed, "budget") %></strong> moved into the area the
