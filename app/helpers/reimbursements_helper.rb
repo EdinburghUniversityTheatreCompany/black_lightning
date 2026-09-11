@@ -81,6 +81,26 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # How much of an area's agreed total has been split out into its lines, in
+  # the one form every screen prints it: its two halves whenever a net basis
+  # has netted income off the spend, and the single figure otherwise.
+  #
+  # The halves rather than the bare negative Area#allocated returns, because
+  # you cannot allocate minus four hundred pounds, a negative money figure
+  # means bad news everywhere else in this portal (Remaining is text-danger
+  # when negative, a cell away on both surfaces), and the not-yet-allocated
+  # figure beside it reconciles only by subtracting a negative. One derivation
+  # for the grouped index and the area edit card, or the card keeps printing
+  # what the index was changed to stop printing.
+  def reimbursements_area_allocation(area)
+    unless area.net_basis? && area.allocated_income.positive?
+      return reimbursements_money(area.allocated)
+    end
+
+    "#{reimbursements_money(area.allocated_spend)} of spend " \
+      "less #{reimbursements_money(area.allocated_income)} of income"
+  end
+
   # The same amount as the VALUE of a `step: 0.01` number input. A decimal
   # column hands the view a BigDecimal, whose to_s an input renders as "100.0"
   # or "12.5" — a pence column short of the figure printed everywhere else.

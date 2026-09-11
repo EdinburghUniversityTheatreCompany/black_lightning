@@ -73,6 +73,13 @@ module Admin
           assert_text "Agreed total (net)"
           assert_text "£1,400.00"
           assert_no_text "Agreed total (expenses)"
+          # The allocation is -£400 here, and this card prints it as its two
+          # halves like the grouped index does: "Allocated to lines -£400.00"
+          # reads as bad news in a portal where every other negative money
+          # figure is, and 1,000 - (-400) = 1,400 reconciles with the
+          # Unallocated cell beside it only by subtracting a negative.
+          assert_text "£400.00 of spend less £800.00 of income"
+          assert_no_text "-£400.00"
         end
       end
 

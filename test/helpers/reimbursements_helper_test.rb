@@ -120,6 +120,38 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_equal "£1,234.50", reimbursements_money("1234.50")
   end
 
+  # The area allocation is printed on two screens — the grouped budgets index
+  # and the area edit card — and the rule that a netted allocation is never a
+  # bare negative held on one of them only until this became a single helper.
+  def netted_area(spend: 400, income: 800, basis: "net")
+    area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
+                                      budget_basis: basis)
+    create_reimbursements_budget(name: "Socials", area: area, initial_budget: spend)
+    create_reimbursements_budget(name: "Raffle", area: area, initial_budget: income,
+                                 budget_type: "Income")
+    area
+  end
+
+  test "reimbursements_area_allocation prints a netted allocation as its two halves" do
+    assert_equal "£400.00 of spend less £800.00 of income",
+                 reimbursements_area_allocation(netted_area)
+  end
+
+  test "reimbursements_area_allocation never prints a bare negative" do
+    # Area#allocated is -400 here: spend less income on a net basis.
+    assert_not_includes reimbursements_area_allocation(netted_area), "-£400.00"
+  end
+
+  test "reimbursements_area_allocation states a spend cap as one figure" do
+    # An income line is left out of a spend cap entirely, so there are no
+    # halves to state.
+    assert_equal "£400.00", reimbursements_area_allocation(netted_area(basis: "expenses"))
+  end
+
+  test "reimbursements_area_allocation states a net area with no income as one figure" do
+    assert_equal "£400.00", reimbursements_area_allocation(netted_area(income: 0))
+  end
+
   test "reimbursements_amount_value pads a decimal column's value to 2dp" do
     # A BigDecimal's own to_s renders "100.0" into a number input, a pence
     # short of the figure reimbursements_money prints beside it.
