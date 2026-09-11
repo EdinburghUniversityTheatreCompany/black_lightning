@@ -446,6 +446,33 @@ module Reimbursements
       @existing_budgets.reject { |budget| named.include?(budget.record_id) }
     end
 
+    # What an apply will DO, keyed by the DatabaseStore#import_budgets! argument
+    # that does it, each value a [label, count] pair for the preview's submit
+    # button.
+    #
+    # Keyed that way so the two cannot drift: budget_import_test asserts this
+    # covers every argument import_budgets! takes apart from the two that carry
+    # no work. Before that, the button counted areas, creates, revisions and
+    # re-homes only — so an owner-only sheet (an area that already exists, a
+    # line already in it, the same figure, and an Owner emails column naming
+    # somebody) rendered the owner panel naming the new owner directly above a
+    # DISABLED button reading "Nothing to import". That is a control failure,
+    # not cosmetics: the owner never lands, the area still names nobody,
+    # OwnerReview.gate_applies? stays false, and every claim on that show skips
+    # budget-owner sign-off.
+    #
+    # +re_homes+ is the TICKED list, so the label and the areas counted for it
+    # say what apply will write; at preview time every box is ticked.
+    def apply_work(re_homes: self.re_homes)
+      { area_creates: [ "new area", area_creates_for(re_homes).size ],
+        creates: [ "new budget", entries_in(:create).size ],
+        revisions: [ "changed figure", revisions.size ],
+        re_homes: [ "moved line", re_homes.size ],
+        adoptions: [ "adopted line", adoptions.size ],
+        owner_syncs: [ "owner update", owner_syncs.size ],
+        area_owner_syncs: [ "area owner update", area_owner_syncs.size ] }
+    end
+
     def unknown_owner_emails
       @entries.flat_map(&:unknown_owner_emails).uniq
     end

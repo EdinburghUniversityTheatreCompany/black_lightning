@@ -33,6 +33,10 @@ module Admin
         ([ "Area\tBudget\tNominal code\tType\tAmount" ] + rows).join("\n")
       end
 
+      def owner_sheet(*rows)
+        ([ "Area\tBudget\tNominal code\tType\tAmount\tOwner emails" ] + rows).join("\n")
+      end
+
       # A budget name is what an existing line is MATCHED on, so rewriting a
       # backslash sequence in it is silent corruption of the key. Only a browser
       # proves the marker is really posted: the request test hands apply the
@@ -52,6 +56,35 @@ module Admin
         end
 
         assert_equal "Costume\\next week", ::Reimbursements::Budget.sole.name
+      end
+
+      # The re-home test below clicks a button whose count was never in doubt.
+      # THIS is the sheet the owner column exists for — the committee's same
+      # file re-sent with owners filled in and no figures changed — and the
+      # button was DISABLED for it, reading "Nothing to import" directly under
+      # a panel naming the owner it was about to add. Only a click sees that:
+      # the request test POSTs :apply and never touches the button.
+      test "an owner-only sheet can actually be imported" do
+        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+        create_reimbursements_budget(name: "Marketing", area: cogito, initial_budget: 400,
+                                     cost_centre: @cost_centre, financial_year: @year)
+        alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+
+        visit admin_reimbursements_budget_import_path
+
+        fill_in "Paste the sheet", with: owner_sheet(
+          "Cogito\tMarketing\t432320\tExpense\t400\talice@example.com"
+        )
+        click_on "Preview import"
+
+        assert_text "Who will sign off for each area after this import"
+        assert_difference -> { ::Reimbursements::AreaOwner.count }, +1 do
+          click_on "Import 1 area owner update"
+          assert_text "Imported into Fringe 2027"
+        end
+
+        assert_equal [ alice.record_id ], cogito.reload.owner_ids
       end
 
       # Only a browser proves the ticks reach apply AT ALL: the request test

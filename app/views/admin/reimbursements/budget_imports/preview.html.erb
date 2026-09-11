@@ -268,15 +268,14 @@
 
     <div class="flex flex-wrap items-center gap-3">
       <%# Only the parts that are actually happening: "Import 0 new budgets and 1
-          changed figure" reads as a mistake. Areas and moved lines are counted
-          too, or a re-import that only adds an Area column to lines that
-          already exist reads "Nothing to import" with the button disabled —
-          which is exactly the sheet this bucket exists for. %>
-      <% parts = [] %>
-      <% parts << pluralize(@import.area_creates.size, "new area") if @import.area_creates.any? %>
-      <% parts << pluralize(@import.entries_in(:create).size, "new budget") if @import.entries_in(:create).any? %>
-      <% parts << pluralize(@import.revisions.size, "changed figure") if @import.revisions.any? %>
-      <% parts << pluralize(@import.re_homes.size, "moved line") if @import.re_homes.any? %>
+          changed figure" reads as a mistake. The LIST comes from
+          BudgetImport#apply_work, which is keyed by the store argument that
+          does each thing — counting only some of them leaves the button
+          reading "Nothing to import", disabled, over work the apply would
+          have done. %>
+      <% parts = @import.apply_work.each_value.filter_map do |label, count|
+           pluralize(count, label) if count.positive?
+         end %>
       <%= submit_tag parts.any? ? "Import #{parts.to_sentence}" : "Nothing to import",
                      class: btn_classes(:primary),
                      disabled: !@import.valid? || parts.empty?,

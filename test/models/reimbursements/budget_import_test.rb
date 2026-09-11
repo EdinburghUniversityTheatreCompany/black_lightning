@@ -677,6 +677,50 @@ module Reimbursements
       assert_equal [ alice.record_id, bob.record_id ].sort, sync[:owner_ids].sort
     end
 
+    # --- What the preview's submit button counts ----------------------------
+    # The button is disabled when nothing is going to happen, so a bucket the
+    # count forgets cannot be applied AT ALL. That is how the owner column Task
+    # 5 added became unreachable on the most likely sheet: the same file re-sent
+    # with owners filled in and no figures changed.
+
+    test "the button's count covers every kind of work an apply does" do
+      arguments = DatabaseStore.instance_method(:import_budgets!).parameters
+                               .filter_map { |kind, name| name if [ :key, :keyreq ].include?(kind) }
+      # note and created_by name the revision log; they are not work.
+      assert_equal (arguments - [ :note, :created_by ]).sort,
+                   build_import(tsv("Props\t4000\tExpense\t1200\t\t")).apply_work.keys.sort
+    end
+
+    test "an owner-only sheet is something to import" do
+      budget, alice, bob = props_in_area_owned_by_bob
+
+      # An area that exists, a line already in it, the SAME figure: the only
+      # thing this sheet does is give the area an owner.
+      import = build_import(tsv("Props\t4000\tExpense\t1000\talice@example.com\t"),
+                            existing_budgets: [ budget ], people: [ alice, bob ])
+
+      assert_predicate import, :valid?
+      work = import.apply_work.each_value.reject { |_, count| count.zero? }
+      assert_equal [ [ "area owner update", 1 ] ], work
+    end
+
+    test "unticking every re-home drops the area nothing will land in from the count" do
+      elsewhere = create_reimbursements_area(name: "Improverts", financial_year: @year,
+                                             cost_centre: @cost_centre)
+      budget = create_reimbursements_budget(name: "Props", initial_budget: 1000, area: elsewhere,
+                                            financial_year: @year, cost_centre: @cost_centre)
+      sheet = [ [ "Area", "Area Budget", "Budget name", "Nominal code", "Type", "Amount" ].join("\t"),
+                [ "Cogito", "", "Props", "4000", "Expense", "1000" ].join("\t") ].join("\n")
+
+      import = build_import(sheet, existing_budgets: [ budget ], existing_areas: [ elsewhere ])
+
+      ticked = import.apply_work.each_value.reject { |_, count| count.zero? }
+      assert_equal [ [ "new area", 1 ], [ "moved line", 1 ] ], ticked
+      # Apply passes the TICKED re-homes, and an area nothing lands in is never
+      # created — so the label must not promise one either.
+      assert_empty import.apply_work(re_homes: []).each_value.reject { |_, count| count.zero? }
+    end
+
     test "an area owner sync converges: a re-import reports it once" do
       budget, alice, bob = props_in_area_owned_by_bob
       sheet = tsv("Props\t4000\tExpense\t1000\talice@example.com\t")
