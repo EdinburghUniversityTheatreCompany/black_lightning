@@ -10,7 +10,7 @@
 
 **Spec:** [docs/superpowers/specs/2026-09-10-area-grouping-design.md](../specs/2026-09-10-area-grouping-design.md) — Phase 2b implements its "nominal code list lives on the cost centre edit page, owned by that centre's finance admin" resolution and the find-or-create half of Option D.
 
-**Phase 2a shipped and merged at `f058541e`** (36 commits). Its execution ledger, every ruling and all thirteen reviews are at `.superpowers/sdd/2026-09-10-area-grouping-phase-2a/`. **Read `final-review.md` and `final-rereview.md` before Task 6** — the two Criticals they found are the reason Task 6 exists.
+**Phase 2a shipped and merged at `f058541e`** (36 commits). Its execution ledger, every ruling and all thirteen reviews are at `.superpowers/sdd/2026-09-10-area-grouping-phase-2a/`. **Read `final-review.md` and `final-rereview.md` before Tasks 6 and 7** — Task 6 changes the matcher those reviews hardened, and the two Criticals they found are the reason Task 7 exists.
 
 ## Global Constraints
 
@@ -49,6 +49,7 @@
 | `app/controllers/admin/reimbursements/nominal_codes_controller.rb` | maintenance, nested under the cost centre it belongs to |
 | `app/views/admin/reimbursements/settings/_nominal_codes.html.erb` | the list + add/remove, on the Settings page that already edits cost centres |
 | `app/services/reimbursements/budget_finder.rb` | find-or-create a budget for `(area, code)` |
+| `app/models/reimbursements/budget_import.rb` | the sheet's Area cell disambiguates a loose line from an area's |
 | `app/models/reimbursements/area.rb` | `budget_basis` — a spend cap or a net allowance — and the arithmetic it governs |
 | `db/migrate/*_add_budget_basis_to_reimbursements_areas.rb` | the column, defaulting to `expenses` |
 | `app/controllers/admin/reimbursements/budgets_controller.rb` | the owner-discard fix (Phase 2a M8) |
@@ -490,7 +491,108 @@ browser test clicking the real control and asserting the card's label changes.
 
 ---
 
-### Task 6: The five debts Phase 2a left behind
+### Task 6: A loose line and an area's line of the same name are TWO lines
+
+**Files:**
+- Modify: `app/models/reimbursements/budget_import.rb`
+- Test: `test/models/reimbursements/budget_import_test.rb`, `test/functional/admin/reimbursements/budget_imports_controller_test.rb`, `test/system/admin/reimbursements/budget_import_js_test.rb`
+
+**Interfaces:**
+- Changes: `#row_key` / the `name_spellings` alias resolution, and the message a genuinely ambiguous row gets.
+
+**Mick's resolution (2026-09-11):** a loose `Marketing` and Cogito's `Marketing` are **legitimately two lines**.
+Phase 2a refuses a sheet carrying both — deliberately, as a holding position, because I would not let a fix
+round decide it. It is decided now.
+
+**This is the most dangerous function in the portal, so read before you touch.** `BudgetImport`'s matching
+decides which bucket every row lands in, and getting it wrong either splits a show's spend across a duplicate
+line (with a fresh `initial_budget`, since that is written only on create) or silently merges two lines that
+should be distinct. Phase 2a's `final-review.md` and both `task-6-*` reviews in
+`.superpowers/sdd/2026-09-10-area-grouping-phase-2a/` are the context; the two-spelling matcher and
+`#flag_shared_budgets` are the machinery you are changing.
+
+**The rule this task implements — the sheet's Area CELL is what disambiguates:**
+
+| Sheet row | Resolves to |
+|---|---|
+| Area cell names `Cogito`, budget `Marketing` | Cogito's `Marketing` |
+| Area cell blank, budget `Cogito: Marketing` | Cogito's `Marketing` (the prefix names the area) |
+| Area cell blank, budget `Marketing`, an area-LESS `Marketing` exists | the area-less one |
+| Area cell blank, budget `Marketing`, only area-bound candidates exist | **BLOCKS** — the sheet does not say which |
+
+The fourth row is the one that must keep blocking. It is the old sheet's shape, and the sheet genuinely does
+not carry the information; guessing there is how 17 lines duplicate.
+
+**What this replaces:** fix round 2's I2 made an area-less row "also answer to the bare name it would have
+under each area the sheet names", so any sheet carrying both spellings blocked. That was the safe holding
+position and it is now wrong — remove it, and keep `#flag_shared_budgets` (two sheet rows reaching ONE stored
+line is still a defect, whatever their spelling).
+
+- [ ] **Step 1: Write the failing test**
+
+```ruby
+test "a loose line and an area's line of the same name are two lines, not a collision" do
+  cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+  in_area = create_reimbursements_budget(name: "Marketing", area: cogito,
+                                         cost_centre: @cost_centre, financial_year: @year)
+  loose = create_reimbursements_budget(name: "Marketing", cost_centre: @cost_centre,
+                                       financial_year: @year)
+
+  import = build_import(<<~TSV, existing_budgets: [ in_area, loose ], existing_areas: [ cogito ])
+    Area\tBudget\tNominal code\tType\tAmount
+    Cogito\tMarketing\t432320\tExpense\t400
+    \tMarketing\t432320\tExpense\t900
+  TSV
+
+  assert import.valid?, "the committee may run a show line and a general line of one name"
+  assert_equal 2, import.entries_in(:revise).size
+  assert_equal [ in_area.record_id, loose.record_id ].sort,
+               import.entries_in(:revise).map { |e| e.budget.record_id }.sort
+end
+
+test "a bare name with no area cell still blocks when only area-bound lines could match" do
+  cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+  improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                          financial_year: @year)
+  create_reimbursements_budget(name: "Marketing", area: cogito,
+                               cost_centre: @cost_centre, financial_year: @year)
+  create_reimbursements_budget(name: "Marketing", area: improverts,
+                               cost_centre: @cost_centre, financial_year: @year)
+
+  import = build_import(<<~TSV, existing_areas: [ cogito, improverts ],
+                        existing_budgets: ::Reimbursements::Budget.all.to_a)
+    Budget\tNominal code\tType\tAmount
+    Marketing\t432320\tExpense\t400
+  TSV
+
+  assert_not import.valid?, "the sheet does not say which show this is"
+end
+```
+
+- [ ] **Step 2: Run them and watch the first fail**
+
+Run: `flock /tmp/bl-test.lock -c 'bin/rails test test/models/reimbursements/budget_import_test.rb -n /two_lines|only_area.bound/'`
+Expected: the first FAILS (currently blocked), the second PASSES already — say so in the report if it does not.
+
+- [ ] **Step 3: Implement**
+
+Take the alias narrowing, not a widening: an area-less sheet row should stop claiming the keys it would have
+under each area the sheet names. Keep `#flag_shared_budgets`, keep the blocking message truthful, and keep the
+old prefixed sheet working — **the no-Area-column re-import test from Phase 2a is the regression that matters
+most here**, because it is the committee's real file.
+
+- [ ] **Step 4: Every existing importer test still passes unmodified**
+
+If one has to change, it pinned the holding position this task replaces: name it in the report, and say what
+it asserted before. **No other test may be touched.**
+
+- [ ] **Step 5: Both suites, then `hk`**
+
+- [ ] **Step 6: Commit**
+
+---
+
+### Task 7: The five debts Phase 2a left behind
 
 **This task is the reason to read Phase 2a's `final-review.md` first.** Each item below was found, ruled on, and deliberately deferred — none is a new idea.
 
@@ -519,7 +621,7 @@ Read them from `progress.md` rather than this list: `AreaRollup#by_type`'s child
 
 ---
 
-### Task 7: Close the rename's rollback window — LAST, and only on Mick's word
+### Task 8: Close the rename's rollback window — LAST, and only on Mick's word
 
 **Files:**
 - Create: `db/migrate/<stamp>_drop_name_before_area_rename.rb`
@@ -547,6 +649,9 @@ Read them from `progress.md` rather than this list: `AreaRollup#by_type`'s child
 - **Is an area's agreed total an EXPENSE budget? — BOTH, and the area says which** (Mick, 2026-09-11). A show
   gets a spend cap regardless of what it earns; a committee gets a net allowance that money it raises genuinely
   increases. **Task 5** implements it and deletes Phase 2a's suppression.
+- **Are a loose `Marketing` and Cogito's `Marketing` two lines? — YES, legitimately** (Mick, 2026-09-11).
+  Phase 2a refuses a sheet carrying both as a holding position; **Task 6** makes the sheet's Area cell the
+  thing that disambiguates, and keeps blocking only the case where the sheet genuinely does not say.
 - **What separates an area from its line in a displayed name? — a COLON**, not a dash (Mick, 2026-09-11;
   shipped in `a78c7703`). It turned out to be correctness rather than style: a colon is what
   `BudgetImport.bare_name` splits on, so a label copied off a screen into the committee's spreadsheet resolves
@@ -554,5 +659,4 @@ Read them from `progress.md` rather than this list: `AreaRollup#by_type`'s child
 
 ## Open questions for Mick
 
-1. **Are a loose `Marketing` and Cogito's `Marketing` legitimately two lines?** Phase 2a blocks a sheet carrying both, which is safe but refuses a sheet the committee might reasonably write. Option D's end state suggests yes, they are distinct.
-2. **Is the mechanical closure worth building?** A test walking every reimbursements screen with two identically-named budgets seeded, failing on any bare name outside a rowgroup heading. Four sweeps each found sites the previous one missed; grepping cannot close that class. Expensive, and nobody has built it.
+1. **Is the mechanical closure worth building?** A test walking every reimbursements screen with two identically-named budgets seeded, failing on any bare name outside a rowgroup heading. Four sweeps each found sites the previous one missed; grepping cannot close that class. Expensive, and nobody has built it.
