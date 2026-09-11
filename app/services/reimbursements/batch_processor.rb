@@ -182,7 +182,7 @@ module Reimbursements
       expenses.each_with_object({}) do |expense, acc|
         acc[expense.record_id] = expense.receipts.each_with_index.map do |receipt, index|
           filename = FilenameSanitizer.build_receipt_filename(
-            bacs_date: bacs_date, budget_name: expense.budget&.name.to_s,
+            bacs_date: bacs_date, budget_name: expense.budget&.display_name.to_s,
             description: expense.description.to_s, original_filename: receipt.filename, index: index + 1
           )
           GraphClient::Attachment.new(
@@ -345,7 +345,7 @@ module Reimbursements
     # false when it failed (collected into result.errors, never raised).
     def deliver_producer_email(result, email, items, bacs_date)
       line_items = items.map do |expense|
-        { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
+        { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
           description: expense.description.to_s }
       end
       @notifier.producer_notification(

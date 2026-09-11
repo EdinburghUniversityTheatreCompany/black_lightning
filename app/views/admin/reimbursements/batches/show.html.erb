@@ -58,7 +58,7 @@
               <td class="py-1 pr-3"><%= expense.auto_number %></td>
               <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
               <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
-              <td class="py-1 pr-3"><%= expense.budget&.name %></td>
+              <td class="py-1 pr-3"><%= expense.budget&.display_name %></td>
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
               <td class="py-1 pr-3">
                 <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)

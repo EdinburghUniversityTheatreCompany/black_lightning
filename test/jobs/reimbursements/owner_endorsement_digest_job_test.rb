@@ -24,6 +24,24 @@ module Reimbursements
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
     end
 
+    # An owner of two shows gets one digest naming "Marketing" twice, and this
+    # email is the only thing that reaches them — see Budget#display_name.
+    test "the digest names the show, not just the category" do
+      # The owner goes on the AREA: Budget#owners reads through it, so a line
+      # in an ownerless area has no sign-off gate at all.
+      area = create_reimbursements_area(name: "Cogito")
+      area.owners << @owner
+      @budget.update!(area: area)
+      awaiting_expense
+
+      ActionMailer::Base.deliveries.clear
+      OwnerEndorsementDigestJob.perform_now
+
+      mail = ActionMailer::Base.deliveries.sole
+      assert_includes mail.html_part.body.to_s, "Cogito — Props"
+      assert_includes mail.text_part.body.to_s, "Cogito — Props"
+    end
+
     test "sends nothing when no pending claim awaits endorsement" do
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
     end

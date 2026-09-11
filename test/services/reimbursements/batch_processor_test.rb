@@ -206,6 +206,23 @@ module Reimbursements
       assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 
+    # Three shows' receipts landed in one SharePoint folder differing only by
+    # description, and the producer's own email named a category with no show.
+    # Everything here reads Budget#display_name.
+    test "a batch's receipt filenames, producer email and EUSA draft all name the show" do
+      processor, store, graph = build_scenario
+      @budget.update!(area: create_reimbursements_area(name: "Cogito"))
+
+      run_batch(processor, store)
+
+      graph.uploaded.reject { |upload| upload[:filename].end_with?(".xlsx") }.each do |upload|
+        assert_includes upload[:filename], "Cogito — Props",
+                        "a receipt filename that names no show is indistinguishable from another show's"
+      end
+      assert_includes graph.send_mails.first[:html], "Cogito — Props"
+      assert_includes graph.drafts.sole[:html], "Cogito — Props"
+    end
+
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
       processor, store, graph = build_scenario
       graph.fail_draft = true

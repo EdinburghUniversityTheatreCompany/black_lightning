@@ -70,7 +70,7 @@
                       pill: true).with_content(entry.row[:status]) %>
               </td>
               <td class="py-1 pr-4"><%= entry.person.name %></td>
-              <td class="py-1 pr-4"><%= entry.budget.name %></td>
+              <td class="py-1 pr-4"><%= entry.budget.display_name %></td>
               <td class="py-1 pr-4 text-right"><%= number_to_currency(entry.row[:amount], unit: "£") %></td>
               <td class="py-1 pr-4"><%= entry.row[:description] %></td>
             </tr>

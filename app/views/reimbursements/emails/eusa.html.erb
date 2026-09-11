@@ -32,7 +32,7 @@
       <tr>
         <td><%= expense.effective_payee_name %></td>
         <td><%= reimbursements_payment_amount(expense) %></td>
-        <td><%= expense.budget&.name %></td>
+        <td><%= expense.budget&.display_name %></td>
         <td><%= expense.effective_nominal_code %></td>
         <td><%= expense.description %></td>
       </tr>

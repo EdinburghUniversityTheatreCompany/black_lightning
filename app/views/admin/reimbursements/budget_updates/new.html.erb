@@ -42,7 +42,7 @@
           <% error = @field_errors[budget.record_id] %>
           <% error_id = "amount-error-#{budget.record_id}" %>
           <tr class="border-b border-gray-100">
-            <td class="py-2 pr-3"><%= budget.name.presence || "-" %></td>
+            <td class="py-2 pr-3"><%= budget.display_name.presence || "-" %></td>
             <td class="py-2 pr-3 whitespace-nowrap"><%= budget.nominal_code.presence || "-" %></td>
             <td class="py-2 pr-3 text-right"><%= reimbursements_money(budget.current_forecast) %></td>
             <td class="py-2 text-right">
@@ -52,7 +52,7 @@
               <div class="ml-auto w-40">
                 <%= text_field_tag field_name, @amounts[budget.record_id],
                       inputmode: "decimal",
-                      "aria-label": "New forecast for #{budget.name}",
+                      "aria-label": "New forecast for #{budget.display_name}",
                       "aria-invalid": error.present?.to_s,
                       "aria-describedby": (error_id if error),
                       class: input_classes("text-right", (FormStyles::INVALID if error)) %>

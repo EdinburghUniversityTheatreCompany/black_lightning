@@ -121,9 +121,9 @@
                                  maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT, class: input_classes %>
             <% end %>
             <%= render "shared/form/field", label: "Budget", name: :budget_record_id do %>
-              <% budget_options = @budgets.map { |b| [ b.name, b.record_id ] } %>
+              <% budget_options = @budgets.map { |b| [ b.display_name, b.record_id ] } %>
               <% if @expense.budget && @expense.budget.record_id.present? && budget_options.none? { |_, id| id == @expense.budget.record_id } %>
-                <% budget_options.unshift([ @expense.budget.name, @expense.budget.record_id ]) %>
+                <% budget_options.unshift([ @expense.budget.display_name, @expense.budget.record_id ]) %>
               <% end %>
               <%= select_tag :budget_record_id,
                              options_for_select(budget_options, @expense.budget&.record_id),

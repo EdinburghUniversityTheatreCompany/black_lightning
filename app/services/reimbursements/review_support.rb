@@ -21,10 +21,13 @@ module Reimbursements
       ATTENTION_STATUSES.include?(expense.status)
     end
 
-    # A BACS-safe payment reference from a budget name: drop anything that isn't
-    # alphanumeric/space/hyphen, cap at 18 chars, then trim.
+    # A BACS-safe payment reference from a budget's display name: drop anything
+    # that isn't alphanumeric/space/hyphen, collapse the runs of spaces that
+    # leaves, cap at 18 chars, then trim. It is fed Budget#display_name, whose
+    # em dash drops out as a space — so "Cogito — Marketing" reads
+    # "Cogito Marketing", which is what EUSA saw before the prefix strip.
     def auto_payment_reference(budget_name)
-      budget_name.to_s.gsub(BACS_SAFE_PATTERN, "")[0, BACS_MAX_LEN].to_s.strip
+      budget_name.to_s.gsub(BACS_SAFE_PATTERN, "").squeeze(" ")[0, BACS_MAX_LEN].to_s.strip
     end
 
     # True if an expense has issues to resolve before approving. Thin wrapper over

@@ -207,6 +207,10 @@ module Reimbursements
       budgets.map { |budget| budget_label(budget, qualified: true) }
     end
 
+    # NOT the display name a screen shows (Budget#display_name): this is the
+    # importer's ambiguity wording, which has to name the area SEPARATELY so
+    # "in no area" reads as a sentence and a colliding area can be qualified
+    # by its year and centre.
     def self.budget_label(budget, qualified: false)
       return "#{budget.name.inspect} in no area" if budget.area.nil?
 

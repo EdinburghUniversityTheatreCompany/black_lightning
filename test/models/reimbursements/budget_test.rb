@@ -219,5 +219,27 @@ module Reimbursements
       # max is 0 (never below reality, and reality here is "nothing yet").
       assert_equal 0, build_budget.expected_outturn
     end
+
+    # --- display_name --------------------------------------------------------
+    # The ONE composition every screen, reminder, email and receipt filename
+    # reads. Stripping the "Area: " prefix left three live Fringe lines all
+    # called "Marketing" on one nominal code.
+
+    test "display_name names the area a line belongs to" do
+      area = Area.create!(name: "Cogito")
+      assert_equal "Cogito — Marketing", build_budget(name: "Marketing", area: area).display_name
+    end
+
+    test "display_name is the bare name for a line in no area" do
+      assert_equal "Props", build_budget.display_name
+    end
+
+    test "display_name tells two identically-named lines apart" do
+      cogito = build_budget(name: "Marketing", area: Area.create!(name: "Cogito"))
+      improverts = build_budget(name: "Marketing", area: Area.create!(name: "Improverts"))
+
+      assert_equal cogito.name, improverts.name
+      assert_not_equal cogito.display_name, improverts.display_name
+    end
   end
 end

@@ -34,7 +34,7 @@
 
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :budget_record_id, label: "Budget", required: true,
-          collection: @budgets.map { |budget| [ budget.name, budget.record_id ] },
+          collection: @budgets.map { |budget| [ budget.display_name, budget.record_id ] },
           include_blank: "Pick a budget",
           hint: "Which budget this cost comes out of." %>
     <%= f.input :description, label: "Description",

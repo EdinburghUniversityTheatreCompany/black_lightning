@@ -148,6 +148,23 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
+    # An owner of two shows is told "Marketing" twice with nothing to say which
+    # claim belongs to which, and this reminder is the only thing that reaches
+    # them — see Budget#display_name.
+    test "the owner reminder names the show, not just the category" do
+      # The owner goes on the AREA: Budget#owners reads through it, so a line
+      # in an ownerless area has no sign-off gate at all.
+      area = create_reimbursements_area(name: "Cogito")
+      area.owners << owner_person
+      owned_budget.update!(area: area)
+      gated_pending(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
+      assert_equal "Cogito — Owned Set", reminder[:rows].sole[:budget_name]
+    end
+
     test "a claim awaiting sign-off is reminded with no age threshold" do
       # Submitted today: finance's reminder waits PENDING_REMINDER_DAYS, but a
       # claim newly assigned to an owner is reminded on the first due run-day.

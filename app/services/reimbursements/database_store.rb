@@ -57,8 +57,12 @@ module Reimbursements
     # The payee's payment_details ride along: every attention/BACS check asks an
     # expense for its EFFECTIVE bank details, which falls through to the linked
     # person, so without this a 150-payee workbook paid 150 extra queries.
+    #
+    # The budget's AREA rides along for the same reason: every screen, reminder
+    # and receipt filename names a claim's budget through Budget#display_name,
+    # which reads it.
     def expenses
-      @expenses ||= Expense.includes(:budget, :batch, person: :payment_details)
+      @expenses ||= Expense.includes(:batch, budget: :area, person: :payment_details)
                            .with_attached_receipt_files.to_a
     end
 
@@ -101,7 +105,7 @@ module Reimbursements
     end
 
     def find_expense(record_id)
-      Expense.includes(:person, :budget, :batch).find_by(id: record_id)
+      Expense.includes(:person, :batch, budget: :area).find_by(id: record_id)
     end
     alias find_expense! find_expense
 
@@ -191,8 +195,13 @@ module Reimbursements
     # and the finance expense-edit form draw from: narrowing it to whichever
     # centre finance happens to have selected would quietly stop a producer
     # filing against the other one.
+    # Ordered by the name the pickers PRINT (Budget#display_name), not the bare
+    # one: three shows each running a "Marketing" line sort adjacent under the
+    # bare name, so the visible labels read out of order in every select this
+    # builds. Order is presentation only — ExpenseForm validates against the
+    # ids, never the position.
     def active_budgets
-      in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:name)
+      in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:display_name)
     end
 
     # Every area, every year — an id->record lookup, for exactly the reason

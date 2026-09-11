@@ -78,7 +78,7 @@ module Admin
       end
 
       def edit
-        @title = "Budget: #{@budget.name}"
+        @title = "Budget: #{@budget.display_name}"
         @people = store.people
         # The budget's OWN area is always offered, however the page is scoped.
         # areas_for_year is year- and cost-centre-scoped while area_id writes

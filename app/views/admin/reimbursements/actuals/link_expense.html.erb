@@ -55,7 +55,7 @@
                     type: Reimbursements::Status.badge_variant(expense.status), pill: true
                   ).with_content(expense.status) %>
               <span class="block text-gray-600">
-                <%= expense.budget&.name.presence || "(no budget)" %>
+                <%= expense.budget&.display_name.presence || "(no budget)" %>
                 <%= "- #{expense.description}" if expense.description.present? %>
               </span>
             </span>

@@ -18,7 +18,7 @@
 
   <% @budgets.each do |budget| %>
     <% expenses = @expenses_by_budget.fetch(budget.record_id, []) %>
-    <%= render CardComponent.new(title: budget.name.presence || budget.record_id, html_class: "mb-4") do %>
+    <%= render CardComponent.new(title: budget.display_name.presence || budget.record_id, html_class: "mb-4") do %>
       <% if budget.remaining %>
         <p class="mb-3 text-sm text-gray-600">
           Remaining:

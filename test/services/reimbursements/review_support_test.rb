@@ -305,8 +305,18 @@ module Reimbursements
       assert_equal "A very long budget", result
     end
 
-    test "special chars stripped before truncation" do
-      assert_equal "Show  Tell", ReviewSupport.auto_payment_reference("Show & Tell")
+    # Was "Show  Tell": the gsub leaves a space either side of what it dropped,
+    # and #auto_payment_reference now collapses that run — a double space wastes
+    # one of the 18 characters EUSA reads.
+    test "special chars stripped before truncation, and the gap they leave collapsed" do
+      assert_equal "Show Tell", ReviewSupport.auto_payment_reference("Show & Tell")
+    end
+
+    # It is fed Budget#display_name, whose em dash is not BACS-safe: three
+    # shows' "Marketing" lines otherwise derive one identical reference, and
+    # the reference is what a payment is reconciled back to a claim by.
+    test "an area-qualified budget name reads as the show and the line" do
+      assert_equal "Cogito Marketing", ReviewSupport.auto_payment_reference("Cogito — Marketing")
     end
 
     test "colon and bang stripped and truncated" do

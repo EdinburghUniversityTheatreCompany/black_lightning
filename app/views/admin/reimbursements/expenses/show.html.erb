@@ -18,7 +18,7 @@
   <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
     <div><dt class="text-gray-500">Amount</dt><dd class="font-medium"><%= reimbursements_money(@expense.amount) %></dd></div>
     <div><dt class="text-gray-500">Amount excl. VAT</dt><dd class="font-medium"><%= reimbursements_money(@expense.amount_excl_vat) %></dd></div>
-    <div><dt class="text-gray-500">Budget</dt><dd class="font-medium"><%= reimbursements_value(@expense.budget&.name) %></dd></div>
+    <div><dt class="text-gray-500">Budget</dt><dd class="font-medium"><%= reimbursements_value(@expense.budget&.display_name) %></dd></div>
     <div><dt class="text-gray-500">Payment reference</dt><dd class="font-medium"><%= reimbursements_value(@expense.payment_reference) %></dd></div>
     <div><dt class="text-gray-500">Created</dt><dd class="font-medium"><%= reimbursements_date(@expense.submitted_at) %></dd></div>
     <% if @expense.payment_confirmed_date.present? %>

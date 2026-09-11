@@ -431,7 +431,7 @@ module Admin
       end
 
       def apply_credit_row(entry, budget, imported_at)
-        with_row_rescue("budget #{budget.name}") do
+        with_row_rescue("budget #{budget.display_name}") do
           actual = store.create_actual!(actuals_attrs(entry, imported_at))
           store.link_actual_to_budget!(actual.record_id, budget.record_id)
         end

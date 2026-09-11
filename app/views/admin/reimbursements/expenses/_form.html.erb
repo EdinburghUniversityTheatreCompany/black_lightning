@@ -170,7 +170,7 @@
         but leave client-side enforcement off (input_html required: false) so
         the "Save as draft" path and server-side validation keep working. %>
     <%= f.input :budget_record_id, label: "Budget", required: true,
-          collection: budgets.map { |b| [ b.name, b.record_id ] },
+          collection: budgets.map { |b| [ b.display_name, b.record_id ] },
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
           input_html: { required: false } %>

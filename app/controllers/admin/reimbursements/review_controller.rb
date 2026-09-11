@@ -291,8 +291,14 @@ module Admin
         attrs = { status: ::Reimbursements::Status::APPROVED }
         # expense.budget is already guaranteed present here (approve_blocker's
         # :skipped_no_budget guard returns early otherwise), so no nil re-check.
+        # display_name, not the bare name: three shows' "Marketing" lines
+        # derived one identical reference after the prefix strip, and the
+        # reference is what EUSA reconciles a payment back to a claim by.
+        # Only ever written for a claim that arrived without one (email-in, an
+        # actuals conversion, an import) — a stored reference is never
+        # recomputed, so nothing EUSA has already seen changes.
         if expense.payment_reference.to_s.strip.empty?
-          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
+          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.display_name)
           attrs[:payment_reference] = reference if reference.present?
         end
         store.update_expense!(expense.record_id, attrs)

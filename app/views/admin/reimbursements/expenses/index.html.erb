@@ -59,7 +59,7 @@
            expense,
            status,
            description,
-           expense.budget ? expense.budget.name : content_tag(:span, "No budget yet", class: "text-gray-500"),
+           expense.budget ? expense.budget.display_name : content_tag(:span, "No budget yet", class: "text-gray-500"),
            reimbursements_money(expense.amount),
            reimbursements_date(expense.submitted_at),
            expense.receipt_count,

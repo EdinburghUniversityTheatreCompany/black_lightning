@@ -1,7 +1,7 @@
 <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
 <%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch do |form| %>
-  <%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do |card| %>
+  <%= render CardComponent.new(title: "Edit #{@budget.display_name.presence || 'budget'}") do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
     <% end %>

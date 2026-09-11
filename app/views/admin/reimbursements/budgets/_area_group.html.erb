@@ -44,7 +44,7 @@
     </th>
   </tr>
   <%= render partial: "admin/reimbursements/budgets/overview_budget_row",
-        collection: rollup.rows, as: :budget %>
+        collection: rollup.rows, as: :budget, locals: { name_area: false } %>
   <%# One subtotal per budget type in the group: an area holding both an
       expense and an income line has no single meaningful subtotal. %>
   <% rollup.by_type.each do |subtotal| %>

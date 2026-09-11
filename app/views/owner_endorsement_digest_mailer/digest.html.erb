@@ -20,7 +20,7 @@
     <% @expenses.each do |expense| %>
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">#<%= expense.auto_number %></td>
-        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.budget&.name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.budget&.display_name %></td>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.effective_payee_name %></td>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right;"><%= number_to_currency(expense.amount, unit: "£") %></td>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.description %></td>

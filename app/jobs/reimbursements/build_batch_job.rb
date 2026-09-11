@@ -147,7 +147,7 @@ module Reimbursements
     def notification_rows(expenses)
       expenses.map do |expense|
         { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
-          amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
+          amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
           description: expense.description.to_s }
       end
     end

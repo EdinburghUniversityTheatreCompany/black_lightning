@@ -1,7 +1,10 @@
-<%# locals: (budget:) %>
+<%# locals: (budget:, name_area: true) %>
+<%# name_area: false only where the AREA is already the heading above this row
+    (_area_group). The nominal-code card groups by code, where three shows'
+    "Marketing" lines sit under 432320 with nothing to tell them apart. %>
 <tr>
   <td>
-    <%= link_to budget.name.presence || "-",
+    <%= link_to (name_area ? budget.display_name : budget.name).presence || "-",
           edit_admin_reimbursements_budget_path(budget.record_id),
           class: "text-primary underline" %>
     <% unless budget.active %>

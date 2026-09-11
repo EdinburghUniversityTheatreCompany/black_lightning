@@ -20,7 +20,7 @@
     <div>
       <%= label_tag :budget, "Budget", class: FormStyles::LABEL %>
       <%= select_tag :budget,
-                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.name, b.record_id ] }, @budget_filter),
+                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.display_name, b.record_id ] }, @budget_filter),
                      class: input_classes(width: "w-44") %>
     </div>
     <div>
@@ -96,7 +96,7 @@
          fields: [
            expense, number, status,
            expense.effective_payee_name.presence || "-",
-           expense.budget&.name.presence || "-",
+           expense.budget&.display_name.presence || "-",
            amount,
            truncate(expense.description.to_s, length: 60),
            content_tag(:span, reimbursements_date(expense.submitted_at), class: "whitespace-nowrap"),

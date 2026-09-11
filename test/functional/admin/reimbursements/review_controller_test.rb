@@ -647,6 +647,19 @@ module Admin
         assert_equal "Props", expense.payment_reference
       end
 
+      # Post-rename three shows' lines are all called "Marketing", so the
+      # auto-derived reference has to carry the show — it is written onto the
+      # BACS spreadsheet EUSA reconciles against.
+      test "the auto-filled reference names the show when the budget is in an area" do
+        @budget.update!(area: create_reimbursements_area(name: "Cogito"))
+        expense = pending_expense(payment_reference: "")
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_equal "Cogito Props", expense.reload.payment_reference
+      end
+
       test "approve keeps an existing payment reference" do
         expense = pending_expense(payment_reference: "KEEPME")
         sign_in @user

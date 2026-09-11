@@ -36,7 +36,7 @@ module Admin
           greeting_name: ::Reimbursements::GreetingName.for(expense.person),
           auto_number: expense.auto_number,
           amount: expense.amount.to_f,
-          budget_name: expense.budget&.name.to_s,
+          budget_name: expense.budget&.display_name.to_s,
           description: expense.description.to_s,
           reason: reason
         )
