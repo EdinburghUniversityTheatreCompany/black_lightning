@@ -348,11 +348,18 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The backfill is a SERVICE, not migration code** (`Reimbursements::AreaBackfill`), because
     test/CI databases are schema-loaded so a data migration never runs there and could never be
     tested. Its `down` REFUSES when the area tree shows signs of hand-editing.
-  - **Area figures must be read off `store.areas`** (unscoped, preloads
+  - **Area figures must be read off `store.areas`** (unscoped, preloads `:forecasts` and
     `budgets: [:expenses, :forecasts]`), never off `budget.area` — whose `budgets` collection
-    is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31).
+    is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31). The
+    area's OWN forecasts are in that preload because `Area#projected_amount` reads its forecast
+    log, which is a query per area on every screen showing an agreed total.
   - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
     paginated and scoped — the row states when fewer lines are visible than exist.
+  - **The overview's area card totals the budgets the SCREEN is scoped to** (`AreaRollup`, the
+    same budgets the nominal-code card totals), while the agreed total and "not yet allocated"
+    beside it come off the area and count every line ever linked to it. A budget CAN hold an
+    area from another year, so the heading states the gap ("2 of 3 lines shown…") rather than
+    dropping that spend or folding it in. `RollupTotals` is the arithmetic both cards share.
   - **Area names are unique within one (financial year, cost centre)** by model validation —
     the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
     NULLs through a unique index, and an area with no year/centre yet has NULLs in both.
