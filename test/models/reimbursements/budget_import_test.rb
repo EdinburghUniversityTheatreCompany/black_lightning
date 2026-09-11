@@ -1523,16 +1523,20 @@ module Reimbursements
       assert_equal [ loose.record_id ], import.superseded_absent_budgets.map(&:record_id)
     end
 
-    # The legitimate pair must not be flagged: a show's "Marketing" created
-    # beside a standing one is exactly what the ruling allows.
+    # The legitimate pair must NOT be flagged: a show's "Marketing" created
+    # beside a standing one is exactly what the ruling allows. The absent line
+    # has to carry the area as a prefix of its OWN name, not merely share the
+    # bare name the create resolved to — which is the same string.
     test "an absent line that carries no prefix is not reported as superseded" do
       cogito = area_named("Cogito")
       loose = create_reimbursements_budget(name: "Marketing", initial_budget: 400,
                                            financial_year: @year, cost_centre: @cost_centre)
 
-      import = build_import(area_sheet("Cogito", "Props"),
+      import = build_import(area_sheet("Cogito", "Cogito: Marketing"),
                             existing_budgets: [ loose ], existing_areas: [ cogito ])
 
+      assert_equal [ "Marketing" ], import.creates.map { |create| create[:name] },
+                   "the create resolves to the same bare name the loose line already has"
       assert_equal [ loose.record_id ], import.absent_budgets.map(&:record_id)
       assert_empty import.superseded_absent_budgets
     end
