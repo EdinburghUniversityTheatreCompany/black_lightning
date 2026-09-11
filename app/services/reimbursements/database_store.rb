@@ -993,7 +993,7 @@ module Reimbursements
       end
     end
 
-    AREA_FIELDS = %i[name initial_budget notes active cost_centre financial_year].freeze
+    AREA_FIELDS = %i[name initial_budget budget_basis notes active cost_centre financial_year].freeze
 
     def area_columns(attrs)
       attrs.slice(*AREA_FIELDS).compact

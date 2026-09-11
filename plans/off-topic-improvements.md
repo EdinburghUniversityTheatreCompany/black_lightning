@@ -634,3 +634,21 @@ screens (an operator retypes; no producer loses a claim), which is why it was le
 A Person deleted between a budget form being drawn and saved gets the same pre-flight check and
 the same unnamed foreign-key 500 behind it. `BudgetGoneError`'s sibling (`PersonGoneError`, or a
 shared `LinkGoneError`) would let the budget forms re-render instead. Not hit in production yet.
+
+### Radio buttons render as squares, so a radio pair reads as two checkboxes
+
+`simple_form`'s `:vertical_collection` wrapper (and the admin `tailwind_horizontal_collection`
+beside it) applies `FormStyles::CHECKBOX` to `radio_buttons` as well as `check_boxes`, and that
+constant carries Tailwind's `rounded` — which overrides the native circle. So the area form's
+"Total expenses / Total net" pair (and `application/_answer_fields`' Yes/No) renders as a filled
+SQUARE next to real checkboxes on the same form, and nothing on screen says the two options are
+mutually exclusive. The fix is a `FormStyles::RADIO` (`rounded-full`) plus a collection wrapper
+mapped for `radio_buttons` only; left alone here because it restyles every existing radio in the
+app, which is a wider change than the area basis it was noticed on.
+
+### `Reimbursements::Area#income?` has no callers
+
+`budgets.any?(&:income?)`, added with the model and never read — the Phase 2a suppression it
+would have suited went through `AreaRollup#mixed_budget_types?` instead, and Task 5 replaced
+that with the declared basis. `debride` does not flag it (an AR model's public reader), so it
+will sit there until someone deletes it.

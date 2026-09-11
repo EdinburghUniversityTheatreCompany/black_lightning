@@ -50,6 +50,17 @@ module Admin
         assert_equal [ alice.record_id ], area.reload.owner_ids
       end
 
+      # The store's own column allow-list, not the controller's: a field the
+      # controller reads and DatabaseStore::AREA_FIELDS does not list is
+      # dropped in silence, so a committee area created as a net allowance
+      # would come back a spend cap with nothing on screen saying so.
+      test "an area created as a net allowance is not silently a spend cap" do
+        post :create, params: { name: "Committee", initial_budget: "1000",
+                                budget_basis: "net" }
+
+        assert_equal "net", ::Reimbursements::Area.order(:id).last.budget_basis
+      end
+
       test "the form switches an area between a spend cap and a net allowance" do
         area = create_reimbursements_area(name: "Committee")
         assert_equal "expenses", area.budget_basis, "a backfilled area is a spend cap"
