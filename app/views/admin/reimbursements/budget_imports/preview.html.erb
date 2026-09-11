@@ -185,22 +185,47 @@
         </p>
         <p>
           Leave a line ticked to follow the sheet. Untick it if somebody moved that line on
-          purpose — nothing else about the line changes either way.
+          purpose — an unticked line stays where it is, and an area nothing lands in isn't
+          created at all.
         </p>
         <%# Always posted, so an untick is a real "no" rather than a missing parameter. %>
         <%= hidden_field_tag "re_home_budget_ids[]", "", id: nil %>
-        <ul class="mt-2 space-y-1">
+        <ul class="mt-2 space-y-2">
           <% @import.re_homes.each do |re_home| %>
             <% checkbox_id = "re-home-#{re_home[:key]}" %>
-            <li class="flex items-center gap-2">
+            <li class="flex items-start gap-2">
               <%# Keyed by BUDGET ID, not row position: a re-import with the
                   rows reordered must not land this tick on a different line. %>
               <%= check_box_tag "re_home_budget_ids[]", re_home[:key], true,
-                                id: checkbox_id, class: checkbox_classes %>
-              <%= label_tag checkbox_id, class: "cursor-pointer" do %>
-                <strong><%= re_home[:budget_name] %></strong> —
-                <%= re_home[:from_area_name].presence || "no area" %> &rarr; <%= re_home[:to_area_name] %>
-              <% end %>
+                                id: checkbox_id, class: "#{checkbox_classes} mt-0.5" %>
+              <div>
+                <%= label_tag checkbox_id, class: "cursor-pointer" do %>
+                  <strong><%= re_home[:budget_name] %></strong> —
+                  <%= re_home[:from_area_name].presence || "no area" %>
+                  <%# Qualified only when the names would otherwise read
+                      "Cogito -> Cogito": the FROM side when that area sits
+                      outside this import's year or cost centre, the TO side
+                      when this import is about to create it. %>
+                  <% if re_home[:from_area_scope] %>
+                    <span class="text-gray-600">(<%= re_home[:from_area_scope] %>)</span>
+                  <% end %>
+                  &rarr; <%= re_home[:to_area_name] %>
+                  <% if re_home[:to_area_is_new] %>
+                    <span class="text-gray-600">(new)</span>
+                  <% end %>
+                <% end %>
+                <%# The third way into an area, and the only silent one — and the
+                    one that moves many lines at once. Budget#owners resolves
+                    THROUGH the area, so a line landing in an ownerless area
+                    stops needing endorsement; said in the same words the area
+                    form and the budget form already use. %>
+                <% unless re_home[:to_area_has_owners] %>
+                  <p class="mt-1 text-sm text-warning">
+                    <%= re_home[:to_area_name] %> names nobody, so claims on this line skip
+                    budget-owner sign-off entirely.
+                  </p>
+                <% end %>
+              </div>
             </li>
           <% end %>
         </ul>

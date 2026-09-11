@@ -6,7 +6,9 @@ module Admin
       include ReimbursementsTestHelpers
 
       FY = ::Reimbursements::FinancialYear
-      HEADERS = "Budget\tNominal code\tType\tAmount\tOwner emails\tNotes".freeze
+      # Derived, so an added column breaks these loudly rather than shifting
+      # every cell one place left in silence — see budget_import_test.rb.
+      HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
       setup do
         finance = Role.create!(name: "Business Manager")
@@ -17,8 +19,10 @@ module Admin
         @cost_centre = ::Reimbursements::CostCentre.default
       end
 
+      # The two leading Area columns are left blank; the area tests write their
+      # own headers.
       def tsv(*rows)
-        ([ HEADERS ] + rows).join("\n")
+        ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
       end
 
       def preview_params(text, **extra)
@@ -409,6 +413,89 @@ module Admin
         end
       end
 
+      # The tick is keyed by budget id, so the rows can arrive in any order —
+      # which is the claim the keying exists to make, and a value assertion
+      # cannot make it.
+      test "a tick follows its budget when the sheet's rows are reordered" do
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+        marketing = marketing_in(improverts)
+        set = create_reimbursements_budget(name: "Cogito: Set", area: improverts,
+                                           initial_budget: 500, cost_centre: @cost_centre,
+                                           financial_year: @year)
+        sign_in @user
+
+        # The opposite order to the sheet the preview rendered its ticks from.
+        post :apply, params: preview_params(
+          "#{AREA_HEADERS}\n" \
+          "Cogito\tCogito: Set\t432320\tExpense\t500\n" \
+          "Cogito\tCogito: Marketing\t432320\tExpense\t400",
+          re_home_budget_ids: [ "", marketing.record_id ]
+        )
+
+        assert_equal cogito.id, marketing.reload.area_id
+        assert_equal improverts.id, set.reload.area_id
+      end
+
+      # An operator who takes the cautious option must not be left with the
+      # empty area the whole bucket exists to prevent.
+      test "unticking every re-home creates no area at all" do
+        budget = marketing_in(nil)
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Area.count } do
+          post :apply, params: preview_params(cogito_sheet, re_home_budget_ids: [ "" ])
+        end
+
+        assert_equal 0, assigns(:result).areas_created
+        assert_equal 0, assigns(:result).re_homed
+        assert_nil budget.reload.area_id
+      end
+
+      # Budget#owners resolves through the area, so a line landing in an
+      # ownerless one stops needing endorsement — said in the words the area
+      # form and the budget form already use.
+      test "preview warns that a re-home into an ownerless area drops the sign-off gate" do
+        marketing_in(nil)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_sheet)
+
+        assert_select "p.text-warning",
+                      text: /Cogito names nobody, so claims on this line skip budget-owner sign-off entirely/
+      end
+
+      test "preview does not warn when the area the sheet names has owners" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year)
+        area.sync_owner_ids!([ create_reimbursements_person(name: "Alice",
+                                                            email: "alice@example.com").id ])
+        marketing_in(nil)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_sheet)
+
+        assert_select "p.text-warning", false
+      end
+
+      # "Cogito → Cogito" would read as a no-op, so the from side names the
+      # year it is stranded in and the to side says it is about to be created.
+      test "preview qualifies a re-home whose from and to areas share a name" do
+        stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                           financial_year: FY.create!(label: "Fringe 2026"))
+        budget = marketing_in(stale)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_sheet)
+
+        assert_select "label[for=?]", "re-home-#{budget.record_id}" do |labels|
+          assert_equal "Cogito: Marketing — Cogito (Fringe 2026) → Cogito (new)",
+                       labels.sole.text.squish
+        end
+      end
+
       # --- Step 3: apply -----------------------------------------------------
 
       test "apply creates the year's budgets" do
@@ -475,7 +562,7 @@ module Admin
       test "an uploaded xlsx survives preview into apply" do
         sign_in @user
         file = fixture_file_upload_xlsx([ HEADERS.split("\t"),
-                                          [ "Props", "4000", "Expense", "1200", "", "" ] ])
+                                          [ "", "", "Props", "4000", "Expense", "1200", "", "" ] ])
 
         post :preview, params: { year: @year.key, cost_centre_id: @cost_centre.id,
                                  file: file }

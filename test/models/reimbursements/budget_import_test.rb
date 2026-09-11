@@ -15,10 +15,29 @@ module Reimbursements
                                                        send_mailbox: "out@x.co")
     end
 
-    HEADERS = "Budget\tNominal code\tType\tAmount\tOwner emails\tNotes".freeze
+    # DERIVED, never retyped. A hardcoded six-column subset here is how Task
+    # 2's Area column shifted every cell one place left and survived two tasks:
+    # these sheets went on matching by header name and said nothing, and only
+    # the system test — the one `bin/rails test` never runs — could catch it.
+    HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
+    # TSV_HEADERS leads with the two AREA columns, so a row stating only a
+    # budget line leaves them blank. The area tests below write their own
+    # headers, because what they are testing IS those two columns.
     def tsv(*rows)
-      ([ HEADERS ] + rows).join("\n")
+      ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
+    end
+
+    # The same padding for an xlsx row, which is an Array, not a String.
+    def xlsx_sheet(*rows)
+      [ HEADERS.split("\t") ] + rows.map { |row| [ "", "" ] + row }
+    end
+
+    # What the two blank cells above are padding PAST. A column inserted before
+    # them shifts every row again, so state the assumption rather than leave it
+    # in a "\t\t" literal.
+    test "the sheet helpers' padding still matches the canonical column order" do
+      assert_equal [ "Area", "Area Budget" ], BudgetImport::TSV_HEADERS.first(2)
     end
 
     def build_import(data, input_type: :paste, existing_budgets: [], existing_areas: [], people: [])
@@ -93,7 +112,7 @@ module Reimbursements
     end
 
     test "reads an uploaded xlsx" do
-      file = xlsx_fixture([ HEADERS.split("\t"), [ "Props", "4000", "Expense", "1200", "", "" ] ])
+      file = xlsx_fixture(xlsx_sheet([ "Props", "4000", "Expense", "1200", "", "" ]))
 
       import = build_import(file, input_type: :xlsx)
 
@@ -373,8 +392,10 @@ module Reimbursements
     # reported and never deleted. Ticked by default, like Reconcile's
     # offsetting pairs; unticking leaves the hand-made grouping alone.
 
-    def cogito_area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                                 financial_year: @year)
+    def area_named(name, financial_year: @year)
+      create_reimbursements_area(name: name, cost_centre: @cost_centre,
+                                 financial_year: financial_year)
+    end
 
     # A "Cogito: Marketing" line and the import of a one-row sheet filing it
     # under +cell+ ("" for a sheet that says nothing). +area+ is where the line
@@ -392,7 +413,7 @@ module Reimbursements
     end
 
     test "a sheet naming a different area than the budget currently has reports a re-home" do
-      cogito = cogito_area
+      cogito = area_named("Cogito")
       improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                               financial_year: @year)
       budget, import = marketing_re_home(area: improverts, existing_areas: [ cogito, improverts ])
@@ -404,7 +425,7 @@ module Reimbursements
     end
 
     test "a line already in the area the sheet names reports no re-home" do
-      cogito = cogito_area
+      cogito = area_named("Cogito")
       _budget, import = marketing_re_home(area: cogito, existing_areas: [ cogito ])
 
       assert_empty import.re_homes
@@ -431,7 +452,7 @@ module Reimbursements
     # A blank cell means "the sheet says nothing", the same reading bucket_for
     # gives a blank Amount — never "move this line out of its area".
     test "a budget in an area whose sheet leaves the Area cell blank is not a re-home" do
-      cogito = cogito_area
+      cogito = area_named("Cogito")
       _budget, import = marketing_re_home(area: cogito, cell: "", existing_areas: [ cogito ])
 
       assert_empty import.re_homes
@@ -457,8 +478,12 @@ module Reimbursements
     # Same buckets as #adoptions and #owner_syncs: a matched line is matched
     # whether or not its figure moved.
     test "a re-home does not depend on the figure having moved" do
-      cogito = cogito_area
-      budget, import = marketing_re_home(initial_budget: 400, existing_areas: [ cogito ])
+      cogito = area_named("Cogito")
+      # A REAL from-area, not the nil default: otherwise this is a second
+      # from-nil test wearing another name, and it dies for that reason too.
+      improverts = area_named("Improverts")
+      budget, import = marketing_re_home(area: improverts, initial_budget: 400,
+                                         existing_areas: [ cogito, improverts ])
 
       assert_equal :unchanged, import.entries.sole.bucket
       assert_equal [ budget.record_id ], import.re_homes.map { |r| r[:budget_id] }
@@ -469,7 +494,7 @@ module Reimbursements
     # Keyed by budget id, not row position: a re-import with the rows reordered
     # must not apply a tick to a different line.
     test "the re-home checkbox key is the budget id" do
-      budget, import = marketing_re_home(existing_areas: [ cogito_area ])
+      budget, import = marketing_re_home(existing_areas: [ area_named("Cogito") ])
 
       assert_equal budget.record_id, import.re_homes.sole[:key]
       assert_equal "Cogito: Marketing", import.re_homes.sole[:budget_name]
@@ -478,12 +503,97 @@ module Reimbursements
     # Case and stray spaces are how a committee retypes an area name, so the
     # same match_key a budget line uses decides whether the line has moved.
     test "a re-typed area name is the same area, not a re-home" do
-      cogito = cogito_area
+      cogito = area_named("Cogito")
       _budget, import = marketing_re_home(area: cogito, cell: "cogito ",
                                           existing_areas: [ cogito ])
 
       assert_empty import.re_homes
     end
+
+    # --- The same name in another year ---------------------------------------
+    # Areas are named per show and shows recur, so "Cogito" exists once per
+    # Fringe — and a budget in THIS year may legitimately hold LAST year's
+    # area: inherit_area_scoping fills blanks only and never checks the year,
+    # and BudgetsController appends the budget's own area to the scoped select
+    # precisely so such a row survives a save. Comparing on the NAME read that
+    # as "already there" and reported nothing, while the line's spend kept
+    # rolling up into the other year's total (Area#committed_amount sums its
+    # budgets with no year filter) and that year's owners kept gating the claim.
+
+    test "a same-named area from another year is a re-home, and the label says which" do
+      stale = area_named("Cogito", financial_year: FinancialYear.create!(label: "Fringe 2026"))
+      _budget, import = marketing_re_home(area: stale)
+
+      re_home = import.re_homes.sole
+      assert_equal "Cogito", re_home[:from_area_name]
+      assert_equal "Fringe 2026", re_home[:from_area_scope]
+      assert_equal "Cogito", re_home[:to_area_name]
+      assert re_home[:to_area_is_new], "this year has no Cogito yet, so one is about to be created"
+    end
+
+    # The qualifications exist only for that collision: an ordinary re-home
+    # must read exactly as it did before record identity replaced the name.
+    test "an ordinary re-home qualifies neither side" do
+      cogito = area_named("Cogito")
+      improverts = area_named("Improverts")
+      _budget, import = marketing_re_home(area: improverts, existing_areas: [ cogito, improverts ])
+
+      re_home = import.re_homes.sole
+      assert_nil re_home[:from_area_scope]
+      assert_not re_home[:to_area_is_new]
+    end
+
+    # --- The owner sign-off gate ---------------------------------------------
+    # Budget#owners resolves THROUGH the area, and OwnerReview.gate_applies? is
+    # false with no owners — so a line landing in an ownerless area stops
+    # needing endorsement. The area form and the budget form both warn about
+    # this; the importer is the third way in, the only silent one, and the one
+    # that moves many lines at once.
+
+    test "a re-home into an area that names nobody reports the lost sign-off gate" do
+      _budget, import = marketing_re_home
+
+      assert_not import.re_homes.sole[:to_area_has_owners],
+                 "an area this import is about to create has no owners at all"
+    end
+
+    test "a re-home into an area that names somebody does not" do
+      cogito = area_named("Cogito")
+      cogito.sync_owner_ids!([ create_reimbursements_person(name: "Alice",
+                                                            email: "alice@example.com").id ])
+      _budget, import = marketing_re_home(existing_areas: [ cogito.reload ])
+
+      assert import.re_homes.sole[:to_area_has_owners]
+    end
+
+    test "a re-home into an existing area that names nobody reports it too" do
+      _budget, import = marketing_re_home(existing_areas: [ area_named("Cogito") ])
+
+      assert_not import.re_homes.sole[:to_area_has_owners]
+    end
+
+    # --- An area nothing lands in is not created -----------------------------
+    # Unticking every re-home on a pure re-import used to mint the area anyway
+    # — the exact orphan this bucket exists to prevent, reached by taking the
+    # cautious option it offers.
+
+    test "unticking the only re-home into a new area stops it being created" do
+      _budget, import = marketing_re_home
+
+      assert_equal [ "Cogito" ], import.area_creates.map { |a| a[:name] }
+      assert_empty import.area_creates_for([])
+      assert_equal [ "Cogito" ], import.area_creates_for(import.re_homes).map { |a| a[:name] }
+    end
+
+    test "an area a new line lands in is created however the re-homes are ticked" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tCogito: Marketing\t432320\tExpense\t400
+      TSV
+
+      assert_equal [ "Cogito" ], import.area_creates_for([]).map { |a| a[:name] }
+    end
+
 
     # --- Owners --------------------------------------------------------------
 
@@ -563,8 +673,7 @@ module Reimbursements
       # An xlsx cell really can contain a tab or a line break, and the preview
       # carries the sheet on as TSV in a hidden field — so without escaping,
       # one stray tab in a note shifts every later column when apply re-parses.
-      file = xlsx_fixture([ HEADERS.split("\t"),
-                            [ "Props", "4000", "Expense", "100", "", "one\ttwo\nthree" ] ])
+      file = xlsx_fixture(xlsx_sheet([ "Props", "4000", "Expense", "100", "", "one\ttwo\nthree" ]))
       import = build_import(file, input_type: :xlsx)
 
       round_tripped = build_import(import.to_tsv, input_type: :canonical_tsv)

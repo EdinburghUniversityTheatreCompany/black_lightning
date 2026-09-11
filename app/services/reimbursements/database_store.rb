@@ -317,7 +317,7 @@ module Reimbursements
         # controller filters the import's own list by the ticked keys, so an
         # untick leaves the hand-made grouping exactly as it is.
         re_homes.each do |re_home|
-          re_home_budget!(re_home[:budget_id], resolve_area(re_home, areas_by_name)[:area_id])
+          re_home_budget!(re_home[:budget_id], resolve_area_id(re_home, areas_by_name))
         end
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
         update = if revisions.any?
@@ -807,10 +807,17 @@ module Reimbursements
     # a brand-new area resolves the same way a create does — which is what
     # stops #area_creates minting an area with nothing in it on a re-import.
     def resolve_area(attrs, areas_by_name)
-      attrs = attrs.dup
-      area_name = attrs.delete(:area_name)
-      attrs[:area_id] = areas_by_name.fetch(::Reimbursements::BudgetImport.match_key(area_name)).id if area_name
-      attrs
+      return attrs unless attrs[:area_name]
+
+      attrs.except(:area_name).merge(area_id: resolve_area_id(attrs, areas_by_name))
+    end
+
+    # The id alone, for a re-home — which needs the area, not a copy of the
+    # whole hash it was asked about.
+    def resolve_area_id(attrs, areas_by_name)
+      return attrs[:area_id] if attrs[:area_name].blank?
+
+      areas_by_name.fetch(::Reimbursements::BudgetImport.match_key(attrs[:area_name])).id
     end
 
     # --- Financial-year scoping ---------------------------------------------

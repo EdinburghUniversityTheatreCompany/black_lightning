@@ -75,10 +75,15 @@ module Admin
         # the text afresh, so anything unreadable has to stop it a second time.
         return render_blocked_preview unless @import.valid? && selected_cost_centre
 
+        # The areas are narrowed to the ones something will actually land in:
+        # an operator who unticks every re-home must not be left with the empty
+        # area the bucket exists to prevent.
+        re_homes = ticked_re_homes
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
-                                        adoptions: @import.adoptions, area_creates: @import.area_creates,
-                                        re_homes: ticked_re_homes,
+                                        adoptions: @import.adoptions,
+                                        area_creates: @import.area_creates_for(re_homes),
+                                        re_homes: re_homes,
                                         note: import_note, created_by: current_user)
         render :apply
       end

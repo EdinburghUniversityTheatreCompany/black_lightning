@@ -133,6 +133,11 @@ module Reimbursements
       @escaped = input_type == :canonical_tsv
       @existing_by_name = existing_budgets.index_by { |budget| self.class.match_key(budget.name) }
       @existing_areas_by_name = existing_areas.index_by { |area| self.class.match_key(area.name) }
+      # By id as well as by name: #re_homes compares the budget's CURRENT area
+      # to the sheet's target by record identity, and separately has to know
+      # whether that current area is inside this import's (year, cost centre)
+      # at all — two different questions that a name lookup can't tell apart.
+      @existing_areas_by_id = existing_areas.index_by(&:record_id)
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
@@ -192,6 +197,24 @@ module Reimbursements
       end
     end
 
+    # #area_creates narrowed to the areas something will ACTUALLY land in: an
+    # area named on a :create line, or one named by a re-home the operator left
+    # TICKED. Apply passes this rather than #area_creates itself.
+    #
+    # Without it, unticking every re-home on a pure re-import still minted the
+    # area — the exact orphan this bucket exists to prevent, arrived at by
+    # taking the cautious option the bucket offers. Silently creating an empty
+    # container is the same failure as silently moving a line.
+    #
+    # At PREVIEW time every re-home is ticked, so this and #area_creates agree
+    # — which is why the preview's "(new)" markers and its button count can
+    # keep reading the unnarrowed list.
+    def area_creates_for(re_homes)
+      wanted = (entries_in(:create).map(&:area_name) + re_homes.map { |re_home| re_home[:area_name] })
+               .compact_blank.map { |name| self.class.match_key(name) }.to_set
+      area_creates.select { |attrs| wanted.include?(self.class.match_key(attrs[:name])) }
+    end
+
     # [{ area_name:, values: [] }] for every area the sheet gives more than one
     # distinct, non-blank Area Budget figure — the column repeats down every
     # row of the area, so two different values within one sheet can't both be
@@ -245,11 +268,14 @@ module Reimbursements
     # sheet is the committee's record, but a hand-made grouping is somebody's
     # decision, and the sheet is not allowed to overrule it silently.
     #
-    # [{ budget_id:, budget_name:, from_area_name:, to_area_name:, key: }],
-    # plus the +area_id:+ / +area_name:+ pair #creates carries — the target is
-    # an id when the area is already here and a NAME when this same import is
-    # about to create it, and import_budgets! resolves the name inside its
-    # transaction exactly as it does for a create.
+    # [{ budget_id:, budget_name:, from_area_name:, from_area_scope:,
+    #    to_area_name:, to_area_is_new:, to_area_has_owners:, key: }], plus the
+    # +area_id:+ / +area_name:+ pair #creates carries — the target is an id
+    # when the area is already here and a NAME when this same import is about
+    # to create it, and import_budgets! resolves the name inside its
+    # transaction exactly as it does for a create. Everything the preview's
+    # label needs is on the hash for the same reason +budget_name+ is: the
+    # view must never reach for a record.
     #
     # +key+ is the checkbox value, and it is the BUDGET ID rather than a row
     # position: a re-import with the rows reordered must not land a tick on a
@@ -268,17 +294,26 @@ module Reimbursements
     # A budget that HAS an area whose sheet leaves the cell BLANK is not a
     # re-home to nowhere: a blank cell means "the sheet says nothing", the same
     # reading bucket_for gives a blank Amount.
+    #
+    # THE COMPARISON IS BY RECORD, NOT BY NAME. Areas are named per show and
+    # shows recur, so "Cogito" exists once per Fringe — and a budget in THIS
+    # year may legitimately hold LAST year's area (inherit_area_scoping fills
+    # blanks only and never checks the year, and BudgetsController appends the
+    # budget's own area to the scoped select precisely so such a row survives a
+    # save). Matching on the name read that as "already there" and reported
+    # nothing, while the line's spend kept rolling up into the other year's
+    # area total (Area#committed_amount sums its budgets with no year filter)
+    # and that year's owners kept gating the claim.
     def re_homes
-      (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+      @re_homes ||= (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
         next if entry.area_name.blank?
 
         key = self.class.match_key(entry.area_name)
         current = entry.budget.area
-        next if current && self.class.match_key(current.name) == key
+        existing = @existing_areas_by_name[key]
+        next if current && existing && current.record_id == existing.record_id
 
-        { budget_id: entry.budget.record_id, budget_name: entry.budget.name,
-          from_area_name: current&.name, to_area_name: first_seen_names[key],
-          key: entry.budget.record_id }.merge(area_attrs_for(entry))
+        re_home_for(entry, key, current, existing)
       end
     end
 
@@ -534,7 +569,7 @@ module Reimbursements
     # :invalid entries (a typo there must not mint an area for a row that will
     # never be written).
     def first_seen_names
-      (@entries - entries_in(:invalid)).each_with_object({}) do |entry, names|
+      @first_seen_names ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, names|
         next if entry.area_name.blank?
 
         names[self.class.match_key(entry.area_name)] ||= entry.area_name
@@ -575,6 +610,34 @@ module Reimbursements
 
       existing = @existing_areas_by_name[self.class.match_key(entry.area_name)]
       existing ? { area_id: existing.record_id } : { area_name: entry.area_name }
+    end
+
+    # One re-home's hash. Split out of #re_homes so the label's two
+    # qualifications sit next to what decides them.
+    def re_home_for(entry, key, current, existing)
+      { budget_id: entry.budget.record_id, budget_name: entry.budget.name,
+        from_area_name: current&.name, from_area_scope: out_of_scope_label(current),
+        to_area_name: first_seen_names[key], to_area_is_new: existing.nil?,
+        # An area this import is about to create has no owners at all, and
+        # Budget#owners resolves THROUGH the area — so attaching a line to one
+        # switches its sign-off gate off. Task 5 (the sheet's owner column
+        # populating an area) narrows what this should read; it does not close
+        # it, since a sheet naming no owner for those lines still lands here.
+        to_area_has_owners: existing.present? && existing.owners.any?,
+        key: entry.budget.record_id }.merge(area_attrs_for(entry))
+    end
+
+    # Why +area+ is outside this import's (financial year, cost centre) — for
+    # the preview's label, which would otherwise read "Cogito -> Cogito" for
+    # the one case where the names genuinely agree and the records don't. nil
+    # for an area inside the scope, which is every ordinary re-home.
+    def out_of_scope_label(area)
+      return if area.nil? || @existing_areas_by_id.key?(area.record_id)
+
+      parts = []
+      parts << area.financial_year.label if area.financial_year && area.financial_year_id != financial_year&.id
+      parts << area.cost_centre.name if area.cost_centre && area.cost_centre_id != cost_centre&.id
+      parts.join(", ").presence
     end
 
     def duplicated_names
