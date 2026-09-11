@@ -1,0 +1,16 @@
+<%# locals: (expected_tip:) %>
+<%# The overview's column vocabulary, shared by both rollup cards so the two
+    axes over the same budgets can't drift into different columns. %>
+<thead>
+  <tr>
+    <th scope="col">Budget</th>
+    <th scope="col">Type</th>
+    <th scope="col" class="text-right">Initial</th>
+    <th scope="col" class="text-right">Projected</th>
+    <th scope="col" class="text-right">Committed</th>
+    <th scope="col" class="text-right">Pipeline</th>
+    <th scope="col" class="text-right">Paid (portal)</th>
+    <th scope="col" class="text-right">EUSA actual</th>
+    <th scope="col" class="text-right" title="<%= expected_tip %>">Expected outturn</th>
+  </tr>
+</thead>

@@ -4,15 +4,15 @@
 <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
 <p class="mb-3 text-gray-600">
-  Every budget grouped by nominal code, with a subtotal per code and a grand total. Expense and
-  income budgets are totalled separately, since adding spend to income gives a figure that is
-  neither. Expected outturn is the greater of the current projection and what's already been
-  spent or committed, so the number never drops below reality; it is left blank on income lines,
-  where the same figure would read as best-case income instead.
+  The same budgets down two axes: grouped by nominal code, the axis EUSA's ledger uses, and
+  grouped by area, the show or project the committee agreed a total for. Expense and income
+  budgets are totalled separately, since adding spend to income gives a figure that is neither.
+  Expected outturn is the greater of the current projection and what's already been spent or
+  committed, so the number never drops below reality; it is left blank on income lines, where
+  the same figure would read as best-case income instead.
 </p>
 
 <%
-  money = ->(amount) { reimbursements_money(amount) }
   expected_tip = "The greater of the current projection and what's already been spent or " \
                  "committed, so the number never drops below reality. Blank on income lines."
 %>
@@ -20,19 +20,7 @@
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
     <table class="table table-hover table-sticky-head">
-      <thead>
-        <tr>
-          <th scope="col">Budget</th>
-          <th scope="col">Type</th>
-          <th scope="col" class="text-right">Initial</th>
-          <th scope="col" class="text-right">Projected</th>
-          <th scope="col" class="text-right">Committed</th>
-          <th scope="col" class="text-right">Pipeline</th>
-          <th scope="col" class="text-right">Paid (portal)</th>
-          <th scope="col" class="text-right">EUSA actual</th>
-          <th scope="col" class="text-right" title="<%= expected_tip %>">Expected outturn</th>
-        </tr>
-      </thead>
+      <%= render "overview_head", expected_tip: expected_tip %>
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
@@ -40,26 +28,7 @@
               Nominal code <%= rollup.code %>
             </th>
           </tr>
-          <% rollup.rows.each do |budget| %>
-            <tr>
-              <td>
-                <%= link_to budget.name.presence || "-",
-                      edit_admin_reimbursements_budget_path(budget.record_id),
-                      class: "text-primary underline" %>
-                <% unless budget.active %>
-                  <span class="text-gray-400 text-xs">(hidden)</span>
-                <% end %>
-              </td>
-              <td><%= budget.budget_type %></td>
-              <td class="text-right"><%= money.(budget.initial_budget) %></td>
-              <td class="text-right"><%= money.(budget.projected_amount) %></td>
-              <td class="text-right"><%= money.(budget.committed_amount) %></td>
-              <td class="text-right"><%= money.(budget.pipeline_amount) %></td>
-              <td class="text-right"><%= money.(budget.paid_portal_amount) %></td>
-              <td class="text-right"><%= money.(budget.eusa_actual_amount) %></td>
-              <td class="text-right"><%= money.(budget.expected_outturn) %></td>
-            </tr>
-          <% end %>
+          <%= render partial: "overview_budget_row", collection: rollup.rows, as: :budget %>
           <%# One subtotal per budget type in the group: a code holding both an
               expense and an income budget has no single meaningful subtotal. %>
           <% rollup.by_type.each do |subtotal| %>
@@ -75,6 +44,26 @@
                 row_class: "border-t-2 border-gray-400 font-semibold" %>
         <% end %>
       </tfoot>
+    </table>
+  </div>
+<% end %>
+
+<%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4", flush: true) do %>
+  <%# No grand total here: this card regroups exactly the budgets the card above
+      totals, so a footer would restate that card's grand total rather than
+      answer anything new. %>
+  <% if @area_rollups.empty? %>
+    <p class="px-4 py-2 text-gray-600">No budget is filed under an area yet.</p>
+  <% end %>
+  <div class="table-scroll">
+    <table class="table table-hover table-sticky-head">
+      <%= render "overview_head", expected_tip: expected_tip %>
+      <% @area_rollups.each do |rollup| %>
+        <%= render "area_group", rollup: rollup, label: rollup.name %>
+      <% end %>
+      <% if @unassigned_rollup %>
+        <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
+      <% end %>
     </table>
   </div>
 <% end %>

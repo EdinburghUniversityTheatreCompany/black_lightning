@@ -1,0 +1,21 @@
+<%# locals: (budget:) %>
+<%# One budget's line on the overview, rendered identically under whichever
+    grouping the card uses, so a line reads the same on both axes. %>
+<tr>
+  <td>
+    <%= link_to budget.name.presence || "-",
+          edit_admin_reimbursements_budget_path(budget.record_id),
+          class: "text-primary underline" %>
+    <% unless budget.active %>
+      <span class="text-gray-400 text-xs">(hidden)</span>
+    <% end %>
+  </td>
+  <td><%= budget.budget_type %></td>
+  <td class="text-right"><%= reimbursements_money(budget.initial_budget) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.projected_amount) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.committed_amount) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.pipeline_amount) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.paid_portal_amount) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.eusa_actual_amount) %></td>
+  <td class="text-right"><%= reimbursements_money(budget.expected_outturn) %></td>
+</tr>

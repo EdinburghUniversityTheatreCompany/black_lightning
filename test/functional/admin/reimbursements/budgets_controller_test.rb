@@ -517,13 +517,13 @@ module Admin
         assert_includes response.body, "Grand total"
       end
 
-      test "the overview's query count does not grow with the number of budgets" do
+      test "the overview's query count does not grow with the number of budgets or areas" do
         sign_in @user
-        # One budget with an expense and a linked actual, so every preload on the
-        # page has rows to load before the baseline is taken (Rails skips a
-        # preload query for an association with nothing to load, which would
-        # otherwise make the two renders different shapes rather than different
-        # sizes).
+        # One area holding one budget with an expense and a linked actual, so
+        # every preload on the page has rows to load before the baseline is taken
+        # (Rails skips a preload query for an association with nothing to load,
+        # which would otherwise make the two renders different shapes rather than
+        # different sizes).
         seed_budget_with_actual(0)
         overview_query_count # warm up anything cached per process
         baseline = overview_query_count
@@ -531,7 +531,9 @@ module Admin
         9.times { |i| seed_budget_with_actual(i + 1) }
 
         # Every figure on the page comes off a preloaded association, so nine more
-        # budgets with their expenses and ledger rows cost exactly what one did.
+        # areas, budgets, expenses and ledger rows cost exactly what one did. The
+        # area figures are the ones at risk: read off budget.area instead of
+        # store.areas, each area's committed/allocated would query per line.
         assert_equal baseline, overview_query_count
       end
 
@@ -638,6 +640,109 @@ module Admin
 
         assert_response :success
         assert_not_includes response.body, "Every EUSA actual is attributed to a budget."
+      end
+
+      # --- Overview (area rollup) --------------------------------------------
+
+      test "overview groups the same budgets by area, with the area's agreed total" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", initial_budget: 5000)
+        create_reimbursements_budget(name: "Marketing", nominal_code: "4300", area: area,
+                                     initial_budget: 400)
+        create_reimbursements_budget(name: "Set", nominal_code: "4400", area: area,
+                                     initial_budget: 350)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Budgets by area"
+        assert_includes response.body, "Cogito"
+        # 750 = 400 + 350, a figure no single row carries, so the assertion pins
+        # the grouping rather than a budget line.
+        assert_includes response.body, "Subtotal Cogito (Expense)"
+        assert_includes response.body, "£750.00"
+        # The committee's agreed figure and what is left to split out of it
+        # (5000 - 750), both read off the area rather than off its lines.
+        assert_includes response.body, "Agreed total £5,000.00"
+        assert_includes response.body, "£4,250.00 not yet allocated"
+        # Props and the income line belong to no area, and still have to appear.
+        assert_includes response.body, "Not in an area"
+      end
+
+      test "overview never totals an area's expense and income lines together" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
+                                     initial_budget: 410)
+        create_reimbursements_budget(name: "Cogito tickets", nominal_code: "8100", area: area,
+                                     budget_type: "Income", initial_budget: 805)
+
+        get :overview
+
+        assert_response :success
+        spend, income = assigns(:area_rollups).sole.by_type
+        assert_equal BigDecimal("410"), spend.initial
+        assert_equal BigDecimal("805"), income.initial
+        assert_includes response.body, "Subtotal Cogito (Expense)"
+        assert_includes response.body, "Subtotal Cogito (Income)"
+        # 1,215 is neither the show's spend nor its income, so nothing says it.
+        assert_not_includes response.body, "£1,215.00"
+      end
+
+      test "an area with no agreed total shows no figure, never a zero" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Backfilled")
+        create_reimbursements_budget(name: "Backfilled props", nominal_code: "4300", area: area,
+                                     initial_budget: 400)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Backfilled"
+        # "Agreed total £0.00" would read as the show being fully overspent.
+        assert_not_includes response.body, "Agreed total"
+        assert_not_includes response.body, "not yet allocated"
+      end
+
+      test "an area holding a line outside the selected year says how many are shown" do
+        this_year, next_year = seed_two_years
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", financial_year: this_year,
+                                          initial_budget: 5000)
+        create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
+                                     initial_budget: 400, financial_year: this_year)
+        # Reachable by an ordinary edit, and the budget form preserves it
+        # deliberately, so the overview has to state it rather than drop it.
+        create_reimbursements_budget(name: "Cogito next year", nominal_code: "4300", area: area,
+                                     initial_budget: 900, financial_year: next_year)
+
+        get :overview, params: { year: this_year.key }
+
+        assert_response :success
+        # The totals cover the year on screen: the other line is not listed...
+        assert_not_includes response.body, "Cogito next year"
+        assert_includes response.body, "1 of 2 lines shown"
+        assert_includes response.body, "1 line in another year or cost centre"
+        # ...while the area's own unallocated figure counts both lines
+        # (5000 - 400 - 900), which is exactly the disagreement the row names.
+        assert_includes response.body, "£3,700.00 not yet allocated"
+      end
+
+      test "the area card reads its figures off store.areas, not off budget.area" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", initial_budget: 5000)
+        create_reimbursements_budget(name: "Marketing", nominal_code: "4300", area: area,
+                                     initial_budget: 400)
+
+        get :overview
+
+        assert_response :success
+        rollup = assigns(:area_rollups).sole
+        # store.areas is the unscoped, fully-preloaded reader; the line count on
+        # the heading comes off that loaded collection rather than a COUNT.
+        assert rollup.area.budgets.loaded?
+        assert_equal 1, rollup.lines_total
+        assert_equal 0, rollup.lines_out_of_scope
       end
 
       # --- Edit --------------------------------------------------------------
@@ -1187,10 +1292,12 @@ module Admin
         [ this_year, next_year ]
       end
 
-      # An Expense budget with a paid expense and a linked EUSA actual: one of
-      # everything the overview's rollups walk.
+      # An area holding one Expense budget with a paid expense and a linked EUSA
+      # actual: one of everything the overview's two rollups walk.
       def seed_budget_with_actual(index)
-        budget = create_reimbursements_budget(name: "Extra #{index}", nominal_code: "42#{index}")
+        area = create_reimbursements_area(name: "Area #{index}", initial_budget: 2000)
+        budget = create_reimbursements_budget(name: "Extra #{index}", nominal_code: "42#{index}",
+                                              area: area, initial_budget: 100)
         expense = create_reimbursements_expense(budget: budget, receipt: false,
                                                 status: ::Reimbursements::Status::PAID)
         ::Reimbursements::EusaActual.create!(expense: expense, debit: BigDecimal("5"),

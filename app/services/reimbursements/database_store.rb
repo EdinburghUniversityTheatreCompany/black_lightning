@@ -203,9 +203,11 @@ module Reimbursements
     # and #allocated each call the equivalent Budget reader per budget, which
     # reads the budget's own expenses/forecasts associations, so without this an
     # areas index or a grouped budgets index would pay one or two queries per
-    # budget, per area, per render.
+    # budget, per area, per render. The area's OWN forecasts are preloaded for
+    # the same reason one step up: Area#projected_amount reads its forecast log,
+    # so every screen showing an agreed total paid a query per area without it.
     def areas
-      @areas ||= Area.includes(:owners, budgets: %i[expenses forecasts]).to_a
+      @areas ||= Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).to_a
     end
 
     # The areas the budget screens LIST.

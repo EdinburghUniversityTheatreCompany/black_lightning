@@ -35,14 +35,16 @@ module Admin
         end
       end
 
-      # A finance overview grouping every budget by nominal code: a subtotal per
-      # code and per budget type, a grand total per type, and a separate list of
-      # the EUSA ledger rows no budget's figures account for.
+      # A finance overview of the same budgets down two axes — EUSA's nominal
+      # code and Bedlam's areas — each with a subtotal per group and per budget
+      # type, plus a separate list of the EUSA ledger rows no budget's figures
+      # account for.
       def overview
         @title = "Budget overview"
         grouped = store.budgets_by_nominal_code
         @rollups = grouped.map { |code, group| ::Reimbursements::NominalCodeRollup.new(code, group) }
         @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, grouped.values.flatten)
+        build_area_rollups(grouped.values.flatten)
         @unattributed_by_code = store.unattributed_actuals.group_by do |actual|
           actual.nominal_code.presence || ::Reimbursements::DatabaseStore::NO_CODE_LABEL
         end
@@ -139,6 +141,24 @@ module Admin
       end
 
       private
+
+      # The overview's second axis: the SAME budgets the nominal-code card
+      # totals, regrouped under their area, so the two cards can never quote
+      # different money for one page. Each area object comes from store.areas —
+      # unscoped and fully preloaded, the reader every area figure has to be
+      # read off, never budget.area, whose own #budgets collection is unloaded
+      # and would N+1 across its expenses and forecasts.
+      def build_area_rollups(budgets)
+        areas_by_id = store.areas.index_by(&:record_id)
+        by_area_id = budgets.group_by { |budget| budget.area&.record_id }
+        unassigned = by_area_id.delete(nil)
+        @area_rollups = by_area_id
+                        .map { |id, group| ::Reimbursements::AreaRollup.new(area: areas_by_id[id], budgets: group) }
+                        .sort_by { |rollup| rollup.name.to_s.downcase }
+        # Nil rather than an empty rollup, so the view renders no "Not in an
+        # area" heading on a portal whose lines all sit in one.
+        @unassigned_rollup = unassigned && ::Reimbursements::AreaRollup.new(area: nil, budgets: unassigned)
+      end
 
       # A forecast id arriving in the URL must actually belong to this budget —
       # never let one budget's page mutate another budget's forecast log.

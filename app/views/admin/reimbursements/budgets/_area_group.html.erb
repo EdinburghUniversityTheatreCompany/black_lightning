@@ -1,0 +1,45 @@
+<%# locals: (rollup:, label:) %>
+<%# One area's block on the overview: its own agreed figures on the heading,
+    its lines, then a subtotal per budget type. The unassigned block is this
+    partial with an area-less rollup, which answers nil to every area figure. %>
+<tbody>
+  <tr class="bg-gray-50">
+    <th scope="rowgroup" colspan="9" class="text-left py-2">
+      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span class="font-semibold text-base"><%= label %></span>
+        <%# Nil means nobody agreed a total (every backfilled area starts
+            there); "£0.00" would read as the show being fully overspent, so
+            the figure is left out entirely rather than shown as a zero. %>
+        <% unless rollup.agreed.nil? %>
+          <span class="text-sm text-gray-600">
+            Agreed total <%= reimbursements_money(rollup.agreed) %>
+          </span>
+        <% end %>
+        <% unless rollup.unallocated.nil? %>
+          <span class="text-sm text-gray-600">
+            <%= reimbursements_money(rollup.unallocated) %> not yet allocated
+          </span>
+        <% end %>
+        <%# The area's own figures sum every line ever linked to it, while the
+            totals below cover the lines this year and cost centre scope to. A
+            line filed under an area from another year makes the two disagree,
+            so the row says so rather than dropping or absorbing it silently. %>
+        <% if rollup.lines_out_of_scope.positive? %>
+          <span class="text-sm text-warning">
+            <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "line") %> shown.
+            <%= pluralize(rollup.lines_out_of_scope, "line") %> in another year or cost centre,
+            <%= rollup.agreed.nil? ? "not counted below." : "counted in the agreed figures above but not in the totals below." %>
+          </span>
+        <% end %>
+      </div>
+    </th>
+  </tr>
+  <%= render partial: "admin/reimbursements/budgets/overview_budget_row",
+        collection: rollup.rows, as: :budget %>
+  <%# One subtotal per budget type in the group: an area holding both an
+      expense and an income line has no single meaningful subtotal. %>
+  <% rollup.by_type.each do |subtotal| %>
+    <%= render "rollup_row", rollup: subtotal,
+          label: "Subtotal #{label} (#{subtotal.budget_type})" %>
+  <% end %>
+</tbody>
