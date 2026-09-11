@@ -137,6 +137,28 @@ module Reimbursements
       assert_nothing_raised { BackfillReimbursementsAreas.new.down }
     end
 
+    # The other half of "only the ones it CREATED": an area a PERSON made between
+    # the rollback and the re-migrate is one the backfill merely finds, and the
+    # area form has shipped, so an empty one is something they can mean to have.
+    # Deleting it would be this migration tidying away somebody else's work.
+    test "an area a person made in the meantime survives being emptied" do
+      this_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      next_year = FinancialYear.create!(label: "Fringe 2027")
+      area = create_reimbursements_area(name: "ZZCogito", financial_year: next_year)
+      budget = create_reimbursements_budget(name: "ZZCogito: Marketing", area: area,
+                                            financial_year: this_year)
+
+      BackfillReimbursementsAreas.new.down
+      # Setting this year up by hand, under the name the stranded line reads as:
+      # the backfill FINDS this one rather than making it.
+      by_hand = create_reimbursements_area(name: "ZZCogito", financial_year: this_year)
+      BackfillReimbursementsAreas.new.up
+
+      assert Area.exists?(by_hand.id), "the backfill only clears the areas IT created"
+      assert_empty by_hand.reload.budgets, "and the line still goes back where the record says"
+      assert_equal next_year.id, budget.reload.area.financial_year_id
+    end
+
     # The other half: an area this run created and the restore did NOT empty is
     # left alone, or the cleanup would delete the ordinary backfill's own work.
     test "an area the backfill created and still holds lines survives the cleanup" do
