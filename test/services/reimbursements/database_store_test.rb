@@ -965,6 +965,71 @@ module Reimbursements
       assert_equal [ alice.record_id ], budget.reload.owner_ids
     end
 
+    # --- Area owners: the sheet ADDS, and never removes -----------------------
+    # A spreadsheet has no way to spell "remove this owner" — a blank cell says
+    # nothing — and an owner dropped silently is a show's sign-off authority
+    # gone. Removal stays hand-work on the area form.
+
+    test "import_budgets! unions the sheet's owners into an area, removing nobody" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+      bob = Person.create!(name: "Bob", email: "bob@example.com")
+      area = create_reimbursements_area(name: "Cogito", cost_centre: CostCentre.default,
+                                        financial_year: year)
+      area.sync_owner_ids!([ bob.id ])
+
+      result = scoped_store(year).import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
+        area_owner_syncs: [ { area_id: area.record_id, owner_ids: [ alice.record_id ] } ]
+      )
+
+      assert_equal [ alice.record_id, bob.record_id ].sort, area.reload.owner_ids.sort
+      assert_equal 1, result.area_owners_synced
+    end
+
+    test "import_budgets! gives an area it created in the same run its owners" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      cost_centre = CostCentre.default
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+
+      scoped_store(year).import_budgets!(
+        creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
+        area_creates: [ { name: "Cogito", cost_centre: cost_centre, financial_year: year } ],
+        area_owner_syncs: [ { area_name: "Cogito", owner_ids: [ alice.record_id ] } ]
+      )
+
+      assert_equal [ alice.record_id ], Area.find_by(name: "Cogito").owner_ids
+    end
+
+    # The owner column is grouped by the area each line NAMES, ticked or not —
+    # so an area every re-home into it was unticked out of never gets created,
+    # and there is nothing to own.
+    test "import_budgets! skips an area owner sync for an area it never created" do
+      year = FinancialYear.create!(label: "Fringe 2027")
+      alice = Person.create!(name: "Alice", email: "alice@example.com")
+
+      result = assert_no_difference -> { AreaOwner.count } do
+        scoped_store(year).import_budgets!(
+          creates: [], revisions: [], owner_syncs: [], note: "x", created_by: nil,
+          area_owner_syncs: [ { area_name: "Cogito", owner_ids: [ alice.record_id ] } ]
+        )
+      end
+
+      assert_equal 0, result.area_owners_synced
+    end
+
+    # Area#sync_owner_ids! is a diff sync, so an empty list would make its
+    # `where.not(person_id: [])` read as WHERE 1=1 and destroy every row.
+    test "add_area_owners! with nothing to add leaves the owners alone" do
+      bob = Person.create!(name: "Bob", email: "bob@example.com")
+      area = create_reimbursements_area(name: "Cogito")
+      area.sync_owner_ids!([ bob.id ])
+
+      store.add_area_owners!(area.record_id, [])
+
+      assert_equal [ bob.record_id ], area.reload.owner_ids
+    end
+
     # --- import_expenses! ----------------------------------------------------
 
     test "import_expenses! creates one claim per row, in one transaction" do

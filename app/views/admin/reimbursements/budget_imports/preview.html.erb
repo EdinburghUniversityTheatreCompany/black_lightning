@@ -116,6 +116,38 @@
     </div>
   <% end %>
 
+  <%# The sheet's owner column names the AREA for any line that has one, and
+      the area's owners are the UNION of what its lines name — so this is a
+      NAMED LIST, never a count. The union is forgiving in both directions:
+      an extra owner can endorse, but a stale address on one line would
+      otherwise gain sign-off authority over a whole show invisibly. %>
+  <% owner_sets = @import.area_owner_sets %>
+  <% if owner_sets.any? %>
+    <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+      <p class="font-medium">Who will sign off for each area after this import</p>
+      <p class="text-gray-600">
+        An area's owners are everyone its lines name, and importing never removes one — any one
+        of them can endorse a claim on the area's budgets. Remove an owner on the area itself.
+      </p>
+      <ul class="mt-2 space-y-1">
+        <% owner_sets.each do |set| %>
+          <li>
+            <strong><%= set[:area_name] %></strong><% if set[:area_is_new] %>
+              <span class="text-gray-600">(new)</span>
+            <% end %>:
+            <%= safe_join(set[:owners].map do |owner|
+                  if owner[:added]
+                    content_tag(:span, "#{owner[:name]} (added)", class: "font-medium text-amber-800")
+                  else
+                    content_tag(:span, owner[:name].to_s)
+                  end
+                end, ", ") %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
   <% if @import.missing_nominal_codes.any? %>
     <p class="mt-4 text-sm text-amber-800">
       <%= pluralize(@import.missing_nominal_codes.size, "line") %>

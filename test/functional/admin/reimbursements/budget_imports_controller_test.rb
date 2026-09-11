@@ -480,6 +480,45 @@ module Admin
         assert_select "p.text-warning", false
       end
 
+      # --- The owner column names the AREA -------------------------------------
+      # Budget#owners reads through the area, so an owner written to a line that
+      # has one is an owner no sign-off gate ever consults.
+
+      OWNER_HEADERS = "#{AREA_HEADERS}\tOwner emails".freeze
+
+      def cogito_owner_sheet(email) = "#{OWNER_HEADERS}\nCogito\tCogito: Marketing\t432320\tExpense\t400\t#{email}"
+
+      # A NAMED list, not a count: the union is forgiving, so a stale address on
+      # one line would otherwise gain sign-off authority over a whole show.
+      test "preview names who will sign off for the area, marking the additions" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year)
+        area.sync_owner_ids!([ create_reimbursements_person(name: "Bob", email: "bob@example.com").id ])
+        create_reimbursements_person(name: "Alice", email: "alice@example.com")
+        marketing_in(area)
+        sign_in @user
+
+        post :preview, params: preview_params(cogito_owner_sheet("alice@example.com"))
+
+        assert_select "li" do |items|
+          assert_includes items.map { |item| item.text.squish }, "Cogito: Bob, Alice (added)"
+        end
+      end
+
+      test "apply gives the area the sheet's owner and leaves the line's own rows empty" do
+        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                          financial_year: @year)
+        alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+        budget = marketing_in(area)
+        sign_in @user
+
+        post :apply, params: preview_params(cogito_owner_sheet("alice@example.com"))
+
+        assert_equal [ alice.record_id ], area.reload.owner_ids
+        assert_empty budget.reload.own_owners
+        assert_equal 1, assigns(:result).area_owners_synced
+      end
+
       # "Cogito → Cogito" would read as a no-op, so the from side names the
       # year it is stranded in and the to side says it is about to be created.
       test "preview qualifies a re-home whose from and to areas share a name" do

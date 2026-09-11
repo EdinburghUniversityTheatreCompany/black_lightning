@@ -139,6 +139,10 @@ module Reimbursements
       # at all — two different questions that a name lookup can't tell apart.
       @existing_areas_by_id = existing_areas.index_by(&:record_id)
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
+      # By record id too: #area_owner_sets names the people an area is about to
+      # gain, and resolve_owners has already reduced them to ids by then. The
+      # preview must never reach for a record of its own.
+      @people_by_record_id = people.index_by(&:record_id)
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
       report_area_total_conflicts
@@ -317,26 +321,78 @@ module Reimbursements
       end
     end
 
-    # Owner lists for budgets that already exist. The sheet is the committee's
-    # own record of who runs what, so a re-import keeps it current — but only
-    # where the sheet actually named someone, since an empty owner column means
-    # "not stated", not "nobody".
+    # Owner lists for budgets that already exist and are in NO area. The sheet
+    # is the committee's own record of who runs what, so a re-import keeps it
+    # current — but only where the sheet actually named someone, since an empty
+    # owner column means "not stated", not "nobody".
     #
-    # Compared against the budget's OWN owner rows, because that is what
-    # DatabaseStore#sync_budget_owners! writes. Budget#owner_ids resolves
-    # through the area when there is one, so comparing it could never
-    # converge: the apply would write the sheet's owner into own_owners,
-    # #owners would keep returning the area's, and every later re-import
-    # would report the identical sync for ever. Whether the sheet's owner
-    # column should instead target the AREA for a line that has one is a
-    # separate (Phase 2) question — this only makes the comparison agree with
-    # the write.
+    # A line that HAS an area is #area_owner_syncs' business instead: Budget#owners
+    # reads through the area, so the sheet's owner written to the line's own rows
+    # is an owner nobody reads and no claim's sign-off gate ever consults.
+    #
+    # Still compared against the budget's OWN owner rows, because that is what
+    # DatabaseStore#sync_budget_owners! writes. With the narrowing above the two
+    # reads happen to agree (Budget#owners IS own_owners with no area), so this
+    # states which of them the comparison depends on rather than relying on that
+    # coincidence — reading the area-resolved Budget#owner_ids is what could
+    # never converge, and re-reported the identical sync for ever.
+    #
+    # A matched AREA-LESS line whose sheet names an area is reported here AND in
+    # #area_owner_syncs, deliberately: the sheet's area only takes effect if the
+    # operator leaves that re-home ticked, and this model cannot know. Written
+    # both places, the owner gates the claim either way.
     def owner_syncs
       (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
         next if entry.owner_ids.empty?
+        next if entry.budget.area
         next if entry.budget.own_owners.map(&:record_id).sort == entry.owner_ids.map(&:to_s).sort
 
         { budget_id: entry.budget.record_id, owner_ids: entry.owner_ids }
+      end
+    end
+
+    # Owner lists for the AREAS the sheet's lines resolve to — [{ owner_ids: }]
+    # plus the same +area_id:+ / +area_name:+ pair #creates and #re_homes carry,
+    # so an area this very import is about to create is resolved inside
+    # import_budgets!' transaction exactly as a budget's area is.
+    #
+    # THE AREA'S OWNERS ARE THE UNION of what its lines name, and a sync NEVER
+    # REMOVES one — +owner_ids+ is the area's current owners plus the sheet's,
+    # and DatabaseStore#add_area_owners! unions again at write time. The sheet
+    # has one owner column per LINE, so three lines under one area can name
+    # three people and all three are meant; and it has no way at all to say
+    # "remove this owner", a blank cell being the same "the sheet says nothing"
+    # a blank Amount is. Union is also the forgiving direction — any one owner
+    # satisfies the gate, so an extra owner can endorse while a missing one
+    # strands the claim — and it is what AreaBackfill#seed_owners! already did.
+    # Removal stays hand-work on the area form.
+    #
+    # Nothing is reported when the sheet names only people the area already has:
+    # the union is then unchanged.
+    def area_owner_syncs
+      owner_targets.each_value.filter_map do |target|
+        current = target[:area]&.owner_ids || []
+        next if (target[:owner_ids] - current).empty?
+
+        area_attrs_for_target(target).merge(owner_ids: current | target[:owner_ids])
+      end
+    end
+
+    # What each of those areas will END UP naming, for the preview:
+    # [{ area_name:, area_is_new:, owners: [{ name:, added: }] }].
+    #
+    # A NAMED LIST rather than a count, because the union is forgiving in both
+    # directions: a stale address on one line otherwise gains sign-off authority
+    # over a whole show with nothing on screen to say so. It shows the area's
+    # existing owners alongside the ones these lines add — since a sync never
+    # subtracts, that IS what the area will hold afterwards.
+    def area_owner_sets
+      owner_targets.each_value.map do |target|
+        current = target[:area]&.owners || []
+        added = target[:owner_ids] - current.map(&:record_id)
+        { area_name: target[:area_name], area_is_new: target[:area].nil?,
+          owners: current.map { |person| { name: person.name, added: false } } +
+                  added.map { |id| { name: @people_by_record_id[id]&.name, added: true } } }
       end
     end
 
@@ -603,6 +659,64 @@ module Reimbursements
       end
     end
 
+    # grouping key => { area:, area_name:, owner_ids: } for every area the
+    # sheet's owner column feeds. One pass, because the three readers above
+    # each need the area record, the name to show and the union.
+    #
+    # Keyed by RECORD ID where the area exists, so two lines reaching the same
+    # area merge however they got there — the sheet naming it, and a blank Area
+    # cell over a line already sitting in it, are the same area — and by name
+    # where this import is about to create it. Excludes :invalid entries for
+    # the same reason #first_seen_names does: a typo on a blocked row must not
+    # hand a show an owner.
+    def owner_targets
+      @owner_targets ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, targets|
+        next if entry.owner_ids.empty?
+
+        area, key, name = resolve_owner_target(entry)
+        next if key.nil?
+
+        target = (targets[key] ||= { area: area, area_name: name, owner_ids: [] })
+        target[:owner_ids] |= entry.owner_ids
+      end
+    end
+
+    # [area record or nil, grouping key, area name] for the area a line's named
+    # owners belong to — the area the line RESOLVES to, which is the one the
+    # sheet names, or the one the budget is already in when the cell is blank.
+    # An empty triple for a line that reaches no area at all: its owners stay on
+    # the budget's own rows, which for an area-less line is the live read.
+    def resolve_owner_target(entry)
+      if entry.area_name.present?
+        key = self.class.match_key(entry.area_name)
+        existing = @existing_areas_by_name[key]
+        [ existing, target_key(existing, key), first_seen_names[key] ]
+      elsif entry.budget&.area
+        area = entry.budget.area
+        [ area, target_key(area, nil), area.name ]
+      else
+        []
+      end
+    end
+
+    def target_key(area, name_key) = area ? "id:#{area.record_id}" : "name:#{name_key}"
+
+    # The +area_id:+ / +area_name:+ pair for a grouped target, the same shape
+    # #area_attrs_for hands #creates.
+    def area_attrs_for_target(target)
+      target[:area] ? { area_id: target[:area].record_id } : { area_name: target[:area_name] }
+    end
+
+    # Whether the area a re-home moves a line into will name SOMEBODY once this
+    # import has run: its current owners, plus the ones this sheet's owner
+    # column is about to add to it. An address that matched nobody doesn't
+    # count — resolve_owners drops it, so the area would still name nobody.
+    def area_will_have_owners?(area, name_key)
+      return true if area&.owners&.any?
+
+      owner_targets[target_key(area, name_key)].present?
+    end
+
     # +area_id:+ for a line naming an area already here, +area_name:+ for one
     # this import is about to create, or neither for an area-less line.
     def area_attrs_for(entry)
@@ -618,12 +732,13 @@ module Reimbursements
       { budget_id: entry.budget.record_id, budget_name: entry.budget.name,
         from_area_name: current&.name, from_area_scope: out_of_scope_label(current),
         to_area_name: first_seen_names[key], to_area_is_new: existing.nil?,
-        # An area this import is about to create has no owners at all, and
-        # Budget#owners resolves THROUGH the area — so attaching a line to one
-        # switches its sign-off gate off. Task 5 (the sheet's owner column
-        # populating an area) narrows what this should read; it does not close
-        # it, since a sheet naming no owner for those lines still lands here.
-        to_area_has_owners: existing.present? && existing.owners.any?,
+        # An area with no owners at all switches its lines' sign-off gate OFF,
+        # because Budget#owners resolves THROUGH the area. Read AFTER this
+        # import's own owner column: a sheet that names somebody for the area
+        # it is moving the line into leaves the gate standing, so warning there
+        # would be false. A sheet naming nobody (or only addresses that matched
+        # nobody) still lands here — which is why the warning stays.
+        to_area_has_owners: area_will_have_owners?(existing, key),
         key: entry.budget.record_id }.merge(area_attrs_for(entry))
     end
 

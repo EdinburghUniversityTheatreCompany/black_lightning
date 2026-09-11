@@ -81,6 +81,7 @@ module Admin
         re_homes = ticked_re_homes
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
+                                        area_owner_syncs: @import.area_owner_syncs,
                                         adoptions: @import.adoptions,
                                         area_creates: @import.area_creates_for(re_homes),
                                         re_homes: re_homes,

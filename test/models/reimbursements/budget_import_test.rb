@@ -572,6 +572,35 @@ module Reimbursements
       assert_not import.re_homes.sole[:to_area_has_owners]
     end
 
+    # The warning is read AFTER this import's own owner column, which now feeds
+    # the AREA: a sheet that names somebody for the area it is moving the line
+    # into leaves the gate standing, so warning there would be false. Narrowed,
+    # not closed — the two tests above still land here.
+    def marketing_with_owner(owner_cell, existing_areas: [], people: [])
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", cost_centre: @cost_centre,
+                                            financial_year: @year)
+      build_import(<<~TSV, existing_budgets: [ budget ], existing_areas: existing_areas, people: people)
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\t#{owner_cell}
+      TSV
+    end
+
+    test "a re-home into an area this import gives an owner does not report a lost gate" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+
+      import = marketing_with_owner("alice@example.com", people: [ alice ])
+
+      assert import.re_homes.sole[:to_area_has_owners],
+             "the sheet names Alice for Cogito, so the gate still applies"
+    end
+
+    test "a re-home into an area whose only named owner is unknown still reports it" do
+      import = marketing_with_owner("gone@example.com", existing_areas: [ area_named("Cogito") ])
+
+      assert_not import.re_homes.sole[:to_area_has_owners],
+                 "no Person is ever created from a bare email, so the area still names nobody"
+    end
+
     # --- An area nothing lands in is not created -----------------------------
     # Unticking every re-home on a pure re-import used to mint the area anyway
     # — the exact orphan this bucket exists to prevent, reached by taking the
@@ -630,33 +659,160 @@ module Reimbursements
       assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ], import.owner_syncs
     end
 
-    # DatabaseStore#sync_budget_owners! writes the budget's OWN rows, so the
-    # "has this already been synced?" comparison has to read the same rows.
-    # Comparing the area-resolved Budget#owner_ids can never converge: the
-    # sheet's owner is written to own_owners, #owners keeps returning the
-    # area's, and every later re-import reports the identical sync again.
-    test "a matched budget in an area is compared against its OWN owner rows" do
-      budget, alice, bob = props_in_area_owned_by_bob(own_owners: true)
+    # --- The sheet's owner column names the AREA ------------------------------
+    # "Once there's an area the owner of a budget line is moot and we only look
+    # at the area" — which is exactly what Budget#owners does. Phase 1 left the
+    # sheet's named owner landing on rows nobody reads, so that owner got no
+    # sign-off gate at all.
+
+    test "a matched line in an area sends the sheet's owner to the AREA, not its own rows" do
+      budget, alice, bob = props_in_area_owned_by_bob
 
       import = build_import(tsv("Props\t4000\tExpense\t1000\talice@example.com\t"),
                             existing_budgets: [ budget ], people: [ alice, bob ])
 
       assert_empty import.owner_syncs,
-                   "Alice is already the budget's own owner — there is nothing to write"
+                   "Budget#owners reads through the area, so the line's own rows are moot"
+      sync = import.area_owner_syncs.sole
+      assert_equal budget.area.record_id, sync[:area_id]
+      # Bob is nowhere on this sheet and must survive it: a spreadsheet has no
+      # way to say "remove this owner", so a sync only ever adds.
+      assert_equal [ alice.record_id, bob.record_id ].sort, sync[:owner_ids].sort
     end
 
-    test "an owner sync inside an area converges: a re-import reports it once" do
+    test "an area owner sync converges: a re-import reports it once" do
       budget, alice, bob = props_in_area_owned_by_bob
       sheet = tsv("Props\t4000\tExpense\t1000\talice@example.com\t")
 
       first = build_import(sheet, existing_budgets: [ budget ], people: [ alice, bob ])
-      assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ],
-                   first.owner_syncs
+      assert_equal [ alice.record_id, bob.record_id ].sort,
+                   first.area_owner_syncs.sole[:owner_ids].sort
 
-      DatabaseStore.new.sync_budget_owners!(budget.record_id, [ alice.id.to_s ])
+      DatabaseStore.new.add_area_owners!(budget.area.record_id, [ alice.record_id ])
 
       second = build_import(sheet, existing_budgets: [ budget.reload ], people: [ alice, bob ])
-      assert_empty second.owner_syncs, "the same sync must not be reported for ever"
+      assert_empty second.area_owner_syncs, "the same sync must not be reported for ever"
+    end
+
+    # The sheet has ONE owner column per line, so three lines under one area can
+    # name three people — and all three are meant. Any one owner satisfies the
+    # gate, so the union is the forgiving direction: an extra owner can endorse,
+    # a missing one strands the claim.
+    test "an area's owners are the union of what its lines name" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
+      marketing = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
+                                               cost_centre: @cost_centre, financial_year: @year)
+      other = create_reimbursements_budget(name: "Cogito: Other", area: area,
+                                           cost_centre: @cost_centre, financial_year: @year)
+
+      sheet = <<~TSV
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\talice@example.com
+        Cogito\tCogito: Other\t432320\tExpense\t800\tbob@example.com
+      TSV
+      import = build_import(sheet, existing_budgets: [ marketing, other ],
+                                   existing_areas: [ area ], people: [ alice, bob ])
+
+      sync = import.area_owner_syncs.sole
+      assert_equal area.record_id, sync[:area_id]
+      assert_equal [ alice.record_id, bob.record_id ].sort, sync[:owner_ids].sort
+      assert_empty import.owner_syncs, "an area-bound line must not write its own owner rows"
+    end
+
+    test "an area-less line still syncs its own owners" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      budget = create_reimbursements_budget(name: "Contingency", cost_centre: @cost_centre,
+                                            financial_year: @year)
+
+      import = build_import(<<~TSV, existing_budgets: [ budget ], people: [ alice ])
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        \tContingency\t\tExpense\t1000\talice@example.com
+      TSV
+
+      assert_empty import.area_owner_syncs
+      assert_equal [ alice.record_id ], import.owner_syncs.sole[:owner_ids]
+    end
+
+    # A sheet naming only people the area already has is not a change. Reporting
+    # one would put an "owners updated" line on every re-import for ever, and
+    # hide the imports that really do hand a show a new signatory.
+    test "a sheet naming a subset of an area's owners reports nothing" do
+      budget, _alice, bob = props_in_area_owned_by_bob
+
+      import = build_import(tsv("Props\t4000\tExpense\t1000\tbob@example.com\t"),
+                            existing_budgets: [ budget ], people: [ bob ])
+
+      assert_empty import.area_owner_syncs
+    end
+
+    # Resolved the same way #creates' area is: by NAME when this very import is
+    # about to create it, so import_budgets! can swap in the new row's id inside
+    # its transaction.
+    test "an area this import creates is named rather than identified" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+
+      import = build_import(<<~TSV, people: [ alice ])
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\talice@example.com
+      TSV
+
+      sync = import.area_owner_syncs.sole
+      assert_nil sync[:area_id]
+      assert_equal "Cogito", sync[:area_name]
+      assert_equal [ alice.record_id ], sync[:owner_ids]
+    end
+
+    # An unknown address is skipped, never invented as a Person — so it hands
+    # the area nothing, and an area whose only named owner is stale still has
+    # no signatory.
+    test "an owner email that matched nobody adds nothing to the area" do
+      import = build_import(<<~TSV, existing_areas: [ area_named("Cogito") ])
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\tgone@example.com
+      TSV
+
+      assert_empty import.area_owner_syncs
+      assert_equal [ "gone@example.com" ], import.unknown_owner_emails
+    end
+
+    # A matched line with no area of its own, whose sheet names one, is written
+    # BOTH places on purpose: the move only happens if the operator leaves the
+    # re-home ticked, and this model can't know which way that tick went.
+    test "an area-less line the sheet re-homes syncs its own owners as well as the area's" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", cost_centre: @cost_centre,
+                                            financial_year: @year)
+      area = area_named("Cogito")
+
+      sheet = <<~TSV
+        Area\tBudget\tNominal code\tType\tAmount\tOwner emails
+        Cogito\tCogito: Marketing\t432320\tExpense\t400\talice@example.com
+      TSV
+      import = build_import(sheet, existing_budgets: [ budget ], existing_areas: [ area ],
+                                   people: [ alice ])
+
+      assert_equal [ alice.record_id ], import.owner_syncs.sole[:owner_ids]
+      assert_equal [ alice.record_id ], import.area_owner_syncs.sole[:owner_ids]
+    end
+
+    # --- What the preview names ----------------------------------------------
+    # A named list, never a count: the union is forgiving, so a stale address on
+    # one line would otherwise gain sign-off authority over a whole show with
+    # nothing on screen to say so.
+
+    test "the preview names an area's resulting owners, marking the ones being added" do
+      budget, alice, bob = props_in_area_owned_by_bob
+
+      import = build_import(tsv("Props\t4000\tExpense\t1000\talice@example.com\t"),
+                            existing_budgets: [ budget ], people: [ alice, bob ])
+
+      set = import.area_owner_sets.sole
+      assert_equal "Cogito", set[:area_name]
+      assert_not set[:area_is_new]
+      assert_equal({ "Bob" => false, "Alice" => true },
+                   set[:owners].to_h { |owner| [ owner[:name], owner[:added] ] })
     end
 
     # --- Round-tripping an upload through the preview -------------------------
