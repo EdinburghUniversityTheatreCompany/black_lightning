@@ -77,6 +77,62 @@ module Reimbursements
       assert_equal "Publicity", budget.reload.name
     end
 
+    # RENAMING THE AREA does not rename the line, so the record is still good and
+    # restoring it could disarm nothing — the old clause read the area's CURRENT
+    # name and skipped, destroying the record one statement before the column is
+    # dropped.
+    test "restore! puts the name back after its area is renamed" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+      Reimbursements::AreaRename.strip!
+      area.update!(name: "Cabaret")
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Cogito: Marketing", budget.reload.name
+    end
+
+    test "restore! puts the name back after its area is re-cased" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+      Reimbursements::AreaRename.strip!
+      area.update!(name: "cogito")
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Cogito: Marketing", budget.reload.name
+    end
+
+    # A line MOVED to another area restores, where it used to skip. Its prefix
+    # names neither that area nor any other, so the backfill's verdict on the
+    # area it landed in is identical either way — which is the only thing that
+    # skip was protecting.
+    test "a line moved to another area restores without making that area reproducible" do
+      budget = create_reimbursements_budget(name: "Cogito: Marketing")
+      AreaBackfill.run!
+      improverts = create_reimbursements_area(name: "Improverts")
+
+      Reimbursements::AreaRename.strip!
+      budget.reload.update!(area: improverts)
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Cogito: Marketing", budget.reload.name
+      error = assert_raises(ActiveRecord::IrreversibleMigration) { BackfillReimbursementsAreas.new.down }
+      assert_match(/Improverts/, error.message)
+    end
+
+    # A line with no area has nothing for the prefix to name.
+    test "restore! leaves a line detached from its area alone" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+      Reimbursements::AreaRename.strip!
+      budget.reload.update!(area: nil)
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Marketing", budget.reload.name
+    end
+
     # Phase 2b drops the column once the rollback window closes. Skipping then
     # would turn a rollback that CANNOT restore the names into one that silently
     # doesn't.

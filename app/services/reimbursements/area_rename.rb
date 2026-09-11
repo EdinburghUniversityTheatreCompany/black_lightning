@@ -49,19 +49,31 @@ module Reimbursements
     # finance gave it, which is what recording the string rather than a rule
     # buys: the rule cannot tell "Publicity" from a name it never touched.
     def self.restore!(scope: Budget.all)
-      raise MissingRecordError, "#{RECORDED_COLUMN} is gone, so the names #strip! took off " \
-                                "cannot be restored — the rollback window closed when it was dropped" \
-        unless scope.model.column_names.include?(RECORDED_COLUMN)
+      # Asked of the live schema, not of the memoized column list: one rollback
+      # run can revert the migration that re-adds this column and then this one.
+      unless scope.model.connection.column_exists?(scope.model.table_name, RECORDED_COLUMN)
+        raise MissingRecordError, "#{RECORDED_COLUMN} is gone, so the names #strip! took off " \
+                                  "cannot be restored — the rollback window closed when it was dropped"
+      end
 
       ActiveRecord::Base.transaction do
         scope.where.not(RECORDED_COLUMN => nil).includes(:area).find_each do |budget|
-          recorded = budget.name_before_area_rename
-          next unless budget.name == BudgetImport.bare_name(recorded, budget.area&.name)
+          next unless restorable?(budget)
 
-          budget.update_columns(name: recorded, name_before_area_rename: nil)
+          budget.update_columns(name: budget.name_before_area_rename, name_before_area_rename: nil)
         end
       end
     end
+
+    # Is the name still the one #strip! left, and is there still an area for the
+    # prefix to name? Read off the RECORDED string — the same tail #bare_name
+    # takes — and never off the area's CURRENT name: doing that made a renamed
+    # area skip and destroy its record one statement before the column is
+    # dropped, while restoring there could not have disarmed anything.
+    def self.restorable?(budget)
+      budget.area && budget.name == budget.name_before_area_rename.to_s.partition(":").last.strip
+    end
+    private_class_method :restorable?
 
     # [[budget, bare name]] for every line whose name carries its own area's
     # prefix. update_columns, never update!: a bookkeeping rename must not be

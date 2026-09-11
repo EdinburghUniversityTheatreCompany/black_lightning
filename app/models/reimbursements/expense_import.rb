@@ -471,20 +471,22 @@ module Reimbursements
       @budgets_by_name.fetch(BudgetImport.match_key(name), [])
     end
 
-    # "Area: Line" resolves a candidate that HAS an area and nothing else, so it
-    # is only offered when one of them does — a name shared by two loose budgets
-    # can only be fixed on the budgets screen.
     def ambiguous_budget_error(row, candidates)
-      labels = candidates.map { |budget| BudgetImport.budget_label(budget) }
       "#{row[:budget].inspect} matches more than one budget in #{destination_label} " \
-        "(#{labels.to_sentence(last_word_connector: ' and ')}). #{ambiguous_budget_fix(candidates)}"
+        "(#{BudgetImport.budget_labels(candidates).to_sentence(last_word_connector: ' and ')}). " \
+        "#{ambiguous_budget_fix(candidates)}"
     end
 
+    # The suggestion is asked of the INDEX, not assumed: "Cogito: Marketing"
+    # resolves nothing when two areas are both called Cogito, and a fix
+    # instruction that reproduces the same block is worse than none. A candidate
+    # with no area has no spelling of its own either.
     def ambiguous_budget_fix(candidates)
-      prefixed = candidates.filter_map { |budget| "#{budget.area.name}: #{budget.name}" if budget.area }.first
-      return "Rename one of them, so this sheet can tell them apart." if prefixed.nil?
+      spelling = candidates.filter_map { |budget| "#{budget.area.name}: #{budget.name}" if budget.area }
+                           .find { |candidate| budgets_named(candidate).one? }
+      return "Rename one of them, so this sheet can tell them apart." if spelling.nil?
 
-      "Write the one you mean as #{prefixed.inspect}, or rename a budget so the two differ."
+      "Write the one you mean as #{spelling.inspect}, or rename a budget so the two differ."
     end
 
     def budget_error(row)

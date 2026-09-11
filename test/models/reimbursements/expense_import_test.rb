@@ -92,6 +92,22 @@ module Reimbursements
       assert_no_match(/Area: Line/, none.entries.sole.error)
     end
 
+    # Two areas of one name is the lenient-scoping shape, and "Cogito: Marketing"
+    # then resolves nothing — so the message must not name it as the fix, and
+    # the candidates must be told apart by something.
+    test "the fix is not a spelling that reproduces the same block" do
+      here = marketing_in("Cogito")
+      stale = create_reimbursements_budget(name: "Marketing", area: Area.create!(name: "Cogito"))
+
+      import = build_import(tsv(row(budget: "Marketing")), budgets: [ here, stale ])
+
+      error = import.entries.sole.error
+      assert_no_match(/Write the one you mean/, error)
+      assert_match(/Rename one of them/, error)
+      assert_match(/Fringe 2027/, error)
+      assert_match(/no financial year or cost centre/, error)
+    end
+
     test "naming the area with the line resolves it" do
       cogito = marketing_in("Cogito")
 

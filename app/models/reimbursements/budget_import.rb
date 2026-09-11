@@ -209,9 +209,29 @@ module Reimbursements
     end
 
     # A collision is usually two identical names, so the AREA is the part that
-    # tells them apart. Shared with ExpenseImport.
-    def self.budget_label(budget)
-      budget.area ? "#{budget.name.inspect} in #{budget.area.name}" : "#{budget.name.inspect} in no area"
+    # tells them apart — and where two areas share a NAME (the lenient year
+    # scoping puts an unstamped Cogito beside a real one), the year and cost
+    # centre are what tell those apart. Qualified only where it is needed, so
+    # the ordinary message stays short. Shared with ExpenseImport.
+    def self.budget_labels(budgets)
+      labels = budgets.map { |budget| budget_label(budget) }
+      return labels if labels.uniq.size == labels.size
+
+      budgets.map { |budget| budget_label(budget, qualified: true) }
+    end
+
+    def self.budget_label(budget, qualified: false)
+      return "#{budget.name.inspect} in no area" if budget.area.nil?
+
+      "#{budget.name.inspect} in #{qualified ? area_label(budget.area) : budget.area.name}"
+    end
+
+    # The names are identical, so the year and the cost centre are the only
+    # things that tell the two apart — and a blank pair is what makes the
+    # lenient scoping put a legacy area in every year's list to begin with.
+    def self.area_label(area)
+      parts = [ area.financial_year&.label, area.cost_centre&.name ].compact_blank
+      parts.any? ? "#{area.name} (#{parts.join(', ')})" : "#{area.name} (no financial year or cost centre)"
     end
 
     # Both spellings of a stored line's name — as stored, and with its area's
@@ -732,21 +752,13 @@ module Reimbursements
 
     def ambiguous_area_error(row, areas)
       "#{row[:area].inspect} matches more than one area already here " \
-        "(#{areas.map { |area| area_collision_label(area) }.to_sentence(last_word_connector: ' and ')}). " \
+        "(#{areas.map { |area| self.class.area_label(area) }.to_sentence(last_word_connector: ' and ')}). " \
         "Rename one of them so it's clear which this line belongs to."
-    end
-
-    # The names are identical, so the year and the cost centre are the only
-    # things that tell the two apart — and a blank pair is what makes the
-    # lenient scoping put a legacy area in every year's list to begin with.
-    def area_collision_label(area)
-      parts = [ area.financial_year&.label, area.cost_centre&.name ].compact_blank
-      parts.any? ? "#{area.name} (#{parts.join(', ')})" : "#{area.name} (no financial year or cost centre)"
     end
 
     def ambiguous_match_error(row, budgets)
       "#{row[:name].inspect} matches more than one budget already here " \
-        "(#{budgets.map { |budget| self.class.budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
+        "(#{self.class.budget_labels(budgets).to_sentence(last_word_connector: ' and ')}). " \
         "Rename one of them so it's clear which line this figure is for."
     end
 
