@@ -536,14 +536,29 @@ survive as historical import provenance and are never written. Spec + plan in
     fresh `initial_budget`, the originals reported absent. The area qualifies the key, so two shows
     each running a "Marketing" line are two keys rather than one collision; two stored lines
     answering to one key **blocks and names them**, never a silent pick of the last.
-  - **A row whose Area cell is blank answers with the line that is in NO area** (`#loose_match`):
-    a show's `Marketing` and a standing one are two lines, and the blank cell is the only thing
-    that says which. It is the one narrow exception to the block above, and it is narrow on
-    purpose — a row that DID name an area, or a name that is itself a prefixed spelling
-    (`Cogito: Marketing` typed against a loose line called exactly that), has pointed at a show
-    already and still blocks. Where only area-bound lines answer a bare name, the sheet does not
-    say which show it meant and the import stops: that is the old sheet's shape, and guessing
-    there is how the 17 lines duplicated.
+  - **Where SEVERAL lines answer a name and the sheet's Area cell is blank, the one in NO area is
+    the answer** (`#loose_match`): a show's `Marketing` and a standing one are two lines, and the
+    blank cell is the only thing that says which. It is the one narrow exception to the block
+    above, and it is narrow on purpose — a row that DID name an area, or a name that is itself a
+    prefixed spelling (`Cogito: Marketing` typed against a loose line called exactly that), has
+    pointed at a show already and still blocks, as do several area-bound lines with no loose one
+    among them. **Where exactly ONE line answers it is matched, loose or not** — a bare row
+    against a show's only `Marketing` revises that line rather than creating a loose one beside
+    it. That asymmetry is deliberate: it is what the committee's file does the day they stop
+    typing prefixes without filling the Area column in, and blocking it would refuse the whole
+    sheet.
+  - **A row whose Area cell is blank but whose NAME carries the prefix of an area the sheet names
+    keys as that area's row** (`#prefix_area_for`). `Cogito | Marketing` beside
+    `(blank) | Cogito: Marketing` is one line written twice, not the legitimate pair — both name
+    Cogito's line — and a sheet mid-transition between the two spellings is the likeliest one the
+    committee sends. It normalises the row's OWN key; a row that claimed several keys would make
+    the duplicate relation asymmetric and non-transitive, which is what Phase 2a's differential
+    harness existed for.
+  - **The preview states the line each row MATCHED** (`Entry#matched_area_label`, plus
+    `#matched_note` where the loose reading decided) wherever that differs from the Area cell the
+    sheet typed. Without it a row matched to the loose line and one matched to the show's line
+    render identically — same blank cell, same name — so "report, don't block" reported nothing
+    the operator could see on the row they typed.
   - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
     note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
     would read an `Area Budget` column as the line's own name (`budget`) *and* as the area (`area`).

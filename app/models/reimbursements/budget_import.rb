@@ -14,10 +14,17 @@ module Reimbursements
   # THE BUCKETS. A line is matched within one (financial year, cost centre) by
   # its AREA plus its bare name where the sheet names an area, and by its whole
   # name otherwise — .bare_name and #resolve_budget read both spellings of a
-  # name the area prefix was stripped from. A row naming no area answers with
-  # the line that is in no area, which is how a show's "Marketing" and a
-  # standing one stay two lines; where only area-bound lines answer, the sheet
-  # has not said which show and the import stops rather than guessing.
+  # name the area prefix was stripped from.
+  #
+  # Where SEVERAL stored lines answer to a name and the sheet's Area cell is
+  # blank, the one that is in NO area is the answer — that is how a show's
+  # "Marketing" and a standing one stay two lines. Where several answer and
+  # none of them is loose, the sheet has not said which show and the import
+  # stops rather than guessing. Where exactly ONE line answers it is matched,
+  # loose or not: a bare row against a show's only "Marketing" revises that
+  # line rather than creating a loose one beside it, which is asymmetric with
+  # the rule above and deliberate — it is what the committee's file does the
+  # day they stop typing prefixes without filling the Area column in.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -37,8 +44,34 @@ module Reimbursements
     include StrictColumnMatching
 
     # What a row became, plus everything the preview needs to explain it.
+    # +declined_namesakes+ are the lines #loose_match passed over, empty for
+    # every ordinary row.
     Entry = Struct.new(:row, :bucket, :budget, :owner_ids, :unknown_owner_emails, :error,
-                       :area_name, keyword_init: true)
+                       :area_name, :declined_namesakes, keyword_init: true) do
+      # The area of the line this row MATCHED, where that is not what the row's
+      # own Area cell says — nil when they agree, so an ordinary filled-in sheet
+      # gains nothing on screen. Two lines of one name are legitimate, so a row
+      # rendering only the cell and the name it typed cannot say which of them
+      # the figure is going to.
+      def matched_area_label
+        return if budget.nil?
+        return if BudgetImport.match_key(area_name) == BudgetImport.match_key(budget.area&.name)
+
+        budget.area&.name || "no area"
+      end
+
+      # Said on the row rather than in a panel: the operator who left the Area
+      # cell blank is the one who skims the lists underneath.
+      def matched_note
+        declined = Array(declined_namesakes)
+        return if declined.empty?
+
+        others = BudgetImport.budget_labels(declined).to_sentence(last_word_connector: " and ")
+        "Matched #{BudgetImport.budget_label(budget)}. #{others} " \
+          "#{declined.one? ? 'is' : 'are'} named the same — give this row an Area cell if you " \
+          "meant #{declined.one? ? 'that one' : 'one of those'}."
+      end
+    end
 
     # One entry per column, in the order #to_tsv writes them: +label+ is the
     # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
@@ -142,10 +175,10 @@ module Reimbursements
       # Their union is every spelling, so nothing a line answered to before has
       # stopped answering.
       @existing_by_prefixed_name = group_by_keys(existing_budgets) do |budget|
-        spelling_keys(budget, naming_area: true)
+        self.class.spelling_keys(budget, naming_area: true)
       end
       @existing_by_bare_name = group_by_keys(existing_budgets) do |budget|
-        spelling_keys(budget, naming_area: false)
+        self.class.spelling_keys(budget, naming_area: false)
       end
       @existing_by_area_and_name = group_by_keys(existing_budgets) do |budget|
         [ self.class.area_scoped_key(budget.name, budget.area&.name) ]
@@ -245,6 +278,20 @@ module Reimbursements
 
       bare = bare_name(name, area_name)
       bare == name.to_s ? [ name.to_s, "#{area_name}: #{name}" ] : [ name.to_s, bare ]
+    end
+
+    # The keys a stored line answers to, taking only the spellings that do (or
+    # do not) name its own area. A spelling names the area exactly when the
+    # rename would take a prefix off it, so this cannot drift from .bare_name —
+    # and it is a PARTITION of .name_spellings, so the two halves together are
+    # still every spelling the line ever answered to. Pinned by a test: a half
+    # lost wholesale reddens a dozen tests, one spelling lost under a degenerate
+    # name would be silent, and the line would simply stop being findable.
+    def self.spelling_keys(budget, naming_area:)
+      area_name = budget.area&.name
+      name_spellings(budget.name, area_name)
+        .select { |spelling| (bare_name(spelling, area_name) != spelling) == naming_area }
+        .map { |spelling| match_key(spelling) }
     end
 
     # Nothing is written unless every row is readable — a partial import leaves
@@ -702,10 +749,11 @@ module Reimbursements
       error = row_error(row, duplicates[index])
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
-      budget, match_error = resolve_budget(row)
+      budget, match_error, declined = resolve_budget(row)
       return Entry.new(**base, bucket: :invalid, error: match_error) if match_error
 
-      Entry.new(**base, budget: budget, bucket: bucket_for(row, budget))
+      Entry.new(**base, budget: budget, bucket: bucket_for(row, budget),
+                declined_namesakes: declined)
     end
 
     # Which stored line this row is about, as [budget, error].
@@ -724,21 +772,24 @@ module Reimbursements
     def resolve_budget(row)
       qualified = stored_under(@existing_by_area_and_name,
                                self.class.area_scoped_key(row[:name], row[:area]))
-      return [ nil, ambiguous_match_error(row, qualified) ] if qualified.size > 1
-      return [ qualified.sole, nil ] if qualified.size == 1
+      return [ nil, ambiguous_match_error(row, qualified), [] ] if qualified.size > 1
+      return [ qualified.sole, nil, [] ] if qualified.size == 1
 
       resolve_by_name(row)
     end
 
-    # No area key placed this row, so its name is all there is to go on.
+    # No area key placed this row, so its name is all there is to go on. The
+    # third element is what the loose reading passed over, for the row to say.
     def resolve_by_name(row)
       key = self.class.match_key(row[:name])
       prefixed = stored_under(@existing_by_prefixed_name, key)
       candidates = prefixed | stored_under(@existing_by_bare_name, key)
-      return [ candidates.first, nil ] if candidates.size <= 1
+      return [ candidates.first, nil, [] ] if candidates.size <= 1
 
       loose = loose_match(row, prefixed, candidates)
-      loose ? [ loose, nil ] : [ nil, ambiguous_match_error(row, candidates) ]
+      return [ nil, ambiguous_match_error(row, candidates), [] ] unless loose
+
+      [ loose, nil, candidates - [ loose ] ]
     end
 
     # Which of several same-named lines a row that pointed at NO show meant: the
@@ -796,16 +847,6 @@ module Reimbursements
       row[:area].present? ? "#{row[:name].inspect} (#{row[:area]})" : "#{row[:name].inspect} (no area)"
     end
 
-    # The keys a stored line answers to, taking only the spellings that do (or
-    # do not) name its own area. A spelling names the area exactly when the
-    # rename would take a prefix off it, so this cannot drift from .bare_name.
-    def spelling_keys(budget, naming_area:)
-      area_name = budget.area&.name
-      self.class.name_spellings(budget.name, area_name)
-          .select { |spelling| (self.class.bare_name(spelling, area_name) != spelling) == naming_area }
-          .map { |spelling| self.class.match_key(spelling) }
-    end
-
     def group_by_keys(records)
       records.each_with_object({}) do |record, index|
         yield(record).compact.uniq.each { |key| (index[key] ||= []) << record }
@@ -837,9 +878,10 @@ module Reimbursements
       end
     end
 
-    # Every row in the group names the same area (or none of them does), since
-    # that is what made their keys equal — so there is no Area cell left to
-    # suggest, and naming it once is the only fix.
+    # Every row in the group names the same area — by its Area cell or by the
+    # prefix on its own name — or none of them does, since that is what made
+    # their keys equal. So there is no Area cell left to suggest, and naming it
+    # once is the only fix.
     def duplicate_rows_error(row, twins)
       "The same budget line is named more than once in this sheet " \
         "(#{rows_phrase([ row ] + twins)}). Name it once — two lines are told apart by their " \
@@ -1016,9 +1058,31 @@ module Reimbursements
         if row[:name].blank?
           nil
         else
-          self.class.area_scoped_key(row[:name], row[:area]) ||
+          self.class.area_scoped_key(row[:name], row[:area].presence || prefix_area_for(row[:name])) ||
             [ nil, self.class.match_key(row[:name]) ]
         end
+    end
+
+    # The area a row's own NAME points at, for a row whose Area cell is blank:
+    # "Cogito: Marketing" names Cogito as surely as the cell would, and the
+    # sheet naming Cogito elsewhere is what says the prefix is a show rather
+    # than part of the line's name. So a sheet mid-transition between the two
+    # spellings writes ONE line twice and is refused, which is not the pair
+    # Mick ruled legitimate — that is a loose line beside an area's.
+    #
+    # This NORMALISES the row's own single key before grouping; it never gives
+    # a row a second key to claim. The keys stay equal-or-not, so #duplicate_rows
+    # stays a group-by and the twin relation stays an equivalence.
+    #
+    # At most one area can answer: #bare_name strips only an exact name match
+    # and #sheet_area_names is unique by that same key.
+    def prefix_area_for(name)
+      sheet_area_names.find { |area| self.class.bare_name(name, area) != name.to_s }
+    end
+
+    def sheet_area_names
+      @sheet_area_names ||= @rows.filter_map { |row| row[:area].presence }
+                                 .uniq { |name| self.class.match_key(name) }
     end
 
     # Row index => the other rows naming the same budget line. A row that names

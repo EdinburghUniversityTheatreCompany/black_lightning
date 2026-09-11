@@ -242,6 +242,30 @@ module Admin
         end
       end
 
+      # A show's "Marketing" and a standing one are two lines now, so the Area
+      # cell and the name the sheet typed no longer say which line a figure is
+      # going to — both rows below render as the same row without this.
+      test "preview states the line each row matched, and what the loose reading passed over" do
+        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+        create_reimbursements_budget(name: "Marketing", area: cogito, initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+        create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Cogito: Marketing\t432320\tExpense\t500\t\t",
+                                                  "Marketing\t432320\tExpense\t900\t\t"))
+
+        assert_equal 2, assigns(:import).entries_in(:revise).size
+        assert_select "div.overflow-x-auto:not(.mt-2) table tbody tr", 2
+        # The row with a blank Area cell that landed on Cogito's line says so.
+        assert_select "td span.text-gray-600", text: "matched: Cogito"
+        # And the row the loose reading decided names the line it passed over.
+        assert_select "td div.text-amber-700",
+                      text: /Matched "Marketing" in no area\. "Marketing" in Cogito is named the same/
+      end
+
       test "apply creates the area named on the sheet and attaches the budget to it" do
         sign_in @user
 

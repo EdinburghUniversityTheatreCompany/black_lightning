@@ -1362,6 +1362,55 @@ module Reimbursements
       assert_match(/matches more than one budget/, import.entries.sole.error)
     end
 
+    # Two loose lines of one name is reachable — budget names are not unique, and
+    # 14 of the 31 live Fringe lines have no area — and the reading has nothing
+    # to choose between them with. Neither lookup may guess.
+    test "two lines in no area of one name block a row that cannot separate them" do
+      cogito = area_named("Cogito")
+      in_area = create_reimbursements_budget(name: "Marketing", area: cogito, initial_budget: 400,
+                                             financial_year: @year, cost_centre: @cost_centre)
+      loose = Array.new(2) do
+        create_reimbursements_budget(name: "Marketing", initial_budget: 400,
+                                     financial_year: @year, cost_centre: @cost_centre)
+      end
+
+      import = build_import(tsv("Marketing\t432320\tExpense\t500\t\t"),
+                            existing_budgets: loose + [ in_area ], existing_areas: [ cogito ])
+
+      assert_not import.valid?
+      assert_match(/matches more than one budget/, import.entries.sole.error)
+    end
+
+    # ONE line written twice, which is not the pair the ruling legitimised: both
+    # rows name Cogito's Marketing, one by the cell and one by the prefix. A
+    # sheet mid-transition between the two spellings is the likeliest one the
+    # committee sends, and with nothing stored yet it would otherwise create two
+    # lines, each with its own agreed figure.
+    test "an area cell and the same area's prefix are one line, not two" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        \tCogito: Marketing\t432330\tExpense\t600
+      TSV
+
+      assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+      assert_match(/named more than once in this sheet/, import.entries.first.error)
+    end
+
+    # Only an area THE SHEET NAMES reads as a prefix: with no Cogito row above
+    # it, "Cogito: Marketing" is a line whose name happens to carry a colon.
+    test "a prefix no row of the sheet names is part of the name" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Improverts\tMarketing\t432320\tExpense\t500
+        \tCogito: Marketing\t432330\tExpense\t600
+      TSV
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal 2, import.entries_in(:create).size
+    end
+
     # The reading is for a row that pointed at NO show. This one pointed at
     # Cogito and missed, so taking the line that is in no area would move it
     # into Cogito rather than revise the line the row meant.
@@ -1453,6 +1502,27 @@ module Reimbursements
       assert_not import.valid?
       assert_equal 2, import.entries_in(:invalid).size
       assert_match(/"Marketing" \(Cogito\), 2 times/, import.entries.first.error)
+    end
+
+    # The two halves of the name index are a PARTITION of .name_spellings, so
+    # together they are still every spelling a line answered to before the
+    # split. Losing one half reddens a dozen tests; losing a single spelling
+    # under a degenerate name would be silent, and that line would simply stop
+    # being findable by the sheet that names it.
+    test "the split name index holds every spelling between its two halves" do
+      names = [ "Marketing", "Cogito: Marketing", "Cogito:  Marketing", "cogito :  Marketing",
+                ":", "Cogito: ", ": Marketing", "Cogito: Cogito: Marketing", "Improverts: Retreat" ]
+      areas = [ nil, "Cogito", "cogito ", ":" ]
+
+      names.product(areas).each do |name, area_name|
+        budget = Budget.new(name: name, area: area_name && Area.new(name: area_name))
+        halves = [ true, false ].map { |flag| BudgetImport.spelling_keys(budget, naming_area: flag) }
+        expected = BudgetImport.name_spellings(name, area_name)
+                               .map { |spelling| BudgetImport.match_key(spelling) }.uniq
+
+        assert_equal expected.sort, halves.inject(:|).sort, "#{name.inspect} in #{area_name.inspect}"
+        assert_empty halves.inject(:&), "#{name.inspect} in #{area_name.inspect}"
+      end
     end
 
     # --- Two areas of one name -----------------------------------------------

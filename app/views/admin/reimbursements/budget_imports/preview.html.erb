@@ -58,8 +58,18 @@
                     <span class="text-amber-700">(new)</span>
                   <% end %>
                 <% end %>
+                <%# Two lines of one name are legitimate, so the cell the sheet
+                    typed no longer says which line this figure is going to. %>
+                <% if entry.matched_area_label %>
+                  <span class="text-gray-600">matched: <%= entry.matched_area_label %></span>
+                <% end %>
               </td>
-              <td class="py-1 pr-4"><%= entry.row[:name] %></td>
+              <td class="py-1 pr-4">
+                <%= entry.row[:name] %>
+                <% if entry.matched_note %>
+                  <div class="text-amber-700"><%= entry.matched_note %></div>
+                <% end %>
+              </td>
               <td class="py-1 pr-4 font-mono">
                 <%= entry.row[:nominal_code].presence || content_tag(:span, "(none)", class: "text-amber-700") %>
               </td>
