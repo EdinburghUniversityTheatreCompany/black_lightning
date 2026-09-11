@@ -323,12 +323,22 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The area owns and its budgets inherit.** `Budget#owners` resolves through the area when
     it has one; `own_owners` is the budget's own rows, KEPT (not deleted) so the backfill is
     reversible, and the area's owners win wherever both exist.
-  - **Ownership is EDITED on the area, and every writer must write `own_owners`.** `#owners`
-    reads through the area, so a screen that offers an editable owner list for an area-bound
-    budget reads one table and writes another: the budget form renders the inherited owners
-    read-only and omits `owner_ids` from its params entirely, and the importer compares
-    `own_owners` (comparing `owner_ids` could never converge, so it re-reported the same sync
-    for ever). A blank list is the dangerous one — `where.not(person_id: [])` is `WHERE 1=1`.
+  - **Ownership is EDITED on the area, and a writer writes the table the gate actually READS.**
+    `#owners` resolves through the area, so a screen offering an editable owner list for an
+    area-bound budget would read one table and write another: the budget form renders the
+    inherited owners read-only and omits `owner_ids` from its params entirely, and the importer
+    sends an area-bound line's owner to the AREA while `#owner_syncs` takes only the lines that
+    have none. Each comparison is against the rows it writes — comparing `owner_ids`, which
+    reads through the area, could never converge and re-reported the same sync for ever. A blank
+    list is the dangerous one — `where.not(person_id: [])` is `WHERE 1=1`.
+  - **A budget named on its own has to name its area** (`Budget#display_name`, the one
+    composition — `"Cogito — Marketing"`). The prefix strip made the stored names non-unique:
+    three live Fringe lines are called `Marketing`, all on nominal code 432320, so a picker
+    offering them bare charges another show AND moves the claim to that show's owner gate. Every
+    picker, reminder, email, receipt filename and the auto-derived BACS payment reference reads
+    it, and `active_budgets` is ordered by it. The BARE name is right only where the area is
+    already beside it — the grouped index's rowgroup heading, the overview's area card, an
+    export's own Area column, the name FIELD on the budget form.
   - **An area naming nobody switches its budgets' sign-off gate OFF** — `OwnerReview
     .gate_applies?` is false with no owners, so a budget with its own owner attached to an
     ownerless area stops needing endorsement entirely. Both forms warn.
@@ -495,9 +505,23 @@ survive as historical import provenance and are never written. Spec + plan in
     column is added to that constant**, and `bin/rails test` does not run system tests — which is
     how adding `Area Budget` left a RED system test invisible for two tasks. Both budget-import test
     files derive `HEADERS` from `TSV_HEADERS` and pad each row with the leading area cells.
-  - **`initial_budget` is written ONLY on create.** A re-import logs revisions as forecasts under
-    one `BudgetUpdate`, so `Budget#variance` keeps meaning "drift from the figure the committee
-    agreed" however often the sheet is re-sent.
+  - **The `Area Budget` column is the show's agreed total, and it repeats down the area's rows**,
+    so two different values for one area BLOCK the import rather than picking one — the rule an
+    unreadable Amount already follows. Written only on create; a later, different figure is
+    reported and logged as a forecast on the AREA (`#area_revisions`) under the same
+    `BudgetUpdate` as the line revisions, compared against `Area#projected_amount` so a re-import
+    converges. The sheet is the committee's own route for revising a show's total, so dropping
+    that revision was silent. The trap is an ACCENT: `Area`'s uniqueness check runs under
+    `utf8mb4_unicode_ci`, which folds accents, and `match_key` does not — so `Cógito` beside a
+    stored `Cogito` is refused in the preview rather than 500ing the apply and losing the paste.
+  - **The preview's submit button is DISABLED when nothing is going to happen, so a bucket its
+    count forgets cannot be applied AT ALL.** It reads `#apply_work`, keyed by the
+    `import_budgets!` argument that does each thing, with a test asserting it covers every one:
+    an owner-only sheet (the committee's same file re-sent with owners filled in) used to render
+    the owner panel directly above a disabled "Nothing to import".
+  - **A BUDGET's `initial_budget` is written ONLY on create**, as an area's is. A re-import logs
+    revisions as forecasts under one `BudgetUpdate`, so `Budget#variance` keeps meaning "drift
+    from the figure the committee agreed" however often the sheet is re-sent.
   - **An unreadable amount blocks the whole import; an unknown owner email only warns.** A
     mis-read figure is silent wrong money; a stale committee email must not stop thirty lines
     landing, and a missing owner surfaces visibly as an unendorsed claim. No `Person` is ever
