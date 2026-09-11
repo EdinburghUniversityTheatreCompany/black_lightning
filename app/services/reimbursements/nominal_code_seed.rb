@@ -35,14 +35,19 @@ module Reimbursements
 
       centres = CostCentre.where(id: groups.keys.map(&:first).compact.uniq).index_by(&:id)
 
+      taken = taken_labels(groups.keys.filter_map(&:first).uniq)
+
       groups.filter_map do |(cost_centre_id, code), group_budgets|
         next if cost_centre_id.nil? # no default centre configured — nowhere to seed an unplaced code
         next if NominalCode.exists?(cost_centre_id: cost_centre_id, code: code)
 
+        derived = derive_label(group_budgets)
+        label = unique_label(derived, code, taken[cost_centre_id])
         {
           cost_centre: centres.fetch(cost_centre_id),
           code: code,
-          label: derive_label(group_budgets),
+          label: label,
+          label_disambiguated: label != derived,
           budget_count: group_budgets.size,
           unplaced_count: group_budgets.count { |b| b.cost_centre_id.nil? }
         }
@@ -81,5 +86,47 @@ module Reimbursements
       budgets.map(&:name).tally.max_by { |_name, count| count }.first
     end
     private_class_method :derive_label
+
+    # Two codes whose budgets share a common name derive the SAME label, and a
+    # centre's labels are unique (NominalCode) because BudgetFinder matches a
+    # hand-named line by label — two codes answering to one would adopt the
+    # same uncoded line and leave the second code unopenable for ever.
+    #
+    # So the collision is qualified rather than refused: the label is already
+    # an explicit guess finance corrects on the cost centre's settings page,
+    # and a guess that names its own code is still one. Refusing instead would
+    # abort the whole seed over data the committee has every right to have.
+    def self.unique_label(derived, code, taken)
+      candidate = derived
+      # The code is the one thing guaranteed distinct here, so it is what the
+      # qualifier carries. A numeric suffix beyond that only runs if a centre
+      # already holds that exact qualified label; it cannot be a space, since
+      # match_key strips and squeezes those and the loop would never end.
+      candidate = "#{derived} (#{code})" if taken.include?(key(candidate))
+      suffix = 2
+      while taken.include?(key(candidate))
+        candidate = "#{derived} (#{code}) #{suffix}"
+        suffix += 1
+      end
+      taken << key(candidate)
+      candidate
+    end
+    private_class_method :unique_label
+
+    # Labels already spoken for in each centre — the rows #plan skips because
+    # their code is seeded, which still hold their names.
+    def self.taken_labels(cost_centre_ids)
+      existing = NominalCode.where(cost_centre_id: cost_centre_ids).pluck(:cost_centre_id, :label)
+      cost_centre_ids.index_with do |id|
+        existing.filter_map { |centre_id, label| key(label) if centre_id == id }.to_set
+      end
+    end
+    private_class_method :taken_labels
+
+    # NominalCode compares labels case-insensitively under utf8mb4_unicode_ci,
+    # so the plan has to reserve them the same way or it hands apply! a pair
+    # the database then refuses.
+    def self.key(label) = BudgetImport.match_key(label)
+    private_class_method :key
   end
 end

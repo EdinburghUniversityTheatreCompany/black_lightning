@@ -92,5 +92,43 @@ module Reimbursements
 
       assert_empty NominalCodeSeed.plan
     end
+
+    # Two codes whose budgets share a name derive one label, and a centre's
+    # labels are unique — so the seed has to qualify rather than abort, or the
+    # committee's own data stops the whole list being seeded.
+    test "two codes deriving one label are qualified rather than refused" do
+      cc = CostCentre.default
+      create_reimbursements_budget(name: "Marketing", nominal_code: "432320", cost_centre: cc)
+      create_reimbursements_budget(name: "Marketing", nominal_code: "555555", cost_centre: cc)
+
+      NominalCodeSeed.apply!
+
+      labels = NominalCode.where(cost_centre: cc).order(:code).pluck(:code, :label)
+      assert_equal [ [ "432320", "Marketing" ], [ "555555", "Marketing (555555)" ] ], labels
+    end
+
+    test "the plan says which labels it had to qualify" do
+      cc = CostCentre.default
+      create_reimbursements_budget(name: "Marketing", nominal_code: "432320", cost_centre: cc)
+      create_reimbursements_budget(name: "Marketing", nominal_code: "555555", cost_centre: cc)
+
+      qualified = NominalCodeSeed.plan.index_by { |entry| entry[:code] }
+
+      assert_not qualified.fetch("432320")[:label_disambiguated]
+      assert qualified.fetch("555555")[:label_disambiguated],
+             "a label the seed had to change must not read as one the data stated"
+    end
+
+    # The rows #plan skips still hold their names, so a label finance already
+    # owns is not free for a code seeded later.
+    test "a label an already-listed code holds is not reused" do
+      cc = CostCentre.default
+      create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")
+      create_reimbursements_budget(name: "Marketing", nominal_code: "555555", cost_centre: cc)
+
+      NominalCodeSeed.apply!
+
+      assert_equal "Marketing (555555)", NominalCode.find_by(cost_centre: cc, code: "555555").label
+    end
   end
 end
