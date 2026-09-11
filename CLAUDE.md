@@ -408,7 +408,10 @@ survive as historical import provenance and are never written. Spec + plan in
       income line is spend recorded on it, not income received — netting it would raise the room
       left by money somebody spent. Income that landed is `Budget#eusa_actual_amount`, an EUSA
       ledger figure, and nothing here mixes a committed figure with an actual one. The edit
-      card's `<dt>` carries that as a `title`.
+      card's `<dt>` carries that as a `title`. **So on a net area whose income has landed it
+      reads LOWER than the room really left** — understating is the direction this portal errs
+      in, and a basis-aware figure needs its own name plus a decision on whether an EUSA credit
+      may raise it.
     - **The grouped index prints a netted allocation as its two halves** ("Allocated £400.00 of
       spend less £800.00 of income"), never as a bare negative: you cannot allocate minus four
       hundred pounds, a negative money figure means bad news everywhere else in this portal

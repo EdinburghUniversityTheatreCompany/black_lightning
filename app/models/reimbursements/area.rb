@@ -131,6 +131,14 @@ module Reimbursements
     # monthly ledger weeks later, and nothing in this portal mixes a committed
     # figure with an actual one. Remaining is therefore the agreed total less
     # committed spend on both bases; the edit card's <dt> says so.
+    #
+    # The consequence, since it is the reason this is safe rather than merely
+    # defensible: on a NET area whose income has actually landed, this reads
+    # LOWER than the room really left — it counts the spend that income was
+    # meant to offset without counting the income. Understating room is the
+    # direction this portal always errs in, so it stands until a basis-aware
+    # figure earns its own name and its own decision about whether an EUSA
+    # credit may raise it.
     def remaining
       return nil if projected_amount.nil?
 
