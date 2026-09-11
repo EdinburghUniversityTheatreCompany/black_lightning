@@ -1,11 +1,21 @@
 class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
   def up
-    Reimbursements::AreaBackfill.run!
+    created_area_ids = Reimbursements::AreaBackfill.run!
     # The backfill re-homes only the lines whose NAME reproduces their area, so
     # anything created, moved or imported into one is restored from what #down
     # recorded instead. Nothing is recorded on a first run, which is every run
     # that is not a re-migrate.
     Reimbursements::AreaMembership.restore!
+    # Only the areas THIS run created and the restore then emptied. The backfill
+    # keys on the budget's year and centre while the record keys on the area's,
+    # so a line holding an area from another year is re-homed into a new area
+    # here and moved out again by the restore — leaving an ownerless phantom in
+    # that year's pickers, which #down would then refuse over as hand-editing.
+    #
+    # Deliberately NOT a sweep of every empty area: the area form has shipped,
+    # so an empty area is something a person can mean to have, and deleting one
+    # is not this migration's business.
+    Reimbursements::Area.where(id: created_area_ids).where.missing(:budgets).destroy_all
   end
 
   # ROLLING THIS BACK ON A DATABASE THAT APPLIED IT BEFORE PHASE 2B: run

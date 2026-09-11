@@ -18,7 +18,16 @@ module Reimbursements
     # without it a mid-run exception could leave budgets homed to an area whose
     # owners were never seeded — silently breaking that area's owner gate with
     # nothing on screen to explain it.
+    #
+    # Returns the ids of the areas it CREATED (never the ones it merely found),
+    # because a caller that re-homes lines afterwards has to be able to tell an
+    # area this run minted from one that was already there. AreaMembership's
+    # restore is exactly such a caller: this keys on the BUDGET's year and
+    # centre while the record keys on the AREA's, and a budget holding an area
+    # from another year is a real state — so a line restored to the recorded
+    # area can leave the one created here holding nothing at all.
     def self.run!(scope: Budget.all)
+      created_ids = []
       ActiveRecord::Base.transaction do
         area_ids = []
 
@@ -27,12 +36,14 @@ module Reimbursements
           next if match.nil?
 
           area = find_or_create_area(budget, match[:area].strip)
+          created_ids << area.id if area.previously_new_record?
           budget.update_column(:area_id, area.id)
           area_ids << area.id
         end
 
         seed_owners!(area_ids.uniq)
       end
+      created_ids.uniq
     end
 
     def self.find_or_create_area(budget, name)

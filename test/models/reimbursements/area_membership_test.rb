@@ -112,6 +112,42 @@ module Reimbursements
       assert_equal [ alice.record_id ], Area.find_by!(name: "ZZProbe Show").owner_ids
     end
 
+    # The backfill keys on the BUDGET's year and centre; the record keys on the
+    # AREA's. A budget holding an area from another year is a documented state,
+    # so the backfill mints an area of its own for that line and the restore
+    # then moves the line out — leaving an ownerless phantom in that year's
+    # pickers, which #down would afterwards refuse over as hand-editing.
+    test "a cross-year line leaves no phantom area behind, and rolls back again" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      this_year = FinancialYear.create!(label: "Fringe 2026", active: true)
+      next_year = FinancialYear.create!(label: "Fringe 2027")
+      area = create_reimbursements_area(name: "ZZCogito", financial_year: next_year)
+      area.sync_owner_ids!([ alice.id ])
+      budget = create_reimbursements_budget(name: "ZZCogito: Marketing", area: area,
+                                            financial_year: this_year)
+
+      BackfillReimbursementsAreas.new.down
+      BackfillReimbursementsAreas.new.up
+
+      assert_equal 1, Area.where(name: "ZZCogito").count,
+                   "the area the backfill minted for this year is left holding nothing"
+      assert_equal next_year.id, budget.reload.area.financial_year_id
+      assert_equal [ alice.record_id ], budget.area.owner_ids
+      # And the guard must not then refuse over an area the migration made.
+      assert_nothing_raised { BackfillReimbursementsAreas.new.down }
+    end
+
+    # The other half: an area this run created and the restore did NOT empty is
+    # left alone, or the cleanup would delete the ordinary backfill's own work.
+    test "an area the backfill created and still holds lines survives the cleanup" do
+      budget = create_reimbursements_budget(name: "ZZCogito: Marketing")
+
+      BackfillReimbursementsAreas.new.down
+      BackfillReimbursementsAreas.new.up
+
+      assert_equal "ZZCogito", budget.reload.area&.name
+    end
+
     # The record is the area's identity, not its id: down deletes the rows, so
     # an id would dangle. An area nothing reproduces is rebuilt from the record.
     test "restore! rebuilds an area no line's name reproduces" do
@@ -159,6 +195,10 @@ module Reimbursements
         assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record! }
       end
       assert_match(/area_before_rollback/, error.message)
+      # The TABLE is the scope's, not a hardcoded one: a guard naming
+      # reimbursements_budgets outright answers "present" for every other model
+      # and only fails later, somewhere less legible.
+      assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record!(scope: Area.all) }
     end
 
     test "restore! refuses when the recording column is gone" do
@@ -169,14 +209,29 @@ module Reimbursements
 
     private
 
+    # CREATE NOTHING IN A TEST THAT CALLS THIS. MySQL auto-commits DDL, so the
+    # drop ends the test's own transaction: nothing written before it is rolled
+    # back, and the first write after it raises "SAVEPOINT active_record_1 does
+    # not exist". The two tests below write nothing, which is what makes them
+    # safe.
+    #
+    # The column cache is WARMED before the drop and reset only afterwards, so
+    # the memoized list and the live schema genuinely disagree inside the block.
+    # Resetting first made them agree again, and a guard reading the cache
+    # instead of the schema passed the test it is supposed to fail.
     def without_recording_column
       connection = Budget.connection
-      connection.remove_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN)
-      Budget.reset_column_information
+      Budget.column_names
+      connection.remove_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN,
+                               if_exists: true)
       yield
     ensure
+      # if_exists/if_not_exists on both halves, and the original position: a run
+      # killed between them would otherwise leave the column dropped (one
+      # failing run, healed forever after by this ensure) or drifting down the
+      # table's column order in that worker's database, run after run.
       connection.add_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN, :json,
-                            if_not_exists: true)
+                            if_not_exists: true, after: :airtable_record_id)
       Budget.reset_column_information
     end
   end
