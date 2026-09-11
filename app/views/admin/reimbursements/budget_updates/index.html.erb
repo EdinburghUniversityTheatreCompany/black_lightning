@@ -39,8 +39,8 @@
                      if forecast.budget_id
                        @budgets_by_id[forecast.budget_id]&.display_name
                      else
-                       area = @areas_by_id[forecast.area_id.to_s]
-                       "#{area.name} (area total)" if area
+                       area_name = @area_names_by_id[forecast.area_id.to_s]
+                       "#{area_name} (area total)" if area_name
                      end
                    end %>
                 <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "line") %>

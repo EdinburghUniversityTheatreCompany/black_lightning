@@ -195,11 +195,9 @@ module Reimbursements
     # and the finance expense-edit form draw from: narrowing it to whichever
     # centre finance happens to have selected would quietly stop a producer
     # filing against the other one.
-    # Ordered by the name the pickers PRINT (Budget#display_name), not the bare
-    # one: three shows each running a "Marketing" line sort adjacent under the
-    # bare name, so the visible labels read out of order in every select this
-    # builds. Order is presentation only — ExpenseForm validates against the
-    # ids, never the position.
+    # Ordered by the label the pickers PRINT (see Budget#display_name). Order is
+    # presentation only — ExpenseForm validates against the ids it RENDERED,
+    # never a position.
     def active_budgets
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:display_name)
     end
@@ -216,6 +214,15 @@ module Reimbursements
     # one level up: Area#projected_amount reads the area's own forecast log.
     def areas
       @areas ||= Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).to_a
+    end
+
+    # record_id => name for every area, in ONE query and with no preloads — for
+    # the screens that only need to PRINT an area's name. #areas above preloads
+    # each area's budgets' expenses and forecasts because Area#committed_amount
+    # and #projected_amount read them; paying that to label a row is the 10->36
+    # shape Phase 1 guarded against. Unscoped for #areas' own reason.
+    def area_names_by_id
+      @area_names_by_id ||= Area.pluck(:id, :name).to_h { |id, name| [ id.to_s, name ] }
     end
 
     # The areas the budget screens LIST.
@@ -454,10 +461,6 @@ module Reimbursements
         update = BudgetUpdate.create!(effective_date: effective_date, note: note,
                                       created_by: created_by,
                                       financial_year: financial_year || FinancialYear.current)
-        # An entry carries a budget_id OR an area_id, never both: a budget
-        # forecast revises one category's allocation, an area forecast the
-        # show's agreed total. BudgetForecast validates that (and a MySQL CHECK
-        # constraint enforces it).
         forecasts.each do |entry|
           BudgetForecast.create!(budget_id: entry[:budget_id], area_id: entry[:area_id],
                                  amount: entry[:amount], date: effective_date,

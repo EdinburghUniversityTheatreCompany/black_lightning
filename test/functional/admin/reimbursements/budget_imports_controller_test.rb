@@ -552,6 +552,38 @@ module Admin
         assert_equal 1, assigns(:result).area_owners_synced
       end
 
+      # --- The "not in this sheet" panel --------------------------------------
+      # The panel that exists to catch "you left a show out of the
+      # spreadsheet", whose names necessarily span areas.
+
+      test "the absent-budget panel names the show each missing line belongs to" do
+        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
+                                                financial_year: @year)
+        [ cogito, improverts ].each do |area|
+          %w[Marketing Other].each do |line|
+            create_reimbursements_budget(name: line, nominal_code: "432320", area: area,
+                                         initial_budget: 400, cost_centre: @cost_centre,
+                                         financial_year: @year)
+          end
+        end
+        sign_in @user
+
+        # The sheet covers Cogito only, so both of Improverts' lines are absent.
+        post :preview, params: preview_params(
+          "#{AREA_HEADERS}\nCogito\tMarketing\t432320\tExpense\t400\n" \
+          "Cogito\tOther\t432320\tExpense\t400"
+        )
+
+        assert_response :success
+        panel = css_select("p.text-gray-600").map { |node| node.text.squish }
+                                             .find { |text| text.include?("importing never deletes") }
+        assert_equal "Nothing will happen to them — importing never deletes a budget, because its " \
+                     "claims and history hang off it. Improverts — Marketing and Improverts — Other.",
+                     panel
+      end
+
       # --- A revised area total ---------------------------------------------
       # The sheet is where the committee agrees a show's total, so a changed
       # Area Budget has to be visible before it is applied and has to actually

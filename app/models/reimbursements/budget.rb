@@ -88,18 +88,14 @@ module Reimbursements
     # area is its parent, and it is what adopt_budget! does on an import).
     before_validation :inherit_area_scoping
 
-    # What to call this line wherever a person reads it ON ITS OWN — every
-    # picker, reminder, email and receipt filename. The "Area: " prefix strip
-    # left the stored names legitimately non-unique (three live Fringe lines
-    # are named "Marketing", all on nominal code 432320), so the area is the
-    # only thing telling them apart, and a picker offering three identical
-    # options charges the wrong show AND moves the claim to that show's owner
-    # gate. This is the ONE composition: anything naming a budget to a person
-    # reads it rather than building its own.
+    # What to call this line wherever a person reads it ON ITS OWN. The ONE
+    # composition: anything naming a budget to a person reads this rather than
+    # building its own, and every list of budgets is ORDERED by it, or the
+    # labels read out of order under a sort on the bare name.
     #
-    # The bare name stays correct exactly where the area is already beside it
-    # — the grouped budgets index's rowgroup heading, an export's own Area
-    # column, the name FIELD on the budget form.
+    # The bare name stays correct exactly where the area is already beside it:
+    # the grouped budgets index's rowgroup heading, the overview's area card,
+    # an export's own Area column, the name FIELD on the budget form.
     def display_name
       area ? "#{area.name} — #{name}" : name.to_s
     end

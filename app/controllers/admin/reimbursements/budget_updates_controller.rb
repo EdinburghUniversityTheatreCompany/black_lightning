@@ -24,9 +24,11 @@ module Admin
         @title = "Budget updates"
         @budget_updates = store.budget_updates
         @budgets_by_id = store.budgets.index_by(&:record_id)
-        # Both unscoped id->record lookups: an update logged against last
-        # year's line or area must still be named, not blanked.
-        @areas_by_id = store.areas.index_by(&:record_id)
+        # Names only — this page prints them and computes nothing, so it must
+        # not pay store.areas' expense/forecast preloads. Unscoped, like
+        # #budgets: an update logged against last year's line or area must
+        # still be named rather than blanked.
+        @area_names_by_id = store.area_names_by_id
       end
 
       def new
@@ -82,10 +84,12 @@ module Admin
       end
 
       # Names of the budgets whose amount fields are flagged, so the summary line
-      # says which rows to look at.
+      # says which ROW to look at — which on a form of three identically-named
+      # lines it can only do through Budget#display_name. The sort matches the
+      # form's own order, which is by the same label.
       def flagged_budget_names
         by_id = store.budgets.index_by(&:record_id)
-        @field_errors.keys.map { |id| by_id[id]&.name.presence || "an unknown budget" }.sort
+        @field_errors.keys.map { |id| by_id[id]&.display_name.presence || "an unknown budget" }.sort
       end
 
       # A budget deleted by someone else while this form was open would otherwise
@@ -104,12 +108,10 @@ module Admin
       end
 
       # The selected year's active budgets (income included — they carry
-      # forecasts too), ordered by the name the form PRINTS so the rows read
-      # in the order they are shown — three shows' "Marketing" lines sorted by
-      # the bare name would interleave under labels that look unsorted.
-      # Scoped to the
-      # year: a revision agreed at this year's budget meeting has no business
-      # re-forecasting last year's closed lines.
+      # forecasts too), ordered by the label the form prints (see
+      # Budget#display_name). Scoped to the year: a revision agreed at this
+      # year's budget meeting has no business re-forecasting last year's
+      # closed lines.
       def active_budgets_for_update
         store.budgets_for_year.select(&:active).sort_by { |b| b.display_name.to_s.downcase }
       end

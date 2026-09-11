@@ -37,10 +37,9 @@ module Reimbursements
       end
     end
 
-    # The group's budgets in display order — by the label the row PRINTS
-    # (Budget#display_name), so a nominal-code group holding three shows'
-    # "Marketing" lines reads in the order it is sorted in. Inside one
-    # area's group the two agree, every row there sharing the area.
+    # The group's budgets in the order the rows are LABELLED (see
+    # Budget#display_name). Inside one area's group the bare and qualified
+    # orders agree, every row there sharing the area.
     def rows = budgets.sort_by { |budget| budget.display_name.to_s.downcase }
 
     private

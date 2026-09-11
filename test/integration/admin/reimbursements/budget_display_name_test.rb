@@ -37,9 +37,8 @@ module Admin
         @claim = create_reimbursements_expense(person: @person, budget: @cogito_marketing)
       end
 
-      # The whole option list of one select, so an assertion compares the list
-      # rather than asking whether a string appears somewhere in a page that
-      # also carries area headings and card titles.
+      # The whole option list of one select, never a body match: the page also
+      # carries area headings and card titles.
       def option_texts(selector)
         css_select("#{selector} option").map { |option| option.text.strip }
       end
@@ -134,19 +133,25 @@ module Admin
       end
 
       # --- Read-only surfaces -------------------------------------------------
-      # These lose the show rather than misdirect money, but they are where a
-      # producer and a budget owner READ what a claim is charged to.
 
       test "the producer's own claim list and claim page name the show" do
         sign_in @producer
 
         get admin_reimbursements_expenses_path
         assert_response :success
-        assert_includes response.body, "Cogito — Marketing"
+        # The CELL, not the body: a page that grew an area heading elsewhere
+        # would satisfy a body match with the budget column still bare.
+        assert_includes css_select("td").map { |cell| cell.text.strip }, "Cogito — Marketing"
 
         get admin_reimbursements_expense_path(@claim.record_id)
         assert_response :success
-        assert_includes response.body, "Cogito — Marketing"
+        assert_equal "Cogito — Marketing", definition_value("Budget")
+      end
+
+      # The value rendered beside the <dt> reading +term+ on the claim page.
+      def definition_value(term)
+        css_select("div").find { |node| node.at_css("dt")&.text&.strip == term }
+                         &.at_css("dd")&.text&.strip
       end
 
       test "My Budgets names the show on each budget card" do
@@ -183,19 +188,17 @@ module Admin
         get overview_admin_reimbursements_budgets_path
 
         assert_response :success
-        # The two cards render the SAME partial. Under a nominal code three
-        # shows' lines have nothing to tell them apart; under an area heading
-        # the show is already written above the row, so repeating it is noise.
+        # The two cards render the SAME partial, and only one of them has the
+        # area written above the row.
         assert_equal [ "Cogito — Marketing", "Improverts — Marketing" ],
                      budget_links_under("Nominal code 432320")
         assert_equal [ "Marketing" ], budget_links_under("Cogito")
         assert_equal [ "Marketing" ], budget_links_under("Improverts")
       end
 
-      # Every budget link in the row group whose heading reads exactly
-      # +heading+. Exact rather than a prefix match: the unattributed-actuals
-      # card further down the page heads its own groups "Nominal code 432320
-      # (net £20.00)".
+      # Every budget link in the row group whose heading reads EXACTLY +heading+
+      # — a prefix match would also take the unattributed-actuals card's own
+      # groups further down the page ("Nominal code 432320 (net £20.00)").
       def budget_links_under(heading)
         css_select("tbody").flat_map do |body|
           cell = body.at_css("th[scope=rowgroup]")

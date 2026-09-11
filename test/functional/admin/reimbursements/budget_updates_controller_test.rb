@@ -153,6 +153,29 @@ module Admin
         assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
       end
 
+      # The rows and their aria-labels name the show; the sentence saying which
+      # row to look at has to as well, or it names all three at once.
+      test "the error summary names the show, so it says which ROW to look at" do
+        sign_in @user
+        cogito = create_reimbursements_area(name: "Cogito")
+        last_orders = create_reimbursements_area(name: "Last Orders")
+        mine = create_reimbursements_budget(name: "Marketing", nominal_code: "432320", area: cogito)
+        theirs = create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
+                                              area: last_orders)
+
+        post :create, params: {
+          effective_date: "2026-06-01", note: "one good one bad",
+          amounts: { mine.record_id => "twelve pounds", theirs.record_id => "250" }
+        }
+
+        assert_response :unprocessable_entity
+        # The whole sentence, off the flash rather than the body: the alert
+        # reaches the page as JSON for the SweetAlert pipeline, and a body
+        # match would pass on a sentence naming both shows' rows at once.
+        assert_equal "Nothing was saved. Check the amount for Cogito — Marketing.",
+                     Array(flash[:error]).sole
+      end
+
       test "comma and pound-sign amounts are read, not dropped" do
         sign_in @user
 

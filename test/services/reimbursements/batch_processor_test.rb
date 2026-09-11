@@ -61,6 +61,10 @@ module Reimbursements
                                                  status: Status::APPROVED, auto_number: 12)
     end
 
+    def table_cells(html)
+      Nokogiri::HTML(html).css("td").map { |cell| cell.text.strip }
+    end
+
     def run_batch(processor, store)
       processor.process(expenses: store.expenses, bacs_date: Date.new(2026, 5, 13),
                         sender_name: "Fringe Finance", eusa_recipient: "finance@eusa.ed.ac.uk")
@@ -219,8 +223,10 @@ module Reimbursements
         assert_includes upload[:filename], "Cogito — Props",
                         "a receipt filename that names no show is indistinguishable from another show's"
       end
-      assert_includes graph.send_mails.first[:html], "Cogito — Props"
-      assert_includes graph.drafts.sole[:html], "Cogito — Props"
+      # The table CELL in each mail, not the body: both templates carry other
+      # prose a substring match could land in.
+      assert_includes table_cells(graph.send_mails.first[:html]), "Cogito — Props"
+      assert_includes table_cells(graph.drafts.sole[:html]), "Cogito — Props"
     end
 
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do

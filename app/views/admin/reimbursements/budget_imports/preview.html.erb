@@ -126,7 +126,10 @@
       <p class="text-gray-600">
         Nothing will happen to <%= @import.absent_budgets.one? ? "it" : "them" %> — importing never
         deletes a budget, because its claims and history hang off it.
-        <%= @import.absent_budgets.map(&:name).to_sentence %>.
+        <%# The one panel whose names NECESSARILY span areas, with nowhere to
+            put a heading: bare, two shows each missing a Marketing and an
+            Other read "Marketing, Marketing, Other and Other". %>
+        <%= @import.absent_budgets.map(&:display_name).to_sentence %>.
       </p>
     </div>
   <% end %>

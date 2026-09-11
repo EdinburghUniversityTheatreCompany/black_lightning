@@ -857,6 +857,25 @@ module Reimbursements
     # one committee meeting is one BudgetUpdate — and the area's own
     # initial_budget stays write-once, so Area#projected_amount moves while the
     # figure first agreed is still there to measure drift against.
+    # #areas preloads every area-bound budget's expenses and forecasts — the
+    # 10->36 shape Phase 1 guarded against — and a screen that only PRINTS a
+    # name must not pay it.
+    test "area_names_by_id costs one query however many budgets hang off the areas" do
+      3.times do |n|
+        area = Area.create!(name: "Area #{n}")
+        3.times do |line|
+          budget = Budget.create!(name: "Line #{line}", nominal_code: "4000", area: area)
+          Expense.create!(budget: budget, description: "x", amount_excl_vat: 10)
+          budget.forecasts.create!(amount: 20, date: Date.current)
+        end
+      end
+      store = DatabaseStore.new
+
+      assert_queries_count(1) { store.area_names_by_id }
+      assert_equal 3, store.area_names_by_id.size
+      assert_equal "Area 0", store.area_names_by_id[Area.order(:id).first.record_id]
+    end
+
     test "import_budgets! logs a revised area total as an area forecast in the same update" do
       year = FinancialYear.create!(label: "Fringe 2027", active: true)
       area = Area.create!(name: "Cogito", initial_budget: BigDecimal("1000"), financial_year: year)

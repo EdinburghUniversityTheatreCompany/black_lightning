@@ -477,14 +477,8 @@ module Reimbursements
     #
     # Keyed that way so the two cannot drift: budget_import_test asserts this
     # covers every argument import_budgets! takes apart from the two that carry
-    # no work. Before that, the button counted areas, creates, revisions and
-    # re-homes only — so an owner-only sheet (an area that already exists, a
-    # line already in it, the same figure, and an Owner emails column naming
-    # somebody) rendered the owner panel naming the new owner directly above a
-    # DISABLED button reading "Nothing to import". That is a control failure,
-    # not cosmetics: the owner never lands, the area still names nobody,
-    # OwnerReview.gate_applies? stays false, and every claim on that show skips
-    # budget-owner sign-off.
+    # no work. The button is DISABLED on an empty count, so a bucket left out
+    # here cannot be applied at all.
     #
     # +re_homes+ is the TICKED list, so the label and the areas counted for it
     # say what apply will write; at preview time every box is ticked.
@@ -880,7 +874,8 @@ module Reimbursements
         key = collation_key(name)
         clash = stored[key]&.name || seen[key]
         if clash
-          @errors << "#{name.inspect} and #{clash.inspect} are the same area name as far as "                      "the database is concerned — it ignores accents. Spell the area one way."
+          @errors << "#{name.inspect} and #{clash.inspect} are the same area name as far as " \
+                     "the database is concerned — it ignores accents. Spell the area one way."
         else
           seen[key] = name
         end
