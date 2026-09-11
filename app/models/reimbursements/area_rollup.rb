@@ -42,16 +42,22 @@ module Reimbursements
     # as it reports no agreed total.
     def total_label = area&.basis_label
 
-    # Read off the GROUP rollup: a #by_type child holds one type's slice, so its
-    # counts describe that slice rather than the area's place in the page's
-    # scope. area.budgets is preloaded by store.areas, so .size reads the loaded
-    # array rather than a COUNT per area.
+    # Read off the GROUP rollup, which is what makes #with_budgets drop the
+    # area: a #by_type child holds one TYPE's slice while the area's own counts
+    # cover both, so a child inheriting the area answered a lines_total the
+    # rows beneath it do not add up to. area.budgets is preloaded by
+    # store.areas, so .size reads the loaded array rather than a COUNT per area.
     def lines_shown = budgets.size
     def lines_total = area ? area.budgets.size : budgets.size
     def lines_out_of_scope = lines_total - lines_shown
 
     private
 
-    def with_budgets(budgets, type) = self.class.new(area: area, budgets: budgets, budget_type: type)
+    # No area, deliberately: every area figure on a per-type subtotal then
+    # answers nil (or 0 for the counts), which reads as "ask the group, not
+    # me", where the parent's number reads as a fact about a row it does not
+    # describe. The view builds a subtotal's label from the group's own, never
+    # from #name, so nothing on screen loses anything.
+    def with_budgets(budgets, type) = self.class.new(area: nil, budgets: budgets, budget_type: type)
   end
 end

@@ -18,6 +18,25 @@ module Reimbursements
       AreaRollup.new(area: @area, budgets: budgets)
     end
 
+    # A #by_type child describes ONE TYPE's slice, so it must not answer the
+    # area's own figures: it would report a lines_total the rows beneath it do
+    # not add up to, and an agreed total for the whole show against a subtotal
+    # of half of it. The view reads neither today; a nil degrades safely where
+    # a wrong integer reads as a fact.
+    test "a per-type subtotal answers no area figure of its own" do
+      line(name: "Marketing", initial_budget: 400)
+      line(name: "Ticket income", budget_type: "Income", initial_budget: 800)
+
+      subtotal = rollup.by_type.first
+
+      assert_nil subtotal.name
+      assert_nil subtotal.agreed
+      assert_nil subtotal.unallocated
+      assert_nil subtotal.total_label
+      assert_equal 1, subtotal.lines_total
+      assert_equal 0, subtotal.lines_out_of_scope
+    end
+
     test "an area rollup never totals Expense and Income together" do
       area = create_reimbursements_area(name: "Hamlet", initial_budget: 1_000)
       create_reimbursements_budget(name: "Marketing", area: area, initial_budget: 400,
