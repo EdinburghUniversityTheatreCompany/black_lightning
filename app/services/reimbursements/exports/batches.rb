@@ -13,10 +13,9 @@ module Reimbursements
     # the BACS spreadsheet.
     #
     # DELIBERATELY NO "Area" column, unlike Budgets/Expenses/Actuals: a batch
-    # spans several claims and therefore several shows, so a single Area cell
-    # would be a lie rather than a blank — the same reasoning Exports::People
-    # has for carrying no Cost centre. Not an oversight for a later task to
-    # "finish".
+    # spans several claims and so several shows, making a single Area cell a lie
+    # rather than a blank. Exports::People carries no Cost centre for the same
+    # reason. Not an oversight to "finish".
     class Batches < Base
       HEADERS = [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
                   "EUSA draft", "SharePoint backup", "Cost centre" ].freeze

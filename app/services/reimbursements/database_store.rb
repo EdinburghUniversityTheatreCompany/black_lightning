@@ -203,9 +203,8 @@ module Reimbursements
     # and #allocated each call the equivalent Budget reader per budget, which
     # reads the budget's own expenses/forecasts associations, so without this an
     # areas index or a grouped budgets index would pay one or two queries per
-    # budget, per area, per render. The area's OWN forecasts are preloaded for
-    # the same reason one step up: Area#projected_amount reads its forecast log,
-    # so every screen showing an agreed total paid a query per area without it.
+    # budget, per area, per render. `:forecasts` is there for the same reason
+    # one level up: Area#projected_amount reads the area's own forecast log.
     def areas
       @areas ||= Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).to_a
     end
@@ -276,10 +275,8 @@ module Reimbursements
       area
     end
 
-    # REPLACE semantics — the area form's own write, where an owner taken off
-    # the list is meant to go. The budget import's #add_area_owners! is the
-    # other shape, and the two must not be confused: a spreadsheet cannot spell
-    # "remove this owner", so it only ever adds.
+    # REPLACE semantics — the area form's write, where removing an owner is
+    # meant to happen. The importer's #add_area_owners! only ever adds.
     def sync_area_owners!(record_id, person_ids)
       Area.find(record_id).sync_owner_ids!(Array(person_ids).reject(&:blank?))
       bust_areas!
@@ -289,11 +286,9 @@ module Reimbursements
     ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, :areas_created,
                               :re_homed, :area_owners_synced, keyword_init: true)
 
-    # Applies a confirmed BudgetImport: creates the areas the sheet named that
-    # don't exist yet, creates the new budget lines (attaching each to its
-    # area), moves the matched lines whose re-home the operator left ticked
-    # into the area the sheet names, logs the revised figures as ONE budget
-    # update, and re-syncs owners on lines that already existed.
+    # Applies a confirmed BudgetImport: creates the new lines, logs the revised
+    # figures as ONE budget update, and re-syncs owners on lines that already
+    # existed.
     #
     # All-or-nothing, unlike the reconcile wizard's per-row rescue. A half
     # imported budget list has no audit value and no obvious repair — the
@@ -306,10 +301,8 @@ module Reimbursements
     # initial_budget, so the spreadsheet's revision lands in the forecast
     # history with the import named as its note.
     #
-    # Areas are created FIRST, inside this same transaction, so a +creates+
-    # entry carrying +area_name:+ (BudgetImport#area_creates named it as
-    # not-yet-existing) can be resolved to the new area's id before the budget
-    # row is written.
+    # Areas are created FIRST in the same transaction, so a +creates+ or
+    # +re_homes+ entry carrying +area_name:+ has an id to resolve to.
     def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
                         area_creates: [], re_homes: [], area_owner_syncs: [])
       result = nil
@@ -320,17 +313,12 @@ module Reimbursements
         end
         created = creates.map { |attrs| create_budget!(resolve_area(attrs, areas_by_name)) }
         adoptions.each { |adoption| adopt_budget!(adoption[:budget_id], adoption[:cost_centre]) }
-        # Only the re-homes the operator left ticked reach here — the
-        # controller filters the import's own list by the ticked keys, so an
-        # untick leaves the hand-made grouping exactly as it is.
+        # Only the ticked re-homes reach here; the controller filters the
+        # import's list by the ticked keys.
         re_homes.each do |re_home|
           re_home_budget!(re_home[:budget_id], resolve_area_id(re_home, areas_by_name))
         end
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
-        # The sheet's owner column names the AREA for any line that has one.
-        # An area this import didn't create after all (every re-home into it
-        # unticked, no new line landing in it) resolves to nil and is skipped —
-        # there is nothing to own.
         area_owner_syncs.each do |sync|
           area_id = resolve_optional_area_id(sync, areas_by_name)
           next if area_id.nil?
@@ -373,13 +361,9 @@ module Reimbursements
       budget
     end
 
-    # Moves a matched budget into the area the sheet names — the confirmed half
-    # of BudgetImport#re_homes. Unlike adopt_budget!, this deliberately has no
-    # "only when it's blank" guard: moving a line that already sits in another
-    # area is the whole point, and the operator ticked it knowing what it was
-    # in (the preview states "from -> to"). +area_id+ nil is never reached from
-    # the importer, which skips a blank Area cell rather than reading it as
-    # "move this line out of its area".
+    # Unlike adopt_budget!, deliberately no "only when it's blank" guard:
+    # moving a line that already sits in another area is the whole point, and
+    # the operator ticked it against a preview stating "from -> to".
     def re_home_budget!(record_id, area_id)
       budget = Budget.find(record_id)
       budget.update!(area_id: area_id)
@@ -395,29 +379,18 @@ module Reimbursements
       budget
     end
 
-    # ADDS +owner_ids+ to an area's owners and never removes one — the budget
-    # sheet's owner column, which names one person per LINE, so three lines
-    # under one area mean three owners and all three are meant. There is no way
-    # to spell "remove this owner" on a spreadsheet (a blank cell says nothing,
-    # the same as a blank Amount), and an owner silently dropped is a show's
-    # sign-off authority silently gone. #sync_area_owners! above is the REPLACE
-    # shape, and removal stays hand-work on the area form that calls it.
+    # ADDS and never removes: the sheet names one person per LINE, and nothing
+    # on a spreadsheet spells "remove this owner" (a blank cell says nothing,
+    # as a blank Amount does), so a subtraction here would drop a show's
+    # sign-off authority silently. Removal is hand-work on the area form,
+    # through #sync_area_owners!.
     #
-    # The union is re-taken HERE as well as in BudgetImport#area_owner_syncs:
-    # that one compares against the preloaded copy the preview rendered, and the
-    # apply runs against whatever the area holds now.
-    #
-    # Area#sync_owner_ids! is a DIFF sync, so it is only safe to hand it a
-    # SUPERSET of what the area holds. That is what the union above guarantees,
-    # and it is also why the `if union.any?` guard below cannot fire on an area
-    # that has owners: the union is empty only when the area had none, so
-    # `where.not(person_id: [])`'s WHERE 1=1 would have nothing to destroy. The
-    # guard is kept as defence in depth against the SHAPE — a later refactor
-    # that stopped unioning would reach it with a live owner list — and what is
-    # pinned is the PROPERTY ("an empty list removes nobody", in the store
-    # test), which goes red only when the union and the guard are both gone.
-    # The branch by itself cannot be tested: with the union in place nothing but
-    # an ownerless area can enter it.
+    # The union is re-taken here as well as in BudgetImport#area_owner_syncs:
+    # that one compares against the copy the preview rendered, this one against
+    # whatever the area holds now. It must stay a union — Area#sync_owner_ids!
+    # is a DIFF sync, and handing it anything short of a superset deletes the
+    # difference. The `any?` guard is the backstop for the empty case, where
+    # `where.not(person_id: [])` is WHERE 1=1.
     def add_area_owners!(record_id, owner_ids)
       area = Area.find(record_id)
       union = area.owner_ids.map(&:to_i) | Array(owner_ids).compact_blank.map(&:to_i)
@@ -851,31 +824,26 @@ module Reimbursements
       @areas_for_year = nil
     end
 
-    # Swaps a line's +area_name:+ (an area this import is about to create) for
-    # the +area_id:+ of the row just created for it. A line naming an area that
-    # already existed carries +area_id:+ straight from BudgetImport#creates or
-    # #re_homes and passes through untouched. Shared by both, so a re-home into
-    # a brand-new area resolves the same way a create does — which is what
-    # stops #area_creates minting an area with nothing in it on a re-import.
+    # Swaps a line's +area_name:+ (an area this run is creating) for the new
+    # row's +area_id:+. A line naming an area that already existed arrives with
+    # +area_id:+ set and passes through untouched.
     def resolve_area(attrs, areas_by_name)
       return attrs unless attrs[:area_name]
 
       attrs.except(:area_name).merge(area_id: resolve_area_id(attrs, areas_by_name))
     end
 
-    # The id alone, for a re-home — which needs the area, not a copy of the
-    # whole hash it was asked about.
     def resolve_area_id(attrs, areas_by_name)
       return attrs[:area_id] if attrs[:area_name].blank?
 
       areas_by_name.fetch(::Reimbursements::BudgetImport.match_key(attrs[:area_name])).id
     end
 
-    # The id, or NIL when the named area wasn't created after all. The owner
-    # syncs' path: the sheet's owner column is grouped by the area each line
-    # names whether or not the operator left the re-home into it ticked, so an
-    # area that nothing lands in has none to write. #resolve_area_id keeps its
-    # raising fetch — a create or a re-home reaching a missing area IS a bug.
+    # NIL when the named area wasn't created after all — owner syncs are
+    # grouped by the area each line names whether or not its re-home stayed
+    # ticked, so an area nothing lands in has no owners to write.
+    # #resolve_area_id keeps its raising fetch: a create or re-home reaching a
+    # missing area IS a bug.
     def resolve_optional_area_id(attrs, areas_by_name)
       return attrs[:area_id] if attrs[:area_name].blank?
 

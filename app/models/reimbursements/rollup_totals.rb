@@ -9,8 +9,7 @@ module Reimbursements
   # the two cards on one page would disagree about the same money.
   #
   # An includer supplies +budgets+, +budget_type+ and a private #with_budgets
-  # building a sibling rollup for one type; its constructor shape is its own
-  # (NominalCodeRollup is positional, AreaRollup keyword).
+  # building a sibling rollup for one type.
   module RollupTotals
     def initial     = sum_of(&:initial_budget)
     def projected   = sum_of(&:projected_amount)

@@ -4,14 +4,11 @@ module Reimbursements
   #
   # EXACT header names first, then MULTI-WORD phrases only — a bare word is
   # never a substring hint — because "any header containing the keyword" is
-  # catastrophic on a sheet whose fields are near-anagrams: read through it, a
-  # "Payment reference" column answered to ExpenseImport's dedupe key
-  # (collapsing two of a payee's claims into one) and an "Account number"
-  # column answered to its expense number (numbering every later claim in the
-  # portal from 66,374,959). Neither is catchable downstream, which is why
-  # this lives here rather than in ImportParsing#find_column — the membership
-  # and user imports keep that looser fallback, whose sheets are flat enough
-  # for it.
+  # catastrophic on a sheet whose fields are near-anagrams: read that way, an
+  # "Account number" column answered to ExpenseImport's expense number and
+  # numbered every later claim in the portal from 66,374,959. Not catchable
+  # downstream, which is why this is separate from ImportParsing#find_column,
+  # whose looser fallback the flatter membership and user sheets keep.
   #
   # Including class must define FIELDS: a Hash of
   # field => { label:, exact: [...], contains: [...] }. Each entry is written

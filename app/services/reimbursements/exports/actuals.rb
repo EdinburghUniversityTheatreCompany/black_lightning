@@ -46,16 +46,13 @@ module Reimbursements
         actual.credit.positive? ? -actual.credit : actual.credit
       end
 
-      # The linked budget, however the row reaches one: booked directly
-      # (budget_id, the Income-budget path the "Budget" column above already
-      # reads) or reconciled to an expense whose OWN budget resolves it (the
-      # Expense-budget path — "Budget" above does not surface this, but the
-      # area is worth resolving anyway; Task 6 stripped the "Area: " prefix,
-      # so this ledger is exactly where losing the grouping hurts). Read
-      # through budget_by_id both times, never expense.budget, so the area
-      # comes off the same preloaded (area: :owners) Budget object either
-      # way — both maps are already unconditionally built for every row by
-      # the two lookups above, so this costs nothing further.
+      # The linked budget however the row reaches one: booked directly
+      # (budget_id, what the "Budget" column above reads) or reconciled to an
+      # expense whose own budget resolves it — which "Budget" does not surface,
+      # but the area is worth resolving anyway. Through budget_by_id both times,
+      # never expense.budget, so the area comes off the same preloaded
+      # (area: :owners) object either way; both maps are already built for
+      # every row by the lookups above.
       def linked_budget(actual)
         budget_by_id[actual.linked_budget_ids.first] ||
           budget_by_id[expense_by_id[actual.linked_expense_ids.first]&.budget_record_id]

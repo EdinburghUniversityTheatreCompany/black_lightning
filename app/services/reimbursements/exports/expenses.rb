@@ -27,12 +27,9 @@ module Reimbursements
         ]
       end
 
-      # Through budget_by_id (store.budgets, unscoped), NOT expense.budget —
-      # attention_reasons below already forces that map to load for every
-      # actionable row, and store.budgets preloads area: :owners for Budgets'
-      # own owner_names column. Reading expense.budget.area directly would
-      # lazy-load a second, unpreloaded Budget/Area pair per unique budget
-      # referenced in the export.
+      # Through budget_by_id (store.budgets, already preloading area: :owners),
+      # NOT expense.budget — which would lazy-load a second, unpreloaded
+      # Budget/Area pair per unique budget in the export.
       def area_name(expense)
         budget_by_id[expense.budget_record_id]&.area&.name
       end

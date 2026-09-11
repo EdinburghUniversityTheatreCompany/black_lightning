@@ -20,11 +20,9 @@ module Reimbursements
     # * Remaining (forecast - committed) and Variance (forecast - initial) are
     #   blank without a forecast, and Variance is legitimately negative when the
     #   forecast came in under the original plan.
-    # * Area — blank for the 14-of-31 live Fringe budgets that have none. Read
-    #   off budget.area directly rather than store.areas: both collections this
-    #   exporter is ever handed (store.budgets, store.budgets_with_actuals)
-    #   already preload area: :owners for owner_names above, so the name costs
-    #   nothing further.
+    # * Area — blank for the 14-of-31 live Fringe budgets that have none. Off
+    #   budget.area rather than store.areas: both collections this exporter is
+    #   handed already preload area: :owners for owner_names above.
     #
     # All amounts are excl-VAT, mirroring the BACS spreadsheet.
     class Budgets < Base

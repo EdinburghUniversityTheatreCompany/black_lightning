@@ -77,8 +77,8 @@ module Reimbursements
       assert_equal "Publicity", budget.reload.name
     end
 
-    # RENAMING THE AREA does not rename the line, so the record is still good and
-    # restoring it could disarm nothing — the old clause read the area's CURRENT
+    # RENAMING THE AREA does not rename the line, so the record is still good
+    # and restoring it disarms nothing. The old clause read the area's CURRENT
     # name and skipped, destroying the record one statement before the column is
     # dropped.
     test "restore! puts the name back after its area is renamed" do
@@ -103,10 +103,9 @@ module Reimbursements
       assert_equal "Cogito: Marketing", budget.reload.name
     end
 
-    # A line MOVED to another area restores, where it used to skip. Its prefix
+    # A line MOVED to another area restores, where it used to skip: its prefix
     # names neither that area nor any other, so the backfill's verdict on the
-    # area it landed in is identical either way — which is the only thing that
-    # skip was protecting.
+    # area it landed in is identical either way.
     test "a line moved to another area restores without making that area reproducible" do
       budget = create_reimbursements_budget(name: "Cogito: Marketing")
       AreaBackfill.run!

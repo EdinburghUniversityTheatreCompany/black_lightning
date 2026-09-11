@@ -75,9 +75,8 @@ module Admin
         # the text afresh, so anything unreadable has to stop it a second time.
         return render_blocked_preview unless @import.valid? && selected_cost_centre
 
-        # The areas are narrowed to the ones something will actually land in:
-        # an operator who unticks every re-home must not be left with the empty
-        # area the bucket exists to prevent.
+        # Areas narrowed to the ones something will actually land in: unticking
+        # every re-home must not leave an empty area behind.
         re_homes = ticked_re_homes
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
@@ -122,16 +121,15 @@ module Admin
         false
       end
 
-      # The re-homes the operator left TICKED. Each one renders as a ticked
-      # checkbox alongside one blank hidden entry, so the parameter is always
-      # present when the bucket was shown: an absent key means unticked, never
-      # "we didn't ask".
+      # The re-homes the operator left TICKED. The preview renders a blank
+      # hidden entry beside the boxes, so the parameter is always present when
+      # the bucket was shown: an absent key means unticked, never "we didn't
+      # ask".
       #
-      # Selected out of this apply's OWN re-parsed list, so a key that matches
-      # nothing here — the sheet edited between the two steps, the budget
-      # deleted, a hand-made request — simply doesn't move anything. Unticked
-      # and unmatched both read as "leave the grouping alone", which is the
-      # safe direction and the same rule Reconcile gives its pair keys.
+      # Selected out of this apply's OWN re-parsed list, so a key matching
+      # nothing here (the sheet edited between steps, the budget deleted, a
+      # hand-made request) moves nothing. Unticked and unmatched both read as
+      # "leave the grouping alone", as Reconcile's pair keys do.
       def ticked_re_homes
         keys = params[:re_home_budget_ids]
         return [] unless keys.is_a?(Array)

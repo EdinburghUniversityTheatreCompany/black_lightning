@@ -28,12 +28,11 @@
             No allocation figure: this area holds both expense and income lines.
           </span>
         <% end %>
-        <%# The not-yet-allocated figure subtracts every line ever linked to the
-            area, while the totals below cover only the lines this year and cost
-            centre scope to. A line filed under an area from another year makes
-            the two disagree, so the row says so rather than dropping or
-            absorbing it silently. The agreed total is named by neither clause:
-            it is the area's own forecast and counts no lines at all. %>
+        <%# The not-yet-allocated figure subtracts every line ever linked to
+            the area; the totals below cover only the lines this year and centre
+            scope to. A line under another year's area makes the two disagree,
+            so the row says so. Neither clause names the agreed total: that is
+            the area's own forecast and counts no lines at all. %>
         <% if rollup.lines_out_of_scope.positive? %>
           <span class="text-sm text-warning">
             <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "line") %> shown.

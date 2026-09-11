@@ -144,10 +144,9 @@ module Admin
 
       # The overview's second axis: the SAME budgets the nominal-code card
       # totals, regrouped under their area, so the two cards can never quote
-      # different money for one page. Each area object comes from store.areas —
-      # unscoped and fully preloaded, the reader every area figure has to be
-      # read off, never budget.area, whose own #budgets collection is unloaded
-      # and would N+1 across its expenses and forecasts.
+      # different money for one page. The area objects come from store.areas,
+      # the preloaded reader every area figure has to be read off — never
+      # budget.area, whose own #budgets is unloaded and would N+1.
       def build_area_rollups(budgets)
         areas_by_id = store.areas.index_by(&:record_id)
         by_area_id = budgets.group_by { |budget| budget.area&.record_id }

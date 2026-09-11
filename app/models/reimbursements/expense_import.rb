@@ -180,10 +180,9 @@ module Reimbursements
       @escaped = input_type == :canonical_tsv
       # Grouped under BOTH spellings, never index_by. The budget rename made
       # same-named lines in different areas normal, and index_by kept the last
-      # one silently — a settled claim charged to an arbitrary show. A sheet
-      # still saying "Cogito: Marketing" has to find the renamed line too, and
-      # the spellings come from BudgetImport so the two importers cannot
-      # disagree about what a budget is called.
+      # one silently — a settled claim charged to an arbitrary show. Spellings
+      # come from BudgetImport so the two importers cannot disagree about what a
+      # budget is called.
       @budgets_by_name = budgets.each_with_object({}) do |budget, index|
         BudgetImport.name_spellings(budget.name, budget.area&.name).each do |spelling|
           (index[BudgetImport.match_key(spelling)] ||= []) << budget

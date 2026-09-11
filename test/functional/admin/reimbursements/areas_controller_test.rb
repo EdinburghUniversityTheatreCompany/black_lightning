@@ -32,15 +32,12 @@ module Admin
         assert_equal [ person.record_id ], area.owner_ids
       end
 
-      # THE form's write is REPLACE, and this is the only thing enforcing that.
+      # THE form's write is REPLACE, and this is the only thing enforcing it.
       # DatabaseStore carries two owner writes with the identical
-      # (record_id, person_ids) signature: #sync_area_owners! replaces, which is
-      # what this screen means, and #add_area_owners! unions, which is what the
-      # budget import means (a spreadsheet cannot spell "remove this owner").
-      # Reaching for the wrong one here is silent — the form gives no account of
-      # what it wrote, and removal simply stops working. Removal is the ONLY way
-      # to take an owner off an area, so it takes a show's sign-off authority
-      # with it.
+      # (record_id, person_ids) signature — #sync_area_owners! replaces,
+      # #add_area_owners! unions — so reaching for the wrong one here is silent:
+      # removal just stops working, and removal is the only way to take a show's
+      # sign-off authority off an area.
       test "removing an owner on the area form actually removes them" do
         alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")

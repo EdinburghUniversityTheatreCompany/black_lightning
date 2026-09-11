@@ -13,8 +13,8 @@ module Reimbursements
   #
   # THE BUCKETS. A line is matched within one (financial year, cost centre) by
   # its AREA plus its bare name where the sheet names an area, and by its whole
-  # name otherwise — see .bare_name and #resolve_budget, which read both
-  # spellings of a name the area prefix was stripped from.
+  # name otherwise — .bare_name and #resolve_budget read both spellings of a
+  # name the area prefix was stripped from.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -41,33 +41,30 @@ module Reimbursements
     # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
     # substring and is multi-word only (see the class note below).
     #
-    # A heading not listed here is simply not found, which reads as "the sheet
-    # has no X column" for the required field and a blank for an optional one —
-    # the safe direction, since a column read as the WRONG field is silent
-    # while one not read at all is stated.
+    # A heading not listed here is simply not found — "the sheet has no X
+    # column" for a required field, a blank for an optional one. The safe
+    # direction: a column read as the WRONG field is silent, one not read at
+    # all is stated.
     #
-    # **Columns are matched here, NOT through ImportParsing#find_column**, whose
-    # "any header containing the keyword" fallback is the class of bug
-    # ExpenseImport was fixed for in September 2026: "budget" is a bare
-    # single-word keyword for +name+, so once a header like "Area Budget"
-    # exists on the sheet (Phase 2b), a bare-keyword fallback could read it as
-    # the line's own name. So: EXACT names first, then MULTI-WORD phrases
-    # only — a bare word is never a substring hint — and two fields resolving
-    # to one column is a blocking error naming both, rather than a silent pick.
+    # **Columns are matched here, NOT through ImportParsing#find_column**,
+    # whose "any header containing the keyword" fallback is the class of bug
+    # ExpenseImport was fixed for (see its note): "budget" is a bare keyword
+    # for +name+, so the "Area Budget" column below would read as the line's
+    # own name. EXACT names first, then MULTI-WORD phrases only — a bare word
+    # is never a substring hint — and two fields resolving to one column is a
+    # blocking error naming both, never a silent pick.
     FIELDS = {
       area: {
         label: "Area",
         exact: [ "area" ],
-        # NOT "area": a bare word is never a substring hint (see the class
-        # note above). Task 3's "Area Budget" header contains this phrase, and
-        # matching it here would read that column as the area name too.
+        # NOT "area", per the class note: the "Area Budget" header contains
+        # it, and would then read as the area name too.
         contains: [ "area name" ]
       },
       area_budget: {
         label: "Area Budget",
-        # Both multi-word, so neither collides with the bare "area" (the name
-        # column above) or "budget" (the line-name column below) — the same
-        # rule that keeps "area name" out of THIS field's own contains list.
+        # Both multi-word, so neither collides with the bare "area" above or
+        # "budget" below.
         exact: [ "area budget", "area total" ],
         contains: [ "area budget", "area total" ]
       },
@@ -107,9 +104,8 @@ module Reimbursements
     # template carries. Reading is more forgiving than this (see FIELDS).
     TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
 
-    # The only column a sheet must carry — nominal code, type, amount and
-    # owners can all be blank or defaulted, but a line with no name has
-    # nothing to create or match against.
+    # The only column a sheet must carry: everything else can be blank or
+    # defaulted, but a line with no name has nothing to match against.
     REQUIRED_FIELDS = %i[name].freeze
 
     # Owner cells hold one or more addresses, separated however the committee
@@ -136,29 +132,26 @@ module Reimbursements
       @escaped = input_type == :canonical_tsv
       @existing_budgets = existing_budgets
       # Grouped, never index_by: a key several stored lines answer to is an
-      # ambiguity to report, and index_by keeps the last one silently. See
-      # #resolve_budget for which of the two decides a match.
+      # ambiguity to report, and index_by keeps the last one silently.
       @existing_by_name = group_by_keys(existing_budgets) do |budget|
         self.class.name_spellings(budget.name, budget.area&.name).map { |spelling| self.class.match_key(spelling) }
       end
       @existing_by_area_and_name = group_by_keys(existing_budgets) do |budget|
         [ self.class.area_scoped_key(budget.name, budget.area&.name) ]
       end
-      # Grouped for the same reason the budgets are: two areas resolving to one
-      # name is a silent last-wins pick in #re_homes, which moves a line's spend
-      # and its sign-off gate.
+      # Grouped for the same reason: two areas under one name would be a
+      # last-wins pick in #re_homes, which moves a line's spend and its gate.
       @existing_areas_by_name = group_by_keys(existing_areas) do |area|
         [ self.class.match_key(area.name) ]
       end
-      # By id as well as by name: #re_homes compares the budget's CURRENT area
-      # to the sheet's target by record identity, and separately has to know
-      # whether that current area is inside this import's (year, cost centre)
-      # at all — two different questions that a name lookup can't tell apart.
+      # By id as well as by name: #re_homes asks both whether two areas are
+      # the same record and whether one is in scope at all, and a name lookup
+      # cannot tell those apart.
       @existing_areas_by_id = existing_areas.index_by(&:record_id)
       @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
-      # By record id too: #area_owner_sets names the people an area is about to
-      # gain, and resolve_owners has already reduced them to ids by then. The
-      # preview must never reach for a record of its own.
+      # #area_owner_sets names the people an area is about to gain, and
+      # resolve_owners has reduced them to ids by then; the preview must never
+      # reach for a record of its own.
       @people_by_record_id = people.index_by(&:record_id)
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
@@ -180,13 +173,9 @@ module Reimbursements
     # AreaRename rewrites the stored rows by this exact call, which is why the
     # rule is stated once, here. The committee's spreadsheet keeps saying
     # "Cogito: Marketing" long after the stored line became "Marketing", so a
-    # matcher reading only one spelling buckets the whole show as new lines —
-    # 17 of the 31 live Fringe budgets duplicated in one apply, each with a
-    # fresh initial_budget and the original reported as absent.
-    #
-    # The prefix is compared through #match_key, so the casing and spacing a
-    # committee happened to type never decides whether two spellings are one
-    # line.
+    # matcher reading one spelling buckets the whole show as new lines — 17 of
+    # the 31 live Fringe budgets duplicated in one apply, each with a fresh
+    # initial_budget and the original reported absent.
     def self.bare_name(name, area_name)
       return name.to_s if area_name.blank?
 
@@ -197,22 +186,20 @@ module Reimbursements
       rest.strip
     end
 
-    # The key a line is matched on once the prefix is out of the way: its AREA
-    # plus its bare name. Qualified by the area, so two shows that each run a
-    # "Marketing" line are two keys rather than one collision — which is the
-    # state stripping the prefixes leaves behind. nil for a line that names no
-    # area; those fall to the name lookup.
+    # Qualified by the area, so two shows that each run a "Marketing" line are
+    # two keys rather than one collision — the state stripping the prefixes
+    # leaves behind. nil for a line naming no area; those fall to the name
+    # lookup.
     def self.area_scoped_key(name, area_name)
       return nil if area_name.blank?
 
       [ match_key(area_name), match_key(bare_name(name, area_name)) ]
     end
 
-    # A collision is usually two identical names, so the AREA is the part that
-    # tells them apart — and where two areas share a NAME (the lenient year
-    # scoping puts an unstamped Cogito beside a real one), the year and cost
-    # centre are what tell those apart. Qualified only where it is needed, so
-    # the ordinary message stays short. Shared with ExpenseImport.
+    # A collision is usually two identical names, so the AREA tells them
+    # apart — and where two areas share a name (lenient year scoping puts an
+    # unstamped Cogito beside a real one), the year and centre do. Qualified
+    # only where needed, so the ordinary message stays short.
     def self.budget_labels(budgets)
       labels = budgets.map { |budget| budget_label(budget) }
       return labels if labels.uniq.size == labels.size
@@ -226,19 +213,17 @@ module Reimbursements
       "#{budget.name.inspect} in #{qualified ? area_label(budget.area) : budget.area.name}"
     end
 
-    # The names are identical, so the year and the cost centre are the only
-    # things that tell the two apart — and a blank pair is what makes the
-    # lenient scoping put a legacy area in every year's list to begin with.
+    # A blank year/centre pair is what makes the lenient scoping put a legacy
+    # area in every year's list to begin with.
     def self.area_label(area)
       parts = [ area.financial_year&.label, area.cost_centre&.name ].compact_blank
       parts.any? ? "#{area.name} (#{parts.join(', ')})" : "#{area.name} (no financial year or cost centre)"
     end
 
-    # Both spellings of a stored line's name — as stored, and with its area's
-    # prefix put on or taken off. The STORED row knows its own area whether or
-    # not the sheet names one, so the committee's untouched old file (prefixed
-    # names, no Area column) still finds "Marketing" in Cogito. Both importers
-    # key on this, so neither can drift about what a budget is called.
+    # As stored, and with its area's prefix put on or taken off. The STORED
+    # row knows its own area whether or not the sheet names one, so the
+    # committee's untouched old file (prefixed names, no Area column) still
+    # finds "Marketing" in Cogito. Both importers key on this.
     def self.name_spellings(name, area_name)
       return [ name.to_s ] if area_name.blank?
 
@@ -255,10 +240,9 @@ module Reimbursements
     def entries_in(bucket) = @entries.select { |entry| entry.bucket == bucket }
 
     # Attributes for each new budget, ready for the store. A line naming an
-    # AREA carries either +area_id:+ (an area already in this year/centre) or
-    # +area_name:+ (one the sheet is about to create) — never both, and
-    # neither when the Area column was left blank. import_budgets! resolves
-    # +area_name:+ to an id once #area_creates has run, inside its transaction.
+    # AREA carries +area_id:+ (an area already here) or +area_name:+ (one the
+    # sheet is about to create), never both; import_budgets! resolves the name
+    # inside its transaction, once #area_creates has run.
     def creates
       entries_in(:create).map do |entry|
         { name: entry.row[:name], nominal_code: entry.row[:nominal_code],
@@ -270,21 +254,17 @@ module Reimbursements
     end
 
     # {name:, cost_centre:, financial_year:, initial_budget:} for every area
-    # the sheet names that doesn't already exist here — matched the same way a
-    # budget line is matched (by name within one financial year and cost
-    # centre), and never deleted for the same reason #absent_budgets is
-    # reported and never touched: a show's claims and history hang off its
-    # lines.
+    # the sheet names that isn't already here — matched by name within one
+    # (financial year, cost centre), as a budget line is, and never deleted for
+    # #absent_budgets' reason.
     #
-    # Reads every entry the sheet actually kept (create/revise/unchanged), not
-    # only #creates: an area can be named on a line that matches an EXISTING
-    # budget too, and a typo on an :invalid row must not mint a spurious area
-    # while the whole import is blocked anyway.
+    # Reads every entry the sheet KEPT (create/revise/unchanged), not only
+    # #creates: an area can be named on a line that matches an existing budget.
+    # :invalid rows are excluded, so a typo can't mint an area for a row that
+    # will never be written.
     #
-    # +initial_budget+ is written ONLY here, on create — an area that already
-    # exists (excluded above) keeps its own figure, the same write-once rule
-    # Budget#initial_budget follows. #area_total_conflicts is what stops two
-    # different Area Budget cells for the same area picking one arbitrarily.
+    # +initial_budget+ is written ONLY on create, the write-once rule
+    # Budget#initial_budget follows.
     def area_creates
       totals = area_budget_totals
       first_seen_names.except(*@existing_areas_by_name.keys).map do |key, name|
@@ -293,29 +273,24 @@ module Reimbursements
       end
     end
 
-    # #area_creates narrowed to the areas something will ACTUALLY land in: an
-    # area named on a :create line, or one named by a re-home the operator left
-    # TICKED. Apply passes this rather than #area_creates itself.
+    # #area_creates narrowed to the areas something will ACTUALLY land in — a
+    # :create line's, or a re-home the operator left TICKED. Apply passes this
+    # rather than #area_creates: without it, unticking every re-home on a pure
+    # re-import still minted the area, so taking the cautious option the bucket
+    # offers produced the orphan it exists to prevent.
     #
-    # Without it, unticking every re-home on a pure re-import still minted the
-    # area — the exact orphan this bucket exists to prevent, arrived at by
-    # taking the cautious option the bucket offers. Silently creating an empty
-    # container is the same failure as silently moving a line.
-    #
-    # At PREVIEW time every re-home is ticked, so this and #area_creates agree
-    # — which is why the preview's "(new)" markers and its button count can
-    # keep reading the unnarrowed list.
+    # At PREVIEW time every re-home is ticked, so this and #area_creates agree,
+    # and the preview's "(new)" markers can read the unnarrowed list.
     def area_creates_for(re_homes)
       wanted = (entries_in(:create).map(&:area_name) + re_homes.map { |re_home| re_home[:area_name] })
                .compact_blank.map { |name| self.class.match_key(name) }.to_set
       area_creates.select { |attrs| wanted.include?(self.class.match_key(attrs[:name])) }
     end
 
-    # [{ area_name:, values: [] }] for every area the sheet gives more than one
-    # distinct, non-blank Area Budget figure — the column repeats down every
-    # row of the area, so two different values within one sheet can't both be
-    # what the committee agreed. #valid? refuses the whole import over this,
-    # the same way an unreadable Amount does, rather than picking one.
+    # Every area the sheet gives more than one distinct Area Budget figure.
+    # The column repeats down the area's rows, so two values can't both be what
+    # the committee agreed: #valid? refuses the whole import rather than
+    # picking one, as it does for an unreadable Amount.
     def area_total_conflicts
       area_budget_totals.filter_map do |key, values|
         next if values.size <= 1
@@ -359,47 +334,27 @@ module Reimbursements
 
     # Matched lines the sheet puts in a DIFFERENT area than they are in now —
     # reported for the operator to confirm, never applied on sight. Somebody
-    # moved that budget on purpose, through the area form or the budget form's
-    # picker, so this is the same temperament #absent_budgets already has: the
-    # sheet is the committee's record, but a hand-made grouping is somebody's
-    # decision, and the sheet is not allowed to overrule it silently.
+    # moved that budget by hand, and the sheet doesn't get to overrule that
+    # silently, the temperament #absent_budgets already has.
     #
-    # [{ budget_id:, budget_name:, from_area_name:, from_area_scope:,
-    #    to_area_name:, to_area_is_new:, to_area_has_owners:, key: }], plus the
-    # +area_id:+ / +area_name:+ pair #creates carries — the target is an id
-    # when the area is already here and a NAME when this same import is about
-    # to create it, and import_budgets! resolves the name inside its
-    # transaction exactly as it does for a create. Everything the preview's
-    # label needs is on the hash for the same reason +budget_name+ is: the
-    # view must never reach for a record.
+    # Carries #creates' +area_id:+ / +area_name:+ pair — a name when this same
+    # import is about to create the target, resolved inside import_budgets!'
+    # transaction as a create's is.
     #
-    # +key+ is the checkbox value, and it is the BUDGET ID rather than a row
-    # position: a re-import with the rows reordered must not land a tick on a
-    # different line. (Reconcile keys its offsetting pairs by row content plus
-    # an occurrence index only because its rows have no id of their own.)
-    #
-    # Same buckets as #adoptions and #owner_syncs — a matched line is matched
-    # whether or not its figure moved.
-    #
-    # A re-home FROM NIL is the case that stops #area_creates minting orphans:
-    # on a re-import every line already exists, and only a :create line carries
-    # an area_id, so an area named on a sheet whose lines all match would
-    # otherwise be created with no budget in it. That is the common shape —
-    # a committee adding an Area column to a sheet they have imported before.
+    # +key+ is the checkbox value and it is the BUDGET ID, not a row position:
+    # a re-import with the rows reordered must not land a tick on another line.
     #
     # A budget that HAS an area whose sheet leaves the cell BLANK is not a
-    # re-home to nowhere: a blank cell means "the sheet says nothing", the same
-    # reading bucket_for gives a blank Amount.
+    # re-home to nowhere: a blank cell says nothing, the reading bucket_for
+    # gives a blank Amount.
     #
-    # THE COMPARISON IS BY RECORD, NOT BY NAME. Areas are named per show and
-    # shows recur, so "Cogito" exists once per Fringe — and a budget in THIS
-    # year may legitimately hold LAST year's area (inherit_area_scoping fills
-    # blanks only and never checks the year, and BudgetsController appends the
-    # budget's own area to the scoped select precisely so such a row survives a
-    # save). Matching on the name read that as "already there" and reported
-    # nothing, while the line's spend kept rolling up into the other year's
-    # area total (Area#committed_amount sums its budgets with no year filter)
-    # and that year's owners kept gating the claim.
+    # THE COMPARISON IS BY RECORD, NOT BY NAME. "Cogito" exists once per
+    # Fringe, and a budget in THIS year may legitimately hold LAST year's area
+    # (inherit_area_scoping fills blanks only and never checks the year).
+    # Matching on the name read that as "already there" and reported nothing,
+    # while the line's spend kept rolling into the other year's area total
+    # (Area#committed_amount has no year filter) and that year's owners kept
+    # gating the claim.
     def re_homes
       @re_homes ||= (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
         next if entry.area_name.blank?
@@ -418,21 +373,18 @@ module Reimbursements
     # current — but only where the sheet actually named someone, since an empty
     # owner column means "not stated", not "nobody".
     #
-    # A line that HAS an area is #area_owner_syncs' business instead: Budget#owners
-    # reads through the area, so the sheet's owner written to the line's own rows
-    # is an owner nobody reads and no claim's sign-off gate ever consults.
+    # A line that HAS an area is #area_owner_syncs' business instead:
+    # Budget#owners reads through the area, so the sheet's owner written to such
+    # a line's own rows is one no sign-off gate ever consults.
     #
-    # Still compared against the budget's OWN owner rows, because that is what
-    # DatabaseStore#sync_budget_owners! writes. With the narrowing above the two
-    # reads happen to agree (Budget#owners IS own_owners with no area), so this
-    # states which of them the comparison depends on rather than relying on that
-    # coincidence — reading the area-resolved Budget#owner_ids is what could
-    # never converge, and re-reported the identical sync for ever.
+    # Compared against the budget's OWN owner rows, because that is what
+    # DatabaseStore#sync_budget_owners! writes — comparing the area-resolved
+    # Budget#owner_ids could never converge, and re-reported the identical sync
+    # for ever.
     #
     # A matched AREA-LESS line whose sheet names an area is reported here AND in
-    # #area_owner_syncs, deliberately: the sheet's area only takes effect if the
-    # operator leaves that re-home ticked, and this model cannot know. Written
-    # both places, the owner gates the claim either way.
+    # #area_owner_syncs, deliberately: the sheet's area takes effect only if the
+    # operator leaves that re-home ticked, which this model cannot know.
     def owner_syncs
       (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
         next if entry.owner_ids.empty?
@@ -444,23 +396,13 @@ module Reimbursements
     end
 
     # Owner lists for the AREAS the sheet's lines resolve to — [{ owner_ids: }]
-    # plus the same +area_id:+ / +area_name:+ pair #creates and #re_homes carry,
-    # so an area this very import is about to create is resolved inside
-    # import_budgets!' transaction exactly as a budget's area is.
+    # plus the +area_id:+ / +area_name:+ pair #creates and #re_homes carry.
     #
     # THE AREA'S OWNERS ARE THE UNION of what its lines name, and a sync NEVER
-    # REMOVES one — +owner_ids+ is the area's current owners plus the sheet's,
-    # and DatabaseStore#add_area_owners! unions again at write time. The sheet
-    # has one owner column per LINE, so three lines under one area can name
-    # three people and all three are meant; and it has no way at all to say
-    # "remove this owner", a blank cell being the same "the sheet says nothing"
-    # a blank Amount is. Union is also the forgiving direction — any one owner
-    # satisfies the gate, so an extra owner can endorse while a missing one
-    # strands the claim — and it is what AreaBackfill#seed_owners! already did.
-    # Removal stays hand-work on the area form.
-    #
-    # Nothing is reported when the sheet names only people the area already has:
-    # the union is then unchanged.
+    # REMOVES one (DatabaseStore#add_area_owners! unions again at write time,
+    # and states why). Union is the forgiving direction: any one owner satisfies
+    # the gate, so an extra can endorse while a missing one strands the claim.
+    # It is what AreaBackfill#seed_owners! already did.
     def area_owner_syncs
       owner_targets.each_value.filter_map do |target|
         current = target[:area]&.owner_ids || []
@@ -470,22 +412,19 @@ module Reimbursements
       end
     end
 
-    # What each of those areas will END UP naming, for the preview:
-    # [{ area_name:, area_is_new:, area_scope:, owners: [{ name:, added: }] }].
+    # What each of those areas will END UP naming, for the preview.
     #
-    # A NAMED LIST rather than a count, because the union is forgiving in both
-    # directions: a stale address on one line otherwise gains sign-off authority
-    # over a whole show with nothing on screen to say so. It shows the area's
-    # existing owners alongside the ones these lines add — since a sync never
-    # subtracts, that IS what the area will hold afterwards.
+    # A NAMED LIST rather than a count: the union is forgiving in both
+    # directions, so a stale address on one line would otherwise gain sign-off
+    # authority over a whole show with nothing on screen to say so. Existing
+    # owners are shown beside the ones these lines add, which since a sync never
+    # subtracts IS what the area ends up holding.
     #
-    # +area_scope+ is the SAME qualification Task 4's re-home label carries, and
-    # it is what makes the blank-Area-cell reading safe to have. A blank cell
-    # targets the area the budget is already IN, which may legitimately be
-    # another year's (see #re_homes on why) — and that line reports no re-home,
-    # so nothing else on the page would mention the area at all. Unqualified,
-    # two different "Cogito"s in one sheet render as two identical lines and the
-    # operator cannot tell which show gains which person.
+    # +area_scope+ is the re-home label's qualification, and it is what makes
+    # the blank-Area-cell reading safe: a blank cell targets the area the budget
+    # is already IN, which may be another year's (see #re_homes), and that line
+    # reports no re-home — so two different "Cogito"s would otherwise render as
+    # two identical lines.
     def area_owner_sets
       owner_targets.each_value.map do |target|
         current = target[:area]&.owners || []
@@ -523,8 +462,7 @@ module Reimbursements
 
     # Canonical heading => the sheet's own heading it was read from (nil when
     # the sheet has no such column). Rendered by the preview: keyword matching
-    # can only ever be nearly right, and stating what was read is worth more
-    # than any amount of tuning.
+    # can only ever be nearly right, so stating what was read beats tuning it.
     def column_mapping
       FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
     end
@@ -576,11 +514,10 @@ module Reimbursements
       area_budget = parse_amount(raw_area_budget)
       {
         area: text(raw, :area).strip.presence,
-        # Same blank/unreadable split as :amount, via the same #parse_amount —
-        # blank (nothing typed) stays nil, the normal state for an area with no
-        # agreed total yet; unreadable ("£1,2OO") is a BLOCKING row error, not
-        # silently read as unstated, because that would be an area created
-        # with no agreed total and nobody told. #row_error below reports it.
+        # Same blank/unreadable split as :amount. Blank is the normal state
+        # for an area with no agreed total yet; unreadable ("£1,2OO") is a
+        # BLOCKING row error (#row_error), because reading it as unstated
+        # creates the area with no agreed total and tells nobody.
         area_budget: area_budget,
         name: text(raw, :name).strip,
         nominal_code: cell(raw, :nominal_code).to_s.strip,
@@ -614,10 +551,9 @@ module Reimbursements
       FIELDS.transform_values { |spec| match_header(headers, spec) }
     end
 
-    # Two fields reading the same column is refused rather than resolved: which
-    # of them the operator meant is exactly what cannot be guessed, and picking
-    # one writes the wrong value into a name or a figure with nothing on screen
-    # to say so.
+    # Refused rather than resolved: which field the operator meant is exactly
+    # what cannot be guessed, and picking one writes the wrong value into a name
+    # or a figure with nothing on screen to say so.
     def ambiguous_columns
       header_for.compact.group_by { |_field, header| header }
                 .select { |_header, pairs| pairs.size > 1 }
@@ -657,9 +593,9 @@ module Reimbursements
     end
 
     # Two rows that resolved to ONE stored line. #duplicated_names compares what
-    # the sheet TYPED, so two spellings of one budget get past it — "Marketing"
-    # and "Cogito: Marketing" on a sheet with no Area column are two keys and
-    # one line, and applying both writes two forecasts to it.
+    # the sheet TYPED, so two spellings get past it — "Marketing" and
+    # "Cogito: Marketing" with no Area column are two keys and one line, and
+    # applying both writes two forecasts to it.
     def flag_shared_budgets(entries)
       counts = entries.filter_map { |entry| entry.budget&.record_id }.tally
       entries.map do |entry|
@@ -685,9 +621,8 @@ module Reimbursements
       end
     end
 
-    # Judged on the HEADERS, not the values: a sheet that does have a Budget
-    # column but left one cell empty gets that row flagged by itself, not the
-    # whole sheet rejected.
+    # Judged on the HEADERS, not the values: a sheet with a Budget column and
+    # one empty cell gets that row flagged, not the whole sheet rejected.
     def report_missing_columns
       missing = REQUIRED_FIELDS.reject { |field| header_for[field] }
                                .map { |field| FIELDS.fetch(field)[:label] }
@@ -713,20 +648,17 @@ module Reimbursements
 
     # Which stored line this row is about, as [budget, error].
     #
-    # TWO SPELLINGS, so two lookups. A sheet still writing "Cogito: Marketing"
-    # and a stored line already renamed to "Marketing" are the same line, and so
-    # are the reverse — the stored side is mid-rename for the length of a deploy
-    # window, and somebody may re-prefix a name by hand long afterwards.
+    # TWO SPELLINGS, so two lookups: a sheet still writing "Cogito: Marketing"
+    # and a stored line renamed to "Marketing" are the same line, and so is the
+    # reverse (somebody may re-prefix a name by hand long afterwards).
     #
-    # THE AREA-QUALIFIED LOOKUP WINS, because it carries strictly more than the
-    # name does: the sheet said which show this line belongs to. Two shows that
-    # each run a "Marketing" line collide on the bare name and not on that key,
-    # which is the whole reason it exists.
+    # THE AREA-QUALIFIED LOOKUP WINS, carrying strictly more than the name: the
+    # sheet said which show this line belongs to, and two shows each running a
+    # "Marketing" line collide on the bare name and not on that key.
     #
-    # Neither lookup may GUESS. Several stored lines under the key that decides
-    # the match blocks the import naming them, the rule the strict column
-    # matcher already sets for two fields resolving to one column — an
-    # arbitrary pick here revises one show's figure against another's line.
+    # Neither lookup may GUESS — several stored lines under the deciding key
+    # blocks the import naming them, as two fields on one column do. An
+    # arbitrary pick revises one show's figure against another's line.
     def resolve_budget(row)
       qualified = stored_under(@existing_by_area_and_name,
                                self.class.area_scoped_key(row[:name], row[:area]))
@@ -741,8 +673,8 @@ module Reimbursements
 
     def stored_under(index, key) = key.nil? ? [] : index.fetch(key, [])
 
-    # Callers only reach this for an area #row_error let through, so at most one
-    # answers to the key. The refusal lives there, once.
+    # Only reached for an area #row_error let through, so at most one answers
+    # to the key; the refusal lives there, once.
     def existing_area_for(name_key) = @existing_areas_by_name.fetch(name_key, []).first
 
     def colliding_areas(name_key)
@@ -762,10 +694,9 @@ module Reimbursements
         "Rename one of them so it's clear which line this figure is for."
     end
 
-    # Names the rows the operator has to go and look at. The preview's bullet
-    # shows the name and nothing else, so the AREA CELL is the part that tells
-    # two rows of one name apart — and where even that is the same, saying how
-    # many beats listing one label twice.
+    # The preview's bullet shows the name and nothing else, so the AREA CELL is
+    # what tells two rows of one name apart — and where even that is the same,
+    # saying how many beats listing one label twice.
     def rows_phrase(rows)
       labels = rows.map { |row| row_label(row) }
       return "#{labels.first}, #{labels.size} times" if labels.uniq.one?
@@ -810,19 +741,16 @@ module Reimbursements
       end
     end
 
-    # For the unreadable-Area-Budget row error: names the area when the row
-    # gives one, so the operator knows which show's total is wrong even
-    # though the bad row is (necessarily) reported by itself rather than
-    # grouped with the area's other rows the way #area_total_conflicts does.
+    # For the unreadable-Area-Budget row error, which is necessarily reported
+    # per row rather than grouped by area as #area_total_conflicts is — so it
+    # has to name the show whose total is wrong.
     def area_label(row)
       row[:area].presence&.inspect || "this line"
     end
 
-    # Area names as the sheet actually typed them, keyed by #match_key and kept
-    # in the order they first appear — so a re-typed "cogito " on a later line
-    # doesn't shadow the casing #area_creates should hand the store. Excludes
-    # :invalid entries (a typo there must not mint an area for a row that will
-    # never be written).
+    # Area names as the sheet typed them, keyed by #match_key, first spelling
+    # wins — so a re-typed "cogito " on a later line doesn't shadow the casing
+    # #area_creates hands the store. :invalid entries are excluded.
     def first_seen_names
       @first_seen_names ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, names|
         next if entry.area_name.blank?
@@ -832,10 +760,9 @@ module Reimbursements
     end
 
     # #match_key(area name) => the DISTINCT, non-blank Area Budget amounts the
-    # sheet gives that area — in the order they're first seen, so #area_creates
-    # can take the single one it expects and #area_total_conflicts can name
-    # every one of a genuine disagreement. Same :invalid exclusion as
-    # #first_seen_names, for the same reason.
+    # sheet gives that area, first-seen order — so #area_creates takes the one
+    # it expects and #area_total_conflicts can name every one of a genuine
+    # disagreement. Same :invalid exclusion as #first_seen_names.
     def area_budget_totals
       (@entries - entries_in(:invalid)).each_with_object(Hash.new { |h, k| h[k] = [] }) do |entry, totals|
         next if entry.area_name.blank?
@@ -859,15 +786,13 @@ module Reimbursements
     end
 
     # grouping key => { area:, area_name:, owner_ids: } for every area the
-    # sheet's owner column feeds. One pass, because the three readers above
-    # each need the area record, the name to show and the union.
+    # sheet's owner column feeds.
     #
-    # Keyed by RECORD ID where the area exists, so two lines reaching the same
-    # area merge however they got there — the sheet naming it, and a blank Area
-    # cell over a line already sitting in it, are the same area — and by name
-    # where this import is about to create it. Excludes :invalid entries for
-    # the same reason #first_seen_names does: a typo on a blocked row must not
-    # hand a show an owner.
+    # Keyed by RECORD ID where the area exists, so two lines reaching one area
+    # merge however they got there (the sheet naming it, or a blank Area cell
+    # over a line already in it), and by name where this import is about to
+    # create it. :invalid entries are excluded: a typo on a blocked row must
+    # not hand a show an owner.
     def owner_targets
       @owner_targets ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, targets|
         next if entry.owner_ids.empty?
@@ -881,10 +806,9 @@ module Reimbursements
     end
 
     # [area record or nil, grouping key, area name] for the area a line's named
-    # owners belong to — the area the line RESOLVES to, which is the one the
-    # sheet names, or the one the budget is already in when the cell is blank.
-    # An empty triple for a line that reaches no area at all: its owners stay on
-    # the budget's own rows, which for an area-less line is the live read.
+    # owners belong to — the one the sheet names, or the one the budget is
+    # already in when the cell is blank. An empty triple for a line reaching no
+    # area: its owners stay on the budget's own rows, the live read there.
     def resolve_owner_target(entry)
       if entry.area_name.present?
         key = self.class.match_key(entry.area_name)
@@ -900,24 +824,19 @@ module Reimbursements
 
     def target_key(area, name_key) = area ? "id:#{area.record_id}" : "name:#{name_key}"
 
-    # The +area_id:+ / +area_name:+ pair for a grouped target, the same shape
-    # #area_attrs_for hands #creates.
     def area_attrs_for_target(target)
       target[:area] ? { area_id: target[:area].record_id } : { area_name: target[:area_name] }
     end
 
-    # Whether the area a re-home moves a line into will name SOMEBODY once this
-    # import has run: its current owners, plus the ones this sheet's owner
-    # column is about to add to it. An address that matched nobody doesn't
-    # count — resolve_owners drops it, so the area would still name nobody.
+    # Whether the target area will name SOMEBODY once this import has run:
+    # current owners plus the ones this sheet adds. An address that matched
+    # nobody doesn't count — resolve_owners drops it, so the area names nobody.
     def area_will_have_owners?(area, name_key)
       return true if area&.owners&.any?
 
       owner_targets[target_key(area, name_key)].present?
     end
 
-    # +area_id:+ for a line naming an area already here, +area_name:+ for one
-    # this import is about to create, or neither for an area-less line.
     def area_attrs_for(entry)
       return {} if entry.area_name.blank?
 
@@ -925,26 +844,22 @@ module Reimbursements
       existing ? { area_id: existing.record_id } : { area_name: entry.area_name }
     end
 
-    # One re-home's hash. Split out of #re_homes so the label's two
-    # qualifications sit next to what decides them.
     def re_home_for(entry, key, current, existing)
       { budget_id: entry.budget.record_id, budget_name: entry.budget.name,
         from_area_name: current&.name, from_area_scope: out_of_scope_label(current),
         to_area_name: first_seen_names[key], to_area_is_new: existing.nil?,
-        # An area with no owners at all switches its lines' sign-off gate OFF,
-        # because Budget#owners resolves THROUGH the area. Read AFTER this
-        # import's own owner column: a sheet that names somebody for the area
-        # it is moving the line into leaves the gate standing, so warning there
-        # would be false. A sheet naming nobody (or only addresses that matched
-        # nobody) still lands here — which is why the warning stays.
+        # An ownerless area switches its lines' sign-off gate OFF, because
+        # Budget#owners resolves THROUGH the area. Read AFTER this import's own
+        # owner column, or a sheet that names somebody for the target area
+        # would warn falsely.
         to_area_has_owners: area_will_have_owners?(existing, key),
         key: entry.budget.record_id }.merge(area_attrs_for(entry))
     end
 
-    # Why +area+ is outside this import's (financial year, cost centre) — for
-    # the preview's label, which would otherwise read "Cogito -> Cogito" for
-    # the one case where the names genuinely agree and the records don't. nil
-    # for an area inside the scope, which is every ordinary re-home.
+    # Why +area+ is outside this import's (financial year, cost centre) — the
+    # preview's label would otherwise read "Cogito -> Cogito" for the one case
+    # where the names agree and the records don't. nil for every ordinary
+    # re-home.
     def out_of_scope_label(area)
       return if area.nil? || @existing_areas_by_id.key?(area.record_id)
 
@@ -972,11 +887,10 @@ module Reimbursements
     end
 
     # What an AREA-LESS row would be called under each area this sheet names.
-    # A half-filled Area column — one row carrying it, one not — is the most
-    # likely transitional sheet there is, and without this it imports as two
-    # budgets of one name with two agreed figures and the show's spend split
-    # between them. It never makes two area-less rows equal to each other:
-    # their own names are all they have to go on.
+    # A half-filled Area column is the likeliest transitional sheet there is,
+    # and without this it imports as two budgets of one name with the show's
+    # spend split between them. Two area-less rows are never made equal to each
+    # other: their own names are all they have to go on.
     def alias_row_keys(index)
       @alias_row_keys ||= {}
       @alias_row_keys[index] ||= begin
@@ -997,10 +911,9 @@ module Reimbursements
     # Row index => the other rows naming the same budget line.
     #
     # Two rows are one line when they share a key that IDENTIFIES at least one
-    # of them — so an alias only ever matches a row that really does name that
-    # area. Read off two groupings rather than by comparing every pair: rows
-    # that CLAIM a key (their own plus their aliases) and rows that OWN one
-    # (their own alone), which is the same rule both ways round.
+    # of them, so an alias only ever matches a row that really does name that
+    # area. Two groupings rather than every pair: rows that CLAIM a key (their
+    # own plus aliases) against rows that OWN one (their own alone).
     def duplicate_rows
       claimants = Hash.new { |index, key| index[key] = [] }
       owners = Hash.new { |index, key| index[key] = [] }

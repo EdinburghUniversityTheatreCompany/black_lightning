@@ -219,13 +219,10 @@ module Admin
 
       # --- Areas ---------------------------------------------------------------
 
-      # The budget name is deliberately NOT "Cogito: Marketing" here (as the
-      # end-to-end apply tests below use) — it shares no substring with the
-      # area name, so an assertion that the rendered Area cell holds "Cogito"
-      # cannot be satisfied by the Budget cell instead. assert_select walks
-      # the table's actual structure (first <td> in the row) rather than
-      # grepping the whole response body, so deleting the Area column from
-      # preview.html.erb fails this test — see the report for the proof.
+      # The budget name shares no substring with the area name, so an assertion
+      # that the rendered Area cell holds "Cogito" cannot be satisfied by the
+      # Budget cell instead. assert_select walks the row's first <td> rather
+      # than grepping the body, so deleting the column fails this test.
       test "preview shows the area named on the sheet, marked as new" do
         sign_in @user
 
@@ -413,9 +410,8 @@ module Admin
         end
       end
 
-      # The tick is keyed by budget id, so the rows can arrive in any order —
-      # which is the claim the keying exists to make, and a value assertion
-      # cannot make it.
+      # Keyed by budget id, so the rows can arrive in any order — the claim the
+      # keying exists to make, which a value assertion cannot make.
       test "a tick follows its budget when the sheet's rows are reordered" do
         improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                                 financial_year: @year)
@@ -491,11 +487,11 @@ module Admin
       # A NAMED list, not a count: the union is forgiving, so a stale address on
       # one line would otherwise gain sign-off authority over a whole show.
       #
-      # All THREE qualifications in one sheet, because each renders differently
-      # and each was a real defect: an in-scope area (bare), one this import is
-      # about to create ("(new)" — whose spacing broke once, invisibly), and one
-      # reached through a blank Area cell that sits in another YEAR, which no
-      # re-home reports and which is otherwise indistinguishable from the first.
+      # All THREE qualifications in one sheet, each rendering differently and
+      # each a real defect: an in-scope area (bare), one this import is about to
+      # create ("(new)"), and one reached through a blank Area cell sitting in
+      # another YEAR — which no re-home reports, so it is otherwise
+      # indistinguishable from the first.
       test "preview names who will sign off for each area, qualified and marking the additions" do
         area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                           financial_year: @year)

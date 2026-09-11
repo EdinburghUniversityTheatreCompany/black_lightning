@@ -149,10 +149,9 @@ module Reimbursements
     end
 
     # --- Strict column matching -----------------------------------------------
-    # Ported from ExpenseImport (fixed there September 2026): a bare keyword
-    # ("budget") must never be read as a substring hint, or a sheet naming both
-    # "Budget" and a column ending in "Budget" can read the wrong one as the
-    # line's name — and two fields resolving to one column must be refused
+    # A bare keyword ("budget") must never be read as a substring hint, or a
+    # sheet naming both "Budget" and a column ending in "Budget" reads the wrong
+    # one as the line's name; and two fields on one column must be refused
     # rather than guessed.
 
     test "a bare word is never read as a substring hint" do
@@ -276,10 +275,9 @@ module Reimbursements
     end
 
     # --- Areas -----------------------------------------------------------------
-    # Matched by name within one (financial year, cost centre) — the same rule
-    # a budget line uses, and the rule AreaBackfill used. Areas are never
-    # deleted by an import, for the reason absent_budgets is reported and
-    # never deleted: a show's claims and history hang off its lines.
+    # Matched by name within one (financial year, cost centre), the rule a
+    # budget line and AreaBackfill both use. Never deleted by an import, for
+    # absent_budgets' reason.
 
     test "a line naming an area that does not exist creates it" do
       import = build_import(<<~TSV)
@@ -386,11 +384,10 @@ module Reimbursements
     end
 
     # --- Re-homing a line the sheet disagrees with ---------------------------
-    # Somebody moved that budget on purpose, through the area form or the
-    # budget form's picker. So a sheet that names a different area REPORTS it
-    # rather than doing it — the same temperament as #absent_budgets, which are
-    # reported and never deleted. Ticked by default, like Reconcile's
-    # offsetting pairs; unticking leaves the hand-made grouping alone.
+    # Somebody moved that budget by hand, so a sheet naming a different area
+    # REPORTS it rather than doing it — #absent_budgets' temperament. Ticked by
+    # default, like Reconcile's offsetting pairs; unticking leaves the hand-made
+    # grouping alone.
 
     def area_named(name, financial_year: @year)
       create_reimbursements_area(name: name, cost_centre: @cost_centre,

@@ -116,11 +116,9 @@
     </div>
   <% end %>
 
-  <%# The sheet's owner column names the AREA for any line that has one, and
-      the area's owners are the UNION of what its lines name — so this is a
-      NAMED LIST, never a count. The union is forgiving in both directions:
-      an extra owner can endorse, but a stale address on one line would
-      otherwise gain sign-off authority over a whole show invisibly. %>
+  <%# A NAMED LIST, never a count: the union is forgiving in both directions,
+      so a stale address on one line would otherwise gain sign-off authority
+      over a whole show invisibly. See BudgetImport#area_owner_sets. %>
   <% owner_sets = @import.area_owner_sets %>
   <% if owner_sets.any? %>
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
