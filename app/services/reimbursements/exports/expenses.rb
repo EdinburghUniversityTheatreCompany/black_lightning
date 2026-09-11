@@ -20,16 +20,21 @@ module Reimbursements
       def row(expense)
         [
           expense.auto_number, expense.status, expense.effective_payee_name,
-          expense.budget&.name, expense.amount, expense.amount_excl_vat,
+          budget_name(expense), expense.amount, expense.amount_excl_vat,
           expense.description, expense.payment_reference,
           iso_date(expense.submitted_at), attention_reasons(expense).join("; "),
           cost_centre_name(expense.cost_centre_id), area_name(expense)
         ]
       end
 
-      # Through budget_by_id (store.budgets, already preloading area: :owners),
-      # NOT expense.budget — which would lazy-load a second, unpreloaded
-      # Budget/Area pair per unique budget in the export.
+      # Both through budget_by_id (store.budgets, already preloading
+      # area: :owners), NOT expense.budget — which would lazy-load a second,
+      # unpreloaded Budget/Area pair per unique budget in the export. The BARE
+      # name, because the sheet carries its own Area column.
+      def budget_name(expense)
+        budget_by_id[expense.budget_record_id]&.name
+      end
+
       def area_name(expense)
         budget_by_id[expense.budget_record_id]&.area&.name
       end

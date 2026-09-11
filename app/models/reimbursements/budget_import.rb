@@ -156,6 +156,7 @@ module Reimbursements
       @rows = parse_data(data, @escaped ? :paste : input_type)
       @entries = categorize
       report_area_total_conflicts
+      report_area_collation_clashes
     end
 
     # Names are matched case- and space-insensitively: a committee retypes
@@ -782,9 +783,7 @@ module Reimbursements
       if row[:name].blank?
         "This line has no budget name, so there's nothing to create or match it against."
       elsif twins.any?
-        "The same budget line is named more than once in this sheet " \
-          "(#{rows_phrase([ row ] + twins)}). Name it once — two lines are told apart by their " \
-          "area, not by the name alone."
+        duplicate_rows_error(row, twins)
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
       elsif row[:area_budget] == :unreadable
@@ -795,6 +794,26 @@ module Reimbursements
       elsif Budget::TYPES.exclude?(row[:budget_type])
         "#{row[:budget_type].inspect} isn't a budget type. Use #{Budget::TYPES.to_sentence(last_word_connector: ' or ')}."
       end
+    end
+
+    # Two rows of one name are ONE line here, which is right when the sheet
+    # types the same line twice and wrong when a Termtime overhead called
+    # "Marketing" sits beside a show's. Telling those apart needs the AREA
+    # cell, and only the area-less row can supply one — so "name it once",
+    # which would destroy a real line, is said only where every row in the
+    # group already names an area (or none of them does).
+    def duplicate_rows_error(row, twins)
+      group = [ row ] + twins
+      instruction =
+        if group.any? { |other| other[:area].blank? } && group.any? { |other| other[:area].present? }
+          "Give the line with no area its own Area cell, or rename it — two lines are told " \
+            "apart by their area, not by the name alone."
+        else
+          "Name it once — two lines are told apart by their area, not by the name alone."
+        end
+
+      "The same budget line is named more than once in this sheet " \
+        "(#{rows_phrase(group)}). #{instruction}"
     end
 
     # For the unreadable-Area-Budget row error, which is necessarily reported
@@ -840,6 +859,35 @@ module Reimbursements
                    "column blank."
       end
     end
+
+    # Area's uniqueness validation queries under utf8mb4_unicode_ci, which FOLDS
+    # ACCENTS, while #match_key folds only case and spacing. So a sheet naming
+    # "Cógito" where "Cogito" is already here reaches #area_creates as a new
+    # area and Area.create! raises RecordInvalid inside apply's transaction — a
+    # 500 that loses the operator's forty-line paste instead of a stated,
+    # blocking error. Two NEW areas differing only by an accent collide the same
+    # way, so the sheet is checked against itself as well.
+    #
+    # transliterate is broader than the collation in places, and that is the
+    # safe direction here: it can only refuse a name the database would have
+    # refused anyway.
+    def report_area_collation_clashes
+      stored = @existing_areas_by_name.each_value.flat_map { |areas| areas }
+                                      .index_by { |area| collation_key(area.name) }
+      seen = {}
+      area_creates.each do |attrs|
+        name = attrs[:name]
+        key = collation_key(name)
+        clash = stored[key]&.name || seen[key]
+        if clash
+          @errors << "#{name.inspect} and #{clash.inspect} are the same area name as far as "                      "the database is concerned — it ignores accents. Spell the area one way."
+        else
+          seen[key] = name
+        end
+      end
+    end
+
+    def collation_key(name) = ActiveSupport::Inflector.transliterate(self.class.match_key(name))
 
     # grouping key => { area:, area_name:, owner_ids: } for every area the
     # sheet's owner column feeds.

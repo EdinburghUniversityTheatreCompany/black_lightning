@@ -36,6 +36,17 @@ module Reimbursements
         assert_equal "Ergo", cell(Expenses.new(store: @store), [ expense ], "Area")
       end
 
+      # The Budget column is read off the same preloaded map as the Area beside
+      # it, so the two cannot come from different Budget objects — and it stays
+      # the BARE name, because the sheet says the area in its own column.
+      test "Expenses names the budget from the same map, bare" do
+        area = create_reimbursements_area(name: "Ergo")
+        budget = create_reimbursements_budget(name: "Props", area: area)
+        expense = create_reimbursements_expense(budget: budget, receipt: false)
+
+        assert_equal "Props", cell(Expenses.new(store: @store), [ expense ], "Budget")
+      end
+
       test "Expenses leaves the cell blank for a claim whose budget has no area" do
         budget = create_reimbursements_budget(name: "Contingency")
         expense = create_reimbursements_expense(budget: budget, receipt: false)

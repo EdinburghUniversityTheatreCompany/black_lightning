@@ -326,6 +326,49 @@ module Reimbursements
       assert_equal 1200, import.area_creates.first[:initial_budget]
     end
 
+    # Area's uniqueness validation queries under utf8mb4_unicode_ci, which folds
+    # accents; the importer's own match_key folds only case and spacing. Without
+    # this the name reached #area_creates as NEW and Area.create! raised inside
+    # apply's transaction — a 500 losing the operator's whole paste.
+    test "an area whose name differs only by an accent blocks rather than 500ing the apply" do
+      existing = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                            financial_year: @year)
+
+      import = build_import(<<~TSV, existing_areas: [ existing ])
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cógito\t1200\tMarketing\t432320\tExpense\t400
+      TSV
+
+      assert_not import.valid?
+      assert_match(/"Cógito" and "Cogito" are the same area name/, import.errors.join(" "))
+      # And the refusal is doing real work: the database would refuse it too.
+      assert_raises(ActiveRecord::RecordInvalid) do
+        Area.create!(name: "Cógito", cost_centre: @cost_centre, financial_year: @year)
+      end
+    end
+
+    test "two new areas differing only by an accent block the import" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tMarketing\t432320\tExpense\t400
+        Cógito\t1200\tSet\t432330\tExpense\t300
+      TSV
+
+      assert_not import.valid?
+      assert_match(/are the same area name/, import.errors.join(" "))
+    end
+
+    test "an area named the same way twice over is not an accent clash" do
+      import = build_import(<<~TSV)
+        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Cogito\t1200\tMarketing\t432320\tExpense\t400
+        Cogito\t1200\tSet\t432330\tExpense\t300
+      TSV
+
+      assert import.valid?, import.errors.inspect
+      assert_equal 1, import.area_creates.size
+    end
+
     test "two different totals for one area block the import" do
       import = build_import(<<~TSV)
         Area\tArea Budget\tBudget\tNominal code\tType\tAmount
@@ -1279,6 +1322,26 @@ module Reimbursements
       assert_equal 2, import.entries_in(:invalid).size
       assert_match(/"Marketing" \(Cogito\) and "Marketing" \(no area\)/,
                    import.entries.first.error)
+      # "Name it once" would destroy a real line when the two genuinely ARE
+      # different — a Termtime overhead called Marketing beside a show's — and
+      # the area-less row is the only one that can say which it is.
+      assert_match(/Give the line with no area its own Area cell, or rename it/,
+                   import.entries.first.error)
+      assert_no_match(/Name it once/, import.entries.first.error)
+    end
+
+    # Where every row already names an area (or none does), the area cell has
+    # nothing left to add, so the instruction is the original one.
+    test "two rows naming the same area and name are told to name it once" do
+      import = build_import(<<~TSV)
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tMarketing\t432320\tExpense\t500
+        Cogito\tMarketing\t432320\tExpense\t600
+      TSV
+
+      assert_not import.valid?
+      assert_match(/Name it once/, import.entries.first.error)
+      assert_no_match(/its own Area cell/, import.entries.first.error)
     end
 
     # It must not make two AREA-LESS rows equal to each other: their own names
