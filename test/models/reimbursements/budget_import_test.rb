@@ -1399,16 +1399,20 @@ module Reimbursements
     end
 
     # Only an area THE SHEET NAMES reads as a prefix: with no Cogito row above
-    # it, "Cogito: Marketing" is a line whose name happens to carry a colon.
+    # them, these are lines whose names happen to carry a colon, and the third
+    # row is what makes that observable — read as a prefix, the last two rows
+    # collapse onto one key (the colon's spacing is part of a NAME and not part
+    # of an area plus a line) and the sheet would be refused.
     test "a prefix no row of the sheet names is part of the name" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount
         Improverts\tMarketing\t432320\tExpense\t500
         \tCogito: Marketing\t432330\tExpense\t600
+        \tCogito:Marketing\t432340\tExpense\t700
       TSV
 
       assert import.valid?, import.entries.filter_map(&:error).inspect
-      assert_equal 2, import.entries_in(:create).size
+      assert_equal 3, import.entries_in(:create).size
     end
 
     # The reading is for a row that pointed at NO show. This one pointed at
