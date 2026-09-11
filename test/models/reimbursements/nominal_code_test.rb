@@ -44,6 +44,26 @@ module Reimbursements
       assert dupe.errors[:code].present?
     end
 
+    # Not tidiness: BudgetFinder matches a hand-named budget line against the
+    # LABEL, so two codes sharing one have a single uncoded line answering to
+    # both — and once a line exists for either, the other can never be opened.
+    test "a label is unique within its cost centre, case-insensitively" do
+      cc = Reimbursements::CostCentre.default
+      create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")
+      dupe = NominalCode.new(code: "431000", cost_centre: cc, label: "marketing")
+
+      assert_not dupe.valid?
+      assert dupe.errors[:label].present?
+    end
+
+    test "another centre may reuse a label, as it may reuse a code" do
+      home = Reimbursements::CostCentre.default
+      other = create_second_reimbursements_cost_centre
+      create_reimbursements_nominal_code(code: "432320", cost_centre: home, label: "Marketing")
+
+      assert NominalCode.new(code: "500000", cost_centre: other, label: "Marketing").valid?
+    end
+
     test "active defaults to true, and false persists" do
       code = NominalCode.create!(code: "999999", label: "Test",
                                  cost_centre: Reimbursements::CostCentre.default)

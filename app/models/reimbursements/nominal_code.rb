@@ -35,6 +35,14 @@ module Reimbursements
     # index already folds case and accents, so a case-sensitive validation
     # would disagree with it and let a duplicate through to a RecordNotUnique.
     validates :code, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
+    # The LABEL is unique per centre too, and that is correctness rather than
+    # tidiness: BudgetFinder matches a hand-named budget line against it, so two
+    # codes sharing a label have one uncoded line answering to both — and once a
+    # line exists for one of them, the other can never be opened at all. Same
+    # case-insensitivity as the code above, and for the same reason: the column
+    # is utf8mb4_unicode_ci, so a case-sensitive rule would disagree with the
+    # database it is guarding.
+    validates :label, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 
