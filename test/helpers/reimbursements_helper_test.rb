@@ -135,6 +135,18 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_nil reimbursements_amount_value(nil)
   end
 
+  # What a BROWSER posts for an empty number input, handed back by a form
+  # re-rendering its own params: format("%.2f", "") raises, so every refusal on
+  # a form carrying an empty amount 500ed instead of stating its reason.
+  test "reimbursements_amount_value renders a browser's empty string as nil" do
+    assert_nil reimbursements_amount_value("")
+  end
+
+  test "reimbursements_amount_value hands a typed amount back rather than raising" do
+    assert_equal "1200.00", reimbursements_amount_value("£1,200")
+    assert_equal "not a number", reimbursements_amount_value("not a number")
+  end
+
   test "reasons_popover is blank when there are no reasons" do
     assert_equal "", reimbursements_reasons_popover(reasons: [], key: "x", label: "Needs attention",
                                                      heading: "Needs attention:")

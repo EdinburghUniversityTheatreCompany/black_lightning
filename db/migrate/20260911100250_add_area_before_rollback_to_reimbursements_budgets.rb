@@ -6,6 +6,11 @@ class AddAreaBeforeRollbackToReimbursementsBudgets < ActiveRecord::Migration[8.1
   # descending version order, so this column outlives the down that writes it
   # and is dropped one step later; added at the end of the chain instead, it
   # would be dropped FIRST and the down would have nowhere to record.
+  #
+  # A database that applied the backfill BEFORE this branch has this migration
+  # pending, so Rails runs it out of order on the next `db:migrate` — which is
+  # what has to happen before that backfill can be rolled back at all (see its
+  # own header).
   def up
     add_column :reimbursements_budgets, :area_before_rollback, :json, if_not_exists: true
   end

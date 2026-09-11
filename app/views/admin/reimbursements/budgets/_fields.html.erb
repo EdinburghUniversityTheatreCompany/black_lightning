@@ -97,7 +97,11 @@
       <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this budget.
         A line placed in an area takes its owners from the area, and they are set there.</p>
     </fieldset>
-    <p class="text-sm text-gray-700" hidden
+    <%# aria-live, because the control that changes is the one being taken away:
+        a screen reader lands on a disabled fieldset with nothing said about
+        why. On the live region, not on the fieldset, so it is announced once
+        rather than read out as it is re-traversed. %>
+    <p class="text-sm text-gray-700" hidden aria-live="polite"
        data-reimbursements-budget-area-target="notice">
       This line goes in an area, so it takes the area's owners — set them on the area itself.
     </p>

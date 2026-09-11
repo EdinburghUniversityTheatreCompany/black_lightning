@@ -1396,8 +1396,12 @@ module Admin
         area.sync_owner_ids!([ @alice.id ])
 
         assert_no_difference -> { ::Reimbursements::Budget.count } do
+          # initial_budget: "" is what a BROWSER posts for an empty number
+          # input, and the refusal has to re-render the form holding it. Omitting
+          # the key instead — posting what no browser sends — is how the
+          # re-render's own 500 went unseen.
           post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
-                                  active: "1", area_id: area.record_id,
+                                  active: "1", area_id: area.record_id, initial_budget: "",
                                   owner_ids: [ @alice.record_id, @bob.record_id ] }
         end
 

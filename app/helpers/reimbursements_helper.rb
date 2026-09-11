@@ -86,10 +86,18 @@ module ReimbursementsHelper
   # or "12.5" — a pence column short of the figure printed everywhere else.
   # No delimiter and no unit: a number input rejects both, and a rejected value
   # renders as an empty box, so this is deliberately not reimbursements_money.
+  #
+  # blank?, not nil?: a re-rendered form hands back what the BROWSER posted, and
+  # an empty number input posts "", which format("%.2f", "") raises on — so
+  # every refusal on a form carrying an empty amount 500ed instead of stating
+  # its reason. A typed value that is not a number is handed back as typed for
+  # the same reason: losing the box is better than losing the page.
   def reimbursements_amount_value(amount)
-    return if amount.nil?
+    return if amount.blank?
+    return format("%.2f", amount) if amount.is_a?(Numeric)
 
-    format("%.2f", amount)
+    parsed = ::Reimbursements::AmountParser.parse(amount)
+    parsed ? format("%.2f", parsed) : amount.to_s
   end
 
   # The amount EUSA is being asked to PAY, in the currency they pay it in.

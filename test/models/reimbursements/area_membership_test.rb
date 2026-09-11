@@ -79,6 +79,39 @@ module Reimbursements
       assert_equal "Cogito", prefixed.reload.area&.name
     end
 
+    # The record decides, never the area the line currently holds. The backfill
+    # re-homes by NAME, so a line hand-moved into another show is re-homed back
+    # to the show its name reads as — and the recorded OWNER list then lands on
+    # that area. own_owners are cleared here so seed_owners! can contribute
+    # nothing: without the fix Alice's sign-off over one show comes back as
+    # Bob's, the owner of a different one.
+    test "the recorded area wins over the name the backfill would re-home by" do
+      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
+      bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
+      moved = create_reimbursements_budget(name: "ZZProbe Show: Sound")
+      # Each area keeps a line whose own name reproduces it, or #down refuses
+      # over the move rather than reaching the restore this test is about.
+      create_reimbursements_budget(name: "ZZProbe Show: Marketing")
+      create_reimbursements_budget(name: "ZZOther Show: Marketing")
+      AreaBackfill.run!
+      probe = Area.find_by!(name: "ZZProbe Show")
+      other = Area.find_by!(name: "ZZOther Show")
+      probe.sync_owner_ids!([ alice.id ])
+      other.sync_owner_ids!([ bob.id ])
+      # The hand-move the budget form makes: the name still reads "ZZProbe Show".
+      moved.update_columns(area_id: other.id)
+      Budget.find_each { |budget| budget.sync_owner_ids!([]) }
+
+      BackfillReimbursementsAreas.new.down
+      BackfillReimbursementsAreas.new.up
+
+      assert_equal "ZZOther Show", moved.reload.area&.name,
+                   "the hand-move is what the record knows and the name does not"
+      assert_equal [ bob.record_id ], moved.area.owner_ids,
+                   "and its owners are that area's, not the ones the name would have given it"
+      assert_equal [ alice.record_id ], Area.find_by!(name: "ZZProbe Show").owner_ids
+    end
+
     # The record is the area's identity, not its id: down deletes the rows, so
     # an id would dangle. An area nothing reproduces is rebuilt from the record.
     test "restore! rebuilds an area no line's name reproduces" do
@@ -114,17 +147,37 @@ module Reimbursements
 
     # Recording where the lines were is the whole reversibility claim, so a
     # rollback that cannot write it must say so rather than detach silently.
+    #
+    # The REAL condition, reached the way it is reached in life: the column is
+    # dropped, and the service asks the LIVE schema rather than its memoized
+    # column list. DDL auto-commits on MySQL and the suite runs several workers
+    # against one server, so the column goes back in an ensure — a test that
+    # reached the guard through a wrong-model scope instead would pass over a
+    # service that had stopped asking the schema at all.
     test "record! refuses when the recording column is gone" do
-      error = assert_raises(AreaMembership::MissingRecordError) do
-        AreaMembership.record!(scope: Area.all)
+      error = without_recording_column do
+        assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record! }
       end
       assert_match(/area_before_rollback/, error.message)
     end
 
     test "restore! refuses when the recording column is gone" do
-      assert_raises(AreaMembership::MissingRecordError) do
-        AreaMembership.restore!(scope: Area.all)
+      without_recording_column do
+        assert_raises(AreaMembership::MissingRecordError) { AreaMembership.restore! }
       end
+    end
+
+    private
+
+    def without_recording_column
+      connection = Budget.connection
+      connection.remove_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN)
+      Budget.reset_column_information
+      yield
+    ensure
+      connection.add_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN, :json,
+                            if_not_exists: true)
+      Budget.reset_column_information
     end
   end
 end

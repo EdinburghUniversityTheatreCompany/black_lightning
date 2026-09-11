@@ -59,7 +59,14 @@ module Reimbursements
         owner_ids_by_area_id = {}
         scope.where.not(RECORDED_COLUMN => nil).find_each do |budget|
           recorded = budget.read_attribute(RECORDED_COLUMN)
-          area = budget.area || area_for(recorded)
+          # The RECORD, never the area the line currently holds: that one is
+          # AreaBackfill's name-based guess, and where the two disagree —
+          # exactly the hand-move this record exists for — the guess decides
+          # which area the recorded OWNER list lands on. One show's sign-off
+          # then comes back naming another show's owners, which is worse than
+          # either failure the record prevents. Idempotent where they agree,
+          # since #area_for keys on the same triple.
+          area = area_for(recorded)
           budget.update_columns(area_id: area.id, RECORDED_COLUMN => nil)
           owner_ids_by_area_id[area.id] = Array(recorded["owner_person_ids"])
         end

@@ -8,6 +8,13 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
     Reimbursements::AreaMembership.restore!
   end
 
+  # ROLLING THIS BACK ON A DATABASE THAT APPLIED IT BEFORE PHASE 2B: run
+  # `db:migrate` FIRST. The recording column arrives in 20260911100250, which is
+  # pending on such a database (its version is lower, so Rails applies it out of
+  # order), and without it #down raises AreaMembership::MissingRecordError —
+  # mid-chain, with 20260911100400/500/600 already reverted. Nothing is lost and
+  # `db:migrate` puts them back, but the rollback stops in an unexpected place.
+  #
   # Detach, then drop the areas this migration created. The budgets' own owner
   # rows were deliberately kept (see AreaBackfill), so ownership returns to
   # exactly where it was — PROVIDED nothing has hand-edited the area tree
