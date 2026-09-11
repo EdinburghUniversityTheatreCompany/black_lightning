@@ -460,6 +460,16 @@ survive as historical import provenance and are never written. Spec + plan in
   - **Neither Expense nor Batch has a cost-centre column.** An expense resolves one through its
     budget; a batch through the expenses it holds — so the reopen mailbox must be read BEFORE the
     revert unlinks them. Review's three tabs, their counts and the CSV come off ONE scoped list.
+  - **A centre's nominal codes are maintained from its Settings page**
+    (`Admin::Reimbursements::NominalCodesController`, `settings/:key/nominal_codes`, finance-gated
+    as Settings is; `NominalCodeSeed` filled the list with GUESSED labels this screen corrects).
+    **Retiring beats deleting and the CONTROLLER decides which**: a code a budget line carries is
+    deactivated so it leaves the pickers and still labels those lines, and only an unreferenced
+    code is deleted — the row's Retire/Delete wording is a prediction made when the page rendered.
+    A budget with NO centre counts as carrying the code in EVERY centre (it is lenient-scoped into
+    every centre's screens). `code` is never updatable: every budget, actuals row and export
+    stores it as a string, so a rename strands them all. The Settings panel's `before_action`
+    covers `update` as well as `edit`, because a refused save re-renders `:edit`.
 
 - **Setting a year up = importing the committee's spreadsheet** (`Reimbursements::BudgetImport`,
   `Admin::Reimbursements::BudgetImportsController`, `DatabaseStore#import_budgets!`). Paste TSV or
