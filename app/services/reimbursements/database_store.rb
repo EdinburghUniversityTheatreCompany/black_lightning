@@ -371,6 +371,31 @@ module Reimbursements
       budget
     end
 
+    # The budget line for one (area, nominal code), created only where the
+    # lookup RE-TAKEN here — inside the transaction, behind the area's row
+    # lock — still finds none.
+    #
+    # BudgetFinder's own lookup is a read, and a double-submitted form passes
+    # it twice: two lines for one (area, code) split a show's spend across them
+    # and invent a second agreed figure, with nothing on either line saying so.
+    # Same shape and same reason as #create_expense_for_actual!. +name+ is the
+    # nominal code's label, which is also what the re-taken match reads to
+    # recognise a hand-named line.
+    def find_or_create_budget_for_area!(area_id:, nominal_code:, name:, cost_centre: nil,
+                                        financial_year: nil)
+      budget = nil
+      Budget.transaction do
+        area = Area.lock.find(area_id)
+        budget = BudgetFinder.match(area.budgets.to_a, area: area, nominal_code: nominal_code,
+                                    label: name)
+        budget ||= create_budget!(name: name, nominal_code: nominal_code, area: area,
+                                  cost_centre: cost_centre, financial_year: financial_year)
+      end
+      bust_budgets!
+      bust_areas!
+      budget
+    end
+
     # Claims a budget that belongs to no cost centre yet for +cost_centre+. Only
     # ever called for a budget whose cost_centre_id is nil (see
     # BudgetImport#adoptions), so it can never move a line out of the pot that
