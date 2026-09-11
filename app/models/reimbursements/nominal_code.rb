@@ -71,8 +71,16 @@ module Reimbursements
     #
     # One query per kind rather than per row, and the same pair of scopes
     # #in_use? reads — the screen states what would happen to each code, so a
-    # count drawn from a different rule than the decision would mislabel the
+    # count drawn from different rows than the decision would mislabel the
     # button.
+    #
+    # The rows are the same; the MATCHING is not, and it can disagree in one
+    # direction. #in_use? asks SQL, under utf8mb4_unicode_ci, which is PAD
+    # SPACE and folds accents; this keys in Ruby on #downcase, which is neither.
+    # So a budget row storing "432320 " counts for #in_use? and lands under a
+    # key the row then fails to find: the button predicts Delete over a code
+    # #destroy correctly retires. Safe direction, and the controller re-decides
+    # — never the reverse, since anything this counts SQL also matches.
     def self.usage_counts(cost_centre, codes)
       budgets = tally_codes(budgets_for(cost_centre), codes)
       actuals = tally_codes(actuals_for(cost_centre), codes)

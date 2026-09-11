@@ -248,10 +248,18 @@ module Reimbursements
                                if_exists: true)
       yield
     ensure
-      # if_exists/if_not_exists on both halves, and the original position: a run
-      # killed between them would otherwise leave the column dropped (one
-      # failing run, healed forever after by this ensure) or drifting down the
-      # table's column order in that worker's database, run after run.
+      # if_exists/if_not_exists on both halves, and the position this database
+      # actually holds it in: a run killed between them would otherwise leave
+      # the column dropped (one failing run, healed forever after by this
+      # ensure) or drifting down the table's column order in that worker's
+      # database, run after run.
+      #
+      # after: :airtable_record_id is the SCHEMA-LOADED order, not the migrated
+      # one — the two differ and this is the test database. db/schema.rb lists
+      # a table's columns alphabetically, so a loaded reimbursements_budgets
+      # has area_before_rollback 4th, right here; the migration adds it with no
+      # after:, so a migrated database has it second from last. Verified in
+      # both.
       connection.add_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN, :json,
                             if_not_exists: true, after: :airtable_record_id)
       Budget.reset_column_information
