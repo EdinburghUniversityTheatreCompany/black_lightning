@@ -44,8 +44,8 @@ module Admin
       end
 
       def assert_both_shows_named(labels, where)
-        assert_includes labels, "Cogito — Marketing", where
-        assert_includes labels, "Improverts — Marketing", where
+        assert_includes labels, "Cogito: Marketing", where
+        assert_includes labels, "Improverts: Marketing", where
         assert_not_includes labels, "Marketing", "#{where}: an unqualified option is ambiguous"
       end
 
@@ -86,10 +86,10 @@ module Admin
 
         assert_response :success
         rows = css_select("tbody tr td:first-child").map { |cell| cell.text.strip }
-        assert_equal [ "Cogito — Marketing", "Contingency", "Improverts — Marketing" ], rows
+        assert_equal [ "Cogito: Marketing", "Contingency", "Improverts: Marketing" ], rows
         labels = css_select("input[type=text]").filter_map { |input| input["aria-label"] }
-        assert_equal [ "New forecast for Cogito — Marketing", "New forecast for Contingency",
-                       "New forecast for Improverts — Marketing" ], labels
+        assert_equal [ "New forecast for Cogito: Marketing", "New forecast for Contingency",
+                       "New forecast for Improverts: Marketing" ], labels
       end
 
       test "Review's re-assign picker names the show on each line" do
@@ -141,11 +141,11 @@ module Admin
         assert_response :success
         # The CELL, not the body: a page that grew an area heading elsewhere
         # would satisfy a body match with the budget column still bare.
-        assert_includes css_select("td").map { |cell| cell.text.strip }, "Cogito — Marketing"
+        assert_includes css_select("td").map { |cell| cell.text.strip }, "Cogito: Marketing"
 
         get admin_reimbursements_expense_path(@claim.record_id)
         assert_response :success
-        assert_equal "Cogito — Marketing", definition_value("Budget")
+        assert_equal "Cogito: Marketing", definition_value("Budget")
       end
 
       # The value rendered beside the <dt> reading +term+ on the claim page.
@@ -163,8 +163,8 @@ module Admin
 
         assert_response :success
         titles = css_select("span.card-title").map { |heading| heading.text.strip }
-        assert_includes titles, "Cogito — Marketing"
-        assert_includes titles, "Improverts — Marketing"
+        assert_includes titles, "Cogito: Marketing"
+        assert_includes titles, "Improverts: Marketing"
         assert_not_includes titles, "Marketing"
       end
 
@@ -176,7 +176,7 @@ module Admin
         get admin_reimbursements_budgets_path
 
         assert_response :success
-        assert_equal [ "Edit Cogito — Marketing", "Edit Contingency", "Edit Improverts — Marketing" ],
+        assert_equal [ "Edit Cogito: Marketing", "Edit Contingency", "Edit Improverts: Marketing" ],
                      css_select("a[aria-label^='Edit ']").map { |link| link["aria-label"] }.sort
         # The row itself stays bare: the area is the heading right above it.
         assert_includes css_select("td span.font-medium").map { |cell| cell.text.strip }, "Marketing"
@@ -190,7 +190,7 @@ module Admin
         assert_response :success
         # The two cards render the SAME partial, and only one of them has the
         # area written above the row.
-        assert_equal [ "Cogito — Marketing", "Improverts — Marketing" ],
+        assert_equal [ "Cogito: Marketing", "Improverts: Marketing" ],
                      budget_links_under("Nominal code 432320")
         assert_equal [ "Marketing" ], budget_links_under("Cogito")
         assert_equal [ "Marketing" ], budget_links_under("Improverts")

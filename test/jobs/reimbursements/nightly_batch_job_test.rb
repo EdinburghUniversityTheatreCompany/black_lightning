@@ -162,7 +162,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       reminder = mailer_calls(:owner_sign_off_reminder).sole.last
-      assert_equal "Cogito — Owned Set", reminder[:rows].sole[:budget_name]
+      assert_equal "Cogito: Owned Set", reminder[:rows].sole[:budget_name]
     end
 
     test "a claim awaiting sign-off is reminded with no age threshold" do
@@ -311,7 +311,7 @@ module Reimbursements
       assert_equal THURSDAY, second.reload.last_nightly_run_on,
                    "the second cost centre still records its own nightly run"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on,
-                   "and the default centre — the one that actually sent — records its own"
+                   "and the default centre: the one that actually sent: records its own"
     end
 
     test "builds the graph client once per run even when both the pending reminder and the " \

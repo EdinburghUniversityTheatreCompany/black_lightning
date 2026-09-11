@@ -38,8 +38,8 @@ module Reimbursements
       OwnerEndorsementDigestJob.perform_now
 
       mail = ActionMailer::Base.deliveries.sole
-      assert_includes mail.html_part.body.to_s, "Cogito — Props"
-      assert_includes mail.text_part.body.to_s, "Cogito — Props"
+      assert_includes mail.html_part.body.to_s, "Cogito: Props"
+      assert_includes mail.text_part.body.to_s, "Cogito: Props"
     end
 
     test "sends nothing when no pending claim awaits endorsement" do

@@ -220,13 +220,16 @@ module Reimbursements
       run_batch(processor, store)
 
       graph.uploaded.reject { |upload| upload[:filename].end_with?(".xlsx") }.each do |upload|
-        assert_includes upload[:filename], "Cogito — Props",
+        # "Cogito Props", not "Cogito: Props": FilenameSanitizer strips the
+        # colon (it is illegal on Windows and in SharePoint) to a space. The
+        # show is still named, which is what this guards.
+        assert_includes upload[:filename], "Cogito Props",
                         "a receipt filename that names no show is indistinguishable from another show's"
       end
       # The table CELL in each mail, not the body: both templates carry other
       # prose a substring match could land in.
-      assert_includes table_cells(graph.send_mails.first[:html]), "Cogito — Props"
-      assert_includes table_cells(graph.drafts.sole[:html]), "Cogito — Props"
+      assert_includes table_cells(graph.send_mails.first[:html]), "Cogito: Props"
+      assert_includes table_cells(graph.drafts.sole[:html]), "Cogito: Props"
     end
 
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
@@ -243,7 +246,7 @@ module Reimbursements
       assert_empty graph.send_mails, "producers must not be notified when the draft fails"
     end
 
-    test "orphan-draft guard: batch write fails after the draft — no double draft on rebuild" do
+    test "orphan-draft guard: batch write fails after the draft: no double draft on rebuild" do
       processor, store, graph = build_scenario
       store.fail_batch_creates = true # the draft succeeds; only the Batch write fails
 
@@ -283,7 +286,7 @@ module Reimbursements
 
       result = run_batch(processor, store)
 
-      assert_not result.success, "one expense couldn't be marked Submitted — must not report success"
+      assert_not result.success, "one expense couldn't be marked Submitted: must not report success"
       assert_equal 1, graph.drafts.size, "the EUSA draft was still created and is live"
       assert(result.errors.any? { |e| e.include?("DOUBLE-DRAFT RISK") && e.include?("11") },
              result.errors.inspect)
@@ -406,9 +409,9 @@ module Reimbursements
 
       @multi.reload
       assert_equal [ "https://sp.example/fldR/#{succeeding_filename}" ], @multi.sharepoint_receipt_urls,
-                   "only the successful upload's URL is recorded — no nil/phantom entry for the failed one"
+                   "only the successful upload's URL is recorded: no nil/phantom entry for the failed one"
       assert_not @multi.receipts_offloaded,
-                 "2 receipts but only 1 uploaded — must not be reported as offloaded"
+                 "2 receipts but only 1 uploaded: must not be reported as offloaded"
 
       assert @single.reload.receipts_offloaded,
              "the other expense's single receipt uploaded fine and must be unaffected"

@@ -96,8 +96,15 @@ module Reimbursements
     # The bare name stays correct exactly where the area is already beside it:
     # the grouped budgets index's rowgroup heading, the overview's area card,
     # an export's own Area column, the name FIELD on the budget form.
+    # A COLON, not a dash, and that is a correctness choice rather than a
+    # style one: it is the spelling BudgetImport.bare_name splits on, so a
+    # label copied off a screen into the committee's spreadsheet resolves to
+    # the line it names. A dash does not — it reads as a whole new name and
+    # buckets as a create, which is the duplicate-line failure the two-spelling
+    # matcher exists to prevent. (Colons are stripped by FilenameSanitizer, so
+    # a receipt filename is unaffected.)
     def display_name
-      area ? "#{area.name} — #{name}" : name.to_s
+      area ? "#{area.name}: #{name}" : name.to_s
     end
 
     # The area owns and its budgets inherit; a budget with no area owns

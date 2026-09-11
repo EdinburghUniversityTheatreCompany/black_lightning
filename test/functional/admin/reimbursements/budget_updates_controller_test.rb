@@ -61,7 +61,7 @@ module Admin
 
         assert_response :success
         revised = css_select("tbody td:nth-child(3)").sole.text.squish
-        assert_equal "Cogito (area total), Cogito — Props", revised
+        assert_equal "Cogito (area total), Cogito: Props", revised
       end
 
       # --- New ---------------------------------------------------------------
@@ -172,7 +172,7 @@ module Admin
         # The whole sentence, off the flash rather than the body: the alert
         # reaches the page as JSON for the SweetAlert pipeline, and a body
         # match would pass on a sentence naming both shows' rows at once.
-        assert_equal "Nothing was saved. Check the amount for Cogito — Marketing.",
+        assert_equal "Nothing was saved. Check the amount for Cogito: Marketing.",
                      Array(flash[:error]).sole
       end
 

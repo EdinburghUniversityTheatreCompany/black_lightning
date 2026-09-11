@@ -227,7 +227,7 @@ module Reimbursements
 
     test "display_name names the area a line belongs to" do
       area = Area.create!(name: "Cogito")
-      assert_equal "Cogito — Marketing", build_budget(name: "Marketing", area: area).display_name
+      assert_equal "Cogito: Marketing", build_budget(name: "Marketing", area: area).display_name
     end
 
     test "display_name is the bare name for a line in no area" do

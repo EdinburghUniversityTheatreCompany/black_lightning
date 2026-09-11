@@ -580,7 +580,7 @@ module Admin
         panel = css_select("p.text-gray-600").map { |node| node.text.squish }
                                              .find { |text| text.include?("importing never deletes") }
         assert_equal "Nothing will happen to them — importing never deletes a budget, because its " \
-                     "claims and history hang off it. Improverts — Marketing and Improverts — Other.",
+                     "claims and history hang off it. Improverts: Marketing and Improverts: Other.",
                      panel
       end
 

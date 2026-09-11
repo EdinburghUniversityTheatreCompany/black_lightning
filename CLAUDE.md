@@ -332,7 +332,13 @@ survive as historical import provenance and are never written. Spec + plan in
     reads through the area, could never converge and re-reported the same sync for ever. A blank
     list is the dangerous one — `where.not(person_id: [])` is `WHERE 1=1`.
   - **A budget named on its own has to name its area** (`Budget#display_name`, the one
-    composition — `"Cogito — Marketing"`). The prefix strip made the stored names non-unique:
+    composition — `"Cogito: Marketing"`). **The separator is a COLON, and that is correctness,
+    not style:** it is the spelling `BudgetImport.bare_name` splits on, so a label copied off a
+    screen into the committee's spreadsheet resolves to the line it names. A dash reads as a
+    whole new name and buckets as a CREATE — the duplicate-line failure the two-spelling matcher
+    exists to prevent. `FilenameSanitizer` strips the colon to a space (it is illegal on Windows
+    and in SharePoint), so a receipt filename reads `Cogito Props` and still names the show.
+    The prefix strip made the stored names non-unique:
     three live Fringe lines are called `Marketing`, all on nominal code 432320, so a picker
     offering them bare charges another show AND moves the claim to that show's owner gate. Every
     picker, reminder, email, receipt filename and the auto-derived BACS payment reference reads
