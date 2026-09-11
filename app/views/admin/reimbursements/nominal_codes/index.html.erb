@@ -18,9 +18,11 @@
       <%= render "shared/form/actions", submit: "Add nominal code" %>
     <% end %>
 
-    <div class="flex flex-wrap items-end gap-3">
+    <%# items-START, not items-end: the Code field carries a hint, so
+        bottom-aligning the row would drop the Label control below it. %>
+    <div class="flex flex-wrap items-start gap-3">
       <%# html_class replaces the partial's default mb-4, which in a one-line
-          items-end row lifts the field above its neighbours. %>
+          row lifts the field above its neighbours. %>
       <%= render "shared/form/field", label: "Code", name: "code", html_class: "w-40",
                  hint: "As EUSA writes it, zero padding included." do %>
         <%= text_field_tag :code, @new_nominal_code.code, placeholder: "432320",
@@ -51,53 +53,54 @@
         <%# id so a browser test can scope to one row: the Save and Retire
             controls repeat down the list. %>
         <div id="nominal_code_<%= nominal_code.record_id %>"
-             class="rounded border border-gray-200 px-3 py-2">
-          <%= form_with url: path, method: :patch, class: "flex flex-wrap items-end gap-3" do %>
-            <%# The code itself is not editable: every budget line, actuals row
-                and export stores it as a string rather than a link, so
-                rewriting it here would strand all of them. %>
-            <span class="mb-2 min-w-24 font-mono font-medium"><%= nominal_code.code %></span>
-            <%= render "shared/form/field", label: "Label", name: "label",
-                       id: "label_#{nominal_code.record_id}", html_class: "grow" do %>
-              <%= text_field_tag :label, nominal_code.label, id: "label_#{nominal_code.record_id}",
-                                 class: input_classes %>
-            <% end %>
-            <%= submit_tag "Save", class: "#{btn_classes(:primary, :sm)} mb-2",
+             class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-gray-200 px-3 py-2">
+          <%# The code itself is not editable: every budget line, actuals row
+              and export stores it as a string rather than a link, so
+              rewriting it here would strand all of them. %>
+          <span class="min-w-20 font-mono font-medium"><%= nominal_code.code %></span>
+
+          <%= form_with url: path, method: :patch,
+                        class: "flex grow basis-64 items-center gap-2" do %>
+            <%# The visible column heading would repeat down every row, so the
+                label is for screen readers only. %>
+            <%= label_tag "label_#{nominal_code.record_id}", "Label", class: "sr-only" %>
+            <%= text_field_tag :label, nominal_code.label, id: "label_#{nominal_code.record_id}",
+                               class: input_classes %>
+            <%= submit_tag "Save", class: btn_classes(:primary, :sm),
                            "aria-label": "Save label for #{nominal_code.code}" %>
           <% end %>
 
-          <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-            <% unless nominal_code.active? %>
-              <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Retired") %>
-            <% end %>
-            <span class="grow">
-              <%= budget_count.positive? ? "#{pluralize(budget_count, 'budget line')} booked here" : "No budget lines booked here" %>
-            </span>
+          <% unless nominal_code.active? %>
+            <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Retired") %>
+          <% end %>
+          <span class="text-sm text-gray-600">
+            <%= budget_count.positive? ? "#{pluralize(budget_count, 'budget line')} booked here" : "No budget lines booked here" %>
+          </span>
 
-            <% unless nominal_code.active? %>
-              <%= form_with url: path, method: :patch, class: "inline-block" do %>
-                <%= hidden_field_tag :active, "1" %>
-                <%= submit_tag "Put back in the picker", class: btn_classes(:secondary, :sm),
-                               "aria-label": "Put #{nominal_code.code} back in the picker" %>
-              <% end %>
+          <% unless nominal_code.active? %>
+            <%= form_with url: path, method: :patch do %>
+              <%= hidden_field_tag :active, "1" %>
+              <%= submit_tag "Put back in the picker", class: btn_classes(:secondary, :sm),
+                             "aria-label": "Put #{nominal_code.code} back in the picker" %>
             <% end %>
+          <% end %>
 
-            <%# One button, two outcomes, and the controller re-decides which:
-                this label is a prediction made when the page rendered, and a
-                budget line charged to the code since then would make it wrong. %>
-            <% if budget_count.positive? %>
-              <%# No confirm: retiring is reversible with the button above. %>
-              <%= button_to "Retire", path, method: :delete,
-                            class: btn_classes(:warning, :sm), form: { class: "inline-block" },
-                            "aria-label": "Retire #{nominal_code.code}" %>
-            <% else %>
-              <%= button_to "Delete", path, method: :delete,
-                            class: btn_classes(:danger, :sm), form: { class: "inline-block",
-                              data: { turbo_confirm: "Delete #{nominal_code.code}? No budget line is " \
-                                                     "booked against it, so nothing loses its label." } },
-                            "aria-label": "Delete #{nominal_code.code}" %>
-            <% end %>
-          </div>
+          <%# One button, two outcomes, and the controller re-decides which:
+              this label is a prediction made when the page rendered, and a
+              budget line charged to the code since then would make it wrong. %>
+          <% if budget_count.positive? %>
+            <%# No confirm: retiring is reversible with the button beside it. %>
+            <%= button_to "Retire", path, method: :delete,
+                          class: btn_classes(:warning, :sm),
+                          "aria-label": "Retire #{nominal_code.code}" %>
+          <% else %>
+            <%= button_to "Delete", path, method: :delete,
+                          class: btn_classes(:danger, :sm),
+                          form: { data: { turbo_confirm: "Delete #{nominal_code.code}? No budget " \
+                                                         "line is booked against it, so nothing " \
+                                                         "loses its label." } },
+                          "aria-label": "Delete #{nominal_code.code}" %>
+          <% end %>
         </div>
       <% end %>
     </div>
