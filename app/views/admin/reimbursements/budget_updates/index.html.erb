@@ -21,7 +21,7 @@
           <tr>
             <th scope="col">Effective date</th>
             <th scope="col">Note</th>
-            <th scope="col">Budgets revised</th>
+            <th scope="col">Revised</th>
             <th scope="col">Logged by</th>
           </tr>
         </thead>
@@ -31,8 +31,19 @@
               <td class="whitespace-nowrap"><%= reimbursements_date(update.effective_date) %></td>
               <td><%= update.note.presence || "-" %></td>
               <td>
-                <% names = update.forecasts.filter_map { |f| @budgets_by_id[f.budget_id]&.name } %>
-                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "budget") %>
+                <%# An update groups BOTH levels — a budget import can revise a show's
+                    agreed total alongside its lines' allocations — so an area forecast
+                    (budget_id nil) has to be named too, and marked, or an area-only
+                    update read "1 budget" naming nothing. %>
+                <% names = update.forecasts.filter_map do |forecast|
+                     if forecast.budget_id
+                       @budgets_by_id[forecast.budget_id]&.display_name
+                     else
+                       area = @areas_by_id[forecast.area_id.to_s]
+                       "#{area.name} (area total)" if area
+                     end
+                   end %>
+                <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "line") %>
               </td>
               <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
             </tr>

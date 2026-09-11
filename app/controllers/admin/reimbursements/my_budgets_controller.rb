@@ -27,7 +27,7 @@ module Admin
         # with claims come first so a many-budget owner sees the work up top.
         @budgets = all_owned
           .select { |budget| (budget.active && !budget.income?) || @expenses_by_budget.key?(budget.record_id) }
-          .sort_by { |budget| [ @expenses_by_budget.key?(budget.record_id) ? 0 : 1, budget.name.to_s.downcase ] }
+          .sort_by { |budget| [ @expenses_by_budget.key?(budget.record_id) ? 0 : 1, budget.display_name.to_s.downcase ] }
         @pending_count = pending.size
         @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
           .where(expense_record_id: pending.map(&:record_id)).index_by(&:expense_record_id)

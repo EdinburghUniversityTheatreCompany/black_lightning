@@ -25,7 +25,7 @@ module Admin
       def index
         @title = "Expenses"
         @statuses = ::Reimbursements::Status.all
-        @budgets = store.budgets.sort_by { |b| b.name.to_s }
+        @budgets = store.budgets.sort_by { |b| b.display_name.to_s }
         @budget_by_id = store.budgets.index_by(&:record_id)
 
         @status_filter = params[:status].to_s.strip

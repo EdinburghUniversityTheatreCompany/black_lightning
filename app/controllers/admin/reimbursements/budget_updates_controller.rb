@@ -24,6 +24,9 @@ module Admin
         @title = "Budget updates"
         @budget_updates = store.budget_updates
         @budgets_by_id = store.budgets.index_by(&:record_id)
+        # Both unscoped id->record lookups: an update logged against last
+        # year's line or area must still be named, not blanked.
+        @areas_by_id = store.areas.index_by(&:record_id)
       end
 
       def new

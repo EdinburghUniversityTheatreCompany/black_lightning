@@ -43,6 +43,27 @@ module Admin
         assert_includes response.body, "May meeting"
       end
 
+      # An update groups both levels — a budget import revises a show's agreed
+      # total alongside its lines — so an AREA forecast carries no budget_id and
+      # was filtered out silently: an area-only update read "1 budget" naming
+      # nothing at all.
+      test "index names an area total revision as well as a line's, qualified" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        @props.update!(area: area)
+        ::Reimbursements::DatabaseStore.new.create_budget_update!(
+          effective_date: Date.new(2026, 5, 1), note: "May meeting", created_by: @user,
+          forecasts: [ { budget_id: @props.record_id, amount: 100 },
+                       { area_id: area.record_id, amount: 5000 } ]
+        )
+
+        get :index
+
+        assert_response :success
+        revised = css_select("tbody td:nth-child(3)").sole.text.squish
+        assert_equal "Cogito (area total), Cogito — Props", revised
+      end
+
       # --- New ---------------------------------------------------------------
 
       test "new renders an amount field for each active budget, hidden budgets excluded" do
