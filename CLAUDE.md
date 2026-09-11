@@ -436,11 +436,22 @@ survive as historical import provenance and are never written. Spec + plan in
       reads LOWER than the room really left** — understating is the direction this portal errs
       in, and a basis-aware figure needs its own name plus a decision on whether an EUSA credit
       may raise it.
-    - **The grouped index prints a netted allocation as its two halves** ("Allocated £400.00 of
-      spend less £800.00 of income"), never as a bare negative: you cannot allocate minus four
-      hundred pounds, a negative money figure means bad news everywhere else in this portal
-      (`remaining.negative?` is `text-danger` two spans right), and 1,000 − (−400) = 1,400 makes
-      the row reconcile only by subtracting a negative.
+    - **The grouped index and the area edit card print a netted allocation as its two halves**
+      ("Allocated £400.00 of spend less £800.00 of income"), never as a bare negative: you
+      cannot allocate minus four hundred pounds, a negative money figure means bad news
+      everywhere else in this portal (`remaining.negative?` is `text-danger` a cell right), and
+      1,000 − (−400) = 1,400 makes the row reconcile only by subtracting a negative. One
+      derivation for both, `reimbursements_area_allocation` — the card printed the bare negative
+      for a whole branch while the index did not.
+    - **A rollback past `20260911100600` returns EVERY area to a spend cap, and nothing records
+      it.** The `down` drops the column and the `up` re-adds it with the `expenses` default, so a
+      declared net allowance comes back declaring nothing — its not-yet-allocated figure drops by
+      the whole of its income with no event on screen. **Re-declare the net areas after any such
+      rollback.** Conservative direction (an area reads as having less room, never more), which
+      is why it ships: the basis is NOT carried in `area_before_rollback` because a rollback
+      reverts in DESCENDING version order, so this column is already gone when
+      `AreaMembership.record!` runs — and a `STEP=1` rollback, the likeliest way here, never runs
+      that recorder at all. Recording it needs a scratch column of its own. Phase 2c.
   - **Area names are unique within one (financial year, cost centre)** by model validation —
     the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
     NULLs through a unique index, and an area with no year/centre yet has NULLs in both.
