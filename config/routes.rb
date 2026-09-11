@@ -250,13 +250,14 @@ ChaosRails::Application.routes.draw do
         member { post :test_access }
       end
 
-      # A cost centre's own chart of accounts, maintained from its Settings
-      # page. Scoped under that page's path and its `:key` param rather than
-      # nested under `resources :settings` (which would rename the param to
-      # `setting_key`), so the centre is found here exactly as
-      # SettingsController finds it.
+      # A cost centre's own chart of accounts, maintained ON its settings page
+      # (the spec: "maintained on the cost centre edit page") — so these are
+      # writes only, with no index of their own. Scoped under that page's path
+      # and its `:key` param rather than nested under `resources :settings`
+      # (which would rename the param to `setting_key`), so the centre is found
+      # here exactly as SettingsController finds it.
       scope "settings/:key" do
-        resources :nominal_codes, only: %i[index create update destroy]
+        resources :nominal_codes, only: %i[create update destroy]
       end
     end
 

@@ -183,10 +183,13 @@ module Admin
         assert_includes response.body, "/permissions"
       end
 
-      test "edit shows this cost centre's nominal codes and a way in to maintain them" do
+      # The list is MAINTAINED here, not linked to from here: the spec puts it
+      # on the cost centre edit page, so the edit form for each code and the
+      # Add form are on this page.
+      test "edit carries this cost centre's nominal codes, editable in place" do
         termtime = create_second_reimbursements_cost_centre
-        create_reimbursements_nominal_code(code: "432320", label: "Marketing",
-                                           cost_centre: @cost_centre)
+        code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
+                                                  cost_centre: @cost_centre)
         create_reimbursements_nominal_code(code: "555555", label: "Termtime printing",
                                            cost_centre: termtime)
         sign_in @user
@@ -194,9 +197,34 @@ module Admin
         get :edit, params: { key: @cost_centre.key }
 
         assert_equal [ "432320" ], assigns(:nominal_codes).map(&:code)
-        assert_includes response.body, "Manage nominal codes"
-        # The summary counts the centre being edited, not every centre's list.
-        assert_includes response.body, "1 code in the list"
+        assert_select "#nominal_codes input##{"label_#{code.record_id}"}[value=?]", "Marketing"
+        assert_select "#nominal_codes form[action=?]",
+                      admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        assert_not_includes response.body, "Termtime printing"
+      end
+
+      # A form inside a form is invalid HTML and the inner submit silently does
+      # nothing, so the section must be a SIBLING of the cost centre's own form.
+      test "the nominal codes section is not nested inside the cost centre form" do
+        create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "form #nominal_codes", false,
+                      "the nominal codes section must not sit inside another form"
+      end
+
+      test "the nominal codes section states what is booked against each code" do
+        create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+        create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
+                                     cost_centre: @cost_centre)
+        create_reimbursements_actual(nominal_code: "432320", cost_centre: @cost_centre)
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_includes response.body, "1 budget line and 1 ledger row booked here"
       end
 
       test "edit 404s for an unknown cost centre" do

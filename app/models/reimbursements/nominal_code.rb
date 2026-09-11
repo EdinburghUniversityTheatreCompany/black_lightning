@@ -38,28 +38,54 @@ module Reimbursements
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 
-    # The budget lines this centre's list is answerable for: its own, plus the
-    # ones with NO centre of their own. An unplaced budget is lenient-scoped
-    # into EVERY centre's screens (DatabaseStore#in_cost_centre), so this
-    # centre's list is what labels its code there — the same rule
-    # NominalCodeSeed folds an unplaced code into the default centre by.
+    # The rows this centre's list is answerable for: budget lines and imported
+    # EUSA ledger rows, each of them carrying a nominal code as a STRING
+    # rather than a link to this table, so the list is the only thing that
+    # gives one a human label.
+    #
+    # Each scope takes the centre's own rows plus the ones with NO centre of
+    # their own: an unplaced row is lenient-scoped into EVERY centre's screens
+    # (DatabaseStore#in_cost_centre), so this centre's list is what labels its
+    # code there — the same rule NominalCodeSeed folds an unplaced code into
+    # the default centre by.
     def self.budgets_for(cost_centre)
       Budget.where(cost_centre_id: [ cost_centre&.id, nil ])
     end
 
-    # How many of those budgets carry each of +codes+, keyed by the code
-    # DOWNCASED: the column is utf8mb4_unicode_ci, so a budget may carry the
-    # same code in another case and still be the same account.
-    def self.budget_counts(cost_centre, codes)
-      budgets_for(cost_centre).where(nominal_code: codes)
-                              .group(:nominal_code).count
-                              .transform_keys { |code| code.to_s.downcase }
+    def self.actuals_for(cost_centre)
+      EusaActual.where(cost_centre_id: [ cost_centre&.id, nil ])
     end
 
-    # Whether a budget line already carries this code. What decides retire
-    # versus delete — read in #destroy, not from the button that was clicked.
+    # How many rows of each kind carry each of +codes+, as
+    # { "432320" => { budgets: 2, actuals: 9 } }, keyed by the code DOWNCASED:
+    # both columns are utf8mb4_unicode_ci, so a row may carry the same code in
+    # another case and still mean the same account.
+    #
+    # One query per kind rather than per row, and the same pair of scopes
+    # #in_use? reads — the screen states what would happen to each code, so a
+    # count drawn from a different rule than the decision would mislabel the
+    # button.
+    def self.usage_counts(cost_centre, codes)
+      budgets = tally_codes(budgets_for(cost_centre), codes)
+      actuals = tally_codes(actuals_for(cost_centre), codes)
+      (budgets.keys | actuals.keys).index_with do |code|
+        { budgets: budgets.fetch(code, 0), actuals: actuals.fetch(code, 0) }
+      end
+    end
+
+    def self.tally_codes(scope, codes)
+      scope.where(nominal_code: codes).group(:nominal_code).count
+           .transform_keys { |code| code.to_s.downcase }
+    end
+    private_class_method :tally_codes
+
+    # Whether any historical row already carries this code. What decides
+    # retire versus delete — read in #destroy, not from the button that was
+    # clicked. A code a settled claim or a reconciled ledger row was booked
+    # against must stay readable, so anything at all counts.
     def in_use?
-      self.class.budgets_for(cost_centre).exists?(nominal_code: code)
+      self.class.budgets_for(cost_centre).exists?(nominal_code: code) ||
+        self.class.actuals_for(cost_centre).exists?(nominal_code: code)
     end
   end
 end

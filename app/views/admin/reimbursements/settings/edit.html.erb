@@ -225,4 +225,4 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
               class: btn_classes(:secondary, :sm) %>
 <% end %>
 
-<%= render "nominal_codes", cost_centre: @cost_centre, codes: @nominal_codes %>
+<%= render "nominal_codes", nominal_codes_locals(@cost_centre) %>

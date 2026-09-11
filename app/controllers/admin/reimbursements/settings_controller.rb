@@ -16,6 +16,8 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class SettingsController < FinanceController
+      include ListsNominalCodes
+
       before_action :set_cost_centre, only: %i[edit update test_access]
       # The nominal-codes panel on the edit page. Every action that can RENDER
       # :edit needs the list, which is #update's refused-save path and
@@ -93,7 +95,7 @@ module Admin
       end
 
       def set_nominal_codes
-        @nominal_codes = ::Reimbursements::NominalCode.for_cost_centre(@cost_centre).to_a
+        load_nominal_codes(@cost_centre)
       end
 
       def edit_path

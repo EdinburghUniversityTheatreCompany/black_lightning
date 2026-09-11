@@ -13,16 +13,22 @@ module Admin
         @cost_centre = ::Reimbursements::CostCentre.default
       end
 
+      # Where every response puts the operator back: the cost centre's own edit
+      # page, which is where the list is maintained.
+      def settings_path
+        edit_admin_reimbursements_setting_path(@cost_centre.key, anchor: "nominal_codes")
+      end
+
       # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
-        get :index, params: { key: @cost_centre.key }
+        post :create, params: { key: @cost_centre.key, code: "432320", label: "Marketing" }
         assert_redirected_to new_user_session_path
       end
 
       test "denies members without the finance permission" do
         sign_in users(:committee)
-        get :index, params: { key: @cost_centre.key }
+        post :create, params: { key: @cost_centre.key, code: "432320", label: "Marketing" }
         assert_response :forbidden
       end
 
@@ -31,31 +37,15 @@ module Admin
         grant_producer_permission(other)
         sign_in other
 
-        get :index, params: { key: @cost_centre.key }
+        post :create, params: { key: @cost_centre.key, code: "432320", label: "Marketing" }
 
         assert_response :forbidden
       end
 
-      # --- Index -------------------------------------------------------------
-
-      test "index lists this cost centre's codes and not another centre's" do
-        termtime = create_second_reimbursements_cost_centre
-        create_reimbursements_nominal_code(code: "432320", label: "Marketing", cost_centre: @cost_centre)
-        create_reimbursements_nominal_code(code: "555555", label: "Termtime printing", cost_centre: termtime)
+      test "404s for a cost centre that does not exist" do
         sign_in @user
 
-        get :index, params: { key: @cost_centre.key }
-
-        assert_response :success
-        assert_equal [ "432320" ], assigns(:nominal_codes).map(&:code)
-        assert_includes response.body, "Marketing"
-        assert_not_includes response.body, "Termtime printing"
-      end
-
-      test "index 404s for a cost centre that does not exist" do
-        sign_in @user
-
-        get :index, params: { key: "no-such-centre" }
+        post :create, params: { key: "no-such-centre", code: "432320", label: "Marketing" }
 
         assert_response :not_found
       end
@@ -74,18 +64,18 @@ module Admin
         assert_equal "Marketing", code.label
         assert_equal @cost_centre.id, code.cost_centre_id
         assert code.active?
-        assert_redirected_to admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        assert_redirected_to settings_path
       end
 
-      test "create refuses a blank code and re-renders the list" do
+      test "create refuses a blank code" do
         sign_in @user
 
         assert_no_difference -> { NC.count } do
           post :create, params: { key: @cost_centre.key, code: "", label: "Marketing" }
         end
 
-        assert_response :unprocessable_entity
-        assert_includes response.body, "Code must not be blank"
+        assert_redirected_to settings_path
+        assert_match(/Code must not be blank/, flash[:alert])
       end
 
       test "create refuses a code the centre already lists, whatever its case" do
@@ -96,7 +86,22 @@ module Admin
           post :create, params: { key: @cost_centre.key, code: "ABC123", label: "Shouted" }
         end
 
+        assert flash[:alert].present?
+      end
+
+      # A browser posts through Turbo, and that path re-renders the section in
+      # place rather than redirecting — so the typed values survive a refusal
+      # and the cost centre's own form above is never re-rendered.
+      test "a refused add re-renders the section with what was typed" do
+        sign_in @user
+
+        post :create, params: { key: @cost_centre.key, code: "", label: "Marketing" },
+                      format: :turbo_stream
+
         assert_response :unprocessable_entity
+        assert_includes response.body, "nominal_codes"
+        assert_includes response.body, "Marketing"
+        assert_includes response.body, "Code must not be blank"
       end
 
       test "the same code may be listed by two cost centres" do
@@ -119,7 +124,7 @@ module Admin
         patch :update, params: { key: @cost_centre.key, id: code.id, label: "Marketing & publicity" }
 
         assert_equal "Marketing & publicity", code.reload.label
-        assert_redirected_to admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        assert_redirected_to settings_path
       end
 
       test "update cannot rewrite the code itself" do
@@ -139,8 +144,22 @@ module Admin
 
         patch :update, params: { key: @cost_centre.key, id: code.id, label: "" }
 
-        assert_response :unprocessable_entity
+        assert flash[:alert].present?
         assert_equal "Marketing", code.reload.label
+      end
+
+      # The Add form holds the record a refused ADD carries back; a refused row
+      # edit must not fill it with that row's code and label.
+      test "a refused row edit leaves the add form empty" do
+        code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
+                                                  cost_centre: @cost_centre)
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, id: code.id, label: "" },
+                       format: :turbo_stream
+
+        assert_response :unprocessable_entity
+        assert_select "input#code[value]", false, "the add form must not prefill from a refused row"
       end
 
       test "update puts a retired code back in the picker" do
@@ -178,6 +197,19 @@ module Admin
         assert_not code.reload.active?
       end
 
+      # A reconciled ledger row carries its nominal code as a string too, so the
+      # list is equally the only thing that gives it a label.
+      test "a code an imported EUSA actual carries is retired, not deleted" do
+        code = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+        create_reimbursements_actual(nominal_code: "432320", cost_centre: @cost_centre)
+        sign_in @user
+
+        delete :destroy, params: { key: @cost_centre.key, id: code.id }
+
+        assert NC.exists?(code.id)
+        assert_not code.reload.active?
+      end
+
       test "a code nothing references is deleted outright" do
         code = create_reimbursements_nominal_code(code: "999999", cost_centre: @cost_centre)
         sign_in @user
@@ -200,11 +232,12 @@ module Admin
         assert_not code.reload.active?
       end
 
-      test "another centre's budget does not block deleting this centre's code" do
+      test "another centre's rows do not block deleting this centre's code" do
         termtime = create_second_reimbursements_cost_centre
         code = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
         create_reimbursements_budget(name: "Termtime marketing", nominal_code: "432320",
                                      cost_centre: termtime)
+        create_reimbursements_actual(nominal_code: "432320", cost_centre: termtime)
         sign_in @user
 
         delete :destroy, params: { key: @cost_centre.key, id: code.id }

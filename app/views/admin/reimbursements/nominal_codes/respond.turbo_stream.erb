@@ -1,0 +1,8 @@
+<%# Every write answers with the section as it now stands, so the cost
+    centre's own form above it is never re-rendered and a half-typed mailbox
+    survives. The message rides along as a toast: a redirect's flash would be
+    rendered outside the replaced section and never seen. %>
+<%= turbo_stream.replace "nominal_codes",
+      partial: "admin/reimbursements/settings/nominal_codes",
+      locals: nominal_codes_locals(@cost_centre) %>
+<turbo-stream action="toast" type="<%= @toast[:type] %>" message="<%= @toast[:message] %>"></turbo-stream>

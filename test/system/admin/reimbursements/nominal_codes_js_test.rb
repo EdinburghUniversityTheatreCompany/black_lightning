@@ -3,13 +3,15 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # The nominal-code list, clicked for real.
+    # The nominal-code list on the cost centre's own edit page, clicked for
+    # real.
     #
     # A request test POSTs straight to the action, so it passes just as
-    # happily when the Add form's submit renders OUTSIDE the <form> — which is
-    # what a form_with opened inside a CardComponent does, the footer being a
-    # component slot. Five defects across Phases 1 and 2a came from exactly
-    # that gap, so the add form and the Retire button are clicked here.
+    # happily when the Add button submits nothing — which is what it does if
+    # the section is nested inside the cost centre's `simple_form_for` (a form
+    # within a form is invalid HTML) or if a submit lands in a CardComponent's
+    # footer slot. Five defects across Phases 1 and 2a came from that class of
+    # gap, so the real controls are clicked here.
     class NominalCodesJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -19,18 +21,24 @@ module Admin
         login_as users(:member)
       end
 
+      def settings_page
+        edit_admin_reimbursements_setting_path(@cost_centre.key)
+      end
+
       # Every row carries the same Save / Retire controls, so a click has to
       # be scoped to the row it belongs to.
       def row_for(nominal_code)
         "#nominal_code_#{nominal_code.record_id}"
       end
 
-      test "adds a nominal code in the browser" do
-        visit admin_reimbursements_nominal_codes_path(@cost_centre.key)
+      test "adds a nominal code from the cost centre's edit page" do
+        visit settings_page
 
-        fill_in "Code", with: "432320"
-        fill_in "Label", with: "Marketing & publicity"
-        click_on "Add nominal code"
+        within "#nominal_codes" do
+          fill_in "Code", with: "432320"
+          fill_in "Label", with: "Marketing & publicity"
+          click_on "Add nominal code"
+        end
 
         assert_text "432320 added"
         code = ::Reimbursements::NominalCode.find_by(cost_centre: @cost_centre, code: "432320")
@@ -40,11 +48,28 @@ module Admin
         assert_field "label_#{code.record_id}", with: "Marketing & publicity"
       end
 
+      # The section answers with a turbo stream replacing itself alone, so the
+      # cost centre's own form is never re-rendered under the operator.
+      test "adding a code leaves a half-typed cost centre field alone" do
+        visit settings_page
+
+        fill_in "EUSA contact name", with: "Half typed"
+        within "#nominal_codes" do
+          fill_in "Code", with: "432320"
+          fill_in "Label", with: "Marketing"
+          click_on "Add nominal code"
+        end
+
+        assert_text "432320 added"
+        assert_field "EUSA contact name", with: "Half typed"
+        assert_nil @cost_centre.reload.eusa_contact_name
+      end
+
       test "corrects a seeded label guess in the browser" do
         nominal_code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
                                                           cost_centre: @cost_centre)
 
-        visit admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        visit settings_page
         within row_for(nominal_code) do
           fill_in "Label", with: "Marketing & publicity"
           click_on "Save"
@@ -60,7 +85,7 @@ module Admin
         create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
                                      cost_centre: @cost_centre)
 
-        visit admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        visit settings_page
         assert_text "1 budget line booked here"
         within(row_for(nominal_code)) { click_on "Retire" }
 
@@ -76,11 +101,13 @@ module Admin
       test "a code nothing carries offers Delete, not Retire" do
         create_reimbursements_nominal_code(code: "999999", cost_centre: @cost_centre)
 
-        visit admin_reimbursements_nominal_codes_path(@cost_centre.key)
+        visit settings_page
 
-        assert_text "No budget lines booked here"
-        assert_selector "button", text: "Delete"
-        assert_no_selector "button", text: "Retire"
+        assert_text "Nothing booked here"
+        within "#nominal_codes" do
+          assert_selector "button", text: "Delete"
+          assert_no_selector "button", text: "Retire"
+        end
       end
     end
   end
