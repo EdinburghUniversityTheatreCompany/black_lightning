@@ -348,6 +348,15 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The backfill is a SERVICE, not migration code** (`Reimbursements::AreaBackfill`), because
     test/CI databases are schema-loaded so a data migration never runs there and could never be
     tested. Its `down` REFUSES when the area tree shows signs of hand-editing.
+  - **`reimbursements_budgets.name_before_area_rename` is the prefix rename's only recording
+    surface, so dropping it while the rename is applied makes the rename permanently
+    irreversible.** `AreaRename.restore!` (same service shape, same reason) puts back the recorded
+    STRING byte-for-byte, only where the name is still the one `strip!` left, and asks the LIVE
+    schema for the column so it raises `MissingRecordError` rather than silently doing nothing.
+    Restoring by RULE instead would re-prefix lines the strip refused to touch, which makes every
+    area reproducible from its budgets and so DISARMS `BackfillReimbursementsAreas#down`'s refusal
+    — turning a guard against unwinding a hand-edited area tree into a silent delete of areas and
+    their owner rows. Phase 2b drops the column, which closes the rollback window on purpose.
   - **Area figures must be read off `store.areas`** (unscoped, preloads `:forecasts` and
     `budgets: [:expenses, :forecasts]`), never off `budget.area` — whose `budgets` collection
     is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31). The
@@ -456,9 +465,36 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The page `<h1>` must not name the year.** It sits OUTSIDE the wizard's Turbo Frame, so a
     preview of a year other than the one the page loaded with left the heading and the card
     stating different years. Each step's heading, inside the frame, names its own.
-  - Buckets, matched by name within one `(financial year, cost centre)`: **create / revise /
-    unchanged / invalid**, plus `absent_budgets` (in the year, not in the sheet) which is
-    **reported and never deleted** — a budget's claims and history hang off it.
+  - Buckets, within one `(financial year, cost centre)`: **create / revise / unchanged / invalid**,
+    plus `absent_budgets` (in the year, not in the sheet) which is **reported and never deleted** —
+    a budget's claims and history hang off it.
+  - **A line is matched by its AREA plus its bare name, and a stored line answers to BOTH
+    spellings** (`BudgetImport.bare_name` / `.area_scoped_key` / `#resolve_budget`). Task 6 stripped
+    the `Area: ` prefix from the stored names but the committee's sheet keeps sending it, so a
+    matcher reading one spelling bucketed 17 of the 31 live Fringe budgets as creates — each with a
+    fresh `initial_budget`, the originals reported absent. The area qualifies the key, so two shows
+    each running a "Marketing" line are two keys rather than one collision; two stored lines
+    answering to one key **blocks and names them**, never a silent pick of the last.
+  - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
+    note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
+    would read an `Area Budget` column as the line's own name (`budget`) *and* as the area (`area`).
+    Exact names first, multi-word substrings only; two fields resolving to one column is a blocking
+    error naming both; the preview states the column read for each field.
+  - **The sheet's owner column names the AREA for a line that has one, and an area's owners are the
+    UNION** (`#area_owner_syncs`, never subtracting). `Budget#owners` reads through the area, so an
+    owner written to such a line's `own_owners` is one no sign-off gate ever consults — a line with
+    no area is the only one that takes that write. Because the union is forgiving, a stale address
+    on one line gains sign-off over a whole show: the preview lists each area's resulting set by
+    NAME rather than counting it.
+  - **A sheet naming a different area for a stored line is REPORTED as a re-home, never applied on
+    sight** — ticked checkboxes keyed by BUDGET ID, so a re-import with the rows reordered can't
+    land a tick on another line. Untick them all and the target area isn't created either
+    (`#area_creates_for`): minting an empty container silently is the same failure as moving a line
+    silently.
+  - **A test sheet built from `TSV_HEADERS` with a hand-written data row shifts every cell when a
+    column is added to that constant**, and `bin/rails test` does not run system tests — which is
+    how adding `Area Budget` left a RED system test invisible for two tasks. Both budget-import test
+    files derive `HEADERS` from `TSV_HEADERS` and pad each row with the leading area cells.
   - **`initial_budget` is written ONLY on create.** A re-import logs revisions as forecasts under
     one `BudgetUpdate`, so `Budget#variance` keeps meaning "drift from the figure the committee
     agreed" however often the sheet is re-sent.
@@ -739,7 +775,10 @@ survive as historical import provenance and are never written. Spec + plan in
   numeric-looking identifier is coerced to a number (nominal code `041000` → 41000,
   period `03` → 3). Every exporter that can name a cost centre carries the column and
   **appends** it, so a saved formula keeps pointing at the same column; `People` has none,
-  because a payee has no cost centre. **Bank details in an export are masked to their last four digits**
+  because a payee has no cost centre. Every exporter that can name an **area** carries that
+  column on the same terms, appended after it; `People` has none (a payee has no area) and
+  neither does `Batches` — a batch spans several shows, so one cell there would be a lie
+  rather than a blank. **Bank details in an export are masked to their last four digits**
   via `BankDetails.mask` (also used by the People notes audit line); only the BACS
   spreadsheet EUSA pays from carries full numbers.
 - **Receipts are served by the app, never over ActiveStorage's routes**
