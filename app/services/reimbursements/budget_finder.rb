@@ -32,9 +32,20 @@ module Reimbursements
     # works; starting NEW spend under an account finance withdrew does not.
     class RetiredCodeError < Error; end
 
+    # The area belongs to no cost centre yet, so there is no chart of accounts
+    # to read a label from. A real state rather than a malformed call —
+    # Area#cost_centre is optional, and a budget only ever inherits one by
+    # Budget's before_validation filling a blank — and a different fix from
+    # UnknownCodeError, by a different person: place the area, rather than add
+    # a code to a centre's list.
+    class UnplacedAreaError < Error; end
+
     def self.find_or_create!(area:, nominal_code:, financial_year: nil, cost_centre: nil,
                              store: Reimbursements.build_store)
-      raise ArgumentError, "an area is required to identify a budget line" if area.nil?
+      # PERSISTED, not merely present: an unsaved Area has a nil id, and
+      # `where(area_id: nil)` matches every arealess line in the portal — so an
+      # unsaved "Cogito" was answered with the Contingency overhead.
+      raise ArgumentError, "a saved area is required to identify a budget line" unless area&.persisted?
 
       code = nominal_code.to_s.strip
       # Not merely invalid: a blank code matches every uncoded line in the area.
@@ -52,7 +63,7 @@ module Reimbursements
       coded = by_code(lines, area: area, nominal_code: code)
       return coded if coded
 
-      listed = listed_code(centre, code)
+      listed = listed_code(area, centre, code)
       # The same match the store re-takes under the lock, now that the label a
       # name match needs can be resolved.
       found = match(lines, area: area, nominal_code: code, label: listed.label)
@@ -69,7 +80,9 @@ module Reimbursements
     # The one matching rule, run twice per create: once on a read that can go
     # stale, and again inside the store's transaction under the area's row
     # lock. Two derivations of "which line is this" drift, which is Phase 2a's
-    # whole lesson, so there is one.
+    # whole lesson, so there is one — and it is PUBLIC solely so
+    # DatabaseStore#find_or_create_budget_for_area! can re-take it under that
+    # lock, not because anything else should call it.
     #
     # +nominal_code+ is the stored string and +label+ the name a line created
     # for that code would carry.
@@ -109,14 +122,15 @@ module Reimbursements
     end
     private_class_method :by_label
 
-    def self.listed_code(cost_centre, code)
-      listed = cost_centre && NominalCode.find_by(cost_centre: cost_centre, code: code)
+    def self.listed_code(area, cost_centre, code)
+      raise UnplacedAreaError, unplaced_message(area) if cost_centre.nil?
+
+      listed = NominalCode.find_by(cost_centre: cost_centre, code: code)
       return listed if listed
 
       raise UnknownCodeError,
-            "#{code.inspect} is not on #{cost_centre&.name.inspect}'s list of nominal codes, " \
-            "so there is no label to name a budget line with. Add it on that cost centre's " \
-            "settings page first."
+            "#{code.inspect} is not on #{cost_centre.name}'s list of nominal codes, so there is " \
+            "no label to name a budget line with. Add it on that cost centre's settings page first."
     end
     private_class_method :listed_code
 
@@ -138,6 +152,12 @@ module Reimbursements
         "it, so it is clear which account this spend belongs to."
     end
     private_class_method :mismatch
+
+    def self.unplaced_message(area)
+      "#{area.name} is not in a cost centre yet, so there is no list of nominal codes to name a " \
+        "budget line from. Put the area in its cost centre first."
+    end
+    private_class_method :unplaced_message
 
     def self.retired_message(listed)
       "Nominal code #{listed.code.inspect} (#{listed.label}) has been retired, so no new budget " \

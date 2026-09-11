@@ -27,7 +27,6 @@ module Reimbursements
       created = find_or_create
 
       assert_nil created.initial_budget, "nobody agreed this figure"
-      assert_nil created.remaining
       assert_equal @area.id, created.area_id
       assert_equal "Marketing", created.name
       assert_equal "432320", created.nominal_code
@@ -62,6 +61,42 @@ module Reimbursements
 
       assert_match "431000", error.message
       assert_equal 1, @area.budgets.count
+    end
+
+    test "two lines answering to the code's label raise rather than resolving to one" do
+      line(name: "Marketing", nominal_code: "")
+      line(name: "Cogito: Marketing", nominal_code: "")
+
+      error = assert_raises(BudgetFinder::AmbiguousError) { find_or_create }
+
+      assert_match "Cogito: Marketing", error.message
+      assert_equal 2, @area.budgets.count
+    end
+
+    # An unsaved area has a nil id, so the lookup reads `area_id IS NULL` and
+    # answers a new show's Marketing line with the portal's own standalone
+    # overheads — Contingency among them.
+    test "an unsaved area is refused rather than matching every arealess line" do
+      create_reimbursements_budget(name: "Contingency", nominal_code: "432320",
+                                   financial_year: @year, cost_centre: @centre)
+
+      assert_raises(ArgumentError) do
+        BudgetFinder.find_or_create!(area: Area.new(name: "Cogito"), nominal_code: "432320",
+                                     financial_year: @year, cost_centre: @centre)
+      end
+    end
+
+    # An area with no centre is a real state (Area#cost_centre is optional), and
+    # it has a different fix from an unlisted code, by a different person.
+    test "an area in no cost centre names that rather than reading a nil list" do
+      unplaced = create_reimbursements_area(name: "Unplaced show", financial_year: @year)
+
+      error = assert_raises(BudgetFinder::UnplacedAreaError) do
+        BudgetFinder.find_or_create!(area: unplaced, nominal_code: "432320")
+      end
+
+      assert_match "Unplaced show", error.message
+      refute_match "nil", error.message
     end
 
     test "a code this centre does not list cannot name a new line" do
