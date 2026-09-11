@@ -208,16 +208,17 @@ module Reimbursements
       [ match_key(area_name), match_key(bare_name(name, area_name)) ]
     end
 
-    # The stored row knows its own area whether or not the SHEET names one, so a
-    # line is indexed under both spellings and the committee's untouched old
-    # file — prefixed names, no Area column — still finds "Marketing" in Cogito.
-    # Names the AREA alongside the name, because the collision is usually two
-    # identical names — "Marketing" twice says nothing an operator can act on.
-    # Shared with ExpenseImport, which resolves budgets by the same rule.
+    # A collision is usually two identical names, so the AREA is the part that
+    # tells them apart. Shared with ExpenseImport.
     def self.budget_label(budget)
       budget.area ? "#{budget.name.inspect} in #{budget.area.name}" : "#{budget.name.inspect} in no area"
     end
 
+    # Both spellings of a stored line's name — as stored, and with its area's
+    # prefix put on or taken off. The STORED row knows its own area whether or
+    # not the sheet names one, so the committee's untouched old file (prefixed
+    # names, no Area column) still finds "Marketing" in Cogito. Both importers
+    # key on this, so neither can drift about what a budget is called.
     def self.name_spellings(name, area_name)
       return [ name.to_s ] if area_name.blank?
 
@@ -981,27 +982,36 @@ module Reimbursements
                                  .uniq { |name| self.class.match_key(name) }
     end
 
-    # Row index => the other rows naming the same budget line. Quadratic over a
-    # committee's thirty-row sheet, and clearer than an index that has to answer
-    # two kinds of key.
+    # Row index => the other rows naming the same budget line.
+    #
+    # Two rows are one line when they share a key that IDENTIFIES at least one
+    # of them — so an alias only ever matches a row that really does name that
+    # area. Read off two groupings rather than by comparing every pair: rows
+    # that CLAIM a key (their own plus their aliases) and rows that OWN one
+    # (their own alone), which is the same rule both ways round.
     def duplicate_rows
+      claimants = Hash.new { |index, key| index[key] = [] }
+      owners = Hash.new { |index, key| index[key] = [] }
+      @rows.each_index do |index|
+        next if row_key(index).nil?
+
+        owners[row_key(index)] << index
+        all_row_keys(index).each { |key| claimants[key] << index }
+      end
+
       @rows.each_index.to_h do |index|
-        twins = @rows.each_index.reject { |other| other == index }
-                     .select { |other| same_line?(index, other) }
-        [ index, twins.map { |other| @rows[other] } ]
+        [ index, twins_of(index, claimants, owners).map { |other| @rows[other] } ]
       end
     end
 
-    # Two rows are one line when they share a key that IDENTIFIES at least one
-    # of them — so an alias only ever matches a row that really does name that
-    # area.
-    def same_line?(index, other)
-      return false if row_key(index).nil? || row_key(other).nil?
+    def twins_of(index, claimants, owners)
+      return [] if row_key(index).nil?
 
-      shared = (([ row_key(index) ] + alias_row_keys(index)) &
-                ([ row_key(other) ] + alias_row_keys(other)))
-      shared.include?(row_key(index)) || shared.include?(row_key(other))
+      (claimants[row_key(index)] |
+        all_row_keys(index).flat_map { |key| owners[key] }).sort - [ index ]
     end
+
+    def all_row_keys(index) = [ row_key(index) ] + alias_row_keys(index)
 
     # People for the sheet's owner emails, plus the addresses that matched
     # nobody. Never creates a Person: a bare email would land as a person named

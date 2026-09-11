@@ -77,6 +77,21 @@ module Reimbursements
       assert_match(/in Improverts/, error)
     end
 
+    # "Area: Line" resolves a candidate that has an area and nothing else, so
+    # offering it for two loose budgets would name a fix that cannot be made.
+    test "the ambiguity message offers a fix that exists" do
+      budgets = [ marketing_in("Cogito"), marketing_in("Improverts") ]
+      loose = [ @budget, create_reimbursements_budget(name: "Props", cost_centre: @cost_centre,
+                                                      financial_year: @year) ]
+
+      areas = build_import(tsv(row(budget: "Marketing")), budgets: budgets)
+      assert_match(/Write the one you mean as "Cogito: Marketing"/, areas.entries.sole.error)
+
+      none = build_import(tsv(row(budget: "Props")), budgets: loose)
+      assert_match(/Rename one of them/, none.entries.sole.error)
+      assert_no_match(/Area: Line/, none.entries.sole.error)
+    end
+
     test "naming the area with the line resolves it" do
       cogito = marketing_in("Cogito")
 

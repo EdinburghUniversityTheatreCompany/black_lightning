@@ -64,6 +64,29 @@ module Reimbursements
                    "restore! puts back what was recorded, not what the rule would rebuild"
     end
 
+    # A rename finance made after the strip is theirs, and a rollback must not
+    # quietly take it back: nothing records that "Publicity" ever existed.
+    test "restore! leaves a line finance has renamed since" do
+      area = create_reimbursements_area(name: "Cogito")
+      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+
+      Reimbursements::AreaRename.strip!
+      budget.reload.update!(name: "Publicity")
+      Reimbursements::AreaRename.restore!
+
+      assert_equal "Publicity", budget.reload.name
+    end
+
+    # Phase 2b drops the column once the rollback window closes. Skipping then
+    # would turn a rollback that CANNOT restore the names into one that silently
+    # doesn't.
+    test "restore! refuses when the recording column is gone" do
+      error = assert_raises(Reimbursements::AreaRename::MissingRecordError) do
+        Reimbursements::AreaRename.restore!(scope: Area.all)
+      end
+      assert_match(/name_before_area_rename/, error.message)
+    end
+
     # THE ROW strip! REFUSED TO TOUCH. Restoring by rule re-prefixed it, which
     # made its area reproducible from its budgets and disarmed the backfill's
     # refusal — a guard turned into a silent delete.

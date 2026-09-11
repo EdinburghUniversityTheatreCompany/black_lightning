@@ -471,10 +471,20 @@ module Reimbursements
       @budgets_by_name.fetch(BudgetImport.match_key(name), [])
     end
 
+    # "Area: Line" resolves a candidate that HAS an area and nothing else, so it
+    # is only offered when one of them does — a name shared by two loose budgets
+    # can only be fixed on the budgets screen.
     def ambiguous_budget_error(row, candidates)
+      labels = candidates.map { |budget| BudgetImport.budget_label(budget) }
       "#{row[:budget].inspect} matches more than one budget in #{destination_label} " \
-        "(#{candidates.map { |budget| BudgetImport.budget_label(budget) }.to_sentence(last_word_connector: ' and ')}). " \
-        "Name it as \"Area: Line\", or rename one of them."
+        "(#{labels.to_sentence(last_word_connector: ' and ')}). #{ambiguous_budget_fix(candidates)}"
+    end
+
+    def ambiguous_budget_fix(candidates)
+      prefixed = candidates.filter_map { |budget| "#{budget.area.name}: #{budget.name}" if budget.area }.first
+      return "Rename one of them, so this sheet can tell them apart." if prefixed.nil?
+
+      "Write the one you mean as #{prefixed.inspect}, or rename a budget so the two differ."
     end
 
     def budget_error(row)

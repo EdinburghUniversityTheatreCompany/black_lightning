@@ -20,6 +20,14 @@ module Reimbursements
     # importer's matcher, with nothing on screen to say two rows went in.
     class CollisionError < StandardError; end
 
+    # reimbursements_budgets.name_before_area_rename is gone — Phase 2b drops it
+    # once the rollback window closes. Raised rather than skipped: skipping
+    # would turn a rollback that CAN'T restore the names into one that silently
+    # doesn't.
+    class MissingRecordError < StandardError; end
+
+    RECORDED_COLUMN = "name_before_area_rename".freeze
+
     # Idempotent: a second run finds the names already bare. One transaction, as
     # AreaBackfill's is.
     def self.strip!(scope: Budget.all)
@@ -32,16 +40,25 @@ module Reimbursements
       end
     end
 
-    # Byte-for-byte, and ONLY the rows #strip! recorded. Restoring by rule
-    # instead would re-prefix lines the strip deliberately refused to touch,
-    # making every area reproducible from its budgets — which disarms
-    # BackfillReimbursementsAreas#down's refusal and turns it into a silent
-    # delete of areas and their owner rows.
+    # Byte-for-byte, and ONLY the rows #strip! recorded that still carry the name
+    # it left them. Restoring by rule instead re-prefixes lines the strip
+    # refused to touch, which makes every area reproducible from its budgets and
+    # so disarms BackfillReimbursementsAreas#down's refusal — turning a guard
+    # against unwinding a hand-edited area tree into a silent delete of areas
+    # and their owner rows. A line finance has renamed since keeps the name
+    # finance gave it, which is what recording the string rather than a rule
+    # buys: the rule cannot tell "Publicity" from a name it never touched.
     def self.restore!(scope: Budget.all)
+      raise MissingRecordError, "#{RECORDED_COLUMN} is gone, so the names #strip! took off " \
+                                "cannot be restored — the rollback window closed when it was dropped" \
+        unless scope.model.column_names.include?(RECORDED_COLUMN)
+
       ActiveRecord::Base.transaction do
-        scope.where.not(name_before_area_rename: nil).find_each do |budget|
-          budget.update_columns(name: budget.name_before_area_rename,
-                                name_before_area_rename: nil)
+        scope.where.not(RECORDED_COLUMN => nil).includes(:area).find_each do |budget|
+          recorded = budget.name_before_area_rename
+          next unless budget.name == BudgetImport.bare_name(recorded, budget.area&.name)
+
+          budget.update_columns(name: recorded, name_before_area_rename: nil)
         end
       end
     end
