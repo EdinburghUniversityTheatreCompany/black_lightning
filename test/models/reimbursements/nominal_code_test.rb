@@ -53,6 +53,12 @@ module Reimbursements
       assert_not code.reload.active?
     end
 
+    test "the helper derives a distinct default label per code" do
+      a = create_reimbursements_nominal_code(code: "111111")
+      b = create_reimbursements_nominal_code(code: "222222")
+      assert_not_equal a.label, b.label
+    end
+
     test "a zero-padded code keeps its padding" do
       code = create_reimbursements_nominal_code(code: "041000")
       assert_equal "041000", code.reload.code
