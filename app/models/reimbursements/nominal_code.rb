@@ -35,27 +35,23 @@ module Reimbursements
     # index already folds case and accents, so a case-sensitive validation
     # would disagree with it and let a duplicate through to a RecordNotUnique.
     validates :code, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
-    # The LABEL is unique per centre too, and that is correctness rather than
-    # tidiness: BudgetFinder matches a hand-named budget line against it, so two
-    # codes sharing a label have one uncoded line answering to both — and once a
-    # line exists for one of them, the other can never be opened at all. Same
-    # case-insensitivity as the code above, and for the same reason: the column
-    # is utf8mb4_unicode_ci, so a case-sensitive rule would disagree with the
-    # database it is guarding.
+    # The LABEL is unique per centre too, and that is correctness: BudgetFinder
+    # matches a hand-named budget line against it, so two codes sharing a label
+    # have one uncoded line answering to both — and once a line exists for one,
+    # the other can never be opened at all. Case-insensitive for the reason
+    # above.
     validates :label, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 
     # The rows this centre's list is answerable for: budget lines and imported
-    # EUSA ledger rows, each of them carrying a nominal code as a STRING
-    # rather than a link to this table, so the list is the only thing that
-    # gives one a human label.
+    # EUSA ledger rows, each carrying a nominal code as a STRING rather than a
+    # link to this table, so the list is the only thing that gives one a label.
     #
-    # Each scope takes the centre's own rows plus the ones with NO centre of
-    # their own: an unplaced row is lenient-scoped into EVERY centre's screens
-    # (DatabaseStore#in_cost_centre), so this centre's list is what labels its
-    # code there — the same rule NominalCodeSeed folds an unplaced code into
-    # the default centre by.
+    # Each scope takes the centre's own rows plus the ones with NO centre: an
+    # unplaced row is lenient-scoped into EVERY centre's screens
+    # (DatabaseStore#in_cost_centre), the same rule NominalCodeSeed folds an
+    # unplaced code into the default centre by.
     def self.budgets_for(cost_centre)
       Budget.where(cost_centre_id: [ cost_centre&.id, nil ])
     end
@@ -65,22 +61,18 @@ module Reimbursements
     end
 
     # How many rows of each kind carry each of +codes+, as
-    # { "432320" => { budgets: 2, actuals: 9 } }, keyed by the code DOWNCASED:
-    # both columns are utf8mb4_unicode_ci, so a row may carry the same code in
-    # another case and still mean the same account.
+    # { "432320" => { budgets: 2, actuals: 9 } }, keyed DOWNCASED because both
+    # columns are utf8mb4_unicode_ci and a row in another case means the same
+    # account. One query per kind rather than per row, off the same pair of
+    # scopes #in_use? reads: the screen predicts what would happen to each code.
     #
-    # One query per kind rather than per row, and the same pair of scopes
-    # #in_use? reads — the screen states what would happen to each code, so a
-    # count drawn from different rows than the decision would mislabel the
-    # button.
-    #
-    # The rows are the same; the MATCHING is not, and it can disagree in one
-    # direction. #in_use? asks SQL, under utf8mb4_unicode_ci, which is PAD
-    # SPACE and folds accents; this keys in Ruby on #downcase, which is neither.
-    # So a budget row storing "432320 " counts for #in_use? and lands under a
-    # key the row then fails to find: the button predicts Delete over a code
-    # #destroy correctly retires. Safe direction, and the controller re-decides
-    # — never the reverse, since anything this counts SQL also matches.
+    # Same rows, but NOT the same matching, and it can disagree one way.
+    # #in_use? asks SQL under utf8mb4_unicode_ci, which is PAD SPACE and folds
+    # accents; this keys in Ruby on #downcase, which is neither. So a budget
+    # storing "432320 " counts for #in_use? and lands under a key the row fails
+    # to find: the button predicts Delete over a code #destroy correctly
+    # retires. Safe direction, the controller re-decides, and never the reverse
+    # — anything this counts, SQL matches too.
     def self.usage_counts(cost_centre, codes)
       budgets = tally_codes(budgets_for(cost_centre), codes)
       actuals = tally_codes(actuals_for(cost_centre), codes)
@@ -95,10 +87,10 @@ module Reimbursements
     end
     private_class_method :tally_codes
 
-    # Whether any historical row already carries this code. What decides
-    # retire versus delete — read in #destroy, not from the button that was
-    # clicked. A code a settled claim or a reconciled ledger row was booked
-    # against must stay readable, so anything at all counts.
+    # Whether any historical row carries this code — what decides retire versus
+    # delete, read in #destroy rather than from the button that was clicked. A
+    # code a settled claim or a reconciled ledger row was booked against must
+    # stay readable, so anything at all counts.
     def in_use?
       self.class.budgets_for(cost_centre).exists?(nominal_code: code) ||
         self.class.actuals_for(cost_centre).exists?(nominal_code: code)

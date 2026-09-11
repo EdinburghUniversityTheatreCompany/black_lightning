@@ -19,13 +19,12 @@ module Reimbursements
     # owners were never seeded — silently breaking that area's owner gate with
     # nothing on screen to explain it.
     #
-    # Returns the ids of the areas it CREATED (never the ones it merely found),
-    # because a caller that re-homes lines afterwards has to be able to tell an
-    # area this run minted from one that was already there. AreaMembership's
-    # restore is exactly such a caller: this keys on the BUDGET's year and
-    # centre while the record keys on the AREA's, and a budget holding an area
-    # from another year is a real state — so a line restored to the recorded
-    # area can leave the one created here holding nothing at all.
+    # Returns the ids of the areas it CREATED, never the ones it merely found:
+    # a caller re-homing lines afterwards has to tell one this run minted from
+    # one that was already there. AreaMembership's restore is such a caller —
+    # this keys on the BUDGET's year and centre while the record keys on the
+    # AREA's, so a line restored to its recorded area can leave the one created
+    # here holding nothing at all.
     def self.run!(scope: Budget.all)
       created_ids = []
       ActiveRecord::Base.transaction do

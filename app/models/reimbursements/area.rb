@@ -53,22 +53,15 @@ module Reimbursements
     BASIS_EXPENSES = "expenses".freeze
     BASIS_NET = "net".freeze
 
-    # "Agreed total" is the noun the form field, the areas index and the
-    # overview card all already use, so the basis is a QUALIFIER on it rather
-    # than a second name for one stored number. "Total expenses" on its own
-    # reads as money already spent — and on the overview card it sits directly
-    # above "Subtotal Cogito (Expense)", so the bigger figure would wear the
-    # word "expenses" while the smaller one was the real expense total.
+    # The basis is a QUALIFIER on "Agreed total", the noun the form field, the
+    # areas index and the overview card already use — not a second name for one
+    # stored number. "Total expenses" alone reads as money already spent, and on
+    # the overview card it sits directly above "Subtotal Cogito (Expense)".
     #
-    # One source for the words: the label on every card AND, through
-    # BASIS_OPTIONS, the two radios on the form, so a finance user picks the
-    # words they then read back.
-    # The one word that separates the two, and the ONE place it is written.
-    # The areas index lists areas side by side under a bare "Agreed total"
-    # header, where two rows both reading £5,000.00 mean different things, so
-    # the qualifier goes on the cell — and it has to be the same word the label
-    # and the radio carry, or the index and the card name the same basis
-    # differently.
+    # ONE source for the words, written here: every card's label, the two radios
+    # (through BASIS_OPTIONS) and the areas index's per-cell qualifier, so a
+    # finance user reads back the words they picked and no two screens name one
+    # basis differently.
     BASIS_QUALIFIERS = { BASIS_EXPENSES => "expenses", BASIS_NET => "net" }.freeze
     BASIS_LABELS = BASIS_QUALIFIERS.transform_values { |word| "Agreed total (#{word})" }.freeze
     BASES = BASIS_LABELS.keys.freeze
@@ -133,23 +126,18 @@ module Reimbursements
     # What is left of the AGREED total. Nil when nobody agreed one, rather than
     # reading as the whole spend being over budget.
     #
-    # This is the one figure on a basis-labelled card that does NOT read the
-    # basis, and that is a decision rather than an oversight. #committed_amount
-    # counts CLAIMS — Approved, Submitted and Paid, ex-VAT — and a claim filed
-    # against an income line is spend recorded on it, not income received, so
-    # netting it would raise the room left by the money somebody spent. Income
-    # that actually landed is Budget#eusa_actual_amount, read off EUSA's
-    # monthly ledger weeks later, and nothing in this portal mixes a committed
-    # figure with an actual one. Remaining is therefore the agreed total less
-    # committed spend on both bases; the edit card's <dt> says so.
+    # The one figure on a basis-labelled card that does NOT read the basis, by
+    # decision. #committed_amount counts CLAIMS, and a claim filed against an
+    # income line is spend recorded on it rather than income received, so
+    # netting it would raise the room left by money somebody spent. Income that
+    # landed is Budget#eusa_actual_amount, an EUSA ledger figure weeks later,
+    # and nothing in this portal mixes a committed figure with an actual one.
     #
-    # The consequence, since it is the reason this is safe rather than merely
-    # defensible: on a NET area whose income has actually landed, this reads
-    # LOWER than the room really left — it counts the spend that income was
-    # meant to offset without counting the income. Understating room is the
-    # direction this portal always errs in, so it stands until a basis-aware
-    # figure earns its own name and its own decision about whether an EUSA
-    # credit may raise it.
+    # The consequence, which is what makes it safe rather than merely
+    # defensible: on a NET area whose income HAS landed this reads LOWER than
+    # the room really left. Understating is the direction this portal errs in,
+    # so it stands until a basis-aware figure earns its own name and its own
+    # decision about whether an EUSA credit may raise it.
     def remaining
       return nil if projected_amount.nil?
 
@@ -160,18 +148,15 @@ module Reimbursements
     # agreed figure are skipped, not counted as zero.
     #
     # Read on the area's own basis, which is the ONLY arithmetic the basis
-    # governs: an income line is left out entirely of a spend cap and
+    # governs: an income line is left out of a spend cap entirely and
     # subtracted from a net allowance. It must not reach AreaRollup#by_type,
-    # whose two subtotals answer "what did this area spend", a different
-    # question that never nets the types together.
+    # whose two subtotals never net the types together.
     def allocated
       @allocated ||= net_basis? ? allocated_spend - allocated_income : allocated_spend
     end
 
-    # The two halves the grouped index prints when they differ, so a netted
-    # allocation is never shown as a bare negative under the word "Allocated"
-    # — you cannot allocate minus four hundred pounds, and in this portal a
-    # negative money figure means bad news everywhere else.
+    # The two halves every screen prints instead of a bare negative — see
+    # ReimbursementsHelper#reimbursements_area_allocation, which owns that rule.
     def allocated_spend = @allocated_spend ||= projections_of { |budget| !budget.income? }
     def allocated_income = @allocated_income ||= projections_of(&:income?)
 

@@ -16,17 +16,9 @@ module Reimbursements
   # name otherwise — .bare_name and #resolve_budget read both spellings of a
   # name the area prefix was stripped from.
   #
-  # Where SEVERAL stored lines answer to a name and the sheet's Area cell is
-  # blank, the one that is in NO area is the answer — that is how a show's
-  # "Marketing" and a standing one stay two lines. Where several answer and
-  # none of them is loose, the sheet has not said which show and the import
-  # stops rather than guessing — and so it does where several of THEM are
-  # loose, since the reading needs exactly one line in no area, not merely one
-  # that is. Where exactly ONE line answers it is matched, loose or not: a bare
-  # row against a show's only "Marketing" revises that line rather than creating
-  # a loose one beside it, which is asymmetric with the rule above and
-  # deliberate — it is what the committee's file does the day they stop typing
-  # prefixes without filling the Area column in.
+  # Where SEVERAL lines answer one name, #loose_match decides and says why it
+  # can; where exactly ONE answers, it is matched whether it is loose or not.
+  # That asymmetry is deliberate and #loose_match states it.
   #
   #   create    a line that matches nothing here yet
   #   revise    an existing line at a different figure — logged as a forecast
@@ -271,12 +263,11 @@ module Reimbursements
     end
 
     # The keys a stored line answers to, taking only the spellings that do (or
-    # do not) name its own area. A spelling names the area exactly when the
-    # rename would take a prefix off it, so this cannot drift from .bare_name —
-    # and it is a PARTITION of .name_spellings, so the two halves together are
-    # still every spelling the line ever answered to. Pinned by a test: a half
-    # lost wholesale reddens a dozen tests, one spelling lost under a degenerate
-    # name would be silent, and the line would simply stop being findable.
+    # do not) name its own area — a spelling names it exactly when the rename
+    # would take a prefix off, so this cannot drift from .bare_name. It is a
+    # PARTITION of .name_spellings, pinned by a test: a whole half lost reddens
+    # a dozen tests, one spelling lost under a degenerate name would be silent
+    # and the line would simply stop being findable.
     def self.spelling_keys(budget, naming_area:)
       area_name = budget.area&.name
       name_spellings(budget.name, area_name)
@@ -292,11 +283,10 @@ module Reimbursements
 
     def entries_in(bucket) = @entries.select { |entry| entry.bucket == bucket }
 
-    # The area this row lands in, for the PREVIEW to render — the cell where
-    # there is one, the area the name named where the importer adopted it. The
-    # screen has to agree with #creates about what a row means: it is the
-    # operator's only chance to catch a wrong adoption, and an adopted row
-    # otherwise shows an empty Area cell for a line that will land in a show.
+    # The area this row LANDS in, for the preview to render. The screen has to
+    # agree with #creates about what a row means: it is the operator's only
+    # chance to catch a wrong adoption, and an adopted row otherwise shows an
+    # empty Area cell for a line that will land in a show.
     def area_name_for(entry) = create_area_name(entry)
 
     # Whether the area above was read off the row's NAME rather than its cell,
@@ -533,12 +523,11 @@ module Reimbursements
       @existing_budgets.reject { |budget| named.include?(budget.record_id) }
     end
 
-    # Absent lines this sheet is about to create again inside an area — a
-    # stored loose "Cogito: Marketing" against a sheet that has converted to
-    # Cogito | Marketing. They ARE two lines, which is the ruling, so nothing
-    # here matches or merges them. But a create in one panel and an absence in
-    # another, with nothing linking them, is a state the operator cannot
-    # resolve from the screen. Report, never block.
+    # Absent lines this sheet is about to create again inside an area — a stored
+    # loose "Cogito: Marketing" against a sheet converted to Cogito | Marketing.
+    # They ARE two lines, so nothing here matches or merges them; but a create
+    # in one panel and an absence in another, with nothing linking them, is a
+    # state the operator cannot resolve from the screen. Report, never block.
     def superseded_absent_budgets
       @superseded_absent_budgets ||= absent_budgets.select do |budget|
         creates.any? { |create| supersedes?(create, budget) }
@@ -1109,20 +1098,18 @@ module Reimbursements
         end
     end
 
-    # The area a row's own NAME points at, for a row whose Area cell is blank:
+    # The area a row's own NAME points at, where its Area cell is blank:
     # "Cogito: Marketing" names Cogito as surely as the cell would, and the
     # sheet naming Cogito elsewhere is what says the prefix is a show rather
     # than part of the line's name. So a sheet mid-transition between the two
-    # spellings writes ONE line twice and is refused, which is not the pair
-    # Mick ruled legitimate — that is a loose line beside an area's.
+    # spellings writes ONE line twice and is refused — not the pair Mick ruled
+    # legitimate, which is a loose line beside an area's.
     #
-    # This NORMALISES the row's own single key before grouping; it never gives
-    # a row a second key to claim. The keys stay equal-or-not, so #duplicate_rows
-    # stays a group-by and the twin relation stays an equivalence.
-    #
-    # At most one area can answer: #bare_name strips only an exact name match
-    # and #sheet_area_names is unique by that same key, so #find is never a pick
-    # between candidates.
+    # This NORMALISES the row's own single key before grouping and never gives
+    # a row a second key to claim, so #duplicate_rows stays a group-by and the
+    # twin relation stays an equivalence. At most one area can answer:
+    # #bare_name strips only an exact match and #sheet_area_names is unique by
+    # that same key, so #find never picks between candidates.
     def prefix_area_for(name)
       sheet_area_names.find { |area| self.class.bare_name(name, area) != name.to_s }
     end
@@ -1132,23 +1119,19 @@ module Reimbursements
                                  .uniq { |name| self.class.match_key(name) }
     end
 
-    # The area a CREATE lands in: its own Area cell, or — where the cell is
-    # blank — the area the row's own NAME names, on exactly the terms #row_key
-    # groups by. Grouping and creating disagreeing about what a row means is the
-    # seam behind every duplicate this class exists to prevent: a row that KEYS
-    # as Cogito's line and is then created as a loose line carrying the prefix
-    # has the next converted sheet create the line again inside the area and
-    # report the first one absent — two lines for one, each with its own agreed
-    # figure, off the half-filled Area column.
+    # The area a CREATE lands in: its Area cell, or — where that is blank — the
+    # area its own NAME names, on exactly the terms #row_key groups by.
+    # Grouping and creating disagreeing about what a row means is the seam
+    # behind every duplicate this class exists to prevent: a row keyed as
+    # Cogito's line but created loose with the prefix in its name has the next
+    # converted sheet create the line again inside the area and report the
+    # first absent — two lines for one, each with its own agreed figure.
     #
-    # A MATCHED row keeps its cell alone. #re_homes and the owner targets read
-    # that, and moving a stored line into a show on the strength of a prefix is
-    # a larger claim than naming a new one — the conservative direction, and the
-    # one Phase 2a pinned for an out-of-scope area the owner column reaches.
-    #
-    # The name comes back in the sheet's FIRST-SEEN casing, as a re-home's does,
-    # so a prefix typed "cogito" cannot mint a second area beside a cell's
-    # "Cogito". The guard means some cell already named it, so it is always there.
+    # A MATCHED row keeps its cell alone (#re_homes and the owner targets read
+    # that): moving a stored line into a show on the strength of a prefix is a
+    # larger claim than naming a new one. The name comes back in the sheet's
+    # FIRST-SEEN casing, as a re-home's does, so a prefix typed "cogito" cannot
+    # mint a second area beside a cell's "Cogito".
     def create_area_name(entry)
       return entry.area_name if entry.area_name.present?
       return unless entry.budget.nil?
@@ -1163,11 +1146,10 @@ module Reimbursements
     # only its own cell and typed name cannot say which of them the figure is
     # going to.
     #
-    # Compared by RECORD where both sides name an area, as #re_homes is:
-    # lenient year scoping puts an unstamped "Cogito" beside a real one and a
-    # budget can hold an area from another year, which is the case the operator
-    # most needs telling about and the one a name comparison reads as agreement.
-    # Qualified by year and centre only there, so the ordinary label stays short.
+    # Compared by RECORD where both sides name an area, as #re_homes is: lenient
+    # year scoping puts an unstamped "Cogito" beside a real one, and that is the
+    # case the operator most needs telling about — the one a name comparison
+    # reads as agreement. Qualified by year and centre only there.
     def matched_area_label(area_name, budget)
       # An unmatched row has matched nothing to report, whatever its cell says.
       # Without this the first import of a financial year — every row a create —

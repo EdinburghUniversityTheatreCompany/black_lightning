@@ -6,40 +6,27 @@ module Reimbursements
   # with a nil area.
   #
   # The money columns cover the budgets HANDED IN — the ones the screen's year
-  # and cost centre scope to. #agreed and #unallocated instead come off the area
-  # itself, whose figures sum every line ever linked to it, in any year or
-  # centre.
-  #
-  # The area's budget basis reaches #unallocated and #total_label and stops
-  # there: #by_type keeps its two separate subtotals on BOTH bases, because
-  # "what did this area spend" is a different question from "how much room has
-  # it left" and only the second one ever nets income against spend.
-  #
-  # A budget CAN hold an area from another year, so the two readings can
-  # disagree: #lines_shown against #lines_total is what makes that visible
-  # rather than silently dropping or silently counting the out-of-scope spend.
+  # and cost centre scope to — while #agreed and #unallocated come off the area
+  # itself, which sums every line ever linked to it in any year or centre. A
+  # budget CAN hold an area from another year, so the two readings disagree,
+  # and #lines_shown against #lines_total is what makes that visible rather
+  # than silently dropping or silently counting the out-of-scope spend.
   AreaRollup = Struct.new(:area, :budgets, :budget_type, keyword_init: true) do
     include RollupTotals
 
     def name = area&.name
 
-    # The committee's agreed figure for the whole area, nil when nobody agreed
-    # one — never zero, which would read as the area being fully overspent.
+    # Nil when nobody agreed one — never zero, which reads as fully overspent.
     def agreed = area&.projected_amount
 
-    # The part of that agreed total not yet split out into category lines. NOT
-    # spare money, and nil for the same reason #agreed is.
-    #
-    # Summed on the area's declared basis (Area#allocated), so an area holding
-    # both budget types has a defensible figure either way: a spend cap leaves
-    # its income lines out, a net allowance credits them. Phase 2a withheld
-    # this figure for such an area because there was no declared basis to read
-    # and netting was the only arithmetic on offer.
+    # NOT spare money, and nil for the same reason #agreed is. Summed on the
+    # area's declared basis (Area#allocated), which is why an area holding both
+    # budget types has a defensible figure at all — Phase 2a withheld it,
+    # having no declared basis to read.
     def unallocated = area&.unallocated
 
-    # What that agreed total is a total OF, in the words the area's own form
-    # offered. The unassigned group has no area and so names nothing, exactly
-    # as it reports no agreed total.
+    # In the words the area's own form offered. The unassigned group has no
+    # area and names nothing, exactly as it reports no agreed total.
     def total_label = area&.basis_label
 
     # Read off the GROUP rollup, which is what makes #with_budgets drop the
@@ -53,11 +40,11 @@ module Reimbursements
 
     private
 
-    # No area, deliberately: every area figure on a per-type subtotal then
-    # answers nil (or 0 for the counts), which reads as "ask the group, not
-    # me", where the parent's number reads as a fact about a row it does not
-    # describe. The view builds a subtotal's label from the group's own, never
-    # from #name, so nothing on screen loses anything.
+    # No area, deliberately, and it is what keeps the basis out of #by_type:
+    # every area figure on a per-type subtotal then answers nil (or 0 for the
+    # counts), which reads as "ask the group, not me", where the parent's
+    # number reads as a fact about a row it does not describe. The view builds
+    # a subtotal's label from the group's own, never from #name.
     def with_budgets(budgets, type) = self.class.new(area: nil, budgets: budgets, budget_type: type)
   end
 end

@@ -2,38 +2,34 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
   def up
     created_area_ids = Reimbursements::AreaBackfill.run!
     # The backfill re-homes only the lines whose NAME reproduces their area, so
-    # anything created, moved or imported into one is restored from what #down
-    # recorded instead. Nothing is recorded on a first run, which is every run
-    # that is not a re-migrate.
+    # anything created, moved or imported into one comes back from what #down
+    # recorded. A first run — every run that is not a re-migrate — has nothing
+    # recorded to read.
     Reimbursements::AreaMembership.restore!
-    # Only the areas THIS run created and the restore then emptied. The backfill
+    # Only the areas THIS run created and the restore then emptied: the backfill
     # keys on the budget's year and centre while the record keys on the area's,
-    # so a line holding an area from another year is re-homed into a new area
-    # here and moved out again by the restore — leaving an ownerless phantom in
-    # that year's pickers, which #down would then refuse over as hand-editing.
-    #
-    # Deliberately NOT a sweep of every empty area: the area form has shipped,
-    # so an empty area is something a person can mean to have, and deleting one
-    # is not this migration's business.
+    # so a cross-year line is re-homed into a new area here and moved out again
+    # by the restore, leaving an ownerless phantom in that year's pickers that
+    # the next #down refuses over as hand-editing. Deliberately NOT a sweep of
+    # every empty area — the area form has shipped, so an empty area is
+    # something a person can mean to have.
     Reimbursements::Area.where(id: created_area_ids).where.missing(:budgets).destroy_all
   end
 
   # ROLLING THIS BACK ON A DATABASE THAT APPLIED IT BEFORE PHASE 2B: run
-  # `db:migrate` FIRST. The recording column arrives in 20260911100250, which is
-  # pending on such a database (its version is lower, so Rails applies it out of
-  # order), and without it #down raises AreaMembership::MissingRecordError —
-  # mid-chain, with 20260911100400/500/600 already reverted. Nothing is lost and
-  # `db:migrate` puts them back, but the rollback stops in an unexpected place.
+  # `db:migrate` FIRST. The recording column arrives in 20260911100250, pending
+  # on such a database (lower version, so Rails applies it out of order), and
+  # without it this raises AreaMembership::MissingRecordError mid-chain with
+  # 20260911100400/500/600 already reverted. Nothing is lost and `db:migrate`
+  # puts them back, but the rollback stops in an unexpected place.
   #
-  # Detach, then drop the areas this migration created. The budgets' own owner
+  # Detach, then drop the areas this migration created — the budgets' own owner
   # rows were deliberately kept (see AreaBackfill), so ownership returns to
-  # exactly where it was — PROVIDED nothing has hand-edited the area tree
-  # since. This is the first migration to write these tables, so today a
-  # blanket wipe is equivalent to "what up created" — but the area edit form
-  # (a later task) lets finance set a real agreed total and create areas of
-  # its own, and a `down` after that must not destroy their work. Refuse
-  # rather than silently drop it, the same shape as
-  # 20260911100200_allow_area_budget_forecasts's refusal over area forecasts.
+  # where it was, PROVIDED nothing has hand-edited the area tree since. The
+  # area edit form lets finance set a real agreed total and create areas of
+  # their own, and a `down` after that must not destroy their work: refuse
+  # rather than silently drop it, the shape
+  # 20260911100200_allow_area_budget_forecasts already uses.
   def down
     concerns = []
 
@@ -41,10 +37,8 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
     concerns << "areas with a hand-set initial_budget (#{hand_totalled.join(', ')})" if hand_totalled.any?
 
     # Area.delete_all below bypasses has_many :forecasts, dependent: :destroy,
-    # so an area whose agreed total has been revised would otherwise get past
-    # both other guards and die on a raw FK violation. A revision to an agreed
-    # total is finance's work either way, the same thing
-    # 20260911100200_allow_area_budget_forecasts refuses to drop.
+    # so a revised agreed total would otherwise get past both other guards and
+    # die on a raw FK violation — and a revision is finance's work either way.
     forecast_revised = Reimbursements::Area.joins(:forecasts).distinct.pluck(:name)
     concerns << "areas carrying a forecast of their own (#{forecast_revised.join(', ')})" if
       forecast_revised.any?
@@ -66,8 +60,8 @@ class BackfillReimbursementsAreas < ActiveRecord::Migration[8.1]
             "the area tree shows signs of hand-editing — #{concerns.join('; ')} — unwind by hand before rolling back"
     end
 
-    # Record before detaching, and in one transaction with it: a detach whose
-    # record did not land is exactly the silent loss this exists to stop.
+    # Record before detaching and in one transaction with it: a detach whose
+    # record did not land is the silent loss this exists to stop.
     ActiveRecord::Base.transaction do
       Reimbursements::AreaMembership.record!
       Reimbursements::Budget.where.not(area_id: nil).update_all(area_id: nil)
