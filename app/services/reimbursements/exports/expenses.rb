@@ -11,7 +11,7 @@ module Reimbursements
     class Expenses < Base
       HEADERS = [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
                   "Description", "Payment reference", "Submitted", "Needs attention",
-                  "Cost centre" ].freeze
+                  "Cost centre", "Area" ].freeze
       SHEET_NAME = "Expenses".freeze
       SLUG = "expenses".freeze
 
@@ -23,8 +23,18 @@ module Reimbursements
           expense.budget&.name, expense.amount, expense.amount_excl_vat,
           expense.description, expense.payment_reference,
           iso_date(expense.submitted_at), attention_reasons(expense).join("; "),
-          cost_centre_name(expense.cost_centre_id)
+          cost_centre_name(expense.cost_centre_id), area_name(expense)
         ]
+      end
+
+      # Through budget_by_id (store.budgets, unscoped), NOT expense.budget —
+      # attention_reasons below already forces that map to load for every
+      # actionable row, and store.budgets preloads area: :owners for Budgets'
+      # own owner_names column. Reading expense.budget.area directly would
+      # lazy-load a second, unpreloaded Budget/Area pair per unique budget
+      # referenced in the export.
+      def area_name(expense)
+        budget_by_id[expense.budget_record_id]&.area&.name
       end
 
       # Match the on-screen table: no attention reasons on non-actionable

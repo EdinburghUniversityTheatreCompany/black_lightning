@@ -224,7 +224,8 @@ module Admin
 
         rows = CSV.parse(response.body)
         assert_equal [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
-                       "Description", "Payment reference", "Submitted", "Needs attention", "Cost centre" ], rows.first
+                       "Description", "Payment reference", "Submitted", "Needs attention",
+                       "Cost centre", "Area" ], rows.first
         assert_equal 4, rows.size, "header + three expenses"
         # A concrete data row: the Paid "Stage nails" expense to Pat, £5.00, Props.
         stage = rows.find { |r| r[6] == "Stage nails" }

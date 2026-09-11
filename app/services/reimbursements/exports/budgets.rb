@@ -20,13 +20,18 @@ module Reimbursements
     # * Remaining (forecast - committed) and Variance (forecast - initial) are
     #   blank without a forecast, and Variance is legitimately negative when the
     #   forecast came in under the original plan.
+    # * Area — blank for the 14-of-31 live Fringe budgets that have none. Read
+    #   off budget.area directly rather than store.areas: both collections this
+    #   exporter is ever handed (store.budgets, store.budgets_with_actuals)
+    #   already preload area: :owners for owner_names above, so the name costs
+    #   nothing further.
     #
     # All amounts are excl-VAT, mirroring the BACS spreadsheet.
     class Budgets < Base
       HEADERS = [ "Budget", "Nominal code", "Type", "Visible", "Initial", "Current forecast",
                   "Projected", "Committed", "Pipeline", "Paid (portal)", "EUSA actual",
                   "Expected outturn", "Remaining", "Variance", "Owners",
-                  "Cost centre" ].freeze
+                  "Cost centre", "Area" ].freeze
       SHEET_NAME = "Budgets".freeze
       SLUG = "budgets".freeze
 
@@ -40,7 +45,7 @@ module Reimbursements
           budget.committed_amount, budget.pipeline_amount, budget.paid_portal_amount,
           budget.eusa_actual_amount, budget.expected_outturn,
           budget.remaining, budget.variance, owner_names(budget),
-          cost_centre_name(budget.cost_centre_id)
+          cost_centre_name(budget.cost_centre_id), budget.area&.name
         ]
       end
 

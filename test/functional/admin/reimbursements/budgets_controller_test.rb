@@ -245,7 +245,8 @@ module Admin
         rows = CSV.parse(response.body)
         assert_equal [ "Budget", "Nominal code", "Type", "Visible", "Initial", "Current forecast",
                        "Projected", "Committed", "Pipeline", "Paid (portal)", "EUSA actual",
-                       "Expected outturn", "Remaining", "Variance", "Owners", "Cost centre" ], rows.first
+                       "Expected outturn", "Remaining", "Variance", "Owners", "Cost centre",
+                       "Area" ], rows.first
         assert_equal 3, rows.size, "header + two budgets"
 
         props = rows.find { |r| r[0] == "Props" }
