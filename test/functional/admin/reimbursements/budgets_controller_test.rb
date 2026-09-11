@@ -656,7 +656,9 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Budgets by area"
-        assert_includes response.body, "Cogito"
+        # The heading span exists only on an area row, so a budget called
+        # "Cogito something" could not satisfy this the way a body match would.
+        assert_select "th[scope=rowgroup] span.font-semibold", text: "Cogito"
         # 750 = 400 + 350, a figure no single row carries, so the assertion pins
         # the grouping rather than a budget line.
         assert_includes response.body, "Subtotal Cogito (Expense)"
@@ -665,13 +667,17 @@ module Admin
         # (5000 - 750), both read off the area rather than off its lines.
         assert_includes response.body, "Agreed total £5,000.00"
         assert_includes response.body, "£4,250.00 not yet allocated"
-        # Props and the income line belong to no area, and still have to appear.
+        # Props and the income line belong to no area, and still have to appear —
+        # under a heading, never behind an empty state.
         assert_includes response.body, "Not in an area"
+        assert_not_includes response.body, "No budgets to group."
       end
 
       test "overview never totals an area's expense and income lines together" do
         sign_in @user
-        area = create_reimbursements_area(name: "Cogito")
+        # An agreed total, so the one figure that would net the two types
+        # against each other is actually reached and can be asserted on.
+        area = create_reimbursements_area(name: "Cogito", initial_budget: 1000)
         create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
                                      initial_budget: 410)
         create_reimbursements_budget(name: "Cogito tickets", nominal_code: "8100", area: area,
@@ -680,25 +686,38 @@ module Admin
         get :overview
 
         assert_response :success
-        spend, income = assigns(:area_rollups).sole.by_type
+        rollup = assigns(:area_rollups).sole
+        spend, income = rollup.by_type
         assert_equal BigDecimal("410"), spend.initial
         assert_equal BigDecimal("805"), income.initial
         assert_includes response.body, "Subtotal Cogito (Expense)"
         assert_includes response.body, "Subtotal Cogito (Income)"
         # 1,215 is neither the show's spend nor its income, so nothing says it.
         assert_not_includes response.body, "£1,215.00"
+        # Area#unallocated is 1000 - 410 - 805 = -215, spend netted against
+        # income and indistinguishable from real over-allocation. The agreed
+        # total still stands: it is one figure the committee agreed, not a sum.
+        assert_equal BigDecimal("-215"), rollup.area.unallocated
+        assert_nil rollup.unallocated
+        assert_includes response.body, "Agreed total £1,000.00"
+        assert_not_includes response.body, "-£215.00"
+        assert_not_includes response.body, "not yet allocated"
+        assert_includes response.body,
+                        "No allocation figure: this area holds both expense and income lines."
       end
 
       test "an area with no agreed total shows no figure, never a zero" do
         sign_in @user
-        area = create_reimbursements_area(name: "Backfilled")
-        create_reimbursements_budget(name: "Backfilled props", nominal_code: "4300", area: area,
+        # The area and its line share no substring, so neither assertion below
+        # can pass off the other's name.
+        area = create_reimbursements_area(name: "Backfilled show")
+        create_reimbursements_budget(name: "Props ledger", nominal_code: "4300", area: area,
                                      initial_budget: 400)
 
         get :overview
 
         assert_response :success
-        assert_includes response.body, "Backfilled"
+        assert_select "th[scope=rowgroup] span.font-semibold", text: "Backfilled show"
         # "Agreed total £0.00" would read as the show being fully overspent.
         assert_not_includes response.body, "Agreed total"
         assert_not_includes response.body, "not yet allocated"
@@ -721,11 +740,44 @@ module Admin
         assert_response :success
         # The totals cover the year on screen: the other line is not listed...
         assert_not_includes response.body, "Cogito next year"
-        assert_includes response.body, "1 of 2 lines shown"
-        assert_includes response.body, "1 line in another year or cost centre"
-        # ...while the area's own unallocated figure counts both lines
+        # ...while the area's own unallocated figure subtracts both lines
         # (5000 - 400 - 900), which is exactly the disagreement the row names.
         assert_includes response.body, "£3,700.00 not yet allocated"
+        # Pinned whole: the sentence's only job is to stop a finance user
+        # misreading two disagreeing figures, so every clause has to be true.
+        # The agreed total is named by neither: it counts no lines at all.
+        assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
+                     "the totals below but already subtracted from the not-yet-allocated figure.",
+                     css_select("span.text-warning").sole.text.squish
+
+        # With no agreed total there is no allocation figure on screen, so the
+        # sentence must not claim one.
+        area.update!(initial_budget: nil)
+        get :overview, params: { year: this_year.key }
+
+        assert_not_includes response.body, "not yet allocated"
+        assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
+                     "the totals below.",
+                     css_select("span.text-warning").sole.text.squish
+      end
+
+      test "the area card's empty state appears only when there is nothing to group" do
+        sign_in @user
+        # Budgets but no areas is not an empty page: they group under "Not in an
+        # area", and a banner over a full table would contradict it.
+        get :overview
+
+        assert_includes response.body, "Not in an area"
+        assert_not_includes response.body, "No budgets to group."
+
+        ::Reimbursements::EusaActual.delete_all
+        ::Reimbursements::Expense.destroy_all
+        ::Reimbursements::Budget.destroy_all
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "No budgets to group."
       end
 
       test "the area card reads its figures off store.areas, not off budget.area" do

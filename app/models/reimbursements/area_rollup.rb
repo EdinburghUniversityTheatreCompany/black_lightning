@@ -28,7 +28,26 @@ module Reimbursements
 
     # The part of that agreed total not yet split out into category lines. NOT
     # spare money, and nil for the same reason #agreed is.
-    def unallocated = area&.unallocated
+    #
+    # Withheld entirely for an area holding both budget types: Area#unallocated
+    # subtracts every line's projected amount from the agreed total with no type
+    # filter, so £1,000 agreed over £400 of spend and £800 of income prints
+    # -£200, indistinguishable from real over-allocation and the one figure on
+    # this card that would net income against spend. What an agreed total means
+    # across two types is a question for whoever agreed it, not for this card.
+    def unallocated
+      return nil if mixed_budget_types?
+
+      area&.unallocated
+    end
+
+    # Read against EVERY line the area holds, not the ones on screen: the figure
+    # this guards is summed over all of them too.
+    def mixed_budget_types?
+      return false if area.nil?
+
+      area.budgets.map(&:budget_type).uniq.size > 1
+    end
 
     # Lines on screen against every line the area holds. Read these off the
     # GROUP rollup: a #by_type child holds one type's slice, so its counts

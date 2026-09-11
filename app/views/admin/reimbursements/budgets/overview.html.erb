@@ -52,20 +52,23 @@
   <%# No grand total here: this card regroups exactly the budgets the card above
       totals, so a footer would restate that card's grand total rather than
       answer anything new. %>
-  <% if @area_rollups.empty? %>
-    <p class="px-4 py-2 text-gray-600">No budget is filed under an area yet.</p>
+  <% if @area_rollups.empty? && @unassigned_rollup.nil? %>
+    <p class="px-4 py-4 text-center text-gray-600">No budgets to group.</p>
+  <% else %>
+    <div class="table-scroll">
+      <table class="table table-hover table-sticky-head">
+        <%= render "overview_head", expected_tip: expected_tip %>
+        <% @area_rollups.each do |rollup| %>
+          <%= render "area_group", rollup: rollup, label: rollup.name %>
+        <% end %>
+        <%# Every line not in an area, under one heading — which is also what a
+            portal with no areas at all renders. %>
+        <% if @unassigned_rollup %>
+          <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
+        <% end %>
+      </table>
+    </div>
   <% end %>
-  <div class="table-scroll">
-    <table class="table table-hover table-sticky-head">
-      <%= render "overview_head", expected_tip: expected_tip %>
-      <% @area_rollups.each do |rollup| %>
-        <%= render "area_group", rollup: rollup, label: rollup.name %>
-      <% end %>
-      <% if @unassigned_rollup %>
-        <%= render "area_group", rollup: @unassigned_rollup, label: "Not in an area" %>
-      <% end %>
-    </table>
-  </div>
 <% end %>
 
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>

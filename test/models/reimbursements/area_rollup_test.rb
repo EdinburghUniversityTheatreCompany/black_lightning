@@ -94,6 +94,25 @@ module Reimbursements
       assert_nil totals.unallocated
     end
 
+    test "an area holding both budget types reports no allocation figure at all" do
+      marketing = line(name: "Marketing", initial_budget: 400)
+      line(name: "Ticket income", budget_type: "Income", initial_budget: 800)
+
+      totals = rollup
+
+      assert_predicate totals, :mixed_budget_types?
+      # Area#unallocated subtracts both with no type filter: 1000 - 400 - 800.
+      # A -200 on screen is indistinguishable from real over-allocation.
+      assert_equal BigDecimal("-200"), @area.unallocated
+      assert_nil totals.unallocated
+      # The agreed total is one figure the committee agreed, not a sum, so it
+      # survives.
+      assert_equal BigDecimal("1000"), totals.agreed
+      # Withheld on the strength of every line the area holds, not the ones on
+      # screen — the figure it guards is summed over all of them too.
+      assert_nil rollup([ marketing ]).unallocated
+    end
+
     test "an area holding lines outside the screen's scope says how many are shown" do
       shown = line(name: "Props")
       line(name: "Set")
@@ -123,6 +142,7 @@ module Reimbursements
       assert_nil totals.name
       assert_nil totals.agreed
       assert_nil totals.unallocated
+      assert_not totals.mixed_budget_types?
       assert_equal 0, totals.lines_out_of_scope
       assert_equal BigDecimal("50"), totals.initial
     end

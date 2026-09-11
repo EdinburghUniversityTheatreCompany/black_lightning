@@ -20,15 +20,25 @@
             <%= reimbursements_money(rollup.unallocated) %> not yet allocated
           </span>
         <% end %>
-        <%# The area's own figures sum every line ever linked to it, while the
-            totals below cover the lines this year and cost centre scope to. A
-            line filed under an area from another year makes the two disagree,
-            so the row says so rather than dropping or absorbing it silently. %>
+        <%# The figure nets income against spend, so it is withheld rather than
+            printed wrong — see AreaRollup#unallocated. Only worth saying where
+            there is an agreed total to allocate. %>
+        <% if rollup.mixed_budget_types? && !rollup.agreed.nil? %>
+          <span class="text-sm text-gray-600">
+            No allocation figure: this area holds both expense and income lines.
+          </span>
+        <% end %>
+        <%# The not-yet-allocated figure subtracts every line ever linked to the
+            area, while the totals below cover only the lines this year and cost
+            centre scope to. A line filed under an area from another year makes
+            the two disagree, so the row says so rather than dropping or
+            absorbing it silently. The agreed total is named by neither clause:
+            it is the area's own forecast and counts no lines at all. %>
         <% if rollup.lines_out_of_scope.positive? %>
           <span class="text-sm text-warning">
             <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "line") %> shown.
             <%= pluralize(rollup.lines_out_of_scope, "line") %> in another year or cost centre,
-            <%= rollup.agreed.nil? ? "not counted below." : "counted in the agreed figures above but not in the totals below." %>
+            left out of the totals below<%= rollup.unallocated.nil? ? "." : " but already subtracted from the not-yet-allocated figure." %>
           </span>
         <% end %>
       </div>

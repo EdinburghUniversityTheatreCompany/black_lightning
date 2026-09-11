@@ -356,10 +356,16 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
     paginated and scoped — the row states when fewer lines are visible than exist.
   - **The overview's area card totals the budgets the SCREEN is scoped to** (`AreaRollup`, the
-    same budgets the nominal-code card totals), while the agreed total and "not yet allocated"
-    beside it come off the area and count every line ever linked to it. A budget CAN hold an
-    area from another year, so the heading states the gap ("2 of 3 lines shown…") rather than
-    dropping that spend or folding it in. `RollupTotals` is the arithmetic both cards share.
+    same budgets the nominal-code card totals), while "not yet allocated" beside it subtracts
+    every line ever linked to the area, in any year or centre. The agreed total counts no lines
+    at all — it is the area's own forecast — so the heading's warning names only the allocation
+    figure ("…left out of the totals below but already subtracted from the not-yet-allocated
+    figure"), never the agreed total. A budget CAN hold an area from another year, which is
+    what makes the two disagree.
+  - **An area holding BOTH budget types prints no allocation figure.** `Area#unallocated`
+    subtracts every line's projection from the agreed total with no type filter, so £1,000
+    agreed over £400 of spend and £800 of income renders -£200 — income netted against spend,
+    reading as over-allocation. `AreaRollup#unallocated` withholds it and the card says why.
   - **Area names are unique within one (financial year, cost centre)** by model validation —
     the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
     NULLs through a unique index, and an area with no year/centre yet has NULLs in both.
