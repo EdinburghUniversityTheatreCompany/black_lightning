@@ -132,9 +132,7 @@
       <ul class="mt-2 space-y-1">
         <% owner_sets.each do |set| %>
           <li>
-            <strong><%= set[:area_name] %></strong><% if set[:area_is_new] %>
-              <span class="text-gray-600">(new)</span>
-            <% end %>:
+            <strong><%= set[:area_name] %></strong><% if set[:area_is_new] %><span class="text-gray-600"> (new)</span><% end %>:
             <%= safe_join(set[:owners].map do |owner|
                   if owner[:added]
                     content_tag(:span, "#{owner[:name]} (added)", class: "font-medium text-amber-800")
