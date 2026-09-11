@@ -373,6 +373,30 @@ survive as historical import provenance and are never written. Spec + plan in
     area reproducible from its budgets and so DISARMS `BackfillReimbursementsAreas#down`'s refusal
     — turning a guard against unwinding a hand-edited area tree into a silent delete of areas and
     their owner rows. Phase 2b drops the column, which closes the rollback window on purpose.
+  - **A rollback of the backfill RECORDS where each line was**
+    (`Reimbursements::AreaMembership`, `reimbursements_budgets.area_before_rollback`), because
+    `AreaBackfill` re-homes only the lines whose NAME reproduces their area: one created,
+    moved or imported into an area came back with its name intact and its area gone, and
+    re-migrating never restored it. The record carries the area's IDENTITY (name, centre,
+    year — an id would dangle, `down` deletes the rows) **and its owner list**, since
+    `seed_owners!` seeds an area from its children's own rows and so rebuilt an area naming
+    nobody, switching sign-off off under it. **The recording migration's version sits BELOW
+    the backfill's**: a rollback reverses in descending order, so the column outlives the
+    `down` that writes it instead of being dropped first.
+  - **A validation must not read a column the backfill's own migration predates.**
+    `Area`'s `budget_basis` inclusion is guarded by `has_attribute?`, because
+    `BackfillReimbursementsAreas#up` creates areas through the live model and runs BEFORE the
+    migration that adds that column — without the guard every `db:migrate` after a rollback
+    died in `AreaBackfill` with `NoMethodError`, so the areas could be unwound but never put
+    back. Every future column on a model a data-migration service writes repeats this.
+  - **The budget form REFUSES the owners ticked for a line going into an area**, rather than
+    writing them to `own_owners`, which `Budget#owners` stops reading the moment there is an
+    area. The guard reads the area the form is GIVING the line, not the one the record already
+    has — `#create` builds a `Budget.new` whose `area_id` is nil until the post is assigned.
+    A Stimulus controller disables the whole fieldset when an area is chosen, so the browser
+    posts no `owner_ids` at all and the own-owner rows are left alone instead of synced to an
+    empty list. A budget ALREADY in an area is unchanged: its form offers no list, and what a
+    stale page posts is still ignored rather than refused.
   - **Area figures must be read off `store.areas`** (unscoped, preloads `:forecasts` and
     `budgets: [:expenses, :forecasts]`), never off `budget.area` — whose `budgets` collection
     is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31). The
