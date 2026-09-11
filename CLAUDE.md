@@ -460,16 +460,25 @@ survive as historical import provenance and are never written. Spec + plan in
   - **Neither Expense nor Batch has a cost-centre column.** An expense resolves one through its
     budget; a batch through the expenses it holds — so the reopen mailbox must be read BEFORE the
     revert unlinks them. Review's three tabs, their counts and the CSV come off ONE scoped list.
-  - **A centre's nominal codes are maintained from its Settings page**
-    (`Admin::Reimbursements::NominalCodesController`, `settings/:key/nominal_codes`, finance-gated
-    as Settings is; `NominalCodeSeed` filled the list with GUESSED labels this screen corrects).
-    **Retiring beats deleting and the CONTROLLER decides which**: a code a budget line carries is
-    deactivated so it leaves the pickers and still labels those lines, and only an unreferenced
-    code is deleted — the row's Retire/Delete wording is a prediction made when the page rendered.
-    A budget with NO centre counts as carrying the code in EVERY centre (it is lenient-scoped into
-    every centre's screens). `code` is never updatable: every budget, actuals row and export
-    stores it as a string, so a rename strands them all. The Settings panel's `before_action`
-    covers `update` as well as `edit`, because a refused save re-renders `:edit`.
+  - **A centre's nominal codes are maintained ON its Settings edit page**, per the spec, by
+    `settings/_nominal_codes` + `Admin::Reimbursements::NominalCodesController` (writes only, no
+    index; `settings/:key/nominal_codes`, finance-gated as Settings is; `NominalCodeSeed` filled
+    the list with GUESSED labels the screen corrects).
+    - **The section is a SIBLING of the cost centre's `simple_form`, never nested in it** — a form
+      inside a form is invalid HTML and the inner submit silently does nothing, the same class as
+      the card-footer trap. Each control is its own small form, and every write answers a **turbo
+      stream replacing `#nominal_codes` plus a `toast`**, so the centre's form is not re-rendered
+      and a half-typed mailbox survives; the toast carries the notice a redirect's flash would
+      lose, rendering outside the replaced section. Only a browser test sees any of this.
+    - **Retiring beats deleting and the CONTROLLER decides which**: a code any historical row
+      carries — a budget line OR an imported EUSA actuals row, both storing it as a string — is
+      deactivated so it leaves the pickers and still labels those rows, and only an unreferenced
+      code is deleted. The row's Retire/Delete wording is a prediction made when the page
+      rendered, and it reads the SAME counts `#in_use?` decides by. A row with NO centre counts
+      in EVERY centre (it is lenient-scoped into every centre's screens).
+    - `code` is never updatable: every budget, actuals row and export stores it as a string, so a
+      rename strands them all. The Settings `before_action` loading the section covers `update`
+      as well as `edit`, because a refused save re-renders `:edit`.
 
 - **Setting a year up = importing the committee's spreadsheet** (`Reimbursements::BudgetImport`,
   `Admin::Reimbursements::BudgetImportsController`, `DatabaseStore#import_budgets!`). Paste TSV or
