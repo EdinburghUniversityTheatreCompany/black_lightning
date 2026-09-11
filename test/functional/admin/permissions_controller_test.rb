@@ -16,6 +16,12 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
       "CostCentre is managed via the Settings form + finance permission, not the per-model grid"
   end
 
+  test "grid excludes Reimbursements::NominalCode like its sibling reimbursements models" do
+    get :grid
+    assert_not_includes assigns(:models), Reimbursements::NominalCode,
+      "NominalCode is gated by the reimbursements permission, not the per-model grid"
+  end
+
   test "grid offers the committee page permission as a miscellaneous row" do
     get :grid
     assert_select "input[name='[Committee][committee]access'][checked]", 1

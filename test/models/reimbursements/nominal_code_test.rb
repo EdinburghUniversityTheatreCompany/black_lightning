@@ -17,6 +17,42 @@ module Reimbursements
       assert other.valid?, "the same code in another centre is a different account"
     end
 
+    test "a duplicate code is rejected case-insensitively" do
+      cc = Reimbursements::CostCentre.default
+      create_reimbursements_nominal_code(code: "abc123", cost_centre: cc)
+      dupe = NominalCode.new(code: "ABC123", cost_centre: cc, label: "Marketing")
+      assert_not dupe.valid?
+      assert dupe.errors[:code].present?
+    end
+
+    test "a duplicate code is rejected accent-insensitively" do
+      cc = Reimbursements::CostCentre.default
+      create_reimbursements_nominal_code(code: "cafe1", cost_centre: cc)
+      dupe = NominalCode.new(code: "café1", cost_centre: cc, label: "Marketing")
+      assert_not dupe.valid?
+      assert dupe.errors[:code].present?
+    end
+
+    # PAD SPACE: 'abc' = 'abc ' under utf8mb4_unicode_ci but not under
+    # utf8mb4_0900_ai_ci (the MySQL 8 server default) — a regression guard for
+    # the table actually carrying the collation the migration pins.
+    test "a trailing-space code is rejected as a duplicate" do
+      cc = Reimbursements::CostCentre.default
+      create_reimbursements_nominal_code(code: "432320", cost_centre: cc)
+      dupe = NominalCode.new(code: "432320 ", cost_centre: cc, label: "Marketing")
+      assert_not dupe.valid?
+      assert dupe.errors[:code].present?
+    end
+
+    test "active defaults to true, and false persists" do
+      code = NominalCode.create!(code: "999999", label: "Test",
+                                 cost_centre: Reimbursements::CostCentre.default)
+      assert code.active?
+
+      code.update!(active: false)
+      assert_not code.reload.active?
+    end
+
     test "a zero-padded code keeps its padding" do
       code = create_reimbursements_nominal_code(code: "041000")
       assert_equal "041000", code.reload.code

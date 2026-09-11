@@ -97,7 +97,7 @@ class Admin::PermissionsController < AdminController
                   Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
                   Reimbursements::Area, Reimbursements::AreaOwner,
                   Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
-                  Reimbursements::FinancialYear, Reimbursements::CostCentre,
+                  Reimbursements::FinancialYear, Reimbursements::CostCentre, Reimbursements::NominalCode,
                   Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq
 
     role_exclude = Admin::Permission::EXCLUDED_ROLES

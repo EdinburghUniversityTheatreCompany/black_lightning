@@ -73,12 +73,19 @@ module ReimbursementsTestHelpers
     )
   end
 
-  # A nominal code, defaulting to the fixture cost centre (as
-  # create_reimbursements_budget's cost_centre would if it weren't optional
-  # there) — NominalCode#cost_centre is required, so callers that don't care
-  # which centre still get a valid row.
-  def create_reimbursements_nominal_code(code:, cost_centre: nil, label: "Marketing", active: true)
-    Reimbursements::NominalCode.create!(code: code, label: label, active: active,
+  # A nominal code. cost_centre: nil resolves through CostCentre.default — the
+  # fixture row in a one-centre test, but "order(:id).first" once a test has
+  # built a second centre (create_second_reimbursements_cost_centre): pass
+  # cost_centre: explicitly in any test with two centres in play.
+  #
+  # label: nil derives "Label for #{code}" rather than a fixed default: a
+  # fixed string like "Marketing" is a PLAUSIBLE REAL label (live Fringe data
+  # has three budget lines called exactly that), so two codes seeded through
+  # this helper with no label: would share one — and an assertion that reads
+  # a NominalCode's label back would pass whether it read the right code, the
+  # wrong code, or just hardcoded the string.
+  def create_reimbursements_nominal_code(code:, cost_centre: nil, label: nil, active: true)
+    Reimbursements::NominalCode.create!(code: code, label: label || "Label for #{code}", active: active,
                                         cost_centre: cost_centre || Reimbursements::CostCentre.default)
   end
 

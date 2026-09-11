@@ -23,11 +23,8 @@ module Reimbursements
   ##
   # One line of a cost centre's chart of accounts. Owned by that centre alone
   # — a global list would let Fringe's admin retire a code Bedlam books
-  # against, since the two centres are different EUSA accounts with their own
-  # charts. code is a STRING and stays one: nominal codes are zero-padded
-  # (041000), and an integer column would lose the padding at the source (see
-  # Exports::Base#add_sheet, which pins every String cell to Axlsx :string
-  # for the same reason).
+  # against. code is a STRING and stays one: codes are zero-padded (041000),
+  # the same coercion Exports::Base#add_sheet guards against for xlsx cells.
   class NominalCode < ApplicationRecord
     include RecordId
 
