@@ -102,7 +102,15 @@ On the area:
 has been assigned to categories, without pretending the remainder is spare.
 
 **Expense and Income areas are never totalled together**, for the same reason budgets aren't
-(`NominalCodeRollup#by_type`). An area holding both is an error worth reporting at import.
+(`NominalCodeRollup#by_type`).
+
+> **Amended 2026-09-11 (Mick's basis ruling, Phase 2b Task 5).** This section originally continued
+> "An area holding both is an error worth reporting at import." It is not: an area holding both is
+> a first-class state, and the area DECLARES what its agreed total is a total of
+> (`areas.budget_basis` — a SHOW gets a spend cap, a COMMITTEE a net allowance). `expenses` leaves
+> the income lines out of `Area#allocated`; `net` subtracts them. The first sentence still stands
+> unchanged: `AreaRollup#by_type` keeps its two subtotals separate on BOTH bases, because "what
+> did this area spend" is a different question from "how much room has it left".
 
 ## Ownership
 

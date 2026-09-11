@@ -372,7 +372,8 @@ survive as historical import provenance and are never written. Spec + plan in
     Restoring by RULE instead would re-prefix lines the strip refused to touch, which makes every
     area reproducible from its budgets and so DISARMS `BackfillReimbursementsAreas#down`'s refusal
     — turning a guard against unwinding a hand-edited area tree into a silent delete of areas and
-    their owner rows. Phase 2b drops the column, which closes the rollback window on purpose.
+    their owner rows. Phase 2b's Task 8 will drop the column and close that rollback window on
+    purpose; it has NOT run — the column is still there and the rename is still reversible.
   - **A rollback of the backfill RECORDS where each line was**
     (`Reimbursements::AreaMembership`, `reimbursements_budgets.area_before_rollback`), because
     `AreaBackfill` re-homes only the lines whose NAME reproduces their area: one created,
