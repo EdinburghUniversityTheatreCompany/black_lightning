@@ -1450,6 +1450,37 @@ module Reimbursements
       assert_empty import.re_homes, "the cell is blank, so nothing asked for the line to move"
     end
 
+    # N4: the label compares by RECORD, as #re_homes does. Lenient year scoping
+    # puts an unstamped Cogito beside a real one and a budget can hold an area
+    # from another year, so comparing the two NAMES reads that as agreement and
+    # says nothing on the one row where the operator most needs telling.
+    test "a matched line in a same-named area from another year is qualified, not silent" do
+      stale = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                         financial_year: FinancialYear.create!(label: "Fringe 2026"))
+      here = area_named("Cogito")
+      budget = create_reimbursements_budget(name: "Marketing", area: stale, initial_budget: 400,
+                                            cost_centre: @cost_centre, financial_year: @year)
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: [ budget ], existing_areas: [ here ])
+
+      assert_equal budget.record_id, import.entries.sole.budget.record_id
+      assert_match(/Fringe 2026/, import.entries.sole.matched_area_label)
+    end
+
+    # The ordinary case says nothing: same area, same record, and a label there
+    # would repeat the cell on every row of an ordinary filled-in sheet.
+    test "a matched line in the area the sheet named is not labelled" do
+      here = area_named("Cogito")
+      budget = create_reimbursements_budget(name: "Marketing", area: here, initial_budget: 400,
+                                            cost_centre: @cost_centre, financial_year: @year)
+
+      import = build_import(area_sheet("Cogito", "Marketing"),
+                            existing_budgets: [ budget ], existing_areas: [ here ])
+
+      assert_nil import.entries.sole.matched_area_label
+    end
+
     # N2: for a group the PREFIX named, "told apart by their area" invites an
     # Area cell that would change nothing — the rows already agree about it.
     test "the duplicate message does not suggest an Area cell the prefix already gave" do
