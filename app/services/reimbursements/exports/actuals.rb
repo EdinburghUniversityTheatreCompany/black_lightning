@@ -16,7 +16,7 @@ module Reimbursements
     # that net to zero can also be filtered out entirely.
     class Actuals < Base
       HEADERS = [ "Date", "Type", "Description", "Amount", "Budget",
-                  "Linked expense", "Period", "Status", "Cost centre" ].freeze
+                  "Linked expense", "Period", "Status", "Cost centre", "Area" ].freeze
       SHEET_NAME = "Actuals".freeze
       SLUG = "actuals".freeze
 
@@ -33,7 +33,7 @@ module Reimbursements
           expense_by_id[actual.linked_expense_ids.first]&.auto_number,
           actual.period,
           actual.reconciliation_status.presence&.capitalize,
-          cost_centre_name(actual.cost_centre_id)
+          cost_centre_name(actual.cost_centre_id), area_name(actual)
         ]
       end
 
@@ -44,6 +44,25 @@ module Reimbursements
         return nil if actual.credit.nil?
 
         actual.credit.positive? ? -actual.credit : actual.credit
+      end
+
+      # The linked budget, however the row reaches one: booked directly
+      # (budget_id, the Income-budget path the "Budget" column above already
+      # reads) or reconciled to an expense whose OWN budget resolves it (the
+      # Expense-budget path — "Budget" above does not surface this, but the
+      # area is worth resolving anyway; Task 6 stripped the "Area: " prefix,
+      # so this ledger is exactly where losing the grouping hurts). Read
+      # through budget_by_id both times, never expense.budget, so the area
+      # comes off the same preloaded (area: :owners) Budget object either
+      # way — both maps are already unconditionally built for every row by
+      # the two lookups above, so this costs nothing further.
+      def linked_budget(actual)
+        budget_by_id[actual.linked_budget_ids.first] ||
+          budget_by_id[expense_by_id[actual.linked_expense_ids.first]&.budget_record_id]
+      end
+
+      def area_name(actual)
+        linked_budget(actual)&.area&.name
       end
     end
   end

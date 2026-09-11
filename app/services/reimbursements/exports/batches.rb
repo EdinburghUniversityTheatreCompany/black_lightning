@@ -11,6 +11,12 @@ module Reimbursements
     # History cards are computed from the same set. No bank details: a batch
     # summary has no payee columns, and the numbers EUSA pays from live only on
     # the BACS spreadsheet.
+    #
+    # DELIBERATELY NO "Area" column, unlike Budgets/Expenses/Actuals: a batch
+    # spans several claims and therefore several shows, so a single Area cell
+    # would be a lie rather than a blank — the same reasoning Exports::People
+    # has for carrying no Cost centre. Not an oversight for a later task to
+    # "finish".
     class Batches < Base
       HEADERS = [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
                   "EUSA draft", "SharePoint backup", "Cost centre" ].freeze
