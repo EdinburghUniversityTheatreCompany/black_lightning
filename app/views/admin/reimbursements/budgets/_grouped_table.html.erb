@@ -30,12 +30,28 @@
               <% end %>
               <%# The agreed figure carries the same label as the overview card:
                   it names what the total is a total OF, which is what decides
-                  whether the income lines below count against it. %>
+                  whether the income lines below count against it. Suppressed
+                  entirely when nobody agreed a total, as the overview card
+                  suppresses it: "Agreed total (expenses) -" reads as a claim
+                  about expenses rather than as an unset plan. %>
+              <% unless area.projected_amount.nil? %>
+                <span class="text-sm text-gray-600">
+                  <%= area.basis_label %> <%= reimbursements_money(area.projected_amount) %>
+                </span>
+              <% end %>
               <span class="text-sm text-gray-600">
-                <%= area.basis_label %> <%= reimbursements_money(area.projected_amount) %>
-              </span>
-              <span class="text-sm text-gray-600">
-                Allocated <%= reimbursements_money(area.allocated) %>
+                <%# A netted allocation is printed as its two halves rather than
+                    as one negative: you cannot allocate minus four hundred
+                    pounds, a negative money figure is bad news everywhere else
+                    in this portal, and 1,000 - (-400) = 1,400 makes the two
+                    figures on this row reconcile only by subtracting a
+                    negative. %>
+                <% if area.net_basis? && area.allocated_income.positive? %>
+                  Allocated <%= reimbursements_money(area.allocated_spend) %> of spend
+                  less <%= reimbursements_money(area.allocated_income) %> of income
+                <% else %>
+                  Allocated <%= reimbursements_money(area.allocated) %>
+                <% end %>
                 <% unless area.unallocated.nil? %>
                   &middot; <%= reimbursements_money(area.unallocated) %> not yet allocated
                 <% end %>

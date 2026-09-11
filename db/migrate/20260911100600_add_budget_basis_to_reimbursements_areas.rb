@@ -9,9 +9,17 @@ class AddBudgetBasisToReimbursementsAreas < ActiveRecord::Migration[8.1]
   # area is then one deliberate choice by a human on the area form.
   #
   # Adding a column WITH a default is instant on MySQL 8.4 (the app pins
-  # mysql:8.4 everywhere), so this needs no separate backfill. The collation
-  # is the table's own — inherited, like every sibling string column here,
-  # from the utf8mb4_unicode_ci config/database.yml pins.
+  # mysql:8.4 everywhere), so this needs no separate backfill.
+  #
+  # A string column added with no COLLATE clause inherits the TABLE's
+  # collation, not the database's — probed on a throwaway table created
+  # utf8mb4_0900_ai_ci inside a utf8mb4_unicode_ci database, where the new
+  # column came out utf8mb4_0900_ai_ci. So this matches its siblings in
+  # reimbursements_areas whatever the database default is, which is stronger
+  # protection than config/database.yml's pin and a different mechanism from
+  # it. The literals below are deliberately NOT Area::BASIS_EXPENSES: a
+  # migration is frozen in time and must keep running after the constant is
+  # renamed or removed.
   def up
     add_column :reimbursements_areas, :budget_basis, :string, null: false, default: "expenses"
   end

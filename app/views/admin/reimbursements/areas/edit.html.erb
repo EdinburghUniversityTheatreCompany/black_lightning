@@ -33,7 +33,7 @@
     <div><dt class="text-gray-500" title="The part of the agreed total not yet assigned to a line — not spare money.">Unallocated</dt><dd class="font-medium"><%= reimbursements_money(@area.unallocated) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@area.committed_amount) %></dd></div>
     <div>
-      <dt class="text-gray-500">Remaining</dt>
+      <dt class="text-gray-500" title="The agreed total less committed spend — the one figure here that is the same on both bases. Committed counts claims, and income that has landed is an EUSA ledger figure rather than a claim, so there is nothing to net against it.">Remaining</dt>
       <dd class="font-medium <%= "text-danger" if @area.remaining&.negative? %>"><%= reimbursements_money(@area.remaining) %></dd>
     </div>
   </dl>

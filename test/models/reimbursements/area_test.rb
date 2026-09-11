@@ -41,9 +41,9 @@ module Reimbursements
     end
 
     test "the words on the form are the words on the card" do
-      assert_equal "Total expenses",
+      assert_equal "Agreed total (expenses)",
                    create_reimbursements_area(name: "Show", budget_basis: "expenses").basis_label
-      assert_equal "Total net",
+      assert_equal "Agreed total (net)",
                    create_reimbursements_area(name: "Committee", budget_basis: "net").basis_label
     end
   end

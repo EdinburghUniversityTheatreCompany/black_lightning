@@ -106,7 +106,7 @@ module Reimbursements
       marketing = line(name: "Marketing", initial_budget: 400)
       line(name: "Ticket income", budget_type: "Income", initial_budget: 800)
 
-      assert_equal "Total expenses", rollup.total_label
+      assert_equal "Agreed total (expenses)", rollup.total_label
       # A spend cap: the £800 raised buys the show no more room.
       assert_equal BigDecimal("600"), rollup.unallocated
 
@@ -119,14 +119,14 @@ module Reimbursements
       # is summed over all of them, which is what the card's out-of-scope row
       # exists to say.
       assert_equal BigDecimal("1400"), netted.unallocated
-      assert_equal "Total net", netted.total_label
+      assert_equal "Agreed total (net)", netted.total_label
     end
 
     test "the card names which figure it is showing" do
       net = create_reimbursements_area(name: "Committee", budget_basis: "net")
 
-      assert_equal "Total expenses", AreaRollup.new(area: @area, budgets: []).total_label
-      assert_equal "Total net", AreaRollup.new(area: net, budgets: []).total_label
+      assert_equal "Agreed total (expenses)", AreaRollup.new(area: @area, budgets: []).total_label
+      assert_equal "Agreed total (net)", AreaRollup.new(area: net, budgets: []).total_label
     end
 
     test "an area holding lines outside the screen's scope says how many are shown" do

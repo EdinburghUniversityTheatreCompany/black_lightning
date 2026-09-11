@@ -45,18 +45,31 @@ module Reimbursements
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast", dependent: :destroy,
                          inverse_of: :area
 
-    # What the agreed total is a total OF, and the words the card prints for
-    # it. A show's total is a SPEND CAP: the £800 it raises buys it no more
-    # room. A committee's is a NET allowance: money it raises genuinely raises
-    # what it may spend. The area declares which, because it is genuinely both
-    # (Mick, 2026-09-11) and neither reading can be derived from the lines.
+    # What the agreed total is a total OF. A show's total is a SPEND CAP: the
+    # £800 it raises buys it no more room. A committee's is a NET allowance:
+    # money it raises genuinely raises what it may spend. The area declares
+    # which, because it is genuinely both (Mick, 2026-09-11) and neither
+    # reading can be derived from the lines.
+    BASIS_EXPENSES = "expenses".freeze
+    BASIS_NET = "net".freeze
+
+    # "Agreed total" is the noun the form field, the areas index and the
+    # overview card all already use, so the basis is a QUALIFIER on it rather
+    # than a second name for one stored number. "Total expenses" on its own
+    # reads as money already spent — and on the overview card it sits directly
+    # above "Subtotal Cogito (Expense)", so the bigger figure would wear the
+    # word "expenses" while the smaller one was the real expense total.
     #
-    # These two strings are the label everywhere the figure is shown — the
-    # overview card, the grouped index, the area's own financials — AND the
-    # two options on the form, so a finance user picks the words they will
-    # then read back.
-    BASIS_LABELS = { "expenses" => "Total expenses", "net" => "Total net" }.freeze
+    # One source for the words: the label on every card AND, through
+    # BASIS_OPTIONS, the two radios on the form, so a finance user picks the
+    # words they then read back.
+    BASIS_LABELS = { BASIS_EXPENSES => "Agreed total (expenses)",
+                     BASIS_NET => "Agreed total (net)" }.freeze
     BASES = BASIS_LABELS.keys.freeze
+    # simple_form wants [text, value] pairs; BASIS_LABELS is value => text.
+    # Derived here rather than inverted in the view, which put the vocabulary
+    # in two places.
+    BASIS_OPTIONS = BASIS_LABELS.map { |value, text| [ text, value ] }.freeze
 
     validates :name, presence: true
     validates :budget_basis, inclusion: { in: BASES }
@@ -108,6 +121,16 @@ module Reimbursements
 
     # What is left of the AGREED total. Nil when nobody agreed one, rather than
     # reading as the whole spend being over budget.
+    #
+    # This is the one figure on a basis-labelled card that does NOT read the
+    # basis, and that is a decision rather than an oversight. #committed_amount
+    # counts CLAIMS — Approved, Submitted and Paid, ex-VAT — and a claim filed
+    # against an income line is spend recorded on it, not income received, so
+    # netting it would raise the room left by the money somebody spent. Income
+    # that actually landed is Budget#eusa_actual_amount, read off EUSA's
+    # monthly ledger weeks later, and nothing in this portal mixes a committed
+    # figure with an actual one. Remaining is therefore the agreed total less
+    # committed spend on both bases; the edit card's <dt> says so.
     def remaining
       return nil if projected_amount.nil?
 
@@ -123,8 +146,15 @@ module Reimbursements
     # whose two subtotals answer "what did this area spend", a different
     # question that never nets the types together.
     def allocated
-      @allocated ||= budgets.sum { |budget| allocation_of(budget) }
+      @allocated ||= net_basis? ? allocated_spend - allocated_income : allocated_spend
     end
+
+    # The two halves the grouped index prints when they differ, so a netted
+    # allocation is never shown as a bare negative under the word "Allocated"
+    # — you cannot allocate minus four hundred pounds, and in this portal a
+    # negative money figure means bad news everywhere else.
+    def allocated_spend = @allocated_spend ||= projections_of { |budget| !budget.income? }
+    def allocated_income = @allocated_income ||= projections_of(&:income?)
 
     # The part of the agreed total not yet assigned to a category — NOT spare money.
     def unallocated
@@ -135,21 +165,15 @@ module Reimbursements
 
     def income? = budgets.any?(&:income?)
 
-    def net_basis? = budget_basis == "net"
+    def net_basis? = budget_basis == BASIS_NET
 
     def basis_label = BASIS_LABELS[budget_basis]
 
     private
 
-    # An income line's share of the agreed total, signed by the basis: nothing
-    # on a spend cap, a credit on a net allowance. A line nobody has given a
-    # figure counts as nothing, not as zero spend.
-    def allocation_of(budget)
-      amount = budget.projected_amount
-      return 0 if amount.nil?
-      return amount unless budget.income?
-
-      net_basis? ? -amount : 0
+    # A line nobody has given a figure is skipped, not counted as zero.
+    def projections_of(&matcher)
+      budgets.select(&matcher).filter_map(&:projected_amount).sum
     end
   end
 end

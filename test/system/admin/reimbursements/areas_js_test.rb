@@ -59,20 +59,20 @@ module Admin
 
         within "dl" do
           # A spend cap: the £800 raised buys the committee no more room.
-          assert_text "Total expenses"
+          assert_text "Agreed total (expenses)"
           assert_text "£600.00"
         end
 
-        choose "Total net"
+        choose "Agreed total (net)"
         click_on "Save"
 
         assert_text "Area saved"
         assert_equal "net", area.reload.budget_basis
         within "dl" do
           # Netted: 1,000 - (400 - 800).
-          assert_text "Total net"
+          assert_text "Agreed total (net)"
           assert_text "£1,400.00"
-          assert_no_text "Total expenses"
+          assert_no_text "Agreed total (expenses)"
         end
       end
 

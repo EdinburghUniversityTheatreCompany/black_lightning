@@ -5,6 +5,14 @@ module Admin
     class BudgetsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
+      # The overview's out-of-scope row, pinned whole in five tests below: its
+      # only job is to stop a finance user misreading two figures that cover
+      # different sets of lines, so every clause has to be true — on both
+      # bases and for an out-of-scope line of either type.
+      OUT_OF_SCOPE_WARNING =
+        "1 of 2 lines shown. 1 line in another year or cost centre, left out of the totals " \
+        "below. The not-yet-allocated figure is worked out over every line the area holds.".freeze
+
       setup do
         finance = Role.create!(name: "Business Manager")
         finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -333,6 +341,69 @@ module Admin
         assert_select "[data-area='#{area.record_id}']" do |elements|
           assert_no_match(/Remaining/, elements.first.text)
         end
+      end
+
+      # The row a finance user reads before opening anything: it carries the
+      # agreed total, the allocation and what is left, side by side. A rowgroup
+      # heading is the only place those three sit together, so the arithmetic
+      # has to reconcile by reading left to right.
+      def area_heading(area)
+        css_select("[data-area='#{area.record_id}'] th[scope=rowgroup]").sole.text.squish
+      end
+
+      test "the grouped index prints a netted allocation as its two halves, never a bare negative" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
+                                          budget_basis: "net")
+        create_reimbursements_budget(name: "Committee: Socials", area: area, initial_budget: 400)
+        create_reimbursements_budget(name: "Committee: Raffle", area: area, initial_budget: 800,
+                                     budget_type: "Income")
+
+        get :index
+
+        assert_response :success
+        heading = area_heading(area)
+        assert_includes heading, "Allocated £400.00 of spend less £800.00 of income"
+        assert_includes heading, "£1,400.00 not yet allocated"
+        # You cannot allocate minus four hundred pounds, a negative money
+        # figure means bad news everywhere else in this portal, and
+        # 1,000 - (-400) = 1,400 reconciles only by subtracting a negative.
+        assert_not_includes heading, "-£400.00"
+      end
+
+      test "the grouped index states a spend cap's allocation as one figure" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito show", initial_budget: 1_000)
+        create_reimbursements_budget(name: "Cogito show: Marketing", area: area,
+                                     initial_budget: 400)
+        create_reimbursements_budget(name: "Cogito show: Tickets", area: area,
+                                     initial_budget: 800, budget_type: "Income")
+
+        get :index
+
+        assert_response :success
+        heading = area_heading(area)
+        # Nothing is netted here, so there are no halves to state.
+        assert_includes heading, "Allocated £400.00"
+        assert_not_includes heading, "of income"
+        assert_includes heading, "£600.00 not yet allocated"
+      end
+
+      test "the grouped index names no agreed total when nobody agreed one" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Unbudgeted area")
+        create_reimbursements_budget(name: "Unbudgeted area: Set", area: area,
+                                     initial_budget: 400)
+
+        get :index
+
+        assert_response :success
+        heading = area_heading(area)
+        # "Agreed total (expenses) -" reads as a claim about expenses rather
+        # than as a plan nobody has set yet.
+        assert_not_includes heading, "Agreed total"
+        assert_not_includes heading, "not yet allocated"
+        assert_includes heading, "Allocated £400.00"
       end
 
       # Same shape as #seed_paged_budgets below, but every budget belongs to
@@ -666,7 +737,7 @@ module Admin
         assert_includes response.body, "£750.00"
         # The committee's agreed figure and what is left to split out of it
         # (5000 - 750), both read off the area rather than off its lines.
-        assert_includes response.body, "Total expenses £5,000.00"
+        assert_includes response.body, "Agreed total (expenses) £5,000.00"
         assert_includes response.body, "£4,250.00 not yet allocated"
         # Props and the income line belong to no area, and still have to appear —
         # under a heading, never behind an empty state.
@@ -696,7 +767,7 @@ module Admin
         assert_not_includes response.body, "£1,215.00"
         # A spend cap by default: the £805 of ticket income buys the show no
         # more room, so 1,000 - 410 is what is left to split into lines.
-        assert_includes response.body, "Total expenses £1,000.00"
+        assert_includes response.body, "Agreed total (expenses) £1,000.00"
         assert_includes response.body, "£590.00 not yet allocated"
 
         # A committee's allowance nets, so the same £805 raises it: 1,000 - 410
@@ -708,7 +779,7 @@ module Admin
         assert_response :success
         assert_equal [ BigDecimal("410"), BigDecimal("805") ],
                      assigns(:area_rollups).sole.by_type.map(&:initial)
-        assert_includes response.body, "Total net £1,000.00"
+        assert_includes response.body, "Agreed total (net) £1,000.00"
         assert_includes response.body, "£1,395.00 not yet allocated"
         assert_not_includes response.body, "£1,215.00"
       end
@@ -725,8 +796,8 @@ module Admin
 
         assert_response :success
         assert_select "th[scope=rowgroup] span.font-semibold", text: "Backfilled show"
-        # "Total expenses £0.00" would read as the show being fully overspent.
-        assert_not_includes response.body, "Total expenses"
+        # "Agreed total (expenses) £0.00" would read as fully overspent.
+        assert_not_includes response.body, "Agreed total"
         assert_not_includes response.body, "not yet allocated"
       end
 
@@ -753,12 +824,7 @@ module Admin
         # Pinned whole: the sentence's only job is to stop a finance user
         # misreading two disagreeing figures, so every clause has to be true.
         # The agreed total is named by neither: it counts no lines at all.
-        # "Counted in", not "subtracted from": on a net-basis area an
-        # out-of-scope INCOME line raises that figure instead of reducing it,
-        # and every clause of this sentence has to be true on both bases.
-        assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
-                     "the totals below but already counted in the not-yet-allocated figure.",
-                     css_select("span.text-warning").sole.text.squish
+        assert_equal OUT_OF_SCOPE_WARNING, css_select("span.text-warning").sole.text.squish
 
         # With no agreed total there is no allocation figure on screen, so the
         # sentence must not claim one.
@@ -769,6 +835,39 @@ module Admin
         assert_equal "1 of 2 lines shown. 1 line in another year or cost centre, left out of " \
                      "the totals below.",
                      css_select("span.text-warning").sole.text.squish
+      end
+
+      # The sentence above states no DIRECTION, and these four rows are why:
+      # it is read beside a figure the out-of-scope line reduces, raises, or
+      # does not move at all, depending on the basis and the line's type. An
+      # earlier "already subtracted from" was false on two of the four and
+      # "already counted in" on one, and only one of the four was pinned.
+      #
+      # Each row states what the not-yet-allocated figure comes to, so the
+      # sentence is never asserted beside a figure nobody checked.
+      {
+        [ "expenses", "Expense" ] => "£3,700.00",  # 5,000 - 400 - 900: reduced
+        [ "expenses", "Income" ] => "£4,600.00",   # 5,000 - 400: not moved at all
+        [ "net", "Expense" ] => "£3,700.00",       # 5,000 - 400 - 900: reduced
+        [ "net", "Income" ] => "£5,500.00"         # 5,000 - 400 + 900: RAISED
+      }.each do |(basis, out_of_scope_type), unallocated|
+        test "the out-of-scope warning holds for a #{basis} area losing an #{out_of_scope_type} line" do
+          this_year, next_year = seed_two_years
+          sign_in @user
+          area = create_reimbursements_area(name: "Cogito", financial_year: this_year,
+                                            initial_budget: 5000, budget_basis: basis)
+          create_reimbursements_budget(name: "Cogito marketing", nominal_code: "4300", area: area,
+                                       initial_budget: 400, financial_year: this_year)
+          create_reimbursements_budget(name: "Cogito next year", nominal_code: "4300", area: area,
+                                       initial_budget: 900, financial_year: next_year,
+                                       budget_type: out_of_scope_type)
+
+          get :overview, params: { year: this_year.key }
+
+          assert_response :success
+          assert_includes response.body, "#{unallocated} not yet allocated"
+          assert_equal OUT_OF_SCOPE_WARNING, css_select("span.text-warning").sole.text.squish
+        end
       end
 
       test "the area card's empty state appears only when there is nothing to group" do

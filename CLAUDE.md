@@ -381,12 +381,15 @@ survive as historical import provenance and are never written. Spec + plan in
   - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
     paginated and scoped — the row states when fewer lines are visible than exist.
   - **The overview's area card totals the budgets the SCREEN is scoped to** (`AreaRollup`, the
-    same budgets the nominal-code card totals), while "not yet allocated" beside it subtracts
-    every line ever linked to the area, in any year or centre. The agreed total counts no lines
-    at all — it is the area's own forecast — so the heading's warning names only the allocation
-    figure ("…left out of the totals below but already subtracted from the not-yet-allocated
-    figure"), never the agreed total. A budget CAN hold an area from another year, which is
-    what makes the two disagree.
+    same budgets the nominal-code card totals), while "not yet allocated" beside it is worked out
+    over every line ever linked to the area, in any year or centre. The agreed total counts no
+    lines at all — it is the area's own forecast — so the heading's warning names only the
+    allocation figure, never the agreed total. A budget CAN hold an area from another year, which
+    is what makes the two disagree.
+    - **That warning states no DIRECTION**, and that is the only wording true in all four cases:
+      an out-of-scope EXPENSE line always reduces the figure, an out-of-scope INCOME line raises
+      it on a `net` basis and moves it not at all on a spend cap. An earlier "already subtracted
+      from" was false on two of the four, and "already counted in" on one.
   - **An area declares what its agreed total is a total OF** (`areas.budget_basis`,
     `Area::BASIS_LABELS`), because it is genuinely both: a SHOW gets a spend cap — the £800 it
     raises buys it no more room — while a COMMITTEE gets a net allowance, where money raised
@@ -400,9 +403,17 @@ survive as historical import provenance and are never written. Spec + plan in
       question from "how much room has it left", and only the second ever nets the types
       together. Letting the basis reach `by_type` would break the standing rule that Expense and
       Income budgets are never totalled.
-    - The overview's out-of-scope warning says an out-of-scope line is "already **counted in** the
-      not-yet-allocated figure", never "subtracted from" it: on a net-basis area an out-of-scope
-      INCOME line raises that figure.
+    - **`Area#remaining` is the ONE figure on a basis-labelled card that does not read the
+      basis**, deliberately. `committed_amount` counts CLAIMS, and a claim filed against an
+      income line is spend recorded on it, not income received — netting it would raise the room
+      left by money somebody spent. Income that landed is `Budget#eusa_actual_amount`, an EUSA
+      ledger figure, and nothing here mixes a committed figure with an actual one. The edit
+      card's `<dt>` carries that as a `title`.
+    - **The grouped index prints a netted allocation as its two halves** ("Allocated £400.00 of
+      spend less £800.00 of income"), never as a bare negative: you cannot allocate minus four
+      hundred pounds, a negative money figure means bad news everywhere else in this portal
+      (`remaining.negative?` is `text-danger` two spans right), and 1,000 − (−400) = 1,400 makes
+      the row reconcile only by subtracting a negative.
   - **Area names are unique within one (financial year, cost centre)** by model validation —
     the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
     NULLs through a unique index, and an area with no year/centre yet has NULLs in both.

@@ -12,8 +12,8 @@
 <%# A radio pair rather than a checkbox: two named states read better than one
     negated one, and these are the words the card then prints beside the
     figure (Area::BASIS_LABELS), so a finance user picks what they read back. %>
-<%= form.input :budget_basis, as: :radio_buttons, include_blank: false,
-      collection: ::Reimbursements::Area::BASIS_LABELS.map { |value, text| [ text, value ] },
+<%= form.input :budget_basis, as: :radio_buttons,
+      collection: ::Reimbursements::Area::BASIS_OPTIONS,
       label: "What that total covers",
       hint: "A show's total is a spend cap: what it raises buys it no more room, " \
             "and its income lines are listed on their own. A committee's is a net " \
