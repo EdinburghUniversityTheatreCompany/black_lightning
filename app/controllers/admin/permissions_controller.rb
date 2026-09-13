@@ -81,7 +81,8 @@ class Admin::PermissionsController < AdminController
       # named after a class makes every save call update_permission for it with just the actions
       # offered here — deleting the read/update/manage rows stored before 2026-05-08, which is how
       # non-admins approve proposals. Any misc-only subject must be a symbol for the same reason.
-      "proposals" => { "review" => "Review proposals (read every proposal after its call's deadline)" },
+      "proposals" => { "review" => "Review proposals (read every proposal after its call's deadline)",
+                       "advance_review" => "Review proposals advance of the submission deadline (temporary)" },
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },

@@ -75,6 +75,10 @@ class Ability
       can [ :update, :read, :delete ], Admin::Proposals::Proposal, users: { id: user.id }
       can [ :index, :create ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
+      if can?(:advance_review, :proposals)
+        can :read, Admin::Proposals::Proposal
+      end
+
       return
     end
 
@@ -209,6 +213,10 @@ class Ability
     if can?(:review, :proposals)
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
       can :index, Admin::Proposals::Proposal
+    end
+
+    if can?(:advance_review, :proposals)
+      can :read, Admin::Proposals::Proposal
     end
 
     # Producers on future shows can use the bulk debt checker
