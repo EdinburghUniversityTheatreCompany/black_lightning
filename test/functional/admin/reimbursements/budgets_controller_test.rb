@@ -116,8 +116,7 @@ module Admin
         assert_includes response.body, "161"
       end
 
-      # Alphabetically-named so page 1 (A-Z sorted, 50 per page) is deterministic.
-      def seed_paged_budgets(count)
+      def seed_many_budgets(count)
         ::Reimbursements::Expense.delete_all
         ::Reimbursements::BudgetForecast.delete_all
         ::Reimbursements::BudgetOwner.delete_all
@@ -125,26 +124,17 @@ module Admin
         (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n)) }
       end
 
-      test "index pages the list at 50 per page" do
-        seed_paged_budgets(60)
-        sign_in @user
-
-        get :index
-
-        assert_equal 50, assigns(:budgets).size
-        assert_includes response.body, "Budget 001"
-        assert_not_includes response.body, "Budget 051"
-      end
-
-      test "index page 2 returns the remaining slice, not page 1's rows" do
-        seed_paged_budgets(60)
+      # Not paginated: a page boundary split an area's lines across pages.
+      test "index lists every budget on one page" do
+        seed_many_budgets(60)
         sign_in @user
 
         get :index, params: { page: 2 }
 
-        assert_equal 10, assigns(:budgets).size
-        assert_includes response.body, "Budget 051"
-        assert_not_includes response.body, "Budget 001"
+        assert_equal 60, assigns(:budgets).size
+        assert_includes response.body, "Budget 001"
+        assert_includes response.body, "Budget 060"
+        assert_includes response.body, "60 budgets"
       end
 
       test "flags a budget that has no owner" do
@@ -283,8 +273,8 @@ module Admin
         assert_equal %w[Income Hidden], income.values_at(2, 3)
       end
 
-      test "index CSV export lists every budget, not just the first page" do
-        seed_paged_budgets(60)
+      test "index CSV export lists every budget" do
+        seed_many_budgets(60)
         sign_in @user
 
         get :index, format: :csv
@@ -421,12 +411,9 @@ module Admin
 
       # The subtotal in the area's header always covers EVERY line linked to
       # it (area.budgets, unscoped — the same total Area#committed_amount and
-      # #allocated already sum over), not just the rows visible on this page.
-      # With 60 lines under one area and a 50-per-page index, page 1 renders
-      # only 50 of them under a subtotal that covers all 60 — this is the case
-      # the note exists to disclose, with real pagination doing the hiding
-      # rather than a stub.
-      test "an area whose lines straddle the page boundary states how many are shown" do
+      # #allocated already sum over). The index is not paginated, so a large
+      # area in scope renders every line and has nothing to disclose.
+      test "an area with more lines than the old page size renders them all" do
         sign_in @user
         area = create_reimbursements_area(name: "Big Area")
         seed_paged_area_budgets(60, area: area)
@@ -435,7 +422,8 @@ module Admin
 
         assert_response :success
         assert_select "[data-area='#{area.record_id}']" do |elements|
-          assert_match(/50 of 60 lines shown/, elements.first.text)
+          assert_includes elements.first.text, "Budget 060"
+          assert_no_match(/lines shown/, elements.first.text)
         end
       end
 

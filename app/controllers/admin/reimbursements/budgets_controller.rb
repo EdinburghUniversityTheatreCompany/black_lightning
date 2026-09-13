@@ -30,7 +30,8 @@ module Admin
         # expenses and forecasts.
         @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
-          format.html { @budgets = paginate(sorted) }
+          # Not paginated: a page boundary split an area's lines across pages.
+          format.html { @budgets = sorted }
           format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
         end
       end

@@ -26,13 +26,13 @@
 </p>
 
 <div class="mb-2 flex items-center justify-between gap-3">
-  <p class="text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
+  <p class="text-sm text-gray-600"><%= pluralize(@budgets.size, "budget") %></p>
   <%= link_to "Download CSV",
               admin_reimbursements_budgets_path(request.query_parameters.merge(format: :csv)),
               class: btn_classes(:secondary, :sm) %>
 </div>
 
-<% if @budgets.total_count.zero? %>
+<% if @budgets.empty? %>
   <%= render CardComponent.new(title: @title) do %>
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
@@ -45,9 +45,8 @@
                  "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
                  "Remaining", "Variance", "Owners", "" ] %>
   <%
-    # Grouped off the CURRENT PAGE's budgets (not the full store list), so
-    # pagination still slices the flat list the same way it always has — an
-    # area's rows only appear on the page(s) its budgets fall on. Every area
+    # Grouped off the budgets in the selected year and cost centre (not the
+    # full store list), so an area shows only its in-scope lines. Every area
     # figure is read off @areas_by_id (store.areas — the unscoped,
     # fully-preloaded id->record reader), never off budget.area's own
     # #budgets, or every area's committed_amount/allocated would N+1 across
@@ -58,7 +57,7 @@
   %>
   <%= render "shared/pages/index_results",
         resources: @budgets, resource_class: ::Reimbursements::Budget,
-        include_pagination: true,
+        include_pagination: false,
         content: render("grouped_table", headers: headers, ordered_area_ids: ordered_area_ids,
                         budgets_by_area_id: budgets_by_area_id, none_budgets: none_budgets,
                         areas_by_id: @areas_by_id, people_by_id: @people_by_id) %>

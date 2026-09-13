@@ -404,7 +404,8 @@ survive as historical import provenance and are never written. Spec + plan in
     area's OWN forecasts are in that preload because `Area#projected_amount` reads its forecast
     log, which is a query per area on every screen showing an agreed total.
   - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
-    paginated and scoped — the row states when fewer lines are visible than exist.
+    scoped to the selected year and cost centre (the index is not paginated) — the row states
+    when fewer lines are visible than exist.
   - **The overview's area card totals the budgets the SCREEN is scoped to** (`AreaRollup`, the
     same budgets the nominal-code card totals), while "not yet allocated" beside it is worked out
     over every line ever linked to the area, in any year or centre. The agreed total counts no

@@ -15,14 +15,14 @@
           array rather than issuing a COUNT — the "does not grow" test above
           checks that. It's every line ever linked to the area (the same scope
           Area#committed_amount/#allocated sum over), matching the figures
-          beside it, not just this page's slice. %>
+          beside it, not just the lines in the selected year and cost centre. %>
       <% total_count = area.budgets.size %>
       <tbody data-area="<%= area_id %>">
         <tr class="bg-gray-50">
           <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left py-2">
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <span class="font-semibold text-base"><%= area.name %></span>
-              <%# Only shown when this page hides some of the area's lines. %>
+              <%# Only shown when some of the area's lines sit in another year or cost centre. %>
               <% if visible_count < total_count %>
                 <span class="text-sm text-gray-500">
                   <%= visible_count %> of <%= pluralize(total_count, "line") %> shown
