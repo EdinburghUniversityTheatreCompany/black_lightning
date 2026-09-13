@@ -60,6 +60,16 @@ module Reimbursements
       end
     end
 
+    # The template's explanation row is words, not a budget line: left in, it
+    # would block the whole import on an unreadable amount.
+    test "a sheet still carrying the template's explanation row imports only its real rows" do
+      hints = BudgetImport::TEMPLATE_HINTS.join("\t")
+      import = build_import([ HEADERS, hints, "\t\tProps\t432320\tExpense\t400\t\t" ].join("\n"))
+
+      assert import.valid?, import.errors.to_sentence
+      assert_equal [ "Props" ], import.entries.map { |entry| entry.row[:name] }
+    end
+
     # The committee's existing spreadsheet still carries the old headings, and
     # renaming the canonical ones must not stop it importing.
     test "a sheet with the old headings still reads each column as the same field" do

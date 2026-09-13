@@ -89,9 +89,11 @@ module Admin
         render :apply
       end
 
-      # The columns the importer reads, as an empty CSV to start from.
+      # The columns the importer reads, with a row explaining each, as a CSV to
+      # start from. The importer skips that explanation row if it is left in.
       def template
-        send_data ::Reimbursements::BudgetImport::TSV_HEADERS.to_csv,
+        import = ::Reimbursements::BudgetImport
+        send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
                   type: "text/csv", filename: "budget-import-template.csv"
       end
 

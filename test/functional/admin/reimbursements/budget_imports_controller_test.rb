@@ -851,7 +851,10 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
-        assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, CSV.parse_line(response.body)
+        header, hints = CSV.parse(response.body)
+        assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, header
+        assert_equal "The show's agreed total, the same on every row of that area",
+                     hints[header.index("Area total")]
         assert_match "Area total", response.body
         assert_match "Budget amount", response.body
       end

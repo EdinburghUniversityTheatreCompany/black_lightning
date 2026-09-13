@@ -74,6 +74,7 @@ module Reimbursements
     FIELDS = {
       area: {
         label: "Area",
+        hint: "The show or committee this line belongs to",
         exact: [ "area" ],
         # NOT "area", per the class note: the old "Area Budget" heading
         # contains it, and would then read as the area name too.
@@ -89,6 +90,7 @@ module Reimbursements
       # its column between the preview and the apply.
       area_budget: {
         label: "Area total",
+        hint: "The show's agreed total, the same on every row of that area",
         # Both multi-word, so neither collides with the bare "area" above or
         # "budget" below.
         exact: [ "area total", "area budget" ],
@@ -96,31 +98,37 @@ module Reimbursements
       },
       name: {
         label: "Budget name",
+        hint: "The line's name, such as Marketing",
         exact: [ "budget name", "name", "line", "category", "budget" ],
         contains: [ "budget name" ]
       },
       nominal_code: {
         label: "Nominal code",
+        hint: "The line's nominal code",
         exact: [ "nominal code", "nominal", "code" ],
         contains: [ "nominal code" ]
       },
       budget_type: {
         label: "Type",
+        hint: "Expense or Income",
         exact: [ "budget type", "type" ],
         contains: [ "budget type" ]
       },
       amount: {
         label: "Budget amount",
+        hint: "This line's own figure",
         exact: [ "budget amount", "amount", "initial budget", "forecast", "total" ],
         contains: [ "initial budget" ]
       },
       owner_emails: {
         label: "Owner emails",
+        hint: "Who signs off claims",
         exact: [ "owner emails", "owner email", "owners", "owner" ],
         contains: [ "owner emails", "owner email" ]
       },
       notes: {
         label: "Notes",
+        hint: "Free text",
         exact: [ "notes", "description", "comment" ],
         contains: []
       }
@@ -129,6 +137,11 @@ module Reimbursements
     # Canonical headers — what #to_tsv writes and what the downloadable
     # template carries. Reading is more forgiving than this (see FIELDS).
     TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
+
+    # The template's second row, explaining each column under its heading.
+    # A sheet still carrying it has that row skipped, or its words would be
+    # read as a budget line with an unreadable amount and block the import.
+    TEMPLATE_HINTS = FIELDS.each_value.map { |spec| spec[:hint] }.freeze
 
     # The only column a sheet must carry: everything else can be blank or
     # defaulted, but a line with no name has nothing to match against.
@@ -188,6 +201,7 @@ module Reimbursements
       # reach for a record of its own.
       @people_by_record_id = people.index_by(&:record_id)
       @rows = parse_data(data, @escaped ? :paste : input_type)
+                .reject { |row| row[:name] == FIELDS[:name][:hint] }
       @entries = categorize
       report_area_total_conflicts
       report_area_collation_clashes
