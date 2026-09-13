@@ -366,11 +366,11 @@ module Admin
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
 
-      test "apply writes the Area Budget column as the new area's agreed total" do
+      test "apply writes the Area total column as the new area's agreed total" do
         sign_in @user
 
         post :apply, params: preview_params(
-          "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\n" \
+          "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
           "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
         )
 
@@ -384,7 +384,7 @@ module Admin
 
         assert_no_difference -> { ::Reimbursements::Area.count } do
           post :apply, params: preview_params(
-            "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\n" \
+            "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
             "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\n" \
             "Cogito\t1500\tCogito: Other\t432320\tExpense\t800"
           )
@@ -398,7 +398,7 @@ module Admin
       # Reported, ticked by default, and only applied for the keys that come
       # back — the same shape as Reconcile's offsetting pairs.
 
-      AREA_HEADERS = "Area\tBudget\tNominal code\tType\tAmount".freeze
+      AREA_HEADERS = "Area\tBudget name\tNominal code\tType\tBudget amount".freeze
 
       # One matched line, currently in +area+ (nil for none), on a sheet that
       # names "Cogito".
@@ -679,10 +679,10 @@ module Admin
 
       # --- A revised area total ---------------------------------------------
       # The sheet is where the committee agrees a show's total, so a changed
-      # Area Budget has to be visible before it is applied and has to actually
+      # Area total has to be visible before it is applied and has to actually
       # land. It used to be dropped: not applied, not logged, not reported.
 
-      TOTAL_HEADERS = "Area\tArea Budget\tBudget\tNominal code\tType\tAmount".freeze
+      TOTAL_HEADERS = "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount".freeze
 
       # The LINE's figure moves too (the stored line is 400), so the label has
       # to carry both buckets and they cannot be mistaken for each other.
@@ -851,8 +851,21 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
-        assert_match "Budget", response.body
-        assert_match "Nominal code", response.body
+        assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, CSV.parse_line(response.body)
+        assert_match "Area total", response.body
+        assert_match "Budget amount", response.body
+      end
+
+      # Two columns hold money and they mean different things, so the page the
+      # operator pastes into says which is which.
+      test "the import page explains the two amount columns" do
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_match(/Area total.*agreed total.*every row/m, response.body)
+        assert_match(/Budget amount.*that line/m, response.body)
       end
 
       private

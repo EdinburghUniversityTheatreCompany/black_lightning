@@ -30,11 +30,11 @@ module Admin
       def sheet(*rows) = ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
 
       def area_sheet(*rows)
-        ([ "Area\tBudget\tNominal code\tType\tAmount" ] + rows).join("\n")
+        ([ "Area\tBudget name\tNominal code\tType\tBudget amount" ] + rows).join("\n")
       end
 
       def owner_sheet(*rows)
-        ([ "Area\tBudget\tNominal code\tType\tAmount\tOwner emails" ] + rows).join("\n")
+        ([ "Area\tBudget name\tNominal code\tType\tBudget amount\tOwner emails" ] + rows).join("\n")
       end
 
       # A budget name is what an existing line is MATCHED on, so rewriting a

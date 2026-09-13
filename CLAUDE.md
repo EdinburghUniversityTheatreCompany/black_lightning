@@ -620,7 +620,7 @@ survive as historical import provenance and are never written. Spec + plan in
     The prefix has to be really there, or the reading fires on the legitimate pair.
   - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
     note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
-    would read an `Area Budget` column as the line's own name (`budget`) *and* as the area (`area`).
+    would read the old `Area Budget` heading as the line's own name (`budget`) *and* as the area (`area`).
     Exact names first, multi-word substrings only; two fields resolving to one column is a blocking
     error naming both; the preview states the column read for each field.
   - **The sheet's owner column names the AREA for a line that has one, and an area's owners are the
@@ -636,11 +636,16 @@ survive as historical import provenance and are never written. Spec + plan in
     silently.
   - **A test sheet built from `TSV_HEADERS` with a hand-written data row shifts every cell when a
     column is added to that constant**, and `bin/rails test` does not run system tests — which is
-    how adding `Area Budget` left a RED system test invisible for two tasks. Both budget-import test
+    how adding the area-total column left a RED system test invisible for two tasks. Both budget-import test
     files derive `HEADERS` from `TSV_HEADERS` and pad each row with the leading area cells.
-  - **The `Area Budget` column is the show's agreed total, and it repeats down the area's rows**,
+  - **The canonical headings say which column is money: `Area total` and `Budget amount` are
+    figures, `Budget name` is the line's name.** The old `Area Budget` / `Budget` / `Amount` read
+    the wrong way round and stay accepted, so the committee's sheet still imports. `#to_tsv` writes
+    the labels for the preview→apply round trip, so each label must be in its own field's `exact`
+    list, or that column silently vanishes on apply; a test pins it.
+  - **The `Area total` column is the show's agreed total, and it repeats down the area's rows**,
     so two different values for one area BLOCK the import rather than picking one — the rule an
-    unreadable Amount already follows. Written only on create; a later, different figure is
+    unreadable `Budget amount` already follows. Written only on create; a later, different figure is
     reported and logged as a forecast on the AREA (`#area_revisions`) under the same
     `BudgetUpdate` as the line revisions, compared against `Area#projected_amount` so a re-import
     converges. The sheet is the committee's own route for revising a show's total, so dropping

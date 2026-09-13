@@ -35,7 +35,9 @@
 
     <p class="mb-4 text-sm text-gray-600">
       Columns read: <strong><%= ::Reimbursements::BudgetImport::TSV_HEADERS.to_sentence %></strong>.
-      Only the budget name is required.
+      Only the budget name is required. Two columns hold money: <strong>Area total</strong> is the
+      show's agreed total, repeated on every row of that area, and <strong>Budget amount</strong> is
+      that line's own figure.
       <%= link_to "Download a template",
                   template_admin_reimbursements_budget_import_path(format: :csv),
                   class: "text-primary underline", data: { turbo_frame: "_top" } %>.

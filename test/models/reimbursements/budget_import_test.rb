@@ -37,7 +37,38 @@ module Reimbursements
     # them shifts every row again, so state the assumption rather than leave it
     # in a "\t\t" literal.
     test "the sheet helpers' padding still matches the canonical column order" do
-      assert_equal [ "Area", "Area Budget" ], BudgetImport::TSV_HEADERS.first(2)
+      assert_equal [ "Area", "Area total" ], BudgetImport::TSV_HEADERS.first(2)
+    end
+
+    # The canonical headings are what the template download and the paste box
+    # show the committee, so they must say which column is a name and which is
+    # money: "Area Budget" held the show's agreed TOTAL and "Budget" held the
+    # line's NAME, which read the wrong way round.
+    test "the canonical headings say which column is a name and which is money" do
+      assert_equal [ "Area", "Area total", "Budget name", "Nominal code", "Type",
+                     "Budget amount", "Owner emails", "Notes" ], BudgetImport::TSV_HEADERS
+    end
+
+    # #to_tsv writes TSV_HEADERS and apply re-parses them, so a heading its own
+    # field cannot read back would silently lose that column between the
+    # preview and the apply.
+    test "every canonical heading is read back as its own field" do
+      import = build_import(tsv("Props\t432320\tExpense\t400\t\t"))
+
+      BudgetImport::TSV_HEADERS.each do |label|
+        assert_equal label, import.column_mapping.fetch(label), "#{label} was not read as itself"
+      end
+    end
+
+    # The committee's existing spreadsheet still carries the old headings, and
+    # renaming the canonical ones must not stop it importing.
+    test "a sheet with the old headings still reads each column as the same field" do
+      import = build_import("Area\tArea Budget\tBudget\tNominal code\tType\tAmount\n" \
+                            "Cogito\t1200\tMarketing\t432320\tExpense\t400")
+
+      assert_equal({ "Area total" => "Area Budget", "Budget name" => "Budget", "Budget amount" => "Amount" },
+                   import.column_mapping.slice("Area total", "Budget name", "Budget amount"))
+      assert import.valid?, import.errors.to_sentence
     end
 
     def build_import(data, input_type: :paste, existing_budgets: [], existing_areas: [], people: [])
@@ -155,6 +186,8 @@ module Reimbursements
     # rather than guessed.
 
     test "a bare word is never read as a substring hint" do
+      # The OLD headings on purpose: "Area Budget" is the one that contains the
+      # bare keyword, and the committee's sheet still carries it.
       headers = "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\tOwner emails\tNotes"
       row = "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\t\t"
       import = build_import([ headers, row ].join("\n"))
@@ -170,8 +203,8 @@ module Reimbursements
 
       assert_not import.valid?
       assert_match(/read as both/i, import.errors.to_sentence)
-      assert_match(/Budget/, import.errors.to_sentence)
-      assert_match(/Amount/, import.errors.to_sentence)
+      assert_match(/Budget name/, import.errors.to_sentence)
+      assert_match(/Budget amount/, import.errors.to_sentence)
     end
 
     # --- Buckets -------------------------------------------------------------
@@ -317,7 +350,7 @@ module Reimbursements
 
     test "the area's total is read once from the repeated column" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
         Cogito\t1200\tCogito: Other\t432320\tExpense\t800
       TSV
@@ -335,7 +368,7 @@ module Reimbursements
                                             financial_year: @year)
 
       import = build_import(<<~TSV, existing_areas: [ existing ])
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cógito\t1200\tMarketing\t432320\tExpense\t400
       TSV
 
@@ -349,7 +382,7 @@ module Reimbursements
 
     test "two new areas differing only by an accent block the import" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tMarketing\t432320\tExpense\t400
         Cógito\t1200\tSet\t432330\tExpense\t300
       TSV
@@ -360,7 +393,7 @@ module Reimbursements
 
     test "an area named the same way twice over is not an accent clash" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tMarketing\t432320\tExpense\t400
         Cogito\t1200\tSet\t432330\tExpense\t300
       TSV
@@ -371,7 +404,7 @@ module Reimbursements
 
     test "two different totals for one area block the import" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
         Cogito\t1500\tCogito: Other\t432320\tExpense\t800
       TSV
@@ -382,31 +415,32 @@ module Reimbursements
 
     test "a typed £1,200 is stored as 1200, not 0" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t£1,200\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
       assert_equal 1200, import.area_creates.first[:initial_budget]
     end
 
-    # An unreadable Area Budget is a BLOCKING row error, the same as an
-    # unreadable Amount — reading it as "unstated" would create the area with
+    # An unreadable Area total is a BLOCKING row error, the same as an
+    # unreadable Budget amount — reading it as "unstated" would create the area with
     # no agreed total and nobody told, which is silent wrong money.
-    test "an unreadable Area Budget blocks the import and the message names the area" do
+    test "an unreadable Area total blocks the import and the message names the column and the area" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t£1,2OO\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
       assert_not import.valid?
       assert_match(/Cogito/, import.entries.sole.error)
+      assert_match(/Area total/, import.entries.sole.error)
     end
 
     # Blank is legitimate and must stay legitimate: an area with no agreed
     # total is the normal state for every area Phase 1's backfill created.
-    test "a blank Area Budget still imports fine and leaves the area's initial_budget nil" do
+    test "a blank Area total still imports fine and leaves the area's initial_budget nil" do
       import = build_import(<<~TSV)
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
@@ -422,7 +456,7 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1000)
       import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
@@ -437,7 +471,7 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1200)
       import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
@@ -450,7 +484,7 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1200)
       import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
@@ -464,7 +498,7 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1000)
       sheet = <<~TSV
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
@@ -483,7 +517,7 @@ module Reimbursements
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year)
       import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea Budget\tBudget\tNominal code\tType\tAmount
+        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
       TSV
 

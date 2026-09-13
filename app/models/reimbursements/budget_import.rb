@@ -67,27 +67,35 @@ module Reimbursements
     # **Columns are matched here, NOT through ImportParsing#find_column**,
     # whose "any header containing the keyword" fallback is the class of bug
     # ExpenseImport was fixed for (see its note): "budget" is a bare keyword
-    # for +name+, so the "Area Budget" column below would read as the line's
-    # own name. EXACT names first, then MULTI-WORD phrases only — a bare word
+    # for +name+, so the "Area Budget" heading older sheets carry would read as
+    # the line's own name. EXACT names first, then MULTI-WORD phrases only — a bare word
     # is never a substring hint — and two fields resolving to one column is a
     # blocking error naming both, never a silent pick.
     FIELDS = {
       area: {
         label: "Area",
         exact: [ "area" ],
-        # NOT "area", per the class note: the "Area Budget" header contains
-        # it, and would then read as the area name too.
+        # NOT "area", per the class note: the old "Area Budget" heading
+        # contains it, and would then read as the area name too.
         contains: [ "area name" ]
       },
+      # The labels say which columns are MONEY and which is a name. The old
+      # headings — "Area Budget" for the show's agreed total, "Budget" for the
+      # line's name, "Amount" for the line's figure — read the wrong way round,
+      # and stay in +exact+ so the committee's existing sheet still imports.
+      #
+      # Every label must be in its own field's +exact+ list: #to_tsv writes the
+      # labels and apply re-parses them, so one that cannot be read back drops
+      # its column between the preview and the apply.
       area_budget: {
-        label: "Area Budget",
+        label: "Area total",
         # Both multi-word, so neither collides with the bare "area" above or
         # "budget" below.
-        exact: [ "area budget", "area total" ],
+        exact: [ "area total", "area budget" ],
         contains: [ "area budget", "area total" ]
       },
       name: {
-        label: "Budget",
+        label: "Budget name",
         exact: [ "budget name", "name", "line", "category", "budget" ],
         contains: [ "budget name" ]
       },
@@ -102,8 +110,8 @@ module Reimbursements
         contains: [ "budget type" ]
       },
       amount: {
-        label: "Amount",
-        exact: [ "amount", "initial budget", "forecast", "total" ],
+        label: "Budget amount",
+        exact: [ "budget amount", "amount", "initial budget", "forecast", "total" ],
         contains: [ "initial budget" ]
       },
       owner_emails: {
@@ -351,7 +359,7 @@ module Reimbursements
     # +initial_budget+ on an area stays write-once, exactly as a budget's is
     # (#area_creates is the only thing that writes it), so Area#variance keeps
     # meaning "drift from the figure the committee agreed". Before this a
-    # revised Area Budget on a re-import was not applied, not logged and not
+    # revised Area total on a re-import was not applied, not logged and not
     # reported — and the spreadsheet IS the committee's route for revising a
     # show's agreed total, so the revision silently did nothing.
     #
@@ -368,10 +376,10 @@ module Reimbursements
       end
     end
 
-    # Every area the sheet gives more than one distinct Area Budget figure.
+    # Every area the sheet gives more than one distinct Area total figure.
     # The column repeats down the area's rows, so two values can't both be what
     # the committee agreed: #valid? refuses the whole import rather than
-    # picking one, as it does for an unreadable Amount.
+    # picking one, as it does for an unreadable Budget amount.
     def area_total_conflicts
       area_budget_totals.filter_map do |key, values|
         next if values.size <= 1
@@ -875,7 +883,7 @@ module Reimbursements
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
       elsif row[:area_budget] == :unreadable
-        "#{row[:raw_area_budget].inspect} isn't an amount for #{area_label(row)}'s Area Budget. " \
+        "#{row[:raw_area_budget].inspect} isn't an amount for #{area_label(row)}'s Area total. " \
           "Leave it blank if the total isn't agreed yet."
       elsif row[:area].present? && (areas = colliding_areas(self.class.match_key(row[:area])))
         ambiguous_area_error(row, areas)
@@ -924,7 +932,7 @@ module Reimbursements
       end
     end
 
-    # #match_key(area name) => the DISTINCT, non-blank Area Budget amounts the
+    # #match_key(area name) => the DISTINCT, non-blank Area total amounts the
     # sheet gives that area, first-seen order — so #area_creates takes the one
     # it expects and #area_total_conflicts can name every one of a genuine
     # disagreement. Same :invalid exclusion as #first_seen_names.
@@ -944,7 +952,7 @@ module Reimbursements
       area_total_conflicts.each do |conflict|
         amounts = conflict[:values].map { |value| value.to_s("F") }
                                    .to_sentence(last_word_connector: " and ")
-        @errors << "#{conflict[:area_name].inspect} has more than one Area Budget figure in " \
+        @errors << "#{conflict[:area_name].inspect} has more than one Area total figure in " \
                    "this sheet (#{amounts}). Make every line for the area agree, or leave the " \
                    "column blank."
       end

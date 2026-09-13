@@ -102,7 +102,7 @@
   <% end %>
 
   <%# The area-level twin of "Changed figures": the sheet is the committee's
-      route for revising a show's agreed total, so a revised Area Budget has to
+      route for revising a show's agreed total, so a revised Area total has to
       be visible before it is applied. initial_budget stays write-once — this
       lands as a forecast under the same budget update as the line revisions. %>
   <% area_revisions = @import.area_revisions %>
@@ -224,8 +224,8 @@
 
   <%# What the matcher read, stated. Keyword matching can only ever be nearly
       right, and a column read as the wrong field is otherwise invisible — see
-      ExpenseImport's class comment for the "Area Budget" class of bug this
-      guards against. %>
+      ExpenseImport's class comment for the class of bug this guards against,
+      which the old "Area Budget" heading would have tripped. %>
   <details class="mt-4 text-sm">
     <summary class="cursor-pointer text-gray-600">
       Columns read from your sheet (check these before importing)
