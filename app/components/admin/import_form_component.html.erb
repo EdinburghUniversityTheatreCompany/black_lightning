@@ -5,7 +5,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
   <div>
     <%= render CardComponent.new(title: "Option 1: Paste Data") do %>
-      <%= form_with url: @preview_path, method: :post, local: true do |f| %>
+      <%= form_with url: @preview_path, method: :post, local: true, html: { :"data-turbo" => false } do |f| %>
         <p class="text-gray-500">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
         <span class="font-monospace block mb-3"><%= @columns_description %></span>
 
@@ -21,7 +21,7 @@
 
   <div>
     <%= render CardComponent.new(title: "Option 2: Upload XLSX") do %>
-      <%= form_with url: @preview_path, method: :post, local: true, multipart: true do |f| %>
+      <%= form_with url: @preview_path, method: :post, local: true, multipart: true, html: { :"data-turbo" => false } do |f| %>
         <p class="text-gray-500">Upload an Excel file (.xlsx) with the same column structure.</p>
 
         <div class="mb-3">
