@@ -31,8 +31,6 @@ lockfile = true
 # supply-chain window as the Bundler/uv/npm dependency cooldowns. `mise install` is unaffected
 # (it always reproduces the locked version from mise.lock).
 minimum_release_age = "4d"
-# Required for [hooks] (the corepack postinstall hook below).
-experimental = true
 
 [hooks]
 # Enable corepack after `mise install` so the pnpm version pinned in package.json's
