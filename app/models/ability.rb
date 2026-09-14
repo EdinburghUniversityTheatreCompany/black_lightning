@@ -68,7 +68,7 @@ class Ability
 
       # If not set in grid, even admins cannot advance-review the proposals.
       cannot :advance_review, :proposals
-      
+
       # Apply role-based grid permissions before proposal restrictions so the proposal rules always take precedence.
       set_permissions_based_on_grid(user)
 
