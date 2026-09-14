@@ -40,7 +40,7 @@ bundle install
 pnpm install
 ```
 
-Run the app with `bin/dev` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;
+Run the app with `mise run serve` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;
 run the test suite with `bin/rails test test:system` (start the test DB first — see the
 development guide). Lint JS with `pnpm lint`.
 

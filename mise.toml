@@ -42,3 +42,25 @@ postinstall = "corepack enable"
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
 # hand-edit — bump it by running the skill's upgrade path.
 DEV_ENV_VERSION = "23"
+
+[tasks]
+install-hk = "hk install"
+install-bundle = "bundle install"
+install-pnpm = "pnpm install"
+
+[tasks.install]
+depends = ["install-hk", "install-bundle", "install-pnpm"]
+
+[tasks.serve]
+depends = ["serve-assets", "serve-app"]
+
+[tasks.serve-assets]
+run = "./bin/vite dev"
+
+[tasks.serve-app]
+run = "./bin/rails server -b $BINDING"
+
+[tasks.serve-app.env]
+PORT = { default = "3000" }
+BINDING = { default = "0.0.0.0" }
+RUBY_DEBUG_OPEN = "true"

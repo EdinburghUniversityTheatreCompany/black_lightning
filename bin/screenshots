@@ -274,7 +274,7 @@ def main():
         sock.close()
     except (socket.timeout, ConnectionRefusedError, OSError):
         print(f"\nERROR: Dev server is not running on {args.host}:{args.port}")
-        print("       Start it with: bin/dev")
+        print("       Start it with: `mise run serve`")
         sys.exit(1)
 
     # Capture screenshots in parallel
