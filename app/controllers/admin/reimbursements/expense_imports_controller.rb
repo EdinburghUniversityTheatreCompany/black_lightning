@@ -92,8 +92,7 @@ module Admin
         render_blocked_preview(RACED_ALERT)
       end
 
-      # The columns the importer reads, with a row explaining each, as a CSV to
-      # start from. The importer skips that explanation row if it is left in.
+      # The columns the importer reads, with a row explaining each, as a CSV to start from.
       def template
         import = ::Reimbursements::ExpenseImport
         send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
