@@ -103,8 +103,10 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
-        assert_includes response.body, "Reference"
-        assert_includes response.body, "Status"
+        header, hints = CSV.parse(response.body)
+        assert_equal IMPORT::TSV_HEADERS, header
+        assert_equal IMPORT::TEMPLATE_HINTS, hints
+        assert_match(/Invoice/, hints[header.index("Type")])
       end
 
       # --- Step 2: preview ---------------------------------------------------

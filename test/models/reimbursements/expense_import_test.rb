@@ -169,7 +169,7 @@ module Reimbursements
     test "the import reports which column it read for each field" do
       import = build_import(real_sheet(real_row("2019-014")))
 
-      assert_equal "Claim ID", import.column_mapping.fetch("Reference")
+      assert_equal "Claim ID", import.column_mapping.fetch("ID")
       assert_equal "Payment reference", import.column_mapping.fetch("Payment reference")
       assert_equal "Account number", import.column_mapping.fetch("Account number")
       assert_nil import.column_mapping.fetch("Expense number")
@@ -361,7 +361,7 @@ module Reimbursements
       import = build_import(tsv(row(reference: "")))
 
       assert_not import.valid?
-      assert_match(/reference/i, import.entries.sole.error)
+      assert_match(/\bID\b/, import.entries.sole.error)
     end
 
     test "a reference repeated within one sheet blocks the import" do
@@ -472,6 +472,33 @@ module Reimbursements
       import = build_import(tsv(row(amount: "5000", amount_excl_vat: "5000")))
 
       assert import.valid?
+    end
+
+    # Nobody types the full "From EUSA (utility, staff cost, etc)" into a cell.
+    test "a bare From EUSA reads as the From EUSA type" do
+      import = build_import(tsv(row(expense_type: "from eusa")))
+
+      assert import.valid?, import.entries.map(&:error).compact.to_sentence
+      assert_equal Expense::TYPE_FROM_EUSA, import.creates.sole[:expense_type]
+    end
+
+    test "the claim's own id column is headed ID, and a sheet saying Reference still imports" do
+      assert_equal "ID", ExpenseImport::TSV_HEADERS.first
+
+      legacy = tsv(row).sub(/\AID\t/, "Reference\t")
+      import = build_import(legacy)
+
+      assert import.valid?, import.errors.to_sentence
+      assert_equal "Reference", import.column_mapping.fetch("ID")
+    end
+
+    # The template's explanation row is words, not a claim: left in, it would
+    # block the whole import on an unreadable amount and an unknown payee.
+    test "a sheet still carrying the template's explanation row imports only its real rows" do
+      import = build_import([ HEADERS, ExpenseImport::TEMPLATE_HINTS.join("\t"), row ].join("\n"))
+
+      assert import.valid?, (import.errors + import.entries.map(&:error)).compact.to_sentence
+      assert_equal [ "OLD-1" ], import.entries.map { |entry| entry.row[:reference] }
     end
 
     test "From EUSA is importable, being a type only the portal's own code writes" do

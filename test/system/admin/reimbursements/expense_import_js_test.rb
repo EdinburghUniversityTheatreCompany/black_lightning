@@ -38,6 +38,13 @@ module Admin
 
       def sheet(*rows) = ([ HEADERS ] + rows).join("\n")
 
+      # Sets the box the way a paste lands. fill_in TYPES the first four
+      # characters of a long value as real keys, and the Tab in the template's
+      # "ID\tStatus" heading moves focus out of the textarea, dropping the tab.
+      def paste_sheet(with:)
+        find_field("Paste the sheet").execute_script("this.value = arguments[0]", with)
+      end
+
       def claim(reference, amount: "120.00", status: STATUS::PAID, payee: "alice@example.com",
                 budget: "Props")
         [ reference, status, payee, budget, amount, "100.00", "Fake blood #{reference}",
@@ -61,7 +68,7 @@ module Admin
       test "pasting a sheet previews it and the confirm button imports it" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1"), claim("OLD-2"))
+        paste_sheet with: sheet(claim("OLD-1"), claim("OLD-2"))
         click_on "Preview import"
 
         # The preview reached the screen, which is what the Turbo Frame buys.
@@ -85,7 +92,7 @@ module Admin
       test "the preview carries the sheet in a hidden field, and apply reads it" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1"))
+        paste_sheet with: sheet(claim("OLD-1"))
         click_on "Preview import"
 
         carried = find("input[name='pasted_text']", visible: false).value
@@ -95,13 +102,13 @@ module Admin
 
       test "a second import of the same sheet reports it and creates nothing" do
         visit admin_reimbursements_expense_import_path
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1"))
+        paste_sheet with: sheet(claim("OLD-1"))
         click_on "Preview import"
         click_on "Import 1 claim"
         assert_text "Imported into Fringe 2027"
 
         visit admin_reimbursements_expense_import_path
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1"))
+        paste_sheet with: sheet(claim("OLD-1"))
         click_on "Preview import"
 
         assert_text "has been imported before and will be skipped"
@@ -113,8 +120,7 @@ module Admin
       test "an unreadable line blocks the whole sheet and names it" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet",
-                with: sheet(claim("OLD-1"), claim("OLD-2", amount: "about a ton"))
+        paste_sheet with: sheet(claim("OLD-1"), claim("OLD-2", amount: "about a ton"))
         click_on "Preview import"
 
         assert_text "1 line can't be imported"
@@ -126,7 +132,7 @@ module Admin
       test "an unknown payee links to the screen that registers one" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1", payee: "nobody@example.com"))
+        paste_sheet with: sheet(claim("OLD-1", payee: "nobody@example.com"))
         click_on "Preview import"
 
         assert_text "isn't anyone on the People screen"
@@ -170,7 +176,7 @@ module Admin
         visit admin_reimbursements_expense_import_path
 
         select termtime.name, from: "Cost centre"
-        fill_in "Paste the sheet", with: sheet(claim("TT-1", budget: "Termtime props"))
+        paste_sheet with: sheet(claim("TT-1", budget: "Termtime props"))
         click_on "Preview import"
 
         assert_text "Preview: Fringe 2027 — #{termtime.name}"
@@ -186,9 +192,8 @@ module Admin
       test "the preview states which column it read for each field" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet",
-                with: [ "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference",
-                        "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE" ].join("\n")
+        paste_sheet with: [ "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference",
+                            "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE" ].join("\n")
         click_on "Preview import"
 
         # A <summary>, so not a link or a button as far as click_on is concerned.
@@ -201,7 +206,7 @@ module Admin
       test "a claim imported at a live status is called out before it is written" do
         visit admin_reimbursements_expense_import_path
 
-        fill_in "Paste the sheet", with: sheet(claim("OLD-1", status: STATUS::APPROVED))
+        paste_sheet with: sheet(claim("OLD-1", status: STATUS::APPROVED))
         click_on "Preview import"
 
         assert_text "EUSA pays it again"

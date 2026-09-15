@@ -23,7 +23,7 @@
       <ul class="mt-2 list-disc pl-5 text-sm text-red-800">
         <% invalid.each do |entry| %>
           <li>
-            <strong><%= entry.row[:reference].presence || "(no reference)" %></strong>:
+            <strong><%= entry.row[:reference].presence || "(no ID)" %></strong>:
             <%= entry.error %>
             <% if entry.person.nil? && entry.row[:payee_email].present? %>
               <%# Never auto-created from a bare email (ExpenseImport), so this
@@ -52,7 +52,7 @@
       <table class="min-w-full text-sm">
         <thead>
           <tr class="text-left text-gray-600">
-            <th class="py-1 pr-4">Reference</th>
+            <th class="py-1 pr-4">ID</th>
             <th class="py-1 pr-4">Status</th>
             <th class="py-1 pr-4">Payee</th>
             <th class="py-1 pr-4">Budget</th>
@@ -88,7 +88,7 @@
         <%= imported.one? ? "has" : "have" %> been imported before and will be skipped.
       </p>
       <p class="text-gray-600">
-        Their references are already on claims in the portal:
+        Their IDs are already on claims in the portal:
         <%= imported.map { |entry| entry.row[:reference] }.to_sentence %>.
       </p>
     </div>

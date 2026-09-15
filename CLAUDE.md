@@ -675,7 +675,7 @@ survive as historical import provenance and are never written. Spec + plan in
     a row imported Approved enters Build Batch and emails its producer, one imported Paid never
     does. All-or-nothing like `import_budgets!`, so an unreadable amount, an unknown payee, an
     unknown budget or a bad status stops the lot naming the rows.
-  - **The sheet's `Reference` column is the double-apply guard**, written to
+  - **The sheet's `ID` column (headed `Reference` before 2026-09-15, still accepted) is the double-apply guard**, written to
     `expenses.import_key` behind a UNIQUE index. The wizard is stateless, so a second click
     re-posts the same sheet, and a claim has NO natural key the way a budget line has its name.
     The pre-flight read gives the preview its "already imported" bucket; the index is what holds
@@ -1575,6 +1575,10 @@ Start the test database using `docker start /mysql8` before running any tests.
   then the `.ts-dropdown-content .option`) — see `tom_select` in
   `test/system/admin/reimbursements/producer_js_test.rb`. Tom Select fires a native `change` on
   the underlying select, so Stimulus actions bound to it still run.
+- **Capybara's `fill_in` TYPES the first four characters of any value over 30 characters** and
+  sets the rest by JavaScript. A Tab among those four is a real Tab key and leaves a textarea, so
+  a pasted sheet opening `ID\tStatus` arrived as `IDtatus`. Set a TSV outright instead
+  (`paste_sheet` in `expense_import_js_test.rb`).
 - **`ActiveStorage::FileNotFoundError` in system tests usually means a poisoned test DB, not a
   branch regression.** `ActiveStorageHelper#default_image_blob` finds the placeholder blob **by
   filename** and returns it without checking the file still exists, so a `bin/rails runner -e test`

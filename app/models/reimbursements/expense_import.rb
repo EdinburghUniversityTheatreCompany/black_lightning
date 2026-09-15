@@ -45,94 +45,119 @@ module Reimbursements
     Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
 
     # One entry per column, in the order #to_tsv writes them: +label+ is the
-    # canonical heading, +exact+ matches a header WHOLE, +contains+ matches a
-    # substring and is multi-word only (see the class note).
+    # canonical heading, +hint+ the template's explanation under it, +exact+
+    # matches a header WHOLE, +contains+ matches a substring and is multi-word
+    # only (see the class note).
     #
     # A heading not listed here is simply not found, which reads as "the sheet
     # has no X column" for a required field and a blank for an optional one —
     # the safe direction, since a column read as the WRONG field is silent
     # while one not read at all is stated.
     FIELDS = {
+      # Headed "ID", not "Reference": a sheet that also carries a Payment
+      # reference made the two read as the same thing, and they are opposites —
+      # this one is unique per claim, that one repeats across a payee's claims.
       reference: {
-        label: "Reference",
-        exact: [ "reference", "ref", "id", "claim id", "claim ref", "claim reference",
+        label: "ID",
+        hint: "Your sheet's own id for this claim, different on every row",
+        exact: [ "id", "reference", "ref", "claim id", "claim ref", "claim reference",
                  "row id", "our ref", "our reference", "sheet ref", "reference id" ],
         contains: [ "claim reference", "our reference", "reference id", "sheet reference" ]
       },
       status: {
         label: "Status",
+        hint: "Paid, Submitted or Rejected for history; Approved, Pending or Draft go into the live queue",
         exact: [ "status", "state" ],
         contains: [ "claim status", "expense status", "payment status" ]
       },
       payee_email: {
         label: "Payee email",
+        hint: "Email of the person the claim belongs to, as on the People screen",
         exact: [ "payee email", "email", "e mail", "email address", "payee", "claimant" ],
         contains: [ "payee email", "payee e mail", "claimant email", "claimant e mail",
                     "submitter email", "submitter e mail" ]
       },
       budget: {
         label: "Budget",
+        hint: "The budget line's name; write Area: Name if two lines share it",
         exact: [ "budget", "budget name", "budget line", "category" ],
         contains: [ "budget name", "budget line", "budget category" ]
       },
       amount: {
         label: "Amount",
+        hint: "Total paid in pounds, including VAT",
         exact: [ "amount", "total", "gross", "gross amount", "total amount", "amount gross" ],
         contains: [ "gross amount", "total amount", "amount incl vat", "amount including vat" ]
       },
       amount_excl_vat: {
         label: "Amount excl VAT",
+        hint: "Optional; blank charges the whole amount to the budget",
         exact: [ "amount excl vat", "excl vat", "ex vat", "net", "net amount", "amount net" ],
         contains: [ "excl vat", "excluding vat", "ex vat", "net amount", "amount net" ]
       },
       description: {
         label: "Description",
+        hint: "What it was for",
         exact: [ "description", "details", "narrative", "purpose", "what for" ],
         contains: [ "what for", "what it was for" ]
       },
       payment_reference: {
         label: "Payment reference",
+        hint: "Optional; the reference on the bank transfer, which may repeat",
         exact: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ],
         contains: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ]
       },
       expense_type: {
         label: "Type",
+        hint: "Reimbursement (blank) if the payee was paid back, Invoice if EUSA paid a " \
+              "supplier, From EUSA for a cost EUSA charged directly",
         exact: [ "type", "kind", "expense type", "claim type" ],
         contains: [ "expense type", "claim type" ]
       },
       auto_number: {
         label: "Expense number",
+        hint: "Optional; the claim's old number, or blank to number it automatically",
         exact: [ "expense number", "claim number", "expense no", "claim no", "number", "no" ],
         contains: [ "expense number", "claim number" ]
       },
       submitted_on: {
         label: "Date submitted",
+        hint: "Optional; 2026-05-13 or 13/05/2026",
         exact: [ "date submitted", "submitted", "date claimed", "claimed", "date" ],
         contains: [ "date submitted", "submitted on", "date claimed", "date of claim" ]
       },
       paid_on: {
         label: "Date paid",
+        hint: "Optional; 2026-05-13 or 13/05/2026",
         exact: [ "date paid", "paid", "payment date", "date of payment" ],
         contains: [ "date paid", "paid on", "payment date", "date of payment" ]
       },
       payee_name_override: {
         label: "Payee name",
+        hint: "Invoices only: the supplier's name",
         exact: [ "payee name", "pay to", "supplier", "supplier name" ],
         contains: [ "payee name", "supplier name", "pay to" ]
       },
       sort_code_override: {
         label: "Sort code",
+        hint: "Invoices only: the supplier's sort code",
         exact: [ "sort code", "sortcode" ],
         contains: [ "sort code" ]
       },
       account_number_override: {
         label: "Account number",
+        hint: "Invoices only: the supplier's account number",
         exact: [ "account number", "account no", "account" ],
         contains: [ "account number", "account no", "bank account" ]
       }
     }.freeze
 
     TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
+
+    # The template's second row, explaining each column under its heading.
+    # A sheet still carrying it has that row skipped, or its words would be
+    # read as a claim with an unreadable amount and block the import.
+    TEMPLATE_HINTS = FIELDS.each_value.map { |spec| spec[:hint] }.freeze
 
     # The only columns a sheet must carry. The rest are optional, and several
     # (Type, the payee trio) exist so a claim that needs them is importable at
@@ -192,6 +217,7 @@ module Reimbursements
       @imported_keys = existing_expenses.filter_map { |e| self.class.key_match(e.import_key) }.to_set
       @taken_numbers = existing_expenses.filter_map(&:auto_number).to_set
       @rows = parse_data(data, @escaped ? :paste : input_type)
+                .reject { |row| row[:reference] == FIELDS[:reference][:hint] }
       @entries = categorize
     end
 
@@ -344,6 +370,8 @@ module Reimbursements
 
     def normalize_type(raw)
       return Expense::TYPE_REIMBURSEMENT if raw.blank?
+      # The stored name carries "(utility, staff cost, etc)", which nobody types.
+      return Expense::TYPE_FROM_EUSA if raw.casecmp?("from eusa")
 
       Expense::TYPES.find { |type| type.casecmp?(raw) } || raw
     end
@@ -419,14 +447,14 @@ module Reimbursements
 
     def reference_error(row, duplicated)
       if row[:reference].blank?
-        "This line has no reference. Give every claim one (its row number in your own sheet " \
+        "This line has no ID. Give every claim one (its row number in your own sheet " \
           "will do) — it's what stops a second import creating the same claim twice."
       elsif row[:reference].length > IMPORT_KEY_LIMIT
-        "That reference is too long: #{row[:reference].length} characters, and the limit is " \
+        "That ID is too long: #{row[:reference].length} characters, and the limit is " \
           "#{IMPORT_KEY_LIMIT}."
       elsif duplicated[:references].include?(self.class.key_match(row[:reference]))
-        "#{row[:reference].inspect} is used by more than one line in this sheet, so a re-import " \
-          "couldn't tell them apart. (References are matched ignoring case.)"
+        "The ID #{row[:reference].inspect} is used by more than one line in this sheet, so a " \
+          "re-import couldn't tell them apart. (IDs are matched ignoring case.)"
       end
     end
 

@@ -15,7 +15,7 @@ module Admin
     # or on disk, and apply re-parses and re-validates from scratch rather than
     # trusting what the preview decided.
     #
-    # THAT IS ALSO WHY THE SHEET NEEDS A REFERENCE COLUMN. Re-posting the same
+    # THAT IS ALSO WHY THE SHEET NEEDS AN ID COLUMN. Re-posting the same
     # text is what a second click does, and a claim has no natural key the way
     # a budget line has its name — see ExpenseImport, and the unique index on
     # expenses.import_key that backs it.
@@ -49,9 +49,9 @@ module Admin
       # operator for the second is a dead end: previewing again shows the same
       # rows and the import can never succeed. Naming the fix covers both.
       RACED_ALERT =
-        "Nothing was imported: one of those references is already on a claim in the portal. " \
+        "Nothing was imported: one of those IDs is already on a claim in the portal. " \
         "Either somebody imported this sheet while you were looking at it — preview it again " \
-        "to see what is left — or a reference differs from one already imported only by an " \
+        "to see what is left — or an ID differs from one already imported only by an " \
         "accent, which the database counts as the same. Renaming it fixes that.".freeze
 
       # Names no year, for the same reason the budget import's doesn't: the
@@ -92,9 +92,11 @@ module Admin
         render_blocked_preview(RACED_ALERT)
       end
 
-      # The columns the importer reads, as an empty CSV to start from.
+      # The columns the importer reads, with a row explaining each, as a CSV to
+      # start from. The importer skips that explanation row if it is left in.
       def template
-        send_data ::Reimbursements::ExpenseImport::TSV_HEADERS.to_csv,
+        import = ::Reimbursements::ExpenseImport
+        send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
                   type: "text/csv", filename: "expense-import-template.csv"
       end
 

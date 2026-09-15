@@ -35,16 +35,39 @@
       status. Receipts aren't imported: attach any you have to the claim afterwards.
     </p>
 
-    <p class="mb-4 text-sm text-gray-600">
+    <p class="mb-2 text-sm text-gray-600">
       Columns read: <strong><%= ::Reimbursements::ExpenseImport::TSV_HEADERS.to_sentence %></strong>.
       <strong><%= ::Reimbursements::ExpenseImport.required_labels.to_sentence %></strong>
-      are required on every line — the reference is your own sheet's id for the claim (a row
-      number will do), and it's what stops importing the same sheet twice creating everything
-      twice.
+      are required on every line.
       <%= link_to "Download a template",
                   template_admin_reimbursements_expense_import_path(format: :csv),
-                  class: "text-primary underline", data: { turbo_frame: "_top" } %>.
+                  class: "text-primary underline", data: { turbo_frame: "_top" } %>
+      — its second row says what goes in each column, and is skipped if you leave it in.
     </p>
+
+    <dl class="mb-4 grid gap-x-4 gap-y-1 text-sm text-gray-600 sm:grid-cols-[max-content_1fr]">
+      <dt class="font-medium text-gray-800">ID</dt>
+      <dd>
+        Your own sheet's id for the claim; a row number will do. Every line needs a different one.
+        It is how a second import of the same sheet knows which claims are already in.
+        It is <em>not</em> the Payment reference, which repeats across one payee's claims.
+      </dd>
+
+      <dt class="font-medium text-gray-800">Type</dt>
+      <dd>
+        Who was paid. <strong>Reimbursement</strong> (the default when blank): the payee spent their
+        own money and was paid back. <strong>Invoice</strong>: EUSA paid a supplier directly, so
+        give the supplier's Payee name, Sort code and Account number. <strong>From EUSA</strong>: a
+        cost EUSA charged straight to the budget, such as a utility bill or staff cost, that
+        nobody claimed.
+      </dd>
+
+      <dt class="font-medium text-gray-800">Status</dt>
+      <dd>
+        Paid, Submitted and Rejected are history. Approved, Pending and Draft land in the live
+        queue, and the next screen spells out what happens to them.
+      </dd>
+    </dl>
 
     <div class="flex flex-col gap-4">
       <%# Both halves of the destination. A claim's budget is matched by name
