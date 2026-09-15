@@ -34,10 +34,7 @@ Toolchain versions are pinned with [mise](https://mise.jdx.dev) (`mise.toml` + `
 pre-commit checks run through [hk](https://hk.jdx.dev) (`hk.pkl`). First-time setup:
 
 ```sh
-mise install        # provisions hk, pkl, gitleaks, node (verified against mise.lock)
-hk install          # installs the git pre-commit hooks (replaces the old overcommit setup)
-bundle install
-pnpm install
+mise install # installs dev tools & dependencies
 ```
 
 Run the app with `mise run serve` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;

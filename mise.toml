@@ -36,12 +36,18 @@ minimum_release_age = "4d"
 # Enable corepack after `mise install` so the pnpm version pinned in package.json's
 # `packageManager` field is available (corepack downloads + verifies it on first use).
 # Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
-postinstall = "corepack enable"
+# Also install dev dependencies
+postinstall = [
+  "corepack enable",
+  { task = "setup-scripts" },
+  { task = "install" },
+]
 
 [env]
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
 # hand-edit — bump it by running the skill's upgrade path.
 DEV_ENV_VERSION = "23"
+_.path = ["bin"]
 
 [tasks]
 install-hk = "hk install"
@@ -50,6 +56,10 @@ install-pnpm = "pnpm install"
 
 [tasks.install]
 depends = ["install-hk", "install-bundle", "install-pnpm"]
+
+[tasks.setup-scripts]
+run = "chmod +x ./bin/*"
+run_windows = ""
 
 [tasks.serve]
 depends = ["serve-assets", "serve-app"]
