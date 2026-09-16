@@ -38,9 +38,9 @@ minimum_release_age = "4d"
 # Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
 # Also install dev dependencies
 postinstall = [
-  "corepack enable",
-  { task = "setup" },
-  { task = "install" },
+    "corepack enable",
+    { task = "setup" },
+    { task = "install" },
 ]
 
 [env]
@@ -50,13 +50,21 @@ DEV_ENV_VERSION = "23"
 _.path = ["bin"]
 
 [tasks]
-setup = [{ task = "setup:scripts" }]
 "install:hk" = "hk install"
 "install:gems" = "bundle install"
 "install:node-modules" = "pnpm install"
 
 [tasks.install]
 depends = ["install:hk", "install:gems", "install:node-modules"]
+
+[tasks.setup]
+depends = ["setup:scripts", "setup:version-files"]
+
+[tasks."setup:version-files"]
+run = [
+    "mise tool ruby --installed | tr -d '\n' > .ruby-version",
+    "mise tool node --installed | tr -d '\n' > .node-version"
+]
 
 [tasks."setup:scripts"]
 run = "chmod +x ./bin/*"
