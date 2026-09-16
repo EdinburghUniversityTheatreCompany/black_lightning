@@ -12,4 +12,3 @@ postinstall = [
     { task = "setup" },
     { task = "install" },
 ]
-

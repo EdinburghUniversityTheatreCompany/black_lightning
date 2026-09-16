@@ -62,8 +62,8 @@ depends = ["setup:scripts", "setup:version-files"]
 
 [tasks."setup:version-files"]
 run = [
-    "mise tool ruby --installed | tr -d '\n' > .ruby-version",
-    "mise tool node --installed | tr -d '\n' > .node-version",
+    "mise tool ruby --requested | tr -d '\n' > .ruby-version",
+    "mise tool node --requested | tr -d '\n' > .node-version",
 ]
 
 [tasks."setup:scripts"]
