@@ -6,7 +6,10 @@
 # toolchain — the devcontainer therefore ships no build-essential/libssl-dev/libyaml-dev.
 # Set explicitly so a contributor's global mise `compile` default can't flip mise.lock.
 ruby = { version = "4.0.2", compile = false }
-node = "24.13.0"  # matches .node-version; provides npx for jscpd + `herb lint` (both npm-distributed)
+# Enable corepack after installing node so the pnpm version pinned in package.json's
+# `packageManager` field is available (corepack downloads + verifies it on first use).
+# Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
+node = { version = "24.13.0", postinstall = "corepack enable" }
 hk = "latest"
 pkl = "latest"
 gitleaks = "latest"
@@ -33,12 +36,7 @@ lockfile = true
 minimum_release_age = "4d"
 
 [hooks]
-# Enable corepack after `mise install` so the pnpm version pinned in package.json's
-# `packageManager` field is available (corepack downloads + verifies it on first use).
-# Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
-# Also install dev dependencies
 postinstall = [
-    "corepack enable",
     { task = "setup" },
     { task = "install" },
 ]
@@ -54,9 +52,11 @@ _.path = ["bin"]
 "install:gems" = "bundle install"
 "install:node-modules" = "pnpm install"
 
+# Install dev dependencies
 [tasks.install]
 depends = ["install:hk", "install:gems", "install:node-modules"]
 
+# Ensure stubs are valid
 [tasks.setup]
 depends = ["setup:scripts", "setup:version-files"]
 
@@ -73,13 +73,13 @@ run_windows = ""
 [tasks.serve]
 depends = ["serve:assets", "serve:app"]
 
-[tasks."serve-assets"]
+[tasks."serve:assets"]
 run = "vite dev"
 
-[tasks."serve-app"]
+[tasks."serve:app"]
 run = "rails server -b $BINDING"
 
-[tasks."serve-app".env]
+[tasks."serve:app".env]
 PORT = { default = "3000" }
 BINDING = { default = "0.0.0.0" }
 RUBY_DEBUG_OPEN = "true"
