@@ -83,7 +83,6 @@ class User < ApplicationRecord
   before_save :ensure_profile_completion_salt
   before_validation :extract_student_id_from_email, if: :email_changed?
 
-  rolify
   has_paper_trail
 
   ###############
@@ -151,6 +150,8 @@ class User < ApplicationRecord
   has_many :admin_debt_notifications, class_name: "Admin::DebtNotification", dependent: :destroy
   has_many :maintenance_credits, class_name: "MaintenanceCredit", dependent: :restrict_with_error
 
+  has_and_belongs_to_many :roles, join_table: :users_roles
+
   has_one_attached :avatar
 
   normalizes :email, with: lambda { |email|
@@ -170,6 +171,16 @@ class User < ApplicationRecord
   scope :profile_complete, -> { where.not(profile_completed_at: nil) }
   scope :order_by_last_name_first, -> { order(:last_name, :first_name) }
   scope :search_by_name, ->(q) { where("CONCAT(first_name, ' ', last_name) LIKE ?", "%#{q}%") }
+
+  scope :with_role, ->(role) {
+    role = Role.resolve(role)
+    self.joins("INNER JOIN users_roles j ON j.user_id = users.id AND j.role_id = #{role.id}")
+  }
+
+  scope :without_role, ->(role) {
+    role = Role.resolve(role)
+    self.joins("LEFT JOIN users_roles j ON j.user_id = users.id AND j.role_id = #{role.id}").where("j.role_id IS NULL")
+  }
 
   # Also change the method 'consented'
   def self.not_consented
@@ -892,27 +903,15 @@ class User < ApplicationRecord
   # Overrides methods that only work on symbols to also work with the instance of the class.
   ##
   def add_role(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+    Role.resolve(role).users << self
   end
 
   def remove_role(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+    Role.resolve(role).users.delete(self)
   end
 
   def has_role?(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+    Role.resolve(role).users.where(id: id).exists?
   end
 
   # Facts about the person, read from the role. These are NOT permissions: "who are the

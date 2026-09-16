@@ -32,7 +32,7 @@ class Admin::EditableBlock < ApplicationRecord
   validates :url, length: { maximum: 255 }
   include MdHelper
 
-  resourcify
+  # resourcify
   has_paper_trail meta: { version_note: :version_note }
 
   include AttachmentItem

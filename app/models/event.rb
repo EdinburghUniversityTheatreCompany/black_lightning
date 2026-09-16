@@ -145,7 +145,7 @@ class Event < ApplicationRecord
   attr_writer :company_name
 
   has_paper_trail
-  resourcify
+  # resourcify
 
   AUTHOR_NAME_LIST_CACHE_KEY = "Event/author_name_list".freeze
 

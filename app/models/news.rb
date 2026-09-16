@@ -35,7 +35,7 @@ class News < ApplicationRecord
   validates :image_content_type, length: { maximum: 255 }
   include Sluggable
 
-  resourcify
+  # resourcify
 
   ##
   # Use the format id-slug for urls. e.g. /news/1-mynews

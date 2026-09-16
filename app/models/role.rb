@@ -48,8 +48,6 @@ class Role < ApplicationRecord
 
   scope :trained, -> { where("name LIKE ?", "%Trained%") }
 
-  scopify
-
   normalizes :name, with: ->(name) { name&.strip }
 
   def self.ransackable_attributes(auth_object = nil)
@@ -58,6 +56,18 @@ class Role < ApplicationRecord
 
   def self.hardcoded_name?(name)
     HARDCODED_NAMES.any? { |hardcoded| hardcoded.casecmp?(name.to_s.strip) }
+  end
+
+  def self.resolve(role)
+    if role.is_a? String
+      role = Role.where("LOWER(name) LIKE ?", "#{role.downcase}").first
+    elsif role.is_a? Symbol
+      role = Role.where("LOWER(name) LIKE ?", "#{role.downcase}").first
+    elsif not (role.is_a? Role)
+      # who am i to complain?
+    end
+
+    role
   end
 
   # Removes all users from the role.
