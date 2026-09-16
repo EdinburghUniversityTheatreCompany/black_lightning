@@ -1,0 +1,15 @@
+[tools]
+hk = { version = "latest", lazy = true, postinstall = "hk install" }
+pkl = { version = "latest", lazy = true }
+gitleaks = { version = "latest", lazy = true }
+# GitHub Actions security static analysis (hk `zizmor` step + CI)
+zizmor = { version = "latest", lazy = true }
+# GitHub Actions workflow linter — syntax/expressions (hk `actionlint` step + CI)
+actionlint = { version = "latest", lazy = true }
+
+[hooks]
+postinstall = [
+    { task = "setup" },
+    { task = "install" },
+]
+
