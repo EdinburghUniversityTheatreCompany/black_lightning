@@ -21,12 +21,12 @@ module Reimbursements
     # One well-formed line, with the fields a test cares about overridden.
     def row(**overrides)
       cells = { reference: "OLD-1", status: Status::PAID, payee_email: "alice@example.com",
-                budget: "Props", amount: "120.00", amount_excl_vat: "100.00",
+                submitter_name: "", budget: "Props", amount: "120.00", amount_excl_vat: "100.00",
                 description: "Fake blood", payment_reference: "PROPS ALICE",
                 expense_type: "", auto_number: "", submitted_on: "", paid_on: "",
                 payee_name_override: "", sort_code_override: "", account_number_override: "" }
         .merge(overrides)
-      cells.values_at(:reference, :status, :payee_email, :budget, :amount, :amount_excl_vat,
+      cells.values_at(:reference, :status, :payee_email, :submitter_name, :budget, :amount, :amount_excl_vat,
                       :description, :payment_reference, :expense_type, :auto_number,
                       :submitted_on, :paid_on, :payee_name_override, :sort_code_override,
                       :account_number_override).join("\t")
@@ -36,10 +36,11 @@ module Reimbursements
       ([ HEADERS ] + rows).join("\n")
     end
 
-    def build_import(data, input_type: :paste, existing_expenses: [], budgets: [ @budget ])
+    def build_import(data, input_type: :paste, existing_expenses: [], budgets: [ @budget ],
+                     people: [ @payee ])
       ExpenseImport.new(data, input_type: input_type, financial_year: @year,
                               cost_centre: @cost_centre, budgets: budgets,
-                              people: [ @payee ], existing_expenses: existing_expenses)
+                              people: people, existing_expenses: existing_expenses)
     end
 
     # A show's line after the area rename: the area holds the grouping and the
@@ -472,6 +473,60 @@ module Reimbursements
       import = build_import(tsv(row(amount: "5000", amount_excl_vat: "5000")))
 
       assert import.valid?
+    end
+
+    # --- Who the claim belongs to --------------------------------------------
+
+    # Several payees have no email, and a blank cell matched whichever of them
+    # was indexed last: 140 claims in production went to "Fringe Society".
+    test "a blank submitter email never matches a payee who has no email" do
+      emailless = create_reimbursements_person(name: "Fringe Society", email: nil)
+
+      import = build_import(tsv(row(payee_email: "")), people: [ @payee, emailless ])
+
+      assert_not import.valid?
+      assert_nil import.entries.sole.person
+      assert_match(/names no submitter/, import.entries.sole.error)
+    end
+
+    test "with no email, the submitter is found by name, ignoring case and accents" do
+      zoe = create_reimbursements_person(name: "Zoë Producer", email: nil)
+      import = build_import(tsv(row(payee_email: "", submitter_name: " zoe  producer ")),
+                            people: [ @payee, zoe ])
+
+      assert import.valid?, import.entries.map(&:error).compact.to_sentence
+      assert_equal zoe.record_id, import.creates.sole[:person_record_id]
+    end
+
+    test "an email, when given, wins over the name" do
+      import = build_import(tsv(row(payee_email: "alice@example.com", submitter_name: "Somebody Else")))
+
+      assert import.valid?, import.entries.map(&:error).compact.to_sentence
+      assert_equal @payee.record_id, import.entries.sole.person.record_id
+    end
+
+    test "a name two payees share blocks the row rather than picking one" do
+      twins = Array.new(2) { |i| create_reimbursements_person(name: "Sam Jones", email: "sam#{i}@example.com") }
+      import = build_import(tsv(row(payee_email: "", submitter_name: "Sam Jones")), people: twins)
+
+      assert_not import.valid?
+      assert_match(/more than one person/, import.entries.sole.error)
+    end
+
+    test "a name nobody has is refused and points at the People screen" do
+      import = build_import(tsv(row(payee_email: "", submitter_name: "Nobody Known")))
+
+      assert_not import.valid?
+      assert_match(/isn't anyone on the People screen/, import.entries.sole.error)
+    end
+
+    test "the submitter columns are headed Submitter email and Submitter, and Payee email still reads" do
+      assert_equal [ "Submitter email", "Submitter" ], ExpenseImport::TSV_HEADERS[2, 2]
+
+      import = build_import(tsv(row).sub("Submitter email\t", "Payee email\t"))
+
+      assert import.valid?, import.errors.to_sentence
+      assert_equal "Payee email", import.column_mapping.fetch("Submitter email")
     end
 
     # Nobody types the full "From EUSA (utility, staff cost, etc)" into a cell.

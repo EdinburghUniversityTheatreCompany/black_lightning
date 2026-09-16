@@ -70,12 +70,20 @@ module Reimbursements
         exact: [ "status", "state" ],
         contains: [ "claim status", "expense status", "payment status" ]
       },
+      # "Submitter", not "Payee": on an Invoice the payee is the supplier in
+      # Payee name, while this is whoever the claim belongs to.
       payee_email: {
-        label: "Payee email",
+        label: "Submitter email",
         hint: "Email of the person the claim belongs to, as on the People screen",
-        exact: [ "payee email", "email", "e mail", "email address", "payee", "claimant" ],
-        contains: [ "payee email", "payee e mail", "claimant email", "claimant e mail",
-                    "submitter email", "submitter e mail" ]
+        exact: [ "submitter email", "payee email", "email", "e mail", "email address", "payee" ],
+        contains: [ "submitter email", "submitter e mail", "payee email", "payee e mail",
+                    "claimant email", "claimant e mail" ]
+      },
+      submitter_name: {
+        label: "Submitter",
+        hint: "Their name instead, if the email is blank",
+        exact: [ "submitter", "submitter name", "claimant", "claimant name" ],
+        contains: [ "submitter name", "claimant name" ]
       },
       budget: {
         label: "Budget",
@@ -162,11 +170,14 @@ module Reimbursements
     # The only columns a sheet must carry. The rest are optional, and several
     # (Type, the payee trio) exist so a claim that needs them is importable at
     # all rather than because a typical sheet carries them.
-    REQUIRED_FIELDS = %i[reference status payee_email budget amount].freeze
+    # The submitter is required too, but either of its two columns will do
+    # (#report_missing_columns).
+    REQUIRED_FIELDS = %i[reference status budget amount].freeze
 
     # Fields whose cells may hold a tab or a newline, so must be unescaped when
     # the text came back from #to_tsv. See @escaped below.
-    TEXT_FIELDS = %i[reference budget description payment_reference payee_name_override].freeze
+    TEXT_FIELDS = %i[reference submitter_name budget description payment_reference
+                     payee_name_override].freeze
 
     # Statuses a row may name, matched case-insensitively so a sheet saying
     # "paid" lands where the operator plainly meant it to.
@@ -213,7 +224,11 @@ module Reimbursements
           (index[BudgetImport.match_key(spelling)] ||= []) << budget
         end
       end
-      @people_by_email = people.index_by { |person| person.email.to_s.strip.downcase }
+      # Payees with no email are left out: they would all index under "", and a
+      # blank cell matched whichever came last (140 claims to Fringe Society).
+      @people_by_email = people.select { |person| person.email.present? }
+                               .index_by { |person| person.email.strip.downcase }
+      @people_by_name = people.group_by { |person| self.class.name_key(person.name) }
       @imported_keys = existing_expenses.filter_map { |e| self.class.key_match(e.import_key) }.to_set
       @taken_numbers = existing_expenses.filter_map(&:auto_number).to_set
       @rows = parse_data(data, @escaped ? :paste : input_type)
@@ -231,6 +246,9 @@ module Reimbursements
     # because over-matching would bucket a genuinely new claim as already
     # imported and drop it silently — the far worse direction.
     def self.key_match(value) = value.to_s.strip.downcase.presence
+
+    # A typed name against a stored one: case, spacing and accents carry no meaning.
+    def self.name_key(value) = I18n.transliterate(value.to_s).downcase.squish.presence
 
     # Nothing is written unless every row is readable. See the class comment.
     def valid?
@@ -402,6 +420,7 @@ module Reimbursements
     def report_missing_columns
       missing = REQUIRED_FIELDS.reject { |field| header_for[field] }
                                .map { |field| FIELDS.fetch(field)[:label] }
+      missing << "Submitter email or Submitter" unless header_for[:payee_email] || header_for[:submitter_name]
       return if missing.empty?
 
       @errors << "The sheet has no #{missing.to_sentence} column#{'s' if missing.many?}. " \
@@ -410,12 +429,13 @@ module Reimbursements
     end
 
     def entry_for(row, duplicated)
-      person = @people_by_email[row[:payee_email]]
+      people = people_for(row)
+      person = people.first if people.one?
       candidates = budgets_named(row[:budget])
       budget = candidates.first if candidates.one?
       base = { row: row, person: person, budget: budget }
 
-      error = row_error(row, person, budget, candidates, duplicated)
+      error = row_error(row, people, budget, candidates, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
       if @imported_keys.include?(self.class.key_match(row[:reference]))
@@ -435,10 +455,10 @@ module Reimbursements
     # own coordinates (reference, status) and the two records it has to resolve.
     # Ordered cheapest-and-most-fundamental first, so a row missing its
     # reference is told that rather than being told about its budget.
-    def row_error(row, person, budget, candidates, duplicated)
+    def row_error(row, people, budget, candidates, duplicated)
       reference_error(row, duplicated) ||
         status_error(row) ||
-        (payee_error(row) if person.nil?) ||
+        (submitter_error(row, people) unless people.one?) ||
         (ambiguous_budget_error(row, candidates) if candidates.many?) ||
         (budget_error(row) if budget.nil?) ||
         value_error(row) ||
@@ -485,13 +505,25 @@ module Reimbursements
     # what the unique index on Person#email exists to stop, and a claim paid to
     # a stub record has nowhere to send the money. Points at the screen that
     # fixes it, as the budget import's preview does.
-    def payee_error(row)
-      if row[:payee_email].blank?
-        "This line names no payee. Give the email address of the person the claim belongs to."
+    def submitter_error(row, people)
+      if row[:payee_email].blank? && row[:submitter_name].blank?
+        "This line names no submitter. Give the email or the name of the person the claim " \
+          "belongs to."
+      elsif people.many?
+        "#{row[:submitter_name].inspect} is the name of more than one person on the People " \
+          "screen. Give their email instead."
       else
-        "#{row[:payee_email].inspect} isn't anyone on the People screen. Register them there " \
-          "first — nobody is created from a bare email address."
+        "#{(row[:payee_email].presence || row[:submitter_name]).inspect} isn't anyone on the " \
+          "People screen. Register them there first — an import never creates anyone."
       end
+    end
+
+    # The email wins when there is one: it is unique, and a name is not.
+    def people_for(row)
+      return Array(@people_by_email[row[:payee_email]]) if row[:payee_email].present?
+
+      key = self.class.name_key(row[:submitter_name])
+      key ? @people_by_name.fetch(key, []) : []
     end
 
     def budgets_named(name)

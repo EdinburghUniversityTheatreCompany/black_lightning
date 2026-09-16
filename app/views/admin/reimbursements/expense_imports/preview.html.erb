@@ -25,7 +25,7 @@
           <li>
             <strong><%= entry.row[:reference].presence || "(no ID)" %></strong>:
             <%= entry.error %>
-            <% if entry.person.nil? && entry.row[:payee_email].present? %>
+            <% if entry.person.nil? && (entry.row[:payee_email].present? || entry.row[:submitter_name].present?) %>
               <%# Never auto-created from a bare email (ExpenseImport), so this
                   is the operator's job — and the link has to actually go
                   somewhere. %>
@@ -54,7 +54,7 @@
           <tr class="text-left text-gray-600">
             <th class="py-1 pr-4">ID</th>
             <th class="py-1 pr-4">Status</th>
-            <th class="py-1 pr-4">Payee</th>
+            <th class="py-1 pr-4">Submitter</th>
             <th class="py-1 pr-4">Budget</th>
             <th class="py-1 pr-4 text-right">Amount</th>
             <th class="py-1 pr-4">Description</th>

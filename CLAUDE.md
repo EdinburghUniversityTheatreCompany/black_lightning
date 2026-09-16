@@ -680,6 +680,11 @@ survive as historical import provenance and are never written. Spec + plan in
     re-posts the same sheet, and a claim has NO natural key the way a budget line has its name.
     The pre-flight read gives the preview its "already imported" bucket; the index is what holds
     when that read goes stale, and the rescued `RecordNotUnique` re-renders the preview.
+  - **A blank Submitter email is "none given", never a lookup.** Payees without an email all
+    index under `""`, so a blank cell matched whichever came last and 140 production claims went
+    to "Fringe Society". With no email the `Submitter` NAME is matched (case, spacing and accents
+    folded); a name two people share blocks the row. The column is "Submitter", not "Payee",
+    because `Payee name` is an Invoice's supplier.
   - **Every rule comes from `ExpenseForm`, because the model has none** — `person`, `budget`,
     `batch` and `financial_year` are all optional and status/type/method have DB defaults, so
     `Expense.create!({})` passes. The importer sets `internal` as `from_actual` does, plus a

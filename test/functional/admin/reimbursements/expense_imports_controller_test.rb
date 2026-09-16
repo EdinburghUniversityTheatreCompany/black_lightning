@@ -23,7 +23,7 @@ module Admin
       def row(reference: "OLD-1", status: STATUS::PAID, payee: "alice@example.com",
               budget: "Props", amount: "120.00", excl_vat: "100.00", description: "Fake blood",
               payment_reference: "PROPS ALICE", type: "", number: "", submitted: "", paid: "")
-        [ reference, status, payee, budget, amount, excl_vat, description, payment_reference,
+        [ reference, status, payee, "", budget, amount, excl_vat, description, payment_reference,
           type, number, submitted, paid, "", "", "" ].join("\t")
       end
 

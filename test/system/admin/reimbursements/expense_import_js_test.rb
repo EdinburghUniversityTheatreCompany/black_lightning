@@ -47,7 +47,7 @@ module Admin
 
       def claim(reference, amount: "120.00", status: STATUS::PAID, payee: "alice@example.com",
                 budget: "Props")
-        [ reference, status, payee, budget, amount, "100.00", "Fake blood #{reference}",
+        [ reference, status, payee, "", budget, amount, "100.00", "Fake blood #{reference}",
           "PROPS ALICE", "", "", "", "", "", "", "" ].join("\t")
       end
 
