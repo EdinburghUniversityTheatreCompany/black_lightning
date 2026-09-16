@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+env:
+  MISE_ENV: "development"
+  MISE_NO_HOOKS: 1
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -244,8 +248,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      MISE_ENV: "development"
 
     steps:
       - name: Checkout code
@@ -269,8 +271,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      MISE_ENV: "development"
 
     steps:
       - name: Checkout code
