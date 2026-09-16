@@ -14,6 +14,7 @@ mise trust --yes
 # `mise install` also runs the corepack-enable postinstall hook (see mise.toml), which makes
 # the pnpm version pinned in package.json's `packageManager` field available via corepack.
 mise install
+mise reshim -f
 
 echo "=== Installing git hooks (hk) ==="
 mise exec -- hk install
