@@ -21,13 +21,13 @@ module Admin
 
       setup do
         backend = -> { Permission.create(action: "access", subject_class: "backend") }
-        producer = Role.create!(name: "Producer")
+        producer = Group.create!(name: "Producer")
         producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
         producer.permissions << backend.call
-        finance = Role.create!(name: "Reimbursements Finance")
+        finance = Group.create!(name: "Reimbursements Finance")
         finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
         finance.permissions << backend.call
-        backend_only = Role.create!(name: "Backend Only")
+        backend_only = Group.create!(name: "Backend Only")
         backend_only.permissions << backend.call
 
         @submitter = users(:member)

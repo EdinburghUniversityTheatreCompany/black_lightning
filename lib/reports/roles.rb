@@ -23,7 +23,7 @@ class Reports::Roles
     # Add a worksheet for each role. Plucking per role (rather than
     # includes(:users)) means only one role's members are resident at a time,
     # instead of every user of every role held simultaneously.
-    Role.order(:name).each do |role|
+    Group.order(:name).each do |role|
       wb.add_worksheet(name: role.name.gsub(/\//, " - ")) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
         role.users.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |first_name, last_name, email, last_login|

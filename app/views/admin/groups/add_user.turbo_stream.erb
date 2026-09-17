@@ -1,9 +1,9 @@
-<% show_remove = current_user.can?(:remove_user, @role) %>
-<% remove_url_lambda = ->(user_id) { remove_user_admin_role_path(@role, user_id) } %>
+<% show_remove = current_user.can?(:remove_user, @group) %>
+<% remove_url_lambda = ->(user_id) { remove_user_admin_group_path(@group, user_id) } %>
 
-<%= turbo_stream.replace dom_id(@role, :users) do %>
-  <div id="<%= dom_id(@role, :users) %>">
-    <%= render(UsersTableComponent.new(users: @users, url: admin_role_url(@role), q: @q,
+<%= turbo_stream.replace dom_id(@group, :users) do %>
+  <div id="<%= dom_id(@group, :users) %>">
+    <%= render(UsersTableComponent.new(users: @users, url: admin_group_url(@group), q: @q,
       show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda)) %>
   </div>
 <% end %>

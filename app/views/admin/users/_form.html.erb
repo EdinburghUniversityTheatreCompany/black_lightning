@@ -19,7 +19,7 @@
     <%= f.input :password_confirmation %>
 
     <% if current_user.admin? %>
-      <%= f.association :roles, as: :check_boxes %>
+      <%= f.association :groups, as: :check_boxes %>
     <% end %>
 
     <h3>Public Profile</h3>

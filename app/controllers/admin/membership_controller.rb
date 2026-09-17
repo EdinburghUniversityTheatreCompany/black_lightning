@@ -29,7 +29,7 @@ class Admin::MembershipController < AdminController
     if user.nil?
       render json: { response: "Member not found" }, status: :not_found
     elsif user.member?
-      if user.has_role?("DM Trained")
+      if user.in_group?("DM Trained")
         message = "#{user.name(current_user)} is a current member and is DM trained"
       else
         message = "#{user.name(current_user)} is a current member"

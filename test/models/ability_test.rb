@@ -15,7 +15,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt,
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo,
                   Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceCredit,
-                  Role, Company ]
+                  Group, Company ]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -160,30 +160,30 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:read, @proposal, true, true, false, situation)
   end
 
-  test "reviewing proposals is granted by the grid permission, not by a role name" do
+  test "reviewing proposals is granted by the grid permission, not by a group name" do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
     helper_set_up_proposal
     @proposal.status = :awaiting_approval
 
-    # The role NAME alone grants nothing any more. (@checker_ability was built by
+    # The group NAME alone grants nothing any more. (@checker_ability was built by
     # helper_set_up_proposal before this delete and holds its own rule set, so it is unaffected.)
     named_only = FactoryBot.create(:user)
-    named_only.add_role "Proposal Checker"
-    Role.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))
-    assert_not Ability.new(named_only).can?(:read, @proposal), "Holding a role called Proposal Checker without the permission must not grant review"
+    named_only.join_group "Proposal Checker"
+    Group.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))
+    assert_not Ability.new(named_only).can?(:read, @proposal), "Holding a group called Proposal Checker without the permission must not grant review"
 
-    # Any role holding the permission does.
-    other_role_user = FactoryBot.create(:user)
-    Role.create!(name: "Artistic Panel").tap do |role|
-      role.permissions << admin_permissions(:review_proposals)
-      other_role_user.add_role(role)
+    # Any group holding the permission does.
+    other_group_user = FactoryBot.create(:user)
+    Group.create!(name: "Artistic Panel").tap do |group|
+      group.permissions << admin_permissions(:review_proposals)
+      other_group_user.join_group(group)
     end
-    assert Ability.new(other_role_user).can?(:read, @proposal), "A role holding the review permission must be able to read an awaiting proposal after the deadline"
+    assert Ability.new(other_group_user).can?(:read, @proposal), "A group holding the review permission must be able to read an awaiting proposal after the deadline"
 
     # Committee reviews through the same permission (fixture), and loses it when it is unticked.
     assert Ability.new(users(:committee)).can?(:read, @proposal)
-    roles(:committee).permissions.delete(admin_permissions(:review_proposals))
-    assert_not Ability.new(users(:committee).reload).can?(:read, @proposal), "Committee without the permission must not review; the role name is not the gate"
+    groups(:committee).permissions.delete(admin_permissions(:review_proposals))
+    assert_not Ability.new(users(:committee).reload).can?(:read, @proposal), "Committee without the permission must not review; the group name is not the gate"
   end
 
   test "the review permission does not open proposals before the submission deadline" do
@@ -285,7 +285,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     user = feedback.show.users.sample
     # If you do not do this, the user might accidentally get permissions from fixtures.
-    user.remove_role(:member)
+    user.leave_group(:member)
 
     ability = Ability.new user
 
@@ -625,57 +625,57 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   test "admins cannot do anything with complaints unless they have the correct permission" do
     admin = users(:admin)
     allowed_actions = %i[create new]
-    # Granted by the welfare role
+    # Granted by the welfare group
     semi_forbidden_actions = %i[read show index edit update]
     forbidden_actions = %I[destroy delete]
     ability = Ability.new(admin)
 
     helper_test_actions(Complaint, "the complaint class as an admin", ability, allowed_actions, semi_forbidden_actions + forbidden_actions)
 
-    admin.add_role("Welfare Contact")
+    admin.join_group("Welfare Contact")
 
     ability = Ability.new(admin)
 
     helper_test_actions(Complaint, "the complaint class as an admin", ability, allowed_actions + semi_forbidden_actions, forbidden_actions)
   end
 
-  test "logged in users can read trained roles but not non-trained roles" do
-    trained_role = roles(:dm_trained)
-    non_trained_role = roles(:committee)
+  test "logged in users can read trained groups but not non-trained groups" do
+    trained_group = groups(:dm_trained)
+    non_trained_group = groups(:committee)
 
     allowed_actions = %I[show read index]
     forbidden_actions = %I[new create update edit delete destroy]
 
-    helper_test_actions(trained_role, "a trained role", @ability, allowed_actions, forbidden_actions)
-    helper_test_actions(non_trained_role, "a non-trained role", @ability, [], allowed_actions + forbidden_actions)
+    helper_test_actions(trained_group, "a trained group", @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(non_trained_group, "a non-trained group", @ability, [], allowed_actions + forbidden_actions)
   end
 
   test "permission grid permissions work" do
     # Pick classses for this that does not have any special permissions.
     # Please make sure the format of the Admin::Permission here is the same as the grid would use.
-    # Note: Role has a base :read permission for trained roles, so use instance-level checks for Role :read.
+    # Note: Group has a base :read permission for trained groups, so use instance-level checks for Group :read.
 
-    role = Role.where(name: "member")
-    other_role = [ Role.create(name: "pineapple") ]
+    group = Group.where(name: "member")
+    other_group = [ Group.create(name: "pineapple") ]
 
     granted_permissions = [
-      Admin::Permission.create(action: :read,   subject_class: "Role", roles: role),
-      Admin::Permission.create(action: :update, subject_class: "Role", roles: role),
-      Admin::Permission.create(action: :delete, subject_class: "MassMail", roles: role),
-      Admin::Permission.create(action: :create, subject_class: "MassMail", roles: role)
+      Admin::Permission.create(action: :read,   subject_class: "Group", groups: group),
+      Admin::Permission.create(action: :update, subject_class: "Group", groups: group),
+      Admin::Permission.create(action: :delete, subject_class: "MassMail", groups: group),
+      Admin::Permission.create(action: :create, subject_class: "MassMail", groups: group)
     ]
 
     non_granted_permissions = [
-      Admin::Permission.create(action: :delete, subject_class: "Role", roles: other_role),
-      Admin::Permission.create(action: :edit,   subject_class: "Role", roles: other_role),
-      Admin::Permission.create(action: :read,   subject_class: "MassMail", roles: other_role),
-      Admin::Permission.create(action: :update, subject_class: "MassMail", roles: other_role)
+      Admin::Permission.create(action: :delete, subject_class: "Group", groups: other_group),
+      Admin::Permission.create(action: :edit,   subject_class: "Group", groups: other_group),
+      Admin::Permission.create(action: :read,   subject_class: "MassMail", groups: other_group),
+      Admin::Permission.create(action: :update, subject_class: "MassMail", groups: other_group)
     ]
 
-    @user.add_role :member
+    @user.join_group :member
     @ability = Ability.new(@user)
 
-    other_user = FactoryBot.create :user, roles: other_role
+    other_user = FactoryBot.create :user, groups: other_group
     other_ability = Ability.new other_user
 
     granted_permissions.each do |permission|
@@ -683,19 +683,19 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
       assert @ability.can?(permission.action.to_sym, subject), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
 
-      # For Role :read, :edit,
-      # check a non-trained role instance since all logged-in users can read trained roles and edit child roles.
-      check_subject = subject == Role && (permission.action.to_sym == :read || permission.action.to_sym == :update) ? other_role.first : subject
+      # For Group :read, :edit,
+      # check a non-trained group instance since all logged-in users can read trained groups and edit child groups.
+      check_subject = subject == Group && (permission.action.to_sym == :read || permission.action.to_sym == :update) ? other_group.first : subject
       assert other_ability.cannot?(permission.action.to_sym, check_subject), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
     end
   end
 
   test "permission grid permissions works with manage" do
     # Pick a class without any special permissions.
-    target_class = Role
+    target_class = Group
 
-    Admin::Permission.create(action: :manage, subject_class: target_class.name.to_s, roles: Role.where(name: "member"))
-    @user.add_role :member
+    Admin::Permission.create(action: :manage, subject_class: target_class.name.to_s, groups: Group.where(name: "member"))
+    @user.join_group :member
     ability = Ability.new @user
 
     allowed_actions = %I[index show new create edit update delete destroy hexagon pineapple]
@@ -749,11 +749,11 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @on_proposal_ability = Ability.new(@proposal.users.sample)
   end
 
-  # The review permission through a "Proposal Checker" role, as the grid would grant it.
+  # The review permission through a "Proposal Checker" group, as the grid would grant it.
   def grant_proposal_review(user)
-    role = Role.find_or_create_by!(name: "Proposal Checker")
-    role.permissions << admin_permissions(:review_proposals) unless role.permissions.include?(admin_permissions(:review_proposals))
-    user.add_role(role)
+    group = Group.find_or_create_by!(name: "Proposal Checker")
+    group.permissions << admin_permissions(:review_proposals) unless group.permissions.include?(admin_permissions(:review_proposals))
+    user.join_group(group)
   end
 
   def helper_test_proposal(action, proposal, can_checker, can_on_proposal, can_random, situation)

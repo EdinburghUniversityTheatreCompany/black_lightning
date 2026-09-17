@@ -313,7 +313,7 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test "get_namespace_for_link for model not in admin namespace" do
-    object = roles(:member)
+    object = groups(:member)
 
     assert_nil get_namespace_for_link(object, false)
 

@@ -242,32 +242,32 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_not @user.consented?
   end
 
-  test "add_role override" do
-    role = Role.find_by(name: :member)
+  test "join_group override" do
+    group = Group.find_by(name: :member)
 
-    assert_not @user.has_role?(role.name), "The user already has the role at the start, so the tests cannot be completed properly."
+    assert_not @user.in_group?(group.name), "The user already has the group at the start, so the tests cannot be completed properly."
 
-    @user.add_role(role)
-    assert @user.has_role?(:member), "User does not have the role that was added as class instance"
+    @user.join_group(group)
+    assert @user.in_group?(:member), "User does not have the group that was added as class instance"
   end
 
-  test "has_role override" do
-    role = Role.find_by(name: :member)
-    @user.add_role(role.name)
+  test "in_group override" do
+    group = Group.find_by(name: :member)
+    @user.join_group(group.name)
 
-    assert @user.has_role?(role.name), "Basemark check if the user has the member role failed"
+    assert @user.in_group?(group.name), "Basemark check if the user has the member group failed"
 
-    assert @user.has_role?(role), "The has_role? method override for the Role class does not work"
+    assert @user.in_group?(group), "The in_group? method override for the Group class does not work"
   end
 
-  test "remove_role override" do
-    role = Role.find_by(name: :member)
-    @user.add_role(role.name)
+  test "leave_group override" do
+    group = Group.find_by(name: :member)
+    @user.join_group(group)
 
-    assert @user.has_role?(role.name), "Basemark check if the user has the member role failed"
+    assert @user.in_group?(group), "Basemark check if the user has the member group failed"
 
-    @user.remove_role(role)
-    assert_not @user.has_role?(role.name), "The remove_role override for the Role class does not work."
+    @user.leave_group(group)
+    assert_not @user.in_group?(group), "The leave_group override for the Group class does not work."
   end
 
   test "email normalization" do
@@ -585,14 +585,14 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   # Ransack tests
   test "ransackable_attributes includes member_id for users with :read permission" do
-    # Create a user with a role that has :read permission for User
+    # Create a user with a group that has :read permission for User
     user_with_read = FactoryBot.create(:user)
-    role = Role.create!(name: "User Viewer")
-    user_with_read.add_role(role)
+    group = Group.create!(name: "User Viewer")
+    user_with_read.join_group(group)
 
-    # Grant the role :read permission for User using existing fixture
+    # Grant the group :read permission for User using existing fixture
     permission = admin_permissions(:can_read_users)
-    role.permissions << permission
+    group.permissions << permission
 
     ability = Ability.new(user_with_read)
 
@@ -613,10 +613,10 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     # Create a user with :read permission
     searcher = FactoryBot.create(:user)
-    role = Role.create!(name: "User Viewer")
-    searcher.add_role(role)
+    group = Group.create!(name: "User Viewer")
+    searcher.join_group(group)
     permission = admin_permissions(:can_read_users)
-    role.permissions << permission
+    group.permissions << permission
 
     ability = Ability.new(searcher)
 
@@ -650,13 +650,13 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   # Absorb tests — user merging
-  test "admin role is NOT transferred via absorb when source user holds :admin" do
+  test "admin group is NOT transferred via absorb when source user holds :admin" do
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
     # Grant admin to source user
-    source_user.add_role(:admin)
-    assert source_user.has_role?(:admin), "Setup: source user should have :admin"
+    source_user.join_group(:admin)
+    assert source_user.in_group?(:admin), "Setup: source user should have :admin"
 
     # Perform absorb
     result = target_user.absorb(source_user)
@@ -664,12 +664,12 @@ class Admin::UserTest < ActiveSupport::TestCase
     # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify admin role was NOT transferred
-    assert_not target_user.has_role?(:admin), "Target user should NOT have :admin after absorbing admin"
-    assert_not_includes result[:transferred][:roles], "Admin", "Admin role should not be in transferred roles list"
+    # Verify admin group was NOT transferred
+    assert_not target_user.in_group?(:admin), "Target user should NOT have :admin after absorbing admin"
+    assert_not_includes result[:transferred][:groups], "Admin", "Admin group should not be in transferred groups list"
   end
 
-  test "admin absorbing another admin does NOT get duplicate :admin roles" do
+  test "admin absorbing another admin does NOT get duplicate :admin groups" do
     admin_user = FactoryBot.create(:admin)
     source_admin = FactoryBot.create(:admin)
 
@@ -679,18 +679,18 @@ class Admin::UserTest < ActiveSupport::TestCase
     # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify target admin still has only one :admin role (no duplicates)
-    admin_role_count = admin_user.roles.where(name: "Admin").count
-    assert_equal 1, admin_role_count, "Target admin should have exactly one :admin role, not duplicated"
+    # Verify target admin still has only one :admin group (no duplicates)
+    admin_group_count = admin_user.groups.where(name: "Admin").count
+    assert_equal 1, admin_group_count, "Target admin should have exactly one :admin group, not duplicated"
   end
 
-  test "all non-admin roles transfer normally via absorb" do
+  test "all non-admin groups transfer normally via absorb" do
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
-    # Grant non-admin roles to source user
-    source_user.add_role(:member)
-    source_user.add_role(:committee)
+    # Grant non-admin groups to source user
+    source_user.join_group(:member)
+    source_user.join_group(:committee)
 
     # Perform absorb
     result = target_user.absorb(source_user)
@@ -698,23 +698,23 @@ class Admin::UserTest < ActiveSupport::TestCase
     # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify non-admin roles were transferred
-    assert target_user.has_role?(:member), "Target should have :member role"
-    assert target_user.has_role?(:committee), "Target should have :committee role"
+    # Verify non-admin groups were transferred
+    assert target_user.in_group?(:member), "Target should have :member group"
+    assert target_user.in_group?(:committee), "Target should have :committee group"
 
-    # Verify returned transferred roles list contains the capitalized role names
-    assert_includes result[:transferred][:roles], "Member", "Member should be in transferred roles"
-    assert_includes result[:transferred][:roles], "Committee", "Committee should be in transferred roles"
+    # Verify returned transferred groups list contains the capitalized group names
+    assert_includes result[:transferred][:groups], "Member", "Member should be in transferred groups"
+    assert_includes result[:transferred][:groups], "Committee", "Committee should be in transferred groups"
   end
 
-  test "absorb with mixed admin and non-admin roles transfers only non-admin" do
+  test "absorb with mixed admin and non-admin groups transfers only non-admin" do
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
-    # Grant mixed roles to source user
-    source_user.add_role(:admin)
-    source_user.add_role(:member)
-    source_user.add_role(:committee)
+    # Grant mixed groups to source user
+    source_user.join_group(:admin)
+    source_user.join_group(:member)
+    source_user.join_group(:committee)
 
     # Perform absorb
     result = target_user.absorb(source_user)
@@ -722,15 +722,15 @@ class Admin::UserTest < ActiveSupport::TestCase
     # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify only non-admin roles were transferred
-    assert target_user.has_role?(:member), "Target should have :member role"
-    assert target_user.has_role?(:committee), "Target should have :committee role"
-    assert_not target_user.has_role?(:admin), "Target should NOT have :admin role"
+    # Verify only non-admin groups were transferred
+    assert target_user.in_group?(:member), "Target should have :member group"
+    assert target_user.in_group?(:committee), "Target should have :committee group"
+    assert_not target_user.in_group?(:admin), "Target should NOT have :admin group"
 
-    # Verify only non-admin roles are in transferred list
-    assert_includes result[:transferred][:roles], "Member"
-    assert_includes result[:transferred][:roles], "Committee"
-    assert_not_includes result[:transferred][:roles], "Admin"
+    # Verify only non-admin groups are in transferred list
+    assert_includes result[:transferred][:groups], "Member"
+    assert_includes result[:transferred][:groups], "Committee"
+    assert_not_includes result[:transferred][:groups], "Admin"
   end
 
   test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
@@ -764,26 +764,26 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   ##
-  # member? / committee? — the one spelling of the two facts every role check reads.
+  # member? / committee? — the one spelling of the two facts every group check reads.
   ##
 
-  test "member? is the member role only, not life member" do
+  test "member? is the member group only, not life member" do
     assert users(:member).member?
-    assert users(:committee).member?, "committee fixture also holds the member role"
+    assert users(:committee).member?, "committee fixture also holds the member group"
     assert_not users(:user).member?
 
     life_member = FactoryBot.create(:user)
-    life_member.add_role("life member")
+    life_member.join_group("life member")
     assert_not life_member.member?, "A life member is only a member for ticket discounts (pretix), nowhere else"
   end
 
-  test "admin? reads the Admin role" do
+  test "admin? reads the Admin group" do
     assert users(:admin).admin?
     assert_not users(:committee).admin?
     assert_not users(:member).admin?
   end
 
-  test "committee? reads the Committee role" do
+  test "committee? reads the Committee group" do
     assert users(:committee).committee?
     assert_not users(:member).committee?
     assert_not users(:user).committee?

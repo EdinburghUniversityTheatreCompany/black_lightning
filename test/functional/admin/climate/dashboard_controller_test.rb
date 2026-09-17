@@ -14,7 +14,7 @@ module Admin
       end
 
       def grant_backend_and_climate_read(user)
-        role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
+        role = ::Group.find_by(name: "Climate Viewer") || ::Group.create!(name: "Climate Viewer").tap do |r|
           r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
           r.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
         end
@@ -32,7 +32,7 @@ module Admin
 
       test "denies a backend user without the climate permission" do
         other = FactoryBot.create(:user)
-        role = ::Role.create!(name: "Backend Only")
+        role = ::Group.create!(name: "Backend Only")
         role.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
         other.add_role("Backend Only")
         sign_in other

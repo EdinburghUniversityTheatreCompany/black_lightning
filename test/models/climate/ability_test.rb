@@ -66,7 +66,7 @@ class Climate::AbilityTest < ActiveSupport::TestCase
     # They are managed only through the climate pages, so a CRUD row for them in
     # the grid would be meaningless, the same rule as the reimbursements models.
     controller = Admin::PermissionsController.new
-    controller.send(:set_models_and_roles)
+    controller.send(:set_models_and_groups)
     models = controller.instance_variable_get(:@models)
 
     assert_not_includes models, Climate::Sensor
@@ -75,7 +75,7 @@ class Climate::AbilityTest < ActiveSupport::TestCase
 
   test "the climate subject is offered in the permission grid" do
     controller = Admin::PermissionsController.new
-    controller.send(:set_models_and_roles)
+    controller.send(:set_models_and_groups)
     miscellaneous = controller.instance_variable_get(:@miscellaneous_permission_subject_classes)
 
     assert_equal %w[read manage], miscellaneous["climate"].keys

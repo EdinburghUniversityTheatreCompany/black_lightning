@@ -103,7 +103,7 @@ class Admin::DebtCheckersController < AdminController
     end
 
     @member_ids = if all_user_ids.any?
-      User.where(id: all_user_ids).with_role(:member).pluck(:id).to_set
+      User.where(id: all_user_ids).in_group(:member).pluck(:id).to_set
     else
       Set.new
     end

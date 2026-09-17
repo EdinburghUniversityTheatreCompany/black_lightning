@@ -13,7 +13,7 @@ module Admin
       include Devise::Test::IntegrationHelpers
 
       setup do
-        finance = Role.create!(name: "Business Manager")
+        finance = Group.create!(name: "Business Manager")
         finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
         users(:member).add_role("Business Manager")
         @year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")

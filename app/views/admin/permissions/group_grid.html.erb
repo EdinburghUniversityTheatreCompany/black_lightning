@@ -1,5 +1,5 @@
-<%= render CardComponent.new(title: "Permissions: #{@role.name}", flush: true, html_class: "w-fit") do %>
-  <%= form_with(url: permissions_admin_role_path(@role), method: "post", local: true,
+<%= render CardComponent.new(title: "Permissions: #{@group.name}", flush: true, html_class: "w-fit") do %>
+  <%= form_with(url: permissions_admin_group_path(@group), method: "post", local: true,
                 data: { controller: "admin--permissions-grid",
                         action: "submit->admin--permissions-grid#confirmSubmit" }) do %>
     <div class="overflow-auto max-h-[calc(100vh-12rem)]">

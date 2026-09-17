@@ -14,7 +14,7 @@ module Admin
         "below. The not-yet-allocated figure is worked out over every line the area holds.".freeze
 
       setup do
-        finance = Role.create!(name: "Business Manager")
+        finance = Group.create!(name: "Business Manager")
         finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
         users(:member).add_role("Business Manager")
         @user = users(:member)
@@ -48,7 +48,7 @@ module Admin
       end
 
       test "the producer portal permission alone does not grant finance access" do
-        producer = Role.create!(name: "Producer")
+        producer = Group.create!(name: "Producer")
         producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
         submitter = users(:member_with_phone_number)
         submitter.add_role("Producer")

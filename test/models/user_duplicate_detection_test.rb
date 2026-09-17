@@ -271,7 +271,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
   test "merge_stats_as_source returns correct statistics" do
     target = FactoryBot.create(:user)
     source = FactoryBot.create(:user)
-    source.add_role(:member)
+    source.activate
 
     show = FactoryBot.create(:show)
     TeamMember.create!(user: source, teamwork: show, position: "Actor")
@@ -280,7 +280,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
 
     assert_equal 1, stats[:team_memberships][:total]
     assert_equal 0, stats[:team_memberships][:overlapping]
-    assert_includes stats[:roles].map(&:downcase), "member"
+    assert_includes stats[:groups].map(&:downcase), "member"
   end
 
   test "merge_stats_as_source shows overlapping team memberships" do

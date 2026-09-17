@@ -94,7 +94,7 @@ class Admin::UsersController < AdminController
     # Ransack query should take care of the filtering.
     @users = base_index_ransack_query
 
-    @users = @users.with_role(:member) if params[:show_non_members] != "1"
+    @users = @users.in_group(:member) if params[:show_non_members] != "1"
 
     # Exclude specific user (e.g., when selecting merge source, exclude target)
     @users = @users.where.not(id: params[:exclude_id]) if params[:exclude_id].present?
@@ -137,7 +137,7 @@ class Admin::UsersController < AdminController
     else
       # Create new user
       @user = User.new_user(activation_user_params)
-      @user.add_role(:member) if params[:user][:is_member] == "1"
+      @user.activate if params[:user][:is_member] == "1"
 
       if @user.save
         @user.send_welcome_email
@@ -182,7 +182,7 @@ class Admin::UsersController < AdminController
     # (an orphan confirmation would fail Devise's confirmation validation).
     perm_params.delete(:password_confirmation) if password_confirmation.blank? || drop_password
 
-    perm_params.push(role_ids: []) if current_user.admin?
+    perm_params.push(group_ids: []) if current_user.admin?
 
     perm_params
   end
@@ -193,7 +193,7 @@ class Admin::UsersController < AdminController
 
   # TEST
   def base_index_database_query
-    return super.with_role(:member) if params[:show_non_members] != "1"
+    return super.in_group(:member) if params[:show_non_members] != "1"
 
     super
   end

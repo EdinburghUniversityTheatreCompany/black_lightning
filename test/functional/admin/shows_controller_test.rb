@@ -18,7 +18,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
   test "index offers the members-only text search to every backend user, not only members" do
     backend_only = FactoryBot.create(:user)
-    Role.create!(name: "Backend Only").tap do |role|
+    Group.create!(name: "Backend Only").tap do |role|
       role.permissions << admin_permissions(:access_backend)
       backend_only.add_role(role)
     end

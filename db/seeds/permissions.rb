@@ -1,10 +1,10 @@
-# Grid permissions the code gates on. Roles alone open nothing: without these a seeded Committee
+# Grid permissions the code gates on. Groups alone open nothing: without these a seeded Committee
 # cannot enter the backend, the committee page or proposal review, because the granting data
 # migrations were stamped as run by db:schema:load and never executed.
-def seed_permission(role_name, action, subject_class)
-  role = Role.find_by!(name: role_name)
+def seed_permission(group_name, action, subject_class)
+  group = Group.find_by!(name: group_name)
   permission = find_or_seed(Admin::Permission, { action: action, subject_class: subject_class })
-  role.permissions << permission unless role.permissions.include?(permission)
+  group.permissions << permission unless group.permissions.include?(permission)
 end
 
 seed_permission("Member", "access", "backend")

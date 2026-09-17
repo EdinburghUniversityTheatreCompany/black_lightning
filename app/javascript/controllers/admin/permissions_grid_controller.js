@@ -109,7 +109,7 @@ export default class extends Controller {
     const thead = document.createElement("thead")
     thead.innerHTML = `
       <tr class="border-b border-gray-200">
-        <th class="text-left py-2 pr-4 font-semibold text-gray-700">Role</th>
+        <th class="text-left py-2 pr-4 font-semibold text-gray-700">Group</th>
         <th class="text-left py-2 pr-4 font-semibold text-gray-700">Subject</th>
         <th class="text-left py-2 pr-4 font-semibold text-gray-700">Action</th>
         <th class="text-left py-2 font-semibold text-gray-700">Change</th>

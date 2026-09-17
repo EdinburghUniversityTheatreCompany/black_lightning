@@ -3,9 +3,9 @@
     <tr>
       <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= model.name %></td>
 
-      <% @roles.each do |role| %>
-        <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
-        <%= render "permission_grid", role: role, model: model, permission: permission %>
+      <% @groups.each do |group| %>
+        <% permission = group.permissions.select{ |p| p.subject_class == model.name } %>
+        <%= render "permission_grid", group: group, model: model, permission: permission %>
       <% end %>
     </tr>
   <% end %>
@@ -15,10 +15,10 @@
       <tr>
         <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= description %></td>
 
-        <% @roles.each do |role| %>
+        <% @groups.each do |group| %>
           <td colspan="<%= @actions.count %>">
-            <% checked = role.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
-            <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", action, checked,
+            <% checked = group.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
+            <%= check_box_tag "[#{group.name}][#{subject_class}]#{action}", action, checked,
                 title: description,
                 data: { action: "change->admin--permissions-grid#markChanged" } %>
           </td>

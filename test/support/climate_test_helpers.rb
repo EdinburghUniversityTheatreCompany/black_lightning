@@ -40,7 +40,7 @@ module ClimateTestHelpers
 
   # :read, :climate — sees the dashboard, cannot touch sensor configuration.
   def grant_climate_read_permission(user)
-    role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
+    role = ::Group.find_by(name: "Climate Viewer") || ::Group.create!(name: "Climate Viewer").tap do |r|
       r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
     end
     user.add_role("Climate Viewer")
@@ -50,7 +50,7 @@ module ClimateTestHelpers
   # :manage, :climate — CanCan's :manage matches any action, so this implies
   # :read as well; the tests assert that rather than granting both.
   def grant_climate_manage_permission(user)
-    role = ::Role.find_by(name: "Climate Manager") || ::Role.create!(name: "Climate Manager").tap do |r|
+    role = ::Group.find_by(name: "Climate Manager") || ::Group.create!(name: "Climate Manager").tap do |r|
       r.permissions << Admin::Permission.create(action: "manage", subject_class: "climate")
     end
     user.add_role("Climate Manager")

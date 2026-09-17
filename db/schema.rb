@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_17_122449) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -109,11 +109,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
-  create_table "admin_permissions_roles", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+  create_table "admin_permissions_groups", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.integer "group_id"
     t.integer "permission_id"
-    t.integer "role_id"
-    t.index ["permission_id"], name: "index_admin_permissions_roles_on_permission_id"
-    t.index ["role_id"], name: "index_admin_permissions_roles_on_role_id"
+    t.index ["group_id"], name: "index_admin_permissions_groups_on_group_id"
+    t.index ["permission_id"], name: "index_admin_permissions_groups_on_permission_id"
   end
 
   create_table "admin_proposals_call_question_templates", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -473,6 +473,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.index ["reported_by_id"], name: "index_fault_reports_on_reported_by_id"
     t.index ["severity"], name: "index_fault_reports_on_severity"
     t.index ["status"], name: "index_fault_reports_on_status"
+  end
+
+  create_table "groups", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
+    t.string "name"
+    t.bigint "resource_id"
+    t.string "resource_type"
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["name", "resource_type", "resource_id"], name: "index_user_groups_on_name_and_resource_type_and_resource_id"
+    t.index ["name"], name: "index_user_groups_on_name"
+    t.index ["resource_type", "resource_id"], name: "index_user_groups_on_resource_type_and_resource_id"
+  end
+
+  create_table "groups_parents", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.integer "group_id", null: false
+    t.integer "parent_id", null: false
+    t.index ["group_id"], name: "fk_rails_b8a5e5be6a"
+    t.index ["parent_id"], name: "fk_rails_4fa933eab8"
+  end
+
+  create_table "groups_users", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.integer "group_id"
+    t.integer "user_id"
+    t.index ["group_id"], name: "index_users_user_groups_on_role_id"
+    t.index ["user_id", "group_id"], name: "index_users_user_groups_on_user_id_and_role_id"
   end
 
   create_table "maintenance_credits", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -982,24 +1007,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.index ["event_id"], name: "index_reviews_on_event_id"
   end
 
-  create_table "roles", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
-    t.datetime "created_at", precision: nil, null: false
-    t.string "name"
-    t.bigint "resource_id"
-    t.string "resource_type"
-    t.datetime "updated_at", precision: nil, null: false
-    t.index ["name", "resource_type", "resource_id"], name: "index_roles_on_name_and_resource_type_and_resource_id"
-    t.index ["name"], name: "index_roles_on_name"
-    t.index ["resource_type", "resource_id"], name: "index_roles_on_resource_type_and_resource_id"
-  end
-
-  create_table "roles_parents", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
-    t.integer "parent_id", null: false
-    t.integer "role_id", null: false
-    t.index ["parent_id"], name: "fk_rails_4fa933eab8"
-    t.index ["role_id"], name: "fk_rails_b8a5e5be6a"
-  end
-
   create_table "solid_queue_blocked_executions", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "concurrency_key", null: false
     t.datetime "created_at", null: false
@@ -1190,13 +1197,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.index ["student_id"], name: "index_users_on_student_id"
   end
 
-  create_table "users_roles", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
-    t.integer "role_id"
-    t.integer "user_id"
-    t.index ["role_id"], name: "index_users_roles_on_role_id"
-    t.index ["user_id", "role_id"], name: "index_users_roles_on_user_id_and_role_id"
-  end
-
   create_table "venues", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "address", size: :medium
     t.datetime "created_at", precision: nil, null: false
@@ -1243,6 +1243,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
   add_foreign_key "event_occurrences", "events"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "events", "companies"
+  add_foreign_key "groups_parents", "groups"
+  add_foreign_key "groups_parents", "groups", column: "parent_id"
   add_foreign_key "maintenance_credits", "users"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"
@@ -1280,8 +1282,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
   add_foreign_key "reimbursements_nominal_codes", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_owner_endorsements", "users", column: "overridden_by_id"
   add_foreign_key "reimbursements_payment_details", "reimbursements_people", column: "person_id"
-  add_foreign_key "roles_parents", "roles"
-  add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

@@ -23,7 +23,7 @@ module Admin
     end
 
     setup do
-      finance = Role.create!(name: "Business Manager")
+      finance = Group.create!(name: "Business Manager")
       finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
       users(:member).add_role("Business Manager")
       @user = users(:member)
@@ -68,7 +68,7 @@ module Admin
     end
 
     test "the producer portal permission alone does not grant finance access" do
-      producer_role = Role.create!(name: "Producer")
+      producer_role = Group.create!(name: "Producer")
       producer_role.permissions << Permission.create(action: "access", subject_class: "reimbursements")
       submitter = users(:member_with_phone_number)
       submitter.add_role("Producer")

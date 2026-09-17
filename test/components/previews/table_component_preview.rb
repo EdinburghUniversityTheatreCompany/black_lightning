@@ -1,7 +1,7 @@
 class TableComponentPreview < ViewComponent::Preview
   def default
     render TableComponent.new(
-      headers: [ "Name", "Role" ],
+      headers: [ "Name", "Group" ],
       field_sets: [
         { fields: [ "Alice Jones", "Stage Manager" ] },
         { fields: [ "Patrick Brennan", "Director" ] }

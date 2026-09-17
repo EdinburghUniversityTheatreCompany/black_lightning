@@ -1,10 +1,6 @@
-##
-# Represents the different role that a User may have. Permissions are asigned using the
-# Admin::PermissionsController
-#
 # == Schema Information
 #
-# Table name: roles
+# Table name: groups
 # Database name: primary
 #
 #  id            :integer          not null, primary key
@@ -16,30 +12,30 @@
 #
 # Indexes
 #
-#  index_roles_on_name                                    (name)
-#  index_roles_on_name_and_resource_type_and_resource_id  (name,resource_type,resource_id)
-#  index_roles_on_resource_type_and_resource_id           (resource_type,resource_id)
+#  index_user_groups_on_name                                    (name)
+#  index_user_groups_on_name_and_resource_type_and_resource_id  (name,resource_type,resource_id)
+#  index_user_groups_on_resource_type_and_resource_id           (resource_type,resource_id)
 #
-class Role < ApplicationRecord
+class Group < ApplicationRecord
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :resource_type, length: { maximum: 255 }
-  # The roles that are referenced directly in the code (`has_role?` / `with_role`).
+  # The groups that are referenced directly in the code (`in_group?` / `in_group`).
   # Renaming one would silently break every such check, so these names cannot be changed.
   # Matched case-insensitively (`hardcoded_name?`): the code asks for :member and "Member" alike,
   # which MySQL's collation happily equates, so the guard must not be the one place casing matters.
-  # Archiving is unaffected — it creates a suffixed sibling role and never renames this one.
+  # Archiving is unaffected — it creates a suffixed sibling group and never renames this one.
   HARDCODED_NAMES = [ "Admin", "Committee", "Member", "Life Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer", "Advance Proposal Checker" ].freeze
-  NON_PURGEABLE_ROLES = [ "member", "life member" ]
+  NON_PURGEABLE_NAMES = [ "member", "life member" ]
 
   validates :name, presence: true
   validate :name_not_hardcoded
 
   before_destroy :prevent_hardcoded_or_non_purgeable_destruction
 
-  has_and_belongs_to_many :parents, class_name: "Role", join_table: :roles_parents, foreign_key: :role_id, association_foreign_key: :parent_id
-  has_and_belongs_to_many :children, class_name: "Role", join_table: :roles_parents, foreign_key: :parent_id, association_foreign_key: :role_id
-  has_and_belongs_to_many :users, join_table: :users_roles
+  has_and_belongs_to_many :parents, class_name: "Group", join_table: :groups_parents, foreign_key: :group_id, association_foreign_key: :parent_id
+  has_and_belongs_to_many :children, class_name: "Group", join_table: :groups_parents, foreign_key: :parent_id, association_foreign_key: :group_id
+  has_and_belongs_to_many :users
   has_and_belongs_to_many :permissions, class_name: "Admin::Permission"
 
   belongs_to :resource, polymorphic: true, optional: true
@@ -58,50 +54,49 @@ class Role < ApplicationRecord
     HARDCODED_NAMES.any? { |hardcoded| hardcoded.casecmp?(name.to_s.strip) }
   end
 
-  def self.resolve(role)
-    if role.is_a? String
-      role = Role.where("LOWER(name) LIKE ?", "#{role.downcase}").first
-    elsif role.is_a? Symbol
-      role = Role.where("LOWER(name) LIKE ?", "#{role.downcase}").first
-    elsif not (role.is_a? Role)
+  def self.resolve(group)
+    if group.is_a? String
+      group = Group.where("LOWER(name) LIKE ?", "#{group.downcase}").first
+    elsif group.is_a? Symbol
+      group = Group.where("LOWER(name) LIKE ?", "#{group.downcase}").first
+    elsif not (group.is_a? Group)
       # who am i to complain?
     end
 
-    role
+    group
   end
 
-  # Removes all users from the role.
+  # Removes all users from the group.
   def purge
-    # You cannot purge certain roles.
-    return false if NON_PURGEABLE_ROLES.include?(name.downcase.strip)
+    # You cannot purge certain group.
+    return false if NON_PURGEABLE_NAMES.include?(name.downcase.strip)
 
     ActiveRecord::Base.transaction do
       self.users.clear
     end
   end
-
-  # Moves all users on this role to a new role with the academic year shorthand as a suffix.
-  # This new role has no permissions, and the existing role keeps all permissions.
+  # Moves all users on this group to a new group with the academic year shorthand as a suffix.
+  # This new group has no permissions, and the existing group keeps all permissions.
   def archive(suffix)
     if suffix.blank?
-      errors.add(:base, "Suffix cannot be blank when archiving a role")
+      errors.add(:base, "Suffix cannot be blank when archiving a group")
       return false
     end
 
     # Captured BEFORE the clear, and synced only after the transaction commits.
     # `users.clear` is delete_all, which fires no association callbacks at all,
-    # so nothing downstream can observe this the way it observes add_role — and
+    # so nothing downstream can observe this the way it observes join_group — and
     # archiving `member` is precisely the moment the whole society stops being
     # members. Enqueuing inside the transaction would tell pretix about a
     # revocation that a rollback then undid.
     archived_user_ids = users.ids
 
     ActiveRecord::Base.transaction do
-      # Create or find the archival role and move all users over.
-      new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
-      new_role.users << self.users
+      # Create or find the archival group and move all users over.
+      group = Group.find_or_create_by(name: "#{name} #{suffix}")
+      group.users << self.users
 
-      # Then clear them from this role.
+      # Then clear them from this group.
       self.users.clear
     end
 
@@ -118,17 +113,15 @@ class Role < ApplicationRecord
   end
 
   def name_not_hardcoded
-    errors.add(:name, "is hardcoded and cannot be altered") if Role.hardcoded_name?(name_was) && !name.to_s.casecmp?(name_was.to_s)
+    errors.add(:name, "is hardcoded and cannot be altered") if Group.hardcoded_name?(name_was) && !name.to_s.casecmp?(name_was.to_s)
   end
 
-  def trained_role?
+  def trained_group?
     name&.include?("Trained")
   end
 
   def remove_user(user)
-    ActiveRecord::Base.transaction do
-      self.users.delete(user)
-    end
+    user.leave_group self
   end
 
   private
@@ -143,11 +136,11 @@ class Role < ApplicationRecord
   end
 
   def prevent_hardcoded_or_non_purgeable_destruction
-    if NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
-      errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
+    if NON_PURGEABLE_NAMES.include?(name&.downcase&.strip)
+      errors.add(:base, "Cannot delete group '#{name}' as it is protected from deletion")
       throw(:abort)
-    elsif Role.hardcoded_name?(name)
-      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
+    elsif Group.hardcoded_name?(name)
+      errors.add(:base, "Cannot delete hardcoded group '#{name}' as it is referenced in code")
       throw(:abort)
     end
   end
@@ -157,11 +150,11 @@ class Role < ApplicationRecord
       id = attribute[1][:id]
       next if id == ""
 
-      role = Role.find(id)
+      group = Group.find(id)
 
-      collection << role unless collection.all.include?(role)
+      collection << group unless collection.all.include?(group)
 
-      collection.delete(role) if attribute[1][:_destroy] == "1"
+      collection.delete(group) if attribute[1][:_destroy] == "1"
     end
   end
 end

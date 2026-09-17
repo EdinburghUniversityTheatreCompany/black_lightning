@@ -39,9 +39,9 @@ module LabelHelper
             output_labels << { label_class: "bg-admin-rotate", text: "Admin" }
         end
 
-        user.roles.trained.each do |role|
-            label_class = role.name == "First Aid Trained" ? "bg-success" : "bg-info"
-            output_labels << { label_class: label_class, text: role.name }
+        user.groups.trained.each do |group|
+            label_class = group.name == "First Aid Trained" ? "bg-success" : "bg-info"
+            output_labels << { label_class: label_class, text: group.name }
         end
 
         if !deadline.present?

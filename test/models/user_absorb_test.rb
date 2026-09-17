@@ -121,22 +121,22 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal @target_user.id, credit.reload.user_id
   end
 
-  # Role tests
+  # Group tests
 
-  test "absorb merges roles from both users" do
-    @source_user.add_role(:committee)
-    @target_user.add_role(:member)
+  test "absorb merges groups from both users" do
+    @source_user.join_group(:committee)
+    @target_user.join_group(:member)
 
     result = @target_user.absorb(@source_user)
 
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert @target_user.has_role?(:member), "Target should keep member role"
-    assert @target_user.has_role?(:committee), "Target should gain committee role from source"
+    assert @target_user.in_group?(:member), "Target should keep member role"
+    assert @target_user.in_group?(:committee), "Target should gain committee role from source"
   end
 
   test "absorb does not duplicate roles already on target" do
-    @source_user.add_role(:member)
-    @target_user.add_role(:member)
+    @source_user.join_group(:member)
+    @target_user.join_group(:member)
 
     initial_role_count = @target_user.roles.count
 
@@ -165,7 +165,7 @@ class UserAbsorbTest < ActiveSupport::TestCase
   test "absorb returns transferred counts on success" do
     FactoryBot.create(:staffing_job, user: @source_user)
     FactoryBot.create(:staffing_debt, user: @source_user)
-    @source_user.add_role("Committee")
+    @source_user.join_group("Committee")
 
     result = @target_user.absorb(@source_user)
 
@@ -173,7 +173,7 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert result[:transferred].is_a?(Hash), "Should return transferred counts"
     assert_equal 1, result[:transferred][:staffing_jobs]
     assert_equal 1, result[:transferred][:staffing_debts]
-    assert_includes result[:transferred][:roles], "Committee"
+    assert_includes result[:transferred][:groups], "Committee"
   end
 
   # Email handling tests

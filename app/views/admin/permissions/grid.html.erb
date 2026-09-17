@@ -7,13 +7,13 @@
         <thead>
           <tr>
             <th class="sticky top-0 left-0 z-40 bg-gray-50"></th>
-            <% @roles.each do |role| %>
-              <th colspan="<%= @actions.count %>" class="sticky top-0 z-30 bg-gray-50 whitespace-nowrap"><%= role.name %></th>
+            <% @groups.each do |group| %>
+              <th colspan="<%= @actions.count %>" class="sticky top-0 z-30 bg-gray-50 whitespace-nowrap"><%= group.name %></th>
             <% end %>
           </tr>
           <tr>
             <th class="sticky top-9.25 left-0 z-30 bg-gray-50 whitespace-nowrap">Subject Class</th>
-            <% @roles.each do |role| %>
+            <% @groups.each do |group| %>
               <% @actions.each do |action| %>
                 <th title="<%= action %>" class="sticky top-9.25 z-20 bg-gray-50"><%= action[0].capitalize %></th>
               <% end %>

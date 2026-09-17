@@ -83,6 +83,6 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
   private
 
   def give_member_permission_to_sign_up_for_staffing
-    Role.find_by(name: :member).permissions << Admin::Permission.create(action: "sign_up_for", subject_class: "Admin::StaffingJob")
+    Group.find_by(name: :member).permissions << Admin::Permission.create(action: "sign_up_for", subject_class: "Admin::StaffingJob")
   end
 end

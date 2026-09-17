@@ -22,7 +22,7 @@ module Admin
 
     # A dedicated role, so users holding only member/committee stay denied.
     def grant_member_role_reimbursements_access
-      producer = Role.create!(name: "Producer")
+      producer = Group.create!(name: "Producer")
       producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
       users(:member).add_role("Producer")
       users(:member_with_phone_number).add_role("Producer")

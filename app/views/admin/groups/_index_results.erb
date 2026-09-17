@@ -1,0 +1,5 @@
+<% headers = [:name, 'Amount of Users'] %>
+
+<% field_sets = @groups.map { |group| { fields: [group, group.users.size] } } %>
+
+<%= render 'shared/pages/index_results', resources: @groups, resource_class: Group, headers: headers, field_sets: field_sets %>

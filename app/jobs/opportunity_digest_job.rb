@@ -6,7 +6,7 @@ class OpportunityDigestJob < ApplicationJob
 
     return if opportunities.none?
 
-    reviewers = Role.find_by(name: "Opportunity Reviewer")&.users || []
+    reviewers = User.in_group("Opportunity Reviewer") || []
 
     opportunities_list = opportunities.to_a
     reviewers.each do |user|

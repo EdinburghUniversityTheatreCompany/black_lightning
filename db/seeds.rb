@@ -1,7 +1,7 @@
 require_relative "seeds/helpers"
 
 seed_files = %w[
-  roles
+  groups
   permissions
   venues
   event_tags
