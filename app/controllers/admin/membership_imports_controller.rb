@@ -140,7 +140,7 @@ class Admin::MembershipImportsController < AdminController
 
     update_email_if_unknown(user, row[:email])
     update_ids_if_missing(user, row)
-    user.add_role(:member)
+    user.activate
     user.send_welcome_email
     @synced_user_ids << user.id
     results[:activated] += 1
@@ -158,7 +158,7 @@ class Admin::MembershipImportsController < AdminController
     )
 
     if user.save
-      user.add_role(:member)
+      user.activate
       user.send_welcome_email
       @synced_user_ids << user.id
       results[:created] += 1
@@ -183,12 +183,13 @@ class Admin::MembershipImportsController < AdminController
     end
 
     unless existing_user.member?
-      existing_user.add_role(:member)
+      existing_user.activate
       existing_user.send_welcome_email
     end
 
-    # Collected even when the role was already held: this branch also rewrites a
-    # placeholder email, and the pretix customer is matched on email.
+    # Collected even when the user was already in the group:
+    # this branch also rewrites a placeholder email,
+    # and the pretix customer is matched on email.
     @synced_user_ids << existing_user.id
     results[:merged] += 1
   end

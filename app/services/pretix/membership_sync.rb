@@ -157,7 +157,7 @@ module Pretix
       def entitled?(user)
         return false if user.blank?
 
-        user.roles.any? { |role| ENTITLING_ROLES.include?(role.name.to_s.downcase.strip) }
+        user.groups.any? { |group| ENTITLING_ROLES.include?(group.name.to_s.downcase.strip) }
       end
 
       # THE resolution, as plan_for is THE decision. The nightly reconcile and
@@ -174,14 +174,14 @@ module Pretix
         return {} if emails.empty?
 
         # users.email is uniquely indexed, so one email resolves to one User.
-        User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
+        User.includes(:groups).where(email: emails).index_by { |user| normalize(user.email) }
       end
 
       def users_by_link(customers)
         identifiers = customers.filter_map { |customer| customer["identifier"].presence }
         return {} if identifiers.empty?
 
-        User.includes(:roles)
+        User.includes(:groups)
             .where(pretix_customer_identifier: identifiers)
             .index_by(&:pretix_customer_identifier)
       end

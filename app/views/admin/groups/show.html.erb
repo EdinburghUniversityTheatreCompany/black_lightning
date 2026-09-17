@@ -1,0 +1,59 @@
+<% if @group.name.downcase != 'admin' %>
+  <% fields = {
+    overlords: @group.parents.any? ? to_sentence(@group.parents.collect { |group| get_link group, :show, link_text: group.name.titleize }) : "None set",
+    underlings: @group.children.any? ? to_sentence(@group.children.collect { |group| get_link group, :show, link_text: group.name.titleize }) : "None set",
+  } %>
+<% else %>
+  <% fields = {} %>
+<% end %>
+
+<% if current_user.can?(:add_user, @group) %>
+  <% content_for :add_user do %>
+    <% if @group.name.downcase == 'member' %>
+      <% if can? :create, User %>
+        Please add members from the membership activation page.
+        <br>
+        <%= link_to 'Activate Membership', activate_admin_users_path, class: btn_classes(:primary) %>
+      <% else %>
+        You are not allowed to add members. Please ask the secretary to add new members.
+      <% end %>
+    <% else %>
+      <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_group_url(@group)) do |f| %>
+        <%= f.error_notification %>
+
+        <%= f.input :user_id, collection: User.order_by_last_name_first %>
+
+        <%= submit_tag "Add User to Group", class: btn_classes(:secondary) %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% fields[:add_user] = { type: 'content', header: 'Add User', content: yield(:add_user) } %>
+<% end %>
+
+<% show_remove = current_user.can?(:remove_user, @group) %>
+<% remove_url_lambda = lambda { |user_id| remove_user_admin_group_path(@group, user_id) } %>
+<% users_table_html = capture do %>
+  <div id="<%= dom_id(@group, :users) %>">
+    <%= render(UsersTableComponent.new(users: @users, url: admin_group_url(@group), q: @q,
+      show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda)) %>
+  </div>
+<% end %>
+<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: users_table_html } %>
+
+<% content_for :extra_show_actions do %>
+  <% if can?(:manage, Admin::Permission) && !Admin::Permission::EXCLUDED_ROLES.include?(@group.name) %>
+    <%= link_to "Permissions", permissions_admin_group_path(@group), class: btn_classes(:secondary) %>
+  <% end %>
+
+  <%= get_link @group, :archive, link_text: 'Archive Group', http_method: :put, variant: :secondary,
+      confirm: "Archiving #{@group.name}", detail: "This will create a new group labelled with the current academic year ('#{@group.name} #{academic_year_shorthand}') and will move all users to it, while leaving all permissions on this group." %>
+
+  <%# Only show the purge button if this group can be purged. %>
+  <% if !Group::NON_PURGEABLE_NAMES.include?(@group.name.downcase.strip) %>
+    <%= get_link @group, :purge, link_text: 'Remove All Users From Group', http_method: :delete, variant: :danger,
+      confirm: "Removing users from #{@group.name}", detail: "Are you sure you want to remove all users from the Group '#{@group.name}'?" %>
+  <% end %>
+<% end %>
+
+<%= render('shared/pages/show', object: @group, fields: fields) %>

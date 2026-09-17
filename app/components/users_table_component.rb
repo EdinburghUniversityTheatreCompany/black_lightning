@@ -1,5 +1,5 @@
 # A searchable list of users, with an optional second column: a Remove button
-# per user (role membership) or their attendance count (maintenance sessions).
+# per user (group membership) or their attendance count (maintenance sessions).
 class UsersTableComponent < ViewComponent::Base
   SEARCH_FIELDS = { full_name_cont: { slug: "defaults.name" } }.freeze
 
@@ -41,7 +41,7 @@ class UsersTableComponent < ViewComponent::Base
       class: ButtonComponent.classes_for(variant: :danger, size: :sm),
       form: { style: "display:contents",
               data: { controller: "confirm", action: "submit->confirm#confirm",
-                      confirm_message_value: "Remove #{user.name} from this role?" } }
+                      confirm_message_value: "Remove #{user.name} from this group?" } }
     )
   end
 end

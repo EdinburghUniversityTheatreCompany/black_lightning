@@ -19,7 +19,7 @@ class Ability
   include CanCan::Ability
 
   def set_permissions_based_on_grid(user)
-    permissions = user.roles.includes(:permissions).flat_map(&:permissions).uniq
+    permissions = user.groups.includes(:permissions).flat_map(&:permissions).uniq
     permissions.each do |permission|
       # Some permissions are not associated with a class, but just with a symbol, such as :backend.
       begin
@@ -57,7 +57,7 @@ class Ability
       can :create, Complaint
 
       # Do not allow admins to add non members to event by default to avoid cluttering their select boxes.
-      # They can give themselves a role with the permission enabled if they want it.
+      # They can give themselves a group with the permission enabled if they want it.
       cannot :add_non_members, Event
 
       # Can view all the tests, except for the access_denied action, because that is the point.
@@ -69,7 +69,7 @@ class Ability
       # If not set in grid, even admins cannot advance-review the proposals.
       cannot :advance_review, :proposals
 
-      # Apply role-based grid permissions before proposal restrictions so the proposal rules always take precedence.
+      # Apply group-based grid permissions before proposal restrictions so the proposal rules always take precedence.
       set_permissions_based_on_grid(user)
 
       # Even admins should not be able to read proposals before the submission deadline has been passed.
@@ -244,22 +244,17 @@ class Ability
     # Grant debt_overview access if user can create either type of debt
     can :debt_overview, Event if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
-    # Explicitly exclude add_user and remove_user from :manage on Role
-    # This prevents users with "can :manage, Role" from automatically being able to add/remove users
-    cannot [ :add_user, :remove_user ], Role
+    # Explicitly exclude add_user and remove_user from :manage on Group
+    # This prevents users with "can :manage, Group" from automatically being able to add/remove users
+    cannot [ :add_user, :remove_user ], Group
 
-    # Re-allow for admins (they should be able to add/remove users from any role)
-    if user&.admin?
-      can [ :add_user, :remove_user ], Role
-    end
+    # All users with group X control the groups which have X as a parent.
+    child_groups_this_user_can_manage = Group.joins(:parents).where(parents_groups: { id: user.groups }).pluck(:id)
 
-    # All users with role X control the roles which have X as a parent.
-    child_roles_this_user_can_manage = Role.joins(:parents).where(parents_roles: { id: user.roles }).pluck(:id)
+    can [ :read, :update, :add_user, :remove_user ], Group, id: child_groups_this_user_can_manage
 
-    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles_this_user_can_manage
-
-    # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
-    can [ :read ], Role, id: Role.trained.pluck(:id)
+    # All logged-in users can view trained groups (e.g. DM Trained, Bar Trained).
+    can [ :read ], Group, id: Group.trained.pluck(:id)
 
 
     can :show, Admin::EditableBlock if can? :access, :backend

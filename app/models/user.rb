@@ -83,7 +83,6 @@ class User < ApplicationRecord
   before_save :ensure_profile_completion_salt
   before_validation :extract_student_id_from_email, if: :email_changed?
 
-  rolify
   has_paper_trail
 
   ###############
@@ -151,6 +150,11 @@ class User < ApplicationRecord
   has_many :admin_debt_notifications, class_name: "Admin::DebtNotification", dependent: :destroy
   has_many :maintenance_credits, class_name: "MaintenanceCredit", dependent: :restrict_with_error
 
+  has_and_belongs_to_many :groups
+  def roles
+    groups
+  end
+
   has_one_attached :avatar
 
   normalizes :email, with: lambda { |email|
@@ -170,6 +174,19 @@ class User < ApplicationRecord
   scope :profile_complete, -> { where.not(profile_completed_at: nil) }
   scope :order_by_last_name_first, -> { order(:last_name, :first_name) }
   scope :search_by_name, ->(q) { where("CONCAT(first_name, ' ', last_name) LIKE ?", "%#{q}%") }
+
+  scope :in_group, ->(group) {
+    group = Group.resolve(group)
+    self.joins("INNER JOIN groups_users j ON j.user_id = users.id AND j.group_id = #{group.id}")
+  }
+
+  scope :without_group, ->(group) {
+    group = Group.resolve(group)
+    self.joins("LEFT JOIN groups_users j ON j.user_id = users.id AND j.group_id = #{group.id}").where("j.group_id IS NULL")
+  }
+
+  scope :with_role, ->(group) { in_group(group) }
+  scope :without_role, ->(group) { in_group(group) }
 
   # Also change the method 'consented'
   def self.not_consented
@@ -200,7 +217,7 @@ class User < ApplicationRecord
   end
 
   def self.ransackable_associations(auth_object = nil)
-    [ "admin_debt_notifications", "admin_maintenance_debts", "admin_staffing_debts", "marketing_creatives_profile", "roles", "shows", "staffing_jobs", "staffings", "versions" ]
+    [ "admin_debt_notifications", "admin_maintenance_debts", "admin_staffing_debts", "marketing_creatives_profile", "groups", "shows", "staffing_jobs", "staffings", "versions" ]
   end
 
   def ability
@@ -565,7 +582,7 @@ class User < ApplicationRecord
         total: maintenance_credits.count,
         unlinked: maintenance_credits_unlinked_count
       },
-      roles: roles.pluck(:name)
+      groups: groups.pluck(:name)
     }
   end
 
@@ -584,7 +601,7 @@ class User < ApplicationRecord
       staffing_debts: 0,
       debt_notifications: 0,
       maintenance_credits: 0,
-      roles: []
+      groups: []
     }
 
     ActiveRecord::Base.transaction do
@@ -664,17 +681,17 @@ class User < ApplicationRecord
       # 5. Transfer Maintenance Credits
       transferred[:maintenance_credits] = source_user.maintenance_credits.update_all(user_id: id)
 
-      # 6. Merge Roles (union)
-      source_user.roles.each do |role|
-        # CRITICAL: admin role must never be absorbed.
-        # Non-admin users with :manage,User permission CAN absorb an admin and inherit their other roles.
+      # 6. Merge Groups (union)
+      source_user.groups.each do |group|
+        # CRITICAL: admin group must never be absorbed.
+        # Non-admin users with :manage,User permission CAN absorb an admin and inherit their other groups.
         # This is acceptable because absorb access is already gated by CanCanCan authorization,
         # and we prevent the most critical escalation (admin status itself). If we need to prevent
         # non-admins from absorbing admins entirely, that belongs in CanCanCan authorization, not here.
-        next if role.name == "Admin"
-        unless has_role?(role.name)
-          add_role(role.name)
-          transferred[:roles] << role.name
+        next if group.name == "Admin"
+        unless in_group?(group.name)
+          join_group(group.name)
+          transferred[:groups] << group.name
         end
       end
 
@@ -887,55 +904,52 @@ class User < ApplicationRecord
     duplicates
   end
 
-  ##
-  # Roles
-  # Overrides methods that only work on symbols to also work with the instance of the class.
-  ##
-  def add_role(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+  def join_group(group)
+    Group.resolve(group).users << self
   end
 
-  def remove_role(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+  def leave_group(group)
+    Group.resolve(group).users.delete(self)
   end
 
-  def has_role?(role)
-    if role.instance_of?(Symbol) || role.instance_of?(String)
-      super(role)
-    else
-      super(role.name)
-    end
+  def in_group?(group)
+    Group.resolve(group).users.where(id: id).exists?
   end
 
-  # Facts about the person, read from the role. These are NOT permissions: "who are the
+  # FIXME(soqb): For where I forgot to refactor correctly.
+  def add_role(group)
+    join_group(group)
+  end
+
+  def remove_role(group)
+    leave_group(group)
+  end
+
+  def has_role?(group)
+    in_group?(group)
+  end
+
+  # Facts about the person, read from the groups. These are NOT permissions: "who are the
   # members" drives mailing lists, the membership report and the annual archive, and a grid
   # checkbox on some other role must not be able to make its holders members by accident.
   # What a member or committee member MAY DO is granted through the permission grid instead.
   # A life member is deliberately not a member here — only pretix treats them as one, for
   # ticket discounts (Pretix::MembershipSync::ENTITLING_ROLES).
   def member?
-    has_role?(:member)
+    in_group?(:member)
   end
 
   def committee?
-    has_role?("Committee")
+    in_group?("Committee")
   end
 
   # Admin is the one role Ability reads directly (can :manage, :all); everything else is the grid.
   def admin?
-    has_role?("Admin")
+    in_group?("Admin")
   end
 
   def activate
-    add_role :member
+    join_group :member
   end
 
   # If you change this, you must also update the scope.

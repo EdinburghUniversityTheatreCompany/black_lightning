@@ -6,7 +6,7 @@ module Admin
     include ReimbursementsTestHelpers
 
     setup do
-      producer = Role.create!(name: "Producer")
+      producer = Group.create!(name: "Producer")
       producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
       users(:member).add_role("Producer")
       users(:member_with_phone_number).add_role("Producer")

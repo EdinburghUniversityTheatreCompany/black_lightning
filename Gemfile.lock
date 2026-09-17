@@ -440,7 +440,6 @@ GEM
     reverse_markdown (3.0.2)
       nokogiri
     rexml (3.4.4)
-    rolify (6.0.1)
     roo (3.0.0)
       base64 (~> 0.2)
       csv (~> 3)
@@ -698,7 +697,6 @@ DEPENDENCIES
   rdbg
   rdoc
   recaptcha
-  rolify
   roo
   rqrcode
   rubocop-faker

@@ -19,31 +19,35 @@ class Admin::Permission < ApplicationRecord
   # Length validations enforcing database column limits
   validates :action, length: { maximum: 255 }
   validates :subject_class, length: { maximum: 255 }
-  has_and_belongs_to_many :roles
+
+  has_and_belongs_to_many :groups
+  def roles
+    groups
+  end
 
   DISABLED_PERMISSIONS = %w[update create delete].freeze
   # Roles whose permissions are not managed in the grid. Admin has :manage, :all in code.
   EXCLUDED_ROLES = [ "Admin" ].freeze
 
   ##
-  # Creates, Adds an existing or Removes a Admin::Permission from a role for the
+  # Creates, Adds an existing or Removes a Admin::Permission from a group for the
   # given subject_class and array of actions.
   #
-  # For example, an empty actions array would mean that the role has no permissions
+  # For example, an empty actions array would mean that the group has no permissions
   # for the subject_class.
   #
   # The actions array has to contain strings.
   ##
-  def self.update_permission(role, subject_class, actions)
-    # Get all existing permissions for this subject_class and role.
-    existing_permissions = role.permissions.where(subject_class: subject_class)
+  def self.update_permission(group, subject_class, actions)
+    # Get all existing permissions for this subject_class and group.
+    existing_permissions = group.permissions.where(subject_class: subject_class)
 
     # For all of those permissions, check if it still has those permissions with the updated actions.
     existing_permissions&.each do |permission|
       unless actions.include? permission.action
-        # The role no longer has this permission.
-        # Remove the role from the permission, but keep the permission.
-        role.permissions.delete(permission)
+        # The group no longer has this permission.
+        # Remove the group from the permission, but keep the permission.
+        group.permissions.delete(permission)
       end
     end
 
@@ -60,11 +64,11 @@ class Admin::Permission < ApplicationRecord
         permission.subject_class = subject_class
       end
 
-      # Add the current role to the permission.
-      permission.roles << role
+      # Add the current group to the permission.
+      permission.groups << group
       permission.save!
     end
 
-    role.save!
+    group.save!
   end
 end

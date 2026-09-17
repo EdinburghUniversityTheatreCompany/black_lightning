@@ -429,14 +429,14 @@ ChaosRails::Application.routes.draw do
 
     resources :reviews
 
-    resources :roles do
+    resources :groups do
       member do
-        get "permissions", to: "permissions#role_grid", as: "permissions"
-        post "permissions", to: "permissions#update_role_grid"
-        post "add_user", to: "roles#add_user"
-        delete "remove_user/:user_id", to: "roles#remove_user", as: "remove_user"
-        delete "purge", to: "roles#purge"
-        put "archive", to: "roles#archive"
+        get "permissions", to: "permissions#group_grid", as: "permissions"
+        post "permissions", to: "permissions#update_group_grid"
+        post "add_user", to: "groups#add_user"
+        delete "remove_user/:user_id", to: "groups#remove_user", as: "remove_user"
+        delete "purge", to: "groups#purge"
+        put "archive", to: "groups#archive"
       end
     end
 

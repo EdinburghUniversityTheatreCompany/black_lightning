@@ -1,6 +1,6 @@
 <%# locals: () %>
 
-<% committee = Role.where(name: "Committee").first.users %>
+<% committee = Group.where(name: "Committee").first.users %>
 
 <ul class="flex flex-col">
   <% if committee.empty? %>

@@ -237,7 +237,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     job = FactoryBot.create(:staffed_staffing_job)
 
     assert_enqueued_emails(1) do
-      job.update!(name: "New Role Name")
+      job.update!(name: "New Group Name")
     end
   end
 

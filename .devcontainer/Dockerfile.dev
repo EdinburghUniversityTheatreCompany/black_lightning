@@ -85,6 +85,7 @@ USER vscode
 # tasks) and activate mise in interactive shells.
 ENV MISE_DATA_DIR=/home/vscode/.local/share/mise
 ENV PATH=${MISE_DATA_DIR}/shims:${PATH}
+ENV MISE_ENV=development
 # Pre-create the mise data + state dirs as the vscode user *before* the volume mounts.
 # The compose `mise-data` volume mounts at MISE_DATA_DIR; creating its parents here
 # (owned by vscode) means (a) a fresh volume initialises with vscode ownership and

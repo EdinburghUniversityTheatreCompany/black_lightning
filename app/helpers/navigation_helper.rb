@@ -116,7 +116,6 @@ module NavigationHelper
     children = []
     children << { title: "Editable Blocks", path: admin_editable_blocks_path, fa_icon: "fa-pen-to-square" }  if can? :index, Admin::EditableBlock
     children << { title: "Carousel Items", path: admin_carousel_items_path, fa_icon: "fa-camera-rotate" }   if can? :index, CarouselItem
-    children << { title: "Roles", path: admin_roles_path, fa_icon: "fa-id-card" }                      if can? :index, Role
     children << { title: "Permissions", path: admin_permissions_path, fa_icon: "fa-unlock" }          if can? :index, Admin::Permission
     children << { title: "Jobs", path: admin_mission_control_jobs_path, fa_icon: "fa-user-tie" }               if can? :manage, :jobs
     children << { title: "Test", path: admin_tests_path, fa_icon: "fa-vial" }                             if can? :manage, :tests
@@ -126,6 +125,7 @@ module NavigationHelper
     children = []
     children << { title: "Users", path: admin_users_path, fa_icon: "fa-circle-user" }                      if can? :index, User
     children << { title: "Activate Members", path: activate_admin_users_path, fa_icon: "fa-circle-check" } if can? :create, User
+    children << { title: "Groups", path: admin_groups_path, fa_icon: "fa-id-card" }                      if can? :index, Group
     children << { title: "Techies", path: admin_techies_path, fa_icon: "fa-toolbox" }                  if can? :index, Techie
     children << { title: "Duplicates", path: admin_duplicates_path, fa_icon: "fa-code-merge" } if can? :index, :duplicates
     navbar_categories << { title: "Users", children: children, fa_icon: "fa-circle-user" }

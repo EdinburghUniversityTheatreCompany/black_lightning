@@ -14,7 +14,7 @@ module Admin
         # ClimateTestHelpers#grant_climate_manage_permission), and the "tears
         # the charts down" test below needs the "Sensors" link, which the
         # dashboard only renders for can?(:manage, :climate).
-        role = ::Role.create!(name: "Climate Manager")
+        role = ::Group.create!(name: "Climate Manager")
         role.permissions << ::Admin::Permission.create(action: "manage", subject_class: "climate")
         role.permissions << ::Admin::Permission.create(action: "access", subject_class: "backend")
         users(:member).add_role("Climate Manager")

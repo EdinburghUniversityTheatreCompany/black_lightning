@@ -33,7 +33,7 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
   test "should create admin_feedback without read permission" do
     sign_in FactoryBot.create(:member)
 
-    permission = Admin::Permission.create(action: :create, subject_class: "Admin::Feedback", roles: Role.where(name: "member"))
+    permission = Admin::Permission.create(action: :create, subject_class: "Admin::Feedback", groups: Group.where(name: "member"))
 
     @feedback = FactoryBot.attributes_for(:feedback, show: nil)
 

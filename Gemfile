@@ -17,7 +17,6 @@ gem "devise"
 gem "doorkeeper"
 gem "doorkeeper-openid_connect"
 gem "recaptcha"
-gem "rolify"
 gem "simple_form"
 
 gem "json"

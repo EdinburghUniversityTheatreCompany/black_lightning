@@ -139,7 +139,7 @@ module ReimbursementsTestHelpers
   # user via the Business Manager role — the gate for every finance operator
   # controller (Review, People, ExpenseEdits, …).
   def grant_finance_permission(user)
-    role = ::Role.find_by(name: "Business Manager") || ::Role.create!(name: "Business Manager").tap do |r|
+    role = ::Group.find_by(name: "Business Manager") || ::Group.create!(name: "Business Manager").tap do |r|
       r.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
     end
     user.add_role("Business Manager")
@@ -150,7 +150,7 @@ module ReimbursementsTestHelpers
   # Producer role — used to prove that portal access alone does NOT open the
   # finance operator surfaces.
   def grant_producer_permission(user)
-    role = ::Role.find_by(name: "Producer") || ::Role.create!(name: "Producer").tap do |r|
+    role = ::Group.find_by(name: "Producer") || ::Group.create!(name: "Producer").tap do |r|
       r.permissions << Admin::Permission.create(action: "access", subject_class: "reimbursements")
     end
     user.add_role("Producer")

@@ -34,45 +34,45 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
   end
 
   test "submitting empty params should not wipe existing permissions" do
-    role = roles(:committee)
-    permissions_before = role.permissions.count
+    group = groups(:committee)
+    permissions_before = group.permissions.count
 
     assert permissions_before > 0, "Committee should have permissions to start with"
 
     # Simulate submitting the form with no checkbox data (e.g. page not fully loaded)
     post :update_grid
 
-    role.reload
-    permissions_after = role.permissions.count
+    group.reload
+    permissions_after = group.permissions.count
 
-    assert_equal permissions_before, permissions_after, "Permissions should not be wiped when no data is submitted for a role"
+    assert_equal permissions_before, permissions_after, "Permissions should not be wiped when no data is submitted for a group"
   end
 
-  test "submitting permissions for a role should save them" do
-    role = roles(:welfare)
+  test "submitting permissions for a group should save them" do
+    group = groups(:welfare)
 
     # Welfare starts with read+update on Complaint (from fixtures)
-    assert role.permissions.where(subject_class: "Complaint").exists?
+    assert group.permissions.where(subject_class: "Complaint").exists?
 
     # Submit with Complaint manage permission added
     post :update_grid, params: {
-      "[#{role.name}]" => {
+      "[#{group.name}]" => {
         "Complaint" => { "read" => "read", "update" => "update", "manage" => "manage" }
       }
     }
 
     assert_redirected_to admin_permissions_path
 
-    role.reload
-    complaint_permissions = role.permissions.where(subject_class: "Complaint").pluck(:action).sort
+    group.reload
+    complaint_permissions = group.permissions.where(subject_class: "Complaint").pluck(:action).sort
 
     assert_includes complaint_permissions, "manage"
     assert_includes complaint_permissions, "read"
     assert_includes complaint_permissions, "update"
   end
 
-  test "should get role_grid" do
-    get :role_grid, params: { id: roles(:committee).id }
+  test "should get group_grid" do
+    get :group_grid, params: { id: groups(:committee).id }
     assert_response :success
   end
 
@@ -87,62 +87,62 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     # for it — but rows from before it was excluded (2026-05-08) still exist in production, and
     # `manage` there is how a non-admin approves proposals. update_permission deletes every action
     # not submitted, so the class must never be in the list of subject classes the save walks.
-    role = roles(:welfare)
+    group = groups(:welfare)
     legacy = Admin::Permission.create!(action: "manage", subject_class: "Admin::Proposals::Proposal")
-    role.permissions << legacy
+    group.permissions << legacy
 
-    post :update_grid, params: { "[#{role.name}]" => { "Complaint" => { "read" => "read" } } }
+    post :update_grid, params: { "[#{group.name}]" => { "Complaint" => { "read" => "read" } } }
     assert_redirected_to admin_permissions_path
-    assert_includes role.reload.permissions, legacy, "A grid save wiped a stored proposal permission the grid never showed"
+    assert_includes group.reload.permissions, legacy, "A grid save wiped a stored proposal permission the grid never showed"
 
-    post :update_role_grid, params: { id: role.id, "[#{role.name}]" => { "Complaint" => { "read" => "read" } } }
-    assert_includes role.reload.permissions, legacy
+    post :update_group_grid, params: { id: group.id, "[#{group.name}]" => { "Complaint" => { "read" => "read" } } }
+    assert_includes group.reload.permissions, legacy
   end
 
-  test "Proposal Checker's permissions are managed in the grid like any other role" do
-    role = Role.create!(name: "Proposal Checker")
-    get :role_grid, params: { id: role.id }
+  test "Proposal Checker's permissions are managed in the grid like any other group" do
+    group = Group.create!(name: "Proposal Checker")
+    get :group_grid, params: { id: group.id }
     assert_response :success
   end
 
-  test "role_grid for excluded role should redirect to role show" do
-    get :role_grid, params: { id: roles(:admin).id }
-    assert_redirected_to admin_role_path(roles(:admin))
+  test "group_grid for excluded group should redirect to group show" do
+    get :group_grid, params: { id: groups(:admin).id }
+    assert_redirected_to admin_group_path(groups(:admin))
   end
 
-  test "should update role permissions via update_role_grid" do
-    role = roles(:welfare)
-    post :update_role_grid, params: { id: role.id }
-    assert_redirected_to permissions_admin_role_path(role)
+  test "should update group permissions via update_group_grid" do
+    group = groups(:welfare)
+    post :update_group_grid, params: { id: group.id }
+    assert_redirected_to permissions_admin_group_path(group)
   end
 
-  test "submitting role permissions should save them" do
-    role = roles(:welfare)
+  test "submitting group permissions should save them" do
+    group = groups(:welfare)
 
-    post :update_role_grid, params: {
-      id: role.id,
-      "[#{role.name}]" => {
+    post :update_group_grid, params: {
+      id: group.id,
+      "[#{group.name}]" => {
         "Complaint" => { "read" => "read", "manage" => "manage" }
       }
     }
 
-    assert_redirected_to permissions_admin_role_path(role)
+    assert_redirected_to permissions_admin_group_path(group)
 
-    role.reload
-    complaint_permissions = role.permissions.where(subject_class: "Complaint").pluck(:action).sort
+    group.reload
+    complaint_permissions = group.permissions.where(subject_class: "Complaint").pluck(:action).sort
     assert_includes complaint_permissions, "manage"
     assert_includes complaint_permissions, "read"
   end
 
-  test "submitting empty role params should not wipe existing permissions" do
-    role = roles(:committee)
-    permissions_before = role.permissions.count
+  test "submitting empty group params should not wipe existing permissions" do
+    group = groups(:committee)
+    permissions_before = group.permissions.count
 
     assert permissions_before > 0, "Committee should have permissions to start with"
 
-    post :update_role_grid, params: { id: role.id }
+    post :update_group_grid, params: { id: group.id }
 
-    role.reload
-    assert_equal permissions_before, role.permissions.count
+    group.reload
+    assert_equal permissions_before, group.permissions.count
   end
 end

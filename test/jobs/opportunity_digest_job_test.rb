@@ -17,7 +17,7 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
 
     # committee fixture has the opportunity_reviewer role via users_roles fixture
     reviewer = users(:committee)
-    assert_includes Role.find_by(name: "Opportunity Reviewer")&.users, reviewer,
+    assert_includes Group.find_by(name: "Opportunity Reviewer")&.users, reviewer,
            "Expected committee user to have Opportunity Reviewer role"
 
     assert_enqueued_jobs(1, only: MailDeliveryJob) do
@@ -27,7 +27,7 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
 
   test "sends one email per reviewer" do
     # Confirm there is exactly one reviewer
-    reviewer_role = Role.find_by(name: "Opportunity Reviewer")
+    reviewer_role = Group.find_by(name: "Opportunity Reviewer")
     reviewer_count = reviewer_role&.users&.count || 0
 
     assert opportunities(:unapproved_opportunity).expiry_date > Date.current

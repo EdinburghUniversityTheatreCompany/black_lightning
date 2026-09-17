@@ -192,12 +192,12 @@
             <% end %>
           </span>
         </li>
-        <% if stats[:roles].any? %>
+        <% if stats[:groups].any? %>
           <li class="list-row flex justify-between items-center">
-            Roles
+            Groups
             <span>
-              <% stats[:roles].each do |role| %>
-                <%= render(BadgeComponent.new(type: :info)) { role } %>
+              <% stats[:groups].each do |group| %>
+                <%= render(BadgeComponent.new(type: :info)) { group } %>
               <% end %>
             </span>
           </li>

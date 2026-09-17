@@ -1,4 +1,4 @@
-<%# locals: (role:, model:, permission:) %>
+<%# locals: (group:, model:, permission:) %>
 
 <% @actions.each do |action| %>
   <td>
@@ -7,7 +7,7 @@
       <% checked = action_permission.count > 0 %>
     <% end %>
 
-    <% title = "#{role.name.titleize} #{model.name} #{action.titleize}" %>
+    <% title = "#{group.name.titleize} #{model.name} #{action.titleize}" %>
 
     <%# Disable the permissions that are included in the disabled_permissions property of the record. %>
     <% if model.const_defined? :DISABLED_PERMISSIONS %>
@@ -17,7 +17,7 @@
       <% end %>
     <% end %>
 
-    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, title: title, disabled: disabled,
+    <%= check_box_tag "[#{group.name}][#{model.name}]#{action}", action, checked, title: title, disabled: disabled,
         data: { action: "change->admin--permissions-grid#markChanged" } %>
   </td>
 <% end %>
