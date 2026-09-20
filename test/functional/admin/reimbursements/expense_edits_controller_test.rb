@@ -1035,6 +1035,26 @@ module Admin
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
       end
+      # Both banners were drawn for the same empty fields: "no bank details"
+      # from ReviewSupport, and — because the checker returns INVALID for a
+      # blank pair — "Modulus check failed ... likely a typo" right under it.
+      # The second sent finance hunting for a typo in a field that is empty.
+      # This is the state the 140 imported claims were in.
+      test "no modulus banner for a claim with no bank details" do
+        payee = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
+                                             sort_code: "", account_number: "")
+        expense = create_reimbursements_expense(person: payee, budget: @budget, status: "Approved")
+
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_match(/no bank details/i, response.body,
+                     "the real problem must still be stated")
+        assert_no_match(/Modulus check failed/, response.body,
+                        "a blank pair is not a typo")
+      end
     end
   end
 end
