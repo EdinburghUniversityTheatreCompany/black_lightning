@@ -59,6 +59,15 @@
            link_to(edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first), class: "no-underline") do
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
+         elsif actual.apportioned?
+           # Name the lines and their shares: "Split" on its own is the state
+           # this row is in, not what it means, and the shares are the whole
+           # point of having split it.
+           safe_join([
+             render(BadgeComponent.new(type: :info, pill: true).with_content("Split")),
+             content_tag(:span, reimbursements_allocation_summary(actual),
+                         class: "block text-xs text-gray-600")
+           ], " ")
          elsif actual.linked_budget_ids.any?
            render(BadgeComponent.new(type: :info, pill: true).with_content("Budget"))
          else
@@ -86,6 +95,24 @@
                         new_expense_admin_reimbursements_actual_path(actual.record_id),
                         class: btn_classes(:secondary, :sm))
               ], " ")
+            elsif actual.apportionable?
+              # A credit covering several shows: split it rather than letting
+              # the whole payout land on one income line.
+              link_to("Split across budgets",
+                      apportion_admin_reimbursements_actual_path(actual.record_id),
+                      class: btn_classes(:secondary, :sm))
+            elsif actual.apportioned?
+              # The way back out, finance-gated as "Not offsetting" is. The row
+              # returns to the unattributed card, so income nobody has placed
+              # is visible again rather than silently gone.
+              button_to("Remove split",
+                        remove_apportionment_admin_reimbursements_actual_path(
+                          actual.record_id, period: @period.presence,
+                          include_offsets: (@include_offsets ? "1" : nil)
+                        ),
+                        class: btn_classes(:secondary, :sm), form_class: "inline-block",
+                        data: { turbo_confirm: "Undo this split? The row goes back to being an " \
+                                               "unplaced credit and each budget loses its share." })
             elsif actual.offset?
               # The pairing heuristic can be wrong, and a wrong pair hides real
               # spend from every rollup, so the operator can always undo one.

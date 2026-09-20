@@ -1,0 +1,90 @@
+<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+
+<p class="mb-3 text-gray-600">
+  One credit can only sit on one budget, so a payout covering several shows — a Stripe
+  settlement, a sponsor's single transfer — lands entirely on whichever line it is attached to.
+  Splitting it gives each income line its own share instead. The parts have to add up to the
+  row exactly: this divides the money that arrived, it does not estimate it.
+</p>
+
+<%= render CardComponent.new(title: "The EUSA row") do %>
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
+    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
+    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
+    <span>Income: <strong><%= reimbursements_money(@actual.apportionable_total) %></strong></span>
+    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
+  </div>
+  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
+<% end %>
+
+<% if @budgets.empty? %>
+  <%= render CardComponent.new(title: "Split it across") do %>
+    <p class="mb-0 text-gray-600">
+      There are no active income budgets to split this across. Create one on the
+      <%= link_to "budgets page", admin_reimbursements_budgets_path, class: "underline" %>
+      first.
+    </p>
+  <% end %>
+<% else %>
+  <%# form_with wraps the card, never the other way round: the footer is a
+      component SLOT, so a form opened inside the card renders its submit
+      outside the <form> and the button silently does nothing. A request test
+      cannot see that; actuals_apportion_js_test clicks the real button. %>
+  <%= form_with url: create_apportionment_admin_reimbursements_actual_path(@actual.record_id),
+                method: :post,
+                data: { controller: "apportion-total",
+                        apportion_total_target_value: @actual.apportionable_total.to_s,
+                        apportion_total_currency_value: "£" } do %>
+    <%= render CardComponent.new(title: "Split it across") do |card| %>
+      <p class="mb-3 text-sm text-gray-600">
+        Leave a row blank if you do not need it. A budget can only take one share — if a show
+        genuinely has two, add them together.
+      </p>
+
+      <div class="space-y-3">
+        <% @shares.each_with_index do |share, index| %>
+          <div class="flex flex-wrap items-end gap-3">
+            <%= render "shared/form/field", label: "Budget", name: "shares[#{index}][budget_id]",
+                  id: "share_#{index}_budget_id", html_class: "grow" do %>
+              <%# Only `simple-select2`: Tom Select copies the select's classes
+                  onto its own wrapper, which already draws the box. %>
+              <%= select_tag "shares[#{index}][budget_id]",
+                    options_for_select(@budgets.map { |b| [ b.display_name, b.record_id ] },
+                                       share[:budget_id]),
+                    id: "share_#{index}_budget_id", class: "simple-select2",
+                    include_blank: "No budget" %>
+            <% end %>
+            <%= render "shared/form/field", label: "Share (£)", name: "shares[#{index}][amount]",
+                  id: "share_#{index}_amount", html_class: "w-44" do %>
+              <%= text_field_tag "shares[#{index}][amount]", share[:amount_typed],
+                    id: "share_#{index}_amount", inputmode: "decimal",
+                    autocomplete: "off", class: input_classes,
+                    data: { apportion_total_target: "amount",
+                            action: "input->apportion-total#recalculate" } %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <p class="mt-3 mb-0 text-sm font-medium" data-apportion-total-target="summary"
+         aria-live="polite">
+        <%= reimbursements_money(@actual.apportionable_total) %> left to allocate
+      </p>
+
+      <% card.with_footer do %>
+        <div class="form-actions flex flex-wrap items-center gap-2">
+          <%# Disabled until the parts add up. The server refuses a short split
+              anyway — this only saves the operator the round trip. %>
+          <%= submit_tag "Save the split", class: btn_classes(:primary), disabled: true,
+                data: { apportion_total_target: "submit" } %>
+          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+        </div>
+        <p class="mt-2 mb-0 text-sm text-gray-500">
+          Nobody is emailed. The row stays on the ledger and the split can be removed again from
+          the actuals list.
+        </p>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
