@@ -58,6 +58,27 @@ module Reimbursements
         return fail_with(result, "SharePoint folders not configured for #{@cost_centre.name}.")
       end
 
+      # Every row on the spreadsheet must say where the money goes. The approve
+      # blocker (ReviewSupport) is the only other check and it runs on the
+      # APPROVAL path alone, so a claim that reached Approved another way — the
+      # settled-claim import, a console fix — never met it, and nothing below
+      # re-asks: #bacs_document reads the effective payee/sort/account, which
+      # are blank strings for a claim with no payee at all. EUSA would receive a
+      # request to pay nobody.
+      #
+      # It fails the WHOLE batch rather than dropping the bad rows: a
+      # spreadsheet quietly short of the claims the operator just approved is
+      # the harder error to notice, and the fix is a minute's work on the named
+      # claims.
+      bankless = expenses.reject(&:effective_has_bank_details?)
+      if bankless.any?
+        return fail_with(result, "#{bankless.size} #{'claim'.pluralize(bankless.size)} have " \
+                                 "no bank details and cannot be paid: " \
+                                 "#{bankless.map { |e| "##{e.auto_number}" }.join(', ')}. " \
+                                 "Fix the payee's People record or the claim's override, " \
+                                 "or move them out of Approved.")
+      end
+
       # The UK rows collapse into one BACS spreadsheet; each international claim
       # needs its own form, because that is the shape of EUSA's template.
       documents = build_payment_documents(expenses, bacs_date)

@@ -492,6 +492,33 @@ module Reimbursements
       assert_equal 1, graph.drafts.size, "still only one EUSA draft"
     end
 
+    # The approve blocker (ReviewSupport) is the ONLY other place that asks
+    # whether we know where the money goes, and it runs on the approval path
+    # alone. A claim that reached Approved another way — the settled-claim
+    # import, a console fix — walks straight past it, and nothing downstream
+    # re-checks: bacs_document builds a row per expense from the EFFECTIVE
+    # payee/sort/account, and a blank person yields blank strings for all
+    # three. 140 production claims sat in exactly that state in September 2026.
+    test "refuses to process a claim with no bank details" do
+      processor, store, graph = build_scenario(expenses: lambda {
+        @expense_a = create_reimbursements_expense(person: @alice, budget: @budget,
+                                                   status: Status::APPROVED, auto_number: 11)
+        payeeless = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
+                                                 sort_code: "", account_number: "")
+        @expense_b = create_reimbursements_expense(person: payeeless, budget: @budget,
+                                                   status: Status::APPROVED, auto_number: 12)
+      })
+
+      result = run_batch(processor, store)
+
+      assert_not result.success
+      assert(result.errors.any? { |e| e.include?("no bank details") },
+             "the failure must say what is wrong: #{result.errors.inspect}")
+      assert(result.errors.any? { |e| e.include?("12") },
+             "the failure must name the claim: #{result.errors.inspect}")
+      assert_empty graph.drafts, "nothing may reach EUSA"
+    end
+
     test "refuses to process when SharePoint folders are not configured" do
       cost_centre = configured_cost_centre
       cost_centre.sharepoint_receipts_drive_id = nil
