@@ -45,6 +45,12 @@ env:
     SOLID_QUEUE_IN_PUMA: true
     RACK_TIMEOUT_SERVICE_TIMEOUT: 30
     RACK_TIMEOUT_SERVICE_PAST_WAIT: true
+    # Honeybadger's ActiveJob plugin notifies from an around-perform callback that
+    # sits INSIDE ActiveJob's own rescue, so it reports before retry_on ever sees
+    # the error -- at the default threshold of 0, every transient blip pages even
+    # though ApplicationJob has four retries left. 2 stays quiet on the first
+    # attempt and reports from the second, with three retries still in hand.
+    HONEYBADGER_ACTIVE_JOB_ATTEMPT_THRESHOLD: 2
   secret:
     - RAILS_MASTER_KEY
     - MYSQL_ROOT_PASSWORD
