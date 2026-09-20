@@ -144,6 +144,21 @@ keep `eusa_code` on `CostCentre`. If a code ever needs to differ per year, add a
 if ever needed); the "clone into next year" action copies that row forward. Do not model EUSA codes as
 a standalone entity.
 
+### Recording expected income
+
+Money the committee expects to raise but that has not landed yet is recorded as an ordinary
+**budget forecast** on the Income line, not as an actual. The forecast flow already supports this
+with no code of its own: `Budget#projected_amount` reads the latest forecast for any budget type,
+and the budgets overview prints it in the **Projected** column directly beside **EUSA actual**, so
+the gap between "what we expect" and "what has landed" is the variance the screen already shows.
+Verified 2026-09-20 against a live Income line: a £4,250 forecast rendered as Projected £4,250.00
+next to EUSA actual £0.00.
+
+A forecast is the right home for it precisely because it never pretends the money arrived. Logging
+expected income as a pseudo-actual, reconciled later, was rejected: it invents a second source of
+truth for money that has landed, and creates an "early figure disagrees with the actual" state that
+somebody then has to resolve. An EUSA credit row stays the only statement that income is real.
+
 ## Phase E: budget-owner approval (post-cutover)
 
 Deferred to after the cutover (Mick, 2026-07-12), where it is clean (no Airtable status-option add,
