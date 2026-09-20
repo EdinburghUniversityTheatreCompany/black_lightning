@@ -33,7 +33,8 @@ module Reimbursements
   class ActualAllocation < ApplicationRecord
     self.table_name = "reimbursements_actual_allocations"
 
-    belongs_to :eusa_actual, class_name: "Reimbursements::EusaActual"
+    belongs_to :eusa_actual, class_name: "Reimbursements::EusaActual",
+                             inverse_of: :allocations
     belongs_to :budget, class_name: "Reimbursements::Budget"
 
     validates :amount, numericality: { greater_than: 0 }

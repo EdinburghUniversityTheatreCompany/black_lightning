@@ -84,6 +84,12 @@ module Reimbursements
                                  foreign_key: :offset_of_id, inverse_of: :offset_of,
                                  dependent: :nullify
 
+    # Each income budget's share of this row, when finance has split it. Only
+    # ever populated on a credit row (see #apportionable?).
+    has_many :allocations, class_name: "Reimbursements::ActualAllocation",
+                           foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
+                           dependent: :destroy
+
     # The net position of a set of ledger rows, from the spending side: debits
     # less credits, so a supplier refund or a credit note reduces the figure
     # instead of inflating it. Offsetting legs are dropped rather than netted:
@@ -118,5 +124,35 @@ module Reimbursements
     def convertible_to_expense?
       debit.present? && debit.positive? && self[:expense_id].blank? && !offset?
     end
+
+    # Splittable across several income budgets: a credit that landed, attached
+    # to nothing yet, and not an offsetting leg.
+    #
+    # DEBITS are deliberately out. A debit row is split by converting it into
+    # several expenses, which already works (#convertible_to_expense?), and a
+    # debit budget's figure totals through its EXPENSES rather than through
+    # budget_id — a different mechanism that allocations would not reach.
+    # An offsetting leg nets to zero against its counterpart, so apportioning
+    # one would invent income, exactly as converting one would invent spend.
+    def apportionable?
+      credit.present? && credit.positive? && self[:budget_id].blank? &&
+        self[:expense_id].blank? && !offset? && !apportioned?
+    end
+
+    def apportioned? = allocations.any?
+
+    # What a split has to add up to: credits less debits, the same derivation
+    # EusaActual.net uses (negated, since this is the income side) and so the
+    # exact figure Budget#credit_actual_total would have counted had the row
+    # been attached whole.
+    #
+    # NOT the stored +net+ column. That is parsed from the export's own Net
+    # cell, which is a second statement of the same fact — it can be blank on
+    # a hand-created row and can disagree with the debit/credit pair every
+    # rollup actually reads. Splitting against a figure no rollup reads is how
+    # the parts would stop summing to the whole.
+    def apportionable_total = -EusaActual.net([ self ])
+
+    def allocated_total = allocations.sum { |allocation| allocation.amount || 0 }
   end
 end
