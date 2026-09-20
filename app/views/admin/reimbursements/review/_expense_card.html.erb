@@ -214,9 +214,9 @@
     </div>
     <div>
       <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: FormStyles::LABEL %>
-      <% budget_options = @budgets.map { |b| [ b.display_name, b.record_id ] } %>
+      <% budget_options = @budgets.map { |b| [ b.picker_label, b.record_id ] } %>
       <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
-        <% budget_options.unshift([ expense.budget.display_name, expense.budget.record_id ]) %>
+        <% budget_options.unshift([ expense.budget.picker_label, expense.budget.record_id ]) %>
       <% end %>
       <%= select_tag :budget_record_id,
                      options_for_select(budget_options, expense.budget&.record_id),

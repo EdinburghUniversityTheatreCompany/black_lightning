@@ -16,6 +16,7 @@
 #  receive_mailbox               :string(255)      not null
 #  send_mailbox                  :string(255)      not null
 #  sharepoint_site_url           :string(255)
+#  short_code                    :string(16)
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
 #  sharepoint_bacs_drive_id      :string(255)
@@ -49,6 +50,10 @@ module Reimbursements
     # is [2, 4] = Tue/Thu. Stored as a JSON string so it round-trips through a
     # plain string column (MySQL can't default a TEXT/JSON column).
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
+
+    # Cap for +short_code+, the abbreviation that prefixes this centre's budgets
+    # in a picker ("BF - Improverts: Other").
+    SHORT_CODE_MAX = 16
     serialize :nightly_run_days, coder: JSON
 
     # +notification_email+ holds one or more addresses separated by ";" (the
@@ -76,6 +81,10 @@ module Reimbursements
     # mailbox would make MailboxPollJob attribute every email-in receipt to
     # whichever cost centre happens to be polled first.
     validates :eusa_code, uniqueness: true
+    # Short enough to prefix a dropdown option without pushing the budget's own
+    # name out of view. Optional: it is a label, and picker_prefix falls back to
+    # the EUSA code, so an unset centre still names itself.
+    validates :short_code, length: { maximum: SHORT_CODE_MAX }, allow_blank: true
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
     validates :send_mailbox, uniqueness: { case_sensitive: false }
     # No format check existed anywhere on this write path — a mistyped
@@ -84,6 +93,11 @@ module Reimbursements
     validates :receive_mailbox, :send_mailbox, format: { with: URI::MailTo::EMAIL_REGEXP }
     validates :eusa_recipient, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validate :nightly_run_days_are_weekday_numbers
+
+    # How this centre names itself in front of a budget in a picker. The short
+    # code when the business manager has set one, else the EUSA code — which
+    # every centre has, so a picker can never render a bare separator.
+    def picker_prefix = short_code.presence || eusa_code
 
     # The primary cost centre (Fringe today). Multi-cost-centre flows iterate
     # .all; .default is for the single-cost-centre call sites that predate the

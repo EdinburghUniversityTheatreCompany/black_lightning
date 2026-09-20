@@ -119,7 +119,7 @@ module Admin
       # operator override it.
       def create_params
         params.require(:cost_centre).permit(
-          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox, :notification_email
+          :key, :name, :eusa_code, :short_code, :receive_mailbox, :send_mailbox, :notification_email
         )
       end
 

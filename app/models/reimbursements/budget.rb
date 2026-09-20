@@ -108,6 +108,24 @@ module Reimbursements
       area ? "#{area.name}: #{name}" : name.to_s
     end
 
+    # How this line reads in a <select>, and NOWHERE else.
+    #
+    # It has to be separate from #display_name, which is load-bearing:
+    # BudgetImport.bare_name splits on its colon to match a re-imported line,
+    # FilenameSanitizer builds receipt filenames from it, and
+    # ReviewSupport.auto_payment_reference derives the BACS reference EUSA sees
+    # from it. Prefixing THAT to label a dropdown would silently change the
+    # reference on every future payment.
+    #
+    # The prefix earns its place because active_budgets — which fills every
+    # submitter's picker — is deliberately NOT cost-centre scoped, so a producer
+    # really is choosing between several centres' lines with nothing else on
+    # screen to tell them apart. A line with no centre yet is left bare rather
+    # than given an empty prefix.
+    def picker_label
+      cost_centre ? "#{cost_centre.picker_prefix} - #{display_name}" : display_name
+    end
+
     # The area owns and its budgets inherit; a budget with no area owns
     # itself. Owner links are People record id STRINGS, because OwnerReview
     # and the budgets UI compare them against person.record_id.

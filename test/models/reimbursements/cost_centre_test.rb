@@ -264,5 +264,22 @@ module Reimbursements
       assert_not_predicate with_address, :notification_recipients_empty?
       assert_predicate without, :notification_recipients_empty?
     end
+    test "picker_prefix uses the short code when set" do
+      centre = CostCentre.new(eusa_code: "F40", short_code: "BF")
+      assert_equal "BF", centre.picker_prefix
+    end
+
+    test "picker_prefix falls back to the eusa code" do
+      # The column ships empty on every existing centre and is never backfilled,
+      # so a picker must still name the centre before anyone fills it in.
+      centre = CostCentre.new(eusa_code: "F40", short_code: "")
+      assert_equal "F40", centre.picker_prefix
+    end
+
+    test "a short code longer than the cap is refused" do
+      centre = CostCentre.new(eusa_code: "F40", short_code: "FAR TOO LONG TO FIT")
+      centre.valid?
+      assert centre.errors[:short_code].present?
+    end
   end
 end
