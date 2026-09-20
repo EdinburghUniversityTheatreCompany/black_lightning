@@ -81,24 +81,6 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
-  # The budgets a split EUSA credit was divided between, each with its share:
-  # "Show A £2,500.00; Show B £1,500.00".
-  #
-  # One derivation for the ledger row on screen and for the Actuals export's
-  # Budget cell, so a finance user reading the CSV and a finance user reading
-  # the page cannot be told two different things about where the money went.
-  # Ordered by share, largest first, then by name, so the list is stable
-  # between renders rather than following insertion order.
-  def reimbursements_allocation_summary(actual)
-    actual.allocations
-          .sort_by { |allocation| [ -(allocation.amount || 0), allocation.budget&.display_name.to_s ] }
-          .map do |allocation|
-            "#{allocation.budget&.display_name.presence || '(budget gone)'} " \
-              "#{reimbursements_money(allocation.amount)}"
-          end
-          .join("; ")
-  end
-
   # How much of an area's agreed total has been split out into its lines, in
   # the one form every screen prints it: its two halves whenever a net basis
   # has netted income off the spend, and the single figure otherwise.

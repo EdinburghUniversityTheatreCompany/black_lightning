@@ -122,6 +122,27 @@ module Admin
         assert_predicate @payout, :apportionable?
       end
 
+      # "Split" alone is the state the row is in, not what it means; the
+      # shares are the whole point of having split it.
+      test "the ledger row names its shares and offers the undo" do
+        sign_in @user
+        post_split(two_way_split)
+
+        get :index
+
+        assert_response :success
+        assert_match "Show A £2,500.00; Show B £1,500.00", response.body
+        assert_match "Remove split", response.body
+      end
+
+      test "an apportionable row offers the split action on the index" do
+        sign_in @user
+
+        get :index
+
+        assert_match "Split across budgets", response.body
+      end
+
       # Splitting a row moves money between budgets' figures, so it is behind
       # the same finance gate as the rest of this controller rather than the
       # producer portal's.

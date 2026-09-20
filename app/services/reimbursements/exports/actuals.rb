@@ -29,12 +29,26 @@ module Reimbursements
           debit ? "Debit" : (actual.credit&.positive? ? "Credit" : ""),
           actual.narrative,
           signed_amount(actual, debit),
-          budget_by_id[actual.linked_budget_ids.first]&.name,
+          budget_cell(actual),
           expense_by_id[actual.linked_expense_ids.first]&.auto_number,
           actual.period,
           actual.reconciliation_status.presence&.capitalize,
           cost_centre_name(actual.cost_centre_id), area_name(actual)
         ]
+      end
+
+      # The budget a row is booked against — or, for a row SPLIT across several
+      # income lines, every one of them with its share
+      # ("Show A £2,500.00; Show B £1,500.00").
+      #
+      # A split row carries no budget_id, so without this its Budget cell is
+      # blank and the export says the money went nowhere. It reads the same
+      # EusaActual#allocation_summary the ledger page prints, so the CSV and
+      # the screen cannot disagree about where it went.
+      def budget_cell(actual)
+        return actual.allocation_summary if actual.apportioned?
+
+        budget_by_id[actual.linked_budget_ids.first]&.name
       end
 
       # Spend positive, income negative. A row with neither (both columns blank
@@ -58,6 +72,10 @@ module Reimbursements
           budget_by_id[expense_by_id[actual.linked_expense_ids.first]&.budget_record_id]
       end
 
+      # Blank for a SPLIT row, and deliberately so: its shares can sit on
+      # budgets in different areas, and one cell there would be a lie rather
+      # than a blank — the reason Batches carries no Area column at all. The
+      # Budget cell already names each line, and each line names its area.
       def area_name(actual)
         linked_budget(actual)&.area&.name
       end

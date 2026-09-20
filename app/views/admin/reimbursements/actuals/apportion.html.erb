@@ -46,7 +46,7 @@
         <% @shares.each_with_index do |share, index| %>
           <div class="flex flex-wrap items-end gap-3">
             <%= render "shared/form/field", label: "Budget", name: "shares[#{index}][budget_id]",
-                  id: "share_#{index}_budget_id", html_class: "grow" do %>
+                  id: "share_#{index}_budget_id", html_class: "grow max-w-lg" do %>
               <%# Only `simple-select2`: Tom Select copies the select's classes
                   onto its own wrapper, which already draws the box. %>
               <%= select_tag "shares[#{index}][budget_id]",
@@ -76,7 +76,14 @@
         <div class="form-actions flex flex-wrap items-center gap-2">
           <%# Disabled until the parts add up. The server refuses a short split
               anyway — this only saves the operator the round trip. %>
-          <%= submit_tag "Save the split", class: btn_classes(:primary), disabled: true,
+<%# ButtonComponent's shared classes carry no disabled styling, so without
+          these a disabled submit looks exactly like a live one and the
+          operator clicks a button that cannot do anything. Local rather than
+          on BASE_CLASSES: that is every button in the app and Mick's call. %>
+          <%= submit_tag "Save the split", disabled: true,
+                class: "#{btn_classes(:primary)} disabled:opacity-50 " \
+                       "disabled:cursor-not-allowed disabled:hover:bg-white " \
+                       "disabled:hover:text-primary",
                 data: { apportion_total_target: "submit" } %>
           <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
         </div>

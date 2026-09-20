@@ -65,7 +65,7 @@
            # point of having split it.
            safe_join([
              render(BadgeComponent.new(type: :info, pill: true).with_content("Split")),
-             content_tag(:span, reimbursements_allocation_summary(actual),
+             content_tag(:span, actual.allocation_summary,
                          class: "block text-xs text-gray-600")
            ], " ")
          elsif actual.linked_budget_ids.any?

@@ -160,5 +160,31 @@ module Reimbursements
     def apportionable_total = -EusaActual.net([ self ])
 
     def allocated_total = allocations.sum { |allocation| allocation.amount || 0 }
+
+    # The budgets a split was divided between, each with its share:
+    # "Show A £2,500.00; Show B £1,500.00". Blank when the row is not split.
+    #
+    # On the MODEL rather than in a helper because the ledger page and the
+    # Actuals export both print it, and a finance user reading the CSV must
+    # not be told something different from one reading the screen. The "£" is
+    # kept even in the export, where amounts are normally bare numerals: this
+    # is a description of several amounts, not a column anything sums.
+    #
+    # Ordered by share, largest first, then by name — stable between renders,
+    # rather than following insertion order.
+    def allocation_summary
+      allocations
+        .sort_by { |a| [ -(a.amount || 0), a.budget&.display_name.to_s ] }
+        .map { |a| "#{a.budget&.display_name.presence || '(budget gone)'} #{money(a.amount)}" }
+        .join("; ")
+    end
+
+    private
+
+    # number_to_currency with the same unit reimbursements_money uses, so the
+    # summary reads identically to every other money figure in the portal.
+    def money(amount)
+      ActiveSupport::NumberHelper.number_to_currency(amount || 0, unit: "£")
+    end
   end
 end
