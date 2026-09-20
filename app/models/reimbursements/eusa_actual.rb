@@ -57,6 +57,12 @@ module Reimbursements
     # else — including a blank status — is an ordinary ledger row.
     STATUS_OFFSET = "offset".freeze
 
+    # reconciliation_status value stamped on a credit row finance has split
+    # across several income budgets. It is what the ledger view and the CSV
+    # read to say "Apportioned" rather than leaving the row looking unlinked;
+    # the allocations themselves are the record of who got what.
+    STATUS_APPORTIONED = "apportioned".freeze
+
     belongs_to :expense, class_name: "Reimbursements::Expense", optional: true,
                          inverse_of: :eusa_actuals
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true
