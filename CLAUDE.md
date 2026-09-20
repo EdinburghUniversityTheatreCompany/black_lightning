@@ -1035,6 +1035,37 @@ survive as historical import provenance and are never written. Spec + plan in
   relaxes the receipt/VAT/large-amount blocks; it is deliberately **not** a permitted
   parameter on the producer form, so a submitter can't pick the internal type to dodge the
   receipt rule.
+- **Income apportionment — splitting one credit across several income budgets.**
+  `reimbursements_actual_allocations` carries `(eusa_actual_id, budget_id, amount)`;
+  `DatabaseStore#apportion_actual!` / `#remove_apportionment!` write and undo it, the screen is
+  `ActualsController#apportion`. Stripe pays out one lump covering a Fringe week and a ledger
+  row holds one `budget_id`, so without it the whole payout lands on one line.
+  - **CREDIT rows only.** A debit is split by converting it into several expenses, which already
+    works — and a debit budget's figure totals through its EXPENSES, a mechanism allocations
+    never reach. An offsetting leg is refused for the reason it is not convertible: it nets to
+    zero, so splitting it would invent income.
+  - **Apportioning CLEARS the row's `budget_id`**, so the allocations are the single answer to
+    whose income it is. A row holding both would have its full value counted on the old line AND
+    its shares on the new ones.
+  - **`unattributed_actuals` must therefore exclude apportioned rows**, and that exclusion runs
+    the opposite way from the rest of that list: it rejects rows that HAVE a `budget_id`, and an
+    apportioned row has none. Without it every split row reappears on the overview's
+    unlinked-spend card, and a permanent false alarm there is how a real one stops being read.
+  - **The parts must sum to `EusaActual#apportionable_total`** — credits less debits, derived as
+    `EusaActual.net` derives every rollup's figure, **never the stored `net` column**, which is
+    parsed separately from the export's own Net cell and can be blank or disagree. A short split
+    understates income silently, so the write is refused whole, in one transaction, with the
+    splittable check re-taken under a row lock (`create_expense_for_actual!`'s shape).
+  - **Two preloads, and forgetting either N+1s a page**: `:actual_allocations` on
+    `budgets_with_actuals` AND on the budgets inside `DatabaseStore#areas`, plus `:allocations`
+    behind `eusa_actuals` (or `apportioned?` fires a query per row on the ledger).
+  - **The picker is UNSCOPED**, for the reason `store.budgets` is: an EUSA credit in one year's
+    tail routinely belongs to the income line of the year it was raised in, and the Actuals
+    screens are not year-scoped at all. Active income lines only; the posted ids are validated
+    against the ids the page RENDERED.
+  - `EusaActual#allocation_summary` is the one derivation the ledger badge and the export's
+    Budget cell both print. A split row's export **Area** cell is blank on purpose — its shares
+    can sit in different areas, so one cell would be a lie (why `Batches` has no Area column).
 
 ### International payments
 
