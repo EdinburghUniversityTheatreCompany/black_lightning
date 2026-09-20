@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -693,6 +693,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end
 
+  create_table "reimbursements_actual_allocations", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.bigint "budget_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "eusa_actual_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["budget_id"], name: "index_reimbursements_actual_allocations_on_budget_id"
+    t.index ["eusa_actual_id", "budget_id"], name: "index_reimb_actual_allocations_on_actual_and_budget", unique: true
+    t.index ["eusa_actual_id"], name: "index_reimbursements_actual_allocations_on_eusa_actual_id"
+  end
+
   create_table "reimbursements_area_owners", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "area_id", null: false
     t.datetime "created_at", null: false
@@ -1253,6 +1264,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
   add_foreign_key "opportunities", "companies"
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
+  add_foreign_key "reimbursements_actual_allocations", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_actual_allocations", "reimbursements_eusa_actuals", column: "eusa_actual_id"
   add_foreign_key "reimbursements_area_owners", "reimbursements_areas", column: "area_id"
   add_foreign_key "reimbursements_area_owners", "reimbursements_people", column: "person_id"
   add_foreign_key "reimbursements_areas", "reimbursements_cost_centres", column: "cost_centre_id"

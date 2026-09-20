@@ -122,6 +122,26 @@ module ReimbursementsTestHelpers
                                        debit: debit, **attrs)
   end
 
+  # A fuller ledger row than create_reimbursements_actual above, which is the
+  # older debit-only shorthand the reconcile tests were written against. This
+  # one stamps the columns an imported row really carries (date, period,
+  # source_month) and takes a +credit:+, since income is the side the
+  # apportionment work reads.
+  #
+  # +net+ is DERIVED from debit and credit rather than taken as an argument,
+  # because EusaActual.net derives the rollups' figure the same way. A stored
+  # net that disagreed with its own debit/credit would be a second source of
+  # truth for what a row is worth, which is exactly what a test must not seed.
+  def create_reimbursements_eusa_actual(nominal_code: "4100", narrative: "Stripe payout",
+                                        debit: nil, credit: nil, date: Date.current,
+                                        period: "06", source_month: "2026-09", **attrs)
+    Reimbursements::EusaActual.create!(
+      nominal_code: nominal_code, narrative: narrative, debit: debit, credit: credit,
+      net: (debit || 0) - (credit || 0), date: date, period: period,
+      source_month: source_month, **attrs
+    )
+  end
+
   # --- Assertions ----------------------------------------------------------
 
   # Every finance list's "Download CSV" answers the same shape: a text/csv
