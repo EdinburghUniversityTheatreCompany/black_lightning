@@ -142,6 +142,29 @@ module ReimbursementsTestHelpers
     )
   end
 
+  # --- Query counting ------------------------------------------------------
+
+  # Counts the SQL a block issues, for the preload assertions that stop a
+  # rollup N+1ing a query per budget. Lives here rather than in one test file
+  # because three suites need it and jscpd gates duplication at 0.
+  #
+  # Schema-introspection queries (the first touch of a table in a test run)
+  # are excluded, or whichever test happens to run first absorbs them and the
+  # comparison between two sizes becomes noise instead of signal — measured:
+  # without this exclusion the SAME scenario read 45 queries first and 31
+  # second, entirely from schema-cache warmup.
+  def count_queries(&block)
+    count = 0
+    callback = lambda do |*, payload|
+      next if payload[:name] == "SCHEMA"
+      next if payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
+
+      count += 1
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+    count
+  end
+
   # --- Assertions ----------------------------------------------------------
 
   # Every finance list's "Download CSV" answers the same shape: a text/csv

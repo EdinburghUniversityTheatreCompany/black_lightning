@@ -62,6 +62,11 @@ module Reimbursements
     # Expense budgets' actuals hang off their expenses (expense.eusa_actuals).
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
                             dependent: :nullify, inverse_of: :budget
+    # This line's share of the credit rows finance has SPLIT across several
+    # income budgets. An apportioned row carries no budget_id, so these never
+    # overlap with #eusa_actuals above.
+    has_many :actual_allocations, class_name: "Reimbursements::ActualAllocation",
+                                  dependent: :destroy, inverse_of: :budget
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast",
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
@@ -245,7 +250,23 @@ module Reimbursements
     # (#to_a on a loaded association reuses the preload, so this stays one query
     # for a budget loaded on its own and none for one the store preloaded.)
     def credit_actual_total
-      -EusaActual.net(eusa_actuals.to_a)
+      -EusaActual.net(eusa_actuals.to_a) + allocated_credit_total
+    end
+
+    # This line's share of the rows that were split across several income
+    # budgets. Counted alongside the rows attached whole, never instead of
+    # them: apportion_actual! clears an apportioned row's budget_id, so the
+    # two sets are disjoint and nothing is counted twice.
+    #
+    # Reads the preloaded association where budgets_with_actuals loaded it,
+    # so the overview costs no per-budget query, and falls back to a SUM for
+    # a budget read on its own.
+    def allocated_credit_total
+      if actual_allocations.loaded?
+        actual_allocations.sum { |allocation| allocation.amount || 0 }
+      else
+        actual_allocations.sum(:amount)
+      end
     end
 
     # Spend on the actuals reconciled to this budget's expenses, debits less

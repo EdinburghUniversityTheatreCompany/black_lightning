@@ -188,7 +188,8 @@ module Reimbursements
     # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped_to_cost_centre(
-        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, area: :owners, expenses: :eusa_actuals).to_a),
+        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
+                                       area: :owners, expenses: :eusa_actuals).to_a),
         &:cost_centre_id
       )
     end
@@ -222,7 +223,8 @@ module Reimbursements
     # budget, per area, per render. `:forecasts` is there for the same reason
     # one level up: Area#projected_amount reads the area's own forecast log.
     def areas
-      @areas ||= Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).to_a
+      @areas ||= Area.includes(:owners, :forecasts,
+                               budgets: %i[expenses forecasts actual_allocations]).to_a
     end
 
     # record_id => name for every area, in ONE query and with no preloads — for

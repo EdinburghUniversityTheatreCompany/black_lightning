@@ -514,23 +514,6 @@ module Admin
                         "#{small_queries} queries for 4 budgets vs #{large_queries} for 16"
       end
 
-      # Schema-introspection queries (the first touch of a table in a test
-      # run) are excluded, or whichever test happens to run first absorbs
-      # them and the comparison between two sizes becomes noise instead of
-      # signal — measured: without this exclusion the SAME scenario read
-      # 45 queries first and 31 second, entirely from schema-cache warmup.
-      def count_queries(&block)
-        count = 0
-        callback = lambda do |*, payload|
-          next if payload[:name] == "SCHEMA"
-          next if payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
-
-          count += 1
-        end
-        ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
-        count
-      end
-
       test "a forecast amount typed with a comma or a pound sign is read" do
         sign_in @user
 
