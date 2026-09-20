@@ -551,6 +551,42 @@ module Reimbursements
                    "a correctly-offset accrual pair nets to zero, it is not unplanned spend"
     end
 
+    # An apportioned row carries NO budget_id — apportion_actual! clears it —
+    # so a list that only rejects rows with one would report every split row
+    # as unlinked income, on the very card that exists to surface money no
+    # budget accounts for.
+    test "an apportioned row is not reported as unattributed" do
+      budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 900)
+      store.apportion_actual!(actual.id, [ { budget_id: budget.id, amount: BigDecimal("900") } ])
+
+      assert_not_includes DatabaseStore.new.unattributed_actuals.map(&:id), actual.id
+    end
+
+    # Undoing a split has to put the row back on the card, or income nobody
+    # has attributed disappears from the one screen that would show it.
+    test "removing an apportionment puts the row back on the unattributed list" do
+      budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 900)
+      store.apportion_actual!(actual.id, [ { budget_id: budget.id, amount: BigDecimal("900") } ])
+      store.remove_apportionment!(actual.id)
+
+      assert_includes DatabaseStore.new.unattributed_actuals.map(&:id), actual.id
+    end
+
+    # apportioned? reads an association, so without the preload behind
+    # eusa_actuals_for_cost_centre this fires one query per row on a page
+    # that renders hundreds.
+    test "the unattributed list does not query per row for allocations" do
+      3.times { |i| create_reimbursements_eusa_actual(credit: 100, narrative: "Payout #{i}") }
+      fresh = DatabaseStore.new
+      fresh.eusa_actuals # warm the one list read the card is built from
+
+      queries = count_queries { fresh.unattributed_actuals }
+
+      assert_equal 0, queries, "apportioned? must read preloaded allocations"
+    end
+
     # --- Budget updates ----------------------------------------------------
 
     test "create_budget_update! records the shared update and one forecast per entry" do

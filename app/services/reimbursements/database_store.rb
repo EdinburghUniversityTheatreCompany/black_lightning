@@ -265,9 +265,16 @@ module Reimbursements
     #
     # Sorted by nominal code, then date, so finance can see which budget each
     # row probably belongs to.
+    # An APPORTIONED row is excluded too, and that exclusion is load-bearing
+    # in the opposite direction from the rest: apportion_actual! CLEARS the
+    # row's budget_id, so without it every split row would reappear here as
+    # unlinked income — turning the one card that surfaces unattributed money
+    # into a permanent false alarm, which is how a real one stops being read.
     def unattributed_actuals
       eusa_actuals_for_cost_centre
-        .reject { |a| a.offset? || a[:expense_id].present? || a[:budget_id].present? }
+        .reject do |a|
+          a.offset? || a[:expense_id].present? || a[:budget_id].present? || a.apportioned?
+        end
         .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 
@@ -710,7 +717,7 @@ module Reimbursements
     # --- EUSA Actuals (reconciliation) ------------------------------------
 
     def eusa_actuals
-      @eusa_actuals ||= EusaActual.includes(:expense, :budget).to_a
+      @eusa_actuals ||= EusaActual.includes(:expense, :budget, allocations: :budget).to_a
     end
 
     # The selected cost centre's ledger rows, for the Actuals browser and its
@@ -729,7 +736,7 @@ module Reimbursements
     end
 
     def find_actual(record_id)
-      EusaActual.includes(:expense, :budget).find_by(id: record_id)
+      EusaActual.includes(:expense, :budget, allocations: :budget).find_by(id: record_id)
     end
 
     def create_actual!(attrs)
