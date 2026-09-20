@@ -5,9 +5,8 @@
   - duplicates: array of possible-duplicate expenses, or nil
   - selectable: whether to show the bulk-select checkbox (Pending only; default false)
 %>
-<%# Nil unless the check applies — an international payee has no sort code or
-    account number, and a claim with no bank details at all already says so.
-    ReviewSupport owns the rule so this banner and the Review summary agree. %>
+<%# Nil unless the check applies — see ReviewSupport.modulus_result, which owns
+    that rule so this banner and the Review summary cannot disagree. %>
 <% modulus = ::Reimbursements::ReviewSupport.modulus_result(expense, modulus_checker) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>

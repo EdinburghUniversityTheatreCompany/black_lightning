@@ -82,8 +82,7 @@ module Reimbursements
     # whichever cost centre happens to be polled first.
     validates :eusa_code, uniqueness: true
     # Short enough to prefix a dropdown option without pushing the budget's own
-    # name out of view. Optional: it is a label, and picker_prefix falls back to
-    # the EUSA code, so an unset centre still names itself.
+    # name out of view.
     validates :short_code, length: { maximum: SHORT_CODE_MAX }, allow_blank: true
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
     validates :send_mailbox, uniqueness: { case_sensitive: false }

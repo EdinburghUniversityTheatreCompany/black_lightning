@@ -120,8 +120,7 @@ module Reimbursements
     # The prefix earns its place because active_budgets — which fills every
     # submitter's picker — is deliberately NOT cost-centre scoped, so a producer
     # really is choosing between several centres' lines with nothing else on
-    # screen to tell them apart. A line with no centre yet is left bare rather
-    # than given an empty prefix.
+    # screen to tell them apart.
     def picker_label
       cost_centre ? "#{cost_centre.picker_prefix} - #{display_name}" : display_name
     end
