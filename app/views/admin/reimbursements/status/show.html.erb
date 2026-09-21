@@ -23,7 +23,8 @@
 <%= render CardComponent.new(title: "Notification recipients", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
     Who gets each cost centre's nightly reminders — claims stuck awaiting approval, and the queue
-    ready to batch. Change it under that cost centre's Settings.
+    ready to batch. The nightly run sends a third reminder, one per budget owner with a claim
+    awaiting their sign-off; that one goes to the owners themselves, not to these addresses.
   </p>
   <ul class="flex flex-col gap-3">
     <% @cost_centres.each do |cost_centre| %>
@@ -34,6 +35,11 @@
                                    .with_content(addresses.any? ? pluralize(addresses.size, "address") : "No notification recipients")) %>
           <span><strong><%= cost_centre.name %></strong></span>
           <span class="text-gray-500"><%= addresses.to_sentence %></span>
+          <%# The audit's "Change it under Settings" sentence, as the link it
+              should always have been: straight to THIS centre's own page. %>
+          <%= link_to "Change under #{cost_centre.name} Settings",
+                      edit_admin_reimbursements_setting_path(cost_centre.key),
+                      class: "text-primary underline" %>
         </div>
         <% if addresses.empty? %>
           <p class="text-xs text-danger mt-1">
@@ -47,10 +53,14 @@
 <% end %>
 
 <%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
+  <%# The note about #run_checks staying an array, and each probe being rescued
+      on its own, is a fact about the CONTROLLER and belongs beside it — it was
+      typed into the paragraph below and rendered on screen to finance users
+      for as long as this card has existed. Anything that explains the code
+      goes in an ERB comment like this one, never in the copy. %>
   <p class="text-sm text-gray-600 mb-2">
-    Probe Microsoft Graph with the app's own credentials. Graph is the only
-    integration left to check; #run_checks stays an array so adding the next one
-    is a one-line change, and each probe is rescued on its own.
+    Probe Microsoft Graph with the app's own credentials. Graph is the only integration this
+    portal has to reach, so it is the only check here.
   </p>
   <div data-controller="busy-dim"
        data-action="turbo:submit-start->busy-dim#start turbo:submit-end->busy-dim#end">

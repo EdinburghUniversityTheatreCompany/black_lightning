@@ -194,6 +194,38 @@ module Admin
         assert_includes response.body, "2 addresses"
       end
 
+      test "names the third nightly reminder, the one budget owners get" do
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body, "budget owner"
+        assert_includes response.body, "sign-off"
+      end
+
+      test "links each cost centre's recipients to that centre's own settings page" do
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body,
+                        edit_admin_reimbursements_setting_path(@cost_centre.key)
+      end
+
+      # A code comment about #run_checks was typed into the card's visible copy
+      # and rendered to finance users. It belongs beside the method.
+      test "does not render the run_checks implementation note on screen" do
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_not_includes response.body, "#run_checks"
+        assert_not_includes response.body, "one-line change"
+      end
+
       test "run answers a turbo stream that updates the results in place" do
         sign_in @user
 
