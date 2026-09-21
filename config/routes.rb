@@ -210,6 +210,12 @@ ChaosRails::Application.routes.draw do
       # before the :id member routes so they never get swallowed by them).
       patch  "review/bulk_approve", to: "review#bulk_approve", as: :bulk_approve_review
       patch  "review/bulk_reject",  to: "review#bulk_reject",  as: :bulk_reject_review
+      # Bulk OVERRIDE, and deliberately not bulk approve, on the Awaiting-owner
+      # tab: bulk approve skips every gated claim there, so it could only ever
+      # report "0 approved". One owner who never opens the portal gates every
+      # claim on their show.
+      patch  "review/bulk_override_approve", to: "review#bulk_override_approve",
+             as: :bulk_override_approve_review
       patch  "review/:id/save",    to: "review#save",    as: :save_review
       patch  "review/:id/approve", to: "review#approve", as: :approve_review
       patch  "review/:id/override_approve", to: "review#override_approve", as: :override_approve_review

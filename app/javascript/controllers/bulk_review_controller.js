@@ -12,6 +12,7 @@ export default class extends Controller {
     "selectAll",
     "approveButton",
     "rejectButton",
+    "overrideButton",
     "counter",
     "reason",
   ]
@@ -62,6 +63,20 @@ export default class extends Controller {
       this.rejectButtonTarget.dataset.turboConfirm = `Reject ${selected} expense${
         selected === 1 ? "" : "s"
       } and email each producer?`
+    }
+    if (this.hasOverrideButtonTarget) {
+      // Gated on the note as well as on a selection, for the reason Reject is
+      // gated on its reason: the note is the only record that finance bypassed
+      // a control on several claims at once, and the server refuses a blank
+      // one — so the confirm must not fire over a decision that cannot happen.
+      const noteGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
+      this.overrideButtonTarget.disabled = none || !noteGiven
+      this.overrideButtonTarget.title = noteGiven
+        ? ""
+        : "Say why above: it is the only record of the decision."
+      this.overrideButtonTarget.dataset.turboConfirm = `Approve ${selected} claim${
+        selected === 1 ? "" : "s"
+      } without their budget owner's sign-off? Your name and reason are recorded against each one.`
     }
     if (this.hasCounterTarget) {
       this.counterTarget.textContent = `${selected} selected`

@@ -826,6 +826,117 @@ module Admin
         assert_match(/overridden/i, flash[:notice])
       end
 
+      # --- Bulk override ------------------------------------------------------
+      # The Awaiting-owner tab has no bulk APPROVE — bulk approve skips every
+      # gated claim there, so it could only ever report "0 approved" — but that
+      # argues for a bulk OVERRIDE, not for nothing: one owner who never opens
+      # the portal gates every claim on their show.
+
+      def second_gated_expense
+        @second_gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED 2")
+      end
+
+      test "bulk override clears the gate on every ticked claim" do
+        gated_expense
+        second_gated_expense
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 2 do
+          patch :bulk_override_approve, params: {
+            expense_ids: [ gated_expense.record_id, second_gated_expense.record_id ],
+            override_note: "No owner holds a portal account"
+          }
+        end
+
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
+        assert_equal ::Reimbursements::Status::APPROVED, second_gated_expense.reload.status
+        assert_match(/2 approved with sign-off overridden/, flash[:notice])
+      end
+
+      test "bulk override records who overrode it and why, on each claim" do
+        gated_expense
+        sign_in @user
+
+        patch :bulk_override_approve, params: {
+          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
+        }
+
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert endorsement.finance_override?
+        assert_equal @user.id, endorsement.overridden_by_id
+        assert_equal "Owner has left", endorsement.note
+      end
+
+      # Required here though optional on a single claim: this is the
+      # higher-consequence action and the note is the only record of it.
+      test "bulk override refuses without a note and writes nothing" do
+        gated_expense
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
+          patch :bulk_override_approve, params: {
+            expense_ids: [ gated_expense.record_id ], override_note: "  "
+          }
+        end
+
+        assert_match(/only record of the decision/, flash[:alert])
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status
+      end
+
+      test "bulk override refuses with nothing ticked" do
+        sign_in @user
+
+        patch :bulk_override_approve, params: { override_note: "Owner has left" }
+
+        assert_match(/Select at least one claim/, flash[:alert])
+      end
+
+      # A claim with a DATA problem must not get a gate-satisfying row written
+      # for an approval that never runs, or a later plain approve sails past a
+      # gate nobody cleared.
+      test "bulk override skips a claim with a hard block and writes no row for it" do
+        gated_expense
+        no_bank = pending_expense(person: @no_bank_person, budget: owned_budget,
+                                  payment_reference: "OWNED NB")
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 1 do
+          patch :bulk_override_approve, params: {
+            expense_ids: [ gated_expense.record_id, no_bank.record_id ],
+            override_note: "No owner holds a portal account"
+          }
+        end
+
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
+        assert_equal ::Reimbursements::Status::PENDING, no_bank.reload.status
+        assert_empty ::Reimbursements::OwnerEndorsement.for_expense(no_bank.record_id)
+        assert_match(/1 skipped/, flash[:notice])
+      end
+
+      # The summary must not report "awaiting owner sign-off" back: that is the
+      # one thing this action just cleared, so it would read as a failure.
+      test "the bulk override summary never names the gate it just cleared" do
+        gated_expense
+        sign_in @user
+
+        patch :bulk_override_approve, params: {
+          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
+        }
+
+        assert_no_match(/awaiting owner/i, flash[:notice])
+      end
+
+      test "the Awaiting owner tab offers the bulk override and no bulk approve" do
+        gated_expense
+        sign_in @user
+
+        get :index, params: { tab: "awaiting_owner" }
+
+        assert_response :success
+        assert_select "form[action*=?]", "bulk_override_approve"
+        assert_select "form[action*=?]", "bulk_approve", count: 0
+      end
+
       test "override_approve writes no override row and reports the hard block when one remains" do
         # A gated claim that ALSO lacks bank details: overriding must surface the
         # bank problem and NOT write a gate-satisfying row (else a later plain

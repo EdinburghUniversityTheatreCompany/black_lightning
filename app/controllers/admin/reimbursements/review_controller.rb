@@ -106,26 +106,38 @@ module Admin
           return
         end
 
-        if ::Reimbursements::OwnerReview.gate_applies?(expense)
-          # Upsert so a re-override after an edit refreshes the snapshot (see
-          # OwnerReview.endorsement_covers?), rather than riding a stale row.
-          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
-          endorsement.assign_attributes(
-            budget_record_id: expense.budget.record_id,
-            endorsed_by_person_id: nil,
-            overridden_by: current_user,
-            note: params[:override_note].to_s.truncate(255).presence,
-            endorsed_amount: expense.amount,
-            endorsed_at: Time.current
-          )
-          endorsement.save!
-        end
-        result = approve_expense(expense)
+        result = override_and_approve(expense, params[:override_note])
         note = result == :approved ? "Approved ##{expense.auto_number} (owner sign-off overridden)." : nil
         redirect_with_approve_result(expense, result, approved_notice: note)
       rescue ActiveRecord::RecordNotUnique
         # An owner endorsed a moment ago; the gate is satisfied, so just approve.
         redirect_with_approve_result(expense, approve_expense(expense))
+      end
+
+      # Override the owner gate on every ticked claim with one shared note.
+      #
+      # The Awaiting-owner tab deliberately has no bulk APPROVE — bulk approve
+      # skips every gated claim, so it could only ever report "0 approved" —
+      # but that argument is for a bulk OVERRIDE, not for nothing: one owner
+      # who never opens the portal gates every claim on their show, and
+      # clearing ten of them was ten forms.
+      #
+      # The note is REQUIRED here though it is optional on a single claim, and
+      # the difference is deliberate: this is the higher-consequence action and
+      # the note is the only record that finance bypassed a control on several
+      # claims at once. bulk_reject requires its reason for the same reason.
+      def bulk_override_approve
+        note = params[:override_note].to_s.strip
+        if note.blank?
+          return redirect_to_review(alert: "Say why you're overriding sign-off before doing it " \
+                                           "in bulk — it's the only record of the decision.")
+        end
+
+        expenses = selected_pending_expenses
+        return redirect_to_review(alert: "Select at least one claim to override.") if expenses.empty?
+
+        results = expenses.map { |expense| override_one(expense, note) }
+        redirect_to_review(notice: bulk_override_summary(results))
       end
 
       def reject
@@ -413,6 +425,54 @@ module Admin
       # The Pending expenses ticked in the bulk toolbar. Filtering to Pending
       # (never trusting the posted ids alone) keeps a stale selection from acting
       # on an already-approved/rejected expense.
+      # Write the override row (where the gate applies at all) and approve.
+      # Shared by the single-claim action and the bulk one, so the two cannot
+      # drift about what an override IS.
+      #
+      # Upserted so a re-override after an edit refreshes the snapshot (see
+      # OwnerReview.endorsement_covers?) rather than riding a stale row.
+      def override_and_approve(expense, note)
+        if ::Reimbursements::OwnerReview.gate_applies?(expense)
+          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
+          endorsement.assign_attributes(
+            budget_record_id: expense.budget.record_id,
+            endorsed_by_person_id: nil,
+            overridden_by: current_user,
+            note: note.to_s.truncate(255).presence,
+            endorsed_amount: expense.amount,
+            endorsed_at: Time.current
+          )
+          endorsement.save!
+        end
+        approve_expense(expense)
+      end
+
+      # One claim of a bulk override. The hard-block check is re-taken per
+      # claim for the reason the single action takes it: a claim with no bank
+      # details must not get a gate-satisfying override row written for an
+      # approval that never runs, or a later plain approve sails past a gate
+      # nobody cleared.
+      def override_one(expense, note)
+        blocker = approve_blocker(expense)
+        return blocker if blocker && blocker != :skipped_awaiting_endorsement
+
+        override_and_approve(expense, note)
+      rescue ActiveRecord::RecordNotUnique
+        # An owner endorsed a moment ago; the gate is satisfied, so just approve.
+        approve_expense(expense)
+      end
+
+      # Skips are named as DATA problems, never as "awaiting owner sign-off":
+      # that is the one thing this action just cleared, so reporting it back
+      # would read as the override having failed.
+      def bulk_override_summary(results)
+        approved = results.count(:approved)
+        skipped = results.size - approved
+        parts = [ "#{approved} approved with sign-off overridden" ]
+        parts << "#{skipped} skipped (missing bank details, budget, or amount)" if skipped.positive?
+        "#{parts.join(', ')}."
+      end
+
       def selected_pending_expenses
         ids = Array(params[:expense_ids]).compact_blank
         return [] if ids.empty?

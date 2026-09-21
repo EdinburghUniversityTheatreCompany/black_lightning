@@ -87,12 +87,41 @@
       Every owner named below is emailed about their outstanding claims automatically, on each of
       this cost centre's nightly run days, until they sign off or the claim is rejected.
     <% end %>
-    <%# The bulk toolbar is deliberately NOT rendered here: bulk approve skips
+    <%# Bulk OVERRIDE, and deliberately no bulk approve: bulk approve skips
         every gated claim, so a "0 approved" summary is all it could ever
-        report. Overriding is a per-claim judgement with a reason attached. %>
-    <% @awaiting_owner.each do |expense| %>
-      <%= render "expense_card", expense: expense, allow_approve: true, duplicates: @duplicates[expense.record_id] %>
-    <% end %>
+        report. That argues for this toolbar, not for none — one owner who
+        never opens the portal gates every claim on their show, and clearing
+        ten of them was ten forms. The note is required here though it is
+        optional on a single claim: this is the higher-consequence action and
+        the note is the only record of it. %>
+    <div data-controller="bulk-review">
+      <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <%= check_box_tag "select_all", "1", false,
+                            data: { bulk_review_target: "selectAll", action: "bulk-review#toggleAll" },
+                            class: "h-4 w-4" %>
+          Select all
+        </label>
+        <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
+        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab),
+                      method: :patch, id: "bulk-review-form",
+                      class: "flex flex-wrap items-center gap-2" do %>
+          <%= text_field_tag :override_note, nil,
+                             placeholder: "Why are you overriding? (required)",
+                             "aria-label": "Why you are overriding sign-off",
+                             data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
+                             class: input_classes(width: nil) %>
+          <%= submit_tag "Override sign-off and approve",
+                         data: { bulk_review_target: "overrideButton", disable_with: false },
+                         disabled: true, class: btn_classes(:warning, :sm) %>
+        <% end %>
+      </div>
+
+      <% @awaiting_owner.each do |expense| %>
+        <%= render "expense_card", expense: expense, allow_approve: true, selectable: true,
+                   duplicates: @duplicates[expense.record_id] %>
+      <% end %>
+    </div>
   <% end %>
 
 <% else %>
