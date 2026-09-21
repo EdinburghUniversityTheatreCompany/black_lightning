@@ -2,10 +2,13 @@
   <%= link_to @cancel_text, @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
 <% end %>
 
+<%# Both forms opt out of Turbo: every importer's preview answers the POST by RENDERING the review
+    page, and Turbo only accepts a redirect or a 4xx/5xx for a form submission — it drops a 200
+    silently, so the button did nothing. Only a browser test sees that. %>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
   <div>
     <%= render CardComponent.new(title: "Option 1: Paste Data") do %>
-      <%= form_with url: @preview_path, method: :post, local: true, html: { :"data-turbo" => false } do |f| %>
+      <%= form_with url: @preview_path, method: :post, data: { turbo: false } do |f| %>
         <p class="text-gray-500">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
         <span class="font-monospace block mb-3"><%= @columns_description %></span>
 
@@ -21,7 +24,7 @@
 
   <div>
     <%= render CardComponent.new(title: "Option 2: Upload XLSX") do %>
-      <%= form_with url: @preview_path, method: :post, local: true, multipart: true, html: { :"data-turbo" => false } do |f| %>
+      <%= form_with url: @preview_path, method: :post, multipart: true, data: { turbo: false } do |f| %>
         <p class="text-gray-500">Upload an Excel file (.xlsx) with the same column structure.</p>
 
         <div class="mb-3">
