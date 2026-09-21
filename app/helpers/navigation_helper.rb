@@ -103,7 +103,7 @@ module NavigationHelper
 
       children << { group: "EUSA ledger", title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced", scoped: true }
       children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list", scoped: true }
-      children << { group: "EUSA ledger", title: "Export workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel", scoped: true }
+      children << { group: "EUSA ledger", title: "Exports", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel", scoped: true }
 
       children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book", scoped: true }
       children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days", scoped: true }

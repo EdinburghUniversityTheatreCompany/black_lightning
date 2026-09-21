@@ -15,12 +15,43 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class ExportsController < FinanceController
-      # GET /admin/reimbursements/export
+      # GET /admin/reimbursements/export — the PAGE, which says what the file
+      # holds and lets the operator scope it before downloading.
+      #
+      # This was a sidebar link that silently downloaded a file: no sheet list,
+      # no scope, and no way to choose one.
       def show
+        @title = "Export"
+        @sheets = ::Reimbursements::Exports::Workbook::SHEETS
+        @counts = sheet_counts
+      end
+
+      # GET /admin/reimbursements/export/download — the file itself.
+      #
+      # A separate ACTION rather than a ?format=xlsx on #show, so no global
+      # MIME registration is needed for one controller's download. It carries
+      # the page's own ?year= and ?cost_centre=, so the file matches the page
+      # the operator was looking at.
+      def download
         workbook = ::Reimbursements::Exports::Workbook.new(store: store, checker: modulus_checker)
         send_data workbook.to_bytes,
                   type: ::Reimbursements::Exports::Workbook::CONTENT_TYPE,
                   filename: workbook.filename
+      end
+
+      private
+
+      # How many rows each sheet would carry under the CURRENT scope, so the
+      # page states what the download contains before the operator commits to
+      # it — and so an empty sheet is visible as an empty sheet rather than
+      # discovered in Excel.
+      #
+      # Off the store's already-memoized lists, which the page's own scope
+      # built, so this costs the same reads the download would.
+      def sheet_counts
+        ::Reimbursements::Exports::Workbook::SHEETS.to_h do |exporter_class, collection_method|
+          [ exporter_class::SHEET_NAME, store.public_send(collection_method).size ]
+        end
       end
     end
   end

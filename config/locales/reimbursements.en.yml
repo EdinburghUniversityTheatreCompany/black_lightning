@@ -21,3 +21,17 @@ en:
         sort_code_override: "Payee sort code"
         account_number_override: "Payee account number"
         receipts: "Receipt"
+  # One line per sheet of the combined export, keyed by the exporter's own
+  # SLUG, so the Export page describes the workbook from the same list the
+  # workbook is built from (Exports::Workbook::SHEETS). A sheet added there
+  # without a line here falls back to "One row per record." rather than
+  # raising — an export must never fail over its own caption.
+  reimbursements:
+    export_sheets:
+      expenses: "Every claim: who, how much, which budget, what status, and which batch paid it."
+      actuals: "EUSA's own ledger rows as imported, with what each one is linked to."
+      budgets: "Every budget line with its plan, what is committed and what EUSA's ledger says landed."
+      areas: "The shows and committees lines hang off: agreed total, what it covers, and who owns it."
+      forecast-revisions: "Every logged revision of a plan — the date, the figure and the reason."
+      people: "The payee registry. Bank details masked to their last four digits."
+      batches: "Each BACS submission to EUSA: when, how many claims, and what they totalled."

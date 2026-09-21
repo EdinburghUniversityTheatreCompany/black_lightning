@@ -64,13 +64,13 @@ module Admin
       # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
-        get :show
+        get :download
         assert_redirected_to new_user_session_path
       end
 
       test "denies members without the finance permission" do
         sign_in users(:committee)
-        get :show
+        get :download
         assert_response :forbidden
       end
 
@@ -79,7 +79,7 @@ module Admin
         grant_producer_permission(submitter)
         sign_in submitter
 
-        get :show
+        get :download
 
         assert_response :forbidden
       end
@@ -89,7 +89,7 @@ module Admin
       test "answers an xlsx attachment named for today" do
         sign_in @user
 
-        get :show
+        get :download
 
         assert_response :success
         assert_equal XLSX_TYPE, response.media_type
@@ -98,19 +98,23 @@ module Admin
         assert_match(/reimbursements-\d{4}-\d{2}-\d{2}\.xlsx/, disposition)
       end
 
-      test "has one fixed-name sheet per resource" do
+      # The cover sheet comes FIRST: what a reader needs before any figure is
+      # what the figures cover. Scope used to be mixed inside the file and
+      # stated nowhere.
+      test "has one fixed-name sheet per resource, behind a cover sheet" do
         sign_in @user
 
-        get :show
+        get :download
 
-        assert_equal [ "Expenses", "Actuals", "Budgets", "People", "Batches" ],
+        assert_equal [ "About this export", "Expenses", "Actuals", "Budgets", "Areas",
+                       "Forecast revisions", "People", "Batches" ],
                      workbook.sheets
       end
 
       test "the Expenses sheet carries the exporter's headers and a known row" do
         sign_in @user
 
-        get :show
+        get :download
 
         rows = sheet_rows(workbook, "Expenses")
         assert_equal ::Reimbursements::Exports::Expenses::HEADERS, rows.first
@@ -125,7 +129,7 @@ module Admin
       test "the Budgets sheet carries the rollups" do
         sign_in @user
 
-        get :show
+        get :download
 
         rows = sheet_rows(workbook, "Budgets")
         assert_equal ::Reimbursements::Exports::Budgets::HEADERS, rows.first
@@ -139,7 +143,7 @@ module Admin
       test "the Actuals and Batches sheets carry their rows" do
         sign_in @user
 
-        get :show
+        get :download
 
         book = workbook
         actuals = sheet_rows(book, "Actuals")
@@ -159,7 +163,7 @@ module Admin
       test "the People sheet MASKS both bank details to their last four digits" do
         sign_in @user
 
-        get :show
+        get :download
 
         rows = sheet_rows(workbook, "People")
         assert_equal ::Reimbursements::Exports::People::HEADERS, rows.first
@@ -172,7 +176,7 @@ module Admin
       test "NO sheet of the workbook carries a full sort code or account number" do
         sign_in @user
 
-        get :show
+        get :download
 
         book = workbook
         book.sheets.each do |name|
@@ -184,6 +188,141 @@ module Admin
           assert_not_includes cells, ::Reimbursements::BankDetails.normalize_sort_code(RAW_SORT_CODE),
                               "the #{name} sheet leaked an undashed sort code"
         end
+      end
+
+      # --- The page --------------------------------------------------------
+      # This was a sidebar link that silently downloaded a file: no sheet list,
+      # no scope, and no way to choose one.
+
+      test "the page lists every sheet the workbook carries" do
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        ::Reimbursements::Exports::Workbook::SHEETS.each do |(exporter_class, _)|
+          assert_match(/#{Regexp.escape(exporter_class::SHEET_NAME)}/, response.body,
+                       "#{exporter_class::SHEET_NAME} is in the file but not on the page")
+        end
+      end
+
+      test "the page describes every sheet rather than falling back" do
+        sign_in @user
+
+        get :show
+
+        ::Reimbursements::Exports::Workbook::SHEETS.each do |(exporter_class, _)|
+          key = "reimbursements.export_sheets.#{exporter_class::SLUG}"
+          assert I18n.exists?(key), "#{exporter_class::SHEET_NAME} has no description"
+        end
+      end
+
+      test "the page states how many rows each sheet would carry" do
+        sign_in @user
+
+        get :show
+
+        assert_equal 1, assigns(:counts)["Expenses"]
+        assert_equal 1, assigns(:counts)["Batches"]
+      end
+
+      test "the download link carries the page's own scope" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+
+        get :show, params: { cost_centre: other.key }
+
+        assert_select "a[href*=?]", "cost_centre=#{other.key}"
+      end
+
+      test "the page is finance-gated like the download" do
+        sign_in users(:committee)
+
+        get :show
+
+        assert_response :forbidden
+      end
+
+      # --- The cover sheet and the two new sheets ----------------------------
+
+      test "the cover sheet states the scope the file was pulled under" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+
+        get :download, params: { cost_centre: other.key }
+
+        cover = sheet_rows(workbook, "About this export").to_h { |k, v| [ k, v ] }
+        assert_equal other.name, cover["Cost centre"]
+        assert_equal Date.current.iso8601, cover["Exported"]
+      end
+
+      test "the cover sheet names every centre when none is selected" do
+        sign_in @user
+
+        get :download
+
+        cover = sheet_rows(workbook, "About this export").to_h { |k, v| [ k, v ] }
+        assert_equal "Every cost centre", cover["Cost centre"]
+      end
+
+      test "the Areas sheet carries a show's agreed total and owners" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ @person.id ])
+        area.update!(initial_budget: BigDecimal("3000"))
+
+        get :download
+
+        rows = sheet_rows(workbook, "Areas")
+        assert_equal ::Reimbursements::Exports::Areas::HEADERS, rows.first
+        row = rows.find { |r| r.first == "Cogito" }
+        assert row, "the area is missing from its own sheet"
+        assert_equal 3000.0, row[1]
+        assert_equal "Pat Producer", row[6]
+      end
+
+      # A plan of exactly £0 is a figure nobody filled in (PlannedAmount), and
+      # a zero here would read as a show that agreed to spend nothing.
+      test "an area with no agreed total exports an empty cell, not a zero" do
+        sign_in @user
+        create_reimbursements_area(name: "Unset")
+
+        get :download
+
+        row = sheet_rows(workbook, "Areas").find { |r| r.first == "Unset" }
+        assert_nil row[1]
+      end
+
+      test "the Forecast revisions sheet carries each logged revision" do
+        sign_in @user
+        ::Reimbursements::DatabaseStore.new.create_forecast!(
+          budget_id: @budget.record_id, amount: 950, date: Date.new(2026, 6, 1),
+          reason: "June meeting"
+        )
+
+        get :download
+
+        rows = sheet_rows(workbook, "Forecast revisions")
+        assert_equal ::Reimbursements::Exports::Forecasts::HEADERS, rows.first
+        row = rows.find { |r| r[3] == 950.0 }
+        assert row, "the forecast is missing from its own sheet"
+        assert_equal "Budget line", row[1]
+        assert_equal "June meeting", row[4]
+      end
+
+      # A forecast belongs to exactly one of a budget or an area, so the sheet
+      # says which rather than leaving a reader to infer it from a blank.
+      test "an area's agreed-total revision is marked as one" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito")
+        ::Reimbursements::BudgetForecast.create!(area: area, amount: 4200,
+                                                 date: Date.new(2026, 6, 1), reason: "Agreed")
+
+        get :download
+
+        row = sheet_rows(workbook, "Forecast revisions").find { |r| r[3] == 4200.0 }
+        assert_equal "Area total", row[1]
+        assert_equal "Cogito", row[2]
       end
     end
   end

@@ -565,6 +565,21 @@ module Reimbursements
                                  .order(effective_date: :desc, id: :desc).to_a)
     end
 
+    # Every logged forecast in the selected year and cost centre, newest first
+    # — the Forecast revisions export sheet.
+    #
+    # Scoped through the OWNER (a forecast belongs to exactly one of a budget or
+    # an area, neither of which it duplicates a year or centre from), so the
+    # sheet covers the same scope the other scoped sheets do and the workbook
+    # stays one coherent view.
+    def forecasts_for_scope
+      @forecasts_for_scope ||= begin
+        owned = BudgetForecast.includes(budget: :area, area: {}, budget_update: :created_by)
+                              .order(date: :desc, id: :desc).to_a
+        owned.select { |forecast| forecast_in_scope?(forecast) }
+      end
+    end
+
     # One update by id, with everything its page prints preloaded. Unscoped,
     # for the reason #budgets is: an update logged against last year's lines is
     # still openable from a bookmark, and blanking it would be worse than
@@ -1082,6 +1097,17 @@ module Reimbursements
     end
 
     private
+
+    # A forecast is in scope when the line or area it revises is. An owner with
+    # no year or centre is lenient-scoped in, the rule #in_year and
+    # #in_cost_centre already follow for every unstamped row.
+    def forecast_in_scope?(forecast)
+      owner = forecast.budget || forecast.area
+      return false if owner.nil?
+
+      in_year([ owner ], financial_year).any? &&
+        in_cost_centre([ owner ], cost_centre, &:cost_centre_id).any?
+    end
 
     def bust_eusa_actuals!
       @eusa_actuals = nil

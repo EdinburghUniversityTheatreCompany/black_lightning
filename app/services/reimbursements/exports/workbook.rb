@@ -39,9 +39,16 @@ module Reimbursements
         [ Expenses, :expenses_for_cost_centre ],
         [ Actuals, :eusa_actuals_for_cost_centre ],
         [ Budgets, :budgets_with_actuals ],
+        [ Areas, :areas_for_year ],
+        [ Forecasts, :forecasts_for_scope ],
         [ People, :people ],
         [ Batches, :batches_for_cost_centre ]
       ].freeze
+
+      # The cover sheet's own name. Fixed like every other, and FIRST in the
+      # workbook because what a reader needs before any figure is what the
+      # figures cover.
+      COVER_SHEET_NAME = "About this export".freeze
 
       def initialize(store:, checker: nil)
         @store = store
@@ -59,11 +66,42 @@ module Reimbursements
       def to_bytes
         require "caxlsx" # lazy: kept out of the boot heap (Gemfile require:false)
         package = Axlsx::Package.new
+        add_cover_sheet(package.workbook)
         SHEETS.each do |exporter_class, collection_method|
           exporter = exporter_class.new(store: @store, checker: @checker)
           exporter.add_sheet(package.workbook, @store.public_send(collection_method))
         end
         package.to_stream.read
+      end
+
+      # What this file covers, stated INSIDE it.
+      #
+      # Scope was mixed and unstated: Budgets followed the active year while
+      # Expenses, Actuals, People and Batches were all of history, and nothing
+      # in the file said so — a reader totalling a column had no way to know
+      # which year or pot they were totalling. Now the scope is one workbook
+      # wide, and this sheet records it, so a file found in a folder two years
+      # later still explains itself.
+      def add_cover_sheet(workbook)
+        workbook.add_worksheet(name: COVER_SHEET_NAME) do |sheet|
+          cover_rows.each { |row| sheet.add_row(row, types: [ :string, :string ]) }
+        end
+      end
+
+      def cover_rows
+        [
+          [ "Exported", Date.current.iso8601 ],
+          [ "Financial year", @store.financial_year&.label || "Every year" ],
+          [ "Cost centre", @store.cost_centre&.name || "Every cost centre" ],
+          [ "Sheets", SHEETS.map { |exporter_class, _| exporter_class::SHEET_NAME }.join(", ") ],
+          # People is the one sheet the scope does not reach, and a reader
+          # totalling it against the others has to know that.
+          [ "Note", "Every sheet covers the year and cost centre above, except People: a payee " \
+                    "has no cost centre, and the same person claims from whichever pot their " \
+                    "claim's budget belongs to." ],
+          [ "Bank details", "Masked to the last four digits. Only the BACS spreadsheet EUSA is " \
+                            "paid from carries full numbers." ]
+        ]
       end
     end
   end

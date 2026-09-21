@@ -43,7 +43,7 @@ class NavigationHelperTest < ActionView::TestCase
 
     gated_titles = [ "Finance home", "Review claims", "All claims", "Build batch", "Batches", "Budgets",
                      "Overview", "Areas", "Forecast revisions", "Reconcile", "Ledger",
-                     "Export workbook", "People", "Financial years", "Cost centres",
+                     "Exports", "People", "Financial years", "Cost centres",
                      "Email & integrations" ]
 
     titles = finance_category[:children].map { |child| child[:title] }

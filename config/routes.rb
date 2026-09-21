@@ -276,7 +276,12 @@ ChaosRails::Application.routes.draw do
 
       # One xlsx containing every resource, a sheet each. (Each list also
       # downloads on its own as CSV, via ?format=csv on its index.)
-      resource :export, only: :show, controller: "exports"
+      # #show is the PAGE (sheet list, scope selectors); #download is the file.
+      # It was a sidebar link that silently downloaded a workbook of mixed and
+      # unstated scope.
+      resource :export, only: :show, controller: "exports" do
+        get :download
+      end
 
       # Integration health dashboard: a page (#show) with an on-demand "Run
       # checks" POST (#run) that probes Graph.
