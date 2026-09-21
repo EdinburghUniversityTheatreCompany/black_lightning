@@ -1,0 +1,31 @@
+<%#
+  A batch attempt's error messages. Locals:
+  - messages: the already-split, blank-free array of strings
+
+  One batch whose receipt offload failed per receipt produced fifteen
+  near-identical paragraphs — about 5,000 characters — which pushed the batch
+  list itself below the fold and kept it there for the seven days the attempt
+  row lives. A short list still reads better inline, so it stays; past
+  INLINE_LIMIT the count on the line above is the message and the detail goes
+  behind a disclosure the operator opens when they want it.
+
+  Shared by the failed and completed-with-warnings branches, which rendered the
+  identical list (jscpd gates duplication at 0).
+%>
+<% inline_limit = Admin::Reimbursements::BatchesController::INLINE_FAILURE_MESSAGES %>
+<% if messages.size <= inline_limit %>
+  <ul class="list-disc list-inside mt-1">
+    <% messages.each do |message| %>
+      <li><%= message %></li>
+    <% end %>
+  </ul>
+<% else %>
+  <details class="mt-1">
+    <summary class="cursor-pointer underline">Show all <%= messages.size %> messages</summary>
+    <ul class="list-disc list-inside mt-1">
+      <% messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </details>
+<% end %>

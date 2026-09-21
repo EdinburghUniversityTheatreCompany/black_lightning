@@ -20,6 +20,12 @@ module Admin
     class BatchesController < FinanceController
       before_action :require_cost_centre, only: %i[new create]
 
+      # How many of a build attempt's follow-up failures History prints inline
+      # before collapsing them behind a disclosure. One batch whose receipt
+      # offload failed per receipt printed fifteen near-identical paragraphs
+      # and pushed the batch list itself off the screen for seven days.
+      INLINE_FAILURE_MESSAGES = 3
+
       def index
         @title = "Batch history"
         @batches = store.batches_for_cost_centre.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse

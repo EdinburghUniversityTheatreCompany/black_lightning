@@ -8,7 +8,12 @@
 
 <% if @expenses.empty? %>
   <%= render AlertComponent.new(type: :info) do %>
-    No approved expenses to batch. Approve some on the Review queue first.
+    No approved expenses to batch. Approve some on
+    <%# A link, not the name of a page to go and find: this and Review's
+        Approved tab named each other in prose both ways. Carries the centre
+        this build is for, so the queue on screen is the one that feeds it. %>
+    <%= link_to "the Review queue", admin_reimbursements_review_path(cost_centre: @cost_centre.key),
+                class: "text-primary underline" %> first.
   <% end %>
 <% else %>
   <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} (#{reimbursements_money(@total)})") do %>
@@ -29,7 +34,13 @@
         <tbody>
           <% @expenses.each do |expense| %>
             <tr class="border-b border-gray-100 align-top">
-              <td class="py-1 pr-3"><%= expense.auto_number %></td>
+              <%# The preview is the screen whose job is checking, so each row
+                  opens the claim it is about. %>
+              <td class="py-1 pr-3">
+                <%= link_to expense.auto_number,
+                            edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                            class: "text-primary underline" %>
+              </td>
               <td class="py-1 pr-3">
                 <%= expense.effective_payee_name %>
                 <% if expense.payee_override? %>

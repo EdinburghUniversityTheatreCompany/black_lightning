@@ -329,8 +329,10 @@ module Admin
         get :show, params: { id: @batch.record_id }
 
         assert_response :success
-        # EUSA draft succeeded (green "Yes"), producers were NOT notified (amber warning).
-        assert_includes response.body, "No: needs a look"
+        # EUSA draft succeeded (green "Yes"), producer emails were NOT sent
+        # (amber warning). "Not sent", because what the column records is
+        # whether the send was attempted successfully, never delivery.
+        assert_includes response.body, "Not sent: needs a look"
       end
 
       test "show 404s for an unknown batch id" do
@@ -444,6 +446,83 @@ module Admin
 
         assert_response :success
         assert_no_match(/Dismiss/, response.body)
+      end
+
+      # --- Saying only what is actually known --------------------------------
+
+      test "History heads a batch by its BACS date, not by 'Sent'" do
+        # Nothing in the portal records whether the EUSA draft was ever sent:
+        # date_sent is the date the operator typed on the build form.
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_match(/BACS 20\d\d-\d\d-\d\d/, response.body)
+        assert_no_match(/Sent 20\d\d-\d\d-\d\d/, response.body)
+      end
+
+      test "Detail labels the typed date 'BACS date' and does not claim delivery" do
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        batch.update!(producer_notifications_sent: true)
+        sign_in @user
+
+        get :show, params: { id: batch.record_id }
+
+        assert_response :success
+        assert_match(/BACS date/, response.body)
+        assert_no_match(/Date sent/, response.body)
+        assert_match(/delivery is not tracked/, response.body)
+      end
+
+      test "Build Batch's empty state links to the Review queue" do
+        sign_in @user
+
+        get :new
+
+        assert_response :success
+        assert_select "a[href=?]",
+                      admin_reimbursements_review_path(cost_centre: ::Reimbursements::CostCentre.default.key)
+      end
+
+      # --- Follow-up failures collapse past a short list ---------------------
+
+      test "History lists a short set of follow-up failures inline" do
+        sign_in @user
+        messages = Array.new(::Admin::Reimbursements::BatchesController::INLINE_FAILURE_MESSAGES) do |i|
+          "receipt #{i} did not reach SharePoint"
+        end
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               status: "completed",
+                                               error_messages: messages.join("\n"))
+
+        get :index
+
+        assert_response :success
+        # The sidebar is built from <details>, so look for this disclosure's
+        # own summary rather than for the element.
+        assert_no_match(/Show all \d+ messages/, response.body, "a short list stays inline")
+        assert_match(/receipt 0 did not reach SharePoint/, response.body)
+      end
+
+      test "History collapses a wall of follow-up failures behind a count" do
+        # The real case: a batch whose receipt offload failed per receipt
+        # printed ~5,000 characters and pushed the batch list off the screen.
+        sign_in @user
+        count = ::Admin::Reimbursements::BatchesController::INLINE_FAILURE_MESSAGES + 12
+        messages = Array.new(count) { |i| "receipt #{i} did not reach SharePoint" }
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               status: "completed",
+                                               error_messages: messages.join("\n"))
+
+        get :index
+
+        assert_response :success
+        assert_match(/#{count} follow-up steps failed/, response.body)
+        assert_select "details summary", text: "Show all #{count} messages"
+        # Still all there, just behind the disclosure.
+        assert_match(/receipt #{count - 1} did not reach SharePoint/, response.body)
       end
 
       test "a dismissed failure is gone from History" do
