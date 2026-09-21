@@ -17,20 +17,14 @@ module Admin
         # keeps blocking finance — the owner must still be able to act on it.
         all_owned = owned_budgets
         owned_ids = all_owned.map(&:record_id).to_set
-        pending = store.expenses.select do |expense|
+        @pending = store.expenses.select do |expense|
           expense.status == ::Reimbursements::Status::PENDING &&
             owned_ids.include?(expense.budget&.record_id)
-        end
-        @expenses_by_budget = pending.group_by { |expense| expense.budget.record_id }
-        # Show active expense budgets, plus any (even inactive) owned budget that
-        # still has a pending claim needing sign-off, so none is stranded. Ones
-        # with claims come first so a many-budget owner sees the work up top.
-        @budgets = all_owned
-          .select { |budget| (budget.active && !budget.income?) || @expenses_by_budget.key?(budget.record_id) }
-          .sort_by { |budget| [ @expenses_by_budget.key?(budget.record_id) ? 0 : 1, budget.display_name.to_s.downcase ] }
-        @pending_count = pending.size
+        end.sort_by { |expense| expense.submitted_at || Time.zone.now }
+        @pending_count = @pending.size
+        @rows = owned_rows(all_owned)
         @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
-          .where(expense_record_id: pending.map(&:record_id)).index_by(&:expense_record_id)
+          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
         @people_by_id = store.people.index_by(&:record_id)
       end
 
@@ -100,6 +94,49 @@ module Admin
         end
         expense
       end
+
+      # One row per thing this person is responsible for: an AREA where they own
+      # the show (its lines inherit the ownership), and a loose line where they
+      # own the line itself. Rows with claims waiting sort first, so a person
+      # who owns several shows sees the work rather than an alphabet.
+      #
+      # Area figures come off store.areas, which preloads each area's lines and
+      # their expenses and forecasts — reading them off budget.area instead
+      # N+1s, which is the trap CLAUDE.md names.
+      def owned_rows(all_owned)
+        # area_id is the raw integer FK while record_id is the opaque string
+        # every reimbursements reader speaks, so the two only match once cast.
+        area_ids = all_owned.filter_map { |budget| budget.area_id&.to_s }.to_set
+        areas = store.areas.select { |area| area_ids.include?(area.record_id) }
+        loose = all_owned.select { |budget| budget.area_id.nil? && (budget.active || waiting_on?(budget)) }
+
+        rows = areas.map { |area| area_row(area) } + loose.map { |budget| loose_row(budget) }
+        rows.sort_by { |row| [ row[:waiting_count].positive? ? 0 : 1, row[:name].to_s.downcase ] }
+      end
+
+      def area_row(area)
+        { kind: :area, record: area, name: area.name,
+          scope: [ area.cost_centre&.name, area.financial_year&.label ].compact.uniq.join(" · "),
+          detail: "#{area.budgets.size} #{'line'.pluralize(area.budgets.size)}",
+          summary: ::Reimbursements::SpendSummary.for_area(area),
+          waiting_count: area.budgets.count { |line| waiting_on?(line) },
+          path: admin_reimbursements_area_path(area.record_id) }
+      end
+
+      def loose_row(budget)
+        { kind: :budget, record: budget, name: budget.name,
+          scope: [ budget.cost_centre&.name, budget.financial_year&.label ].compact.uniq.join(" · "),
+          detail: "a single budget, in no area",
+          summary: ::Reimbursements::SpendSummary.for_budget(budget),
+          waiting_count: waiting_count(budget),
+          path: admin_reimbursements_budget_path(budget.record_id) }
+      end
+
+      def waiting_count(budget)
+        @pending.count { |expense| expense.budget&.record_id == budget.record_id }
+      end
+
+      def waiting_on?(budget) = waiting_count(budget).positive?
 
       def owned_budgets
         return [] if current_person.nil?

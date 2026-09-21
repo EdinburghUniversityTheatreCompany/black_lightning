@@ -129,6 +129,10 @@ ChaosRails::Application.routes.draw do
 
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
+      # A loose line's own page — the same shape as an area's, for a budget that
+      # belongs to no area. Owner-visible, so it is not finance-gated.
+      resources :budgets, only: %i[show]
+
       resources :budgets, only: %i[index new create edit update] do
         collection do
           get :overview

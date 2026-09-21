@@ -826,11 +826,12 @@ module Admin
         assert_includes response.body, "Budgets by area"
         # The heading span exists only on an area row, so a budget called
         # "Cogito something" could not satisfy this the way a body match would.
-        # The heading is a LINK to the area's own form now (where its agreed
-        # total, basis and owners are edited), so it is an <a>, not a <span>.
+        # The heading is a LINK to the area's own PAGE — its figures, its lines
+        # and its claims, with Edit offered from there. It used to point at the
+        # edit form, which sent a finance user to a form to read a number.
         assert_select "th[scope=rowgroup] a.font-semibold", text: "Cogito"
         assert_select "th[scope=rowgroup] a[href=?]",
-                      edit_admin_reimbursements_area_path(area.record_id)
+                      admin_reimbursements_area_path(area.record_id)
         # 750 = 400 + 350, a figure no single row carries, so the assertion pins
         # the grouping rather than a budget line.
         assert_includes response.body, "Subtotal Cogito (Expense)"

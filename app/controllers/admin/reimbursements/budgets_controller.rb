@@ -15,7 +15,21 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class BudgetsController < FinanceController
+      # A loose line's page is shared with its owners, who hold no finance
+      # permission — the same union, and the same 404, as an area's page.
+      skip_before_action :authorize_finance!, only: %i[show]
+      before_action :authorize_budget_page!, only: %i[show]
       before_action :set_budget, only: %i[edit update forecast update_forecast delete_forecast]
+
+      # GET /admin/reimbursements/budgets/:id
+      #
+      # A loose line's own page, the area page's shape without a lines table.
+      def show
+        @title = @budget.name
+        @summary = ::Reimbursements::SpendSummary.for_budget(@budget)
+        @claims = paginate_budget_claims(claims_for_budget(@budget))
+        @changes = ::Reimbursements::BudgetChanges.for_budget(@budget)
+      end
 
       def index
         @title = "Reimbursements Budgets"
@@ -180,6 +194,33 @@ module Admin
 
         redirect_to edit_path, alert: "That forecast isn't part of this budget."
         false
+      end
+
+      # Finance, or a person this line's own owner set names. A line INSIDE an
+      # area is reached through the area's page instead, since that is where its
+      # figures and its siblings are.
+      def authorize_budget_page!
+        @budget = store.find_budget(params[:id])
+        raise ActiveRecord::RecordNotFound if @budget.nil? || !budget_page_visible?(@budget)
+      end
+
+      def budget_page_visible?(budget)
+        return true if can?(:manage, :reimbursements_finance)
+
+        current_person.present? && budget.owner_ids.include?(current_person.record_id)
+      end
+
+      def claims_for_budget(budget)
+        store.expenses
+             .select { |expense| expense.budget&.record_id == budget.record_id }
+             .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
+             .reverse
+      end
+
+      def paginate_budget_claims(claims)
+        @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
+        @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
+        paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
       end
 
       def set_budget

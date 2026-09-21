@@ -35,7 +35,8 @@
        {
          fields: [
            area,
-           content_tag(:span, area.name, class: "font-medium"),
+           link_to(area.name, admin_reimbursements_area_path(area.record_id),
+                   class: "font-medium"),
            agreed,
            reimbursements_money(area.committed_amount),
            content_tag(:span, reimbursements_money(area.remaining), class: remaining_class),

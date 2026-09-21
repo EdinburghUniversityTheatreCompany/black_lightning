@@ -18,18 +18,19 @@ module Admin
       # money figure and date in this portal is written.
       delegate :reimbursements_money, :reimbursements_date, to: :helpers
 
-      def initialize(claims:, counts:, tab:, finance:, area: nil, current_person: nil)
+      def initialize(claims:, counts:, tab:, finance:, area: nil, budget: nil, current_person: nil)
         @claims = claims
         @counts = counts
         @tab = tab
         @finance = finance
         @area = area
+        @budget = budget
         @current_person = current_person
       end
 
       private
 
-      attr_reader :claims, :counts, :tab, :area, :current_person
+      attr_reader :claims, :counts, :tab, :area, :budget, :current_person
 
       def finance? = @finance
 
@@ -46,7 +47,11 @@ module Admin
       # claims" and finance can send one.
       def tab_path(key)
         params = key == ::Reimbursements::ClaimTabs::ALL ? {} : { status: key }
-        helpers.admin_reimbursements_area_path(area.record_id, **params)
+        if area
+          helpers.admin_reimbursements_area_path(area.record_id, **params)
+        else
+          helpers.admin_reimbursements_budget_path(budget.record_id, **params)
+        end
       end
 
       # Finance can open any claim on the finance edit form. A producer gets a

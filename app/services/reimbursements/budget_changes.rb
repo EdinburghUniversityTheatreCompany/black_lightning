@@ -33,6 +33,11 @@ module Reimbursements
       entries.sort_by { |entry| [ entry.date || Date.new(0), entry.subject.to_s ] }
     end
 
+    # A loose line on its own: its own log, with no agreed total above it.
+    def self.for_budget(budget)
+      sequence(budget.forecasts, budget.initial_budget, budget.name, area_total: false)
+    end
+
     # One owner's log, in date order, each row carrying the figure it replaced.
     def self.sequence(forecasts, initial, subject, area_total:)
       previous = initial

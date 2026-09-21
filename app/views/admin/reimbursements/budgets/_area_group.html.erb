@@ -11,7 +11,7 @@
             the overview named the show and offered no route to it. The
             unassigned group has no area and stays plain. %>
         <% if rollup.area %>
-          <%= link_to label, edit_admin_reimbursements_area_path(rollup.area.record_id),
+          <%= link_to label, admin_reimbursements_area_path(rollup.area.record_id),
                       class: "font-semibold text-base text-primary underline" %>
         <% else %>
           <span class="font-semibold text-base"><%= label %></span>
