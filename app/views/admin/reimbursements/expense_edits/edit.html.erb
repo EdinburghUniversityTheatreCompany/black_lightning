@@ -18,6 +18,20 @@
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(@expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= @expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(@expense.status), pill: true).with_content(@expense.status) %>
+    <%# A rejection was terminal: nothing in the portal wrote a status back to
+        Pending, so a mistaken one meant a console or a refile under a new
+        number, which loses the thread between the two. Back to PENDING, never
+        Approved — the claim re-enters the queue and the owner gate as a fresh
+        one would, so this can never be a way round a sign-off. %>
+    <% if @expense.status == ::Reimbursements::Status::REJECTED %>
+      <%= button_to "Reopen this claim",
+            admin_reimbursements_reopen_expense_edit_path(@expense.record_id),
+            method: :post, class: btn_classes(:secondary, :sm),
+            form: { class: "inline-block" },
+            data: { turbo_confirm: "Put ##{@expense.auto_number} back in the review queue as " \
+                                   "Pending? Nobody is emailed, and the rejection stays in its " \
+                                   "history." } %>
+    <% end %>
   </div>
 
   <%# --- Why this needs attention (blocked vs advisory) ---
@@ -130,6 +144,12 @@
             <%= reimbursements_date(@expense.rejection_notified) %>, producer emailed —
           <% end %>
           <q><%= @expense.rejection_reason %></q>
+          <%# The reason and the stamp are kept after a reopen, so on a claim
+              that is no longer Rejected this row is history rather than its
+              state — say which. %>
+          <% if @expense.status != ::Reimbursements::Status::REJECTED %>
+            <span class="text-gray-500">(reopened since)</span>
+          <% end %>
         </dd>
       <% end %>
 
@@ -185,6 +205,24 @@
             <%= select_tag :expense_type,
                            options_for_select(Reimbursements::Expense::TYPES, @expense.expense_type),
                            include_blank: @expense.expense_type.blank?, class: input_classes %>
+          <% end %>
+
+          <%# WHOSE claim this is, and on the Reimbursement rail whose bank
+              details pay it. Finance could not change it at all, so a claim
+              matched to the wrong person — by email-in, or by the settled-claim
+              import, where a blank Submitter email once sent 140 production
+              claims to one payee — could only be fixed from a console.
+              Deliberately offered at every status: the case it exists for is a
+              batch of imported claims already Paid to the wrong payee. %>
+          <%= render "shared/form/field", label: "Submitter / payee", name: :person_record_id,
+                hint: "Who filed this claim, and on the Reimbursement rail whose bank details " \
+                      "pay it. Changing it corrects the portal's record and decides who a " \
+                      "FUTURE batch pays; it changes nothing EUSA has already been sent." do %>
+            <% person_options = @people.map { |p| [ p.name.presence || p.email.presence || p.record_id, p.record_id ] } %>
+            <%= select_tag :person_record_id,
+                           options_for_select(person_options, @expense.person&.record_id),
+                           include_blank: @expense.person&.record_id.blank?,
+                           class: "simple-select2" %>
           <% end %>
 
           <%# Which rail the money travels on. Finance could not change it at

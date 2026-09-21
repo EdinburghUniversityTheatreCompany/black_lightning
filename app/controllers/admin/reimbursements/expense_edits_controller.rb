@@ -72,7 +72,8 @@ module Admin
         expense = find_expense!
         error = amount_error(expense) || foreign_amount_error(expense) ||
                 bank_detail_override_error(expense) || expense_type_error(expense) ||
-                budget_record_id_error(params[:budget_record_id])
+                budget_record_id_error(params[:budget_record_id]) ||
+                person_record_id_error(params[:person_record_id])
         if error
           load_edit(expense)
           flash.now[:alert] = error
@@ -82,6 +83,39 @@ module Admin
 
         store.update_expense!(expense.record_id, update_attrs(expense))
         redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
+      end
+
+      # Put a rejected claim back in the queue.
+      #
+      # A rejection was terminal: nothing in the portal wrote a status back to
+      # Pending, so a claim rejected by mistake — or one the producer has since
+      # fixed by sending the missing receipt — could only be resurrected from a
+      # console, or refiled from scratch under a new number, which loses the
+      # thread between the two.
+      #
+      # It goes back to PENDING, never straight to Approved: the claim re-enters
+      # finance's queue and the owner gate exactly as a fresh one would, so
+      # reopening can never be a way round a sign-off. The rejection reason and
+      # the notified stamp are KEPT — they are what happened, and the History
+      # card is where they are read.
+      #
+      # Nobody is emailed. The producer was told it was rejected; a second,
+      # unexplained "it is pending again" from a portal they may never have
+      # opened is worse than the operator telling them in the reply they are
+      # already writing.
+      def reopen
+        expense = find_expense!
+        unless expense.status == ::Reimbursements::Status::REJECTED
+          redirect_to_edit(expense, alert: "Only a rejected claim can be reopened. " \
+                                           "##{expense.auto_number} is #{expense.status}.")
+          return
+        end
+
+        store.update_expense!(expense.record_id, status: ::Reimbursements::Status::PENDING)
+        redirect_to_edit(expense,
+                         notice: "##{expense.auto_number} is Pending again and back in the review " \
+                                 "queue. Nobody was emailed, and the rejection is kept in its " \
+                                 "history.")
       end
 
       # Both answer a turbo stream for the receipts-upload dropzone on the edit
@@ -123,6 +157,11 @@ module Admin
         @title = "Edit ##{expense.auto_number}"
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
+        # The payee picker. Every registered person, in name order: a claim
+        # matched to the wrong one is corrected here, and the payee it should
+        # have gone to is as likely to be at the end of the alphabet as the
+        # start. See #person_record_id_error for why the write is guarded.
+        @people = store.people_in_name_order
         @attention =
           ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
         load_history(expense)
@@ -214,6 +253,21 @@ module Admin
         rail == ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
       end
 
+      # The posted payee has to be one the page RENDERED, the rule every other
+      # picker here follows: the write goes straight to a foreign key, so an id
+      # that names nothing is a 500 rather than a fixable form error.
+      #
+      # Unlike the budget, this is NOT narrowed by status. The motivating case
+      # is a batch of imported claims already Paid to the wrong payee, and
+      # correcting the record of who was paid is exactly what is wanted there —
+      # the form says what it does and does not change.
+      def person_record_id_error(record_id)
+        return nil if record_id.blank?
+        return nil if store.people_in_name_order.any? { |person| person.record_id == record_id.to_s }
+
+        "That person is no longer in the registry. Reload the page and pick again."
+      end
+
       # Finance may move a claim between rails only while the money can still
       # move — Draft, Pending and Approved. Once it is Submitted or Paid the
       # paperwork EUSA acted on has gone out (a BACS row or an international
@@ -300,6 +354,16 @@ module Admin
           expense_type: params[:expense_type],
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence,
+          # WHOSE claim this is. Finance could not change it at all, so a claim
+          # matched to the wrong person — by email-in, or by the settled-claim
+          # import, where a blank Submitter email once sent 140 production
+          # claims to one payee — could only be fixed from a console.
+          #
+          # Compacted away when blank, so a form that posts no payee (or a
+          # deliberate "leave it") never unlinks the claim from its person:
+          # a claim with no payee at all is the state the BACS pre-flight
+          # exists to refuse.
+          person_record_id: params[:person_record_id].presence,
           payee_name_override: params[:payee_name_override].to_s,
           # Persist the SAME normalized value #bank_detail_override_error just
           # validated (dashed sort code, whitespace-stripped account number) —

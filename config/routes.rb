@@ -216,6 +216,10 @@ ChaosRails::Application.routes.draw do
       resources :expense_edits, only: %i[index edit update] do
         get :find, on: :collection
       end
+      # Put a rejected claim back in the queue. A rejection was terminal:
+      # nothing in the portal wrote a status back to Pending, so a mistaken one
+      # could only be undone from a console.
+      post   "expense_edits/:id/reopen", to: "expense_edits#reopen", as: :reopen_expense_edit
       post   "expense_edits/:id/receipts",                to: "expense_edits#add_receipts",   as: :expense_edit_receipts
       delete "expense_edits/:id/receipts/:attachment_id", to: "expense_edits#remove_receipt", as: :expense_edit_receipt
 

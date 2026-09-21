@@ -1426,6 +1426,139 @@ module Admin
         assert_no_match(/Modulus check failed/, response.body,
                         "a blank pair is not a typo")
       end
+
+      # --- Changing the payee -------------------------------------------------
+      # Finance could not change it at all, so a claim matched to the wrong
+      # person — by email-in, or by the settled-claim import, where a blank
+      # Submitter email once sent 140 production claims to one payee — could
+      # only be fixed from a console.
+
+      def other_payee
+        create_reimbursements_person(name: "Robin Rig", email: "robin@example.com",
+                                     sort_code: "08-99-99", account_number: "12345678")
+      end
+
+      test "the edit form offers every registered person as the payee" do
+        other = other_payee
+        expense = expense_at("Pending")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_select "select[name=person_record_id] option[value=?]", other.record_id
+        assert_select "select[name=person_record_id] option[value=?]", @person.record_id
+      end
+
+      test "saving a different payee re-points the claim" do
+        other = other_payee
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, person_record_id: other.record_id,
+                                 amount: "12.50", description: "Fake blood" }
+
+        assert_equal other.id, expense.reload.person_id
+      end
+
+      # The case it exists for is a batch of imported claims already Paid to
+      # the wrong payee, so the window is deliberately every status — unlike
+      # the rail and the type, which stop at Approved.
+      test "the payee can be corrected on a Paid claim" do
+        other = other_payee
+        expense = expense_at("Paid")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, person_record_id: other.record_id,
+                                 amount: "12.50", description: "Fake blood" }
+
+        assert_equal other.id, expense.reload.person_id
+      end
+
+      test "a payee id the page never offered is refused rather than 500ing" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, person_record_id: "999999",
+                                 amount: "12.50", description: "Fake blood" }
+
+        assert_response :unprocessable_content
+        assert_match(/no longer in the registry/, response.body)
+        assert_equal @person.id, expense.reload.person_id
+      end
+
+      test "a blank payee leaves the claim with the one it has" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: { id: expense.record_id, person_record_id: "",
+                                 amount: "12.50", description: "Fake blood" }
+
+        assert_equal @person.id, expense.reload.person_id,
+                     "a claim with no payee at all is the state the BACS pre-flight refuses"
+      end
+
+      # --- Reopening a rejected claim -----------------------------------------
+      # A rejection was terminal: nothing in the portal wrote a status back to
+      # Pending.
+
+      test "a rejected claim can be put back in the queue" do
+        expense = expense_at("Rejected", rejection_reason: "No receipt attached")
+        sign_in @user
+
+        post :reopen, params: { id: expense.record_id }
+
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
+      end
+
+      # Never straight to Approved: the claim re-enters finance's queue and the
+      # owner gate as a fresh one would, so reopening cannot be a way round a
+      # sign-off.
+      test "reopening goes to Pending, not Approved" do
+        expense = expense_at("Rejected", rejection_reason: "No receipt attached")
+        sign_in @user
+
+        post :reopen, params: { id: expense.record_id }
+
+        refute_equal ::Reimbursements::Status::APPROVED, expense.reload.status
+      end
+
+      test "reopening keeps the rejection in the claim's history" do
+        expense = expense_at("Rejected", rejection_reason: "No receipt attached",
+                             rejection_notified: Time.current)
+        sign_in @user
+
+        post :reopen, params: { id: expense.record_id }
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/No receipt attached/, response.body)
+        assert_match(/reopened since/, response.body,
+                     "the reason must read as history, not as the claim's state")
+      end
+
+      test "only a rejected claim can be reopened" do
+        expense = expense_at("Paid")
+        sign_in @user
+
+        post :reopen, params: { id: expense.record_id }
+
+        assert_match(/Only a rejected claim/, flash[:alert])
+        assert_equal ::Reimbursements::Status::PAID, expense.reload.status
+      end
+
+      test "the Reopen control is offered on a rejected claim and nowhere else" do
+        rejected = expense_at("Rejected", rejection_reason: "No receipt")
+        paid = expense_at("Paid")
+        sign_in @user
+
+        get :edit, params: { id: rejected.record_id }
+        assert_select "form[action=?]",
+                      admin_reimbursements_reopen_expense_edit_path(rejected.record_id)
+
+        get :edit, params: { id: paid.record_id }
+        assert_select "form[action=?]",
+                      admin_reimbursements_reopen_expense_edit_path(paid.record_id), count: 0
+      end
     end
   end
 end
