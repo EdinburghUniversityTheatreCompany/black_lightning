@@ -968,6 +968,126 @@ module Admin
         .detect_offsetting_pairs(rows, cost_centres: rows.map { cost_centre.id.to_s })
         .first.map(&:key)
     end
+
+    # --- Uploading the sheet -------------------------------------------------
+    # This was paste-only on the one screen whose input arrives as an email
+    # attachment, though the shared partial has always taken a file.
+
+    def actuals_xlsx(rows)
+      require "caxlsx"
+      package = Axlsx::Package.new
+      package.workbook.add_worksheet(name: "Actuals") { |sheet| rows.each { |row| sheet.add_row row } }
+      file = Tempfile.new([ "actuals", ".xlsx" ])
+      file.binmode
+      file.write(package.to_stream.read)
+      file.rewind
+      Rack::Test::UploadedFile.new(file.path,
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    end
+
+    def actuals_csv(text)
+      file = Tempfile.new([ "actuals", ".csv" ])
+      file.write(text)
+      file.rewind
+      Rack::Test::UploadedFile.new(file.path, "text/csv")
+    end
+
+    test "an uploaded xlsx previews exactly as the same rows pasted would" do
+      sign_in @user
+
+      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
+                                                            debit_row.split("\t") ]) }
+
+      assert_response :success
+      assert_select "form" # the preview step rendered
+      assert_match(/Alice Producer/, response.body)
+    end
+
+    # The wizard is stateless and an upload has no second file to re-send, so
+    # the sheet has to come back as TEXT in the hidden field or apply would
+    # have nothing to re-parse.
+    test "an uploaded sheet is carried on as text for the apply step" do
+      sign_in @user
+
+      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
+                                                            debit_row.split("\t") ]) }
+
+      carried = css_select("input[name=pasted_text][type=hidden]").first
+      assert carried, "the sheet has to come back as text for apply to re-parse"
+      assert_includes carried["value"], "439999"
+      assert_includes carried["value"], "Alice Producer"
+    end
+
+    # The preview's SECOND form (the offsetting-pair ticks and Apply) carried
+    # params[:pasted_text], which is empty on the upload path — so applying an
+    # uploaded sheet would have imported nothing at all.
+    test "every hidden field carrying the sheet holds the uploaded rows" do
+      sign_in @user
+
+      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"),
+                                                            debit_row.split("\t") ]) }
+
+      carriers = css_select("input[name=pasted_text][type=hidden]")
+      assert_operator carriers.size, :>=, 1
+      carriers.each do |field|
+        assert_includes field["value"].to_s, "439999",
+                        "a form carrying the sheet on must hold the uploaded rows"
+      end
+    end
+
+    test "a csv upload is read as the text it already is" do
+      sign_in @user
+
+      post :preview, params: { actuals_file: actuals_csv("#{HEADER}\n#{debit_row}") }
+
+      assert_response :success
+      assert_match(/Alice Producer/, response.body)
+    end
+
+    test "an unreadable file is reported on the form rather than 500ing" do
+      sign_in @user
+      file = Tempfile.new([ "actuals", ".xlsx" ])
+      file.write("this is not a spreadsheet")
+      file.rewind
+
+      post :preview, params: {
+        actuals_file: Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel")
+      }
+
+      assert_response :success
+      assert_match(/Couldn't read that file/, response.body)
+    end
+
+    test "a submit with neither a paste nor a file says so" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: "" }
+
+      assert_response :success
+      assert_match(/Paste the actuals rows, or upload the sheet/, response.body)
+    end
+
+    test "the page says where the sheet comes from" do
+      sign_in @user
+
+      get :show
+
+      assert_match(/EUSA's finance office exports its ledger once a month/, response.body)
+      assert_match(/ask EUSA's finance office/, response.body)
+    end
+
+    # A cell's own tab would split the row into two columns and shift every
+    # figure one place left — silently, into the wrong column.
+    test "a tab inside a spreadsheet cell cannot shift the row's columns" do
+      # The tab has to be INSIDE one cell, which is the only way a spreadsheet
+      # can carry one — a row built by splitting on tabs would never show this.
+      cells = debit_row.split("\t")
+      cells[5] = "Alice\tProducer"
+      text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ HEADER.split("\t"), cells ]))
+
+      assert_equal HEADER.split("\t").size, text.lines.last.split("\t").size
+      assert_includes text, "Alice Producer", "the tab becomes a space rather than a column break"
+    end
   end
   end
 end

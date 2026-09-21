@@ -42,6 +42,11 @@ module Admin
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
+      # A submit with neither a paste nor a file. It used to re-render step 1
+      # in silence, which reads as the button having done nothing.
+      NOTHING_GIVEN_ALERT =
+        "Paste the actuals rows, or upload the sheet, before parsing.".freeze
+
       NO_COST_CENTRE_ALERT =
         "No cost centre is set up yet, so there is nothing to reconcile these rows against. " \
         "Add one under Settings first.".freeze
@@ -56,9 +61,18 @@ module Admin
 
       def preview
         @title = "Reconcile EUSA actuals"
-        @pasted_text = params[:pasted_text].to_s
+        # An upload beats the text box, for the reason ReadsImportSource gives:
+        # the preview carries the sheet on as TEXT in a hidden field, so apply
+        # only ever sees text and an upload has no second file to re-send. The
+        # file is converted ONCE, here, and everything downstream runs on
+        # exactly what a paste produces.
+        @pasted_text = text_from_upload || params[:pasted_text].to_s
+        return render :show if @upload_error
 
-        return render :show if @pasted_text.strip.empty?
+        if @pasted_text.strip.empty?
+          flash.now[:alert] = NOTHING_GIVEN_ALERT
+          return render :show
+        end
 
         parsed = parse_rows(@pasted_text)
         return render :show if parsed.nil?
@@ -157,6 +171,21 @@ module Admin
         @expenses_paid = committed_debits.size
         @credits_linked = committed_credits.size
         @unmatched_saved = committed_unmatched.size
+      end
+
+      # The uploaded sheet as text, or nil when no file was picked. A file the
+      # reader cannot open is reported on the form rather than 500ing with the
+      # operator's upload lost.
+      def text_from_upload
+        file = params[:actuals_file]
+        return nil unless file.respond_to?(:path)
+
+        ::Reimbursements::ActualsUpload.to_text(file)
+      rescue ::Reimbursements::ActualsUpload::UnreadableError => e
+        @upload_error = true
+        flash.now[:alert] = "Couldn't read that file: #{e.message}. Save it as .xlsx or .csv, " \
+                            "or paste the rows instead."
+        nil
       end
 
       def parse_rows(text)

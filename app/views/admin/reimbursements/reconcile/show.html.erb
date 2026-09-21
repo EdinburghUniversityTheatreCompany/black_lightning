@@ -7,25 +7,53 @@
 <%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
   Import the monthly EUSA actuals sheet and reconcile it against submitted expenses
-  and income budgets. Copy the actuals rows from Excel or the email and paste them
-  below. Both the legacy format (Nominal, Cost Centre, Ref, …) and the Sage export
+  and income budgets. Both the legacy format (Nominal, Cost Centre, Ref, …) and the Sage export
   (AccountNumber, …, GoodsValueInBaseCurrency) are accepted; the header identifies
   the columns automatically.
+  <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
+
+<%# Where the sheet comes from. The page asked for "the monthly EUSA actuals
+    sheet" and never said who sends it, how often, or what to do when it has
+    not arrived — which for a successor is the difference between a monthly
+    routine and a file they have never seen. %>
+<%= render CardComponent.new(title: "Where this sheet comes from", html_class: "mb-4") do %>
+  <p class="mb-0 text-sm text-gray-600">
+    EUSA's finance office exports its ledger once a month and emails it out — one row per
+    transaction that actually hit the account, for every cost centre. It lands weeks after the
+    BACS run it confirms, so a claim sent to EUSA this week is normally reconciled next month.
+    Upload the file as it arrived, or copy the rows out of Excel and paste them. If it has not
+    come, ask EUSA's finance office for the latest actuals export; nothing here can fetch it.
+  </p>
+<% end %>
 
 <% if flash[:alert].present? %>
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
+<%# multipart: true, or the browser posts the file's NAME and nothing else —
+    `form_with url:` does not infer it from a file_field_tag the way the form
+    builder's file_field does, and a request-level test never sees it because
+    ActionController::TestCase bypasses form encoding entirely. Both import
+    wizards already say it; this form did not. %>
+<%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post,
+              multipart: true do %>
   <%= render CardComponent.new(title: "Step 1: Paste actuals data") do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: "Parse and match" %>
     <% end %>
 
+    <%# The upload half was never passed, so this was paste-only on the one
+        screen whose input arrives as an email attachment. The file is turned
+        into the same text a paste produces (ActualsUpload) before anything
+        else sees it, so the two routes cannot give different answers. %>
     <%= render "shared/form/paste_or_upload",
           text_name: :pasted_text,
           text_label: "Actuals data (tab- or comma-separated, include the header row)",
+          file_name: :actuals_file,
+          file_label: "…or upload the sheet EUSA sent",
+          file_accept: ::Reimbursements::ActualsUpload::ACCEPT,
+          file_hint: "An .xlsx, .xls or .csv. Its first sheet is read, header row included.",
           text_value: @pasted_text, rows: 10,
           placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
           text_hint: "Each row's EUSA period (P1–P12) and cost centre are read from the pasted data, so " \

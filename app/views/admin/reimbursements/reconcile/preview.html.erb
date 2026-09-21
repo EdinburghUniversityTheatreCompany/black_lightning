@@ -216,7 +216,10 @@
   <%# The offsetting-pair tickboxes and the Apply button are one form: the
       pairs you leave ticked are the pairs that get collapsed. %>
   <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
-    <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
+    <%# @pasted_text, never params[:pasted_text]: an UPLOADED sheet arrives as
+        a file and is converted to text by the controller, so the raw param is
+        empty and this form would apply nothing at all. %>
+    <%= hidden_field_tag :pasted_text, @pasted_text %>
     <%# The wizard keeps no session state, so the blank-cost-centre answer rides
         along with the paste the way the pair ticks do. Without it, apply
         re-derives "no choice made" and refuses. %>
