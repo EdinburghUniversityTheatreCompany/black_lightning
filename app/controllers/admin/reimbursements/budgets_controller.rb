@@ -230,7 +230,48 @@ module Admin
           return "Choose a valid budget type."
         end
 
-        owners_in_area_error(budget) || owner_ids_error(attrs[:owner_ids])
+        owners_in_area_error(budget) || area_scope_error(attrs, budget) ||
+          owner_ids_error(attrs[:owner_ids])
+      end
+
+      # A line in an area must sit in the SAME cost centre and financial year
+      # as the area. Budget's own inherit_area_scoping fills blanks only — so it
+      # can never move a line somebody has already placed — and #create always
+      # hands it a centre (chosen_cost_centre falls back to the default), so the
+      # inheritance never fired on the create path and the mismatch was written
+      # silently.
+      #
+      # It matters because the two readings then disagree and neither is wrong:
+      # the grouped budgets index scopes its ROWS to the selected centre and
+      # year while an area's subtotal covers the whole area, and the overview's
+      # area card says the same thing about lines outside its scope. A line
+      # deliberately placed in another year's area is a real state; one created
+      # by a form that never mentioned the clash is a mistake nobody can see.
+      #
+      # Refused rather than silently re-homed: moving the line into the area's
+      # centre would move money between pots on a save the operator thinks is
+      # about a name.
+      def area_scope_error(attrs, budget)
+        return nil unless attrs.key?(:area_id)
+
+        area = attrs[:area_id].present? && store.find_area(attrs[:area_id])
+        return nil unless area
+
+        centre = budget.persisted? ? budget.cost_centre : chosen_cost_centre
+        year = budget.persisted? ? budget.financial_year : selected_financial_year
+
+        mismatch_error("cost centre", area.cost_centre&.name, centre&.name) ||
+          mismatch_error("financial year", area.financial_year&.label, year&.label)
+      end
+
+      # Nil when either side is unset: an unstamped area or line is
+      # lenient-scoped into every centre and year on purpose, and inheritance
+      # will fill the blank rather than contradict it.
+      def mismatch_error(label, area_value, budget_value)
+        return nil if area_value.blank? || budget_value.blank? || area_value == budget_value
+
+        "That area is in a different #{label} (#{area_value}) from this budget " \
+          "(#{budget_value}). Pick an area from #{budget_value}, or leave Area blank."
       end
 
       # The owners ticked on a form that is ALSO putting the line in an area

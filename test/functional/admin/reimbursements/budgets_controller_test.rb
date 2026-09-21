@@ -1515,6 +1515,64 @@ module Admin
                      "a refusal must not widen the area's own owner list either"
       end
 
+      # Budget's own inherit_area_scoping fills BLANKS only, so it can never
+      # move a placed line — and #create always hands it a centre
+      # (chosen_cost_centre falls back to the default), so the inheritance
+      # never fired on the create path and the mismatch was written silently.
+      test "create refuses an area from a different cost centre" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+        area = create_reimbursements_area(name: "Cogito", cost_centre: other)
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
+                                  active: "1", area_id: area.record_id, initial_budget: "",
+                                  cost_centre_id: ::Reimbursements::CostCentre.default.id }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/different cost centre/, response.body)
+        assert_match(/Bedlam Termtime/, response.body, "the message has to name which")
+      end
+
+      test "create accepts an area in the same cost centre" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+        area = create_reimbursements_area(name: "Cogito", cost_centre: other)
+
+        post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
+                                active: "1", area_id: area.record_id, cost_centre_id: other.id }
+
+        budget = ::Reimbursements::Budget.find_by!(name: "Marketing")
+        assert_equal area.id, budget.area_id
+        assert_equal other.id, budget.cost_centre_id
+      end
+
+      # An unstamped area or line is lenient-scoped into every centre on
+      # purpose, and inheritance fills the blank rather than contradicting it.
+      test "an area with no cost centre is not refused" do
+        sign_in @user
+        area = create_reimbursements_area(name: "Cogito", cost_centre: nil)
+
+        post :create, params: { name: "Marketing", nominal_code: "432320", budget_type: "Expense",
+                                active: "1", area_id: area.record_id }
+
+        assert_equal area.id, ::Reimbursements::Budget.find_by!(name: "Marketing").area_id
+      end
+
+      test "the edit form refuses to move a line into another centre's area" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+        area = create_reimbursements_area(name: "Cogito", cost_centre: other)
+        @props.update!(cost_centre: ::Reimbursements::CostCentre.default)
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", active: "1", area_id: area.record_id }
+
+        assert_match(/different cost centre/, flash[:alert])
+        assert_nil @props.reload.area_id, "a refused Save must not attach the area"
+      end
+
       test "create inside an area with nobody ticked writes no own-owner rows" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
