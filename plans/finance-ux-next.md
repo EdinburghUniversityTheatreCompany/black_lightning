@@ -1,5 +1,12 @@
 # Finance portal: what is left to fix
 
+> **DONE, 2026-09-22.** Every item below shipped on the `finance-ux-next` branch: the finance
+> home page, the EUSA draft link and its unsent probe, all three undo gaps (ledger unlink and
+> re-pair, claim payee and reopen-rejected, budget updates opened and undone), the glossary, and
+> all twelve of "the rest". The evidence for each is in its own commit message; the traps worth
+> keeping went into CLAUDE.md. Kept as the record of what the audit asked for and why.
+
+
 Handover, 2026-09-21. The audit is [finance-ux-audit.md](finance-ux-audit.md) and the area-page
 design is [area-pages-design.md](area-pages-design.md); read the audit's "Findings by task"
 section for the evidence behind any item below, and CLAUDE.md's "Reimbursements portal" section
