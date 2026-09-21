@@ -55,13 +55,17 @@
                        class: input_classes %>
       <% end %>
 
+      <%# NO preselect of selectable_cost_centres.first. A whole committee
+          spreadsheet into the wrong pot is a large quiet mistake, and
+          everywhere else here "none" means "every centre" as a stated safety
+          rule. The prompt stands until the operator picks — unless a link
+          prefilled the centre, or there is only one and nothing to choose. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             hint: "Which pot these budgets belong to.", html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,
                        options_from_collection_for_select(selectable_cost_centres, :id, :name,
-                                                          selected_cost_centre&.id ||
-                                                            selectable_cost_centres.first&.id),
-                       class: input_classes %>
+                                                          chosen_cost_centre&.id),
+                       include_blank: "Choose a cost centre…", class: input_classes %>
       <% end %>
 
       <%= render "shared/form/paste_or_upload",

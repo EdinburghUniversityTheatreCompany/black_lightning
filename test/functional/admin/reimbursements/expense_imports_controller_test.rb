@@ -242,6 +242,55 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
+      # --- The cost centre has to be chosen ----------------------------------
+      #
+      # The wizard preselected `selectable_cost_centres.first` while everywhere
+      # else in this portal "none" means "every centre" as a stated safety
+      # rule. A whole sheet of settled claims into the wrong pot is a large
+      # quiet mistake.
+
+      test "apply accepts a blank cost centre while only one is configured" do
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::Expense.count }, 1 do
+          post :apply, params: import_params(tsv(row), cost_centre_id: "")
+        end
+      end
+
+      test "apply refuses without a cost centre once there are two to choose from" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::Expense.count } do
+          post :apply, params: import_params(tsv(row), cost_centre_id: "")
+        end
+
+        assert_response :unprocessable_entity
+        assert_includes response.body, "Choose which cost centre"
+      end
+
+      test "preview refuses without a cost centre and keeps the paste" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :preview, params: import_params(tsv(row), cost_centre_id: "")
+
+        assert_response :unprocessable_entity
+        assert_includes response.body, "Choose which cost centre"
+        assert_includes response.body, "Fake blood"
+      end
+
+      test "the cost-centre select offers a prompt rather than preselecting the first" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body, "Choose a cost centre…"
+        assert_select "select#cost_centre_id option[selected]", 0
+      end
+
       test "an imported claim is not marked as having notified its producer" do
         sign_in @user
 

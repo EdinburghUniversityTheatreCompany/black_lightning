@@ -6,7 +6,11 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}") do %>
+<%# The heading names BOTH coordinates, as the expense preview's already did:
+    the <h1> outside this frame can name neither, and "which pot is this
+    landing in" is the question a whole committee sheet turns on. %>
+<%= render CardComponent.new(
+      title: "Preview: #{selected_financial_year.label} · #{chosen_cost_centre&.name}") do %>
   <p class="mb-4 text-sm text-gray-600">
     Nothing has been written yet. Check the lines below, then confirm at the bottom.
   </p>
@@ -93,6 +97,36 @@
                 <% if entry.unknown_owner_emails.any? %>
                   <span class="text-amber-700">(<%= entry.unknown_owner_emails.size %> not recognised)</span>
                 <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <%# The agreed total each NEW area is about to be given. It caps a whole
+      show, it is write-once (only #area_creates ever sets it), and the
+      preview stated it nowhere — so the one figure the operator most needs to
+      check before confirming was invisible until after it was written.
+      Revisions to a stored area's total are the table below. %>
+  <% area_creates = @import.area_creates.select { |attrs| attrs[:initial_budget] } %>
+  <% if area_creates.any? %>
+    <h3 class="mt-4 mb-2 font-medium">Agreed totals to be set (<%= area_creates.size %>)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-600">
+            <th class="py-1 pr-4">New area</th>
+            <th class="py-1 pr-4 text-right">Area total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% area_creates.each do |attrs| %>
+            <tr class="border-t border-gray-200">
+              <td class="py-1 pr-4"><%= attrs[:name] %></td>
+              <td class="py-1 pr-4 text-right font-medium">
+                <%= number_to_currency(attrs[:initial_budget], unit: "£") %>
               </td>
             </tr>
           <% end %>

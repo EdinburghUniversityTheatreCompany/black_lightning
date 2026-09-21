@@ -42,6 +42,10 @@ module Admin
 
       NOTHING_PASTED_ALERT = "Paste the budget sheet, or choose an .xlsx file, first.".freeze
 
+      NO_COST_CENTRE_CHOSEN_ALERT =
+        "Choose which cost centre these budgets belong to. Nothing has been imported — the " \
+        "sheet you pasted is still below.".freeze
+
       # The page heading names NO year, deliberately. The year is a field on the
       # form now, and the <h1> sits OUTSIDE the wizard's Turbo Frame — so a
       # preview of a different year than the one the page loaded with left the
@@ -60,6 +64,9 @@ module Admin
       def preview
         return render(:show) unless source_present?
         return render(:show, status: :unprocessable_entity) unless destination_available?
+        # Step 1 again, with the paste still in the box — the operator has to
+        # name the pot before seeing a preview of what would land in it.
+        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
         render :preview
@@ -68,12 +75,13 @@ module Admin
       def apply
         return redirect_to(import_path, alert: NOTHING_PASTED_ALERT) unless params[:pasted_text].present?
         return render(:show, status: :unprocessable_entity) unless destination_available?
+        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
 
         # Re-validated here, not merely trusted from the preview: apply parses
         # the text afresh, so anything unreadable has to stop it a second time.
-        return render_blocked_preview unless @import.valid? && selected_cost_centre
+        return render_blocked_preview unless @import.valid?
 
         # Areas narrowed to the ones something will actually land in: unticking
         # every re-home must not leave an empty area behind.
@@ -102,7 +110,7 @@ module Admin
       def build_import
         @import = ::Reimbursements::BudgetImport.new(
           import_source, input_type: input_type,
-          financial_year: selected_financial_year, cost_centre: selected_cost_centre,
+          financial_year: selected_financial_year, cost_centre: chosen_cost_centre,
           existing_budgets: store.budgets_for_year, existing_areas: store.areas_for_year,
           people: store.people
         )
@@ -144,12 +152,10 @@ module Admin
       # Re-render the preview with the problems shown rather than redirecting:
       # a forty-line paste must survive the refusal.
       def render_blocked_preview
-        flash.now[:alert] =
-          if selected_cost_centre.nil?
-            "Nothing was imported. Choose the cost centre these budgets belong to."
-          else
-            "Nothing was imported. Fix the lines flagged below and try again."
-          end
+        # The cost centre is settled before the preview is ever drawn now
+        # (#cost_centre_chosen?), so the only thing that can still block here
+        # is a line the sheet spells wrong.
+        flash.now[:alert] = "Nothing was imported. Fix the lines flagged below and try again."
         render :preview, status: :unprocessable_entity
       end
 
@@ -163,7 +169,7 @@ module Admin
       # import comes back to the form the operator filled in, not a blank one.
       def import_path
         admin_reimbursements_budget_import_path(
-          year: selected_financial_year&.key, cost_centre: selected_cost_centre&.key
+          year: selected_financial_year&.key, cost_centre: chosen_cost_centre&.key
         )
       end
       helper_method :import_path

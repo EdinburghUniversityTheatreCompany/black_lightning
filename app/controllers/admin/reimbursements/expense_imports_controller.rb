@@ -41,6 +41,10 @@ module Admin
 
       NOTHING_PASTED_ALERT = "Paste the claims sheet, or choose an .xlsx file, first.".freeze
 
+      NO_COST_CENTRE_CHOSEN_ALERT =
+        "Choose which cost centre paid these claims. Nothing has been imported — the sheet " \
+        "you pasted is still below.".freeze
+
       # Deliberately does NOT assert what happened. Two things reach here: a
       # genuine race (somebody imported the same sheet meanwhile), and a
       # reference that collides with one already stored only under the column's
@@ -68,6 +72,9 @@ module Admin
       def preview
         return render(:show) unless source_present?
         return render(:show, status: :unprocessable_entity) unless destination_available?
+        # Step 1 again, with the paste still in the box — the operator has to
+        # name the pot before seeing a preview of what would land in it.
+        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
         render :preview
@@ -76,12 +83,13 @@ module Admin
       def apply
         return redirect_to(import_path, alert: NOTHING_PASTED_ALERT) if params[:pasted_text].blank?
         return render(:show, status: :unprocessable_entity) unless destination_available?
+        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
 
         # Re-validated here, not merely trusted from the preview: apply parses
         # the text afresh, so anything unreadable has to stop it a second time.
-        return render_blocked_preview unless @import.valid? && selected_cost_centre
+        return render_blocked_preview unless @import.valid?
 
         @created = store.import_expenses!(rows: @import.creates)
         render :apply
@@ -104,7 +112,7 @@ module Admin
       def build_import
         @import = ::Reimbursements::ExpenseImport.new(
           import_source, input_type: input_type,
-          financial_year: selected_financial_year, cost_centre: selected_cost_centre,
+          financial_year: selected_financial_year, cost_centre: chosen_cost_centre,
           # Scoped to the destination, so "which budget is this?" is asked of
           # the year and pot being imported into rather than of whichever
           # happens to be active. Expenses are NOT scoped: an already-used
@@ -134,12 +142,11 @@ module Admin
       # Re-render the preview with the problems shown rather than redirecting:
       # a forty-line paste must survive the refusal.
       def render_blocked_preview(alert = nil)
-        flash.now[:alert] = alert ||
-                            if selected_cost_centre.nil?
-                              "Nothing was imported. Choose the cost centre these claims belong to."
-                            else
-                              "Nothing was imported. Fix the lines flagged below and try again."
-                            end
+        # The cost centre is settled before the preview is ever drawn now
+        # (#cost_centre_chosen?), so the only thing that can still block here
+        # is a row the sheet spells wrong.
+        flash.now[:alert] =
+          alert || "Nothing was imported. Fix the lines flagged below and try again."
         render :preview, status: :unprocessable_entity
       end
 
@@ -147,7 +154,7 @@ module Admin
       # import comes back to the form the operator filled in, not a blank one.
       def import_path
         admin_reimbursements_expense_import_path(
-          year: selected_financial_year&.key, cost_centre: selected_cost_centre&.key
+          year: selected_financial_year&.key, cost_centre: chosen_cost_centre&.key
         )
       end
       helper_method :import_path
