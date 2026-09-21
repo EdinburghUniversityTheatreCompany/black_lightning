@@ -21,28 +21,24 @@
   <p class="text-sm text-gray-600 mb-3">
     Computed from the expenses, forecasts and EUSA actuals linked to this budget.
   </p>
-  <% if @budget.over_budget? %>
-    <p class="mb-3">
-      <%= render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget")) %>
-    </p>
-  <% elsif @budget.over_initial_budget? %>
-    <p class="mb-3">
-      <%= render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget")) %>
-    </p>
+  <% if (health_badge = reimbursements_budget_health_badge(@budget)) %>
+    <p class="mb-3"><%= health_badge %></p>
   <% end %>
   <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-    <div><dt class="text-gray-500">Current forecast</dt><dd class="font-medium"><%= reimbursements_money(@budget.current_forecast) %></dd></div>
+    <%# "Projected", the same one name the index and the overview use. The raw
+        latest forecast is in the forecast log directly below this card. %>
+    <div><dt class="text-gray-500">Projected</dt><dd class="font-medium"><%= reimbursements_budget_projected(@budget) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@budget.committed_amount) %></dd></div>
     <div><dt class="text-gray-500">Pipeline</dt><dd class="font-medium" title="Pending expenses not yet approved."><%= reimbursements_money(@budget.pipeline_amount) %></dd></div>
     <div><dt class="text-gray-500">Paid (portal)</dt><dd class="font-medium"><%= reimbursements_money(@budget.paid_portal_amount) %></dd></div>
     <div><dt class="text-gray-500">EUSA actual</dt><dd class="font-medium" title="Reconciled EUSA ledger spend for this line."><%= reimbursements_money(@budget.eusa_actual_amount) %></dd></div>
     <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality. Blank on income lines, where the same figure would read as best-case income instead."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
-    <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium <%= "text-danger" if @budget.remaining&.negative? %>"><%= reimbursements_money(@budget.remaining) %></dd></div>
+    <%# Both read the same helper the index row does, so the colouring and the
+        "no budget set" wording cannot drift between the two screens. %>
+    <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium"><%= reimbursements_budget_remaining(@budget) %></dd></div>
     <div>
       <dt class="text-gray-500">Variance</dt>
-      <dd class="font-medium <%= "text-danger" if @budget.variance&.positive? %><%= "text-success" if @budget.variance&.negative? %>">
-        <%= reimbursements_money(@budget.variance) %>
-      </dd>
+      <dd class="font-medium"><%= reimbursements_budget_variance(@budget) %></dd>
     </div>
   </dl>
 <% end %>

@@ -12,4 +12,11 @@
   <td class="text-right"><%= reimbursements_money(rollup.paid_portal) %></td>
   <td class="text-right"><%= reimbursements_money(rollup.eusa_actual) %></td>
   <td class="text-right"><%= reimbursements_money(rollup.expected) %></td>
+  <%# A group's remaining and variance, summed the way every other column here
+      is (a nil line counting as zero), so the two health columns total under
+      the rows that carry them rather than leaving the footer short. %>
+  <td class="text-right <%= "text-danger" if rollup.remaining.negative? %>">
+    <%= reimbursements_money(rollup.remaining) %>
+  </td>
+  <td class="text-right"><%= reimbursements_money(rollup.variance) %></td>
 </tr>

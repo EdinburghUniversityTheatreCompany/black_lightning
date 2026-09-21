@@ -366,6 +366,22 @@ module Admin
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
 
+      # The agreed total caps a whole show and is write-once, and the preview
+      # stated it nowhere — so the one figure the operator most needs to check
+      # was invisible until after it had been written.
+      test "the preview states the agreed total each new area is about to be given" do
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
+          "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
+        )
+
+        assert_response :success
+        assert_includes response.body, "Agreed totals to be set"
+        assert_includes response.body, "£1,200.00"
+      end
+
       test "apply writes the Area total column as the new area's agreed total" do
         sign_in @user
 
@@ -779,7 +795,22 @@ module Admin
         assert_match(/about a grand/, response.body)
       end
 
-      test "apply refuses without a cost centre" do
+      # With ONE centre configured there is nothing to choose between, so a
+      # blank choice lands in it rather than refusing over a question with a
+      # single answer.
+      test "apply accepts a blank cost centre while only one is configured" do
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::Budget.count }, 1 do
+          post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"), cost_centre_id: "")
+        end
+      end
+
+      # With two, it is a real question and the operator has to answer it: a
+      # whole committee spreadsheet into the wrong pot is a large quiet
+      # mistake, and the wizard used to preselect the first centre silently.
+      test "apply refuses without a cost centre once there are two to choose from" do
+        create_second_reimbursements_cost_centre
         sign_in @user
 
         assert_no_difference -> { ::Reimbursements::Budget.count } do
@@ -787,6 +818,52 @@ module Admin
         end
 
         assert_response :unprocessable_entity
+        assert_includes response.body, "Choose which cost centre"
+      end
+
+      test "preview refuses without a cost centre and keeps the paste" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"),
+                                              cost_centre_id: "")
+
+        assert_response :unprocessable_entity
+        assert_includes response.body, "Choose which cost centre"
+        # Step 1 again, with what was pasted still in the box.
+        assert_includes response.body, "Props"
+      end
+
+      test "the cost-centre select offers a prompt rather than preselecting the first" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :show
+
+        assert_response :success
+        assert_includes response.body, "Choose a cost centre…"
+        assert_select "select#cost_centre_id option[selected]", 0
+      end
+
+      test "a centre named by the entry point still arrives selected" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :show, params: { cost_centre_id: second.id }
+
+        assert_response :success
+        assert_select "select#cost_centre_id option[selected][value=?]", second.id.to_s
+      end
+
+      test "the preview names the cost centre it is about to import into" do
+        second = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"),
+                                              cost_centre_id: second.id)
+
+        assert_response :success
+        assert_includes response.body, second.name
       end
 
       test "applying the same sheet twice creates nothing the second time" do

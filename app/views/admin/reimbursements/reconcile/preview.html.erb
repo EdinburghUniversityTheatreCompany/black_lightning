@@ -1,6 +1,9 @@
 <%# Same Turbo Frame as show/apply — see show.html.erb for why the wizard
     renders inside a frame. %>
 <%= turbo_frame_tag "reconcile" do %>
+<%# The wizard's steps read "Step 1" and then "Step 3" — this screen is the
+    missing two, and was headed nothing at all. %>
+<h2 class="mb-2 text-lg font-semibold">Step 2: Review the matches</h2>
 <p class="mb-3 text-gray-600">
   Review the matches below. Every row is imported under the cost centre its own Cost Centre
   column names. Debits are matched to Submitted or Paid expenses, credits to income budgets,
@@ -118,7 +121,15 @@
                 <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) %></td>
-                <td class="py-1 pr-3">#<%= expense.auto_number %></td>
+                <%# The claim this row is about to mark Paid, as a link to it.
+                    "_top" because a link inside a Turbo Frame navigates the
+                    FRAME, and the edit page carries no matching one. %>
+                <td class="py-1 pr-3">
+                  <%= link_to "##{expense.auto_number}",
+                              edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                              class: "text-primary underline",
+                              data: { turbo_frame: "_top" } %>
+                </td>
                 <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
                 <td class="py-1 text-right"><%= reimbursements_money(expense.amount_excl_vat || expense.amount || 0) %></td>
               </tr>

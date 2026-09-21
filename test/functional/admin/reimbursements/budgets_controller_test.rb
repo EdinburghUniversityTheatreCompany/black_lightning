@@ -619,6 +619,97 @@ module Admin
                                     .find { |b| b.name == "Programme ads" }.expected_outturn
       end
 
+      # --- The overview as a health check -------------------------------------
+      #
+      # It had no health signals at all: no over-budget badge, no Remaining, no
+      # Variance, and the unattributed total — the one real health number —
+      # sat under ~120 table rows.
+
+      test "the overview badges an over-budget line, as the index does" do
+        sign_in @user
+        over = create_reimbursements_budget(name: "Overspent", nominal_code: "4321",
+                                            initial_budget: 100)
+        create_reimbursements_expense(budget: over, status: ::Reimbursements::Status::APPROVED,
+                                      amount: 200, amount_excl_vat: 200)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Over budget"
+        assert_equal 1, assigns(:over_budget_count)
+      end
+
+      test "the overview's summary states both health numbers above the tables" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "attributed to no budget"
+        assert_includes response.body, "#unattributed-actuals"
+        assert_equal BigDecimal("42.00"), assigns(:unattributed_total)
+        assert_equal 1, assigns(:unattributed_count)
+      end
+
+      # The net is debits less credits, so unattributed INCOME makes it
+      # negative — and a bare negative money figure means bad news everywhere
+      # else in this portal. The count is the headline instead.
+      test "the summary leads on the count, so a net credit does not read as alarm" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Box office",
+                                             credit: BigDecimal("500.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "1 EUSA ledger row"
+        assert_includes response.body, "debits less credits"
+      end
+
+      test "the overview says so plainly when nothing is over budget" do
+        sign_in @user
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "No line is over budget"
+      end
+
+      test "the overview carries Remaining and Variance columns" do
+        sign_in @user
+
+        get :overview
+
+        assert_response :success
+        assert_select "th", text: "Remaining"
+        assert_select "th", text: "Variance"
+      end
+
+      # --- Remaining is never blank without a reason -------------------------
+
+      test "the index reports Remaining for a line carrying only an initial budget" do
+        sign_in @user
+        ::Reimbursements::Budget.create!(name: "Freshly imported", nominal_code: "4321",
+                                         initial_budget: BigDecimal("450"))
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "£450.00"
+      end
+
+      test "a line with no forecast and no initial budget says so instead of a dash" do
+        sign_in @user
+        ::Reimbursements::Budget.create!(name: "Unplanned", nominal_code: "4322")
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "No budget set"
+      end
+
       test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
         # 4000 IS budgeted (@props), but nothing links this row to an expense, so
@@ -643,6 +734,40 @@ module Admin
         # Total unattributed = 1250 + 42 = 1292; the linked row is not in the list.
         assert_includes response.body, "£1,292.00"
         assert_not_includes response.body, "Reconciled row"
+      end
+
+      # The card used to say "Link each row on the Reconcile page". Reconcile is
+      # the paste wizard and has no per-row linking at all — Link to a claim,
+      # Create expense and Split across budgets are all on the EUSA Actuals
+      # ledger, which the card sent people away from.
+      test "overview's unattributed card names and links the ledger, not Reconcile" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "EUSA Actuals ledger"
+        assert_includes response.body, admin_reimbursements_actuals_path(state: "needs_attention")
+        assert_not_includes response.body, "Link each row on the Reconcile page"
+      end
+
+      test "each unattributed row links to itself on the ledger" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             ref: "AUDIT-7", period: "06",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        # Its own ref and period, so the operator lands on the row they clicked
+        # rather than on the whole ledger.
+        assert_includes response.body,
+                        CGI.escapeHTML(admin_reimbursements_actuals_path(
+                                         state: "needs_attention", period: "06", search: "AUDIT-7"
+                                       ))
       end
 
       test "overview does not report a correctly-offset accrual pair as unattributed" do
@@ -701,7 +826,11 @@ module Admin
         assert_includes response.body, "Budgets by area"
         # The heading span exists only on an area row, so a budget called
         # "Cogito something" could not satisfy this the way a body match would.
-        assert_select "th[scope=rowgroup] span.font-semibold", text: "Cogito"
+        # The heading is a LINK to the area's own form now (where its agreed
+        # total, basis and owners are edited), so it is an <a>, not a <span>.
+        assert_select "th[scope=rowgroup] a.font-semibold", text: "Cogito"
+        assert_select "th[scope=rowgroup] a[href=?]",
+                      edit_admin_reimbursements_area_path(area.record_id)
         # 750 = 400 + 350, a figure no single row carries, so the assertion pins
         # the grouping rather than a budget line.
         assert_includes response.body, "Subtotal Cogito (Expense)"
@@ -766,7 +895,7 @@ module Admin
         get :overview
 
         assert_response :success
-        assert_select "th[scope=rowgroup] span.font-semibold", text: "Backfilled show"
+        assert_select "th[scope=rowgroup] a.font-semibold", text: "Backfilled show"
         # "Agreed total (expenses) £0.00" would read as fully overspent.
         assert_not_includes response.body, "Agreed total"
         assert_not_includes response.body, "not yet allocated"

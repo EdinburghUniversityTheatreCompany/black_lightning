@@ -89,13 +89,13 @@
                        class: input_classes %>
       <% end %>
 
+      <%# No preselect of the first centre — see the budget import's note. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             hint: "Which pot paid them.", html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,
                        options_from_collection_for_select(selectable_cost_centres, :id, :name,
-                                                          selected_cost_centre&.id ||
-                                                            selectable_cost_centres.first&.id),
-                       class: input_classes %>
+                                                          chosen_cost_centre&.id),
+                       include_blank: "Choose a cost centre…", class: input_classes %>
       <% end %>
 
       <%= render "shared/form/paste_or_upload",

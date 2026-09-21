@@ -46,9 +46,21 @@ module Admin
         @rollups = grouped.map { |code, group| ::Reimbursements::NominalCodeRollup.new(code, group) }
         @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, grouped.values.flatten)
         build_area_rollups(grouped.values.flatten)
-        @unattributed_by_code = store.unattributed_actuals.group_by do |actual|
+        unattributed = store.unattributed_actuals
+        @unattributed_by_code = unattributed.group_by do |actual|
           actual.nominal_code.presence || ::Reimbursements::DatabaseStore::NO_CODE_LABEL
         end
+        # The two real health numbers, so they sit above the fold instead of
+        # under ~120 table rows. The over-budget count is taken over the SAME
+        # budgets the cards total (the page's year and cost centre), or the
+        # summary would count lines the tables below do not show.
+        @over_budget_count = grouped.values.flatten.count(&:over_budget?)
+        # COUNT as well as net, because the net is debits less credits and can
+        # legitimately be NEGATIVE (more unattributed income than spend) — a
+        # bare negative in the headline reads as bad news, which everywhere
+        # else in this portal it is.
+        @unattributed_count = unattributed.size
+        @unattributed_total = ::Reimbursements::EusaActual.net(unattributed)
       end
 
       # One budget line by hand. The spreadsheet import is the way a year gets

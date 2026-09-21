@@ -96,6 +96,14 @@ module Reimbursements
                            foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
                            dependent: :destroy
 
+    # EVERY write path lands here — the reconcile apply, an offsetting pair, a
+    # hand fix in a console — so the ledger cannot acquire a second spelling of
+    # one month again. The parser normalises too (so a paste's dedup bucket key
+    # matches what is stored) and this is the backstop under it.
+    # Reconciliation.normalise_period is the ONE definition; it is a pure
+    # function with no Rails dependencies, so the model may call it.
+    before_validation :normalise_period
+
     # The net position of a set of ledger rows, from the spending side: debits
     # less credits, so a supplier refund or a credit note reduces the figure
     # instead of inflating it. Offsetting legs are dropped rather than netted:
@@ -147,6 +155,39 @@ module Reimbursements
 
     def apportioned? = allocations.any?
 
+    # A row nobody has finished with: attached to no claim and no budget, not a
+    # leg of an offsetting pair, not split across income lines.
+    #
+    # The ONE definition, because two screens act on it and must not disagree:
+    # the ledger's default "needs attention" filter — which is the list of what
+    # is left to do after a reconcile — and DatabaseStore#unattributed_actuals,
+    # the overview card that stops unlinked spend disappearing. They were the
+    # same predicate written twice; a row the ledger hid but the card counted
+    # would be money with no screen to resolve it on.
+    def needs_attention?
+      !offset? && self[:expense_id].blank? && self[:budget_id].blank? && !apportioned?
+    end
+
+    # Whether this row answers a free-text search of the ledger: its narrative,
+    # its EUSA reference, its nominal code or either amount.
+    #
+    # Amounts are compared with the separators a person types stripped out
+    # ("£1,340" and "1340.00" are the same row), because the narrative is
+    # frequently a payment-run label and the AMOUNT is the only thing the
+    # operator has to go on.
+    def matches_search?(term)
+      term = term.to_s.strip.downcase
+      return true if term.blank?
+
+      haystacks = [ narrative, narrative_1, ref, nominal_code ].compact.map(&:downcase)
+      return true if haystacks.any? { |field| field.include?(term) }
+
+      number = term.delete("£, ")
+      return false if number.blank?
+
+      [ debit, credit ].compact.any? { |amount| amount.to_s.include?(number) }
+    end
+
     # What a split has to add up to: credits less debits, the same derivation
     # EusaActual.net uses (negated, since this is the income side) and so the
     # exact figure Budget#credit_actual_total would have counted had the row
@@ -180,6 +221,12 @@ module Reimbursements
     end
 
     private
+
+    def normalise_period
+      return if period.nil?
+
+      self.period = Reconciliation.normalise_period(period)
+    end
 
     # number_to_currency with the same unit reimbursements_money uses, so the
     # summary reads identically to every other money figure in the portal.

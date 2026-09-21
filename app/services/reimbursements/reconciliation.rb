@@ -102,7 +102,10 @@ module Reimbursements
           cost_centre: cost_centre,
           ref: col_map.key?(:ref) ? cell.call(:ref) : "",
           date: parsed_date,
-          period: cell.call(:period),
+          # Normalised here, at the one place a pasted sheet becomes rows, so
+          # the dedup bucket key and the offsetting-pair period score compare
+          # the same spelling the ledger stores.
+          period: normalise_period(cell.call(:period)),
           narrative: cell.call(:narrative),
           narrative_1: col_map.key?(:narrative_1) ? cell.call(:narrative_1) : "",
           debit: debit,
@@ -112,6 +115,30 @@ module Reimbursements
       end
 
       rows
+    end
+
+    # The one canonical spelling of an EUSA accounting period, so "6" and "06"
+    # are one month rather than two.
+    #
+    # ZERO-PADDED TO TWO DIGITS is the form EUSA's own exports carry — it is
+    # why Exports::Base#add_sheet has to pin string cells (a bare "03" is
+    # coerced to the number 3 by a spreadsheet otherwise) — and it is the only
+    # form that SORTS: on the unpadded spelling "10" sorts between "1" and "2",
+    # so the ledger's period picker listed the year's months out of order.
+    #
+    # ONLY a purely numeric value is touched, and only up to two digits' worth
+    # (Sage's year-end period 13 included). Anything else — a blank, a "P6", a
+    # whole date — is stored exactly as the sheet spelled it: padding something
+    # we do not understand would be guessing at a figure finance reads back.
+    #
+    # Idempotent by construction, which is what lets it sit on a
+    # before_validation AND in the parser AND in the backfill.
+    def normalise_period(value)
+      stripped = value.to_s.strip
+      return stripped unless /\A\d+\z/.match?(stripped)
+
+      number = stripped.to_i
+      number <= 99 ? format("%02d", number) : stripped
     end
 
     # Canonical key for deduplicating EUSA Actuals rows. Uses narrative (not date,

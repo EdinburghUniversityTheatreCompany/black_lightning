@@ -331,6 +331,17 @@ survive as historical import provenance and are never written. Spec + plan in
     **`expected_outturn` is nil for an Income budget** and renders blank/empty everywhere
     (overview, index, edit, CSV, xlsx): the "never below reality" max reads as *best-case*
     income on that side.
+  - **`Budget#remaining` reads the PLAN (`projected_amount`), not the forecast alone**, so a
+    freshly imported year does not read "-" on every line; `variance` follows it, and is £0.00
+    rather than blank when no forecast has been logged (the plan IS the agreed figure). An
+    INCOME line keeps the forecast-only reading: its plan is a target to raise while
+    `committed_amount` is spend recorded against it, so a fallback there would mean nothing.
+    Nil only with no figure at all, and the screens print "No budget set"
+    (`reimbursements_budget_remaining`) rather than a bare dash.
+  - **"Projected" is the ONE name for that figure** on the index, the overview and the edit card
+    (`reimbursements_budget_projected`, marking `(initial)` where no forecast is logged). They
+    used to say "Current forecast" and "Projected" for two different numbers. The EXPORTS keep
+    both columns and both names — an export column is never renamed or reordered.
   - **`store.budgets` deliberately does NOT preload actuals** — only
     `store.budgets_with_actuals` does (budgets index/overview + the Budgets export sheet).
     Don't "fix" a caller by switching it: the producer's budget `<select>` used to load the
@@ -382,6 +393,13 @@ survive as historical import provenance and are never written. Spec + plan in
     CHECK constraint — the app pins mysql:8.4 everywhere, so CHECK is enforced). An area
     forecast revises the show's agreed total, a budget forecast a category's allocation. It
     can't be area-only: 14 of the 31 live Fringe budgets have no area, Contingency among them.
+  - **A plan of EXACTLY £0 counts as unset, not as a cap of nothing**
+    (`Reimbursements::PlannedAmount#no_budget_set?`, included by Budget AND Area). Production
+    carries many termtime areas with a £0 agreed total and real spend, and reading the 0 as a cap
+    made every one of them over budget in red for ever. Nil, or zero with nothing allocated under
+    it; an area whose £0 total HAS allocated lines is left as a real statement, the lines
+    contradicting the total. `remaining`, `variance`, `unallocated` and (through `remaining`)
+    `over_budget?` all go quiet on it.
   - **`remaining` and `unallocated` are nil, never zero, when nobody agreed a total** — the
     state every backfilled area starts in; a 0 there would read as "fully overspent".
   - **The backfill is a SERVICE, not migration code** (`Reimbursements::AreaBackfill`), because
@@ -737,6 +755,15 @@ survive as historical import provenance and are never written. Spec + plan in
     Approved goes on the next BACS spreadsheet (EUSA pays it again) and emails its payee, and a
     Pending one is named to its budget owners nightly. The preview and the apply screen both count
     the non-terminal rows and say so; don't reword those into a flat "nothing was emailed".
+- **Both import wizards REFUSE to guess the cost centre** (`ReadsImportSource#cost_centre_chosen?`
+  / `#chosen_cost_centre`): they used to preselect `selectable_cost_centres.first` while
+  everywhere else here "none" means "every centre". Preview and apply both re-render step 1 with
+  the paste intact. With ONE centre configured nothing is asked — there is no question with a
+  single answer — and a centre named by `?cost_centre=` / `?cost_centre_id=` still prefills.
+- **A grouped `<select>` needs `as: :grouped_select`.** A plain simple_form `collection:` with
+  `group_method:` renders ONE OPTION PER GROUP — the group's label as the text, its whole array
+  as the value — which looks right on the page and offers nothing selectable. Assert the
+  `<optgroup>` MARKUP, not the ivar: a test reading the controller's groups passes over this.
 - **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless its
   destination carries the same frame — otherwise Turbo replaces the wizard with "Content
   missing". All five escape links out of the budget import shipped broken this way;
@@ -1046,6 +1073,20 @@ survive as historical import provenance and are never written. Spec + plan in
   otherwise scored 5 pairing a cost with unrelated income of the same size). Verified on
   that export: 58 pairs with the gate, 58 without, none cross-nominal, so the tightening
   costs nothing.
+  **The EUSA period has ONE canonical spelling: zero-padded to two digits**
+  (`Reconciliation.normalise_period`, applied in the parser, on `EusaActual`'s
+  `before_validation` and by the `PeriodNormalisation` backfill service a migration invokes).
+  Stored verbatim, the ledger filter offered `05 / 06 / 5 / 6` as four months and `?period=6`
+  returned 12 rows where `?period=06` returned 5; Sage's own export writes the month unpadded.
+  Only a purely numeric value up to two digits is touched. **`actuals_for_period` normalises
+  BOTH sides** rather than comparing stored strings, so a re-paste is still recognised as
+  already imported on a database the backfill has not reached — getting that wrong
+  double-counts real spend.
+  **The ledger opens on `?state=needs_attention`** (`EusaActual#needs_attention?`, the same
+  predicate `DatabaseStore#unattributed_actuals` reads — one definition, or a row the ledger
+  hides while the overview counts it is money with no screen to resolve it on). `include_offsets`
+  with no `state` resolves to the full ledger, since an offsetting leg is never a row needing
+  attention.
   The preview shows every pair as a **ticked checkbox** keyed by row *content plus an
   occurrence index* — content alone collapses two byte-identical pairs into one vote (that
   export contains a byte-identical row group), and the occurrence index survives rows

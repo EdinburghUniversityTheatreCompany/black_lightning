@@ -331,6 +331,54 @@ module Admin
       assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
     end
 
+    # "Unmatched rows saved: N" is a to-do list, and the apply screen's only
+    # action was "Reconcile another month" — no route at all to where those
+    # rows get resolved.
+    test "apply links the unmatched rows to the ledger's needs-attention view" do
+      sign_in @user
+
+      post :apply, params: {
+        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
+      }
+
+      assert_response :success
+      assert_includes response.body, "on the EUSA Actuals ledger"
+      assert_includes response.body,
+                      admin_reimbursements_actuals_path(state: "needs_attention")
+      # A link out of the wizard's Turbo Frame needs "_top", or Turbo renders
+      # "Content missing" into the frame instead of navigating.
+      assert_select "a[data-turbo-frame='_top']"
+    end
+
+    test "apply offers no unmatched-rows link when there were none" do
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_not_includes response.body, "on the EUSA Actuals ledger"
+    end
+
+    test "the preview is headed Step 2, between the paste and the apply steps" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_includes response.body, "Step 2"
+      assert_includes response.body, "Step 3"
+    end
+
+    test "a matched expense on the preview links to its finance edit page" do
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_includes response.body,
+                      edit_admin_reimbursements_expense_edit_path(@expense.record_id)
+    end
+
     test "an already-reconciled expense is not re-matched by a later paste" do
       # @expense was already paid in an earlier period and linked to an imported
       # actual. A later/overlapping export carries a near-identical row (same

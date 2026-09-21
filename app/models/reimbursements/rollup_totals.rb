@@ -18,6 +18,12 @@ module Reimbursements
     def paid_portal = sum_of(&:paid_portal_amount)
     def eusa_actual = sum_of(&:eusa_actual_amount)
 
+    # The two health columns, summed like every other one — a line answering
+    # nil (nobody set a figure; an income line with no forecast) counting as
+    # zero, so a partly-planned group still totals rather than going blank.
+    def remaining = sum_of(&:remaining)
+    def variance  = sum_of(&:variance)
+
     # Blank for an income subtotal, mirroring Budget#expected_outturn: "the
     # greater of the projection and what's already been spent" is a worst-case
     # cost, and the same max over income lines reads as best-case income — the

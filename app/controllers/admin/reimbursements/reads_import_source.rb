@@ -15,6 +15,12 @@ module Admin
     module ReadsImportSource
       extend ActiveSupport::Concern
 
+      included do
+        # The views draw their cost-centre select from it, so a prefilled or
+        # sole centre arrives selected and everything else shows the prompt.
+        helper_method :chosen_cost_centre
+      end
+
       private
 
       def import_source
@@ -45,6 +51,34 @@ module Admin
 
         flash.now[:alert] = self.class::NOTHING_PASTED_ALERT
         false
+      end
+
+      # A whole committee spreadsheet, or a whole sheet of settled claims,
+      # landing in the wrong pot is a large quiet mistake, and the wizards used
+      # to PRESELECT `selectable_cost_centres.first` — while everywhere else in
+      # this portal "none" means "every centre" as a stated safety rule.
+      #
+      # So the operator has to say, and this is where they are made to. It
+      # matters only where there is something to choose: with one centre
+      # configured, `#chosen_cost_centre` below answers it and nothing is asked.
+      #
+      # Shared by both wizards rather than written twice, so they cannot drift
+      # about when a centre is demanded (and jscpd gates duplication at 0).
+      def cost_centre_chosen?
+        return true if chosen_cost_centre
+
+        flash.now[:alert] = self.class::NO_COST_CENTRE_CHOSEN_ALERT
+        false
+      end
+
+      # The centre this import lands in: the one the URL or the form named, or
+      # the sole configured one, where there is genuinely nothing to choose
+      # between. Never `.first` of several — see CostCentre.default's note on
+      # why naming an arbitrary pot is the bug this replaced.
+      def chosen_cost_centre
+        return selected_cost_centre if selected_cost_centre
+
+        selectable_cost_centres.one? ? selectable_cost_centres.first : nil
       end
     end
   end

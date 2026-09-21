@@ -12,11 +12,39 @@
   the same figure would read as best-case income instead.
 </p>
 
+<%# The health check in one line. This page is read monthly to answer "is
+    anything wrong", and both answers used to be buried: the over-budget lines
+    were unmarked entirely, and the unattributed total sat under ~120 rows. %>
+<%= render AlertComponent.new(type: @over_budget_count.positive? ? :warning : :info) do %>
+  <% if @over_budget_count.positive? %>
+    <strong><%= pluralize(@over_budget_count, "line") %></strong>
+    <%= @over_budget_count == 1 ? "is" : "are" %> over budget
+    (<%= link_to "see them below", "#budgets-by-code", class: "underline" %>, badged in red).
+  <% else %>
+    No line is over budget.
+  <% end %>
+  <%# The COUNT is the headline and the net is a parenthetical in the card's
+      own words, because "debits less credits" is legitimately negative when
+      more unattributed income than spend is sitting there — and a bare
+      negative money figure means bad news everywhere else in this portal. %>
+  <% if @unattributed_count.zero? %>
+    Every EUSA ledger row is attributed to a budget.
+  <% else %>
+    <%= link_to pluralize(@unattributed_count, "EUSA ledger row"),
+                "#unattributed-actuals", class: "underline" %>
+    <%= @unattributed_count == 1 ? "is" : "are" %> attributed to no budget
+    (net <%= reimbursements_money(@unattributed_total) %>, debits less credits).
+  <% end %>
+<% end %>
+
 <%
   expected_tip = "The greater of the current projection and what's already been spent or " \
                  "committed, so the number never drops below reality. Blank on income lines."
 %>
 
+<%# The anchors the summary above jumps to. A wrapper rather than an id on the
+    card, since CardComponent takes no id. %>
+<div id="budgets-by-code">
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
     <table class="table table-hover table-sticky-head">
@@ -24,7 +52,7 @@
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
-            <th scope="rowgroup" colspan="9" class="text-left font-semibold py-2">
+            <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
               Nominal code <%= rollup.code %>
             </th>
           </tr>
@@ -47,6 +75,7 @@
     </table>
   </div>
 <% end %>
+</div>
 
 <%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4", flush: true) do %>
   <%# No grand total here: this card regroups exactly the budgets the card above
@@ -71,14 +100,30 @@
   <% end %>
 <% end %>
 
+<div id="unattributed-actuals">
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
+  <%
+    # Reconcile is the paste wizard; it has no per-row linking at all. Link to
+    # a claim, Create expense and Split across budgets all live on the EUSA
+    # Actuals ledger, which this card had been sending people away from.
+    # The same cost centre the tables above are scoped to travels with it.
+    ledger_path = lambda do |extra = {}|
+      admin_reimbursements_actuals_path(
+        { cost_centre: selected_cost_centre&.key,
+          state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION }
+          .merge(extra).compact_blank
+      )
+    end
+  %>
   <p class="text-sm text-gray-600 mb-3">
     EUSA ledger rows that are linked to neither an expense nor a budget, so no line above
     counts them. That includes rows on a nominal code that <em>does</em> have a budget: a
     budget only counts the actuals reconciled to it, because several budgets can share one
     code. Offsetting pairs are left out, since an accrual and its reversal net to zero.
-    Link each row on the Reconcile page, or convert a debit into an expense, so it stops
-    showing here.
+    Resolve them on the
+    <%= link_to "EUSA Actuals ledger", ledger_path.call, class: "text-primary underline" %>
+    — link a row to the claim it paid, convert a debit into an expense, or split a credit
+    across income budgets — and it stops showing here.
   </p>
 
   <% if @unattributed_by_code.empty? %>
@@ -111,7 +156,16 @@
               <% debit = actual.debit&.positive? %>
               <tr class="border-b border-gray-100">
                 <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(actual.date) %></td>
-                <td class="py-2 pr-3"><%= actual.narrative.presence || "-" %></td>
+                <%# Each row is a link to ITSELF on the ledger: the search term
+                    is the row's own ref (or its narrative), plus its period,
+                    so the operator lands on the row they clicked rather than
+                    on 200 rows to scroll. %>
+                <td class="py-2 pr-3">
+                  <%= link_to actual.narrative.presence || "(no narrative)",
+                              ledger_path.call(period: actual.period,
+                                               search: actual.ref.presence || actual.narrative),
+                              class: "text-primary underline" %>
+                </td>
                 <td class="py-2 pr-3"><%= actual.ref.presence || "-" %></td>
                 <td class="py-2 pr-3"><%= debit ? "Debit" : (actual.credit&.positive? ? "Credit" : "-") %></td>
                 <td class="py-2 text-right"><%= reimbursements_money(debit ? actual.debit : actual.credit) %></td>
@@ -131,3 +185,4 @@
     </div>
   <% end %>
 <% end %>
+</div>

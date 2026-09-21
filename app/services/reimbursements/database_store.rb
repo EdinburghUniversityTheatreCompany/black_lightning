@@ -311,9 +311,7 @@ module Reimbursements
     # into a permanent false alarm, which is how a real one stops being read.
     def unattributed_actuals
       eusa_actuals_for_cost_centre
-        .reject do |a|
-          a.offset? || a[:expense_id].present? || a[:budget_id].present? || a.apportioned?
-        end
+        .select(&:needs_attention?)
         .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 
@@ -788,8 +786,15 @@ module Reimbursements
 
     # Actuals already imported for a given EUSA period (P1..P12), used to dedup
     # a freshly-pasted export against what's already stored for that period.
+    # Both sides go through Reconciliation.normalise_period rather than
+    # comparing the stored strings. The write paths normalise, and the backfill
+    # normalised what was already there — but a row that slipped in unpadded
+    # (a console fix predating this, a database the backfill has not reached)
+    # must still be recognised as already imported, or re-pasting the month
+    # double-counts it in the ledger and every rollup.
     def actuals_for_period(period)
-      eusa_actuals.select { |a| a.period == period }
+      key = Reconciliation.normalise_period(period)
+      eusa_actuals.select { |a| Reconciliation.normalise_period(a.period) == key }
     end
 
     def find_actual(record_id)

@@ -124,11 +124,13 @@ module Admin
 
       # "Split" alone is the state the row is in, not what it means; the
       # shares are the whole point of having split it.
+      # ?state=all: a split row is a row somebody has finished with, so the
+      # index's default "needs attention" view leaves it out by design.
       test "the ledger row names its shares and offers the undo" do
         sign_in @user
         post_split(two_way_split)
 
-        get :index
+        get :index, params: { state: "all" }
 
         assert_response :success
         assert_match "Show A £2,500.00; Show B £1,500.00", response.body

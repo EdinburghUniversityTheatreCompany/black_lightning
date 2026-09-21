@@ -49,6 +49,11 @@ module Admin
         @graph ||= graph_builder.call
       end
 
+      # Graph is the only integration to probe today. This stays an ARRAY so
+      # adding the next one is a one-line change, and each probe is rescued on
+      # its own so one dead service renders a failed row rather than 500ing the
+      # page. (That explanation used to sit in the view's visible copy — a code
+      # comment rendered to finance users; keep it here.)
       def run_checks
         [ graph_check ]
       end

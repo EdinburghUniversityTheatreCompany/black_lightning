@@ -17,9 +17,13 @@ module Reimbursements
     #   spent or committed, so the number never drops below reality. EMPTY for an
     #   Income budget: the same max there is best-case income, the opposite
     #   direction, so a number would mislead (see Budget#expected_outturn).
-    # * Remaining (forecast - committed) and Variance (forecast - initial) are
-    #   blank without a forecast, and Variance is legitimately negative when the
-    #   forecast came in under the original plan.
+    # * Remaining (projected - committed) and Variance (projected - initial)
+    #   read the PLAN, not the forecast alone, so a line carrying only an
+    #   initial figure still reports both rather than two blanks. Remaining is
+    #   blank only when nobody set a figure at all (and for an income line with
+    #   no forecast — see Budget#remaining); Variance is blank without an
+    #   initial budget, and is legitimately negative when the plan came in
+    #   under the original.
     # * Area — blank for the 14-of-31 live Fringe budgets that have none. Off
     #   budget.area rather than store.areas: both collections this exporter is
     #   handed already preload area: :owners for owner_names above.

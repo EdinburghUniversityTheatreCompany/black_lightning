@@ -128,8 +128,13 @@ module Admin
         get new_expense_admin_reimbursements_actual_path(actual.record_id)
 
         assert_response :success
-        assert_both_shows_named(option_texts("select#reimbursements_expense_form_budget_record_id"),
-                                "the actuals conversion picker")
+        # This picker appends the line's nominal code to every option (the
+        # groups are ordered by the row's own code, so the code has to be
+        # checkable). Compare on the part before that suffix, which is still
+        # the label every other picker prints.
+        labels = option_texts("select#reimbursements_expense_form_budget_record_id")
+                 .map { |text| text.split(" · ").first }
+        assert_both_shows_named(labels, "the actuals conversion picker")
       end
 
       # --- Read-only surfaces -------------------------------------------------
@@ -179,7 +184,14 @@ module Admin
         assert_equal [ "Edit Cogito: Marketing", "Edit Contingency", "Edit Improverts: Marketing" ],
                      css_select("a[aria-label^='Edit ']").map { |link| link["aria-label"] }.sort
         # The row itself stays bare: the area is the heading right above it.
-        assert_includes css_select("td span.font-medium").map { |cell| cell.text.strip }, "Marketing"
+        # The name is a LINK to the same form now (the Edit button sits off
+        # screen at 1366px until the table is scrolled), so it is an <a> rather
+        # than the <span> it used to be.
+        assert_includes css_select("td a.font-medium").map { |cell| cell.text.strip }, "Marketing"
+        # And that link carries the QUALIFIED name for a screen reader, without
+        # becoming a second control announcing "Edit …" on the same row.
+        assert_includes css_select("td a.font-medium").map { |link| link["aria-label"] },
+                        "Cogito: Marketing"
       end
 
       test "the overview's nominal-code card names the show, and its area card does not repeat it" do

@@ -1,14 +1,20 @@
 <%# locals: (budget:, people_by_id:) %>
 <%
-  over_flag = if budget.over_budget?
-                render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
-              elsif budget.over_initial_budget?
-                render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
-              end
+  # The line's name IS its link to the edit form. At 1366x768 the Edit button
+  # in the last column sits off the right-hand edge of the table, and the name
+  # is the first thing on the row — so the one click this table exists for is
+  # reachable without scrolling sideways.
   name = safe_join([
-    content_tag(:span, budget.name.presence || "-", class: "font-medium"),
+    # The accessible name is the QUALIFIED one, because the rowgroup heading
+    # above is not announced with the link and three links reading "Marketing"
+    # are ambiguous. It deliberately does NOT start with "Edit": that is the
+    # button at the end of the row, and two controls on one row both
+    # announcing "Edit Cogito: Marketing" is worse than one.
+    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
+            class: "font-medium text-primary underline",
+            "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
-    over_flag
+    reimbursements_budget_health_badge(budget)
   ].compact, " ")
   # "No owner" is a warning only for a live (Visible) budget — Hidden
   # overhead lines (payroll, NI, contracts) will never have a producer
@@ -25,37 +31,20 @@
             else
               render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
             end
-  # Variance = forecast vs initial: POSITIVE means the forecast grew past
-  # the original plan (the concerning direction) -> red; negative means it
-  # shrank (spending less than planned) -> green. Remaining is the money
-  # actually left, so a negative one is red.
-  variance_class = if budget.variance.nil? || budget.variance.zero? then nil
-                   elsif budget.variance.positive? then "text-danger"
-                   else "text-success"
-                   end
-  variance_title = if budget.variance&.positive? then "Forecast is above the initial budget"
-                   elsif budget.variance&.negative? then "Forecast is below the initial budget"
-                   end
-  remaining_class = "text-danger font-medium" if budget.remaining&.negative?
 %>
 <tr>
   <td><%= name %></td>
   <td><%= budget.budget_type %></td>
   <td><%= visible %></td>
   <td><%= reimbursements_money(budget.initial_budget) %></td>
-  <td><%= reimbursements_money(budget.current_forecast) %></td>
+  <td><%= reimbursements_budget_projected(budget) %></td>
   <td><%= reimbursements_money(budget.committed_amount) %></td>
   <td><%= reimbursements_money(budget.pipeline_amount) %></td>
   <td><%= reimbursements_money(budget.paid_portal_amount) %></td>
   <td><%= reimbursements_money(budget.eusa_actual_amount) %></td>
   <td><%= reimbursements_money(budget.expected_outturn) %></td>
-  <td>
-    <%= content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class,
-          title: ("Over budget: nothing left to spend" if budget.remaining&.negative?)) %>
-  </td>
-  <td>
-    <%= content_tag(:span, reimbursements_money(budget.variance), class: variance_class, title: variance_title) %>
-  </td>
+  <td><%= reimbursements_budget_remaining(budget) %></td>
+  <td><%= reimbursements_budget_variance(budget) %></td>
   <td><%= owners %></td>
   <td>
     <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),

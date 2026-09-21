@@ -45,6 +45,45 @@ select.simple-select2 {
     box-shadow: inset 0 -1px 0 var(--color-gray-200);
   }
 
+  /* A rowgroup heading (the budgets index's area rows) sticks UNDER the column
+     headers, so a row reading "Set · 439998" always has the show it belongs to
+     on screen. Measured at 1366x768 and 1440x900: the header row is 57px tall
+     at both, and the heading has to clear it or it pins on top of the columns
+     it is grouping. Re-measure if the header's padding or font changes.
+
+     Cells, not the <tr> — the same reason the header above sticks its cells:
+     Safari and older Chrome ignore `position: sticky` on a <tr>. z-10 keeps it
+     over the row content and under the header (z-20). */
+  .table-sticky-head>tbody>tr>th[scope="rowgroup"] {
+    @apply sticky z-10 bg-gray-50;
+
+    top: 57px;
+
+    /* Same inset-shadow trick as the header: a sticky cell's own border is
+       dropped by `border-collapse: collapse` once it detaches. */
+    box-shadow: inset 0 -1px 0 var(--color-gray-200);
+  }
+
+  /* Pins a table's LAST column to the right edge of its scroll box, for a table
+     whose last column is the row's action. The budgets index is 1218px of
+     columns in a 1012px box at 1366x768, so the Edit button sat 87px off the
+     right-hand edge of the screen and the one click the table exists for meant
+     scrolling sideways first.
+
+     Opaque, or the row scrolls through underneath it. The header's corner cell
+     needs BOTH offsets and a z-index above its own row's cells. */
+  .table-pinned-actions>tbody>tr>td:last-child {
+    @apply sticky right-0 z-10 bg-white;
+
+    box-shadow: inset 1px 0 0 var(--color-gray-200);
+  }
+
+  .table-pinned-actions.table-sticky-head>thead>tr>th:last-child {
+    @apply right-0 z-30;
+
+    box-shadow: inset 1px 0 0 var(--color-gray-200), inset 0 -1px 0 var(--color-gray-200);
+  }
+
   /* Scroll box for a wide table that needs its own horizontal scrollbar.
      `overflow-x: auto` forces the other axis to compute to `auto` too, which
      makes this element — not <main> — the scrollport the sticky header above

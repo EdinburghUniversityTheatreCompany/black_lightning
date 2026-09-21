@@ -215,6 +215,77 @@ module ReimbursementsHelper
     Reimbursements::EusaActual.net(actuals)
   end
 
+  # The over-budget / over-original-budget pill, or nothing. ONE derivation,
+  # because the budgets index and the budget overview are two views of the
+  # same lines and a line badged red on one and plain black on the other is
+  # the disagreement the overview audit opened with. BudgetHealth owns the
+  # rules; this owns how they read.
+  def reimbursements_budget_health_badge(budget)
+    if budget.over_budget?
+      render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
+    elsif budget.over_initial_budget?
+      render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
+    end
+  end
+
+  # The line's CURRENT PLAN: the latest forecast, falling back to the initial
+  # figure. One label and one figure on the index, the overview and the edit
+  # card — they used to print "Current forecast" and "Projected", two names
+  # for two different numbers, side by side in the same portal.
+  #
+  # The fallback is MARKED rather than hidden: "the committee's opening figure"
+  # and "a figure finance has since revised" are different claims, and the
+  # difference is the whole reason the forecast log exists.
+  def reimbursements_budget_projected(budget)
+    if budget.projected_amount.nil?
+      return content_tag(:span, reimbursements_money(nil), class: "text-gray-400",
+                         title: "No forecast has been logged and no initial budget was set.")
+    end
+    return reimbursements_money(budget.projected_amount) if budget.current_forecast
+
+    content_tag(:span, title: "No forecast has been logged, so this is the initial budget.") do
+      safe_join([ reimbursements_money(budget.projected_amount),
+                  content_tag(:span, "(initial)", class: "text-xs text-gray-500") ], " ")
+    end
+  end
+
+  # A budget line's Remaining, in the ONE form every screen prints it — the
+  # budgets index, the budget edit card and a producer's My Budgets.
+  #
+  # Nil is the case this exists for. Budget#remaining is nil only when nobody
+  # set a figure at all (no forecast and no initial budget), and a bare "-"
+  # there reads as a broken column rather than as an unplanned line: it was on
+  # every line of a freshly imported year. It says so instead. A 0 would be
+  # worse still — everywhere else in this portal a Remaining of nothing means
+  # fully spent.
+  def reimbursements_budget_remaining(budget)
+    if budget.remaining.nil?
+      return content_tag(:span, "No budget set", class: "text-gray-500",
+                         title: "No forecast has been logged and no initial budget was set, " \
+                                "so there is nothing left to be left of.")
+    end
+
+    content_tag(:span, reimbursements_money(budget.remaining),
+                class: ("text-danger font-medium" if budget.remaining.negative?),
+                title: ("Over budget: nothing left to spend" if budget.remaining.negative?))
+  end
+
+  # And its Variance, coloured the one way: POSITIVE means the plan grew past
+  # the figure the committee agreed (the concerning direction) so it is red;
+  # negative means it shrank, so green. Zero — the plan still being the agreed
+  # figure, which is what an unrevised line reads — is neither.
+  def reimbursements_budget_variance(budget)
+    variance = budget.variance
+    if variance.nil?
+      return content_tag(:span, reimbursements_money(nil), class: "text-gray-400",
+                         title: "No initial budget was agreed for this line, so there is " \
+                                "nothing for the current plan to have drifted from.")
+    end
+
+    content_tag(:span, reimbursements_money(variance),
+                class: variance_colour(variance), title: variance_title(variance))
+  end
+
   # Comma-joined owner names for a budget, resolving its owner_ids against a
   # {record_id => Person} lookup. Unknown ids are skipped.
   def budget_owner_names(budget, people_by_id)
@@ -288,5 +359,19 @@ module ReimbursementsHelper
     label, tip = PRODUCER_STATUS.fetch(status, [ status, nil ])
     render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(status)).with_content(label))
       .then { |html| tip ? content_tag(:span, html, title: tip, class: "inline-block") : html }
+  end
+
+  private
+
+  def variance_colour(variance)
+    return nil if variance.zero?
+
+    variance.positive? ? "text-danger" : "text-success"
+  end
+
+  def variance_title(variance)
+    return "The current plan is still the initial budget" if variance.zero?
+
+    variance.positive? ? "The plan is above the initial budget" : "The plan is below the initial budget"
   end
 end
