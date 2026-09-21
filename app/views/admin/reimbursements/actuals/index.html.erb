@@ -60,13 +60,15 @@
 
 <div class="my-2 flex flex-wrap items-center justify-between gap-3">
   <p class="mb-0 text-sm text-gray-600">
+    <%# The headline count sits outside the branch: both readings lead on a
+        count, and herb-lint flags a tag repeated across every branch. %>
+    <strong><%= pluralize(needs_attention ? @needs_attention_count : @actuals.total_count, "row") %></strong>
     <% if needs_attention %>
-      <strong><%= pluralize(@needs_attention_count, "row") %></strong>
       <%= @needs_attention_count == 1 ? "needs" : "need" %> attention
       <%= "of #{pluralize(@matching_count, 'row')} here" if @matching_count != @needs_attention_count %><%= " (period #{@period})" if @period.present? %>.
       A row attached to a claim or a budget is finished with, and is left out.
     <% else %>
-      <strong><%= pluralize(@actuals.total_count, "row") %></strong> shown<%= " (period #{@period})" if @period.present? %>,
+      shown<%= " (period #{@period})" if @period.present? %>,
       <%= @needs_attention_count %> of them needing attention.
     <% end %>
   </p>
