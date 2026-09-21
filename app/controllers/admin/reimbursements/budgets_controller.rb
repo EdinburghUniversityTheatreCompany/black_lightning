@@ -15,6 +15,8 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class BudgetsController < FinanceController
+      include ListsClaims
+
       # A loose line's page is shared with its owners, who hold no finance
       # permission — the same union, and the same 404, as an area's page.
       skip_before_action :authorize_finance!, only: %i[show]
@@ -27,7 +29,7 @@ module Admin
       def show
         @title = @budget.name
         @summary = ::Reimbursements::SpendSummary.for_budget(@budget)
-        @claims = paginate_budget_claims(claims_for_budget(@budget))
+        load_claims([ @budget ])
         @changes = ::Reimbursements::BudgetChanges.for_budget(@budget)
       end
 
@@ -208,19 +210,6 @@ module Admin
         return true if can?(:manage, :reimbursements_finance)
 
         current_person.present? && budget.owner_ids.include?(current_person.record_id)
-      end
-
-      def claims_for_budget(budget)
-        store.expenses
-             .select { |expense| expense.budget&.record_id == budget.record_id }
-             .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
-             .reverse
-      end
-
-      def paginate_budget_claims(claims)
-        @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
-        @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
-        paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
       end
 
       def set_budget

@@ -129,10 +129,6 @@ ChaosRails::Application.routes.draw do
 
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
-      # A loose line's own page — the same shape as an area's, for a budget that
-      # belongs to no area. Owner-visible, so it is not finance-gated.
-      resources :budgets, only: %i[show]
-
       resources :budgets, only: %i[index new create edit update] do
         collection do
           get :overview
@@ -143,6 +139,13 @@ ChaosRails::Application.routes.draw do
           delete :delete_forecast
         end
       end
+
+      # A loose line's own page — the same shape as an area's, for a budget that
+      # belongs to no area. Owner-visible, so it is not finance-gated.
+      #
+      # Declared AFTER the block above on purpose: a member :show route matches
+      # any single segment, so declared first it swallows /budgets/overview.
+      resources :budgets, only: %i[show]
 
       # Multi-budget forecast revisions: one shared date + note across several
       # budgets (e.g. after a budget meeting).

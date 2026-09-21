@@ -159,7 +159,10 @@ module Admin
                          &.at_css("dd")&.text&.strip
       end
 
-      test "My Budgets names the show on each budget card" do
+      # My Budgets lists one row per SHOW now, not one card per line, so the
+      # thing that has to be unambiguous is the area's name rather than the
+      # qualified line name. Three production lines are called "Marketing".
+      test "My Budgets names each show it lists" do
         @cogito.owners << @person
         @improverts.owners << @person
         sign_in @producer
@@ -167,10 +170,9 @@ module Admin
         get admin_reimbursements_my_budgets_path
 
         assert_response :success
-        titles = css_select("span.card-title").map { |heading| heading.text.strip }
-        assert_includes titles, "Cogito: Marketing"
-        assert_includes titles, "Improverts: Marketing"
-        assert_not_includes titles, "Marketing"
+        names = css_select("tbody tr td a.font-semibold").map { |link| link.text.strip }
+        assert_equal [ "Cogito", "Improverts" ], names.sort
+        assert_not_includes names, "Marketing"
       end
 
       # The rowgroup heading above the row is not announced with the button, so

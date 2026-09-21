@@ -15,6 +15,8 @@ module Admin
     # the bare top-level params otherwise, so a params hash posted directly
     # (as a controller test does) works exactly like a real form submission.
     class AreasController < FinanceController
+      include ListsClaims
+
       # The area PAGE is shared with budget owners, who do not hold the finance
       # permission, so #show steps out from under FinanceController's gate and
       # applies the union instead. Everything else here stays finance-only.
@@ -45,7 +47,7 @@ module Admin
         @title = @area.name
         @summary = ::Reimbursements::SpendSummary.for_area(@area)
         @expense_lines, @income_lines = @area.budgets.partition { |line| !line.income? }
-        @claims = paginate_claims(claims_for(@area.budgets))
+        load_claims(@area.budgets)
         @changes = ::Reimbursements::BudgetChanges.for_area(@area)
         @people_by_id = store.people.index_by(&:record_id)
       end
@@ -118,23 +120,6 @@ module Admin
         return true if can?(:manage, :reimbursements_finance)
 
         current_person.present? && area.owner_ids.include?(current_person.record_id)
-      end
-
-      # Claims charged to any of this area's lines, newest first. Read off the
-      # store's one preloaded expense list (batch, budget, person and receipts
-      # ride along) rather than a query per line.
-      def claims_for(lines)
-        ids = lines.map(&:record_id).to_set
-        store.expenses
-             .select { |expense| ids.include?(expense.budget&.record_id) }
-             .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
-             .reverse
-      end
-
-      def paginate_claims(claims)
-        @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
-        @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
-        paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
       end
 
       def set_area

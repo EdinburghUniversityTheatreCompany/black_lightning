@@ -16,7 +16,7 @@ module Admin
     class AreaClaimsComponent < ViewComponent::Base
       # A component gets no helpers of its own, and these two are how every
       # money figure and date in this portal is written.
-      delegate :reimbursements_money, :reimbursements_date, to: :helpers
+      delegate :reimbursements_money, :reimbursements_date, :paginate, to: :helpers
 
       def initialize(claims:, counts:, tab:, finance:, area: nil, budget: nil, current_person: nil)
         @claims = claims
