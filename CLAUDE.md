@@ -1039,14 +1039,20 @@ survive as historical import provenance and are never written. Spec + plan in
   draft was already sent by hand in Outlook must never be silently rebuilt into a second
   live submission.
 - **Exports** (`app/services/reimbursements/exports/`): one exporter per resource
-  (`Expenses`, `Actuals`, `Budgets`, `People`, `Batches`) under `Exports::Base`, each
+  (`Expenses`, `Actuals`, `Budgets`, `Areas`, `Forecasts`, `People`, `Batches`) under
+  `Exports::Base`, each
   owning its `HEADERS` and a private `#row` **once**. That single definition drives both
   the per-view "Download CSV" (`FinanceController#send_export`, called from each index's
   `format.csv`, with the link built as
   `request.query_parameters.merge(format: :csv)` so the on-screen filters carry through)
   **and** the matching sheet of the combined workbook (`Exports::Workbook`,
-  `ExportsController#show` at `GET /admin/reimbursements/export`). Add a column in the
-  exporter, not in a controller. Conventions: amounts stay numeric (no "£"), dates are
+  `ExportsController#download`). Add a column in the exporter, not in a controller.
+  **`GET /admin/reimbursements/export` is a PAGE** — the sheet list, each sheet's row count
+  under the current scope, and the year and centre selectors — with `#download` as a separate
+  action rather than a `?format=xlsx`, so one controller's file needs no global MIME
+  registration. The workbook opens with an "About this export" COVER SHEET recording the date,
+  year, centre and sheet list: the scope used to be mixed inside the file (Budgets followed the
+  active year, everything else was all of history) and stated nowhere. Conventions: amounts stay numeric (no "£"), dates are
   ISO 8601 strings with blanks left empty (not the on-screen "-"), and **every cell goes
   through `Reimbursements::CellSanitizer`** — the shared formula-injection guard that
   `BacsXlsx` uses too. `Base#add_sheet` pins every String cell to Axlsx `:string`, or a
