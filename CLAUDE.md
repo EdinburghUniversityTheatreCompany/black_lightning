@@ -183,6 +183,14 @@ gitignored `mise.local.toml` still sits at the root and still layers on top. Pre
   builds; `macos-x64` (Intel Mac) falls back to a source compile.
 
 - **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
+- **The pre-commit hook AUTOCORRECTS, so a green test run before `git commit` does not
+  guarantee a green tree after it.** When the commit output says `rubocop – N files modified`,
+  re-run the tests for those files: the autocorrect is applied and committed without anything
+  re-checking it. `Rails/OutputSafety` is the one that has bitten — it rewrites
+  `"…".html_safe` into `safe_join(...)`, which is a VIEW HELPER, so in a PORO (a composer, an
+  exporter, anything rendered from a job) the corrected code raises `NoMethodError` at runtime
+  and the commit looks clean. Where the string really is safe by construction, keep `html_safe`
+  and disable the cop on that line with the reason.
 - **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
   `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
   `debride`/`flay`/`jscpd` (dead-code + duplication), `gitleaks`, `actionlint` + `zizmor`

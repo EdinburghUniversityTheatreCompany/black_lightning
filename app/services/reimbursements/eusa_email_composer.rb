@@ -111,7 +111,13 @@ module Reimbursements
 
       expanded = text.gsub(PLACEHOLDER) { |match| values.fetch(Regexp.last_match(1), match) }
       paragraphs = ERB::Util.html_escape(expanded).split(/\r?\n\s*\r?\n/)
-      safe_join(paragraphs.map { |para| "<p>#{para.gsub(/\r?\n/, '<br>')}</p>" }, "\n")
+      markup = paragraphs.map { |para| "<p>#{para.gsub(/\r?\n/, '<br>')}</p>" }.join("\n")
+      # Safe because the operator's text was escaped on the line above and the
+      # only markup here is the <p> and <br> this method wrote itself. NOT
+      # safe_join, which rubocop's Rails/OutputSafety autocorrect reaches for:
+      # it is a view helper, and this is a PORO rendered from a job as often as
+      # from a request.
+      markup.html_safe # rubocop:disable Rails/OutputSafety
     end
   end
 end
