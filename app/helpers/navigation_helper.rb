@@ -101,6 +101,7 @@ module NavigationHelper
       children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days" }
       children << { group: "Setup", title: "Cost centres", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" }
       children << { group: "Setup", title: "Email & integrations", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" }
+      children << { group: "Setup", title: "What the words mean", path: admin_reimbursements_glossary_path, fa_icon: "fa-book" }
     end
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 

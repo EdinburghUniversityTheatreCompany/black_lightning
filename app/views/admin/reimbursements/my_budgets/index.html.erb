@@ -1,5 +1,9 @@
 <p class="mb-4 text-gray-600">
   The shows and budgets you are responsible for.
+  <%# The owner meets "Left", "waiting" and "endorse" here and nowhere else,
+      so the glossary has to be reachable from this page rather than only from
+      the finance sidebar. %>
+  <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
 
 <%= render CardComponent.new(title: "Waiting for your sign-off") do %>

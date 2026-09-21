@@ -9,6 +9,11 @@
   update.
 </p>
 
+<%= render "admin/reimbursements/shared/glossary_terms",
+           terms: ::Reimbursements::Glossary.terms(:initial_budget, :projected, :committed,
+                                                   :pipeline, :remaining, :expected_outturn,
+                                                   :variance, :eusa_actual) %>
+
 <p class="mb-3 flex flex-wrap gap-2">
   <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path(year: selected_financial_year&.key),
         class: btn_classes(:secondary, :sm) %>

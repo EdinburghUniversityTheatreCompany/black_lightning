@@ -8,7 +8,12 @@
   Review submitted expenses before they go to EUSA. Each card shows a live modulus
   check on the details the money will actually be paid to, plus any duplicate or override
   warnings. Fix anything that needs attention, then approve or reject.
+  <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
+
+<%= render "admin/reimbursements/shared/glossary_terms",
+           summary: "What the words on these cards mean",
+           terms: ::Reimbursements::Glossary.terms(:statuses, :endorse, :committed, :batch) %>
 
 <% awaiting_owner_total = @awaiting_owner.sum { |e| e.amount || 0 } %>
 <% to_approve_total = @to_approve.sum { |e| e.amount || 0 } %>

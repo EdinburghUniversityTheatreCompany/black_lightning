@@ -1,0 +1,30 @@
+<p class="mb-4 text-gray-600">
+  Every word this portal is built on, in one place. Several of these are ordinary English used in
+  a particular way here, and three or four of the figures have a rule that surprises people the
+  first time — those rules are stated rather than left to be discovered.
+</p>
+
+<% @sections.each do |(heading, terms)| %>
+  <%= render CardComponent.new(title: heading, html_class: "mb-4") do %>
+    <dl class="flex flex-col gap-3">
+      <% terms.each do |term| %>
+        <div>
+          <dt class="font-medium" id="glossary-<%= term.key %>"><%= term.term %></dt>
+          <dd class="text-sm text-gray-700">
+            <%= term.definition %>
+            <% if term.also.present? %>
+              <span class="text-gray-500">Also: <%= term.also %>.</span>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+<% end %>
+
+<p class="mt-4 text-sm text-gray-500">
+  <%# The one rule that catches everybody, and it is not a word: it is why two
+      figures for the same claim differ by a fifth. %>
+  Budget figures exclude VAT; a claim's own total is the gross amount EUSA pays. That is why a
+  £120 claim moves a budget line by £100.
+</p>

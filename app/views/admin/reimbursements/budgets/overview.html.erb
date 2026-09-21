@@ -12,6 +12,11 @@
   the same figure would read as best-case income instead.
 </p>
 
+<%= render "admin/reimbursements/shared/glossary_terms",
+           terms: ::Reimbursements::Glossary.terms(:nominal_code, :area, :projected, :committed,
+                                                   :pipeline, :remaining, :eusa_actual,
+                                                   :unattributed) %>
+
 <%# The health check in one line. This page is read monthly to answer "is
     anything wrong", and both answers used to be buried: the over-budget lines
     were unmarked entirely, and the unattributed total sat under ~120 rows. %>

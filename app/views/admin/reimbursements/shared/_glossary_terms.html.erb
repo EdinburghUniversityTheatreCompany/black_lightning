@@ -1,0 +1,21 @@
+<%# locals: (terms:, summary: "What these columns mean") %>
+<%# The definitions where the reader is, not only on the glossary page.
+    A <details> rather than a title= tooltip: a tooltip is invisible on a
+    touch screen and to the keyboard, and these are the figures the whole
+    portal is read for. Shares Reimbursements::Glossary with the glossary
+    itself, so a column note cannot drift from its definition. %>
+<details class="mb-3 rounded border border-gray-200 bg-gray-50 p-3">
+  <summary class="cursor-pointer text-sm font-medium"><%= summary %></summary>
+  <dl class="mt-2 flex flex-col gap-2">
+    <% terms.each do |term| %>
+      <div>
+        <dt class="text-sm font-medium"><%= term.term %></dt>
+        <dd class="text-sm text-gray-700"><%= term.definition %></dd>
+      </div>
+    <% end %>
+  </dl>
+  <p class="mt-2 mb-0 text-sm">
+    <%= link_to "Every word this portal uses", admin_reimbursements_glossary_path,
+                class: "underline" %>
+  </p>
+</details>

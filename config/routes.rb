@@ -199,6 +199,11 @@ ChaosRails::Application.routes.draw do
             "/admin/reimbursements/budget_import?year=#{CGI.escape(path_params[:financial_year_key])}"
           }
 
+      # What the words mean. On the BASE portal permission, not the finance
+      # one: a budget owner reads "committed" and "endorse" on their area page,
+      # and a producer reads "Submitted" on a claim they sent weeks ago.
+      get "glossary", to: "glossary#show", as: :glossary
+
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
       # Bulk actions over the ticked Pending expenses (static paths, declared
