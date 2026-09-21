@@ -288,14 +288,114 @@ module Admin
         patch :update, params: {
           id: area.record_id, name: "Cogito",
           budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320",
-                                         initial_budget: "£1,200", active: "0" } }
+                                         active: "0", cost_centre_id: "999" } }
         }
 
         budget = area.reload.budgets.last
-        # AR casts a raw String to a decimal column with to_d, so a permitted
-        # "£1,200" would have stored as 0 — a figure nobody typed.
-        assert_nil budget.initial_budget
-        assert budget.active
+        assert budget.active, "a field the form never renders must not be writable through it"
+        refute_equal 999, budget.cost_centre_id
+      end
+
+      # --- Type and figure on a nested row ------------------------------------
+      # Without them a line typed on the area form landed as an Expense with no
+      # plan at all, and an unbudgeted line reports "no budget set" everywhere.
+
+      test "a new nested row takes its type and initial budget" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { name: "Ticket income", nominal_code: "301000",
+                                         budget_type: "Income", initial_budget: "5000" } }
+        }
+
+        budget = area.reload.budgets.last
+        assert_equal "Income", budget.budget_type
+        assert_equal BigDecimal("5000"), budget.initial_budget
+      end
+
+      # AR casts a raw String to a decimal column with to_d, so a figure handed
+      # through unparsed would store "£1,200" as 0 — money nobody typed.
+      test "a typed amount goes through the parser" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
+                                         initial_budget: "£1,200" } }
+        }
+
+        assert_equal BigDecimal("1200"), area.reload.budgets.last.initial_budget
+      end
+
+      test "an unreadable amount blocks the save and names itself" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          patch :update, params: {
+            id: area.record_id, name: "Cogito",
+            budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
+                                           initial_budget: "about a grand" } }
+          }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/isn't an amount/, response.body)
+      end
+
+      # A plan of exactly £0 is a figure nobody filled in (PlannedAmount), so a
+      # blank must not be written as one — and on an EXISTING row it must leave
+      # the figure alone rather than wiping it.
+      test "a blank amount leaves an existing line's figure where it is" do
+        area = create_reimbursements_area(name: "Cogito")
+        budget = create_reimbursements_budget(name: "Marketing", area: area,
+                                              initial_budget: BigDecimal("800"))
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { id: budget.id, name: "Marketing",
+                                         nominal_code: "432320", initial_budget: "" } }
+        }
+
+        assert_equal BigDecimal("800"), budget.reload.initial_budget
+      end
+
+      test "a blank amount on a new line leaves it with no plan rather than a £0 one" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
+                                         initial_budget: "" } }
+        }
+
+        assert_nil area.reload.budgets.last.initial_budget
+      end
+
+      test "an unknown budget type is refused" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          patch :update, params: {
+            id: area.record_id, name: "Cogito",
+            budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
+                                           budget_type: "Nonsense" } }
+          }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/valid budget type/, response.body)
+      end
+
+      test "the form renders a type and an amount for each row" do
+        area = create_reimbursements_area(name: "Cogito")
+        create_reimbursements_budget(name: "Marketing", area: area)
+
+        get :edit, params: { id: area.record_id }
+
+        assert_response :success
+        assert_select "select[name*='[budget_type]']"
+        assert_select "input[name*='[initial_budget]']"
       end
     end
   end

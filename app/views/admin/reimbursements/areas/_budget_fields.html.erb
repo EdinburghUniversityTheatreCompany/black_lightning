@@ -7,6 +7,26 @@
   <div class="w-40">
     <%= f.input :nominal_code, label: "Nominal code", wrapper_html: { class: "mb-0" } %>
   </div>
+  <%# Type and figure, because without them a line typed here landed as an
+      Expense with no plan at all — and an unbudgeted line reports "no budget
+      set" everywhere, which is right about the data and useless to the
+      committee that just agreed a number for it. Both optional: an area whose
+      split is not decided yet is a real state, and an EXISTING row that posts
+      a blank keeps the figure it has. %>
+  <div class="w-40">
+    <%# NOT simple-select2: Tom Select sizes its own wrapper to its content,
+        which in this fixed-width row rendered a 64px box with no chevron
+        beside three full-width inputs. A two-option field in a compact row
+        wants the plain styled select. %>
+    <%= f.input :budget_type, label: "Type", collection: ::Reimbursements::Budget::TYPES,
+                include_blank: false, wrapper_html: { class: "mb-0" } %>
+  </div>
+  <div class="w-40">
+    <%= f.input :initial_budget, label: "Initial budget",
+                input_html: { value: reimbursements_amount_value(f.object.initial_budget),
+                              inputmode: "decimal", autocomplete: "off" },
+                wrapper_html: { class: "mb-0" } %>
+  </div>
   <% unless f.object.new_record? %>
     <%# Sets area_id to "" on submit — the same unchecked-value trick
         Rails' own check_box uses, repurposed to blank a foreign key instead

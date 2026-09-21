@@ -29,7 +29,7 @@ module Admin
       # initial_budget would be cast by AR with to_d and store a "£1,200" as
       # 0, and a posted cost_centre_id/financial_year_id could move the line
       # into another pot or year.
-      BUDGET_ROW_FIELDS = %i[id name nominal_code area_id].freeze
+      BUDGET_ROW_FIELDS = %i[id name nominal_code area_id budget_type initial_budget].freeze
 
       # GET /admin/reimbursements/areas
       def index
@@ -170,12 +170,44 @@ module Admin
         owner_ids_error(area_form_params[:owner_ids]) || budget_rows_error
       end
 
-      # The nested budget rows, filtered to the fields the form renders.
+      # The nested budget rows, filtered to the fields the form renders, with
+      # each row's typed amount PARSED.
+      #
+      # Parsed here rather than handed through: AR casts a String to a decimal
+      # column with #to_d, so a typed "£1,200" would store 0 — the same trap
+      # AmountValidation's callers are warned about. A row that leaves the
+      # field blank posts "" and must not be read as a deliberate £0 either
+      # (PlannedAmount: a plan of exactly £0 is a figure nobody filled in), so
+      # the key is dropped rather than set to nil, which for a NEW row leaves
+      # the column unset and for an existing one leaves its figure alone.
+      #
+      # Memoized: #budget_rows_error reads this too, and re-parsing would mean
+      # the validation and the write could disagree about what was typed.
       def permitted_budgets_attributes
-        source = area_form_params
-        return nil if source[:budgets_attributes].blank?
+        return @permitted_budgets_attributes if defined?(@permitted_budgets_attributes)
 
-        source.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
+        source = area_form_params
+        @permitted_budgets_attributes =
+          if source[:budgets_attributes].blank?
+            nil
+          else
+            rows = source.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
+            rows.each_value { |row| normalise_initial_budget(row) }
+            rows
+          end
+      end
+
+      # "" -> drop the key; an unreadable value -> leave the raw string, which
+      # #budget_row_error reports by name before anything is written.
+      def normalise_initial_budget(row)
+        return unless row.key?("initial_budget")
+
+        raw = row["initial_budget"]
+        if raw.blank?
+          row.delete("initial_budget")
+        elsif (parsed = ::Reimbursements::AmountParser.parse(raw))
+          row["initial_budget"] = parsed
+        end
       end
 
       # Budget itself validates only the name, so what a budget row may leave
@@ -185,7 +217,7 @@ module Admin
         rows = permitted_budgets_attributes
         return nil if rows.blank?
 
-        rows.each_value.filter_map { |row| budget_row_error(row) }.first
+        rows.each_value.filter_map { |row| budget_row_error(row) || budget_row_value_error(row) }.first
       end
 
       # A NEW line typed here needs both fields, the intent
@@ -215,6 +247,21 @@ module Admin
         return nil if row[:name].present? && row[:nominal_code].present?
 
         "A new budget line needs a name and a nominal code."
+      end
+
+      # An unreadable figure or an unknown type on any row, checked over the
+      # SAME parsed rows that will be written. An unreadable amount is silent
+      # wrong money, so it blocks the whole save the way every other typed
+      # figure in this portal does.
+      def budget_row_value_error(row)
+        if row["initial_budget"].present? && !row["initial_budget"].is_a?(BigDecimal)
+          return "#{row['initial_budget'].to_s.strip.inspect} isn't an amount. Use a number " \
+                 "like 1200 or £1,200, or leave it blank."
+        end
+        return nil if row["budget_type"].blank?
+        return nil if ::Reimbursements::Budget::TYPES.include?(row["budget_type"])
+
+        "Choose a valid budget type for each line."
       end
 
       # Optional: with one cost centre configured there is nothing to choose,
