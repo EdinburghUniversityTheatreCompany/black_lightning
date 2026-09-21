@@ -1,3 +1,8 @@
+<%# ?focus=expense-<id> is where the last action came back to. See
+    scroll_to_controller: the redirect's own fragment does not survive a Turbo
+    form submission, so the query parameter is what makes "keep my place"
+    work. %>
+<div data-controller="scroll-to" data-scroll-to-param-value="focus"></div>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 <p class="mb-3 text-gray-600">
   Review submitted expenses before they go to EUSA. Each card shows a live modulus

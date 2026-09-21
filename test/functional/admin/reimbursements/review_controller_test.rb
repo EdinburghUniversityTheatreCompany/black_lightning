@@ -43,13 +43,26 @@ module Admin
       # record ids the fixtures happen to hand out.
       def assert_redirected_to_review(tab: nil)
         target = URI.parse(@response.redirect_url)
-        query = "?#{target.query}" if target.query.present?
+        rest = Rack::Utils.parse_nested_query(target.query.to_s).except("focus")
+        query = rest.any? ? "?#{rest.to_query}" : ""
         assert_equal admin_reimbursements_review_path(tab: tab), "#{target.path}#{query}"
       end
 
-      # The #expense-… fragment on the last redirect, or nil when there is none.
+      # Where the last redirect came back to. BOTH the ?focus= parameter and
+      # the #expense-… fragment carry it, and they must agree: the fragment is
+      # what a no-JS navigation honours, while the parameter is the one that
+      # survives a Turbo form submission (fetch follows the 302 itself and
+      # never transmits a fragment).
       def redirect_anchor
-        URI.parse(@response.redirect_url).fragment
+        target = URI.parse(@response.redirect_url)
+        focus = Rack::Utils.parse_nested_query(target.query.to_s)["focus"]
+        if focus.nil?
+          assert_nil target.fragment, "no ?focus= means no fragment either"
+        else
+          assert_equal focus, target.fragment,
+                       "the ?focus= parameter and the fragment must name the same card"
+        end
+        focus
       end
 
       def pending_expense(person: @person, budget: @budget, **attrs)

@@ -599,6 +599,27 @@ module Admin
         assert_selector ".swal2-container", wait: 5
       end
 
+      # Keeping your place is the whole point of the anchored redirect, and a
+      # request test cannot see whether the browser actually moved. It nearly
+      # did not: a fragment in the redirect's Location header does NOT survive
+      # a Turbo form submission — Turbo submits with fetch, fetch follows the
+      # 302 itself, and a fragment is never transmitted — so the first cut came
+      # back with main.scrollTop still 0. The ?focus= parameter is what works.
+      test "approving a card comes back scrolled to the next one" do
+        # Tall enough that the second card is well below the fold.
+        first = seed_expense(status: "Pending", amount: 111, amount_excl_vat: 100)
+        second = seed_expense(status: "Pending", amount: 222, amount_excl_vat: 200)
+
+        visit admin_reimbursements_review_path
+        within("#expense-#{first.record_id}") { click_button "Approve", exact: true }
+
+        assert_current_path(/focus=expense-#{second.record_id}/, url: false, wait: 5)
+        # The admin layout scrolls inside <main>, not on the document.
+        scrolled = page.evaluate_script("document.querySelector('main').scrollTop")
+        assert scrolled.to_i.positive?,
+               "expected <main> to have scrolled to the anchored card, got scrollTop #{scrolled}"
+      end
+
       # Rejecting is irreversible and emails the producer, so agreeing to it
       # over a submit the server was always going to refuse is the wrong order.
       # The browser now stops a blank reason BEFORE the confirm — which only a

@@ -1,3 +1,9 @@
+<%# Reuses the ?person=<id> this page already carries, rather than a second
+    parameter meaning the same thing — the row is opened server-side and this
+    scrolls to it. See scroll_to_controller for why a redirect's fragment is
+    not enough. %>
+<div data-controller="scroll-to" data-scroll-to-param-value="person"
+     data-scroll-to-prefix-value="person-"></div>
 <p class="mb-3 text-gray-600">
   The finance team's payee registry. Edit a person's bank details (every change is
   recorded in their notes) and mark them verified once their details are confirmed.

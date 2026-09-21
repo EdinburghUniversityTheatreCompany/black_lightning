@@ -493,7 +493,16 @@ module Admin
       # (not resolve_tab'd) so a redirect with no tab stays a redirect with no
       # tab, which every existing test and link relies on.
       def redirect_to_review(flash)
-        redirect_to admin_reimbursements_review_path(tab: params[:tab], anchor: queue_anchor), **flash
+        target = queue_anchor
+        # BOTH, and the query parameter is the one that actually works.
+        # Turbo submits these forms with fetch, which follows the 302 itself
+        # and never transmits a fragment — so `response.url` has none and the
+        # visit lands at the top of the page (measured: main.scrollTop 0 after
+        # approving the fifth card). The fragment is kept because a no-JS
+        # navigation honours it; scroll_to_controller reads `focus`.
+        redirect_to admin_reimbursements_review_path(tab: params[:tab], focus: target,
+                                                     anchor: target),
+                    **flash
       end
     end
   end
