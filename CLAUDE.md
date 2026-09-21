@@ -6,8 +6,7 @@ Ruby on Rails 8.1
 
 Use pnpm for package management rather than npm, yarn, or bun. The pnpm version is pinned in
 `package.json`'s `packageManager` field (the single source of truth) and provided by **corepack**:
-the dev container and host enable it via the `corepack enable` mise `postinstall` hook (`mise.toml`,
-requires `experimental = true`), and CI's `pnpm/action-setup` reads the same field (no `version:`
+the dev container and host enable it via the `corepack enable` `postinstall` on the node tool (`mise/config.toml`), and CI's `pnpm/action-setup` reads the same field (no `version:`
 pin). To bump pnpm, run `corepack use pnpm@<version>` (it rewrites `packageManager` with a fresh
 integrity hash) — do not hand-edit the hash.
 
@@ -92,6 +91,11 @@ error and hint below). Never type `border border-gray-300 rounded …` into a vi
   footer is a component SLOT, so a `form_with` opened INSIDE the card renders its submit button
   outside the `<form>` and the button silently does nothing. A request-level test cannot see this
   (it POSTs straight to the action); only a browser test clicking the real button catches it.
+- **A form whose POST answers by RENDERING a page must opt out of Turbo** (`data: { turbo: false }`),
+  as `Admin::ImportFormComponent` and the climate import do. Turbo accepts only a redirect or a
+  4xx/5xx for a form submission and drops a 200 silently, so the button does nothing — all four bulk
+  importers sat broken that way for four months. Inside a Turbo Frame a 200 is fine, which is why the
+  reimbursements wizards need no opt-out. Only a browser test sees it.
 - `shared/back_link` is the "← All …" line above a card; `shared/form/paste_or_upload` is the
   paste-box-plus-file-input pair the budget import, climate import and Reconcile share.
 - **`shared/form/field`'s `html_class` DEFAULTS to `mb-4`, and passing any class replaces it.** In a
@@ -157,18 +161,22 @@ When writing a ViewComponent, check for an applicable skill, and make sure to cr
 
 ## Dev Environment (mise + hk)
 
-Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `pkl`, `gitleaks`,
-`node 24.13.0`). Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
+Toolchain is pinned with **mise**, and its config lives in `mise/`, not the repo root: `mise/config.toml`
+(+ `mise/mise.lock`) pins Ruby and Node and holds the tasks; `mise/config.development.toml`
+(+ `mise/mise.development.lock`) adds the dev tools (`hk`, `pkl`, `gitleaks`, `zizmor`, `actionlint`) and
+is read **only when `MISE_ENV=development`**. CI sets that; a local shell has to as well, or `hk` does not
+resolve and the pre-commit hook fails every commit with "No version is set for shim: hk". A worktree's
+gitignored `mise.local.toml` still sits at the root and still layers on top. Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
 (`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
 `mise install && hk install` once to swap the git hooks over.
 
-- **Ruby is installed precompiled, not built from source.** `mise.toml` pins
+- **Ruby is installed precompiled, not built from source.** `mise/config.toml` pins
   `ruby = { version = "…", compile = false }`, so mise downloads a precompiled portable Ruby from
   **jdx/ruby** (its default provider) instead of compiling via ruby-build — a ~12s download vs
   minutes. jdx/ruby's Linux builds run in manylinux2014 containers (glibc 2.17 floor) and bundle
   their own OpenSSL/libyaml/libffi, so the binary is portable across glibc ≥ 2.17 (the Debian-trixie
   devcontainer + CI are fine) and needs no build toolchain *for Ruby*. `compile = false` is set
-  explicitly so a contributor's global mise `compile` default can't flip `mise.lock`. The devcontainer
+  explicitly so a contributor's global mise `compile` default can't flip `mise/mise.lock`. The devcontainer
   still ships a C toolchain + headers because the app's **native gems** (bcrypt, mysql2, nio4r, puma, …)
   are compiled by `bundle install`. Only `linux-x64`, `linux-arm64`, and `macos-arm64` have jdx/ruby
   builds; `macos-x64` (Intel Mac) falls back to a source compile.
@@ -202,7 +210,7 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
   `check-added-large-files`). PNG illustrations that trip it compress well as PNG8 palette
   (`convert … PNG8:out.png && optipng -o5`) with no visible loss — they're flat-colour art.
 - **The dev container is mise-driven — keep it in sync.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
-  installs *only* the `mise` binary plus OS build/runtime libs; `mise.toml`/`mise.lock` are the single
+  installs *only* the `mise` binary plus OS build/runtime libs; `mise/config.toml`/`mise/mise.lock` are the single
   source of truth for Ruby, Node, and the dev tools, installed by `mise install` in
   [.devcontainer/setup.sh](.devcontainer/setup.sh). **Never** pin a language version in the devcontainer
   (no `ruby:x.y` base, no `apt-get install nodejs`) — that reintroduces drift. When you change the
@@ -212,12 +220,12 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 
 ## Dev Server
 
-- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). **Start one yourself when you need it** (a screenshot, a visual check, driving the real app) — this overrides the global "ask the user first" default. Check the port is free first (`ss -ltn | grep ":${PORT:-3000}"`) and run it in the background.
-- **A provisioned worktree gets its own ports** — `PORT` and `VITE_RUBY_PORT` come from a gitignored `mise.local.toml` (see `.worktree-isolate.conf`), so a worktree's server never fights the main checkout's :3000. Run `bin/dev` from the worktree directory or you will start a second server on the wrong port against the wrong database.
-- **Stop `bin/dev` before `bin/rails test:system`** — a running dev server makes ~57 unrelated system tests fail, and the failures point nowhere near the cause.
+- **Run with `mise run serve`** — a mise task ([mise/config.toml](mise/config.toml)) running `serve:app` (Puma) and `serve:assets` (Vite) side by side. There is no `bin/dev` and no foreman any more. **Start one yourself when you need it** (a screenshot, a visual check, driving the real app) — this overrides the global "ask the user first" default. Check the port is free first (`ss -ltn | grep ":${PORT:-3000}"`) and run it in the background.
+- **A provisioned worktree gets its own ports** — `PORT` and `VITE_RUBY_PORT` come from a gitignored `mise.local.toml` (see `.worktree-isolate.conf`), so a worktree's server never fights the main checkout's :3000. Run `mise run serve` from the worktree directory or you will start a second server on the wrong port against the wrong database.
+- **Stop the dev server before `bin/rails test:system`** — a running dev server makes ~57 unrelated system tests fail, and the failures point nowhere near the cause.
 - **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
-- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
-- **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
+- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here. It finds Puma by the process tag, which is the checkout's directory name, so it restarts its own checkout's server and never another worktree's.
+- **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `mise run serve` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
 
 ## Background jobs (Solid Queue)
 

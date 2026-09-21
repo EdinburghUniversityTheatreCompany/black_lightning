@@ -90,13 +90,14 @@ RUN (bundle info bootsnap >/dev/null 2>&1 && \
     echo "[Dockerfile] Skipping bootsnap precompile – executable not available"
 
 # Adjust binfiles to be executable on Linux
+ENV PATH="/rails/bin:${PATH}"
 RUN chmod +x bin/* && \
     sed -i "s/\r$//g" bin/* && \
     sed -i 's/ruby\.exe$/ruby/' bin/*
 
 # Precompile assets for production without requiring the real master key
  # DATABASE_URL="mysql2://user:pass@127.0.0.1:3306/dummy" 
-RUN ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+RUN ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 rails assets:precompile
 
 # Clean up build artifacts
 RUN rm -rf \
@@ -111,6 +112,7 @@ FROM base
 # Copy built artifacts: gems, application
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
+ENV PATH="/rails/bin:${PATH}"
 
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
@@ -124,8 +126,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:80/up || exit 1
 
 # Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+ENTRYPOINT ["docker-entrypoint"]
 
 # Start server via Thruster by default, this can be overwritten at runtime
 EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+CMD ["thrust", "rails", "server"]

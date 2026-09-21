@@ -48,4 +48,4 @@ else
   mise exec -- bin/rails db:prepare
 fi
 
-echo "=== Done! Run 'bin/dev' to start the server ==="
+echo "=== Done! Run 'mise run serve' to start the server ==="

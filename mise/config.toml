@@ -1,0 +1,82 @@
+[settings]
+# Maintain mise.lock (resolved versions + per-platform checksums) on every install.
+# Tools stay spec'd "latest"; the lock records what that resolved to so installs are
+# reproducible + checksum-verified (aqua-backed tools add Cosign/SLSA). Upgrade with
+# `mise upgrade`, then commit the changed mise.lock.
+lockfile = true
+# Prevent `mise upgrade` from resolving a tool version published in the last 4 days — same
+# supply-chain window as the Bundler/uv/npm dependency cooldowns. `mise install` is unaffected
+# (it always reproduces the locked version from mise.lock).
+minimum_release_age = "4d"
+
+[tools.ruby]
+version = "4.0.2"
+# `compile = false` installs a precompiled portable Ruby from jdx/ruby (mise's default
+# precompiled provider) instead of building from source via ruby-build. The jdx/ruby Linux
+# builds run in manylinux2014 containers (glibc 2.17 floor) and bundle their own OpenSSL +
+# libyaml + libffi, so the binary is portable across glibc >= 2.17 and needs no build
+# toolchain — the devcontainer therefore ships no build-essential/libssl-dev/libyaml-dev.
+# Set explicitly so a contributor's global mise `compile` default can't flip mise.lock.
+compile = false
+
+[tools.node]
+version = "24.13.0"
+# Enable corepack after installing node so the pnpm version pinned in package.json's
+# `packageManager` field is available (corepack downloads + verifies it on first use).
+# Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
+postinstall = "corepack enable"
+
+[tools]
+# jscpd is NOT a mise tool — it's a Rust binary shipped via npm optional platform packages that
+# npx resolves but the mise npm backend does not. `herb lint` likewise delegates to
+# npx @herb-tools/linter (version pinned to the herb gem). flay + debride + herb + brakeman +
+# bundler-audit + fasterer + database_consistency are Gemfile dev-group gems; strong_migrations
+# is a runtime gem.
+# pnpm is NOT a mise tool either — it's pinned via the `packageManager` field in package.json and
+# provided by corepack (enabled by the postinstall hook below). That one pin is read by corepack
+# (host + dev container) AND by pnpm/action-setup in CI, so all three stay on the same pnpm.
+
+[hooks]
+postinstall = [
+    { task = "setup" },
+]
+
+[env]
+# dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
+# hand-edit — bump it by running the skill's upgrade path.
+DEV_ENV_VERSION = "23"
+_.path = ["bin"]
+
+# Install dev dependencies
+[tasks.install]
+depends = ["install:gems", "install:node-modules"]
+
+[tasks]
+"install:gems" = "bundle install"
+"install:node-modules" = "pnpm install"
+"serve:assets" = "vite dev"
+
+# Ensure stubs are valid
+[tasks.setup]
+depends = ["setup:scripts", "setup:version-files"]
+
+[tasks."setup:version-files"]
+run = [
+    "mise tool ruby --requested | tr -d '\n' > .ruby-version",
+    "mise tool node --requested | tr -d '\n' > .node-version",
+]
+
+[tasks."setup:scripts"]
+run = "chmod +x ./bin/*"
+run_windows = ""
+
+[tasks.serve]
+depends = ["serve:assets", "serve:app"]
+
+[tasks."serve:app"]
+run = "rails server -b $BINDING"
+
+[tasks."serve:app".env]
+PORT = { default = "3000" }
+BINDING = { default = "0.0.0.0" }
+RUBY_DEBUG_OPEN = "true"
