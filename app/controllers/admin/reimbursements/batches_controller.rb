@@ -109,7 +109,47 @@ module Admin
         redirect_to admin_reimbursements_batches_path, **draft_cleanup_flash(batch, reverted, mailbox)
       end
 
+      # Ask Graph whether this batch's EUSA draft is still sitting unsent, and
+      # say so — the same probe #reopen makes, surfaced on its own.
+      #
+      # Sending that draft is the one manual step left in paying people and the
+      # portal deliberately has no visibility into it, so "has it gone?" could
+      # only be answered by ATTEMPTING a reopen and reading the refusal. That is
+      # a destructive way to ask a read-only question.
+      #
+      # On demand, never on page load, for the reason StatusController's probes
+      # are: a batch list must not wait on Microsoft, and History can show a
+      # dozen batches.
+      def check_draft
+        batch = find_or_404(:find_batch)
+        linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
+
+        if batch.draft_message_id.blank?
+          return redirect_to_history(alert: "No EUSA draft was recorded for this batch, so there " \
+                                            "is nothing to check. Look in Outlook before rebuilding it.")
+        end
+
+        mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked))
+        if mailbox
+          redirect_to_history(notice: "Checked just now: this batch's EUSA draft is still UNSENT in " \
+                                      "#{mailbox}. EUSA has not been asked to pay it yet.")
+        else
+          # draft_message? fails CLOSED, so this covers "sent", "deleted",
+          # "moved" and "Graph is down" alike and must not claim the first.
+          redirect_to_history(alert: "Couldn't confirm this batch's EUSA draft is still unsent. It may " \
+                                     "already have been sent, it may have been deleted or moved, or " \
+                                     "Graph couldn't be reached. Check Outlook before acting on it.")
+        end
+      end
+
       private
+
+      # Back to wherever the check was made from — History lists every batch and
+      # Detail is one batch's page, and a probe must not move the operator off
+      # the page they are reading.
+      def redirect_to_history(**flash_args)
+        redirect_back fallback_location: admin_reimbursements_batches_path, **flash_args
+      end
 
       def assign_new_form
         @title = "Build batch"

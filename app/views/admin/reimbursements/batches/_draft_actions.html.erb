@@ -1,0 +1,24 @@
+<%# The EUSA draft's controls, on History's row and on Detail alike.
+
+    Sending this draft is the one manual step left in paying people, and the
+    portal has no visibility into it by design — so the link is the primary
+    action and "Check if still unsent" is the only way to ask what happened to
+    it, short of attempting a reopen. %>
+<% if batch.draft_web_link.present? %>
+  <%= link_to "Open the EUSA draft", batch.draft_web_link,
+              class: btn_classes(:primary, :sm), target: "_blank", rel: "noopener",
+              "aria-label": "Open the EUSA draft for batch #{batch.name.presence || batch.record_id} in Outlook" %>
+<% elsif batch.eusa_draft_created %>
+  <%# Graph hands the webLink back once, at creation, and it cannot be derived
+      from the stored message id — so a batch built before the link was stored
+      has one in Outlook that this page can never link to. Say that, rather
+      than rendering nothing where History has always promised a link. %>
+  <span class="text-sm text-gray-500">Draft link not recorded; find it in Outlook's Drafts</span>
+<% end %>
+
+<% if batch.draft_message_id.present? %>
+  <%= button_to "Check if still unsent",
+                check_draft_admin_reimbursements_batch_path(batch.record_id),
+                method: :post, class: btn_classes(:secondary, :sm),
+                form: { class: "inline-block" } %>
+<% end %>

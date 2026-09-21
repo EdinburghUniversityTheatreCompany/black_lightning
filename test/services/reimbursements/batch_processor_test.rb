@@ -188,6 +188,10 @@ module Reimbursements
       # Submitted + linked.
       batch = Batch.sole
       assert_equal "msg-1", batch.draft_message_id
+      # Graph hands the webLink back ONCE, here, and it cannot be derived from
+      # the message id afterwards — so a batch written without it can never
+      # show the operator the draft they still have to send.
+      assert_equal "https://outlook.example/draft-1", batch.draft_web_link
       [ @expense_a, @expense_b ].each do |expense|
         expense.reload
         assert_equal Status::SUBMITTED, expense.status

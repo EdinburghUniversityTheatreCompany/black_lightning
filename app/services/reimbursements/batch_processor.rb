@@ -272,10 +272,17 @@ module Reimbursements
       batch = with_write_retry do |attempt|
         (attempt > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
           # No eusa_draft_created: it is derived from draft_message_id, set here.
+          #
+          # draft_web_link is stored because Graph hands the webLink back ONCE,
+          # here, and it cannot be derived from the message id afterwards — so
+          # a batch written without it can never show the operator the draft
+          # they still have to send. It used to reach only the operator's own
+          # email (BuildBatchJob).
           @store.create_batch!(date_sent: result.bacs_date,
                                notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
                                sharepoint_backup_url: result.bacs_sharepoint_url,
-                               draft_message_id: result.eusa_draft_message_id)
+                               draft_message_id: result.eusa_draft_message_id,
+                               draft_web_link: result.eusa_draft_web_link.presence)
       end
       result.batch_id = batch.record_id
       batch

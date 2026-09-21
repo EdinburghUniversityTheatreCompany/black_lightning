@@ -262,7 +262,15 @@ ChaosRails::Application.routes.draw do
         member { post :dismiss }
       end
       resources :batches, only: %i[index show new create] do
-        member { post :reopen }
+        # check_draft surfaces the same Graph probe reopen already makes, on
+        # demand: sending the EUSA draft is the one manual step left in paying
+        # people and nothing in the portal records that it happened, so the
+        # operator's only way to know was to attempt a reopen. A POST, not a
+        # GET, because it calls a live external service.
+        member do
+          post :reopen
+          post :check_draft
+        end
       end
 
       # Per-cost-centre operational settings (Phase F): picker -> edit/update.

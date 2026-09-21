@@ -111,6 +111,7 @@
           <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id),
                       "aria-label": "Detail for batch #{batch.name.presence || batch.record_id}",
                       class: btn_classes(:secondary, :sm) %>
+          <%= render "draft_actions", batch: batch %>
         </div>
 
         <div class="mt-2">

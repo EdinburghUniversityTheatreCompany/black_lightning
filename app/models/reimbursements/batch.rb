@@ -5,6 +5,7 @@
 #
 #  id                          :bigint           not null, primary key
 #  date_sent                   :date
+#  draft_web_link              :text(65535)
 #  name                        :string(255)      default(""), not null
 #  notes                       :text(65535)
 #  producer_notifications_sent :boolean          default(FALSE), not null

@@ -538,6 +538,83 @@ module Admin
         assert_response :success
         assert_no_match(/a distinctive failure message/, response.body)
       end
+
+      # --- The EUSA draft link ----------------------------------------------
+      # Sending the draft is the one manual step left in paying people. History
+      # and Detail both promised the link and neither could render one, because
+      # nothing stored it.
+
+      test "History and Detail link the EUSA draft" do
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                                   draft_message_id: "msg-1",
+                                   draft_web_link: "https://outlook.example/draft-1")
+        sign_in @user
+
+        get :index
+        assert_select "a[href=?]", "https://outlook.example/draft-1"
+
+        get :show, params: { id: batch.record_id }
+        assert_select "a[href=?]", "https://outlook.example/draft-1"
+      end
+
+      test "a batch built before the link was stored says so rather than rendering nothing" do
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED, draft_message_id: "msg-1")
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_match(/Draft link not recorded/, response.body)
+      end
+
+      # --- Checking whether it is still unsent -------------------------------
+
+      test "reports a draft that is still unsent" do
+        graph = use_graph
+        graph.draft_still_exists = true
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED, draft_message_id: "msg-1")
+        sign_in @user
+
+        post :check_draft, params: { id: batch.record_id }
+
+        assert_match(/still UNSENT/, flash[:notice])
+      end
+
+      # Fails CLOSED, so this one message has to cover sent, deleted, moved and
+      # "Graph is down" alike — it must not claim the draft was sent.
+      test "refuses to say a draft is sent when it only failed to confirm it" do
+        graph = use_graph
+        graph.draft_still_exists = false
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED, draft_message_id: "msg-1")
+        sign_in @user
+
+        post :check_draft, params: { id: batch.record_id }
+
+        assert_match(/Couldn't confirm/, flash[:alert])
+        assert_no_match(/has been sent/, flash[:alert])
+      end
+
+      test "a batch with no recorded draft has nothing to check" do
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        post :check_draft, params: { id: batch.record_id }
+
+        assert_match(/nothing to check/, flash[:alert])
+      end
+
+      test "checking a draft changes nothing" do
+        graph = use_graph
+        graph.draft_still_exists = false
+        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED, draft_message_id: "msg-1")
+        sign_in @user
+
+        post :check_draft, params: { id: batch.record_id }
+
+        assert ::Reimbursements::Batch.exists?(batch.id), "the probe must not delete the batch"
+        assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
+        assert_empty graph.deleted_messages
+      end
     end
   end
 end
