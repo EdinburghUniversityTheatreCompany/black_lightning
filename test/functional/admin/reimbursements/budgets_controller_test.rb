@@ -890,12 +890,15 @@ module Admin
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
-        # A checkbox per person instead of a Ctrl-click multi-select; the current
-        # owner (Alice) is pre-ticked, the non-owner (Bob) is not.
-        assert_select "fieldset legend", text: "Owners"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@alice.record_id}][checked]"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}]"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}][checked]", false
+        # One Tom Select multiple rather than a column of tickboxes; the current
+        # owner (Alice) is pre-selected, the non-owner (Bob) is not. The empty
+        # hidden field beside it is what clears the owners when the last one is
+        # taken off — without it the post carries no owner_ids key at all.
+        assert_select "select#owner_ids[name='owner_ids[]'][multiple].simple-select2"
+        assert_select "input[type=hidden][name='owner_ids[]'][value='']"
+        assert_select "select#owner_ids option[value=#{@alice.record_id}][selected]"
+        assert_select "select#owner_ids option[value=#{@bob.record_id}]"
+        assert_select "select#owner_ids option[value=#{@bob.record_id}][selected]", false
       end
 
       test "the forecast log flags a forecast that came from a budget update" do
@@ -1165,8 +1168,8 @@ module Admin
         get :edit, params: { id: @props.record_id }
 
         assert_response :success
-        assert_select "fieldset legend", text: "Owners"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}]"
+        assert_select "fieldset[data-reimbursements-budget-area-target=owners] select#owner_ids[multiple]"
+        assert_select "select#owner_ids option[value=#{@bob.record_id}]"
 
         patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Expense", active: "1",

@@ -103,6 +103,14 @@ error and hint below). Never type `border border-gray-300 rounded …` into a vi
   the select renders a box inside a box. simple_form's `CollectionSelectInput` strips the classes
   for you; a `select_tag` must not add them. The single border comes from `.ts-control` in
   Tom Select's own CSS: overriding it away leaves the widget with no box at all.
+- **A `multiple` Tom Select needs the empty hidden field beside it, and cannot be switched off by
+  a disabled fieldset alone.** Rails emits the hidden `name[]` field for `collection_select …
+  multiple: true`; a hand-rolled `select_tag` must add it, or taking the last choice off posts no
+  key at all and the old list survives. And Tom Select draws its control from divs, so it goes on
+  looking live inside a disabled fieldset even though the browser submits nothing — the budget
+  form's owners list has to call `tomselect.disable()` as well. Tom Select is built after an async
+  `import()`, so a controller that drives a widget listens for the `select:ready` event
+  `select_controller` dispatches rather than assuming `el.tomselect` exists when it connects.
 - **Receipt add/remove on both expense edit pages answers a turbo stream** replacing
   `#receipts-gallery` (`AttachesReceipts#respond_with_receipts_gallery`, `finance: true` for the
   finance routes), with a redirect for a plain post; `shared/_receipts_dropzone` is the drop

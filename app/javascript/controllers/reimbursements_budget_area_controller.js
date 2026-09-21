@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 // The budget form's area picker against its owners list. The area owns and its
-// budgets inherit, so owners ticked while an area is chosen would be written to
+// budgets inherit, so owners chosen while an area is chosen would be written to
 // a table Budget#owners never reads — the server refuses that post outright.
 // This is what stops the operator reaching the refusal: choosing an area
 // disables the whole fieldset, which also stops the browser posting owner_ids
@@ -20,6 +20,12 @@ export default class extends Controller {
 
     const inArea = this.areaTarget.value !== ""
     this.ownersTarget.disabled = inArea
+    // A disabled fieldset stops the browser SUBMITTING the select, but Tom
+    // Select draws its own control from divs and an input of its own, which
+    // goes on looking live inside one — an operator would pick owners that are
+    // then silently dropped. Tom Select has to be told separately.
+    const ts = this.ownersTarget.querySelector("select.simple-select2")?.tomselect
+    if (ts) { inArea ? ts.disable() : ts.enable() }
     if (this.hasNoticeTarget) this.noticeTarget.hidden = !inArea
   }
 }

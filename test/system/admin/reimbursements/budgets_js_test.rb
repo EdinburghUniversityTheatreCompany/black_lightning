@@ -55,7 +55,7 @@ module Admin
         area = create_reimbursements_area(name: "Cogito")
 
         visit new_admin_reimbursements_budget_path
-        check "Alice Owner"
+        tom_select_add "Alice Owner", from: "Owners"
         select "Cogito", from: "Area"
 
         assert_text "it takes the area's owners"
@@ -70,6 +70,39 @@ module Admin
                      "the browser must send no owner_ids at all for a line going into an area"
       end
 
+      # A disabled fieldset stops the browser SUBMITTING its controls, but Tom
+      # Select draws its own control out of divs and goes on looking live
+      # inside one — an operator would pick owners that are then silently
+      # dropped. Only a browser sees the difference.
+      test "choosing an area visibly locks the owners widget" do
+        create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        create_reimbursements_area(name: "Cogito")
+
+        visit new_admin_reimbursements_budget_path
+        assert_no_selector ".ts-wrapper.disabled"
+
+        select "Cogito", from: "Area"
+        assert_selector ".ts-wrapper.disabled"
+
+        select "— none —", from: "Area"
+        assert_no_selector ".ts-wrapper.disabled"
+      end
+
+      # The form can OPEN with an area already chosen (the areas screen links
+      # here with ?area_id=), and Tom Select is built after an async import() —
+      # so this controller's connect runs before the widget exists. Without the
+      # select:ready handshake the fieldset is disabled and the widget is left
+      # looking live, which is the one state this whole mechanism exists to
+      # avoid.
+      test "a form opened with an area already chosen locks the widget too" do
+        create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        area = create_reimbursements_area(name: "Cogito")
+
+        visit new_admin_reimbursements_budget_path(area_id: area.record_id)
+
+        assert_selector ".ts-wrapper.disabled"
+      end
+
       # The other half of the same control: with no area chosen the list is the
       # live one, so a green test above cannot be a fieldset that never enables.
       test "a line in no area still saves the owners ticked on the same form" do
@@ -77,7 +110,7 @@ module Admin
         create_reimbursements_area(name: "Cogito")
 
         visit new_admin_reimbursements_budget_path
-        check "Alice Owner"
+        tom_select_add "Alice Owner", from: "Owners"
         fill_in "Name", with: "Contingency"
         fill_in "Nominal code", with: "432340"
         click_on "Create budget"

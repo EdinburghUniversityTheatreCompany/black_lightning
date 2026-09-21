@@ -26,33 +26,31 @@
 
 <%= form.input :active, as: :boolean, label: "Active" %>
 
-<fieldset aria-describedby="owner_ids_hint" class="mb-4">
-  <legend class="<%= FormStyles::LABEL %>">Owners</legend>
-  <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select, same as
-      the budget form's owners fieldset. Area has no owner_ids= writer — the
-      controller syncs owners through store.sync_area_owners! — so this only
-      needs the #owner_ids reader collection_check_boxes pre-checks against. %>
-  <div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
-    <%= form.collection_check_boxes(:owner_ids, people, :record_id,
-          ->(person) { person.name.presence || person.email },
-          { checked: owner_ids }) do |b| %>
-      <%= b.label(class: "flex items-center gap-2 text-sm text-gray-700") do %>
-        <%= b.check_box(class: checkbox_classes) %><%= b.text %>
-      <% end %>
-    <% end %>
-  </div>
-  <p id="owner_ids_hint" class="<%= FormStyles::HINT %>">Tick everyone who owns this area.</p>
-  <% if form.object.persisted? && owner_ids.empty? %>
-    <%# An area with no owners reports none for every budget under it, and
-        OwnerReview.gate_applies? is false with no owners — so its claims skip
-        owner endorsement, the nightly job never names them and Review's
-        Awaiting-owner tab never shows them. Warned in the spirit of the
-        budgets index's "No owner" badge. %>
-    <p class="mt-1 text-sm text-warning">
-      Nobody is ticked, so claims on this area's budget lines
-      skip budget-owner sign-off entirely.
-    </p>
-  <% end %>
-</fieldset>
+<%# A Tom Select multiple rather than a checkbox list: the registry runs to
+    dozens of people, so a scrolling column of tickboxes meant hunting for a
+    name that a type-ahead finds in three keystrokes. Only `simple-select2` on
+    the control (CollectionSelectInput sets it) — Tom Select copies the
+    select's classes onto its own wrapper, which already draws the box. Area
+    has no owner_ids= writer (the controller syncs through
+    store.sync_area_owners!), so `selected:` is passed explicitly rather than
+    read off the object; Rails emits the empty hidden field for a multiple
+    select, so clearing everyone still clears the owners. %>
+<%= form.input :owner_ids, label: "Owners", collection: people,
+      value_method: :record_id,
+      label_method: ->(person) { person.name.presence || person.email },
+      selected: owner_ids, include_blank: false,
+      hint: "Everyone who owns this area.",
+      input_html: { multiple: true, data: { placeholder: "Search people…" } } %>
+<% if form.object.persisted? && owner_ids.empty? %>
+  <%# An area with no owners reports none for every budget under it, and
+      OwnerReview.gate_applies? is false with no owners — so its claims skip
+      owner endorsement, the nightly job never names them and Review's
+      Awaiting-owner tab never shows them. Warned in the spirit of the
+      budgets index's "No owner" badge. %>
+  <p class="-mt-2 mb-4 text-sm text-warning">
+    Nobody is named, so claims on this area's budget lines
+    skip budget-owner sign-off entirely.
+  </p>
+<% end %>
 
 <%= form.input :notes, label: "Notes", input_html: { rows: 3 } %>

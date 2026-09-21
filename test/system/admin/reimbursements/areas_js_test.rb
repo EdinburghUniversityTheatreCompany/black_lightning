@@ -83,6 +83,43 @@ module Admin
         end
       end
 
+      # The owners control is a Tom Select multiple, so nothing about it can be
+      # seen from a request test: the widget writes back into a <select> the
+      # browser hides, and a form whose owners never reach the post would look
+      # exactly like one nobody ticked.
+      test "owners are chosen through the search widget and saved" do
+        alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ alice.id ])
+
+        visit edit_admin_reimbursements_area_path(area.record_id)
+        # The one already named renders as a chip rather than as an option.
+        assert_selector ".ts-control .item", text: "Alice Owner"
+        tom_select_add "Bob Owner", from: "Owners"
+        click_on "Save"
+
+        assert_text "Area saved"
+        assert_equal [ alice, bob ].map(&:record_id).sort, area.reload.owner_ids.sort
+      end
+
+      # The other direction, and the one a bare `select_tag` would get wrong:
+      # taking the last owner off must post the empty hidden field Rails emits
+      # beside a multiple select, or the post carries no owner_ids key at all
+      # and the area keeps every owner it had.
+      test "taking the last owner off the widget actually clears the owners" do
+        alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        area = create_reimbursements_area(name: "Cogito")
+        area.sync_owner_ids!([ alice.id ])
+
+        visit edit_admin_reimbursements_area_path(area.record_id)
+        find(".ts-control .item", text: "Alice Owner").find(".remove").click
+        click_on "Save"
+
+        assert_text "Area saved"
+        assert_empty area.reload.owner_ids
+      end
+
       test "a budget line saved with no nominal code is refused in the browser" do
         area = create_reimbursements_area(name: "Cogito")
 
