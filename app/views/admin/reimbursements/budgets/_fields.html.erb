@@ -11,8 +11,27 @@
     <%= render "shared/form/field", label: "Name", name: :name do %>
       <%= text_field_tag :name, name, class: input_classes %>
     <% end %>
-    <%= render "shared/form/field", label: "Nominal code", name: :nominal_code do %>
-      <%= text_field_tag :nominal_code, nominal_code, class: input_classes %>
+    <%# A datalist, NOT a select: the curated list is a set of suggestions, and
+        a code absent from it is legitimate (BudgetImport allows a blank one and
+        the overview has a "(none)" bucket), so refusing an unlisted code would
+        make the list a constraint nobody agreed to. Until now the labels
+        finance maintains on Settings fed nothing at all and this was bare
+        free text. %>
+    <%= render "shared/form/field", label: "Nominal code", name: :nominal_code,
+          hint: (if nominal_code_suggestions.any?
+                   "Start typing to pick from the codes finance maintains on Settings, " \
+                     "or enter another."
+                 end) do %>
+      <%= text_field_tag :nominal_code, nominal_code, class: input_classes,
+                         list: ("nominal-code-suggestions" if nominal_code_suggestions.any?),
+                         autocomplete: "off" %>
+      <% if nominal_code_suggestions.any? %>
+        <datalist id="nominal-code-suggestions">
+          <% nominal_code_suggestions.each do |code, label| %>
+            <option value="<%= code %>"><%= label %></option>
+          <% end %>
+        </datalist>
+      <% end %>
     <% end %>
     <%= render "shared/form/field", label: "Type", name: :budget_type do %>
       <%= select_tag :budget_type, options_for_select(::Reimbursements::Budget::TYPES, budget_type),

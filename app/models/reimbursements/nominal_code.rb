@@ -44,6 +44,32 @@ module Reimbursements
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 
+    # The ACTIVE codes to offer as suggestions, as [code, label] pairs.
+    #
+    # With a centre selected, its own list; with none — the "every centre"
+    # default every finance screen has — every centre's, deduped by code so a
+    # code both pots curate is offered once. The FIRST label wins on a clash,
+    # which is arbitrary and acceptable here precisely because this is a
+    # suggestion list: nothing is refused for being absent from it, so an
+    # imperfect label costs a glance rather than a wrong charge.
+    def self.suggestions_for(cost_centre)
+      scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
+      scope.where(active: true).order(:code, :id)
+           .pluck(:code, :label)
+           .uniq { |code, _| code.to_s.downcase }
+    end
+
+    # code => label for the screens that PRINT a stored code, keyed downcased
+    # because both this column and the ones carrying the code are
+    # utf8mb4_unicode_ci, so a row in another case means the same account.
+    # Inactive codes are included: a retired code still labels the historical
+    # rows that carry it, which is the whole reason retiring beats deleting.
+    def self.labels_for(cost_centre)
+      scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
+      scope.order(:code, :id).pluck(:code, :label)
+           .to_h { |code, label| [ code.to_s.downcase, label ] }
+    end
+
     # The rows this centre's list is answerable for: budget lines and imported
     # EUSA ledger rows, each carrying a nominal code as a STRING rather than a
     # link to this table, so the list is the only thing that gives one a label.

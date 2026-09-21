@@ -1519,6 +1519,66 @@ module Admin
       # move a placed line — and #create always hands it a centre
       # (chosen_cost_centre falls back to the default), so the inheritance
       # never fired on the create path and the mismatch was written silently.
+      # --- The curated nominal codes -----------------------------------------
+      # The labels finance maintains on a cost centre's Settings page were
+      # rendered nowhere else at all: the budget form's code was free text and
+      # the overview printed bare digits.
+
+      test "the budget form suggests the curated codes" do
+        sign_in @user
+        create_reimbursements_nominal_code(code: "432320", label: "Marketing and publicity")
+
+        get :new
+
+        assert_response :success
+        assert_select "datalist#nominal-code-suggestions option[value=?]", "432320"
+        assert_match(/Marketing and publicity/, response.body)
+      end
+
+      # A suggestion list, not a constraint: a code absent from it is
+      # legitimate (a blank one is supported state, and the overview has a
+      # "(none)" bucket), so refusing one would make the list a rule nobody
+      # agreed to.
+      test "a code that is not on the curated list is still accepted" do
+        sign_in @user
+        create_reimbursements_nominal_code(code: "432320", label: "Marketing")
+
+        post :create, params: { name: "Odd line", nominal_code: "999999",
+                                budget_type: "Expense", active: "1" }
+
+        assert_equal "999999", ::Reimbursements::Budget.find_by!(name: "Odd line").nominal_code
+      end
+
+      test "a retired code still labels the rows that carry it" do
+        sign_in @user
+        create_reimbursements_nominal_code(code: "432320", label: "Marketing", active: false)
+
+        get :new
+
+        assert_select "datalist#nominal-code-suggestions option[value=?]", "432320", count: 0
+        assert_includes ::Reimbursements::NominalCode.labels_for(nil), "432320",
+                        "a retired code must still be readable on historical rows"
+      end
+
+      test "the overview prints each code's label beside it" do
+        sign_in @user
+        create_reimbursements_nominal_code(code: "4000", label: "Production materials")
+
+        get :overview
+
+        assert_response :success
+        assert_match(/Production materials/, response.body)
+      end
+
+      test "a code with no curated label prints bare rather than blank" do
+        sign_in @user
+
+        get :overview
+
+        assert_response :success
+        assert_match(/Nominal code 4000/, response.body)
+      end
+
       test "create refuses an area from a different cost centre" do
         sign_in @user
         other = create_second_reimbursements_cost_centre

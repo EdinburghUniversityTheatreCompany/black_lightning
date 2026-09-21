@@ -58,7 +58,10 @@
         <tbody>
           <tr class="bg-gray-50">
             <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
-              Nominal code <%= rollup.code %>
+              Nominal code <%= rollup.code %><%
+                label = nominal_code_labels[rollup.code.to_s.downcase] %><% if label.present? %>
+                <span class="font-normal text-gray-600">— <%= label %></span>
+              <% end %>
             </th>
           </tr>
           <%= render partial: "overview_budget_row", collection: rollup.rows, as: :budget %>

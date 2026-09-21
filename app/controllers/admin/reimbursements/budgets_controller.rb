@@ -172,6 +172,26 @@ module Admin
 
       private
 
+      # The curated codes the budget form suggests, and the labels the overview
+      # prints beside a bare code. Both read the SELECTED cost centre, which
+      # with none chosen means every centre — the "All" default every finance
+      # screen has.
+      #
+      # Until now the labels finance maintains on a cost centre's Settings page
+      # were rendered nowhere else at all: the budget form's code was free text
+      # and the overview printed bare digits.
+      def nominal_code_suggestions
+        @nominal_code_suggestions ||=
+          ::Reimbursements::NominalCode.suggestions_for(selected_cost_centre)
+      end
+      helper_method :nominal_code_suggestions
+
+      def nominal_code_labels
+        @nominal_code_labels ||=
+          ::Reimbursements::NominalCode.labels_for(selected_cost_centre)
+      end
+      helper_method :nominal_code_labels
+
       # The overview's second axis: the SAME budgets the nominal-code card
       # totals, regrouped under their area, so the two cards can never quote
       # different money for one page. The area objects come from store.areas,
