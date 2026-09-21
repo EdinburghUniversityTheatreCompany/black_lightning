@@ -39,5 +39,19 @@ module Reimbursements
 
     validates :amount, numericality: { greater_than: 0 }
     validates :budget_id, uniqueness: { scope: :eusa_actual_id }
+    validate :actual_is_not_attached_whole
+
+    private
+
+    # Budget#credit_actual_total ADDS these shares to the rows attached to a
+    # budget whole, so the two sets must be disjoint or a row is counted twice.
+    # apportion_actual! clears budget_id to keep them apart, but that is a
+    # writer's promise and MySQL cannot check it across two tables — a console
+    # edit or a future writer could leave a row holding both.
+    def actual_is_not_attached_whole
+      return if eusa_actual.nil? || eusa_actual[:budget_id].blank?
+
+      errors.add(:eusa_actual, "is already attached to a budget in full")
+    end
   end
 end

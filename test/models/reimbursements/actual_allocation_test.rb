@@ -19,5 +19,19 @@ module Reimbursements
 
       assert_not duplicate.valid?
     end
+    # Budget#credit_actual_total ADDS allocations to the rows attached whole, so
+    # the two sets have to be disjoint or a row is counted twice. That holds
+    # because apportion_actual! clears budget_id — a writer's promise, not a
+    # database one, and MySQL cannot check it across two tables. This is the
+    # belt and braces under it.
+    test "an allocation refuses an actual still attached to a budget whole" do
+      budget = create_reimbursements_budget(name: "Fundraising", budget_type: "Income")
+      attached = create_reimbursements_eusa_actual(credit: 100, budget: budget)
+
+      allocation = ActualAllocation.new(eusa_actual: attached, budget: budget, amount: 100)
+
+      assert_not allocation.valid?
+      assert allocation.errors[:eusa_actual].present?
+    end
   end
 end
