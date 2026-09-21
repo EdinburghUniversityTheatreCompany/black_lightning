@@ -1,0 +1,5 @@
+# Read by mise before any config file, which is the only place `env` can be set from inside the repo.
+# Without it nothing but CI sets MISE_ENV, mise never loads mise/config.development.toml, and `hk`
+# does not resolve — so the pre-commit hook and the devcontainer's `hk install` both fail.
+# Production is unaffected: the Dockerfile never runs mise. MISE_ENV in the environment still wins.
+env = ["development"]

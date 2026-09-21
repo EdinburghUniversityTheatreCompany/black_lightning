@@ -156,8 +156,9 @@ When writing a ViewComponent, check for an applicable skill, and make sure to cr
 Toolchain is pinned with **mise**, and its config lives in `mise/`, not the repo root: `mise/config.toml`
 (+ `mise/mise.lock`) pins Ruby and Node and holds the tasks; `mise/config.development.toml`
 (+ `mise/mise.development.lock`) adds the dev tools (`hk`, `pkl`, `gitleaks`, `zizmor`, `actionlint`) and
-is read **only when `MISE_ENV=development`**. CI sets that; a local shell has to as well, or `hk` does not
-resolve and the pre-commit hook fails every commit with "No version is set for shim: hk". A worktree's
+is read **only when `MISE_ENV=development`**. The committed `.miserc.toml` sets that for every checkout
+(CI sets it explicitly too); delete it and `hk` stops resolving, so the pre-commit hook fails every commit
+with "No version is set for shim: hk". Production never runs mise, so none of this reaches the image. A worktree's
 gitignored `mise.local.toml` still sits at the root and still layers on top. Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
 (`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
 `mise install && hk install` once to swap the git hooks over.
