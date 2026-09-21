@@ -14,6 +14,13 @@ module Admin
     class ActualsController < FinanceController
       before_action :set_convertible_actual, only: %i[new_expense create_expense
                                                       link_expense confirm_link]
+      before_action :set_apportionable_actual, only: %i[apportion create_apportionment]
+
+      # How many empty share rows the split form offers. Five is the case it
+      # exists for — a Stripe payout covering a Fringe week's shows — and the
+      # form's Stimulus controller adds more, so this is a starting point
+      # rather than a cap.
+      DEFAULT_SHARE_ROWS = 5
 
       # Enough that the right claim is almost always on the list, few enough
       # that the page stays readable. The list is sorted by closeness, so a
@@ -130,6 +137,58 @@ module Admin
                             "#{' with the amount corrected to what EUSA charged' if expense.international?}."
       end
 
+      # Split one credit row across several income budgets. Stripe pays out one
+      # lump covering a week of shows, and the ledger row can only carry one
+      # budget_id, so without this the whole payout lands on one line.
+      def apportion
+        @title = "Split an EUSA credit across budgets"
+        @budgets = splittable_budgets
+        @shares = blank_shares
+      end
+
+      def create_apportionment
+        @budgets = splittable_budgets
+        @shares = submitted_shares
+
+        if (error = apportionment_error)
+          @title = "Split an EUSA credit across budgets"
+          flash.now[:alert] = error
+          render :apportion, status: :unprocessable_entity
+          return
+        end
+
+        store.apportion_actual!(@actual.record_id, @shares)
+        redirect_to actuals_path_with_filters,
+                    notice: "Split across #{@shares.length} budgets. Each one now counts its own " \
+                            "share of this credit."
+      rescue ::Reimbursements::DatabaseStore::NotApportionableError
+        # Split between this request's check and its write — a double-submitted
+        # form, or another operator. Splitting twice would double the income.
+        redirect_to actuals_path_with_filters,
+                    alert: "That row had already been split, so nothing was written a second time."
+      rescue ::Reimbursements::DatabaseStore::ApportionmentMismatchError
+        # Belt and braces under #apportionment_error: the row's own figure
+        # cannot change under us, but refusing beats writing a short split.
+        redirect_to actuals_path_with_filters,
+                    alert: "Those shares did not add up to the row, so nothing was written."
+      end
+
+      # Undo a split. The row goes back to unlinked and reappears on the
+      # overview's unattributed card, so income nobody has attributed is
+      # visible again rather than silently gone.
+      def remove_apportionment
+        actual = find_or_404(:find_actual)
+        unless actual.apportioned?
+          redirect_to actuals_path_with_filters, alert: "That row is not split across budgets."
+          return
+        end
+
+        store.remove_apportionment!(actual.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "That row is an unlinked credit again, and is back on the " \
+                            "unattributed list until it is placed."
+      end
+
       def unoffset
         actual = find_or_404(:find_actual)
         unless actual.offset?
@@ -158,6 +217,103 @@ module Admin
         return if @actual.convertible_to_expense?
 
         redirect_to admin_reimbursements_actuals_path, alert: not_convertible_reason(@actual)
+      end
+
+      def set_apportionable_actual
+        @actual = find_or_404(:find_actual)
+        return if @actual.apportionable?
+
+        redirect_to admin_reimbursements_actuals_path, alert: not_apportionable_reason(@actual)
+      end
+
+      def not_apportionable_reason(actual)
+        if actual.offset?
+          "That row offsets another one, so together they net to zero. Splitting it would " \
+            "invent income that never arrived."
+        elsif actual.apportioned?
+          "That row is already split across budgets. Remove the split first to change it."
+        elsif actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+          "That row is already attached to a claim or a budget, so splitting it as well would " \
+            "count its money twice."
+        else
+          "Only a credit row can be split across income budgets. A debit is spend: split one by " \
+            "creating an expense per share instead."
+        end
+      end
+
+      # The income lines this row's shares may land on.
+      #
+      # UNSCOPED, for the reason store.budgets is: an EUSA credit arriving in
+      # the tail of one financial year routinely belongs to the income line of
+      # the year it was raised in, and the Actuals screens are not year-scoped
+      # at all — a picker following the selected year would silently refuse the
+      # only line that row could correctly land on. Inactive lines are left out
+      # for the reason active_budgets leaves them out: charging a retired line
+      # is quiet and wrong.
+      #
+      # Memoized, so the list the post is VALIDATED against is the list the
+      # page RENDERED — the rule ExpenseForm#offerable_budget_ids follows.
+      def splittable_budgets
+        @splittable_budgets ||= store.budgets.select { |b| b.active && b.income? }
+                                     .sort_by(&:display_name)
+      end
+
+      def splittable_budget_ids
+        splittable_budgets.map(&:record_id)
+      end
+
+      def blank_shares
+        Array.new(DEFAULT_SHARE_ROWS) { { budget_id: nil, amount: nil, amount_typed: "" } }
+      end
+
+      # The typed rows, blanks dropped. A row is blank when it names no budget
+      # AND no amount — a half-filled row is a mistake worth reporting, not
+      # something to silently ignore.
+      #
+      # +amount_typed+ is kept beside the parsed figure so a refused submit
+      # re-renders what the operator actually typed rather than blanking it.
+      # An unreadable amount parses to nil and is caught by
+      # #apportionment_error; it is never handed on raw, because AR casts a
+      # string to a decimal column with #to_d and "£1,200" would store 0.
+      def submitted_shares
+        (params[:shares] || {}).values.filter_map do |row|
+          typed = row[:amount].to_s
+          budget_id = row[:budget_id].to_s
+          next if typed.strip.blank? && budget_id.blank?
+
+          { budget_id: budget_id.presence, amount: ::Reimbursements::AmountParser.parse(typed),
+            amount_typed: typed }
+        end
+      end
+
+      def apportionment_error
+        return "Add at least one budget and amount to split this row across." if @shares.empty?
+
+        share_rule_error || total_rule_error
+      end
+
+      def share_rule_error
+        return "Every share needs a budget and a readable amount, like 2500 or £2,500." if
+          @shares.any? { |s| s[:budget_id].blank? || s[:amount].nil? || !s[:amount].positive? }
+
+        ids = @shares.map { |s| s[:budget_id] }
+        # The picker is drawn from one list and the write goes straight to
+        # budget_id, so an id the page never offered — a line deleted,
+        # retired, or typed in by hand — has to be refused here.
+        return "One of those budgets is no longer available. Reload the page and pick again." if
+          (ids - splittable_budget_ids).any?
+
+        "A budget can only take one share of a row. Add its shares together instead." if
+          ids.uniq.length != ids.length
+      end
+
+      def total_rule_error
+        total = @shares.sum { |s| s[:amount] }
+        return nil if total == @actual.apportionable_total
+
+        "The shares add up to #{helpers.reimbursements_money(total)}, but this row is " \
+          "#{helpers.reimbursements_money(@actual.apportionable_total)}. " \
+          "Apportioning divides the row, so the parts have to add up to it exactly."
       end
 
       def not_convertible_reason(actual)

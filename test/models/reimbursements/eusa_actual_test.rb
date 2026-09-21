@@ -2,6 +2,8 @@ require "test_helper"
 
 module Reimbursements
   class EusaActualTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     test "linked ids wrap the single FKs as record-id string arrays" do
       actual = EusaActual.create!(nominal_code: "4000", narrative: "BACS RUN", debit: 10)
       assert_empty actual.linked_expense_ids
@@ -72,6 +74,59 @@ module Reimbursements
                                   expense: expense)
 
       assert_not_predicate actual, :convertible_to_expense?
+    end
+
+    # --- apportionment -----------------------------------------------------
+
+    test "a credit row with no links is apportionable" do
+      assert_predicate create_reimbursements_eusa_actual(credit: 4000), :apportionable?
+    end
+
+    test "a debit row is not apportionable" do
+      assert_not_predicate create_reimbursements_eusa_actual(debit: 4000), :apportionable?
+    end
+
+    test "an offsetting leg is never apportionable" do
+      actual = create_reimbursements_eusa_actual(credit: 4000,
+                                                 reconciliation_status: EusaActual::STATUS_OFFSET)
+
+      assert_not_predicate actual, :apportionable?
+    end
+
+    test "a row already attached to a budget is not apportionable" do
+      budget = create_reimbursements_budget(name: "Fundraising", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 4000, budget: budget)
+
+      assert_not_predicate actual, :apportionable?
+    end
+
+    test "a row already attached to an expense is not apportionable" do
+      expense = Expense.create!(status: Status::PAID, description: "x")
+      actual = create_reimbursements_eusa_actual(credit: 4000, expense: expense)
+
+      assert_not_predicate actual, :apportionable?
+    end
+
+    test "an already apportioned row is not apportionable again" do
+      budget = create_reimbursements_budget(name: "Fundraising", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 4000)
+      ActualAllocation.create!(eusa_actual: actual, budget: budget, amount: 4000)
+
+      assert_predicate actual.reload, :apportioned?
+      assert_not_predicate actual, :apportionable?
+      assert_equal BigDecimal("4000"), actual.allocated_total
+    end
+
+    # The figure a split must add up to is derived exactly as EusaActual.net
+    # derives every rollup's: credits less debits. NOT the stored `net`
+    # column, which is parsed from the export's own Net cell and so is a
+    # second statement of the same fact that can disagree with (or be blank
+    # beside) the debit/credit pair the budget totals actually read.
+    test "the apportionable total is credits less debits, not the stored net column" do
+      actual = create_reimbursements_eusa_actual(credit: 4000, debit: 250)
+      actual.update_column(:net, 0)
+
+      assert_equal BigDecimal("3750"), actual.reload.apportionable_total
     end
   end
 end

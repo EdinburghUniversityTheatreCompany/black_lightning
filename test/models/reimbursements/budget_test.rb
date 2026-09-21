@@ -5,6 +5,8 @@ module Reimbursements
   # against the base schema export: committed/paid sum amount_excl_vat,
   # current_forecast is the latest forecast, remaining/variance derive from it.
   class BudgetTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     def build_budget(**attrs)
       Budget.create!(name: "Props", **attrs)
     end
@@ -276,6 +278,75 @@ module Reimbursements
       budget = build_budget(name: "Other", cost_centre: nil)
 
       assert_equal "Other", budget.picker_label
+    end
+
+    # --- apportioned income --------------------------------------------------
+
+    # One income line taking the whole of its own credit row. Extracted
+    # because three tests below seed exactly this and jscpd gates at 0.
+    def split_income(name, credit)
+      budget = create_reimbursements_budget(name: name, budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: credit)
+      DatabaseStore.new.apportion_actual!(
+        actual.id, [ { budget_id: budget.id, amount: BigDecimal(credit.to_s) } ]
+      )
+      budget
+    end
+
+    test "an income budget counts its share of an apportioned row" do
+      budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
+      other  = create_reimbursements_budget(name: "Show B", budget_type: "Income")
+      actual = create_reimbursements_eusa_actual(credit: 4000)
+      DatabaseStore.new.apportion_actual!(actual.id, [
+        { budget_id: budget.id, amount: BigDecimal("2500") },
+        { budget_id: other.id,  amount: BigDecimal("1500") }
+      ])
+
+      assert_equal BigDecimal("2500"), budget.reload.eusa_actual_amount
+      assert_equal BigDecimal("1500"), other.reload.eusa_actual_amount
+    end
+
+    # An apportioned row carries no budget_id (apportion_actual! clears it),
+    # so the two sets never overlap. A row linked WHOLE must still be counted
+    # exactly once.
+    test "a fully linked row is counted once, not twice" do
+      budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
+      create_reimbursements_eusa_actual(credit: 900, budget: budget)
+
+      assert_equal BigDecimal("900"), budget.reload.eusa_actual_amount
+    end
+
+    # An Expense line's figure totals through its EXPENSES, so an allocation
+    # to one is not income it earned and must not appear in its rollup.
+    test "an expense budget's figure is untouched by allocations" do
+      budget = create_reimbursements_budget(name: "Props", budget_type: "Expense")
+      actual = create_reimbursements_eusa_actual(credit: 500)
+      DatabaseStore.new.apportion_actual!(
+        actual.id, [ { budget_id: budget.id, amount: BigDecimal("500") } ]
+      )
+
+      assert_equal 0, budget.reload.eusa_actual_amount
+    end
+
+    test "the overview does not query per budget for its allocations" do
+      3.times { |i| split_income("Show #{i}", 100) }
+
+      budgets = DatabaseStore.new.budgets_with_actuals
+      queries = count_queries { budgets.each(&:eusa_actual_amount) }
+
+      assert_equal 0, queries, "eusa_actual_amount must read preloaded allocations"
+    end
+
+    # Negative control for the assertion above: without the preload the same
+    # read really does cost a query per budget, so the zero is not vacuous.
+    test "negative control: unpreloaded budgets DO query per budget" do
+      3.times { |i| split_income("Unpreloaded #{i}", 100) }
+
+      budgets = Budget.where(budget_type: "Income").to_a
+      queries = count_queries { budgets.each(&:eusa_actual_amount) }
+
+      assert_operator queries, :>=, 3,
+                      "expected an unpreloaded read to cost a query per budget (got #{queries})"
     end
   end
 end

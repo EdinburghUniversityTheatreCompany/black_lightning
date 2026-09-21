@@ -27,6 +27,15 @@ module Reimbursements
     # controllers can re-render the form instead.
     class BudgetGoneError < StandardError; end
 
+    # Raised instead of splitting a ledger row that stopped being splittable
+    # between the caller's check and the write (see #apportion_actual!).
+    class NotApportionableError < StandardError; end
+
+    # Raised instead of writing shares that do not add up to the row they
+    # divide. £4,000 split into parts totalling £3,880 understates income by
+    # £120 with nothing on screen saying so, so the write is refused whole.
+    class ApportionmentMismatchError < StandardError; end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -179,7 +188,8 @@ module Reimbursements
     # Year-scoped: every caller is a "this year's budget lines" view.
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped_to_cost_centre(
-        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, area: :owners, expenses: :eusa_actuals).to_a),
+        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
+                                       area: :owners, expenses: :eusa_actuals).to_a),
         &:cost_centre_id
       )
     end
@@ -213,7 +223,8 @@ module Reimbursements
     # budget, per area, per render. `:forecasts` is there for the same reason
     # one level up: Area#projected_amount reads the area's own forecast log.
     def areas
-      @areas ||= Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).to_a
+      @areas ||= Area.includes(:owners, :forecasts,
+                               budgets: %i[expenses forecasts actual_allocations]).to_a
     end
 
     # record_id => name for every area, in ONE query and with no preloads — for
@@ -254,9 +265,16 @@ module Reimbursements
     #
     # Sorted by nominal code, then date, so finance can see which budget each
     # row probably belongs to.
+    # An APPORTIONED row is excluded too, and that exclusion is load-bearing
+    # in the opposite direction from the rest: apportion_actual! CLEARS the
+    # row's budget_id, so without it every split row would reappear here as
+    # unlinked income — turning the one card that surfaces unattributed money
+    # into a permanent false alarm, which is how a real one stops being read.
     def unattributed_actuals
       eusa_actuals_for_cost_centre
-        .reject { |a| a.offset? || a[:expense_id].present? || a[:budget_id].present? }
+        .reject do |a|
+          a.offset? || a[:expense_id].present? || a[:budget_id].present? || a.apportioned?
+        end
         .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 
@@ -699,7 +717,7 @@ module Reimbursements
     # --- EUSA Actuals (reconciliation) ------------------------------------
 
     def eusa_actuals
-      @eusa_actuals ||= EusaActual.includes(:expense, :budget).to_a
+      @eusa_actuals ||= EusaActual.includes(:expense, :budget, allocations: :budget).to_a
     end
 
     # The selected cost centre's ledger rows, for the Actuals browser and its
@@ -718,7 +736,7 @@ module Reimbursements
     end
 
     def find_actual(record_id)
-      EusaActual.includes(:expense, :budget).find_by(id: record_id)
+      EusaActual.includes(:expense, :budget, allocations: :budget).find_by(id: record_id)
     end
 
     def create_actual!(attrs)
@@ -828,6 +846,62 @@ module Reimbursements
       end
       bust_eusa_actuals!
       legs
+    end
+
+    # Splits one credit row across several income budgets as ONE unit, so a
+    # Stripe payout covering five shows lands on five income lines.
+    #
+    # The row's own budget_id is CLEARED: the allocations become the single
+    # answer to "whose income is this", and a row holding both would have its
+    # full value counted on the old line AND its shares counted on the new
+    # ones. #apportionable? already refuses a row that carries one, so this is
+    # belt and braces for a link landing inside the window.
+    #
+    # The guard is re-taken here under a row lock, exactly as
+    # #create_expense_for_actual! does: the controller's check is a read that
+    # goes stale on a double-submitted form, and a second split would double
+    # the income. One transaction for the same reason the offsetting pair is
+    # one — a half-written split leaves the row reading as unlinked while some
+    # of its shares already sit on budgets, and nothing on screen says so.
+    def apportion_actual!(actual_id, allocations)
+      EusaActual.transaction do
+        actual = EusaActual.lock.find(actual_id)
+        raise NotApportionableError unless actual.apportionable?
+
+        total = allocations.sum { |allocation| allocation[:amount] || 0 }
+        raise ApportionmentMismatchError unless total == actual.apportionable_total
+
+        allocations.each do |allocation|
+          ActualAllocation.create!(eusa_actual_id: actual.id, budget_id: allocation[:budget_id],
+                                   amount: allocation[:amount])
+        end
+        actual.update!(budget_id: nil,
+                       reconciliation_status: EusaActual::STATUS_APPORTIONED)
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+      EusaActual.find(actual_id)
+    end
+
+    # The way back out of a split: the shares go and the row becomes an
+    # ordinary unlinked credit again, ready to be split differently or linked
+    # whole. It deletes no ledger row — finance needs the audit trail.
+    #
+    # The stamp is cleared only when it is the one this write put there, so
+    # calling this on a row carrying some other status (an offsetting leg,
+    # which #apportionable? would never have let through in the first place)
+    # cannot silently strip it.
+    def remove_apportionment!(actual_id)
+      EusaActual.transaction do
+        actual = EusaActual.lock.find(actual_id)
+        actual.allocations.destroy_all
+        if actual.reconciliation_status == EusaActual::STATUS_APPORTIONED
+          actual.update!(reconciliation_status: nil)
+        end
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+      EusaActual.find(actual_id)
     end
 
     # Records that two imported rows cancel each other out (an accrual and its

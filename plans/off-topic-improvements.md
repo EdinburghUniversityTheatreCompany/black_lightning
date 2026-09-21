@@ -659,3 +659,12 @@ will sit there until someone deletes it.
 binstub cannot run", while `bundle exec kamal deploy` works. The file is the old three-line
 `load Gem.bin_path('bundler', 'bundle')` stub. `bundle binstubs bundler --force` regenerates it;
 check `bin/kamal` and the other gem binstubs run afterwards, since they share the loader.
+
+### A disabled button is indistinguishable from a live one
+
+`ButtonComponent::BASE_CLASSES` carries no `disabled:` styling, so a `submit_tag … disabled: true`
+renders exactly like an enabled button — the operator clicks it and nothing happens, with nothing
+on screen saying why. The apportion form works around it locally
+(`disabled:opacity-50 disabled:cursor-not-allowed` plus the two hover resets, since the primary
+variant's hover still fires on a disabled button). Adding those to `BASE_CLASSES` is the real fix
+and restyles every button in the app, which is wider than the one form it was noticed on.

@@ -222,6 +222,11 @@ ChaosRails::Application.routes.draw do
           # clears, so its row can land outside even the widened window.
           get :link_expense
           post :confirm_link
+          # Split one credit row across several income budgets: a Stripe
+          # payout covering five shows lands on five lines rather than one.
+          get :apportion
+          post :create_apportionment
+          post :remove_apportionment
         end
       end
 

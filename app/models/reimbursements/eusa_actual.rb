@@ -57,6 +57,12 @@ module Reimbursements
     # else — including a blank status — is an ordinary ledger row.
     STATUS_OFFSET = "offset".freeze
 
+    # reconciliation_status value stamped on a credit row finance has split
+    # across several income budgets. It is what the ledger view and the CSV
+    # read to say "Apportioned" rather than leaving the row looking unlinked;
+    # the allocations themselves are the record of who got what.
+    STATUS_APPORTIONED = "apportioned".freeze
+
     belongs_to :expense, class_name: "Reimbursements::Expense", optional: true,
                          inverse_of: :eusa_actuals
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true
@@ -83,6 +89,12 @@ module Reimbursements
     has_one :offset_counterpart, class_name: "Reimbursements::EusaActual",
                                  foreign_key: :offset_of_id, inverse_of: :offset_of,
                                  dependent: :nullify
+
+    # Each income budget's share of this row, when finance has split it. Only
+    # ever populated on a credit row (see #apportionable?).
+    has_many :allocations, class_name: "Reimbursements::ActualAllocation",
+                           foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
+                           dependent: :destroy
 
     # The net position of a set of ledger rows, from the spending side: debits
     # less credits, so a supplier refund or a credit note reduces the figure
@@ -117,6 +129,62 @@ module Reimbursements
     # into an expense would invent spend that never happened.
     def convertible_to_expense?
       debit.present? && debit.positive? && self[:expense_id].blank? && !offset?
+    end
+
+    # Splittable across several income budgets: a credit that landed, attached
+    # to nothing yet, and not an offsetting leg.
+    #
+    # DEBITS are deliberately out. A debit row is split by converting it into
+    # several expenses, which already works (#convertible_to_expense?), and a
+    # debit budget's figure totals through its EXPENSES rather than through
+    # budget_id — a different mechanism that allocations would not reach.
+    # An offsetting leg nets to zero against its counterpart, so apportioning
+    # one would invent income, exactly as converting one would invent spend.
+    def apportionable?
+      credit.present? && credit.positive? && self[:budget_id].blank? &&
+        self[:expense_id].blank? && !offset? && !apportioned?
+    end
+
+    def apportioned? = allocations.any?
+
+    # What a split has to add up to: credits less debits, the same derivation
+    # EusaActual.net uses (negated, since this is the income side) and so the
+    # exact figure Budget#credit_actual_total would have counted had the row
+    # been attached whole.
+    #
+    # NOT the stored +net+ column. That is parsed from the export's own Net
+    # cell, which is a second statement of the same fact — it can be blank on
+    # a hand-created row and can disagree with the debit/credit pair every
+    # rollup actually reads. Splitting against a figure no rollup reads is how
+    # the parts would stop summing to the whole.
+    def apportionable_total = -EusaActual.net([ self ])
+
+    def allocated_total = allocations.sum { |allocation| allocation.amount || 0 }
+
+    # The budgets a split was divided between, each with its share:
+    # "Show A £2,500.00; Show B £1,500.00". Blank when the row is not split.
+    #
+    # On the MODEL rather than in a helper because the ledger page and the
+    # Actuals export both print it, and a finance user reading the CSV must
+    # not be told something different from one reading the screen. The "£" is
+    # kept even in the export, where amounts are normally bare numerals: this
+    # is a description of several amounts, not a column anything sums.
+    #
+    # Ordered by share, largest first, then by name — stable between renders,
+    # rather than following insertion order.
+    def allocation_summary
+      allocations
+        .sort_by { |a| [ -(a.amount || 0), a.budget&.display_name.to_s ] }
+        .map { |a| "#{a.budget&.display_name.presence || '(budget gone)'} #{money(a.amount)}" }
+        .join("; ")
+    end
+
+    private
+
+    # number_to_currency with the same unit reimbursements_money uses, so the
+    # summary reads identically to every other money figure in the portal.
+    def money(amount)
+      ActiveSupport::NumberHelper.number_to_currency(amount || 0, unit: "£")
     end
   end
 end

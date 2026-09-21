@@ -122,6 +122,49 @@ module ReimbursementsTestHelpers
                                        debit: debit, **attrs)
   end
 
+  # A fuller ledger row than create_reimbursements_actual above, which is the
+  # older debit-only shorthand the reconcile tests were written against. This
+  # one stamps the columns an imported row really carries (date, period,
+  # source_month) and takes a +credit:+, since income is the side the
+  # apportionment work reads.
+  #
+  # +net+ is DERIVED from debit and credit rather than taken as an argument,
+  # because EusaActual.net derives the rollups' figure the same way. A stored
+  # net that disagreed with its own debit/credit would be a second source of
+  # truth for what a row is worth, which is exactly what a test must not seed.
+  def create_reimbursements_eusa_actual(nominal_code: "4100", narrative: "Stripe payout",
+                                        debit: nil, credit: nil, date: Date.current,
+                                        period: "06", source_month: "2026-09", **attrs)
+    Reimbursements::EusaActual.create!(
+      nominal_code: nominal_code, narrative: narrative, debit: debit, credit: credit,
+      net: (debit || 0) - (credit || 0), date: date, period: period,
+      source_month: source_month, **attrs
+    )
+  end
+
+  # --- Query counting ------------------------------------------------------
+
+  # Counts the SQL a block issues, for the preload assertions that stop a
+  # rollup N+1ing a query per budget. Lives here rather than in one test file
+  # because three suites need it and jscpd gates duplication at 0.
+  #
+  # Schema-introspection queries (the first touch of a table in a test run)
+  # are excluded, or whichever test happens to run first absorbs them and the
+  # comparison between two sizes becomes noise instead of signal — measured:
+  # without this exclusion the SAME scenario read 45 queries first and 31
+  # second, entirely from schema-cache warmup.
+  def count_queries(&block)
+    count = 0
+    callback = lambda do |*, payload|
+      next if payload[:name] == "SCHEMA"
+      next if payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
+
+      count += 1
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+    count
+  end
+
   # --- Assertions ----------------------------------------------------------
 
   # Every finance list's "Download CSV" answers the same shape: a text/csv
