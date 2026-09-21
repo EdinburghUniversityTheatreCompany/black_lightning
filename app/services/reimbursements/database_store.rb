@@ -36,6 +36,14 @@ module Reimbursements
     # £120 with nothing on screen saying so, so the write is refused whole.
     class ApportionmentMismatchError < StandardError; end
 
+    # Raised instead of unlinking a ledger row from a claim that exists ONLY
+    # because of it — a From-EUSA claim created by #create_expense_for_actual!.
+    # There is no earlier state to put that claim back into: unlinking would
+    # leave a Paid expense charged to a budget with nothing on the ledger
+    # behind it, and the row offering "Create expense" again beside it. Delete
+    # the claim instead.
+    class ClaimFromRowError < StandardError; end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -620,7 +628,12 @@ module Reimbursements
     # "nil means leave it alone" contract that four other write paths
     # (BatchProcessor, the reject path, Review#save, the producer form) rely
     # on, and every one of those validates it as positive before writing.
-    CLEARABLE_EXPENSE_COLUMNS = %i[foreign_amount].freeze
+    #
+    # payment_confirmed_date joins it for #unlink_actual_from_expense!, which
+    # must undo the settle it is reversing: left behind, the claim reads
+    # Submitted while still carrying the date it was paid on, from a ledger row
+    # that is no longer attached to it.
+    CLEARABLE_EXPENSE_COLUMNS = %i[foreign_amount payment_confirmed_date].freeze
 
     def update_expense!(record_id, attrs)
       expense = Expense.find(record_id)
@@ -964,6 +977,62 @@ module Reimbursements
       bust_eusa_actuals!
       bust_budgets!
       EusaActual.find(actual_id)
+    end
+
+    # The way back out of a wrong match to an INCOME line: the row loses its
+    # budget and becomes an ordinary unlinked credit again, ready to be split
+    # or linked to the right line.
+    #
+    # It is what makes "Split across budgets" reachable on the row it was built
+    # for. Reconcile attaches a whole box-office settlement to one income line,
+    # and #apportionable? refuses a row that already carries a budget — so the
+    # one control that exists for splitting a payout across five shows never
+    # appeared on the payout.
+    #
+    # Nothing else moves. A budget link is a pure attribution: no claim's status
+    # hangs off it, so clearing it changes only which line's figures count this
+    # money, which is the whole point.
+    def unlink_actual_from_budget!(actual_id)
+      actual = EusaActual.find(actual_id)
+      actual.update!(budget_id: nil)
+      bust_eusa_actuals!
+      bust_budgets!
+      actual
+    end
+
+    # The way back out of a wrong match to a CLAIM — and it undoes the
+    # settlement as well as the link, in one transaction.
+    #
+    # That is the whole difficulty. #settle_expense_from_actual! writes both:
+    # the link AND Paid + payment_confirmed_date on the claim. Clearing the
+    # link alone would leave a claim reading Paid with no ledger row behind it
+    # and no screen saying so — a money screen stating something untrue, which
+    # is worse than the wrong match it was meant to fix. So a claim this row
+    # settled goes back to Submitted, the status it necessarily held: a claim
+    # reaches the ledger by being in a batch.
+    #
+    # A claim that is NOT Paid is left alone rather than pushed anywhere: it was
+    # linked without being settled (the plain #link_actual_to_expense! path), so
+    # there is nothing to undo but the link.
+    #
+    # An INTERNATIONAL claim keeps the corrected amount. The estimate finance
+    # typed at review is overwritten by what EUSA's bank actually charged and is
+    # not recorded anywhere, so it cannot be restored — the callers say so.
+    def unlink_actual_from_expense!(actual_id)
+      actual = EusaActual.transaction do
+        row = EusaActual.lock.find(actual_id)
+        expense = row.expense_id && Expense.lock.find_by(id: row.expense_id)
+        raise ClaimFromRowError if expense&.expense_type == Expense::TYPE_FROM_EUSA
+
+        if expense&.status == Status::PAID
+          update_expense!(expense.record_id, status: Status::SUBMITTED, payment_confirmed_date: nil)
+        end
+        row.update!(expense_id: nil)
+        row
+      end
+      bust_eusa_actuals!
+      bust_budgets!
+      actual
     end
 
     # Records that two imported rows cancel each other out (an accrual and its

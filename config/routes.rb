@@ -234,6 +234,10 @@ ChaosRails::Application.routes.draw do
           # Undo a mis-detected offsetting pair: the pairing heuristic can stamp
           # real spend as noise, and that must not need a console to reverse.
           post :unoffset
+          # Detach a row from the claim or income line it was matched to. A
+          # wrong match had no way back short of a console, and it also kept
+          # "Split across budgets" off the very row that control exists for.
+          post :unlink
           # Attach a row to a claim the automatic matcher missed. An
           # international claim's amount is only an estimate until the payment
           # clears, so its row can land outside even the widened window.

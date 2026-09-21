@@ -151,12 +151,15 @@
            actual,
            content_tag(:span, actual.nominal_code.presence || "-", class: "font-mono"),
            content_tag(:span, actual.period.presence || "-", class: "font-mono"),
-           reimbursements_date(actual.date),
+           # nowrap: the actions cell grew when Unlink joined it, and an ISO
+           # date is the column that gives way first — "2026-09-21" wrapping
+           # after the month reads as two dates.
+           content_tag(:span, reimbursements_date(actual.date), class: "whitespace-nowrap"),
            actual.narrative.presence || "-",
            (reimbursements_money(actual.debit) if actual.debit&.positive?),
            (reimbursements_money(actual.credit) if actual.credit&.positive?),
            linked,
-           (if actual.convertible_to_expense?
+           safe_join([ (if actual.convertible_to_expense?
               # Two ways a stray debit row gets resolved: it paid a claim
               # somebody filed (link it), or it is a cost EUSA levied directly
               # and nobody claimed (convert it).
@@ -195,7 +198,24 @@
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",
                         data: { turbo_confirm: "Treat these two rows as real spend or income " \
                                                "again? Both stay on the ledger." })
-            end)
+            end),
+           # Unlink sits in the SAME cell and is ADDITIVE, not another branch in
+           # the chain above: a row can carry a link AND still be offered
+           # something else. A budget-linked DEBIT is convertible
+           # (convertible_to_expense? reads expense_id, not budget_id), and an
+           # offsetting leg that carries a link must keep "Not offsetting" —
+           # the only control that un-hides it from every rollup. Written as an
+           # elsif, Unlink was unreachable on both.
+           #
+           # A wrong match had no way back short of a console, and a whole
+           # settlement attached to one income line could never be split,
+           # because apportionable? refuses a row that carries a budget.
+           (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+              button_to("Unlink",
+                        unlink_admin_reimbursements_actual_path(actual.record_id, **filters),
+                        class: btn_classes(:secondary, :sm), form_class: "inline-block",
+                        data: { turbo_confirm: reimbursements_unlink_confirm(actual) })
+            end) ].compact, " ")
          ]
        }
      end %>

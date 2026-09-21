@@ -1067,6 +1067,109 @@ module Admin
       assert_match(/already linked/, flash[:alert])
       assert_equal ::Reimbursements::Status::SUBMITTED, claim.reload.status
     end
+
+    # --- Unlink -------------------------------------------------------------
+    # A wrong match had no way back short of a console, and an income line
+    # holding a whole settlement could never be split, because apportionable?
+    # refuses a row that already carries a budget.
+
+    test "unlinking from an income line makes the row splittable again" do
+      sign_in @user
+      refute @linked_budget.apportionable?, "precondition: a budget-linked credit cannot be split"
+
+      post :unlink, params: { id: @linked_budget.record_id }
+
+      @linked_budget.reload
+      assert_nil @linked_budget.budget_id
+      assert @linked_budget.apportionable?, "the row it was built for must now offer the split"
+      assert @linked_budget.needs_attention?, "unplaced money has to be visible again"
+    end
+
+    test "unlinking from a claim sends a claim this row settled back to Submitted" do
+      @expense.update!(status: ::Reimbursements::Status::PAID,
+                       payment_confirmed_date: Date.new(2026, 5, 13))
+      sign_in @user
+
+      post :unlink, params: { id: @linked_expense.record_id }
+
+      @expense.reload
+      assert_equal ::Reimbursements::Status::SUBMITTED, @expense.status
+      assert_nil @expense.payment_confirmed_date,
+                 "a claim reading Submitted must not still carry the date it was paid on"
+      assert_nil @linked_expense.reload.expense_id
+    end
+
+    test "unlinking leaves a claim that was never settled where it is" do
+      sign_in @user
+      assert_equal ::Reimbursements::Status::PENDING, @expense.status
+
+      post :unlink, params: { id: @linked_expense.record_id }
+
+      assert_equal ::Reimbursements::Status::PENDING, @expense.reload.status
+      assert_nil @linked_expense.reload.expense_id
+    end
+
+    # The claim exists only because of the row, so there is no earlier state to
+    # return it to: unlinking would leave a Paid expense charged to a budget
+    # with nothing on the ledger behind it.
+    test "refuses to unlink a claim that was created from this row" do
+      @expense.update!(expense_type: ::Reimbursements::Expense::TYPE_FROM_EUSA,
+                       status: ::Reimbursements::Status::PAID)
+      sign_in @user
+
+      post :unlink, params: { id: @linked_expense.record_id }
+
+      assert_match(/created FROM this row/, flash[:alert])
+      assert_equal @expense.id, @linked_expense.reload.expense_id
+      assert_equal ::Reimbursements::Status::PAID, @expense.reload.status
+    end
+
+    test "unlinking an already-unlinked row says so and changes nothing" do
+      sign_in @user
+
+      post :unlink, params: { id: @unlinked.record_id }
+
+      assert_match(/isn't linked to anything/, flash[:alert])
+    end
+
+    test "unlinking deletes no ledger row" do
+      sign_in @user
+      before = ::Reimbursements::EusaActual.count
+
+      post :unlink, params: { id: @linked_budget.record_id }
+
+      assert_equal before, ::Reimbursements::EusaActual.count
+    end
+
+    test "the ledger offers Unlink on linked rows and not on unlinked ones" do
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert_response :success
+      # Prefix match: the button carries the page's filters through its action,
+      # so the path it posts to is never the bare one.
+      assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@linked_expense.record_id)
+      assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@linked_budget.record_id)
+      assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@unlinked.record_id), count: 0
+    end
+
+    # Unlink is additive rather than another branch of the action chain. A
+    # budget-linked DEBIT is still convertible (convertible_to_expense? reads
+    # expense_id, not budget_id), so as an elsif the button was unreachable on
+    # exactly the row an operator is most likely to have mis-attributed.
+    test "a budget-linked debit offers Unlink alongside its conversion controls" do
+      row = create_reimbursements_actual(nominal_code: "432320", period: "03",
+                                         narrative: "Venue recharge", date: Date.new(2026, 5, 15),
+                                         debit: BigDecimal("90.0"), budget: @budget)
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert row.convertible_to_expense?, "precondition: the conversion controls are offered"
+      assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(row.record_id)
+      assert_select "a[href=?]", new_expense_admin_reimbursements_actual_path(row.record_id)
+    end
   end
   end
 end

@@ -238,7 +238,51 @@ module Admin
                             "as real spend or income."
       end
 
+      # Detach a row from the claim or the income line it was matched to.
+      #
+      # A wrong match had no way back short of a console. It also had a second
+      # cost the screen never explained: #apportionable? refuses a row that
+      # already carries a budget, so a box-office settlement Reconcile attached
+      # whole to one income line could never be split across the shows it
+      # covered — the one control built for that case never appeared on the one
+      # row it was built for.
+      #
+      # Deletes nothing; the row stays on the ledger and returns to the
+      # unattributed card, so money nobody has placed is visible again rather
+      # than silently gone. Which link it carries decides what is undone, since
+      # the two are undone differently (see the store's two methods).
+      def unlink
+        actual = find_or_404(:find_actual)
+
+        if actual.linked_expense_ids.any?
+          unlink_from_claim(actual)
+        elsif actual.linked_budget_ids.any?
+          store.unlink_actual_from_budget!(actual.record_id)
+          redirect_to actuals_path_with_filters,
+                      notice: "Unlinked from that income line. The row is unplaced again, and can " \
+                              "now be split across budgets or linked to another line."
+        else
+          redirect_to actuals_path_with_filters, alert: "That row isn't linked to anything."
+        end
+      end
+
       private
+
+      # Unlinking a row from a CLAIM also reverses the settlement it wrote — so
+      # the notice says so, rather than leaving the operator to discover that
+      # the claim moved back to Submitted.
+      def unlink_from_claim(actual)
+        store.unlink_actual_from_expense!(actual.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "Unlinked from that claim. If the claim was marked Paid by this row " \
+                            "it is back to Submitted, so it will be reconciled again when the " \
+                            "right row turns up."
+      rescue ::Reimbursements::DatabaseStore::ClaimFromRowError
+        redirect_to actuals_path_with_filters,
+                    alert: "That claim was created FROM this row, so there is nothing to unlink it " \
+                           "back to — the claim only exists because of it. Delete the claim instead, " \
+                           "and the row goes back to offering \"Create expense\"."
+      end
 
       # The state the URL asks for, defaulting to the leftovers.
       #

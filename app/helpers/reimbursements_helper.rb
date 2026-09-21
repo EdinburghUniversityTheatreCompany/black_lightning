@@ -229,6 +229,22 @@ module ReimbursementsHelper
     Reimbursements::EusaActual.net(actuals)
   end
 
+  # What unlinking this ledger row will do, for its confirm dialog.
+  #
+  # The two links are undone differently and the difference is the operator's
+  # to know BEFORE they click: detaching a budget is a pure re-attribution,
+  # while detaching a claim also reverses the settlement the match wrote and
+  # sends the claim back to Submitted. An international claim keeps the
+  # corrected amount either way — the estimate it replaced is not recorded
+  # anywhere, so it cannot come back.
+  def reimbursements_unlink_confirm(actual)
+    if actual.linked_expense_ids.any?
+      "Unlink this row from its claim? The row stays on the ledger and goes back to needing "         "attention. If the claim was marked Paid by this match it returns to Submitted, and an "         "international claim keeps the amount EUSA actually charged."
+    else
+      "Unlink this row from its income line? The row stays on the ledger, that line stops "         "counting this money, and the row can then be split across several budgets."
+    end
+  end
+
   # The over-budget / over-original-budget pill, or nothing. ONE derivation,
   # because the budgets index and the budget overview are two views of the
   # same lines and a line badged red on one and plain black on the other is
