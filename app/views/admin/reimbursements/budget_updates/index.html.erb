@@ -2,7 +2,8 @@
 
 <p class="mb-3 text-gray-600">
   A log of multi-budget forecast revisions. Each one revised several budgets' forecasts at once
-  under a shared effective date and note. The individual forecasts stay editable from each
+  under a shared effective date and note. Open one to see the amounts it set, what each one
+  replaced, and to undo the whole revision; the individual forecasts stay editable from each
   budget's own forecast log.
 </p>
 
@@ -23,6 +24,7 @@
             <th scope="col">Note</th>
             <th scope="col">Revised</th>
             <th scope="col">Logged by</th>
+            <th scope="col"><span class="sr-only">Open</span></th>
           </tr>
         </thead>
         <tbody>
@@ -46,6 +48,13 @@
                 <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "line") %>
               </td>
               <td class="whitespace-nowrap"><%= update.created_by&.full_name.presence || "-" %></td>
+              <td class="whitespace-nowrap text-right">
+                <%# The row names the lines and no figures — the amounts are on
+                    the update's own page, along with what each one replaced
+                    and the way to undo the whole revision. %>
+                <%= link_to "Open", admin_reimbursements_budget_update_path(update.record_id),
+                            class: btn_classes(:secondary, :sm) %>
+              </td>
             </tr>
           <% end %>
         </tbody>

@@ -31,6 +31,33 @@ module Admin
         @area_names_by_id = store.area_names_by_id
       end
 
+      # One revision, with the AMOUNTS it set and what each one replaced.
+      #
+      # The log named the budgets a meeting revised and nothing else, so the
+      # one thing an operator wants from it — "what did we actually change it
+      # to, and from what" — was the one thing it did not say, and there was no
+      # page to open at all (routes gave index/new/create only). Undoing a
+      # meeting's worth of revisions meant deleting forecasts one at a time
+      # from each budget's own edit page.
+      def show
+        @budget_update = find_or_404(:find_budget_update)
+        @title = "Budget update: #{helpers.reimbursements_date(@budget_update.effective_date)}"
+        @rows = revision_rows(@budget_update)
+      end
+
+      # Undo the whole revision. See DatabaseStore#delete_budget_update!: the
+      # forecasts it logged are destroyed rather than detached, so each line
+      # falls back to the forecast that preceded this one.
+      def destroy
+        budget_update = find_or_404(:find_budget_update)
+        count = budget_update.forecasts.size
+        store.delete_budget_update!(budget_update.record_id)
+        redirect_to admin_reimbursements_budget_updates_path,
+                    notice: "Removed that budget update. #{pluralize_forecasts(count)} " \
+                            "#{count == 1 ? 'was' : 'were'} undone, so each line is back on the " \
+                            "forecast it had before."
+      end
+
       def new
         @amounts = {}
         @field_errors = {}
@@ -50,6 +77,61 @@ module Admin
       end
 
       private
+
+      # One row per forecast this update logged: what it names, what it set the
+      # figure to, what that replaced, and what the line's plan is NOW.
+      #
+      # "Replaced" is the newest forecast for the same line dated BEFORE this
+      # one, which is exactly the rule current_forecast reads — so it is what
+      # removing this update would fall back to, not a guess. Nil where this
+      # was the line's first forecast; the line then falls back to its initial
+      # budget, which the row says instead.
+      #
+      # "Now" is read separately because a LATER revision may already have
+      # superseded this one, in which case removing it changes nothing on
+      # screen — and the page has to be able to say so.
+      def revision_rows(budget_update)
+        budget_update.forecasts.sort_by { |f| label_for(f).to_s.downcase }.map do |forecast|
+          owner = forecast.budget || forecast.area
+          { label: label_for(forecast), area_total: forecast.budget_id.nil?,
+            amount: forecast.amount, replaced: previous_forecast(forecast)&.amount,
+            initial: owner&.initial_budget, current: owner&.current_forecast,
+            superseded: superseded?(forecast, owner) }
+        end
+      end
+
+      def label_for(forecast)
+        return forecast.budget.display_name if forecast.budget
+        return "#{forecast.area.name} (area total)" if forecast.area
+
+        "an unknown line"
+      end
+
+      # The forecast this one replaced: the same line's newest entry ordered
+      # BEFORE it by (date, id) — the ordering current_forecast itself uses.
+      def previous_forecast(forecast)
+        # Array has <=> but not <, so the comparison has to be spelled out.
+        siblings_of(forecast)
+          .select { |other| (sort_key(other) <=> sort_key(forecast)).negative? }
+          .max_by { |other| sort_key(other) }
+      end
+
+      def superseded?(forecast, owner)
+        return false if owner.nil?
+
+        siblings_of(forecast).any? { |other| (sort_key(other) <=> sort_key(forecast)).positive? }
+      end
+
+      def siblings_of(forecast)
+        owner = forecast.budget || forecast.area
+        return [] if owner.nil?
+
+        owner.forecasts.to_a
+      end
+
+      def sort_key(forecast)
+        [ forecast.date || Date.new(0), forecast.id ]
+      end
 
       def set_up_form
         @title = "New budget update"

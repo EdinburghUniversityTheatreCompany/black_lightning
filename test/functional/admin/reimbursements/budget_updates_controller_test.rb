@@ -211,6 +211,144 @@ module Admin
         assert_match(/no longer exists/i, response.body)
         assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
       end
+
+      # --- Show and undo -------------------------------------------------------
+      # The log named the budgets a meeting revised and nothing else, and an
+      # update could not be opened at all: routes gave index/new/create only,
+      # so undoing one meant deleting forecasts from each budget's edit page.
+
+      def store_for_test
+        ::Reimbursements::DatabaseStore.new
+      end
+
+      def logged_update(date: Date.new(2026, 6, 1), note: "June meeting", forecasts: nil)
+        store_for_test.create_budget_update!(
+          effective_date: date, note: note, created_by: @user,
+          forecasts: forecasts || [ { budget_id: @props.record_id, amount: 250 } ]
+        )
+      end
+
+      test "the page states the amount each line was set to" do
+        update = logged_update
+        sign_in @user
+
+        get :show, params: { id: update.record_id }
+
+        assert_response :success
+        assert_match(/250/, response.body)
+        assert_match(/Props/, response.body)
+      end
+
+      test "the page states what each amount replaced" do
+        store = store_for_test
+        store.create_forecast!(budget_id: @props.record_id, amount: 100,
+                               date: Date.new(2026, 5, 1), reason: "May meeting")
+        update = logged_update
+        sign_in @user
+
+        get :show, params: { id: update.record_id }
+
+        row = assigns(:rows).sole
+        assert_equal BigDecimal("100"), row[:replaced]
+        assert_equal BigDecimal("250"), row[:amount]
+      end
+
+      # A line's FIRST forecast replaced the committee's initial figure, not an
+      # earlier revision — and that is what removing this update falls back to.
+      test "a line's first forecast reports the initial budget as what it replaced" do
+        @props.update!(initial_budget: 400)
+        update = logged_update
+        sign_in @user
+
+        get :show, params: { id: update.record_id }
+
+        row = assigns(:rows).sole
+        assert_nil row[:replaced]
+        assert_equal BigDecimal("400"), row[:initial]
+      end
+
+      test "removing an update puts each line back on the forecast it had before" do
+        store = store_for_test
+        store.create_forecast!(budget_id: @props.record_id, amount: 100,
+                               date: Date.new(2026, 5, 1), reason: "May meeting")
+        update = logged_update
+        sign_in @user
+        # Re-found, never reloaded: Budget#current_forecast memoizes into an
+        # ivar that `reload` does not clear, so a second read through the same
+        # object hands back the figure from before the delete.
+        assert_equal BigDecimal("250"), ::Reimbursements::Budget.find(@props.id).current_forecast
+
+        delete :destroy, params: { id: update.record_id }
+
+        assert_equal BigDecimal("100"), ::Reimbursements::Budget.find(@props.id).current_forecast
+      end
+
+      # dependent: :nullify would leave every revision in place and merely
+      # unlabelled — the opposite of an undo, and a state nothing on screen
+      # could explain.
+      test "removing an update destroys its forecasts rather than orphaning them" do
+        update = logged_update
+        sign_in @user
+
+        delete :destroy, params: { id: update.record_id }
+
+        assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
+        assert_empty ::Reimbursements::BudgetForecast.where(budget_id: @props.id)
+        refute ::Reimbursements::BudgetUpdate.exists?(update.id)
+      end
+
+      test "removing an update deletes no budget and no claim" do
+        update = logged_update
+        expense = create_reimbursements_expense(budget: @props, status: "Paid")
+        sign_in @user
+
+        delete :destroy, params: { id: update.record_id }
+
+        assert ::Reimbursements::Budget.exists?(@props.id)
+        assert ::Reimbursements::Expense.exists?(expense.id)
+      end
+
+      # A later revision already won, so removing this one moves no figure —
+      # the page has to say so rather than offering a click that does nothing.
+      test "a superseded revision is marked as such" do
+        update = logged_update
+        store_for_test.create_forecast!(budget_id: @props.record_id, amount: 900,
+                                        date: Date.new(2026, 7, 1), reason: "July meeting")
+        sign_in @user
+
+        get :show, params: { id: update.record_id }
+
+        assert assigns(:rows).sole[:superseded]
+        assert_match(/superseded this one/, response.body)
+      end
+
+      test "an area's agreed total is named and marked as one" do
+        area = create_reimbursements_area(name: "Cogito")
+        update = logged_update(forecasts: [ { area_id: area.record_id, amount: 3000 } ])
+        sign_in @user
+
+        get :show, params: { id: update.record_id }
+
+        assert_response :success
+        assert_match(/Cogito \(area total\)/, response.body)
+      end
+
+      test "the index links each update to its page" do
+        update = logged_update
+        sign_in @user
+
+        get :index
+
+        assert_select "a[href=?]", admin_reimbursements_budget_update_path(update.record_id)
+      end
+
+      test "an unknown update is a 404, not a 500" do
+        sign_in @user
+
+        get :show, params: { id: "999999" }
+
+        assert_response :not_found
+      end
     end
   end
 end

@@ -153,7 +153,10 @@ ChaosRails::Application.routes.draw do
 
       # Multi-budget forecast revisions: one shared date + note across several
       # budgets (e.g. after a budget meeting).
-      resources :budget_updates, only: %i[index new create]
+      # show + destroy: the log named the budgets a meeting revised and nothing
+      # else, and an update could not be opened at all — so undoing one meant
+      # deleting forecasts one at a time from each budget's own edit page.
+      resources :budget_updates, only: %i[index new create show destroy]
 
       # Financial years. A year is built as a draft (create -> edit -> import
       # its budgets) and switched to with the separate `activate` action, so

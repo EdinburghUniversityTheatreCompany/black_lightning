@@ -565,6 +565,36 @@ module Reimbursements
                                  .order(effective_date: :desc, id: :desc).to_a)
     end
 
+    # One update by id, with everything its page prints preloaded. Unscoped,
+    # for the reason #budgets is: an update logged against last year's lines is
+    # still openable from a bookmark, and blanking it would be worse than
+    # showing it.
+    def find_budget_update(record_id)
+      return nil if record_id.blank?
+
+      BudgetUpdate.includes(:created_by, forecasts: %i[budget area]).find_by(id: record_id)
+    end
+
+    # Undo a whole revision: the forecasts it logged go, then the update row.
+    #
+    # The forecasts have to be DESTROYED, not detached. `has_many :forecasts,
+    # dependent: :nullify` means destroying the update alone would leave every
+    # revision in place and merely unlabelled — the opposite of an undo, and a
+    # state nothing on screen could explain. Each line then falls back to
+    # whatever forecast preceded this one, because current_forecast is simply
+    # the latest by date and id.
+    #
+    # One transaction: a half-removed update leaves some lines reverted and
+    # some not, under a heading that no longer exists to say which.
+    def delete_budget_update!(record_id)
+      BudgetUpdate.transaction do
+        update = BudgetUpdate.lock.find(record_id)
+        update.forecasts.destroy_all
+        update.destroy!
+      end
+      bust_budgets!
+    end
+
     # Retries the auto_number MAX+1 race: two concurrent creates (portal vs
     # poll job) can pick the same number; the unique index rejects the loser,
     # which re-reads MAX on the retry. Explicit auto_numbers (the importer)

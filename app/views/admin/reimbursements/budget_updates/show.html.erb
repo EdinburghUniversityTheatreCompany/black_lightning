@@ -1,0 +1,101 @@
+<%= render "shared/back_link", text: "All budget updates",
+           path: admin_reimbursements_budget_updates_path %>
+
+<p class="mb-4 text-gray-600">
+  One revision, and what it changed. Each line's plan is the latest forecast logged against it,
+  so removing this update puts every line back on whatever it had before — except where a later
+  revision has already superseded it, which the rows below mark.
+</p>
+
+<%= render CardComponent.new(title: "The revision") do %>
+  <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+    <dt class="font-medium">Effective date</dt>
+    <dd><%= reimbursements_date(@budget_update.effective_date) %></dd>
+    <dt class="font-medium">Logged by</dt>
+    <dd><%= @budget_update.created_by&.full_name.presence || "-" %></dd>
+    <% if @budget_update.note.present? %>
+      <dt class="font-medium">Note</dt>
+      <dd><q><%= @budget_update.note %></q></dd>
+    <% end %>
+  </dl>
+<% end %>
+
+<%= render CardComponent.new(title: "#{pluralize(@rows.size, 'line')} revised", html_class: "mt-4") do %>
+  <% if @rows.empty? %>
+    <p class="mb-0 text-gray-600">
+      This update logged no forecasts. Removing it changes no figure.
+    </p>
+  <% else %>
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">Line</th>
+            <th scope="col" class="px-3 py-2 text-right">Was</th>
+            <th scope="col" class="px-3 py-2 text-right">Set to</th>
+            <th scope="col" class="px-3 py-2 text-right">Plan now</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2">
+                <%= row[:label] %>
+                <% if row[:superseded] %>
+                  <%# Removing this update would not move the figure: a later
+                      revision already won. Saying so is the difference between
+                      an undo and a click that appears to do nothing. %>
+                  <div class="text-xs text-gray-500">
+                    A later revision has superseded this one, so removing it changes nothing here.
+                  </div>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <% if row[:replaced] %>
+                  <%= reimbursements_money(row[:replaced]) %>
+                <% elsif row[:initial] %>
+                  <%# The line's first forecast, so what it replaced was the
+                      committee's initial figure rather than an earlier
+                      revision — and that is what removing this falls back to. %>
+                  <%= reimbursements_money(row[:initial]) %>
+                  <span class="text-xs text-gray-500">(initial)</span>
+                <% else %>
+                  <span class="text-gray-500">no figure set</span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-right font-medium tabular-nums">
+                <%= reimbursements_money(row[:amount]) %>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <% if row[:current] %>
+                  <%= reimbursements_money(row[:current]) %>
+                <% else %>
+                  <span class="text-gray-500">-</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Remove this update", html_class: "mt-4") do %>
+  <p class="mb-3 text-sm text-gray-600">
+    This deletes the <%= pluralize(@rows.size, "forecast") %> it logged, so every line goes back
+    to the figure it had before. The claims charged to those lines are untouched, nobody is
+    emailed, and the budgets themselves are not deleted. There is no undo for this, but the same
+    revision can be logged again from
+    <%= link_to "New budget update", new_admin_reimbursements_budget_update_path,
+                class: "underline" %>.
+  </p>
+  <%= button_to "Remove this update",
+                admin_reimbursements_budget_update_path(@budget_update.record_id),
+                method: :delete, class: btn_classes(:danger, :sm),
+                form: { class: "inline-block" },
+                data: { turbo_confirm: "Remove this budget update? " \
+                                       "#{pluralize(@rows.size, 'forecast')} will be deleted and " \
+                                       "each line goes back to the figure it had before. " \
+                                       "This can't be undone." } %>
+<% end %>
