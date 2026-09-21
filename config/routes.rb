@@ -121,6 +121,12 @@ ChaosRails::Application.routes.draw do
       # accepts_nested_attributes_for :budgets).
       resources :areas, only: %i[index new create edit update]
 
+      # The area PAGE is the one reimbursements screen finance and a budget
+      # OWNER share, so it cannot sit behind AreasController's finance gate —
+      # AreasController#show skips it and applies the union instead. Declared
+      # separately from the block above so that difference is visible here.
+      resources :areas, only: %i[show]
+
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index new create edit update] do

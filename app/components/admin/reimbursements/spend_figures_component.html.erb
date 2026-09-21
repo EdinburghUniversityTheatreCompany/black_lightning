@@ -1,0 +1,78 @@
+<%= render CardComponent.new do %>
+  <dl class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+    <div>
+      <dt class="text-sm text-gray-500">Budget</dt>
+      <dd class="text-2xl font-semibold tabular-nums">
+        <% if summary.no_budget_set? %>
+          <span class="text-lg font-normal text-gray-500">No budget set</span>
+        <% else %>
+          <%= reimbursements_money(summary.budget_amount) %>
+        <% end %>
+        <% if budget_note %>
+          <small class="block text-xs font-normal text-gray-500"><%= budget_note %></small>
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-sm text-gray-500">Spent</dt>
+      <dd class="text-2xl font-semibold tabular-nums">
+        <%= reimbursements_money(summary.spent) %>
+        <% if term(:spent) %>
+          <small class="block text-xs font-normal text-gray-500"><%= term(:spent) %></small>
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-sm text-gray-500">Waiting for approval</dt>
+      <dd class="text-2xl font-semibold tabular-nums">
+        <%= reimbursements_money(summary.waiting) %>
+        <% if term(:waiting) %>
+          <small class="block text-xs font-normal text-gray-500"><%= term(:waiting) %></small>
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-sm text-gray-500">Left</dt>
+      <dd class="text-2xl font-semibold tabular-nums">
+        <% if summary.no_budget_set? %>
+          <span class="text-lg font-normal text-gray-500">—</span>
+        <% elsif summary.over? %>
+          <%# A bare "-£2,426.13" reads as bad news twice and invites the
+              question "minus of what". %>
+          <span class="text-danger"><%= reimbursements_money(summary.over_by) %> over</span>
+        <% else %>
+          <%= reimbursements_money(summary.left) %>
+        <% end %>
+        <% if term(:left) %>
+          <small class="block text-xs font-normal text-gray-500"><%= term(:left) %></small>
+        <% end %>
+      </dd>
+    </div>
+    <% if show_unallocated? %>
+      <div>
+        <dt class="text-sm text-gray-500">Not yet given to a line</dt>
+        <dd class="text-2xl font-semibold tabular-nums">
+          <%= reimbursements_money(unallocated) %>
+          <% if finance? %>
+            <small class="block text-xs font-normal text-gray-500">unallocated</small>
+          <% end %>
+        </dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <% if summary.bar? %>
+    <%# The figures above are the text alternative, so the bar is decorative
+        rather than a second, unreadable copy of them. %>
+    <div class="mt-4 flex h-2.5 overflow-hidden rounded-full bg-gray-200" aria-hidden="true">
+      <span class="block h-full <%= summary.over? ? "bg-danger" : "bg-wine" %>"
+            style="width: <%= summary.spent_percentage %>%"></span>
+      <span class="block h-full bg-amber-500" style="width: <%= summary.waiting_percentage %>%"></span>
+    </div>
+    <p class="mt-1 text-xs text-gray-600">
+      <%= reimbursements_money(summary.spent) %> spent<% if summary.waiting.positive? %>,
+        <%= reimbursements_money(summary.waiting) %> waiting for approval<% end %>
+      of <%= reimbursements_money(summary.budget_amount) %>.
+    </p>
+  <% end %>
+<% end %>

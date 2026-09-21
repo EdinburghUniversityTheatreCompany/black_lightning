@@ -15,6 +15,11 @@ module Admin
     # the bare top-level params otherwise, so a params hash posted directly
     # (as a controller test does) works exactly like a real form submission.
     class AreasController < FinanceController
+      # The area PAGE is shared with budget owners, who do not hold the finance
+      # permission, so #show steps out from under FinanceController's gate and
+      # applies the union instead. Everything else here stays finance-only.
+      skip_before_action :authorize_finance!, only: %i[show]
+      before_action :authorize_area_page!, only: %i[show]
       before_action :set_area, only: %i[edit update]
 
       # Only the fields areas/_budget_fields.html.erb actually renders.
@@ -28,6 +33,20 @@ module Admin
       def index
         @title = "Areas"
         @areas = paginate(store.areas_for_year)
+        @people_by_id = store.people.index_by(&:record_id)
+      end
+
+      # GET /admin/reimbursements/areas/:id
+      #
+      # What one show has, has spent, and is waiting on. Read-only for an
+      # owner; finance gets the same page with the actions and the finance
+      # vocabulary beside each plain label.
+      def show
+        @title = @area.name
+        @summary = ::Reimbursements::SpendSummary.for_area(@area)
+        @expense_lines, @income_lines = @area.budgets.partition { |line| !line.income? }
+        @claims = paginate_claims(claims_for(@area.budgets))
+        @changes = ::Reimbursements::BudgetChanges.for_area(@area)
         @people_by_id = store.people.index_by(&:record_id)
       end
 
@@ -86,6 +105,37 @@ module Admin
       end
 
       private
+
+      # Finance, or a person this area's owner set names. Anything else is a
+      # 404 rather than a 403, as ReceiptFilesController does: a 403 tells a
+      # stranger the area exists.
+      def authorize_area_page!
+        @area = store.find_area(params[:id])
+        raise ActiveRecord::RecordNotFound if @area.nil? || !area_page_visible?(@area)
+      end
+
+      def area_page_visible?(area)
+        return true if can?(:manage, :reimbursements_finance)
+
+        current_person.present? && area.owner_ids.include?(current_person.record_id)
+      end
+
+      # Claims charged to any of this area's lines, newest first. Read off the
+      # store's one preloaded expense list (batch, budget, person and receipts
+      # ride along) rather than a query per line.
+      def claims_for(lines)
+        ids = lines.map(&:record_id).to_set
+        store.expenses
+             .select { |expense| ids.include?(expense.budget&.record_id) }
+             .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
+             .reverse
+      end
+
+      def paginate_claims(claims)
+        @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
+        @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
+        paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
+      end
 
       def set_area
         @area = find_or_404(:find_area)

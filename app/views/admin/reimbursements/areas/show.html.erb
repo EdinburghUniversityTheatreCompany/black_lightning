@@ -1,0 +1,90 @@
+<% finance = can?(:manage, :reimbursements_finance) %>
+
+<%= render "shared/back_link",
+           text: finance ? "← All areas" : "← My budgets",
+           path: finance ? admin_reimbursements_areas_path : admin_reimbursements_my_budgets_path %>
+
+<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+  <div>
+    <p class="text-gray-600">
+      <%# Two production areas are both called "Tech", in different centres and
+          years, so the heading always says which one this is. %>
+      <%= @area.cost_centre&.name || "No cost centre" %>
+      <% if @area.financial_year && @area.cost_centre&.name != @area.financial_year.label %>
+        · <%= @area.financial_year.label %>
+      <% end %>
+      <% if finance %>· <%= @area.basis_label %><% end %>
+    </p>
+    <p class="text-gray-600">
+      <% if @area.owners.any? %>
+        <%= "Owner".pluralize(@area.owners.size) %>:
+        <%= @area.owners.map(&:name).to_sentence %>
+      <% end %>
+    </p>
+  </div>
+  <% if finance %>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to "Edit area", edit_admin_reimbursements_area_path(@area.record_id),
+                  class: btn_classes(:primary, :sm) %>
+    </div>
+  <% end %>
+</div>
+
+<% if finance && @area.owners.empty? %>
+  <div class="mb-4"><%= render AlertComponent.new(type: :warning) do %>
+    <strong>Nobody owns this area</strong>, so claims charged to its lines skip owner sign-off and
+    come straight to finance.
+    <%= link_to "Add an owner", edit_admin_reimbursements_area_path(@area.record_id),
+                class: "underline" %>.
+  <% end %></div>
+<% end %>
+
+<%= render Admin::Reimbursements::SpendFiguresComponent.new(
+             summary: @summary, finance: finance, area: @area) %>
+
+<%= render Admin::Reimbursements::BudgetLinesComponent.new(
+             lines: @expense_lines, income_lines: @income_lines, finance: finance,
+             area: @area) %>
+
+<%= render Admin::Reimbursements::AreaClaimsComponent.new(
+             claims: @claims, counts: @claim_counts, tab: @claim_tab, finance: finance,
+             area: @area, current_person: current_person) %>
+
+<% if @changes.any? %>
+  <%= render CardComponent.new(title: "Changes to the budget", html_class: "mt-4") do %>
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">Date</th>
+            <th scope="col" class="px-3 py-2">What changed</th>
+            <th scope="col" class="px-3 py-2 text-right">From</th>
+            <th scope="col" class="px-3 py-2 text-right">To</th>
+            <th scope="col" class="px-3 py-2">Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @changes.each do |change| %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2 whitespace-nowrap"><%= reimbursements_date(change.date) %></td>
+              <td class="px-3 py-2">
+                <%= change.subject %><% if change.area_total? %> <span class="text-gray-500">(agreed total)</span><% end %>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <%= change.first? ? "—" : reimbursements_money(change.from) %>
+              </td>
+              <td class="px-3 py-2 text-right font-medium tabular-nums">
+                <%= reimbursements_money(change.to) %>
+              </td>
+              <td class="px-3 py-2 text-gray-600"><%= change.reason %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>
+
+<p class="mt-4 text-sm text-gray-500">
+  Figures exclude VAT, so they can be lower than the amounts people claimed.
+</p>
