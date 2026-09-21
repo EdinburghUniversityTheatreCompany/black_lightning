@@ -57,7 +57,11 @@ select.simple-select2 {
   .table-sticky-head>tbody>tr>th[scope="rowgroup"] {
     @apply sticky z-10 bg-gray-50;
 
-    top: 57px;
+    /* Set by sticky_table_controller from the header's measured height: the
+       header wraps to two lines at 1366px and one at 1920px, so a constant
+       leaves a gap at one of them that the rows scroll through. The fallback
+       is the two-line height, the commoner case. */
+    top: var(--sticky-head-height, 57px);
 
     /* Same inset-shadow trick as the header: a sticky cell's own border is
        dropped by `border-collapse: collapse` once it detaches. */

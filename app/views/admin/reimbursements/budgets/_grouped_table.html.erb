@@ -4,7 +4,8 @@
       measured at 1366x768 this table is 1218px of columns in a 1012px box, so
       Edit sat 87px off screen. The budget NAME is a link to the same form, so
       there are two routes to it either way. %>
-  <table class="table table-hover table-sticky-head table-pinned-actions">
+  <table class="table table-hover table-sticky-head table-pinned-actions"
+         data-controller="sticky-table">
     <thead>
       <tr>
         <% headers.each do |header| %>

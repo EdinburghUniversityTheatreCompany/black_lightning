@@ -274,6 +274,14 @@ module ReimbursementsHelper
   # fully spent.
   def reimbursements_budget_remaining(budget)
     if budget.remaining.nil?
+      # An INCOME line's remaining is nil even when a figure IS set: its plan is
+      # money to raise, so "what is left" means nothing on that side. Saying
+      # "No budget set" there contradicted the £800.00 in the same row's
+      # Initial column.
+      return content_tag(:span, "—", class: "text-gray-500",
+                         title: "Income is measured by what it raises (see EUSA actual), " \
+                                "not by what is left of it.") if budget.income?
+
       return content_tag(:span, "No budget set", class: "text-gray-500",
                          title: "No forecast has been logged and no initial budget was set, " \
                                 "so there is nothing left to be left of.")
