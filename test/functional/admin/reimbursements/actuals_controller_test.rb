@@ -82,9 +82,12 @@ module Admin
 
     # --- Index -------------------------------------------------------------
 
+    # ?state=all, because the page now OPENS on the rows needing attention (see
+    # the state-filter tests below). This one is about the ledger's contents
+    # and its ordering, so it asks for the whole thing.
     test "lists every imported actual, newest imported first" do
       sign_in @user
-      get :index
+      get :index, params: { state: "all" }
 
       assert_response :success
       assert_equal [ @unlinked, @linked_budget, @linked_expense ].map(&:record_id),
@@ -159,7 +162,7 @@ module Admin
 
     test "links an expense-linked actual to its finance edit page" do
       sign_in @user
-      get :index
+      get :index, params: { state: "all" }
 
       assert_response :success
       assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@expense.record_id)
@@ -193,7 +196,7 @@ module Admin
     test "index CSV export has a header row and one data row per actual" do
       sign_in @user
 
-      get :index, format: :csv
+      get :index, params: { state: "all" }, format: :csv
 
       rows = CSV.parse(response.body)
       assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period",
@@ -223,7 +226,7 @@ module Admin
     test "index CSV export signs the amount so income subtracts from spend" do
       sign_in @user
 
-      get :index, format: :csv
+      get :index, params: { state: "all" }, format: :csv
 
       rows = CSV.parse(response.body, headers: true)
       debit = rows.find { |r| r["Description"] == "Alice Producer" }
@@ -299,11 +302,130 @@ module Admin
       [ accrual, reversal ]
     end
 
+    # --- The needs-attention filter ----------------------------------------
+    #
+    # The ledger is read after a reconcile to find what is LEFT to do, and a
+    # row already attached to a claim or a budget offers no action at all — 17
+    # of the 50 rows on the first page were inert. So the page opens on the
+    # leftovers, with the whole ledger one click away.
+
+    test "the index opens on the rows that need attention" do
+      sign_in @user
+
+      get :index
+
+      assert_response :success
+      assert_equal ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION,
+                   assigns(:state)
+      assert_equal [ @unlinked.record_id ], assigns(:actuals).map(&:record_id)
+    end
+
+    test "the state rides in the URL so the full ledger is a link" do
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert_response :success
+      assert_equal 3, assigns(:actuals).size
+      assert_includes response.body, "Show only rows needing attention"
+    end
+
+    test "an unrecognised state falls back to the leftovers rather than 500ing" do
+      sign_in @user
+
+      get :index, params: { state: "wibble" }
+
+      assert_response :success
+      assert_equal ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION,
+                   assigns(:state)
+    end
+
+    test "a split row counts as finished with, not as needing attention" do
+      budget = create_reimbursements_budget(name: "Box office", budget_type: "Income")
+      credit = create_reimbursements_eusa_actual(credit: BigDecimal("100"), narrative: "Stripe")
+      ::Reimbursements::ActualAllocation.create!(eusa_actual: credit, budget: budget,
+                                                 amount: BigDecimal("100"))
+      sign_in @user
+
+      get :index
+
+      assert_not_includes assigns(:actuals).map(&:record_id), credit.record_id
+    end
+
+    test "the counts describe the rows on screen, so the switch says what it would show" do
+      sign_in @user
+
+      get :index
+
+      assert_equal 1, assigns(:needs_attention_count)
+      assert_equal 3, assigns(:matching_count)
+    end
+
+    # An old link or bookmark asking for the offsets must still get them: an
+    # offsetting leg is never a row needing attention, so answering with the
+    # needs-attention view would be the control lying.
+    test "asking for the offsets alone opens the full ledger" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }
+
+      assert_equal ::Admin::Reimbursements::ActualsController::STATE_ALL, assigns(:state)
+      assert_equal 5, assigns(:actuals).size
+    end
+
+    test "the hidden-offsets sentence links to the rows it describes" do
+      create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert_response :success
+      assert_includes response.body,
+                      CGI.escapeHTML(admin_reimbursements_actuals_path(state: "all",
+                                                                       include_offsets: "1"))
+      assert_includes response.body, "can be undone"
+    end
+
+    # --- Search -------------------------------------------------------------
+
+    test "searches the narrative" do
+      sign_in @user
+
+      get :index, params: { state: "all", search: "box off" }
+
+      assert_equal [ @linked_budget.record_id ], assigns(:actuals).map(&:record_id)
+    end
+
+    test "searches the amount, with the separators a person types stripped" do
+      sign_in @user
+
+      get :index, params: { state: "all", search: "£123.45" }
+
+      assert_equal [ @linked_expense.record_id ], assigns(:actuals).map(&:record_id)
+    end
+
+    test "search carries through to the CSV export" do
+      sign_in @user
+
+      get :index, params: { state: "all", search: "Sundry" }, format: :csv
+
+      assert_equal 2, CSV.parse(response.body).size, "header + the one matching row"
+    end
+
+    test "search and period narrow together" do
+      sign_in @user
+
+      get :index, params: { state: "all", period: "03", search: "Sundry" }
+
+      assert_empty assigns(:actuals)
+    end
+
     test "offsetting rows are kept out of the working set by default" do
       create_offsetting_pair
       sign_in @user
 
-      get :index
+      get :index, params: { state: "all" }
 
       assert_response :success
       assert_equal [ @unlinked, @linked_budget, @linked_expense ].map(&:record_id),
@@ -328,7 +450,7 @@ module Admin
       create_offsetting_pair
       sign_in @user
 
-      get :index, format: :csv
+      get :index, params: { state: "all" }, format: :csv
       assert_equal 4, CSV.parse(response.body).size, "header + the three non-offsetting rows"
 
       get :index, params: { include_offsets: "1" }, format: :csv

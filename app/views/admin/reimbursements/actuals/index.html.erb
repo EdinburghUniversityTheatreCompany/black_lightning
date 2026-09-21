@@ -4,50 +4,121 @@
   code, EUSA period, transaction date, narrative and debit/credit, plus whether it's
   been linked to an expense or an income budget. Imports happen on the
   <%= link_to "Reconcile", admin_reimbursements_reconciliation_path, class: "underline" %> page;
-  an unlinked debit row can be turned into a From-EUSA expense here.
+  an unlinked debit row can be turned into a From-EUSA expense here. It opens on the rows that
+  still need attention — the leftovers a reconcile could not place — because a row already
+  attached to a claim or a budget offers nothing to do.
 </p>
 
-<% if @periods.any? || @offset_count.positive? %>
-  <%= render CardComponent.new(title: "Filter") do %>
-    <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
-      <% if @periods.any? %>
-        <div>
-          <%= label_tag :period, "EUSA period", class: FormStyles::LABEL %>
-          <%= select_tag :period,
-                         options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
-                         class: input_classes(width: "w-44") %>
-        </div>
-      <% end %>
+<%
+  # Every filter the page is on, so a row's Remove split / Not offsetting
+  # button comes back to the list the operator was reading rather than to an
+  # unfiltered first page. Built once here, since four controls need it.
+  filters = { period: @period.presence, search: @search.presence, state: @state,
+              include_offsets: (@include_offsets ? "1" : nil) }.compact
+  needs_attention = @state == ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+  all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
+%>
+
+<%= render CardComponent.new(title: "Filter") do %>
+  <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
+    <%# The state rides in the URL like every other filter, so a "what is left
+        to do" view is a link somebody can bookmark or send. %>
+    <div>
+      <%= label_tag :state, "Show", class: FormStyles::LABEL %>
+      <%= select_tag :state,
+                     options_for_select([ [ "Rows needing attention", ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION ],
+                                          [ "All rows", all_state ] ], @state),
+                     class: input_classes(width: "w-56") %>
+    </div>
+    <% if @periods.any? %>
+      <div>
+        <%= label_tag :period, "EUSA period", class: FormStyles::LABEL %>
+        <%= select_tag :period,
+                       options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
+                       class: input_classes(width: "w-44") %>
+      </div>
+    <% end %>
+    <div>
+      <%= label_tag :search, "Search", class: FormStyles::LABEL %>
+      <%= search_field_tag :search, @search, placeholder: "Narrative, ref or amount",
+                           class: input_classes(width: "w-64") %>
+    </div>
+    <%# Only on the full ledger: an offsetting leg nets to zero, so it is never
+        a row needing attention and the tickbox could only ever add nothing. %>
+    <% unless needs_attention %>
       <div class="flex items-center gap-2 pb-1">
         <%= check_box_tag :include_offsets, "1", @include_offsets, class: "h-4 w-4" %>
         <%= label_tag :include_offsets, "Show offsetting rows", class: "text-sm" %>
       </div>
-      <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
-      <% if @period.present? || @include_offsets %>
-        <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
-      <% end %>
     <% end %>
-    <% if @offset_count.positive? && !@include_offsets %>
-      <p class="mt-2 mb-0 text-sm text-gray-600">
-        <%= pluralize(@offset_count, "row") %> cancel out against a counterpart
-        <%= @offset_count == 1 ? "and is" : "and are" %> hidden.
-      </p>
+    <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
+    <% if @period.present? || @search.present? || @include_offsets || !needs_attention %>
+      <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
     <% end %>
   <% end %>
 <% end %>
 
-<div class="mb-2 flex items-center justify-between gap-3">
-  <p class="text-sm text-gray-600">
-    <%= pluralize(@actuals.total_count, "actual") %><%= " (period #{@period})" if @period.present? %>
+<div class="my-2 flex flex-wrap items-center justify-between gap-3">
+  <p class="mb-0 text-sm text-gray-600">
+    <% if needs_attention %>
+      <strong><%= pluralize(@needs_attention_count, "row") %></strong>
+      <%= @needs_attention_count == 1 ? "needs" : "need" %> attention
+      <%= "of #{pluralize(@matching_count, 'row')} here" if @matching_count != @needs_attention_count %><%= " (period #{@period})" if @period.present? %>.
+      A row attached to a claim or a budget is finished with, and is left out.
+    <% else %>
+      <strong><%= pluralize(@actuals.total_count, "row") %></strong> shown<%= " (period #{@period})" if @period.present? %>,
+      <%= @needs_attention_count %> of them needing attention.
+    <% end %>
   </p>
-  <%= link_to "Download CSV",
-              admin_reimbursements_actuals_path(request.query_parameters.merge(format: :csv)),
-              class: btn_classes(:secondary, :sm) %>
+  <div class="flex flex-wrap items-center gap-2">
+    <%# The switch between the two views, as a button rather than only as the
+        select above: this is the one control the page is read for. %>
+    <% if needs_attention %>
+      <%= link_to "Show all rows",
+                  admin_reimbursements_actuals_path(filters.merge(state: all_state)),
+                  class: btn_classes(:secondary, :sm) %>
+    <% else %>
+      <%= link_to "Show only rows needing attention",
+                  admin_reimbursements_actuals_path(filters.except(:include_offsets)
+                                                      .merge(state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION)),
+                  class: btn_classes(:secondary, :sm) %>
+    <% end %>
+    <%= link_to "Download CSV",
+                admin_reimbursements_actuals_path(request.query_parameters.merge(format: :csv)),
+                class: btn_classes(:secondary, :sm) %>
+  </div>
 </div>
+
+<%# The hidden-offsets sentence IS the way to those rows — it was a statement
+    with no route to what it described, and "Not offsetting" (the only undo for
+    a mis-detected pair) was reachable nowhere else. %>
+<% if @offset_count.positive? && !@include_offsets %>
+  <p class="mb-2 text-sm text-gray-600">
+    <%= pluralize(@offset_count, "row") %> cancel out against a counterpart
+    <%= @offset_count == 1 ? "and is" : "and are" %> hidden.
+    <%= link_to "Show them on the full ledger",
+                admin_reimbursements_actuals_path(filters.merge(state: all_state, include_offsets: "1")),
+                class: "text-primary underline" %>,
+    where a pairing proposed in error can be undone.
+  </p>
+<% end %>
 
 <% if @actuals.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>
-    <p class="py-4 text-center text-gray-600">No EUSA Actuals imported yet.</p>
+    <%# "Nothing imported yet" and "nothing left to do" are different answers,
+        and the default filter makes the second one the common case. %>
+    <p class="py-4 text-center text-gray-600">
+      <% if needs_attention && @matching_count.positive? %>
+        Nothing here needs attention: every row is attached to a claim or a budget.
+        <%= link_to "Show all rows",
+                    admin_reimbursements_actuals_path(filters.merge(state: all_state)),
+                    class: "text-primary underline" %>.
+      <% elsif @period.present? || @search.present? %>
+        No rows match these filters.
+      <% else %>
+        No EUSA Actuals imported yet.
+      <% end %>
+    </p>
   <% end %>
 <% else %>
   <% headers = [ "Nominal", "Period", "Date", "Narrative", "Debit", "Credit", "Linked to", "" ] %>
@@ -107,8 +178,7 @@
               # is visible again rather than silently gone.
               button_to("Remove split",
                         remove_apportionment_admin_reimbursements_actual_path(
-                          actual.record_id, period: @period.presence,
-                          include_offsets: (@include_offsets ? "1" : nil)
+                          actual.record_id, **filters
                         ),
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",
                         data: { turbo_confirm: "Undo this split? The row goes back to being an " \
@@ -118,8 +188,7 @@
               # spend from every rollup, so the operator can always undo one.
               button_to("Not offsetting",
                         unoffset_admin_reimbursements_actual_path(
-                          actual.record_id, period: @period.presence,
-                          include_offsets: (@include_offsets ? "1" : nil)
+                          actual.record_id, **filters
                         ),
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",
                         data: { turbo_confirm: "Treat these two rows as real spend or income " \

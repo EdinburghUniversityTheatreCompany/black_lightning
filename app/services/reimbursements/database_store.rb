@@ -272,9 +272,7 @@ module Reimbursements
     # into a permanent false alarm, which is how a real one stops being read.
     def unattributed_actuals
       eusa_actuals_for_cost_centre
-        .reject do |a|
-          a.offset? || a[:expense_id].present? || a[:budget_id].present? || a.apportioned?
-        end
+        .select(&:needs_attention?)
         .sort_by { |a| [ a.nominal_code.to_s, a.date || Date.new(0), a.id ] }
     end
 

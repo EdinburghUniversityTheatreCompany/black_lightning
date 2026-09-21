@@ -27,26 +27,48 @@ module Admin
       # claim past this point was never the answer.
       LINK_CANDIDATE_LIMIT = 50
 
+      # Which slice of the ledger the page is showing, in the URL as ?state=.
+      #
+      # NEEDS_ATTENTION IS THE DEFAULT, and that is the point of it: the ledger
+      # is read after a reconcile to find what is left to do, and every row
+      # already attached to a claim or a budget is inert — it offers no action
+      # at all. 17 of the 50 rows on the first page were in that state, so the
+      # work was hidden among rows nobody could act on.
+      STATE_NEEDS_ATTENTION = "needs_attention".freeze
+      STATE_ALL = "all".freeze
+      STATES = [ STATE_NEEDS_ATTENTION, STATE_ALL ].freeze
+
       def index
         @title = "EUSA Actuals"
         # The SELECTED cost centre's rows (all of them when no centre is
         # picked). Not store.eusa_actuals, which stays whole because the
         # reconcile wizard deduplicates and matches against it per row.
         actuals = store.eusa_actuals_for_cost_centre
+        # The picker's options come from every row in the centre, before the
+        # period filter narrows them — otherwise picking one month leaves it as
+        # the only month you can pick. Canonical, so the year sorts in order.
         @periods = actuals.map(&:period).reject(&:blank?).uniq.sort
         @period = params[:period].to_s.strip
+        @search = params[:search].to_s.strip
+        @state = resolved_state
+
         actuals = actuals.select { |a| a.period == @period } if @period.present?
-        # Offsetting rows net to zero against their counterpart, so they are
-        # bookkeeping noise: out of the working set unless asked for.
+        actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
+
+        # Counted AFTER period and search and BEFORE the state filter, so the
+        # switch between the two views describes the rows the operator is
+        # actually looking at rather than the whole ledger.
+        @matching_count = actuals.size
+        @needs_attention_count = actuals.count(&:needs_attention?)
         @offset_count = actuals.count(&:offset?)
-        @include_offsets = ActiveModel::Type::Boolean.new.cast(params[:include_offsets]).present?
-        actuals = actuals.reject(&:offset?) unless @include_offsets
+
+        actuals = apply_state(actuals)
         # Newest first: imported rows carry an imported_at; fall back to the
         # transaction date so hand-imported/legacy rows still sort sensibly.
         sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
         respond_to do |format|
           format.html { @actuals = paginate(sorted) }
-          # Export the FULL filtered set (the period filter carries through the
+          # Export the FULL filtered set (every filter carries through the
           # query string) — pagination is display-only, so the CSV isn't paged.
           format.csv { send_export ::Reimbursements::Exports::Actuals, sorted }
         end
@@ -204,11 +226,43 @@ module Admin
 
       private
 
+      # The state the URL asks for, defaulting to the leftovers.
+      #
+      # ?include_offsets=1 WITHOUT a state means the full ledger, because an
+      # offsetting leg is never a row needing attention: asking for the offsets
+      # and being given a view that by definition holds none of them would be
+      # the control lying. It also keeps every link and bookmark written before
+      # the state filter existed pointing at what it used to show.
+      def resolved_state
+        return params[:state] if STATES.include?(params[:state])
+        return STATE_ALL if ActiveModel::Type::Boolean.new.cast(params[:include_offsets]).present?
+
+        STATE_NEEDS_ATTENTION
+      end
+
+      # The rows the chosen state leaves on screen.
+      #
+      # "Show offsetting rows" only applies to the FULL ledger: an offsetting
+      # leg nets to zero against its counterpart, so it is never something that
+      # needs attention, and a tickbox that could only ever add nothing would
+      # be a control that lies. The needs-attention view instead LINKS to the
+      # full ledger with the offsets shown (see the index view), which is also
+      # the only place a mistaken pairing can be undone.
+      def apply_state(actuals)
+        if @state == STATE_NEEDS_ATTENTION
+          @include_offsets = false
+          return actuals.select(&:needs_attention?)
+        end
+
+        @include_offsets = ActiveModel::Type::Boolean.new.cast(params[:include_offsets]).present?
+        @include_offsets ? actuals : actuals.reject(&:offset?)
+      end
+
       # The index's own filters, so undoing an offset doesn't throw the operator
       # back to an unfiltered first page.
       def actuals_path_with_filters
         admin_reimbursements_actuals_path(
-          params.permit(:period, :include_offsets).to_h.compact_blank
+          params.permit(:period, :include_offsets, :state, :search).to_h.compact_blank
         )
       end
 
