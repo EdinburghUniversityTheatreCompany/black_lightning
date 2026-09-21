@@ -317,6 +317,36 @@ switch, the `Reimbursements::Airtable::*` POROs, the Solid-Cache-fronted Airtabl
 survive as historical import provenance and are never written. Spec + plan in
 `docs/superpowers/specs|plans/`.
 
+- **`/admin/reimbursements` is the portal's FRONT DOOR for both audiences**
+  (`HomeController#show`): a finance user gets the dashboard, anyone else is redirected to their
+  own claims, which is what the URL did for everybody. The branch is IN the action, not a
+  before_action — a producer has access to the portal and must not 403 at its root.
+  `Reimbursements::FinanceHome` assembles the figures off existing readers and invents no second
+  reading of anything; its totals are GROSS `amount` ("how much money is about to move"), never
+  the ex-VAT figure the budget rollups use.
+- **`Reimbursements::Glossary` is the ONE definition of every word the portal uses.** The budget
+  and review screens print a subset inline (`shared/_glossary_terms`), so a column note cannot
+  drift from the glossary; `.terms` RAISES on an unknown key rather than printing a shorter list.
+  The page is on the BASE portal permission, not the finance one — an owner reads "committed" and
+  "endorse" on their area page, a producer reads "Submitted" on their claim.
+- **Undo exists now, and each undo reverses what its forward action wrote.** Ledger `unlink`
+  detaches a row from a claim AND reverses the settlement (`settle_expense_from_actual!` writes
+  Paid + `payment_confirmed_date`, so clearing the link alone leaves a claim reading Paid with no
+  evidence); it REFUSES a From-EUSA claim created by that row, which has no earlier state.
+  `offset_pair` re-pairs two rows by hand, applying the detector's HARD requirements and
+  deliberately not its scoring. A budget update can be opened and removed as a unit
+  (`delete_budget_update!` DESTROYS its forecasts — `dependent: :nullify` would leave every
+  revision in place and merely unlabelled). A rejected claim reopens to PENDING, never Approved,
+  so it re-enters the owner gate.
+- **Every email the Notifier sends is logged, one row per recipient**
+  (`Reimbursements::NotificationLog`, written at `Notifier#send_email`, the single chokepoint).
+  The KIND is the template's basename, so a new message type logs itself. `record` swallows its
+  own failures: an unlogged email that went out beats a logged one that did not.
+- **The EUSA covering email is a plain-text NOTE with `{{placeholders}}`, not raw HTML.** The
+  operator's text is escaped before it becomes paragraphs; the claims table, totals and sign-off
+  are always generated. An unknown placeholder is left exactly as typed — a visible typo beats a
+  silent hole in a sentence. Nothing on the money path moved: the body is still composed and
+  still passed as `eusa_body_html`, and a blank note passes nothing.
 - **Everything goes through the store built by `Reimbursements.build_store`** — the
   AR-backed `Reimbursements::DatabaseStore`, the single data gateway with a frozen
   public API. No cache layer: lists are memoized per instance (one store per
