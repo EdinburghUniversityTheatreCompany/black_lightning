@@ -30,6 +30,12 @@ module Admin
 
         @status_filter = params[:status].to_s.strip
         @budget_filter = params[:budget].to_s.strip
+        # The SUBMITTER, not the effective payee: this is what People's
+        # "N claims" link opens, and a payee's claims are the ones they filed.
+        # A record id rather than a name, so two people sharing a name are two
+        # different lists.
+        @person_filter = params[:person].to_s.strip
+        @person = store.people.find { |p| p.record_id == @person_filter } if @person_filter.present?
         @query = params[:q].to_s.strip
         @attention_only = params[:attention] == "1"
 
@@ -129,6 +135,7 @@ module Admin
         result = store.expenses.sort_by { |e| e.submitted_at || Time.zone.at(0) }.reverse
         result = result.select { |e| e.status == @status_filter } if @status_filter.present?
         result = result.select { |e| e.budget&.record_id == @budget_filter } if @budget_filter.present?
+        result = result.select { |e| e.person&.record_id == @person_filter } if @person_filter.present?
         if @attention_only
           result = result.select do |e|
             ::Reimbursements::ReviewSupport.needs_attention(e, @budget_by_id, modulus_checker)
@@ -138,13 +145,21 @@ module Admin
         result
       end
 
-      # Case-insensitive substring over description, effective payee name and
-      # payment reference; an exact match on the visible auto-number; or a
-      # numeric match on the gross amount.
+      # Case-insensitive substring over description, effective payee name,
+      # the SUBMITTER's name and email, and payment reference; an exact match
+      # on the visible auto-number; or a numeric match on the gross amount.
+      #
+      # The submitter half is what makes "where's my money?" answerable. The
+      # search read the EFFECTIVE payee only, which on an Invoice is the
+      # supplier — so a producer who submitted a third-party bill could not be
+      # found by their own name, and the claim they are chasing did not come
+      # back for any spelling of it.
       def matches_query?(expense, query)
         needle = query.downcase
         return true if expense.description.to_s.downcase.include?(needle)
         return true if expense.effective_payee_name.to_s.downcase.include?(needle)
+        return true if expense.person&.name.to_s.downcase.include?(needle)
+        return true if expense.person&.email.to_s.downcase.include?(needle)
         return true if expense.payment_reference.to_s.downcase.include?(needle)
         return true if expense.auto_number.to_s == query.sub(/\A#/, "")
 

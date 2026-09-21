@@ -416,6 +416,76 @@ module Admin
         assert_no_match(/worth checking before approving/i, response.body)
       end
 
+      # --- Search finds the submitter, not only the payee -------------------
+
+      def third_party_claim
+        # An Invoice: the EFFECTIVE payee is the supplier, and @person — who
+        # actually filed it — appears nowhere the old search looked.
+        expense_at("Pending", payee_name_override: "Concord Theatricals Ltd",
+                              sort_code_override: "08-99-99", account_number_override: "66374958",
+                              expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
+      end
+
+      test "index search matches the submitter's name" do
+        claim = third_party_claim
+        sign_in @user
+
+        get :index, params: { q: "Pat Producer" }
+
+        assert_includes assigns(:expenses).map(&:record_id), claim.record_id,
+                        "the submitter of a third-party invoice must be findable by name"
+      end
+
+      test "index search matches the submitter's email" do
+        claim = third_party_claim
+        sign_in @user
+
+        get :index, params: { q: "pat@example.com" }
+
+        assert_includes assigns(:expenses).map(&:record_id), claim.record_id
+      end
+
+      test "index search still matches the effective payee" do
+        claim = third_party_claim
+        sign_in @user
+
+        get :index, params: { q: "Concord" }
+
+        assert_includes assigns(:expenses).map(&:record_id), claim.record_id
+      end
+
+      test "index names both columns: paid to, and submitted by" do
+        third_party_claim
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_match(/Paid to/, response.body)
+        assert_match(/Submitted by/, response.body)
+        assert_no_match(/>Payee</, response.body)
+      end
+
+      test "the Expenses CSV export is unchanged by the on-screen column rename" do
+        # An export is a stable contract: a saved formula keys off the header.
+        assert_includes ::Reimbursements::Exports::Expenses::HEADERS, "Payee"
+        assert_not_includes ::Reimbursements::Exports::Expenses::HEADERS, "Paid to"
+      end
+
+      test "index filters to one person's claims with ?person=" do
+        mine = expense_at("Pending")
+        other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
+        theirs = create_reimbursements_expense(person: other_person, budget: @budget, status: "Pending")
+        sign_in @user
+
+        get :index, params: { person: @person.record_id }
+
+        ids = assigns(:expenses).map(&:record_id)
+        assert_includes ids, mine.record_id
+        assert_not_includes ids, theirs.record_id
+        assert_match(/Showing only the claims submitted by/, response.body)
+      end
+
       test "edit gives no approval advice on a settled claim" do
         # A Paid claim opened with "This can't be approved until these are
         # fixed" and "worth checking before approving" stacked above "already
