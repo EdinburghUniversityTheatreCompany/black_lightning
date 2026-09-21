@@ -147,7 +147,7 @@
                  label = owner.name.presence || owner.email.presence || "an owner"
                  owner.email.present? ? link_to(label, "mailto:#{owner.email}", class: "underline") : label
                end %>
-            <%= safe_join(owner_links.map { |l| l }, ", ") %>
+            <%= safe_join(owner_links, ", ") %>
             <%= owners.one? ? "owns" : "own" %> the
             <%= link_to expense.budget.display_name,
                         edit_admin_reimbursements_budget_path(expense.budget.record_id),
