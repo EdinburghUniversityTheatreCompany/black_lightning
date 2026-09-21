@@ -1,0 +1,90 @@
+<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+
+<p class="mb-3 text-gray-600">
+  An accrual and its reversal cancel each other out, so neither is real spend. The reconcile
+  wizard proposes the pairs it is confident about; this records one it did not, and it is also
+  the way back after <strong>Not offsetting</strong> — which returns both rows to ordinary
+  ledger rows and, until now, could not be undone. Both rows stay on the ledger either way, and
+  nobody is emailed.
+</p>
+
+<%= render CardComponent.new(title: "The row you are pairing") do %>
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
+    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
+    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
+    <span>
+      Amount:
+      <strong>
+        <%= reimbursements_money(@actual.debit&.positive? ? @actual.debit : @actual.credit) %>
+        <%= @actual.debit&.positive? ? "debit" : "credit" %>
+      </strong>
+    </span>
+    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
+  </div>
+  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
+<% end %>
+
+<% if @candidates.empty? %>
+  <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do %>
+    <p class="mb-0 text-gray-600">
+      <%# Naming the four gates is the only way the operator can tell "nothing
+          matches" from "I am looking in the wrong place". %>
+      Nothing on the ledger can cancel this row out. A counterpart has to be the same amount on
+      the opposite side, on the same nominal code and in the same financial year, and be attached
+      to nothing itself — the same requirements the automatic matcher will not pair across.
+    </p>
+  <% end %>
+<% else %>
+  <%# form_with wraps the card, never the other way round: the footer is a
+      component SLOT, so a form opened inside the card renders its submit
+      outside the <form> and the button silently does nothing. %>
+  <%= form_with url: confirm_offset_admin_reimbursements_actual_path(@actual.record_id),
+                method: :post do |f| %>
+    <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
+      <p class="mb-3 text-sm text-gray-600">
+        Same amount, opposite side, same nominal code, same financial year — and attached to
+        nothing itself. These are the requirements only; unlike the automatic matcher, nothing
+        here is ranked by how likely it is, so check the date and the narrative before choosing.
+      </p>
+
+      <div class="space-y-1">
+        <% @candidates.each do |candidate| %>
+          <label class="flex items-start gap-3 rounded border border-gray-200 p-2 hover:bg-gray-50">
+            <%= f.radio_button :counterpart_id, candidate.record_id, class: "mt-1" %>
+            <span class="text-sm">
+              <span class="font-medium">
+                <%= reimbursements_money(candidate.debit&.positive? ? candidate.debit : candidate.credit) %>
+                <%= candidate.debit&.positive? ? "debit" : "credit" %>
+              </span>
+              <span class="text-gray-600"><%= reimbursements_date(candidate.date) %></span>
+              <span class="font-mono text-gray-600"><%= candidate.period.presence || "-" %></span>
+              <% if candidate.ref.present? && candidate.ref == @actual.ref %>
+                <%# The strongest signal the automatic matcher scores on, so it
+                    is worth marking even though nothing here is ranked. %>
+                <%= render BadgeComponent.new(type: :success, pill: true).with_content("Same reference") %>
+              <% end %>
+              <span class="block text-gray-600">
+                <%= candidate.narrative.presence || "(no narrative)" %>
+                <% if candidate.ref.present? %>
+                  <span class="font-mono text-gray-500">· <%= candidate.ref %></span>
+                <% end %>
+              </span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+
+      <% card.with_footer do %>
+        <div class="form-actions flex flex-wrap items-center gap-2">
+          <%= f.submit "Mark these two as offsetting", class: btn_classes(:primary) %>
+          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+        </div>
+        <p class="mt-2 mb-0 text-sm text-gray-500">
+          Both rows stay on the ledger and stop counting as spend or income. "Not offsetting" on
+          either one undoes it.
+        </p>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

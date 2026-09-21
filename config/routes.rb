@@ -238,6 +238,11 @@ ChaosRails::Application.routes.draw do
           # wrong match had no way back short of a console, and it also kept
           # "Split across budgets" off the very row that control exists for.
           post :unlink
+          # Pair two rows as an accrual and its reversal by hand. "Not
+          # offsetting" was one-way, so an operator who undid a pair to look at
+          # it had no way to put it back.
+          get  :offset_pair
+          post :confirm_offset
           # Attach a row to a claim the automatic matcher missed. An
           # international claim's amount is only an estimate until the payment
           # clears, so its row can land outside even the widened window.

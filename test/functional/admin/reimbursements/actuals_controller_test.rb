@@ -1170,6 +1170,96 @@ module Admin
       assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(row.record_id)
       assert_select "a[href=?]", new_expense_admin_reimbursements_actual_path(row.record_id)
     end
+
+    # --- Pairing two rows by hand -------------------------------------------
+    # "Not offsetting" was one-way: it returns both legs to ordinary rows and
+    # nothing put them back.
+
+    # A counterpart for @unlinked (a £42 debit on 500000): the same figure on
+    # the opposite side, same code, same year.
+    def counterpart_for_unlinked(**attrs)
+      create_reimbursements_actual(nominal_code: "500000", period: "05", narrative: "Reversal",
+                                   date: Date.new(2026, 6, 20), debit: nil,
+                                   credit: BigDecimal("42.0"),
+                                   financial_year_id: @unlinked.financial_year_id, **attrs)
+    end
+
+    test "offers only rows that cancel this one out" do
+      match = counterpart_for_unlinked
+      wrong_amount = counterpart_for_unlinked(credit: BigDecimal("99.0"))
+      wrong_code = counterpart_for_unlinked(nominal_code: "432320")
+      same_side = create_reimbursements_actual(nominal_code: "500000", debit: BigDecimal("42.0"),
+                                               financial_year_id: @unlinked.financial_year_id)
+      sign_in @user
+
+      get :offset_pair, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      ids = assigns(:candidates).map(&:record_id)
+      assert_includes ids, match.record_id
+      refute_includes ids, wrong_amount.record_id, "a different figure cancels nothing"
+      refute_includes ids, wrong_code.record_id, "the detector will not pair across nominal codes"
+      refute_includes ids, same_side.record_id, "two debits do not cancel out"
+      refute_includes ids, @unlinked.record_id, "a row cannot cancel itself"
+    end
+
+    # Stamping a linked row as offset would hide spend a claim or a line is
+    # still counting, so it is not offered and not accepted.
+    test "never offers a row that is linked to a claim or a budget" do
+      linked = counterpart_for_unlinked(expense: @expense)
+      sign_in @user
+
+      get :offset_pair, params: { id: @unlinked.record_id }
+
+      refute_includes assigns(:candidates).map(&:record_id), linked.record_id
+    end
+
+    test "pairing two rows stamps both and each can undo it" do
+      match = counterpart_for_unlinked
+      sign_in @user
+
+      post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: match.record_id }
+
+      assert @unlinked.reload.offset?
+      assert match.reload.offset?
+      assert_equal match.id, @unlinked.offset_of_id
+      assert_equal @unlinked.id, match.offset_of_id
+
+      post :unoffset, params: { id: match.record_id }
+
+      refute @unlinked.reload.offset?
+      refute match.reload.offset?
+    end
+
+    test "refuses a counterpart that stopped qualifying since the page was drawn" do
+      match = counterpart_for_unlinked
+      sign_in @user
+      match.update!(expense_id: @expense.id)
+
+      post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: match.record_id }
+
+      assert_match(/can no longer be paired/, flash[:alert])
+      refute @unlinked.reload.offset?
+      refute match.reload.offset?
+    end
+
+    test "refuses to pair a row that is already linked, naming the fix" do
+      sign_in @user
+
+      get :offset_pair, params: { id: @linked_expense.record_id }
+
+      assert_match(/Unlink it first/, flash[:alert])
+    end
+
+    test "the ledger offers Mark as offsetting only on rows needing attention" do
+      sign_in @user
+
+      get :index, params: { state: "all" }
+
+      assert_select "a[href=?]", offset_pair_admin_reimbursements_actual_path(@unlinked.record_id)
+      assert_select "a[href=?]",
+                    offset_pair_admin_reimbursements_actual_path(@linked_expense.record_id), count: 0
+    end
   end
   end
 end

@@ -210,6 +210,16 @@
            # A wrong match had no way back short of a console, and a whole
            # settlement attached to one income line could never be split,
            # because apportionable? refuses a row that carries a budget.
+           # Also additive: a row needing attention is offered its main action
+           # (link, convert or split) AND this. "Not offsetting" was one-way,
+           # so an operator who undid a pair to look at it could not put it
+           # back, and a pair the detector's score missed could not be recorded
+           # at all.
+           (if actual.pairable?
+              link_to("Mark as offsetting",
+                      offset_pair_admin_reimbursements_actual_path(actual.record_id),
+                      class: btn_classes(:secondary, :sm))
+            end),
            (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
               button_to("Unlink",
                         unlink_admin_reimbursements_actual_path(actual.record_id, **filters),

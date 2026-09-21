@@ -15,6 +15,7 @@ module Admin
       before_action :set_convertible_actual, only: %i[new_expense create_expense
                                                       link_expense confirm_link]
       before_action :set_apportionable_actual, only: %i[apportion create_apportionment]
+      before_action :set_pairable_actual, only: %i[offset_pair confirm_offset]
 
       # How many empty share rows the split form offers. Five is the case it
       # exists for — a Stripe payout covering a Fringe week's shows — and the
@@ -225,6 +226,37 @@ module Admin
                             "unattributed list until it is placed."
       end
 
+      # Pair this row with another as an accrual and its reversal, by hand.
+      #
+      # "Not offsetting" was one-way: it returns both legs to ordinary rows and
+      # nothing put them back, so an operator who undid a pair to look at it —
+      # or who wants to record a pair the detector's score missed — had no way
+      # forward but a console.
+      def offset_pair
+        @title = "Mark an EUSA row as offsetting"
+        @candidates = @actual.offset_candidates(store.eusa_actuals_for_cost_centre)
+      end
+
+      def confirm_offset
+        counterpart = store.find_actual(params[:counterpart_id])
+        # Re-checked here, not just when the page was drawn: the picker is a
+        # read that goes stale, and pairing a row that has since been linked to
+        # a claim would hide real spend AND leave that claim reading Paid with
+        # nothing behind it.
+        unless counterpart && @actual.offset_candidates([ counterpart ]).any?
+          redirect_to actuals_path_with_filters,
+                      alert: "That row can no longer be paired with this one. It may have been " \
+                             "linked or paired since this page was opened; check the ledger and " \
+                             "try again."
+          return
+        end
+
+        store.link_offsetting_pair!(@actual.record_id, counterpart.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "Those two rows now cancel each other out, so neither counts as spend " \
+                            "or income. Both stay on the ledger, and \"Not offsetting\" undoes it."
+      end
+
       def unoffset
         actual = find_or_404(:find_actual)
         unless actual.offset?
@@ -322,6 +354,26 @@ module Admin
         admin_reimbursements_actuals_path(
           params.permit(:period, :include_offsets, :state, :search).to_h.compact_blank
         )
+      end
+
+      # A row that can be half of a hand-made offsetting pair. Anything else is
+      # bounced with the reason, the shape #set_convertible_actual uses.
+      def set_pairable_actual
+        @actual = find_or_404(:find_actual)
+        return if @actual.pairable?
+
+        redirect_to actuals_path_with_filters, alert: not_pairable_reason(@actual)
+      end
+
+      def not_pairable_reason(actual)
+        return "That row is already part of an offsetting pair." if actual.offset?
+        return "That row is split across budgets, so unpick the split first." if actual.apportioned?
+        if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+          return "That row is linked to a claim or a budget. Unlink it first — marking it " \
+                 "offsetting would hide spend that a claim or a line is still counting."
+        end
+
+        "That row has no debit or credit, so there is nothing for another row to cancel out."
       end
 
       def set_convertible_actual

@@ -168,6 +168,45 @@ module Reimbursements
       !offset? && self[:expense_id].blank? && self[:budget_id].blank? && !apportioned?
     end
 
+    # Whether this row can be paired with another as an offsetting pair by
+    # hand. It is #needs_attention? plus "carries a figure at all".
+    #
+    # Only an UNFINISHED row: stamping a row that is linked to a claim or an
+    # income line as offset would hide real spend from every rollup AND leave
+    # the claim reading Paid with nothing behind it. That restriction is also
+    # exactly the re-pair case, since "Not offsetting" returns both legs to
+    # precisely this state.
+    def pairable?
+      needs_attention? && signed_amount != 0
+    end
+
+    # Debits positive, credits negative — the sign an offsetting pair has to
+    # cancel. Read off debit and credit rather than the stored `net` column,
+    # which is parsed separately from the export's own Net cell and can be
+    # blank or disagree (the reason EusaActual.net derives every rollup).
+    def signed_amount
+      (debit || 0) - (credit || 0)
+    end
+
+    # The rows this one could cancel out with: the HARD requirements
+    # Reconciliation.detect_offsetting_pairs applies, and nothing softer.
+    #
+    # Same absolute amount, opposite sign, same nominal code, same financial
+    # year — the gates the automatic detector will not pair across. The
+    # detector then SCORES the survivors on reference, period, narrative and
+    # date distance; this deliberately does not, because a person is choosing
+    # here and the governing asymmetry runs the other way: a false positive
+    # stamps real spend as noise and hides it, while an extra row on a picker
+    # costs a glance.
+    def offset_candidates(rows)
+      rows.select do |row|
+        row.id != id && row.pairable? &&
+          row.signed_amount == -signed_amount &&
+          row.nominal_code.to_s == nominal_code.to_s &&
+          row.financial_year_id == financial_year_id
+      end
+    end
+
     # Whether this row answers a free-text search of the ledger: its narrative,
     # its EUSA reference, its nominal code or either amount.
     #
