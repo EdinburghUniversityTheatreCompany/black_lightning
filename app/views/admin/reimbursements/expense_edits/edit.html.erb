@@ -1,6 +1,6 @@
-<%# UK-only: the modulus algorithm takes a sort code and account number, which
-    an international payee has neither of. %>
-<% modulus = @expense.international? ? nil : modulus_checker.check(@expense.effective_sort_code, @expense.effective_account_number) %>
+<%# Nil unless the check applies — see ReviewSupport.modulus_result, which owns
+    that rule so this banner and the Review summary cannot disagree. %>
+<% modulus = ::Reimbursements::ReviewSupport.modulus_result(@expense, modulus_checker) %>
 
 <p class="mb-3 text-gray-600">
   Finance edit for a single expense at any status. Changes save immediately.

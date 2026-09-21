@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -826,6 +826,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_100600) do
     t.string "sharepoint_receipts_drive_id"
     t.string "sharepoint_receipts_folder_id"
     t.string "sharepoint_site_url"
+    t.string "short_code", limit: 16
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_reimbursements_cost_centres_on_key", unique: true
   end

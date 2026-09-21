@@ -5,9 +5,9 @@
   - duplicates: array of possible-duplicate expenses, or nil
   - selectable: whether to show the bulk-select checkbox (Pending only; default false)
 %>
-<%# UK-only: the modulus algorithm takes a sort code and account number, which
-    an international payee has neither of. %>
-<% modulus = expense.international? ? nil : modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
+<%# Nil unless the check applies — see ReviewSupport.modulus_result, which owns
+    that rule so this banner and the Review summary cannot disagree. %>
+<% modulus = ::Reimbursements::ReviewSupport.modulus_result(expense, modulus_checker) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
 <%# The owner-endorsement gate is a distinct, overridable blocking reason (see
@@ -213,9 +213,9 @@
     </div>
     <div>
       <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: FormStyles::LABEL %>
-      <% budget_options = @budgets.map { |b| [ b.display_name, b.record_id ] } %>
+      <% budget_options = @budgets.map { |b| [ b.picker_label, b.record_id ] } %>
       <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
-        <% budget_options.unshift([ expense.budget.display_name, expense.budget.record_id ]) %>
+        <% budget_options.unshift([ expense.budget.picker_label, expense.budget.record_id ]) %>
       <% end %>
       <%= select_tag :budget_record_id,
                      options_for_select(budget_options, expense.budget&.record_id),

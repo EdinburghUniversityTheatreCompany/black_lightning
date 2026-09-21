@@ -345,6 +345,12 @@ survive as historical import provenance and are never written. Spec + plan in
     it, and `active_budgets` is ordered by it. The BARE name is right only where the area is
     already beside it — the grouped index's rowgroup heading, the overview's area card, an
     export's own Area column, the name FIELD on the budget form.
+  - **`Budget#picker_label` is a SEPARATE string from `display_name`, and must stay so.** It
+    prefixes the cost centre's `short_code` (falling back to `eusa_code`, edited on Settings) so a
+    producer can tell two centres' lines apart — `active_budgets` is deliberately not cost-centre
+    scoped. Prefixing `display_name` itself would change the BACS payment reference EUSA sees on
+    every future payment, the receipt filenames, and the spelling `BudgetImport.bare_name` matches
+    on. It is used in `<select>` collections and nowhere else.
   - **An area naming nobody switches its budgets' sign-off gate OFF** — `OwnerReview
     .gate_applies?` is false with no owners, so a budget with its own owner attached to an
     ownerless area stops needing endorsement entirely. Both forms warn.
@@ -915,6 +921,19 @@ survive as historical import provenance and are never written. Spec + plan in
   `create_second_reimbursements_cost_centre` — never a second fixture row (see the nightly
   job's note above), and never inline, because `jscpd` gates duplication at 0 and three
   tests repeating the same setup block trips it.
+- **A claim with no bank details never reaches a batch** (`BatchProcessor#process`, a pre-flight
+  `fail_with` naming the claims). `ReviewSupport`'s approve blocker is the only other check and it
+  runs on the APPROVAL path alone, so anything that reached Approved another way — the settled-claim
+  import, a console fix — walked straight past it, and `bacs_document` reads the effective payee /
+  sort code / account number, all blank strings for a claim with no payee. 140 imported production
+  claims sat in exactly that state. It fails the WHOLE batch rather than dropping the bad rows: a
+  spreadsheet quietly short of what the operator just approved is the harder error to notice.
+- **`ReviewSupport.modulus_result` is the one rule for when the modulus check applies**, read by
+  the attention summary and by both views that draw the banner. The checker returns **INVALID for a
+  blank pair**, so a claim with no bank details drew "Modulus check failed … likely a typo" directly
+  under "no bank details" — contradictory advice over an empty field. `FakeModulusChecker` answers
+  INVALID for a blank pair too; it used to answer OUTSIDE_SPEC, which is precisely why no test could
+  see this.
 - **BACS batch invariants** (`Reimbursements::BatchProcessor`): the vendored xlsx
   template (`lib/reimbursements/templates/EUSA_BACS_template.xlsx`) caps a batch at
   `BacsXlsx::MAX_ROWS` (200) data rows — its GRAND TOTAL formula and the Authorisation

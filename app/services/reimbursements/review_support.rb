@@ -21,6 +21,24 @@ module Reimbursements
       ATTENTION_STATUSES.include?(expense.status)
     end
 
+    # The modulus check's result, or nil where the check does not apply.
+    #
+    # It is a UK sort-code/account-number algorithm, so it is SKIPPED rather
+    # than run and failed on a claim that has no such pair: an international
+    # claim travels on IBAN + BIC, and a claim with no bank details at all
+    # already says so on its own. Run on a blank pair the checker returns
+    # INVALID, which put "Modulus check failed ... likely a typo" directly under
+    # "no bank details" on the expense edit page — contradictory advice over a
+    # field that is empty rather than mistyped.
+    #
+    # One rule, read by this summary AND by both views that draw the banner, so
+    # the three cannot drift about when the check applies.
+    def modulus_result(expense, modulus_checker)
+      return nil if expense.international? || !expense.effective_has_bank_details?
+
+      modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
+    end
+
     # A BACS-safe payment reference from a budget's display name: drop anything
     # that isn't alphanumeric/space/hyphen, collapse the runs of spaces that
     # leaves, cap at 18 chars, then trim. It is fed Budget#display_name, whose
@@ -65,13 +83,9 @@ module Reimbursements
       blocking << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
       advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 
-      if !expense.effective_has_bank_details?
-        blocking << "no bank details"
-      elsif !expense.international?
-        # A UK sort-code/account-number algorithm, so it is skipped rather than
-        # run and failed on a payee who has neither.
-        modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
-        advisory << "failed the bank modulus check" if modulus == ModulusCheck::INVALID
+      blocking << "no bank details" unless expense.effective_has_bank_details?
+      if modulus_result(expense, modulus_checker) == ModulusCheck::INVALID
+        advisory << "failed the bank modulus check"
       end
 
       advisory << "over budget" if over_budget?(expense, budget_by_id)

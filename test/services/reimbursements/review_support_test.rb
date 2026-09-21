@@ -558,6 +558,38 @@ module Reimbursements
       assert_empty summary[:blocking]
     end
 
+    # --- modulus_result: when the check applies at all ----------------------
+
+    test "no modulus result for a claim with no bank details" do
+      # The algorithm takes a sort code and an account number. Run on a blank
+      # pair it returns INVALID, which rendered "Modulus check failed ... likely
+      # a typo" directly beneath "no bank details" on the expense edit page —
+      # two contradictory red banners, one of them sending finance to hunt for a
+      # typo in an empty field.
+      result = ReviewSupport.modulus_result(
+        expense(payee: payee_without_bank, budget: budget), FakeChecker.new(ModulusCheck::INVALID)
+      )
+
+      assert_nil result
+    end
+
+    test "no modulus result for an international claim" do
+      result = ReviewSupport.modulus_result(
+        expense(payee: valid_payee, budget: budget, payment_method: "international"),
+        FakeChecker.new(ModulusCheck::INVALID)
+      )
+
+      assert_nil result
+    end
+
+    test "a UK claim with bank details is checked" do
+      result = ReviewSupport.modulus_result(
+        expense(payee: valid_payee, budget: budget), FakeChecker.new(ModulusCheck::INVALID)
+      )
+
+      assert_equal ModulusCheck::INVALID, result
+    end
+
     test "the EUR amount is not read on a UK claim" do
       # A UK claim never has one, and demanding it would block every one of them.
       summary = ReviewSupport.attention_summary(

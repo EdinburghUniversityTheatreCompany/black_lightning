@@ -9,6 +9,14 @@ module Reimbursements
       Budget.create!(name: "Props", **attrs)
     end
 
+    def picker_cost_centre(key:, eusa_code:, short_code: "BF")
+      CostCentre.create!(key: key, name: "Bedlam Fringe", eusa_code: eusa_code,
+                         short_code: short_code,
+                         receive_mailbox: "in-#{key}@example.com",
+                         send_mailbox: "out-#{key}@example.com",
+                         notification_email: "finance-#{key}@example.com")
+    end
+
     def add_expense(budget, status:, excl_vat:)
       Expense.create!(budget: budget, status: status, amount: excl_vat * 1.2r,
                       amount_excl_vat: excl_vat, description: "x")
@@ -240,6 +248,34 @@ module Reimbursements
 
       assert_equal cogito.name, improverts.name
       assert_not_equal cogito.display_name, improverts.display_name
+    end
+    # display_name is load-bearing: BudgetImport.bare_name splits on its colon,
+    # FilenameSanitizer builds receipt filenames from it, and ReviewSupport
+    # .auto_payment_reference derives the BACS reference EUSA sees from it. The
+    # picker label has to be a SEPARATE string, or prefixing a dropdown would
+    # silently change the reference on every future payment.
+    test "picker_label prefixes the cost centre without touching display_name" do
+      centre = picker_cost_centre(key: "fringe-picker", eusa_code: "F40p")
+      budget = build_budget(name: "Other", cost_centre: centre)
+
+      assert_equal "BF - Other", budget.picker_label
+      assert_equal "Other", budget.display_name
+    end
+
+    test "picker_label keeps the area composition" do
+      centre = picker_cost_centre(key: "fringe-area", eusa_code: "F40a")
+      area = Area.create!(name: "Improverts", cost_centre: centre)
+      budget = build_budget(name: "Other", cost_centre: centre, area: area)
+
+      assert_equal "BF - Improverts: Other", budget.picker_label
+    end
+
+    test "picker_label is the display name when the budget has no cost centre" do
+      # An unplaced line is lenient-scoped into every centre's screens, so there
+      # is no centre to name and a bare "- Other" would read as a missing one.
+      budget = build_budget(name: "Other", cost_centre: nil)
+
+      assert_equal "Other", budget.picker_label
     end
   end
 end

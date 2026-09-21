@@ -8,6 +8,12 @@
             cancel_path: admin_reimbursements_settings_path %>
     <% end %>
 
+    <%= f.input :short_code, label: "Short code",
+          placeholder: @cost_centre.eusa_code,
+          hint: "Prefixes this cost centre's budgets in every picker " \
+                "(\"BF - Improverts: Other\"), so a producer choosing a budget can tell two " \
+                "centres' lines apart. Left blank it falls back to the EUSA code." %>
+
     <div class="grid gap-x-4 sm:grid-cols-2">
       <%= f.input :receive_mailbox, label: "Receive mailbox (email-in)" %>
       <%= f.input :send_mailbox, label: "Send-from mailbox (drafts)" %>

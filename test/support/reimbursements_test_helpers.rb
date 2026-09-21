@@ -164,7 +164,16 @@ module ReimbursementsTestHelpers
       @by_account = by_account
     end
 
-    def check(_sort_code, account_number)
+    # A blank pair reads INVALID, as the REAL checker does — the algorithm has
+    # no digits to work on and fails. The fake used to answer OUTSIDE_SPEC here,
+    # which is the one case that mattered: it meant no test could ever see the
+    # "Modulus check failed ... likely a typo" banner that the live site drew
+    # over a payee with no bank details at all.
+    def check(sort_code, account_number)
+      if sort_code.to_s.strip.empty? || account_number.to_s.strip.empty?
+        return ::Reimbursements::ModulusCheck::INVALID
+      end
+
       @by_account.fetch(account_number, ::Reimbursements::ModulusCheck::OUTSIDE_SPEC)
     end
   end

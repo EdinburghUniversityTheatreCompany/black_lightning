@@ -100,6 +100,22 @@ module Admin
       }
     end
 
+    # The one place the prefix has to actually appear: active_budgets is not
+    # cost-centre scoped, so this picker is where a producer sees both centres'
+    # lines at once. Asserting on the model alone would not catch a view still
+    # mapping display_name.
+    test "the budget picker names each line's cost centre" do
+      centre = create_reimbursements_cost_centre(key: "picker-centre", name: "Bedlam Fringe",
+                                                 eusa_code: "F41", short_code: "BF")
+      create_reimbursements_budget(name: "Marketing", cost_centre: centre)
+      sign_in @user
+
+      get :new
+
+      assert_response :success
+      assert_select "option", text: "BF - Marketing"
+    end
+
     test "new renders the receipt-first form" do
       sign_in @user
 
