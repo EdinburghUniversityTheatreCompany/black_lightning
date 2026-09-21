@@ -336,7 +336,11 @@
   <dialog data-review-decision-target="dialog"
           data-action="click->review-decision#backdropClose close->review-decision#closed"
           aria-labelledby="unsaved-edits-title-<%= expense.record_id %>"
-          class="rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
+          <%# m-auto is load-bearing: Tailwind's preflight sets margin:0 on
+              every element, which defeats the UA stylesheet's dialog:modal
+              { margin: auto } and parked this dialog in the viewport's top
+              left corner, over the sidebar. %>
+          class="m-auto rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
     <div class="max-w-sm p-4">
       <h2 class="text-base font-medium" id="unsaved-edits-title-<%= expense.record_id %>"
           data-review-decision-target="title">
