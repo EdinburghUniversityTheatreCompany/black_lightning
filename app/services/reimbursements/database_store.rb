@@ -634,12 +634,9 @@ module Reimbursements
       # Money columns the finance edit form may deliberately CLEAR.
       # #expense_columns compacts nils away, which reads a missing key as "not
       # edited here" — right for a form that posts a subset, but it made
-      # blanking the invoice amount a no-op that looked like a save (the field
-      # came back with the old figure in it), and left an international claim's
-      # GBP estimate standing after finance cleared it. A key that is present
-      # and nil is an instruction, not an omission. Only this caller ever
-      # passes one: every other write path validates the amount as positive
-      # first.
+      # blanking the invoice amount a no-op that looked like a save: the field
+      # came back with the old figure still in it. A key that is present and
+      # nil is an instruction, not an omission.
       CLEARABLE_EXPENSE_COLUMNS.each do |key|
         columns[key] = nil if attrs.key?(key) && attrs[key].nil?
       end
