@@ -103,8 +103,13 @@
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
         <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab), method: :patch,
                       id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
+          <%# Deliberately NOT required, unlike the per-card reject box: this one
+              box is shared with "Approve selected", which needs no reason, and a
+              required attribute here would block every bulk approval. The
+              controller enables Reject selected only once it is filled in, and
+              the server refuses a blank reason either way. %>
           <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
-                             data: { bulk_review_target: "reason" },
+                             data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
                              class: input_classes(width: nil) %>
           <%= submit_tag "Approve selected",
                          formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab),

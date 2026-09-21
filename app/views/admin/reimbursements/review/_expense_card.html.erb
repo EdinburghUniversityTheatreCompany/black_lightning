@@ -284,7 +284,13 @@
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
                   method: :patch, class: "flex items-center gap-2",
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
-      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+      <%# required, so the browser stops a blank reason BEFORE the "this can't
+          be undone" confirm: agreeing to something irreversible and then being
+          told the submit was refused is the wrong order. The field is always
+          visible, so a required attribute here can never be the unreachable
+          kind that silently breaks a form. The server check stays — it is the
+          one that holds with JavaScript off. %>
+      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection", required: true,
                          "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
                          class: input_classes(width: nil) %>
       <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}",
