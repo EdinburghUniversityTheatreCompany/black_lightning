@@ -33,10 +33,14 @@
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>
+    <%# Grouped, with the row's own nominal code first — see
+        ActualsController#budget_groups_for. Every line is still offerable: the
+        code is a hint, not a rule. %>
     <%= f.input :budget_record_id, label: "Budget", required: true,
-          collection: @budgets.map { |budget| [ budget.picker_label, budget.record_id ] },
+          collection: @budget_groups, group_method: :last, group_label_method: :first,
           include_blank: "Pick a budget",
-          hint: "Which budget this cost comes out of." %>
+          hint: "Which budget this cost comes out of. The lines on this row's nominal code " \
+                "are listed first." %>
     <%= f.input :description, label: "Description",
           hint: "Prefilled from the ledger narrative; tidy it up if it's cryptic." %>
     <%= f.input :payment_reference, label: "Payment reference",

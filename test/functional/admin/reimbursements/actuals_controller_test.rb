@@ -854,6 +854,113 @@ module Admin
       assert_equal 77, assigns(:candidates).first.auto_number
     end
 
+    # --- What Link to claim offers, and in what order ------------------------
+    #
+    # The list was every claim in the portal ordered by amount alone — 37 of
+    # them, Draft and Rejected included, with a Rejected one ranked third.
+
+    test "link_expense offers no draft or rejected claim" do
+      draft = create_reimbursements_expense(auto_number: 90, budget: @budget,
+                                            status: ::Reimbursements::Status::DRAFT,
+                                            amount: BigDecimal("42.00"),
+                                            amount_excl_vat: BigDecimal("42.00"))
+      rejected = create_reimbursements_expense(auto_number: 91, budget: @budget,
+                                               status: ::Reimbursements::Status::REJECTED,
+                                               amount: BigDecimal("42.00"),
+                                               amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      numbers = assigns(:candidates).map(&:auto_number)
+      assert_not_includes numbers, draft.auto_number,
+                          "a draft is a claim its submitter has not finished writing"
+      assert_not_includes numbers, rejected.auto_number,
+                          "a rejected claim is one finance refused to pay"
+    end
+
+    test "link_expense still offers a Pending, Approved or Submitted claim" do
+      pending_claim = create_reimbursements_expense(auto_number: 92, budget: @budget,
+                                                    status: ::Reimbursements::Status::PENDING,
+                                                    amount: BigDecimal("42.00"),
+                                                    amount_excl_vat: BigDecimal("42.00"))
+      approved = create_reimbursements_expense(auto_number: 93, budget: @budget,
+                                               status: ::Reimbursements::Status::APPROVED,
+                                               amount: BigDecimal("42.00"),
+                                               amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      numbers = assigns(:candidates).map(&:auto_number)
+      assert_includes numbers, pending_claim.auto_number
+      assert_includes numbers, approved.auto_number
+    end
+
+    # The narrative is routinely "BACS PAYMENT KIRSTY TOLMIE" — the strongest
+    # evidence on the row — while amount-closeness alone ranked her claim
+    # sixth behind four unrelated ones that happened to be nearer.
+    test "a claim whose payee the narrative names outranks a closer amount" do
+      @unlinked.update!(narrative: "BACS PAYMENT KIRSTY TOLMIE")
+      kirsty = create_reimbursements_person(name: "Kirsty Tolmie", email: "kirsty@example.com")
+      named = create_reimbursements_expense(auto_number: 94, budget: @budget, person: kirsty,
+                                            status: ::Reimbursements::Status::SUBMITTED,
+                                            amount: BigDecimal("500.00"),
+                                            amount_excl_vat: BigDecimal("500.00"))
+      create_reimbursements_expense(auto_number: 95, budget: @budget,
+                                    status: ::Reimbursements::Status::SUBMITTED,
+                                    amount: BigDecimal("42.00"),
+                                    amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_equal named.auto_number, assigns(:candidates).first.auto_number
+    end
+
+    # A ledger row belongs to one pot and a claim resolves one through its
+    # budget, so a candidate from the other centre is almost certainly the
+    # wrong answer — and the list said nothing about it.
+    test "link_expense names each candidate's cost centre" do
+      centre = ::Reimbursements::CostCentre.default
+      placed = create_reimbursements_budget(name: "Placed", cost_centre: centre)
+      create_reimbursements_expense(auto_number: 96, budget: placed,
+                                    status: ::Reimbursements::Status::SUBMITTED,
+                                    amount: BigDecimal("42.00"),
+                                    amount_excl_vat: BigDecimal("42.00"))
+      sign_in @user
+
+      get :link_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_includes response.body, centre.name
+    end
+
+    # --- What Create expense offers ------------------------------------------
+
+    test "new_expense lists the budgets on this row's nominal code first" do
+      matching = create_reimbursements_budget(name: "Sundries", nominal_code: "500000")
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      label, options = assigns(:budget_groups).first
+      assert_includes label, "500000"
+      assert_includes options.map(&:last), matching.record_id
+      # An order, not a filter: every other line is still offerable.
+      assert_includes assigns(:budget_groups).last.last.map(&:last), @budget.record_id
+    end
+
+    test "new_expense prints each budget's nominal code in its label" do
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert(assigns(:budget_groups).flat_map(&:last).all? { |label, _| label.include?("·") })
+    end
+
     test "link_expense refuses a row that is already linked" do
       sign_in @user
 

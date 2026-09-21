@@ -27,6 +27,14 @@ module Admin
       # claim past this point was never the answer.
       LINK_CANDIDATE_LIMIT = 50
 
+      # Statuses a manual "Link to claim" must never offer. See
+      # #link_candidates for why each one is here.
+      EXCLUDED_LINK_STATUSES = [
+        ::Reimbursements::Status::PAID,
+        ::Reimbursements::Status::DRAFT,
+        ::Reimbursements::Status::REJECTED
+      ].freeze
+
       # Which slice of the ledger the page is showing, in the URL as ?state=.
       #
       # NEEDS_ATTENTION IS THE DEFAULT, and that is the point of it: the ledger
@@ -77,6 +85,7 @@ module Admin
       def new_expense
         @title = "Create expense from EUSA actual"
         @budgets = offerable_budgets
+        @budget_groups = budget_groups_for(@actual)
         @form = ::Reimbursements::ExpenseForm.from_actual(@actual)
         @form.budget_record_id = budget_for_nominal_code(@actual.nominal_code)
       end
@@ -99,6 +108,7 @@ module Admin
         unless @form.valid?
           @title = "Create expense from EUSA actual"
           @budgets = offerable_budgets
+          @budget_groups = budget_groups_for(@actual)
           render :new_expense, status: :unprocessable_entity
           return
         end
@@ -142,6 +152,10 @@ module Admin
       def link_expense
         @title = "Link EUSA actual to a claim"
         @candidates = link_candidates(@actual)
+        # id -> centre for the candidate list, off the store's memoized reader:
+        # a claim resolves its centre through its budget, and reading
+        # budget.cost_centre per row would be a query per candidate.
+        @cost_centres_by_id = store.cost_centres.index_by(&:id)
       end
 
       def confirm_link
@@ -381,17 +395,54 @@ module Admin
         end
       end
 
-      # Claims this row could plausibly settle, closest amount first so the
-      # obvious answer is at the top. Deliberately NOT filtered to the row's
-      # nominal code or to a date window: this list exists precisely for the
-      # rows the automatic matcher, which applies both of those, already gave up
-      # on. Paid claims are excluded — one is already settled.
+      # Claims this row could plausibly settle. Deliberately NOT filtered to
+      # the row's nominal code or to a date window: this list exists precisely
+      # for the rows the automatic matcher, which applies both of those,
+      # already gave up on.
+      #
+      # WHICH STATUSES. Paid is out — already settled. DRAFT and REJECTED are
+      # out too, and that is the point of this: a draft is a claim its
+      # submitter has not finished writing, and a rejected one is a claim
+      # finance refused, so settling either marks paid something nobody agreed
+      # to pay. The unfiltered list put a Rejected claim third. What is left —
+      # Pending, Approved, Submitted — can each legitimately have been paid:
+      # Submitted is the matcher's own set, and a claim settled outside a batch
+      # (an imported claim, a payment EUSA made directly) can still be sitting
+      # at either of the other two.
       def link_candidates(actual)
-        target = actual.debit || 0
         store.expenses
-             .reject { |expense| expense.status == ::Reimbursements::Status::PAID }
-             .sort_by { |expense| [ ((expense.amount || 0) - target).abs, -expense.auto_number.to_i ] }
+             .reject { |expense| EXCLUDED_LINK_STATUSES.include?(expense.status) }
+             .sort_by { |expense| link_candidate_rank(expense, actual) }
              .first(LINK_CANDIDATE_LIMIT)
+      end
+
+      # A claim whose payee is NAMED IN THE ROW'S NARRATIVE comes first,
+      # whatever the amounts say.
+      #
+      # The narrative is routinely "BACS PAYMENT KIRSTY TOLMIE" — the strongest
+      # evidence on the row and the very thing a human reads it for — while
+      # amount-closeness alone ranked her claim sixth behind four unrelated
+      # claims that happened to be nearer. Amount-closeness stays the
+      # tie-break, then the newest claim.
+      def link_candidate_rank(expense, actual)
+        target = actual.debit || 0
+        [ named_in_narrative?(expense, actual) ? 0 : 1,
+          ((expense.amount || 0) - target).abs,
+          -expense.auto_number.to_i ]
+      end
+
+      # Whether any word of the payee's or the submitter's name appears in the
+      # narrative. Word by word, because the ledger abbreviates and reorders
+      # ("TOLMIE K", "K TOLMIE"), and only words of 3+ characters, so an
+      # initial or a stray "DE" cannot match half the ledger.
+      def named_in_narrative?(expense, actual)
+        narrative = "#{actual.narrative} #{actual.narrative_1}".downcase
+        return false if narrative.blank?
+
+        names = [ expense.effective_payee_name, expense.person&.name ].compact_blank
+        names.flat_map { |name| name.downcase.split(/[^a-z]+/) }
+             .select { |word| word.length >= 3 }
+             .any? { |word| narrative.include?(word) }
       end
 
       def conversion_params
@@ -408,6 +459,35 @@ module Admin
 
       def offerable_budget_ids
         offerable_budgets.map(&:record_id)
+      end
+
+      # The budget picker as two labelled groups: the lines on the row's own
+      # nominal code first, then everything else.
+      #
+      # The nominal code is the strongest hint the row carries and the picker
+      # ignored it entirely, listing all 34 budgets alphabetically — with eight
+      # of them sharing one code, finding the right line meant knowing it
+      # already. Every line stays offerable (a code is a hint, not a rule, and
+      # the operator may genuinely be charging this elsewhere), so this is an
+      # ORDER, not a filter; the label on each group says which is which.
+      #
+      # Each option also prints its nominal code, so the grouping can be
+      # checked rather than trusted.
+      def budget_groups_for(actual)
+        matching, others = offerable_budgets.partition do |budget|
+          actual.nominal_code.present? && budget.nominal_code == actual.nominal_code
+        end
+        groups = []
+        if matching.any?
+          groups << [ "Matches this row's nominal code (#{actual.nominal_code})",
+                      budget_options(matching) ]
+        end
+        groups << [ matching.any? ? "Every other budget" : "Budgets", budget_options(others) ]
+        groups
+      end
+
+      def budget_options(budgets)
+        budgets.map { |budget| [ "#{budget.picker_label} · #{budget.nominal_code}", budget.record_id ] }
       end
 
       # The budget a nominal code unambiguously belongs to, so the operator
