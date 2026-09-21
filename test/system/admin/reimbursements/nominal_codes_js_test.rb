@@ -25,8 +25,9 @@ module Admin
         edit_admin_reimbursements_setting_path(@cost_centre.key)
       end
 
-      # Every row carries the same Save / Retire controls, so a click has to
-      # be scoped to the row it belongs to.
+      # Every row carries the same "Save label" / Retire controls, so a click
+      # has to be scoped to the row it belongs to. The button says what it
+      # saves because nine of them sat beside the cost centre's own Save.
       def row_for(nominal_code)
         "#nominal_code_#{nominal_code.record_id}"
       end
@@ -72,7 +73,7 @@ module Admin
         visit settings_page
         within row_for(nominal_code) do
           fill_in "Label", with: "Marketing & publicity"
-          click_on "Save"
+          click_on "Save label"
         end
 
         assert_text "432320 saved"
