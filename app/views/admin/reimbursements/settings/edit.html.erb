@@ -20,7 +20,7 @@
     </div>
     <p class="<%= FormStyles::HINT %> -mt-2 mb-4">
       Changing a mailbox breaks email-in / draft-sending until the new address is added to the app's
-      Exchange management scope (see the Microsoft-access steps below the form). Run the access
+      Exchange management scope (see the Microsoft setup page linked below). Run the access
       check after changing it.
     </p>
 
@@ -46,7 +46,7 @@
           hint: safe_join([ "The site holding this cost centre's receipts + BACS folders. The app is granted ",
                             tag.code("write"),
                             " on just this site (Sites.Selected), and the folder picker below browses it. ",
-                            "The grant command is in the Microsoft-access section under the form." ]) %>
+                            "The grant command is on the Microsoft setup page linked below." ]) %>
 
     <div class="grid gap-x-4 sm:grid-cols-3">
       <%= f.input :eusa_recipient, label: "EUSA recipient",
@@ -68,130 +68,17 @@
   <% end %>
 <% end %>
 
-<% app_id = "b874d491-4edf-4b76-839d-84e534c7f7c0" %>
-<% grant_mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq %>
-<% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
-<%= render CollapsibleSectionComponent.new(
-      title: safe_join([ tag.span("⚠️", aria: { hidden: true }), " Microsoft access for this cost centre" ]),
-      variant: :warning, html_class: "mb-4") do %>
-  <div class="flex flex-col gap-3 text-sm text-gray-700">
-    <p class="font-medium">
-      These steps need Microsoft 365 admin permissions (Exchange Online / SharePoint admin).
-      If that's not you, send this section to IT.
-    </p>
-    <p>
-      The manual Microsoft 365 steps the app can't do itself. You only need these when
-      <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
-      The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID <code><%= app_id %></code>)
-      already exists; what's left is authorising this cost centre's own mailboxes and site below.
-    </p>
-
-    <div>
-      <p class="font-medium">Authorise this cost centre's mailbox<%= "es" unless @cost_centre.receive_mailbox == @cost_centre.send_mailbox %></p>
-      <p>
-        Setting a mailbox above is <strong>not enough</strong>. The app holds no tenant-wide mail permission
-        at all: Exchange hands it one mailbox at a time through a <strong>management scope</strong> listing
-        the addresses it may touch (RBAC for Applications). Until
-        <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "it's" : "they're" %> in that scope,
-        every Graph call (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost
-        centre's email-in and batch drafting silently break.
-      </p>
-      <p class="mt-2">
-        <strong>The scope filter is replaced, not added to</strong>, so you have to pass every mailbox the
-        app uses, not just the new one. Leave one out and you cut off a cost centre that was working.
-        Don't type that list from memory, because a send mailbox is a separate field from a receive one and
-        they usually differ. Ask the app:
-      </p>
-      <pre class="<%= code_class %>"><code>kamal app exec -i 'bin/rails graph:mailboxes'</code></pre>
-      <p class="mt-2">
-        That prints the <code>$env:</code> lines ready to paste. Then run the script from a checkout of this
-        repo (<code>docs/graph-mailbox-rbac.ps1</code>), which is idempotent, so re-running it is safe:
-      </p>
-      <pre class="<%= code_class %>"><code># Create each shared mailbox first (M365 admin center &rarr; Teams &amp; groups &rarr; Shared
-# mailboxes), then:
-Connect-ExchangeOnline
-
-$env:BL_GRAPH_APP_ID       = "<%= app_id %>"
-$env:BL_GRAPH_SP_OBJECT_ID = "&lt;Object ID, from Entra &gt; ENTERPRISE APPLICATIONS&gt;"
-# ...then paste the two $env: lines from `bin/rails graph:mailboxes`
-
-./docs/graph-mailbox-rbac.ps1 -WhatIf   # read the filter it would write
-./docs/graph-mailbox-rbac.ps1</code></pre>
-      <p class="mt-2">
-        Read the <code>-WhatIf</code> filter before running it for real and check every mailbox is in it.
-        Then confirm this cost centre came out in scope:
-      </p>
-      <% grant_mailboxes.each do |mailbox| %>
-        <pre class="<%= code_class %>"><code>Test-ServicePrincipalAuthorization -Identity <%= app_id %> `
-  -Resource <%= mailbox %> | Format-Table RoleName,AllowedResourceScope,InScope</code></pre>
-      <% end %>
-      <p class="mt-2 text-xs text-gray-500">
-        Look for <code>InScope True</code> against <code>Application Mail Full Access</code>. That cmdlet
-        bypasses the permission cache so it answers immediately, but the app doesn't: allow
-        <strong>30 minutes to 2 hours</strong> before Run access check goes green. A red mailbox row inside
-        that window isn't a second problem, so don't re-run the script at it.
-        <strong>Address already in use?</strong> Find what holds the SMTP proxy with
-        <code>Get-Recipient -Filter "EmailAddresses -eq 'smtp:THE-ADDRESS'"</code>, then free it or pick another.
-      </p>
-    </div>
-
-    <div>
-      <p class="font-medium">Grant this app write access to the SharePoint site</p>
-      <p>
-        The app uses least-privilege <code>Sites.Selected</code>: it reaches only the sites you grant it.
-        After setting the <strong>SharePoint site URL</strong> above, grant this app <code>write</code> on
-        that site (once per site). The easiest way is <strong>Graph Explorer</strong>
-        (<a class="underline" href="https://aka.ms/ge">aka.ms/ge</a>, a web tool), signed in as a SharePoint
-        admin. These are Microsoft Graph calls, <strong>not PowerShell</strong>:
-      </p>
-      <% site_path = @cost_centre.sharepoint_graph_site_path %>
-      <pre class="<%= code_class %>"><code># 1. Get the site id:
-GET https://graph.microsoft.com/v1.0/sites/<%= site_path || "TENANT.sharepoint.com:/sites/SiteName" %>
-#    -&gt; copy "id" from the response
-
-# 2. Grant THIS app write on THAT site only:
-POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
-{
-  "roles": ["write"],
-  "grantedToIdentities": [
-{ "application": { "id": "<%= app_id %>",
-                   "displayName": "BlackLightning Reimbursements Mailbox" } }
-  ]
-}</code></pre>
-      <p class="text-xs text-gray-500">
-        The <code>POST</code> needs the <code>Sites.FullControl.All</code> delegated permission for your
-        session (not for the app). If Graph Explorer says permissions are missing, open its
-        <strong>Modify permissions</strong> tab, consent to <code>Sites.FullControl.All</code> as an admin,
-        then re-run. Prefer PowerShell? Run the same with
-        <code>Connect-MgGraph -Scopes "Sites.FullControl.All"</code> then <code>Invoke-MgGraphRequest</code>,
-        but in a <strong>fresh window</strong>: the Exchange Online module from the mailbox step clashes with
-        Microsoft.Graph in one session (the <code>Method not found: WithLogging</code> error). List or revoke
-        later against the same <code>/sites/&lt;id&gt;/permissions</code> endpoint. Without the grant, uploads
-        and the folder picker for this site fail with <strong>403</strong>. Don't fall back to tenant-wide
-        <code>Sites.ReadWrite.All</code> / <code>Files.ReadWrite.All</code>.
-      </p>
-    </div>
-
-    <div>
-      <p class="font-medium">Graph permissions on the Entra app</p>
-      <ul class="list-disc pl-5">
-        <li>
-          <strong>Mail: no Entra permission at all.</strong> Poll / draft / send come from the Exchange role
-          assignment above (<code>Application Mail Full Access</code>), scoped to the mailbox list.
-          Consenting <code>Mail.ReadWrite</code> or <code>Mail.Send</code> here would give the app every
-          mailbox in the tenant and make the scoping decorative, because Exchange and Entra permissions are
-          a union. Don't.
-        </li>
-        <li><code>Sites.Selected</code>: SharePoint, granted <code>write</code> per-site (above), not tenant-wide.</li>
-        <li>
-          <code>Sites.ReadWrite.All</code> and <code>Files.ReadWrite.All</code> are still consented
-          tenant-wide, which is why SharePoint works today even for a site with no per-site grant. Retiring
-          them is the open item in <code>docs/graph-mailbox-rbac.md</code>: grant the site first, confirm a
-          batch upload, then revoke.
-        </li>
-      </ul>
-    </div>
-  </div>
+<%# The Microsoft 365 setup steps moved to their OWN page: they are needed once
+    per cost centre, by somebody with Exchange or SharePoint admin rights who is
+    usually not the person editing these settings, and a wall of PowerShell and
+    Graph JSON sat between the routine controls an operator edits weekly. %>
+<%= render AlertComponent.new(type: :info, html_class: "mb-4") do %>
+  Setting this cost centre up for the first time?
+  <%= link_to "What IT has to do in Microsoft 365",
+              microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key),
+              class: "underline font-medium" %>
+  — mailbox authorisation and the SharePoint grant. Day-to-day use needs none of it, and that
+  page is safe to forward.
 <% end %>
 
 <%= render CardComponent.new(title: "Check Microsoft access", html_class: "mt-4") do %>

@@ -304,7 +304,13 @@ ChaosRails::Application.routes.draw do
       # (The Azure/mailbox/SharePoint manual-setup runbook lives inline on the
       # per-cost-centre Settings edit page, filled with that cost centre's values.)
       resources :settings, only: %i[index new create edit update], param: :key do
-        member { post :test_access }
+        member do
+          post :test_access
+          # The manual Microsoft 365 steps, on their own page: needed once per
+          # cost centre, by somebody with Exchange or SharePoint admin rights
+          # who is usually not the person editing these settings.
+          get :microsoft_setup
+        end
       end
 
       # A cost centre's own chart of accounts, maintained ON its settings page

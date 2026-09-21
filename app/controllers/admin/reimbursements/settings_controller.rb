@@ -18,7 +18,7 @@ module Admin
     class SettingsController < FinanceController
       include ListsNominalCodes
 
-      before_action :set_cost_centre, only: %i[edit update test_access]
+      before_action :set_cost_centre, only: %i[edit update test_access microsoft_setup]
       # The nominal-codes panel on the edit page. Every action that can RENDER
       # :edit needs the list, which is #update's refused-save path and
       # #test_access's non-turbo response as well as #edit itself.
@@ -69,6 +69,22 @@ module Admin
       def edit
         @title = "Settings: #{@cost_centre.name}"
         setup_folder_picker if params[:picker].present?
+      end
+
+      # The manual Microsoft 365 steps, on their own page.
+      #
+      # They were a collapsed section of the settings FORM, where a wall of
+      # PowerShell and Graph JSON sat between the routine controls an operator
+      # edits weekly. They are needed once per cost centre, by somebody with
+      # Exchange Online or SharePoint admin rights who is usually not the
+      # person editing the settings — so the page is a thing to send, which a
+      # section of somebody else's form is not.
+      #
+      # Deliberately NOT behind set_nominal_codes: it renders none of that
+      # panel, and loading it would be two queries for a page that shows it
+      # nothing.
+      def microsoft_setup
+        @title = "Microsoft setup: #{@cost_centre.name}"
       end
 
       def update

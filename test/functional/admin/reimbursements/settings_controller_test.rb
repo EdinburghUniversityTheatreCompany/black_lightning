@@ -125,12 +125,12 @@ module Admin
         assert_select "a[href=?] span[aria-hidden=true]", admin_reimbursements_settings_path, text: "←"
       end
 
-      test "edit shows the Exchange verify command filled in with this mailbox" do
+      test "the Microsoft setup page shows the Exchange verify command filled in with this mailbox" do
         sign_in @user
-        get :edit, params: { key: @cost_centre.key }
+        get :microsoft_setup, params: { key: @cost_centre.key }
 
         assert_response :success
-        assert_includes response.body, "Microsoft access for this cost centre"
+        assert_includes response.body, "What IT has to do in Microsoft 365"
         assert_includes response.body, "docs/graph-mailbox-rbac.ps1"
         assert_includes response.body,
           "Test-ServicePrincipalAuthorization -Identity b874d491-4edf-4b76-839d-84e534c7f7c0"
@@ -151,10 +151,10 @@ module Admin
         assert_not_includes response.body, "Reimbursements App Access"
       end
 
-      test "edit shows a separate verify block when the send mailbox differs" do
+      test "the Microsoft setup page shows a separate verify block when the send mailbox differs" do
         @cost_centre.update!(send_mailbox: "outbox@bedlamfringe.co.uk")
         sign_in @user
-        get :edit, params: { key: @cost_centre.key }
+        get :microsoft_setup, params: { key: @cost_centre.key }
 
         assert_response :success
         assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
@@ -163,19 +163,19 @@ module Admin
 
       # The scope filter is replaced wholesale, so a partial list silently revokes
       # every mailbox left out of it. The page has to say so where the command is.
-      test "edit warns that the mailbox scope filter is replaced rather than appended" do
+      test "the Microsoft setup page warns that the mailbox scope filter is replaced rather than appended" do
         sign_in @user
-        get :edit, params: { key: @cost_centre.key }
+        get :microsoft_setup, params: { key: @cost_centre.key }
 
         assert_response :success
         assert_includes response.body, "replaced, not added to"
         assert_includes response.body, "bin/rails graph:mailboxes"
       end
 
-      test "edit shows the SharePoint Sites.Selected grant with the site path filled in" do
+      test "the Microsoft setup page shows the SharePoint Sites.Selected grant with the site path filled in" do
         @cost_centre.update!(sharepoint_site_url: "https://tenant.sharepoint.com/sites/Finance")
         sign_in @user
-        get :edit, params: { key: @cost_centre.key }
+        get :microsoft_setup, params: { key: @cost_centre.key }
 
         assert_response :success
         assert_includes response.body, "Sites.Selected"
@@ -668,6 +668,64 @@ module Admin
         end
 
         assert_response :forbidden
+      end
+
+      # --- The Microsoft setup page ------------------------------------------
+      # A wall of PowerShell and Graph JSON sat between the routine controls an
+      # operator edits weekly, inside the settings FORM. These steps are needed
+      # once per cost centre, by somebody with Exchange or SharePoint admin
+      # rights who is usually not the person editing the settings.
+
+      test "the settings form no longer carries the Microsoft setup steps" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        # The runbook's own markers. "Sites.Selected" itself still appears in a
+        # one-line explanation beside the SharePoint URL field, which is the
+        # kind of sentence that belongs on the form it describes.
+        assert_not_includes response.body, "Test-ServicePrincipalAuthorization"
+        assert_not_includes response.body, "graph.microsoft.com/v1.0/sites"
+        assert_not_includes response.body, "docs/graph-mailbox-rbac.ps1"
+      end
+
+      test "the settings form links to them instead" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "a[href=?]",
+                      microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key)
+      end
+
+      test "the Microsoft setup page is finance-gated like the settings it belongs to" do
+        sign_in users(:committee)
+
+        get :microsoft_setup, params: { key: @cost_centre.key }
+
+        assert_response :forbidden
+      end
+
+      test "the Microsoft setup page links back to its cost centre" do
+        sign_in @user
+
+        get :microsoft_setup, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_select "a[href=?]", edit_admin_reimbursements_setting_path(@cost_centre.key)
+      end
+
+      # The code is never updatable — every budget, actuals row and export
+      # stores it as a string — so the label is the only thing the row saves,
+      # and nine buttons reading "Save" sat beside the cost centre's own.
+      test "a nominal code row's button says what it saves" do
+        sign_in @user
+        create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "input[type=submit][value='Save label']"
       end
     end
   end

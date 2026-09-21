@@ -50,7 +50,12 @@
               <%= label_tag "label_#{nominal_code.record_id}", "Label", class: "sr-only" %>
               <%= text_field_tag :label, nominal_code.label, id: "label_#{nominal_code.record_id}",
                                  class: input_classes %>
-              <%= submit_tag "Save", class: btn_classes(:primary, :sm),
+              <%# "Save label", not "Save": nine of these sat down the page beside
+                  the cost centre's own Save, and a walker saved a nominal code
+                  while aiming at the centre form. The label is the only thing
+                  this row can change — the code is never updatable, since every
+                  budget, actuals row and export stores it as a string. %>
+              <%= submit_tag "Save label", class: btn_classes(:primary, :sm),
                              "aria-label": "Save label for #{nominal_code.code}" %>
             <% end %>
 
