@@ -619,6 +619,29 @@ module Admin
                                     .find { |b| b.name == "Programme ads" }.expected_outturn
       end
 
+      # --- Remaining is never blank without a reason -------------------------
+
+      test "the index reports Remaining for a line carrying only an initial budget" do
+        sign_in @user
+        ::Reimbursements::Budget.create!(name: "Freshly imported", nominal_code: "4321",
+                                         initial_budget: BigDecimal("450"))
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "£450.00"
+      end
+
+      test "a line with no forecast and no initial budget says so instead of a dash" do
+        sign_in @user
+        ::Reimbursements::Budget.create!(name: "Unplanned", nominal_code: "4322")
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "No budget set"
+      end
+
       test "overview lists unattributed actuals, including spend on a budgeted code" do
         sign_in @user
         # 4000 IS budgeted (@props), but nothing links this row to an expense, so

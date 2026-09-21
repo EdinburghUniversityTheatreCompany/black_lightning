@@ -19,14 +19,12 @@
   <% @budgets.each do |budget| %>
     <% expenses = @expenses_by_budget.fetch(budget.record_id, []) %>
     <%= render CardComponent.new(title: budget.display_name.presence || budget.record_id, html_class: "mb-4") do %>
-      <% if budget.remaining %>
-        <p class="mb-3 text-sm text-gray-600">
-          Remaining:
-          <span class="<%= "text-danger font-medium" if budget.remaining.negative? %>">
-            <%= reimbursements_money(budget.remaining) %>
-          </span>
-        </p>
-      <% end %>
+      <%# Always rendered, through the helper the finance screens use: an owner
+          reading a line with no figure at all is told so rather than shown a
+          Remaining line that silently disappears. %>
+      <p class="mb-3 text-sm text-gray-600">
+        Remaining: <%= reimbursements_budget_remaining(budget) %>
+      </p>
 
       <% if expenses.empty? %>
         <p class="py-2 text-gray-600">No claims are waiting for your endorsement.</p>

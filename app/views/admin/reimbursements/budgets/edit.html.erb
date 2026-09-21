@@ -37,12 +37,12 @@
     <div><dt class="text-gray-500">Paid (portal)</dt><dd class="font-medium"><%= reimbursements_money(@budget.paid_portal_amount) %></dd></div>
     <div><dt class="text-gray-500">EUSA actual</dt><dd class="font-medium" title="Reconciled EUSA ledger spend for this line."><%= reimbursements_money(@budget.eusa_actual_amount) %></dd></div>
     <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality. Blank on income lines, where the same figure would read as best-case income instead."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
-    <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium <%= "text-danger" if @budget.remaining&.negative? %>"><%= reimbursements_money(@budget.remaining) %></dd></div>
+    <%# Both read the same helper the index row does, so the colouring and the
+        "no budget set" wording cannot drift between the two screens. %>
+    <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium"><%= reimbursements_budget_remaining(@budget) %></dd></div>
     <div>
       <dt class="text-gray-500">Variance</dt>
-      <dd class="font-medium <%= "text-danger" if @budget.variance&.positive? %><%= "text-success" if @budget.variance&.negative? %>">
-        <%= reimbursements_money(@budget.variance) %>
-      </dd>
+      <dd class="font-medium"><%= reimbursements_budget_variance(@budget) %></dd>
     </div>
   </dl>
 <% end %>

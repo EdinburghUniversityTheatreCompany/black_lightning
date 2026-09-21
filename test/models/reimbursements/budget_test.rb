@@ -39,6 +39,7 @@ module Reimbursements
     test "current_forecast is the latest forecast amount, nil when none" do
       budget = build_budget
       assert_nil budget.current_forecast
+      # No forecast AND no initial budget, so there is nothing to be left of.
       assert_nil budget.remaining
 
       budget.forecasts.create!(amount: 100, date: Date.new(2026, 5, 1), reason: "initial")
@@ -56,6 +57,83 @@ module Reimbursements
       assert_equal BigDecimal("110"), fresh.remaining
       assert_equal BigDecimal("30"), fresh.variance
       assert_not fresh.over_budget?
+    end
+
+    # --- Remaining falls back to the initial budget -------------------------
+    #
+    # Budget#remaining read the forecast alone, so a freshly imported financial
+    # year showed "-" on every line under an area heading that printed a
+    # Remaining of its own, and so did any line created by hand with an initial
+    # figure. That is day one of every year, and it is what #projected_amount
+    # (and Area#remaining) have always meant by "the plan".
+
+    test "remaining falls back to the initial budget when no forecast is logged" do
+      budget = build_budget(initial_budget: 450)
+      add_expense(budget, status: Status::APPROVED, excl_vat: 100)
+
+      assert_equal BigDecimal("350"), Budget.find(budget.id).remaining
+    end
+
+    test "a line with only an initial budget can read as over budget" do
+      budget = build_budget(initial_budget: 100)
+      add_expense(budget, status: Status::APPROVED, excl_vat: 140)
+
+      fresh = Budget.find(budget.id)
+      assert_equal BigDecimal("-40"), fresh.remaining
+      assert_predicate fresh, :over_budget?
+    end
+
+    test "a logged forecast still wins over the initial figure" do
+      budget = build_budget(initial_budget: 450)
+      budget.forecasts.create!(amount: 600, date: Date.new(2026, 6, 1), reason: "revised")
+      add_expense(budget, status: Status::APPROVED, excl_vat: 100)
+
+      assert_equal BigDecimal("500"), Budget.find(budget.id).remaining
+    end
+
+    test "remaining stays nil when nobody set a figure at all" do
+      budget = build_budget
+      add_expense(budget, status: Status::APPROVED, excl_vat: 100)
+
+      # Nil, never zero: a 0 there reads as fully overspent, which is why
+      # Area#remaining is nil in the same case.
+      assert_nil Budget.find(budget.id).remaining
+    end
+
+    # An income line's plan is a target to RAISE and committed_amount is spend
+    # somebody recorded against it, so "target less spend" is not money left
+    # over. Falling it back onto the initial figure would put a number meaning
+    # nothing on every income line.
+    test "an income line does not take the initial-budget fallback" do
+      income = build_budget(name: "Box office", budget_type: "Income", initial_budget: 800)
+
+      assert_nil Budget.find(income.id).remaining
+    end
+
+    test "an income line with a forecast keeps the figure it always had" do
+      income = build_budget(name: "Box office", budget_type: "Income", initial_budget: 800)
+      income.forecasts.create!(amount: 900, date: Date.new(2026, 6, 1), reason: "revised")
+
+      assert_equal BigDecimal("900"), Budget.find(income.id).remaining
+    end
+
+    # --- Variance -----------------------------------------------------------
+    #
+    # With no forecast logged the plan IS the agreed figure, so the drift is
+    # genuinely zero rather than unknown — a fact about the line. Blank stays
+    # for the case that really is undefined: no initial budget to drift from.
+
+    test "variance is zero, not blank, when the plan is still the initial budget" do
+      budget = build_budget(initial_budget: 450)
+
+      assert_equal BigDecimal("0"), Budget.find(budget.id).variance
+    end
+
+    test "variance is blank when no initial budget was agreed" do
+      budget = build_budget
+      budget.forecasts.create!(amount: 600, date: Date.new(2026, 6, 1), reason: "plan")
+
+      assert_nil Budget.find(budget.id).variance
     end
 
     test "over_budget? when committed exceeds the forecast; income budgets never" do

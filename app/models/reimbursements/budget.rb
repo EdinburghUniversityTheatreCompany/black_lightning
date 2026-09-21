@@ -41,8 +41,9 @@ module Reimbursements
   #   committed_amount = Σ amount_excl_vat, status ∈ {Approved, Submitted, Paid}
   #   total_paid       = Σ amount_excl_vat, status = Paid
   #   current_forecast = latest forecast's amount (nil when none logged)
-  #   remaining        = current_forecast − committed_amount (nil without forecast)
-  #   variance         = current_forecast − initial_budget (nil without either)
+  #   projected_amount = current_forecast, else initial_budget (the PLAN)
+  #   remaining        = projected_amount − committed_amount (nil with no plan)
+  #   variance         = projected_amount − initial_budget (nil without initial)
   #
   # Each is memoized per instance — one Store lives per request, so a Review
   # render costs one query per figure, not one per card per figure.
@@ -186,18 +187,45 @@ module Reimbursements
         end
     end
 
-    # Nil when no forecast has been logged yet — callers treat nil as "not
-    # tracked, don't block" rather than as zero remaining.
+    # What is left against the line's CURRENT PLAN.
+    #
+    # The plan is #projected_amount — the latest forecast, falling back to the
+    # initial figure — which is the same reading Area#remaining has always had
+    # and the same figure the overview's Projected column prints. It used to
+    # read current_forecast alone, so a freshly imported financial year showed
+    # "-" on every line under an area heading that printed a Remaining, and so
+    # did any line created by hand with an initial figure and no forecast yet.
+    # That is day one of every financial year.
+    #
+    # Nil ONLY when nobody has set a figure at all — no forecast AND no initial
+    # budget. There is then genuinely nothing to be left of, and the screens
+    # say "no budget set" rather than printing a dash (a 0 would read as fully
+    # overspent, the reason Area#remaining is nil in the same case).
+    #
+    # INCOME budgets keep the old forecast-only reading, deliberately. On an
+    # income line the plan is a target to RAISE and committed_amount is spend
+    # somebody recorded against it, so "target less spend" is not money left
+    # over — falling that back onto the initial figure would put a number on
+    # every income line that means nothing. Nothing reads it for a decision
+    # either: over_budget? is false for income by definition.
     def remaining
-      return nil if current_forecast.nil?
+      plan = income? ? current_forecast : projected_amount
+      return nil if plan.nil?
 
-      current_forecast - committed_amount
+      plan - committed_amount
     end
 
+    # How far the current plan has drifted from the figure the committee
+    # agreed. Reads #projected_amount for the reason #remaining does, so with
+    # no forecast logged it is £0.00 — the plan IS the agreed figure, which is
+    # a fact about the line and not an unknown.
+    #
+    # Nil when there is no initial budget: you cannot drift from a plan nobody
+    # set, and that case stays blank rather than claiming a zero.
     def variance
-      return nil if current_forecast.nil? || initial_budget.nil?
+      return nil if projected_amount.nil? || initial_budget.nil?
 
-      current_forecast - initial_budget
+      projected_amount - initial_budget
     end
 
     # --- Overview rollups ---------------------------------------------------
