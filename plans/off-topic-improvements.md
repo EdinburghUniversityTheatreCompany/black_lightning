@@ -688,3 +688,30 @@ it by an explicit tick. No test covers either half (a holder can read early; an 
 cannot), and `"Advance Proposal Checker"` went into `Role::HARDCODED_NAMES` though nothing in the
 code asks for that role by name — the gate is the grid permission. The grid label reads
 "(temporary)": remove it, the two `Ability` blocks and the role name once the call closes.
+
+### Budgets index is still wider than a laptop (books UX pass, 2026-09-21)
+
+The action column is pinned to the right edge now, so Edit is reachable at 1366x768 without
+scrolling sideways (measured: it sat at x=1453 in a 1366px viewport, now x=1247). The TABLE is
+still wider than the box — 1218px of columns in a 1012px scrollport, 206px of overflow at 1366 and
+132px at 1440 — so:
+
+- the pinned column OVERLAYS the Remaining cell until the operator scrolls right. That is how a
+  pinned action column behaves, and it beats Edit being off screen, but it does clip a money
+  figure mid-word ("No bu… set"). A real fix is fewer columns: a column-visibility control, or
+  moving Owners behind a popover, or dropping Pipeline/Paid to the overview.
+- 14 money columns is the underlying problem; the audit's ranked list already has "a visible
+  'what these columns mean' block" as a related item.
+
+### `Area#remaining` understates a net-basis area whose income has landed
+
+Pre-existing and documented in CLAUDE.md, restated here because the £0-plan work walked past it:
+`committed_amount` counts CLAIMS, so an area on a net basis whose income has actually arrived
+reads LOWER than the room really left. A basis-aware figure needs its own name and a decision on
+whether an EUSA credit may raise it.
+
+### Reconcile still takes a paste only
+
+`reconcile/show.html.erb` renders `shared/form/paste_or_upload` without `file_name:`, so the one
+wizard of the three that cannot take an .xlsx is the one finance uses monthly. Both import
+wizards already accept a file through the same partial.
