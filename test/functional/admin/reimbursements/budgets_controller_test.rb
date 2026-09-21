@@ -645,6 +645,40 @@ module Admin
         assert_not_includes response.body, "Reconciled row"
       end
 
+      # The card used to say "Link each row on the Reconcile page". Reconcile is
+      # the paste wizard and has no per-row linking at all — Link to a claim,
+      # Create expense and Split across budgets are all on the EUSA Actuals
+      # ledger, which the card sent people away from.
+      test "overview's unattributed card names and links the ledger, not Reconcile" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "EUSA Actuals ledger"
+        assert_includes response.body, admin_reimbursements_actuals_path(state: "needs_attention")
+        assert_not_includes response.body, "Link each row on the Reconcile page"
+      end
+
+      test "each unattributed row links to itself on the ledger" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             ref: "AUDIT-7", period: "06",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        # Its own ref and period, so the operator lands on the row they clicked
+        # rather than on the whole ledger.
+        assert_includes response.body,
+                        CGI.escapeHTML(admin_reimbursements_actuals_path(
+                                         state: "needs_attention", period: "06", search: "AUDIT-7"
+                                       ))
+      end
+
       test "overview does not report a correctly-offset accrual pair as unattributed" do
         sign_in @user
         store = ::Reimbursements::DatabaseStore.new
