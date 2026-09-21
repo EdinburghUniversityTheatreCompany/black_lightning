@@ -77,6 +77,23 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "don't own any budgets"
+        # The Budgets page is finance-gated, and this user is not finance, so
+        # naming it — as plain text or as a link — points at a 403.
+        assert_includes response.body, "Ask the business manager"
+        assert_not_includes response.body, admin_reimbursements_budgets_path
+      end
+
+      test "the empty state links the Budgets page for a finance user" do
+        @owned.budget_ownerships.destroy_all
+        @owned.owners << @stranger
+        grant_finance_permission(@user)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, admin_reimbursements_budgets_path
+        assert_not_includes response.body, "Ask the business manager"
       end
 
       test "a claim the owner submitted themselves shows as auto-cleared, not an Endorse button" do

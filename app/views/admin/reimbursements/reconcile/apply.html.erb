@@ -67,7 +67,21 @@
   time these actuals arrive the money is already in their account.
 </p>
 
-<div class="mt-4">
-  <%= link_to "Reconcile another month", admin_reimbursements_reconciliation_path, class: btn_classes(:secondary) %>
+<%# "Unmatched rows saved: N" in the summary above is a to-do list, and this
+    screen's only action used to be "Reconcile another month" — no route at all
+    to where those rows get resolved. The ledger's needs-attention view IS that
+    list. turbo_frame "_top" because this whole wizard renders inside a frame,
+    and a link out of one navigates the FRAME: the ledger has no matching frame,
+    so without it Turbo renders "Content missing". %>
+<div class="mt-4 flex flex-wrap gap-2">
+  <% if @unmatched_saved.to_i.positive? %>
+    <%= link_to "See the #{pluralize(@unmatched_saved, 'unmatched row')} on the EUSA Actuals ledger",
+                admin_reimbursements_actuals_path(
+                  state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+                ),
+                class: btn_classes(:primary), data: { turbo_frame: "_top" } %>
+  <% end %>
+  <%= link_to "Reconcile another month", admin_reimbursements_reconciliation_path,
+              class: btn_classes(:secondary) %>
 </div>
 <% end %>

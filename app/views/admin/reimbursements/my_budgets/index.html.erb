@@ -8,7 +8,18 @@
 
 <% if @budgets.empty? %>
   <%= render AlertComponent.new(type: :info) do %>
-    You don't own any budgets yet. A finance administrator sets budget owners on the Budgets page.
+    <%# "the Budgets page" was plain text, and the page it names is finance-
+        gated — so for almost everyone who reaches this empty state it was a
+        link they could not have followed anyway. Linked for the finance user
+        who can open it; for everyone else, who to ask instead. %>
+    You don't own any budgets yet.
+    <% if can?(:manage, :reimbursements_finance) %>
+      Budget owners are set on the
+      <%= link_to "Budgets page", admin_reimbursements_budgets_path, class: "underline" %>,
+      or on an area's own form for a line inside one.
+    <% else %>
+      Ask the business manager to add you as an owner of the budgets you are responsible for.
+    <% end %>
   <% end %>
 <% else %>
   <p class="mb-3 text-sm text-gray-600">
