@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+env:
+  MISE_ENV: "development"
+  MISE_NO_HOOKS: 1
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -254,6 +258,8 @@ jobs:
 
       - name: Set up mise
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: "gitleaks"
 
       - name: Scan git history for secrets
         run: mise exec -- gitleaks git --redact --no-banner .
@@ -274,6 +280,8 @@ jobs:
 
       - name: Set up mise
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: "actionlint"
 
       - name: Lint workflows (actionlint)
         # -shellcheck= disables actionlint's shellcheck-of-run: pass (run: blocks word-split

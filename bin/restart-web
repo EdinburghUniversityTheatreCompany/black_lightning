@@ -15,10 +15,10 @@ set -e
 pid=$(pgrep -f 'puma .* \[BlackLightning\]' || true)
 
 if [ -z "$pid" ]; then
-  echo "No running Puma dev server found (is bin/dev running?)." >&2
+  echo "No running Puma dev server found (is the dev server running?)." >&2
   exit 1
 fi
 
 echo "Hot-restarting Puma (pid $pid) via SIGUSR2..."
 kill -USR2 "$pid"
-echo "Done. Watch the bin/dev terminal for the restart log."
+echo "Done. Watch the dev server for the restart log."

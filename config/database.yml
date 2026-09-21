@@ -21,7 +21,7 @@ default: &default
   port: 3306
 
 # WORKTREE_DB_SUFFIX (see .worktree-isolate.conf) gives a git worktree its own dev stack, so
-# two `bin/dev`s don't share one development database. Empty by default -> the plain names,
+# two dev servers don't share one development database. Empty by default -> the plain names,
 # which is what the main checkout uses. A worktree creates its own with `bin/rails db:prepare`.
 development:
   primary:

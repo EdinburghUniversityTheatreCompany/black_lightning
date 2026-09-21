@@ -5,8 +5,8 @@ import "package://github.com/jdx/hk/releases/download/v1.46.0/hk@1.46.0#/Builtin
 local linters = new Mapping<String, Step> {
     ["rubocop"] {
         glob = "**/*.rb"
-        check = "bin/rubocop"
-        fix = "bin/rubocop -A"
+        check = "rubocop"
+        fix = "rubocop -A"
     }
     // --- JavaScript (eslint) ----------------------------------------------------
     // Stimulus controllers + custom lib modules (this is a Vite app — JS lives in
@@ -48,7 +48,7 @@ local linters = new Mapping<String, Step> {
     // changes. Keep loop-free — hk's internal `sh` aborts on `while read` inside `$(...)`.
     ["annotate-models"] {
         glob = List("db/schema.rb", "app/models/**/*.rb")
-        fix = "if bin/rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec annotaterb models; else echo 'annotaterb: no DB reachable, skipping'; fi"
+        fix = "if rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec annotaterb models; else echo 'annotaterb: no DB reachable, skipping'; fi"
     }
     // Toolchain + service versions are pinned in several files at once, because different
     // consumers read different ones: mise.toml for local dev, .ruby-version/.node-version for
@@ -117,7 +117,7 @@ local linters = new Mapping<String, Step> {
     // guarded — this Vite app has no bin/importmap, so it skips). fasterer = perf advisory
     // (exits non-zero on offenses → `|| true`). database_consistency compares model
     // validations/associations to the DB schema; it needs a reachable dev/test DB, so a cheap
-    // `bin/rails runner` connection probe gates when one is up and skips (exit 0) otherwise —
+    // `rails runner` connection probe gates when one is up and skips (exit 0) otherwise —
     // a fresh/un-migrated worktree won't block commits. Keep every command loop-free: hk's
     // internal `sh` aborts on `while read` inside `$(...)`.
     ["brakeman"] {
@@ -165,7 +165,7 @@ local linters = new Mapping<String, Step> {
 local checkSteps: Mapping<String, Step> = (linters) {
     ["test"] {
         glob = "**/*.rb"
-        check = "bin/rails test"
+        check = "rails test"
     }
 }
 

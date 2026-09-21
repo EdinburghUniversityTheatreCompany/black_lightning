@@ -34,13 +34,10 @@ Toolchain versions are pinned with [mise](https://mise.jdx.dev) (`mise.toml` + `
 pre-commit checks run through [hk](https://hk.jdx.dev) (`hk.pkl`). First-time setup:
 
 ```sh
-mise install        # provisions hk, pkl, gitleaks, node (verified against mise.lock)
-hk install          # installs the git pre-commit hooks (replaces the old overcommit setup)
-bundle install
-pnpm install
+mise install # installs dev tools & dependencies
 ```
 
-Run the app with `bin/dev` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;
+Run the app with `mise run serve` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;
 run the test suite with `bin/rails test test:system` (start the test DB first — see the
 development guide). Lint JS with `pnpm lint`.
 
