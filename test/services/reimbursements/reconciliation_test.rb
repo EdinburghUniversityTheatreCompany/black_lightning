@@ -251,7 +251,10 @@ module Reimbursements
       assert_equal "F40", row.cost_centre
       assert_equal "BACS", row.ref
       assert_equal Date.new(2026, 4, 24), row.date
-      assert_equal "1", row.period
+      # The Sage sheet really does write the month unpadded, which is half of
+      # why the ledger ended up offering "05", "06", "5" and "6" as four
+      # months. The parser normalises it to the one canonical spelling.
+      assert_equal "01", row.period
       assert_equal "EN-LIANG LEE - TECH PC GRAPHICS CARD", row.narrative
       assert_equal "", row.narrative_1
     end

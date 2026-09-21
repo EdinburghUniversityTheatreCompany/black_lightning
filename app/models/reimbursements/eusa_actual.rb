@@ -96,6 +96,14 @@ module Reimbursements
                            foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
                            dependent: :destroy
 
+    # EVERY write path lands here — the reconcile apply, an offsetting pair, a
+    # hand fix in a console — so the ledger cannot acquire a second spelling of
+    # one month again. The parser normalises too (so a paste's dedup bucket key
+    # matches what is stored) and this is the backstop under it.
+    # Reconciliation.normalise_period is the ONE definition; it is a pure
+    # function with no Rails dependencies, so the model may call it.
+    before_validation :normalise_period
+
     # The net position of a set of ledger rows, from the spending side: debits
     # less credits, so a supplier refund or a credit note reduces the figure
     # instead of inflating it. Offsetting legs are dropped rather than netted:
@@ -180,6 +188,12 @@ module Reimbursements
     end
 
     private
+
+    def normalise_period
+      return if period.nil?
+
+      self.period = Reconciliation.normalise_period(period)
+    end
 
     # number_to_currency with the same unit reimbursements_money uses, so the
     # summary reads identically to every other money figure in the portal.
