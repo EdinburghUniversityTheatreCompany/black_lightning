@@ -42,29 +42,30 @@
         genuinely has two, add them together.
       </p>
 
-      <div class="space-y-3">
-        <% @shares.each_with_index do |share, index| %>
-          <div class="flex flex-wrap items-end gap-3">
-            <%= render "shared/form/field", label: "Budget", name: "shares[#{index}][budget_id]",
-                  id: "share_#{index}_budget_id", html_class: "grow max-w-lg" do %>
-              <%# Only `simple-select2`: Tom Select copies the select's classes
-                  onto its own wrapper, which already draws the box. %>
-              <%= select_tag "shares[#{index}][budget_id]",
-                    options_for_select(@budgets.map { |b| [ b.display_name, b.record_id ] },
-                                       share[:budget_id]),
-                    id: "share_#{index}_budget_id", class: "simple-select2",
-                    include_blank: "No budget" %>
-            <% end %>
-            <%= render "shared/form/field", label: "Share (£)", name: "shares[#{index}][amount]",
-                  id: "share_#{index}_amount", html_class: "w-44" do %>
-              <%= text_field_tag "shares[#{index}][amount]", share[:amount_typed],
-                    id: "share_#{index}_amount", inputmode: "decimal",
-                    autocomplete: "off", class: input_classes,
-                    data: { apportion_total_target: "amount",
-                            action: "input->apportion-total#recalculate" } %>
-            <% end %>
-          </div>
-        <% end %>
+      <%# The five rows are a starting point, not a ceiling: a Stripe payout can
+          cover more shows than that, and the form used to offer no way past it.
+          nested-form clones the template below, substituting a timestamp for
+          NEW_RECORD — #submitted_shares reads params[:shares].values, so the
+          keys never have to be 0..n. The cloned <select> is picked up by
+          select_controller's MutationObserver (it sits on <body>), so the new
+          row gets its Tom Select like the rest. %>
+      <div data-controller="nested-form">
+        <div class="space-y-3">
+          <% @shares.each_with_index do |share, index| %>
+            <%= render "share_row", index: index, share: share, budgets: @budgets %>
+          <% end %>
+          <div data-nested-form-target="target" class="hidden"></div>
+        </div>
+
+        <template data-nested-form-target="template">
+          <%= render "share_row", index: "NEW_RECORD", share: {}, budgets: @budgets %>
+        </template>
+
+        <p class="mt-3">
+          <%# type="button": inside a form, a bare <button> submits it. %>
+          <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
+                  data-action="nested-form#add">Add another share</button>
+        </p>
       </div>
 
       <p class="mt-3 mb-0 text-sm font-medium" data-apportion-total-target="summary"
