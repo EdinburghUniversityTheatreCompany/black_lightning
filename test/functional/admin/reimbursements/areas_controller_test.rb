@@ -41,10 +41,9 @@ module Admin
                "an area with no agreed total was qualified anyway: #{rows.inspect}")
       end
 
-      # The owners control is a Tom Select multiple, and the empty hidden field
-      # Rails emits beside a multiple select is what clears the list when the
-      # last owner is taken off — without it the post carries no owner_ids key
-      # at all and #sync_area_owners! is never told to replace anything.
+      # The empty hidden field Rails emits beside a multiple select is what
+      # clears the list: without it, taking the last owner off posts no
+      # owner_ids key and #sync_area_owners! is never told to replace anything.
       test "the area form offers its owners as one searchable multi-select" do
         alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")

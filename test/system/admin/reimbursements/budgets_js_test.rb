@@ -71,9 +71,8 @@ module Admin
       end
 
       # A disabled fieldset stops the browser SUBMITTING its controls, but Tom
-      # Select draws its own control out of divs and goes on looking live
-      # inside one — an operator would pick owners that are then silently
-      # dropped. Only a browser sees the difference.
+      # Select's own control is divs and goes on looking live inside one — so an
+      # operator would pick owners that are then silently dropped.
       test "choosing an area visibly locks the owners widget" do
         create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         create_reimbursements_area(name: "Cogito")
@@ -88,12 +87,9 @@ module Admin
         assert_no_selector ".ts-wrapper.disabled"
       end
 
-      # The form can OPEN with an area already chosen (the areas screen links
-      # here with ?area_id=), and Tom Select is built after an async import() —
-      # so this controller's connect runs before the widget exists. Without the
-      # select:ready handshake the fieldset is disabled and the widget is left
-      # looking live, which is the one state this whole mechanism exists to
-      # avoid.
+      # The form can OPEN with an area already chosen (?area_id=), and the
+      # widget is built after an async import() — so without the select:ready
+      # handshake the fieldset is disabled and the widget is left looking live.
       test "a form opened with an area already chosen locks the widget too" do
         create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         area = create_reimbursements_area(name: "Cogito")

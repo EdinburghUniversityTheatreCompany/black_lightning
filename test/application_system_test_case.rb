@@ -36,8 +36,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     execute_script("document.getElementById('#{select_id}').tomselect.setValue('#{option_value}')")
   end
 
-  # The MULTIPLE variant: adds one more choice instead of replacing the lot,
-  # which is what setValue does.
+  # The MULTIPLE variant: setValue replaces every choice, addItem adds one.
   def tom_select_add(text, from:)
     select_id, option_value = tom_select_option(text, from: from)
     execute_script("document.getElementById('#{select_id}').tomselect.addItem('#{option_value}')")
@@ -45,10 +44,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
-  # The select's id and the value behind a visible option label. Tom Select
-  # hides the native <select> and rewrites the label's `for` to point at its own
-  # control element (suffix "-ts-control"), so the suffix is stripped to get the
-  # original id back.
+  # Tom Select hides the native <select> and rewrites the label's `for` to its
+  # own control element, hence the "-ts-control" strip.
   def tom_select_option(text, from:)
     label = find("label", text: from)
     select_id = label["for"].sub(/-ts-control$/, "")

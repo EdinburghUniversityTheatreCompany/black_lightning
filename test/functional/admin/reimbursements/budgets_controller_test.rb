@@ -890,9 +890,7 @@ module Admin
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
-        # One Tom Select multiple rather than a column of tickboxes; the current
-        # owner (Alice) is pre-selected, the non-owner (Bob) is not. The empty
-        # hidden field beside it is what clears the owners when the last one is
+        # The hidden empty field is what clears the owners when the last one is
         # taken off — without it the post carries no owner_ids key at all.
         assert_select "select#owner_ids[name='owner_ids[]'][multiple].simple-select2"
         assert_select "input[type=hidden][name='owner_ids[]'][value='']"

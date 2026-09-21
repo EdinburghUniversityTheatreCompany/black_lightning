@@ -2,10 +2,9 @@
 <%# The budget fields, shared by new (values from params) and edit (values
     from the budget). The cost centre picker only exists on new and only when
     there is a choice to make. %>
-<%# select:ready, because the owners control is a Tom Select built by the
-    `select` controller AFTER an async import() — this controller's own connect
-    runs first, so a form rendered with an area already chosen would disable
-    the fieldset and leave the widget looking live. %>
+<%# select:ready, because the owners widget is built after an async import():
+    this controller's connect runs first, so a form rendered with an area
+    already chosen would disable the fieldset and leave the widget looking live. %>
 <div class="flex flex-col gap-4" data-controller="reimbursements-budget-area"
      data-action="select:ready->reimbursements-budget-area#areaChanged">
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -85,19 +84,17 @@
         nothing consults, so with JavaScript off the operator is told; with it
         on they never reach the refusal. %>
     <fieldset data-reimbursements-budget-area-target="owners">
-      <%# The fieldset is the DISABLING wrapper, not a grouping: only a
-          fieldset can switch its descendants off, and that is what stops the
-          browser posting owner_ids at all once an area is chosen. It carries
-          no legend because it holds one labelled control. %>
+      <%# The fieldset is the DISABLING wrapper, not a grouping: only a fieldset
+          can switch its descendants off, which is what stops the browser
+          posting owner_ids at all once an area is chosen. %>
       <%= render "shared/form/field", label: "Owners", name: :owner_ids,
             hint: "Everyone who owns this budget. A line placed in an area takes " \
                   "its owners from the area, and they are set there." do %>
-        <%# Only `simple-select2`, never input_classes: Tom Select copies the
-            select's classes onto its own .ts-wrapper, which already draws the
-            box. The hidden empty field is what collection_check_boxes used to
-            emit for us — without it, clearing everyone posts no owner_ids key
-            at all and the owners are left as they were. It sits INSIDE the
-            fieldset so a disabled fieldset drops it too. %>
+        <%# Only `simple-select2`, never input_classes — Tom Select copies the
+            classes onto the wrapper that already draws the box. `select_tag`
+            emits no hidden empty field of its own, and without it clearing
+            everyone posts no owner_ids key at all; it sits INSIDE the fieldset
+            so a disabled fieldset drops it too. %>
         <%= hidden_field_tag "owner_ids[]", "", id: nil %>
         <%= select_tag :owner_ids,
               options_from_collection_for_select(

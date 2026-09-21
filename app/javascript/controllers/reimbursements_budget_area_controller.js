@@ -21,9 +21,8 @@ export default class extends Controller {
     const inArea = this.areaTarget.value !== ""
     this.ownersTarget.disabled = inArea
     // A disabled fieldset stops the browser SUBMITTING the select, but Tom
-    // Select draws its own control from divs and an input of its own, which
-    // goes on looking live inside one — an operator would pick owners that are
-    // then silently dropped. Tom Select has to be told separately.
+    // Select's own control is divs and goes on looking live inside one — so an
+    // operator would pick owners that are then silently dropped.
     const ts = this.ownersTarget.querySelector("select.simple-select2")?.tomselect
     if (ts) { inArea ? ts.disable() : ts.enable() }
     if (this.hasNoticeTarget) this.noticeTarget.hidden = !inArea

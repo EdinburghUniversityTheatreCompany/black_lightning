@@ -83,10 +83,8 @@ module Admin
         end
       end
 
-      # The owners control is a Tom Select multiple, so nothing about it can be
-      # seen from a request test: the widget writes back into a <select> the
-      # browser hides, and a form whose owners never reach the post would look
-      # exactly like one nobody ticked.
+      # A request test posts owner_ids directly; only a browser shows whether
+      # the widget writes them back into the <select> the form actually submits.
       test "owners are chosen through the search widget and saved" do
         alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
@@ -103,10 +101,9 @@ module Admin
         assert_equal [ alice, bob ].map(&:record_id).sort, area.reload.owner_ids.sort
       end
 
-      # The other direction, and the one a bare `select_tag` would get wrong:
-      # taking the last owner off must post the empty hidden field Rails emits
-      # beside a multiple select, or the post carries no owner_ids key at all
-      # and the area keeps every owner it had.
+      # The other direction, and the one a bare `select_tag` gets wrong: with no
+      # hidden empty field the post carries no owner_ids key and the area keeps
+      # every owner it had.
       test "taking the last owner off the widget actually clears the owners" do
         alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         area = create_reimbursements_area(name: "Cogito")

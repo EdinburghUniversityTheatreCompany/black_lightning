@@ -26,15 +26,10 @@
 
 <%= form.input :active, as: :boolean, label: "Active" %>
 
-<%# A Tom Select multiple rather than a checkbox list: the registry runs to
-    dozens of people, so a scrolling column of tickboxes meant hunting for a
-    name that a type-ahead finds in three keystrokes. Only `simple-select2` on
-    the control (CollectionSelectInput sets it) — Tom Select copies the
-    select's classes onto its own wrapper, which already draws the box. Area
-    has no owner_ids= writer (the controller syncs through
-    store.sync_area_owners!), so `selected:` is passed explicitly rather than
-    read off the object; Rails emits the empty hidden field for a multiple
-    select, so clearing everyone still clears the owners. %>
+<%# Area has no owner_ids= writer — the controller syncs through
+    store.sync_area_owners! — so `selected:` is passed rather than read off the
+    object. Rails emits the empty hidden field for a multiple select, which is
+    what makes clearing everyone actually clear the owners. %>
 <%= form.input :owner_ids, label: "Owners", collection: people,
       value_method: :record_id,
       label_method: ->(person) { person.name.presence || person.email },
