@@ -4,9 +4,18 @@
     area-less rollup, which answers nil to every area figure. %>
 <tbody>
   <tr class="bg-gray-50">
-    <th scope="rowgroup" colspan="9" class="text-left py-2">
+    <th scope="rowgroup" colspan="11" class="text-left py-2">
       <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span class="font-semibold text-base"><%= label %></span>
+        <%# The heading is the way to the area's own form — where its agreed
+            total, its basis and its owners are edited. It was plain text, so
+            the overview named the show and offered no route to it. The
+            unassigned group has no area and stays plain. %>
+        <% if rollup.area %>
+          <%= link_to label, edit_admin_reimbursements_area_path(rollup.area.record_id),
+                      class: "font-semibold text-base text-primary underline" %>
+        <% else %>
+          <span class="font-semibold text-base"><%= label %></span>
+        <% end %>
         <%# Nil means nobody agreed a total — every backfilled area starts
             there — and "£0.00" would read as fully overspent, so the figure is
             left out entirely rather than shown as a zero. %>

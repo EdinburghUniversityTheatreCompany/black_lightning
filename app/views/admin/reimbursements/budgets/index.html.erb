@@ -41,7 +41,14 @@
        title: "The greater of the current projection and what's already been spent or committed, " \
               "so the number never drops below reality. Blank on income lines, where the same " \
               "figure would read as best-case income instead.") %>
-  <% headers = [ "Budget", "Type", "Visible", "Initial", "Current forecast", "Committed",
+  <%# "Projected", not "Current forecast" — the overview's column for the same
+      idea was already called that, and the two printed DIFFERENT numbers. One
+      name, one figure (Budget#projected_amount), marked where it is falling
+      back to the initial. %>
+  <% projected_header = content_tag(:span, "Projected",
+       title: "The line's current plan: the latest logged forecast, falling back to the " \
+              "initial budget, which is marked as such.") %>
+  <% headers = [ "Budget", "Type", "Visible", "Initial", projected_header, "Committed",
                  "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
                  "Remaining", "Variance", "Owners", "" ] %>
   <%

@@ -201,6 +201,40 @@ module ReimbursementsHelper
     Reimbursements::EusaActual.net(actuals)
   end
 
+  # The over-budget / over-original-budget pill, or nothing. ONE derivation,
+  # because the budgets index and the budget overview are two views of the
+  # same lines and a line badged red on one and plain black on the other is
+  # the disagreement the overview audit opened with. BudgetHealth owns the
+  # rules; this owns how they read.
+  def reimbursements_budget_health_badge(budget)
+    if budget.over_budget?
+      render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
+    elsif budget.over_initial_budget?
+      render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
+    end
+  end
+
+  # The line's CURRENT PLAN: the latest forecast, falling back to the initial
+  # figure. One label and one figure on the index, the overview and the edit
+  # card — they used to print "Current forecast" and "Projected", two names
+  # for two different numbers, side by side in the same portal.
+  #
+  # The fallback is MARKED rather than hidden: "the committee's opening figure"
+  # and "a figure finance has since revised" are different claims, and the
+  # difference is the whole reason the forecast log exists.
+  def reimbursements_budget_projected(budget)
+    if budget.projected_amount.nil?
+      return content_tag(:span, reimbursements_money(nil), class: "text-gray-400",
+                         title: "No forecast has been logged and no initial budget was set.")
+    end
+    return reimbursements_money(budget.projected_amount) if budget.current_forecast
+
+    content_tag(:span, title: "No forecast has been logged, so this is the initial budget.") do
+      safe_join([ reimbursements_money(budget.projected_amount),
+                  content_tag(:span, "(initial)", class: "text-xs text-gray-500") ], " ")
+    end
+  end
+
   # A budget line's Remaining, in the ONE form every screen prints it — the
   # budgets index, the budget edit card and a producer's My Budgets.
   #

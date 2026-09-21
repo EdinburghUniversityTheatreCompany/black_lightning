@@ -7,16 +7,22 @@
     <%= link_to (name_area ? budget.display_name : budget.name).presence || "-",
           edit_admin_reimbursements_budget_path(budget.record_id),
           class: "text-primary underline" %>
+    <%# The SAME badge the budgets index draws, through the one helper: this
+        screen showed no health signal at all, so a line badged red there
+        rendered in plain black here. %>
+    <%= reimbursements_budget_health_badge(budget) %>
     <% unless budget.active %>
       <span class="text-gray-400 text-xs">(hidden)</span>
     <% end %>
   </td>
   <td><%= budget.budget_type %></td>
   <td class="text-right"><%= reimbursements_money(budget.initial_budget) %></td>
-  <td class="text-right"><%= reimbursements_money(budget.projected_amount) %></td>
+  <td class="text-right"><%= reimbursements_budget_projected(budget) %></td>
   <td class="text-right"><%= reimbursements_money(budget.committed_amount) %></td>
   <td class="text-right"><%= reimbursements_money(budget.pipeline_amount) %></td>
   <td class="text-right"><%= reimbursements_money(budget.paid_portal_amount) %></td>
   <td class="text-right"><%= reimbursements_money(budget.eusa_actual_amount) %></td>
   <td class="text-right"><%= reimbursements_money(budget.expected_outturn) %></td>
+  <td class="text-right"><%= reimbursements_budget_remaining(budget) %></td>
+  <td class="text-right"><%= reimbursements_budget_variance(budget) %></td>
 </tr>

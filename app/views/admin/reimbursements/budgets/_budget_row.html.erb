@@ -1,14 +1,15 @@
 <%# locals: (budget:, people_by_id:) %>
 <%
-  over_flag = if budget.over_budget?
-                render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
-              elsif budget.over_initial_budget?
-                render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
-              end
+  # The line's name IS its link to the edit form. At 1366x768 the Edit button
+  # in the last column sits off the right-hand edge of the table, and the name
+  # is the first thing on the row — so the one click this table exists for is
+  # reachable without scrolling sideways.
   name = safe_join([
-    content_tag(:span, budget.name.presence || "-", class: "font-medium"),
+    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
+            class: "font-medium text-primary underline",
+            "aria-label": "Edit #{budget.display_name}"),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
-    over_flag
+    reimbursements_budget_health_badge(budget)
   ].compact, " ")
   # "No owner" is a warning only for a live (Visible) budget — Hidden
   # overhead lines (payroll, NI, contracts) will never have a producer
@@ -31,7 +32,7 @@
   <td><%= budget.budget_type %></td>
   <td><%= visible %></td>
   <td><%= reimbursements_money(budget.initial_budget) %></td>
-  <td><%= reimbursements_money(budget.current_forecast) %></td>
+  <td><%= reimbursements_budget_projected(budget) %></td>
   <td><%= reimbursements_money(budget.committed_amount) %></td>
   <td><%= reimbursements_money(budget.pipeline_amount) %></td>
   <td><%= reimbursements_money(budget.paid_portal_amount) %></td>

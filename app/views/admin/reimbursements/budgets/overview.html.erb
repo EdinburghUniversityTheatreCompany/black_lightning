@@ -12,11 +12,30 @@
   the same figure would read as best-case income instead.
 </p>
 
+<%# The health check in one line. This page is read monthly to answer "is
+    anything wrong", and both answers used to be buried: the over-budget lines
+    were unmarked entirely, and the unattributed total sat under ~120 rows. %>
+<%= render AlertComponent.new(type: @over_budget_count.positive? ? :warning : :info) do %>
+  <% if @over_budget_count.positive? %>
+    <strong><%= pluralize(@over_budget_count, "line") %></strong>
+    <%= @over_budget_count == 1 ? "is" : "are" %> over budget
+    (<%= link_to "see them below", "#budgets-by-code", class: "underline" %>, badged in red).
+  <% else %>
+    No line is over budget.
+  <% end %>
+  <%= link_to "#{reimbursements_money(@unattributed_total)} of EUSA ledger rows",
+              "#unattributed-actuals", class: "underline" %>
+  is attributed to no budget.
+<% end %>
+
 <%
   expected_tip = "The greater of the current projection and what's already been spent or " \
                  "committed, so the number never drops below reality. Blank on income lines."
 %>
 
+<%# The anchors the summary above jumps to. A wrapper rather than an id on the
+    card, since CardComponent takes no id. %>
+<div id="budgets-by-code">
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
     <table class="table table-hover table-sticky-head">
@@ -24,7 +43,7 @@
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
-            <th scope="rowgroup" colspan="9" class="text-left font-semibold py-2">
+            <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
               Nominal code <%= rollup.code %>
             </th>
           </tr>
@@ -47,6 +66,7 @@
     </table>
   </div>
 <% end %>
+</div>
 
 <%= render CardComponent.new(title: "Budgets by area", html_class: "mt-4", flush: true) do %>
   <%# No grand total here: this card regroups exactly the budgets the card above
@@ -71,6 +91,7 @@
   <% end %>
 <% end %>
 
+<div id="unattributed-actuals">
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
   <%
     # Reconcile is the paste wizard; it has no per-row linking at all. Link to
@@ -155,3 +176,4 @@
     </div>
   <% end %>
 <% end %>
+</div>

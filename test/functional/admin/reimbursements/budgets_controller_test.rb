@@ -619,6 +619,58 @@ module Admin
                                     .find { |b| b.name == "Programme ads" }.expected_outturn
       end
 
+      # --- The overview as a health check -------------------------------------
+      #
+      # It had no health signals at all: no over-budget badge, no Remaining, no
+      # Variance, and the unattributed total — the one real health number —
+      # sat under ~120 table rows.
+
+      test "the overview badges an over-budget line, as the index does" do
+        sign_in @user
+        over = create_reimbursements_budget(name: "Overspent", nominal_code: "4321",
+                                            initial_budget: 100)
+        create_reimbursements_expense(budget: over, status: ::Reimbursements::Status::APPROVED,
+                                      amount: 200, amount_excl_vat: 200)
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Over budget"
+        assert_equal 1, assigns(:over_budget_count)
+      end
+
+      test "the overview's summary states both health numbers above the tables" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "attributed to no budget"
+        assert_includes response.body, "#unattributed-actuals"
+        assert_equal BigDecimal("42.00"), assigns(:unattributed_total)
+      end
+
+      test "the overview says so plainly when nothing is over budget" do
+        sign_in @user
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "No line is over budget"
+      end
+
+      test "the overview carries Remaining and Variance columns" do
+        sign_in @user
+
+        get :overview
+
+        assert_response :success
+        assert_select "th", text: "Remaining"
+        assert_select "th", text: "Variance"
+      end
+
       # --- Remaining is never blank without a reason -------------------------
 
       test "the index reports Remaining for a line carrying only an initial budget" do
@@ -758,7 +810,11 @@ module Admin
         assert_includes response.body, "Budgets by area"
         # The heading span exists only on an area row, so a budget called
         # "Cogito something" could not satisfy this the way a body match would.
-        assert_select "th[scope=rowgroup] span.font-semibold", text: "Cogito"
+        # The heading is a LINK to the area's own form now (where its agreed
+        # total, basis and owners are edited), so it is an <a>, not a <span>.
+        assert_select "th[scope=rowgroup] a.font-semibold", text: "Cogito"
+        assert_select "th[scope=rowgroup] a[href=?]",
+                      edit_admin_reimbursements_area_path(area.record_id)
         # 750 = 400 + 350, a figure no single row carries, so the assertion pins
         # the grouping rather than a budget line.
         assert_includes response.body, "Subtotal Cogito (Expense)"
@@ -823,7 +879,7 @@ module Admin
         get :overview
 
         assert_response :success
-        assert_select "th[scope=rowgroup] span.font-semibold", text: "Backfilled show"
+        assert_select "th[scope=rowgroup] a.font-semibold", text: "Backfilled show"
         # "Agreed total (expenses) £0.00" would read as fully overspent.
         assert_not_includes response.body, "Agreed total"
         assert_not_includes response.body, "not yet allocated"

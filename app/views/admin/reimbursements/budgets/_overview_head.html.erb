@@ -1,14 +1,21 @@
 <%# locals: (expected_tip:) %>
+<%# Remaining and Variance are the two HEALTH columns, and the overview — the
+    screen a monthly budget check is done on — had neither, so a line the
+    budgets index badged red rendered here in plain black. They sit in the same
+    order and carry the same meanings as on the index. %>
 <thead>
   <tr>
     <th scope="col">Budget</th>
     <th scope="col">Type</th>
     <th scope="col" class="text-right">Initial</th>
-    <th scope="col" class="text-right">Projected</th>
+    <th scope="col" class="text-right"
+        title="The line's current plan: the latest logged forecast, falling back to the initial budget, which is marked as such.">Projected</th>
     <th scope="col" class="text-right">Committed</th>
     <th scope="col" class="text-right">Pipeline</th>
     <th scope="col" class="text-right">Paid (portal)</th>
     <th scope="col" class="text-right">EUSA actual</th>
     <th scope="col" class="text-right" title="<%= expected_tip %>">Expected outturn</th>
+    <th scope="col" class="text-right">Remaining</th>
+    <th scope="col" class="text-right">Variance</th>
   </tr>
 </thead>
