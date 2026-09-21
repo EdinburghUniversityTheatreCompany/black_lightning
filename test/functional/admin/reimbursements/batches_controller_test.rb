@@ -615,6 +615,100 @@ module Admin
         assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
         assert_empty graph.deleted_messages
       end
+
+      # --- The EUSA covering note --------------------------------------------
+      # The body field handed the operator the whole rendered email — the
+      # generated claims table included — as editable HTML, on the one message
+      # that asks EUSA to move money.
+
+      test "the form offers a plain-text note, not the rendered HTML" do
+        one_approved
+        sign_in @user
+
+        get :new, params: { cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        assert_response :success
+        assert_select "textarea[name=eusa_note]"
+        assert_select "textarea[name=eusa_body]", count: 0
+      end
+
+      test "the form lists what each placeholder expands to for this batch" do
+        one_approved
+        sign_in @user
+
+        get :new, params: { cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        ::Reimbursements::EusaEmailComposer::SUBSTITUTIONS.each do |key|
+          assert_match(/\{\{#{key}\}\}/, response.body, "#{key} is usable but not listed")
+        end
+        assert_equal "1", assigns(:substitutions)["count"]
+      end
+
+      test "a note replaces the opening and keeps the generated table" do
+        one_approved
+        sign_in @user
+
+        post :create, params: { bacs_date: "2026-05-13", sender_name: "Sam",
+                                eusa_recipient: "eusa@example.com",
+                                eusa_note: "Hi {{contact}}, {{count}} claims this week.",
+                                cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        body = enqueued_body_html
+        assert_includes body, "1 claims this week."
+        assert_includes body, "<table", "the claims table is generated, never typed"
+        assert_not_includes body, "Please find attached the BACS request"
+      end
+
+      # Nothing an operator types may introduce markup: a covering note is
+      # prose, and the one piece of this email that is not generated must not
+      # also be the one piece that can break it.
+      test "a note cannot inject markup" do
+        one_approved
+        sign_in @user
+
+        post :create, params: { bacs_date: "2026-05-13", sender_name: "Sam",
+                                eusa_recipient: "eusa@example.com",
+                                eusa_note: "Hello <script>alert(1)</script>",
+                                cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        body = enqueued_body_html
+        assert_not_includes body, "<script>"
+        assert_includes body, "&lt;script&gt;"
+      end
+
+      # A silently blanked placeholder is a sentence with a hole in it that
+      # reaches EUSA; a visible one is a typo the operator can see.
+      test "an unknown placeholder is left exactly as typed" do
+        one_approved
+        sign_in @user
+
+        post :create, params: { bacs_date: "2026-05-13", sender_name: "Sam",
+                                eusa_recipient: "eusa@example.com",
+                                eusa_note: "Total {{totl}} please",
+                                cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        assert_includes enqueued_body_html, "{{totl}}"
+      end
+
+      test "a blank note sends nothing, so the job composes the default" do
+        one_approved
+        sign_in @user
+
+        post :create, params: { bacs_date: "2026-05-13", sender_name: "Sam",
+                                eusa_recipient: "eusa@example.com", eusa_note: "  ",
+                                cost_centre: ::Reimbursements::CostCentre.default.key }
+
+        assert_nil enqueued_job_args[:eusa_body_html]
+      end
+
+      def enqueued_job_args
+        enqueued_jobs.find { |job| job["job_class"] == "Reimbursements::BuildBatchJob" }
+          .then { |job| job["arguments"].first.symbolize_keys }
+      end
+
+      def enqueued_body_html
+        enqueued_job_args[:eusa_body_html].to_s
+      end
     end
   end
 end

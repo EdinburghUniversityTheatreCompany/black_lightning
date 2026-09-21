@@ -101,10 +101,46 @@
           <%= text_field_tag :eusa_subject, @default_email.subject, class: input_classes %>
         <% end %>
 
-        <%= render "shared/form/field", label: "Body (HTML)", name: :eusa_body,
-              hint: "Sent from #{@cost_centre.send_mailbox}." do %>
-          <%= text_area_tag :eusa_body, @default_email.body_html, rows: 16, class: input_classes("font-mono") %>
+        <%# PLAIN TEXT, not the rendered HTML. This field used to hand the
+            operator the whole body — the generated claims table included — as
+            editable markup, on the one message that asks EUSA to move money: a
+            mistyped tag breaks the table EUSA reads, silently, and nothing in
+            the portal would show it. The note replaces the opening paragraphs;
+            the table, totals and sign-off stay generated. %>
+        <%= render "shared/form/field", label: "Your message to EUSA", name: :eusa_note,
+              hint: "Leave blank for the standard wording. Sent from #{@cost_centre.send_mailbox}; " \
+                    "the claims table, total and sign-off are added below whatever you write." do %>
+          <%= text_area_tag :eusa_note, params[:eusa_note], rows: 6, class: input_classes %>
         <% end %>
+
+        <div class="rounded border border-gray-200 bg-gray-50 p-3">
+          <p class="mb-2 text-sm font-medium">You can use these in your message</p>
+          <dl class="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
+            <% ::Reimbursements::EusaEmailComposer::SUBSTITUTIONS.each do |key| %>
+              <dt class="font-mono">{{<%= key %>}}</dt>
+              <%# What it expands to FOR THIS BATCH, off the same derivation the
+                  email uses, so the list cannot promise something the message
+                  then does differently. %>
+              <dd class="text-gray-600"><%= @substitutions[key] %></dd>
+            <% end %>
+          </dl>
+          <p class="mt-2 mb-0 text-xs text-gray-500">
+            Anything else in double braces is left exactly as you typed it, so a misspelt one
+            shows up in the preview rather than leaving a hole in a sentence.
+          </p>
+        </div>
+
+        <details class="rounded border border-gray-200 p-3">
+          <summary class="cursor-pointer text-sm font-medium">Preview the whole email</summary>
+          <div class="mt-3 overflow-x-auto rounded border border-gray-200 bg-white p-3 text-sm">
+            <%# The standard email for THIS batch, so the operator can see what
+                their note sits above rather than imagining it. %>
+            <%# Safe by construction, not by assertion: the composer marks its
+                own output html_safe, and the only operator-supplied part of it
+                is escaped before it gets there. %>
+            <%= @default_email.body_html %>
+          </div>
+        </details>
       </div>
     <% end %>
   <% end %>
