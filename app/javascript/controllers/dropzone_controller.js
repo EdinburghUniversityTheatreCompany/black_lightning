@@ -19,7 +19,6 @@ export default class extends Controller {
     ])
     const _Dropzone = _DropzoneModule.default
     const Dropzone = _Dropzone?.default ?? _Dropzone
-    Dropzone.autoDiscover = false
 
     this.dropZone = createDropZone(this, Dropzone)
     this.hideFileInput()

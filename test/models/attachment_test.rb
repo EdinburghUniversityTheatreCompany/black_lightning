@@ -148,4 +148,15 @@ class AttachmentTest < ActionView::TestCase
     assert_not attachment.valid?
     assert_not attachment.errors[:file].empty?
   end
+
+  # Catches an upgrade re-enabling active_storage_validations' derived `accept`
+  # (see its initializer): nothing else here renders a file field and looks at
+  # it, and the symptom is a file picker silently greying out a valid file.
+  test "a file field carries no accept attribute" do
+    builder = ActionView::Helpers::FormBuilder.new(
+      :attachment, Attachment.new, ApplicationController.new.view_context, {}
+    )
+
+    assert_no_match(/accept=/, builder.file_field(:file))
+  end
 end

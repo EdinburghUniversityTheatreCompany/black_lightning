@@ -87,8 +87,8 @@ importers:
         specifier: ^4.4.0
         version: 4.4.0
       dropzone:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: ^6.3.4
+        version: 6.3.4
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -759,8 +759,9 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  dropzone@5.9.3:
-    resolution: {integrity: sha512-Azk8kD/2/nJIuVPK+zQ9sjKMRIpRvNyqn9XwbBHNq+iNuSccbJS6hwm1Woy0pMST0erSo0u4j+KJaodndDk4vA==}
+  dropzone@6.3.4:
+    resolution: {integrity: sha512-Qlc8TE7MaP2FzKWFXCD81kf/BMaw2hVSUO7i/4ItCLQM0UHEPuZJSP78Guj2U+G+ld3C7OvV+33VJYJLhY4KLw==}
+    engines: {node: '>=20.19.0'}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2325,7 +2326,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  dropzone@5.9.3: {}
+  dropzone@6.3.4: {}
 
   emoji-regex@10.6.0: {}
 
