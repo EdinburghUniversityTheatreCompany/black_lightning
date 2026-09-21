@@ -44,8 +44,8 @@ show page at all: finance gets an index row and an edit form whose nested lines 
    spent · no budget set", no red, and (finance only) "Set an agreed total".
 3. **A real total that is exceeded** (Tech: £100 vs £2,526). Red, "£2,426 over".
 
-Rule: treat an agreed total of 0 with 0 allocated as state 2. **Open question for Mick**: is a
-£0 agreed total ever a deliberate "this may spend nothing"? If so state 2 needs a flag instead.
+Rule (Mick, 2026-09-21): an agreed total of 0 with nothing allocated is "no budget set". One
+predicate on the model, shared with the Budgets index and Overview badges.
 
 ## Vocabulary
 
@@ -127,3 +127,19 @@ Owners: A. Owner    (none: "Nobody owns this show, so claims skip sign-off. [Add
 `areas#show` / `budgets#show`: finance, or a person in the area's (or loose line's) owner set.
 Go through the store (`store.areas` for figures, per CLAUDE.md, never `budget.area`). Areas index
 rows, the grouped Budgets index headings and the Overview's area headings all link here.
+
+## Decisions and the approved mock
+
+Mick approved the clickable mock on 2026-09-21: https://claude.ai/artifact/3G4ezy29kYHzB1SjABDUAL
+(source in the gitignored `tmp/mocks/area-pages.html`). Build to it.
+
+- Ownership will be used more later, so the inbox and the ownerless warning are both worth
+  building properly even though 53 of 60 areas name nobody today.
+- Built as mocked unless Mick says otherwise:
+  - a claim sent to EUSA and not yet paid reads **"With EUSA"**;
+  - **Left = Budget − Spent − Waiting**, so pending claims reduce it. The portal's `remaining`
+    ignores pending, so this is a new derived figure with its own name in code, not a change
+    to `Budget#remaining`;
+  - an owner sees every claim on their area (number, status, amount, line, description, date,
+    batch) and never bank details.
+
