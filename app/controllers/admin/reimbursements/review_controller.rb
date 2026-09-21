@@ -25,6 +25,13 @@ module Admin
       DEFAULT_TAB = "to_approve".freeze
       LEGACY_TABS = { "pending" => DEFAULT_TAB }.freeze
 
+      # The one sentence explaining why a claim just went back to "awaiting
+      # sign-off". A plain Save says it and so must Save-then-approve: the
+      # bare "needs a budget owner's endorsement first" reads as a standing
+      # condition rather than as something this very click caused.
+      GATE_REOPENED_BY_EDIT =
+        "Your edit changed the amount or budget, so it needs a fresh owner sign-off.".freeze
+
       def index
         @title = "Review Expenses"
         @tab = resolve_tab
@@ -34,14 +41,15 @@ module Admin
         # centre of its own — it resolves one through its budget (see
         # Expense#cost_centre_id), which the store already preloads.
         expenses = store.expenses_for_cost_centre
-        @pending = expenses.select(&:pending?)
-        @approved = expenses.select { |e| e.status == ::Reimbursements::Status::APPROVED }
         # Split the Pending queue in two BEFORE the format branch: the CSV
         # download follows the tab on screen, so it needs the same split the HTML
         # tabs render. Everything else the queue needs is HTML-only (#load_queue).
+        @pending = expenses.select(&:pending?)
         @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
-        @awaiting_owner, @to_approve =
-          @pending.partition { |e| @owner_gate_unmet_ids.include?(e.record_id) }
+        queue = ::Reimbursements::ReviewSupport.split_queue(expenses, @owner_gate_unmet_ids)
+        @approved = queue[:approved]
+        @awaiting_owner = queue[:awaiting_owner]
+        @to_approve = queue[:to_approve]
 
         respond_to do |format|
           format.html { load_queue }
@@ -53,7 +61,7 @@ module Admin
       end
 
       def save
-        expense = find_expense!
+        expense = find_queue_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
         ) || budget_record_id_error(params[:budget_record_id])
@@ -62,22 +70,15 @@ module Admin
           return
         end
 
-        # A covering owner endorsement before the edit means this Save may have
-        # re-opened the gate (if it changed amount/budget) — tell finance so the
-        # claim jumping back to "awaiting sign-off" isn't a surprise. update_expense!
-        # returns the updated claim, so no re-read is needed.
-        was_endorsed = ::Reimbursements::OwnerReview.gate_applies?(expense) &&
-                       ::Reimbursements::OwnerReview.gate_satisfied?(expense)
-        updated = store.update_expense!(expense.record_id, save_attrs)
+        apply_edits(expense)
 
         notice = "Saved changes to ##{expense.auto_number}."
-        notice += " Your edit changed the amount or budget, so it needs a fresh owner sign-off." \
-          if was_endorsed && !::Reimbursements::OwnerReview.gate_satisfied?(updated)
+        notice += " #{GATE_REOPENED_BY_EDIT}" if @gate_reopened_by_edit
         redirect_to_review(notice: notice)
       end
 
       def approve
-        expense = find_expense!
+        expense = find_queue_expense!
         # "Save Changes" in the unsaved-edits dialog: persist the card edits
         # first, in this same request, and abort the approval if they don't
         # validate (save_edits_before_decision redirects then returns nil).
@@ -90,7 +91,7 @@ module Admin
       # owner gate can be overridden this way — every other blocking reason is a
       # genuine data problem the override still can't approve past.
       def override_approve
-        expense = find_expense!
+        expense = find_queue_expense!
         # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
         # card edits first, aborting the override if they don't validate — so no
         # gate-satisfying override row is written for an approval that never runs.
@@ -128,7 +129,7 @@ module Admin
       end
 
       def reject
-        expense = find_expense!
+        expense = find_queue_expense!
         # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
         # card edits first, aborting the rejection if they don't validate.
         expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
@@ -170,7 +171,7 @@ module Admin
       end
 
       def add_receipts
-        expense = find_expense!
+        expense = find_queue_expense!
         attached, upload_errors = attach_posted_receipts(expense)
         if attached.zero?
           redirect_to_review(alert: upload_errors.presence&.to_sentence ||
@@ -185,7 +186,7 @@ module Admin
       end
 
       def remove_receipt
-        expense = find_expense!
+        expense = find_queue_expense!
         store.remove_receipt!(expense.record_id, params[:attachment_id])
         redirect_to_review(notice: "Removed a receipt from ##{expense.auto_number}.")
       rescue ::Reimbursements::DatabaseStore::LastReceiptError
@@ -195,6 +196,68 @@ module Admin
       end
 
       private
+
+      # find_expense!, plus a note of where the claim sat on the tab it is
+      # being acted from. Approving or rejecting takes the card off the tab, so
+      # the position has to be read BEFORE the action — afterwards there is
+      # nothing left to read it from.
+      def find_queue_expense!
+        expense = find_expense!
+        @anchor_record_id = expense.record_id
+        @anchor_successors = successors_on_tab(expense)
+        expense
+      end
+
+      # The record ids rendering AFTER this claim on its tab, nearest first.
+      def successors_on_tab(expense)
+        order = rendered_tab_order
+        index = order.index(expense.record_id)
+        index ? order[(index + 1)..] : []
+      end
+
+      # The tab's claims as record ids, in the order the page renders them —
+      # which for To approve is Ready then Needs attention, not store order.
+      # Read once before an action and once after, so "is it still on this tab"
+      # is answered against the queue as it now stands rather than guessed from
+      # the new status.
+      def rendered_tab_order
+        expenses = store.expenses_for_cost_centre
+        pending = expenses.select(&:pending?)
+        unmet = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(pending)
+        queue = ::Reimbursements::ReviewSupport.split_queue(expenses, unmet)
+
+        case resolve_tab
+        when "approved" then queue[:approved]
+        when "awaiting_owner" then queue[:awaiting_owner]
+        else ordered_to_approve(queue[:to_approve], pending)
+        end.map(&:record_id)
+      end
+
+      def ordered_to_approve(to_approve, pending)
+        ready, attention = ::Reimbursements::ReviewSupport.partition_ready(
+          to_approve, store.budgets.index_by(&:record_id), modulus_checker,
+          ::Reimbursements::ReviewSupport.find_duplicate_submissions(pending)
+        )
+        ready + attention
+      end
+
+      # Where to scroll back to. The claim just acted on when it is still on
+      # this tab; otherwise the nearest claim that rendered BELOW it, which is
+      # where the operator's eye already was. Nothing survived below it (or a
+      # bulk action, which has no single card) means no anchor at all: the top
+      # of the list, the old behaviour.
+      def queue_anchor
+        return nil if @anchor_record_id.blank?
+
+        remaining = rendered_tab_order
+        target =
+          if remaining.include?(@anchor_record_id)
+            @anchor_record_id
+          else
+            @anchor_successors.find { |id| remaining.include?(id) }
+          end
+        target && "expense-#{target}"
+      end
 
       # Which expenses this tab shows -- and therefore downloads.
       def expenses_for_tab
@@ -233,10 +296,9 @@ module Admin
         #
         # Over @to_approve, NOT @pending: an unmet owner gate is its own tab now,
         # so "needs attention" here means a data problem finance can actually fix.
-        @ready, @attention = @to_approve.partition do |expense|
-          !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
-            !@duplicates.key?(expense.record_id)
-        end
+        @ready, @attention = ::Reimbursements::ReviewSupport.partition_ready(
+          @to_approve, @budget_by_id, modulus_checker, @duplicates
+        )
       end
 
       # Map an approve_expense result to the redirect + flash, shared by #approve
@@ -262,8 +324,14 @@ module Admin
                                     "counts it in GBP, and reconciliation corrects it to the rate the " \
                                     "bank charged.")
         when :skipped_awaiting_endorsement
-          redirect_to_review(alert: "##{expense.auto_number} needs a budget owner's endorsement first " \
-                                    "(or a finance override).")
+          # Name the CAUSE when this very request created it: the Save-Changes
+          # branch of the unsaved-edits dialog can save an edit that re-opens a
+          # covering endorsement, and the bare sentence reads as a condition
+          # that was already there.
+          alert = "##{expense.auto_number} needs a budget owner's endorsement first " \
+                  "(or a finance override)."
+          alert = "#{GATE_REOPENED_BY_EDIT} #{alert}" if @gate_reopened_by_edit
+          redirect_to_review(alert: alert)
         else
           redirect_to_review(notice: approved_notice || "Approved ##{expense.auto_number}.")
         end
@@ -381,7 +449,21 @@ module Admin
           return nil
         end
 
-        store.update_expense!(expense.record_id, save_attrs)
+        apply_edits(expense)
+      end
+
+      # Write the card's inline edits, recording whether that just re-opened a
+      # covering owner endorsement — editing the amount or the budget revokes
+      # it (see OwnerReview.endorsement_covers?). Both the plain Save and the
+      # save-then-decide path read the flag, so they cannot drift about how the
+      # claim's sudden return to "awaiting sign-off" is explained.
+      def apply_edits(expense)
+        was_endorsed = ::Reimbursements::OwnerReview.gate_applies?(expense) &&
+                       ::Reimbursements::OwnerReview.gate_satisfied?(expense)
+        updated = store.update_expense!(expense.record_id, save_attrs)
+        @gate_reopened_by_edit =
+          was_endorsed && !::Reimbursements::OwnerReview.gate_satisfied?(updated)
+        updated
       end
 
       def save_attrs
@@ -401,11 +483,12 @@ module Admin
         attrs
       end
 
-      # Keeps the operator on the tab they acted from. params[:tab] is passed
-      # through verbatim (not resolve_tab'd) so a redirect with no tab stays a
-      # redirect with no tab, which every existing test and link relies on.
+      # Keeps the operator on the tab they acted from, AND at the card they
+      # acted on (see #queue_anchor). params[:tab] is passed through verbatim
+      # (not resolve_tab'd) so a redirect with no tab stays a redirect with no
+      # tab, which every existing test and link relies on.
       def redirect_to_review(flash)
-        redirect_to admin_reimbursements_review_path(tab: params[:tab]), **flash
+        redirect_to admin_reimbursements_review_path(tab: params[:tab], anchor: queue_anchor), **flash
       end
     end
   end

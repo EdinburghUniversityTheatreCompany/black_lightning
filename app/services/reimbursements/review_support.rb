@@ -39,6 +39,32 @@ module Reimbursements
       modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
     end
 
+    # The Review queue's three tabs, split out of one list of this cost
+    # centre's claims. +unmet_ids+ is OwnerReview.unmet_gate_expense_ids over
+    # the pending half.
+    #
+    # Shared by ReviewController#index (which renders them) and by the
+    # post-action anchor, which has to know a tab's membership in exactly the
+    # same terms or the redirect would scroll to a card that is not there.
+    def split_queue(expenses, unmet_ids)
+      pending = expenses.select(&:pending?)
+      awaiting_owner, to_approve = pending.partition { |e| unmet_ids.include?(e.record_id) }
+      { pending: pending,
+        approved: expenses.select { |e| e.status == Status::APPROVED },
+        awaiting_owner: awaiting_owner,
+        to_approve: to_approve }
+    end
+
+    # The To-approve tab's render order: clean claims first, then the ones with
+    # a data problem or a possible duplicate. Returned as the two halves,
+    # because the page heads them separately.
+    def partition_ready(to_approve, budget_by_id, modulus_checker, duplicates)
+      to_approve.partition do |expense|
+        !needs_attention(expense, budget_by_id, modulus_checker) &&
+          !duplicates.key?(expense.record_id)
+      end
+    end
+
     # A BACS-safe payment reference from a budget's display name: drop anything
     # that isn't alphanumeric/space/hyphen, collapse the runs of spaces that
     # leaves, cap at 18 chars, then trim. It is fed Budget#display_name, whose

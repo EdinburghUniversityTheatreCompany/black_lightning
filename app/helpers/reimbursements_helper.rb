@@ -71,6 +71,20 @@ module ReimbursementsHelper
     value.strftime("%Y-%m-%d")
   end
 
+  # "Waiting 6 days." from a submission timestamp — how long the producer has
+  # been held up, which is the question asked of a claim sitting on the owner
+  # gate. Empty (not "-", not "Waiting 0 days") for a claim with no timestamp
+  # or submitted today: a figure nobody can read a delay off is noise on a
+  # line that exists to report one.
+  def reimbursements_waiting_since(submitted_at)
+    return "" if submitted_at.blank?
+
+    days = (Date.current - submitted_at.to_date).to_i
+    return "" unless days.positive?
+
+    "Waiting #{pluralize(days, 'day')}."
+  end
+
   # The one money format for the whole reimbursements section: a GBP amount as
   # "£12.50" (2dp, thousands-separated), or "-" when nil. Accepts a numeric or a
   # numeric string (some emails pre-format their amounts). The single definition

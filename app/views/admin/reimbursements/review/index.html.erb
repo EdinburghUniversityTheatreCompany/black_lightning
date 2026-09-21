@@ -42,7 +42,13 @@
   <% else %>
     <p class="mb-3 text-gray-600">
       <%= @approved.size %> approved, total <%= reimbursements_money(approved_total) %>.
-      Ready to submit on the Build Batch page.
+      <%# The next step in the weekly loop, as a link rather than the name of a
+          page to go and find in the sidebar. Carries the selected cost centre:
+          a batch is built for ONE pot, and the one on screen is the one meant. %>
+      Ready to submit on
+      <%= link_to "the Build Batch page",
+                  new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
+                  class: "text-primary underline" %>.
     </p>
     <% @approved.each do |expense| %>
       <%= render "expense_card", expense: expense, allow_approve: false, duplicates: nil %>
@@ -65,6 +71,11 @@
       portal account, say), you can override the sign-off and approve it here; the override is
       recorded against your account. A claim on a budget with no owner never appears here — it goes
       straight to To approve.
+      <%# So nobody chases by hand believing nothing else will. The nightly job
+          names every gated claim to each of its owners on every due run day,
+          with no age threshold (see NightlyBatchJob#remind_budget_owners). %>
+      Every owner named below is emailed about their outstanding claims automatically, on each of
+      this cost centre's nightly run days, until they sign off or the claim is rejected.
     <% end %>
     <%# The bulk toolbar is deliberately NOT rendered here: bulk approve skips
         every gated claim, so a "0 approved" summary is all it could ever
