@@ -23,9 +23,18 @@
   <% else %>
     No line is over budget.
   <% end %>
-  <%= link_to "#{reimbursements_money(@unattributed_total)} of EUSA ledger rows",
-              "#unattributed-actuals", class: "underline" %>
-  is attributed to no budget.
+  <%# The COUNT is the headline and the net is a parenthetical in the card's
+      own words, because "debits less credits" is legitimately negative when
+      more unattributed income than spend is sitting there — and a bare
+      negative money figure means bad news everywhere else in this portal. %>
+  <% if @unattributed_count.zero? %>
+    Every EUSA ledger row is attributed to a budget.
+  <% else %>
+    <%= link_to pluralize(@unattributed_count, "EUSA ledger row"),
+                "#unattributed-actuals", class: "underline" %>
+    <%= @unattributed_count == 1 ? "is" : "are" %> attributed to no budget
+    (net <%= reimbursements_money(@unattributed_total) %>, debits less credits).
+  <% end %>
 <% end %>
 
 <%

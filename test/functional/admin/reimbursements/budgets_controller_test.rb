@@ -650,6 +650,22 @@ module Admin
         assert_includes response.body, "attributed to no budget"
         assert_includes response.body, "#unattributed-actuals"
         assert_equal BigDecimal("42.00"), assigns(:unattributed_total)
+        assert_equal 1, assigns(:unattributed_count)
+      end
+
+      # The net is debits less credits, so unattributed INCOME makes it
+      # negative — and a bare negative money figure means bad news everywhere
+      # else in this portal. The count is the headline instead.
+      test "the summary leads on the count, so a net credit does not read as alarm" do
+        sign_in @user
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Box office",
+                                             credit: BigDecimal("500.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "1 EUSA ledger row"
+        assert_includes response.body, "debits less credits"
       end
 
       test "the overview says so plainly when nothing is over budget" do

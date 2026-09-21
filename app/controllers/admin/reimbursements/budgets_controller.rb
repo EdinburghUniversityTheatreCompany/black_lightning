@@ -55,6 +55,11 @@ module Admin
         # budgets the cards total (the page's year and cost centre), or the
         # summary would count lines the tables below do not show.
         @over_budget_count = grouped.values.flatten.count(&:over_budget?)
+        # COUNT as well as net, because the net is debits less credits and can
+        # legitimately be NEGATIVE (more unattributed income than spend) — a
+        # bare negative in the headline reads as bad news, which everywhere
+        # else in this portal it is.
+        @unattributed_count = unattributed.size
         @unattributed_total = ::Reimbursements::EusaActual.net(unattributed)
       end
 
