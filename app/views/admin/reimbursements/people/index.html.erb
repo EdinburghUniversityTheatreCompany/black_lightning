@@ -18,6 +18,49 @@
   <% end %>
 <% end %>
 
+<%= render CardComponent.new(title: "Find a person") do %>
+  <%# A GET with the term in the URL, so a search is a link somebody can send
+      or bookmark (house rule: the URL is the state). %>
+  <%= form_with url: admin_reimbursements_people_path, method: :get,
+                class: "flex flex-wrap items-end gap-3" do %>
+    <div>
+      <%= label_tag :q, "Name or email", class: FormStyles::LABEL %>
+      <%= text_field_tag :q, @query, placeholder: "part of a name or address",
+                         class: input_classes(width: "w-64") %>
+    </div>
+    <%= submit_tag "Search", class: btn_classes(:secondary, :sm) %>
+    <% if @query.present? %>
+      <%= link_to "Clear", admin_reimbursements_people_path, class: "text-sm text-gray-600 underline" %>
+    <% end %>
+  <% end %>
+
+  <%# What the six badges mean, once, where they are read. "Outside spec" in
+      particular says nothing about the details being wrong: Pay.UK publishes
+      no rule for that sort code (or the rule files are missing), so the check
+      could not run. %>
+  <details class="mt-3 text-sm">
+    <summary class="cursor-pointer text-gray-600 underline">What the badges mean</summary>
+    <dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-gray-600">
+      <dt><%= render BadgeComponent.new(type: :success, pill: true).with_content("Valid") %></dt>
+      <dd>The sort code and account number pass Pay.UK's modulus check: they are a
+          self-consistent pair. It catches typos, not fraud.</dd>
+      <dt><%= render BadgeComponent.new(type: :danger, pill: true).with_content("Invalid") %></dt>
+      <dd>They fail that check, so at least one digit is wrong. Fix them before paying.</dd>
+      <dt><%= render BadgeComponent.new(type: :warning, pill: true).with_content("Outside spec") %></dt>
+      <dd>Pay.UK publishes no rule covering that sort code, so the check could not run.
+          This does <strong>not</strong> mean the details are wrong.</dd>
+      <dt><%= render BadgeComponent.new(type: :warning, pill: true).with_content("Missing") %></dt>
+      <dd>No bank details on file. A budget owner who never claims needs none.</dd>
+      <dt><%= render BadgeComponent.new(type: :success, pill: true).with_content("Verified") %></dt>
+      <dd>Somebody in finance confirmed these details against the payee. Saving a change
+          clears it, since nobody has re-checked what replaced them.</dd>
+      <dt><%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Unverified") %></dt>
+      <dd>Nobody has confirmed them yet. The correct end state for a budget owner who
+          never claims.</dd>
+    </dl>
+  </details>
+<% end %>
+
 <div class="mb-2 flex flex-wrap items-center justify-end gap-2">
   <%= link_to "Register a person", new_admin_reimbursements_person_path,
               class: btn_classes(:primary, :sm) %>
@@ -34,8 +77,18 @@
     <div class="flex flex-col gap-2">
       <% @people.each do |person| %>
         <% editing = @edit_person_id == person.record_id %>
-        <%= tag.details class: "rounded border border-gray-200", open: editing do %>
+        <% claims = @claim_counts[person.record_id].to_i %>
+        <%# id + scroll-mt: a save redirects back to ?person=<id>#person-<id>,
+            so the row reopens where the operator left it instead of collapsing
+            and throwing them to the top. The margin clears the sticky header. %>
+        <%= tag.details id: "person-#{person.record_id}",
+                        class: "group scroll-mt-20 rounded border border-gray-200",
+                        open: editing || @open_person_id == person.record_id do %>
           <summary class="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 cursor-pointer">
+            <%# A visible affordance: nothing said these rows opened, so the
+                bank-details editor may as well not have been there. %>
+            <i class="fas fa-chevron-right w-3 text-xs text-gray-400 transition-transform group-open:rotate-90"
+               aria-hidden="true"></i>
             <span class="font-medium min-w-40"><%= person.name.presence || "-" %></span>
             <span class="text-gray-600 grow"><%= person.email.presence || "-" %></span>
             <%= reimbursements_modulus_badge(person, checker: modulus_checker) %>
@@ -43,6 +96,16 @@
               <%= render BadgeComponent.new(type: :success, pill: true).with_content("Verified") %>
             <% else %>
               <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Unverified") %>
+            <% end %>
+            <%# Their claims, filtered to them. A person had no link out to
+                anything, so "what has this payee actually claimed?" meant
+                searching the expenses index by hand. %>
+            <% if claims.positive? %>
+              <%= link_to pluralize(claims, "claim"),
+                          admin_reimbursements_expense_edits_path(person: person.record_id),
+                          class: "text-sm text-primary underline" %>
+            <% else %>
+              <span class="text-sm text-gray-500">No claims</span>
             <% end %>
           </summary>
 

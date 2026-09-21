@@ -148,6 +148,30 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
+    # The registry in the order the People screen reads it: by name, blanks
+    # last, id as the tiebreak.
+    #
+    # Ordered in SQL on purpose. The column collates utf8mb4_unicode_ci, which
+    # folds accents, while Ruby's String comparison is byte-wise — so an
+    # in-memory sort would put "Ábel" after "Zoe" and disagree with every other
+    # ordered list in the portal. The id tiebreak keeps two people of the same
+    # name in a stable order across page loads.
+    def people_in_name_order
+      @people_in_name_order ||=
+        Person.includes(:payment_details)
+              .order(Arel.sql("CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END"), :name, :id)
+              .to_a
+    end
+
+    # How many claims each person has SUBMITTED, keyed by their record id.
+    # One grouped query, because the People index would otherwise count per
+    # row — and the count is a link to that person's filtered claim list.
+    def expense_counts_by_person_id
+      @expense_counts_by_person_id ||=
+        Expense.where.not(person_id: nil).group(:person_id).count
+               .transform_keys(&:to_s)
+    end
+
     # Every configured cost centre, by name. Memoized like every other list, so
     # the exporters' id->centre lookup costs one query per request however many
     # rows they name a centre on.
