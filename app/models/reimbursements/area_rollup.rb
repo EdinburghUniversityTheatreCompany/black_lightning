@@ -19,6 +19,13 @@ module Reimbursements
     # Nil when nobody agreed one — never zero, which reads as fully overspent.
     def agreed = area&.projected_amount
 
+    # Whether that total is one nobody actually set: absent, or a £0 with
+    # nothing allocated under it (see PlannedAmount). The card suppresses the
+    # figure in both cases — "Agreed total (expenses) £0.00" reads as a claim
+    # about expenses rather than as an unset plan. A group with no area at all
+    # (the unassigned block) agrees nothing either.
+    def no_budget_set? = area.nil? || area.no_budget_set?
+
     # NOT spare money, and nil for the same reason #agreed is. Summed on the
     # area's declared basis (Area#allocated), which is why an area holding both
     # budget types has a defensible figure at all — Phase 2a withheld it,

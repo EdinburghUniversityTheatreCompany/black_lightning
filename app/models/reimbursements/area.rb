@@ -34,6 +34,7 @@ module Reimbursements
   # docs/superpowers/specs/2026-09-10-area-grouping-design.md.
   class Area < ApplicationRecord
     include RecordId
+    include PlannedAmount
 
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
@@ -139,9 +140,19 @@ module Reimbursements
     # so it stands until a basis-aware figure earns its own name and its own
     # decision about whether an EUSA credit may raise it.
     def remaining
-      return nil if projected_amount.nil?
+      return nil if no_budget_set?
 
       projected_amount - committed_amount
+    end
+
+    # An agreed total of exactly £0 counts as unset only while nothing has been
+    # allocated under it. Production carries many termtime areas in exactly
+    # that state with real spend against them, and reading the 0 as a cap
+    # painted every one of them red for ever. An area that HAS allocated lines
+    # under a £0 total is a different thing — the lines contradict the total,
+    # and that disagreement is worth showing.
+    def nothing_allocated?
+      allocated.zero?
     end
 
     # How much of the total has been split out into category lines. Lines with no
@@ -162,7 +173,7 @@ module Reimbursements
 
     # The part of the agreed total not yet assigned to a category — NOT spare money.
     def unallocated
-      return nil if projected_amount.nil?
+      return nil if no_budget_set?
 
       projected_amount - allocated
     end

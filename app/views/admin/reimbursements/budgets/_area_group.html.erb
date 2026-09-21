@@ -19,7 +19,7 @@
         <%# Nil means nobody agreed a total — every backfilled area starts
             there — and "£0.00" would read as fully overspent, so the figure is
             left out entirely rather than shown as a zero. %>
-        <% unless rollup.agreed.nil? %>
+        <% unless rollup.no_budget_set? %>
           <span class="text-sm text-gray-600">
             <%= rollup.total_label %> <%= reimbursements_money(rollup.agreed) %>
           </span>

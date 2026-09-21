@@ -50,6 +50,7 @@ module Reimbursements
   class Budget < ApplicationRecord
     include RecordId
     include BudgetHealth
+    include PlannedAmount
     TYPES = %w[Expense Income].freeze
 
     COMMITTED_STATUSES = [ Status::APPROVED, Status::SUBMITTED, Status::PAID ].freeze
@@ -211,6 +212,10 @@ module Reimbursements
     def remaining
       plan = income? ? current_forecast : projected_amount
       return nil if plan.nil?
+      # A plan of exactly £0 is a figure nobody filled in, not a cap of
+      # nothing — see PlannedAmount. Without this a £0 line with real spend
+      # reads as over budget, in red, forever.
+      return nil if no_budget_set?
 
       plan - committed_amount
     end
@@ -223,7 +228,7 @@ module Reimbursements
     # Nil when there is no initial budget: you cannot drift from a plan nobody
     # set, and that case stays blank rather than claiming a zero.
     def variance
-      return nil if projected_amount.nil? || initial_budget.nil?
+      return nil if no_budget_set? || initial_budget.nil?
 
       projected_amount - initial_budget
     end

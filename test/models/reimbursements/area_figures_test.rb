@@ -93,5 +93,41 @@ module Reimbursements
       assert_nil area.unallocated
       assert_equal(-800, area.allocated)
     end
+
+    # --- A £0 agreed total is unset, not a cap of nothing -------------------
+    #
+    # Mick's call. Production carries many termtime areas in exactly this
+    # state with real spend against them, and reading the 0 as a cap made
+    # every one of them read as fully overspent.
+
+    test "an area whose agreed total is zero, with nothing allocated, reads as unset" do
+      area = create_reimbursements_area(name: "Termtime odds", initial_budget: 0)
+      budget = create_reimbursements_budget(name: "Sundries", area: area)
+      create_reimbursements_expense(budget: budget, status: ::Reimbursements::Status::APPROVED,
+                                    amount: 200, amount_excl_vat: 200)
+
+      area.reload
+      assert_predicate area, :no_budget_set?
+      assert_nil area.remaining, "a figure nobody filled in is not a cap that was blown"
+      assert_nil area.unallocated
+    end
+
+    # The lines contradict the total, and that disagreement is worth showing
+    # rather than hiding behind "no budget set".
+    test "a zero total WITH lines allocated under it is still a real statement" do
+      area = create_reimbursements_area(name: "Contradicted", initial_budget: 0)
+      create_reimbursements_budget(name: "Props budget", area: area, initial_budget: 400)
+
+      area.reload
+      assert_not area.no_budget_set?
+      assert_equal(-400, area.unallocated)
+    end
+
+    test "a real agreed total is untouched by the zero rule" do
+      area = create_reimbursements_area(name: "Real", initial_budget: 1_000)
+
+      assert_not area.reload.no_budget_set?
+      assert_equal 1_000, area.remaining
+    end
   end
 end

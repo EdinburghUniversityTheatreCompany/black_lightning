@@ -117,6 +117,40 @@ module Reimbursements
       assert_equal BigDecimal("900"), Budget.find(income.id).remaining
     end
 
+    # --- A £0 plan is unset, not a cap of nothing ---------------------------
+    #
+    # Mick's call. Production carries many termtime areas whose agreed total is
+    # £0 with real spend against them; reading the 0 as a cap made every one of
+    # them over budget, in red, for ever — a permanent false alarm, which is
+    # how a real one stops being read.
+
+    test "a line whose plan is exactly zero reads as having no budget set" do
+      budget = build_budget(initial_budget: 0)
+      add_expense(budget, status: Status::APPROVED, excl_vat: 200)
+
+      fresh = Budget.find(budget.id)
+      assert_predicate fresh, :no_budget_set?
+      assert_nil fresh.remaining
+      assert_not fresh.over_budget?, "a figure nobody filled in is not a cap that was blown"
+      assert_nil fresh.variance
+    end
+
+    test "a zero FORECAST is unset too, not just a zero initial budget" do
+      budget = build_budget(initial_budget: 500)
+      budget.forecasts.create!(amount: 0, date: Date.new(2026, 6, 1), reason: "cancelled")
+
+      assert_predicate Budget.find(budget.id), :no_budget_set?
+    end
+
+    test "a real plan is untouched by the zero rule" do
+      budget = build_budget(initial_budget: 100)
+      add_expense(budget, status: Status::APPROVED, excl_vat: 140)
+
+      fresh = Budget.find(budget.id)
+      assert_not fresh.no_budget_set?
+      assert_predicate fresh, :over_budget?
+    end
+
     # --- Variance -----------------------------------------------------------
     #
     # With no forecast logged the plan IS the agreed figure, so the drift is

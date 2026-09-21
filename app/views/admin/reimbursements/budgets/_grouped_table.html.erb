@@ -34,7 +34,11 @@
                   entirely when nobody agreed a total, as the overview card
                   suppresses it: "Agreed total (expenses) -" reads as a claim
                   about expenses rather than as an unset plan. %>
-              <% unless area.projected_amount.nil? %>
+              <%# no_budget_set?, not projected_amount.nil?: a £0 total with
+                  nothing allocated is a figure nobody filled in, and
+                  "Agreed total (expenses) £0.00" reads as a claim about
+                  expenses rather than as an unset plan. %>
+              <% unless area.no_budget_set? %>
                 <span class="text-sm text-gray-600">
                   <%= area.basis_label %> <%= reimbursements_money(area.projected_amount) %>
                 </span>
