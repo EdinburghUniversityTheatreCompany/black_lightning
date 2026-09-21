@@ -229,6 +229,29 @@ module ReimbursementsHelper
     Reimbursements::EusaActual.net(actuals)
   end
 
+  # The fx-rate controller's wiring for a claim's GBP amount field, or nothing
+  # on the UK rail — where there is no second currency and so no rate.
+  def reimbursements_fx_rate_data(expense)
+    return {} unless expense.international? && expense.foreign_amount.to_f.positive?
+
+    { data: { controller: "fx-rate",
+              fx_rate_foreign_amount_value: expense.foreign_amount.to_s,
+              fx_rate_currency_value: expense.foreign_currency.to_s } }
+  end
+
+  # A converter prefilled with the invoice figure, so finance does not retype
+  # it. An ordinary link the operator chooses to follow — the portal makes no
+  # request of its own and stores no rate, which is why nothing here can go
+  # stale or quietly disagree with what the bank charged.
+  def reimbursements_fx_converter_link(expense)
+    return nil unless expense.international? && expense.foreign_amount.to_f.positive?
+
+    url = "https://www.xe.com/currencyconverter/convert/?" +
+          { Amount: expense.foreign_amount.to_s, From: expense.foreign_currency.to_s,
+            To: "GBP" }.to_query
+    link_to("Look up today's rate", url, class: "underline", target: "_blank", rel: "noopener")
+  end
+
   # What unlinking this ledger row will do, for its confirm dialog.
   #
   # The two links are undone differently and the difference is the operator's

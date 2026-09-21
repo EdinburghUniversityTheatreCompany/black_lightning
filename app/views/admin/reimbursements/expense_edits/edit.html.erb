@@ -250,9 +250,26 @@
           <% end %>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <%= render "shared/form/field", label: "Amount (GBP)", name: :amount do %>
-              <%= number_field_tag :amount, reimbursements_amount_value(@expense.amount), step: 0.01, min: 0, class: input_classes %>
-            <% end %>
+            <%# Same fx-rate controller as the Review card, so the arithmetic
+                finance would otherwise do in their head is on both screens
+                that ask for this figure. Renders nothing on the UK rail. %>
+            <%# mb-4 moves to this wrapper and off the field, so the label,
+                the control and the implied-rate line space as one group and
+                still line up with the ex-VAT cell beside them. %>
+            <div class="mb-4" <%= tag.attributes(reimbursements_fx_rate_data(@expense)) %>>
+              <%= render "shared/form/field", label: "Amount (GBP)", name: :amount,
+                    hint: (reimbursements_fx_converter_link(@expense) if @expense.international?),
+                    html_class: "" do %>
+                <%= number_field_tag :amount, reimbursements_amount_value(@expense.amount),
+                      step: 0.01, min: 0, class: input_classes,
+                      data: (@expense.international? ? { fx_rate_target: "amount",
+                                                         action: "input->fx-rate#render" } : {}) %>
+              <% end %>
+              <% if @expense.international? %>
+                <p class="mt-1 mb-0 text-sm text-gray-600" data-fx-rate-target="output"
+                   aria-live="polite"></p>
+              <% end %>
+            </div>
             <%= render "shared/form/field", label: "Amount excl. VAT (GBP)", name: :amount_excl_vat do %>
               <%= number_field_tag :amount_excl_vat, reimbursements_amount_value(@expense.amount_excl_vat), step: 0.01, min: 0,
                                    class: input_classes %>

@@ -246,17 +246,25 @@
   <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
                 method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2",
                 data: { review_decision_target: "editForm" } do %>
-    <div>
+    <%# The fx-rate controller shows the rate the typed pair implies, so the
+        arithmetic finance was doing in their head is on the form. It knows no
+        real rate and claims none — see the controller. %>
+    <div <%= tag.attributes(reimbursements_fx_rate_data(expense)) %>>
       <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: FormStyles::LABEL %>
       <% if expense.international? %>
         <p class="mb-1 text-sm text-gray-600">
           What <%= reimbursements_payment_amount(expense) %> is expected to cost in pounds.
           The budget counts this figure, and reconciliation later corrects it to the rate the
           bank actually charged. It has to be filled in before the claim can be approved.
+          <%= reimbursements_fx_converter_link(expense) %>
         </p>
       <% end %>
       <%= number_field_tag :amount, reimbursements_amount_value(expense.amount), step: 0.01, min: 0, id: "amount_#{expense.record_id}",
-                           class: input_classes %>
+                           class: input_classes,
+                           data: (expense.international? ? { fx_rate_target: "amount", action: "input->fx-rate#render" } : {}) %>
+      <% if expense.international? %>
+        <p class="mt-1 mb-0 text-sm text-gray-600" data-fx-rate-target="output" aria-live="polite"></p>
+      <% end %>
     </div>
     <div>
       <%# A foreign invoice carries no reclaimable UK VAT, so ex-VAT follows the
