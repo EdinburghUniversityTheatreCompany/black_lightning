@@ -584,15 +584,72 @@ module Admin
 
       # (g2) A pristine card never shows the unsaved-edits dialog — the decision's
       # own turbo-confirm (a SweetAlert here) fires as usual.
+      #
+      # The reason is filled in first because the box is now `required`: see the
+      # test below, which is the whole point of that attribute.
       test "a pristine review card skips the dialog and runs the normal confirm" do
+        seed_expense(status: "Pending")
+
+        visit admin_reimbursements_review_path
+
+        fill_in "Reason for rejection", with: "No receipt"
+        click_button "Reject", exact: true
+
+        assert_no_selector "dialog[open]", wait: 1
+        assert_selector ".swal2-container", wait: 5
+      end
+
+      # Keeping your place is the whole point of the anchored redirect, and a
+      # request test cannot see whether the browser actually moved. It nearly
+      # did not: a fragment in the redirect's Location header does NOT survive
+      # a Turbo form submission — Turbo submits with fetch, fetch follows the
+      # 302 itself, and a fragment is never transmitted — so the first cut came
+      # back with main.scrollTop still 0. The ?focus= parameter is what works.
+      test "approving a card comes back scrolled to the next one" do
+        # Tall enough that the second card is well below the fold.
+        first = seed_expense(status: "Pending", amount: 111, amount_excl_vat: 100)
+        second = seed_expense(status: "Pending", amount: 222, amount_excl_vat: 200)
+
+        visit admin_reimbursements_review_path
+        within("#expense-#{first.record_id}") { click_button "Approve", exact: true }
+
+        assert_current_path(/focus=expense-#{second.record_id}/, url: false, wait: 5)
+        # The admin layout scrolls inside <main>, not on the document.
+        scrolled = page.evaluate_script("document.querySelector('main').scrollTop")
+        assert scrolled.to_i.positive?,
+               "expected <main> to have scrolled to the anchored card, got scrollTop #{scrolled}"
+      end
+
+      # Rejecting is irreversible and emails the producer, so agreeing to it
+      # over a submit the server was always going to refuse is the wrong order.
+      # The browser now stops a blank reason BEFORE the confirm — which only a
+      # browser test can see, since a request test POSTs straight to the action.
+      test "a blank rejection reason never reaches the can't-be-undone confirm" do
         seed_expense(status: "Pending")
 
         visit admin_reimbursements_review_path
 
         click_button "Reject", exact: true
 
+        assert_no_selector ".swal2-container", wait: 2
         assert_no_selector "dialog[open]", wait: 1
-        assert_selector ".swal2-container", wait: 5
+      end
+
+      # The bulk toolbar's single reason box is SHARED with "Approve selected",
+      # so it cannot carry `required` — Reject selected is disabled until a
+      # reason is typed instead.
+      test "bulk Reject selected stays disabled until a reason is typed" do
+        expense = seed_expense(status: "Pending")
+
+        visit admin_reimbursements_review_path
+        check "select_#{expense.record_id}"
+
+        assert_button "Reject selected", disabled: true
+        assert_button "Approve selected", disabled: false,
+                      exact: true
+        fill_in "Reason (required to reject)", with: "Duplicate"
+
+        assert_button "Reject selected", disabled: false
       end
 
       # --- Bank-detail masking ------------------------------------------------

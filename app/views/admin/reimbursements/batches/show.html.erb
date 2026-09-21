@@ -2,7 +2,10 @@
 
 <%= render CardComponent.new(title: @batch.name.presence || @batch.record_id) do %>
   <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
-    <dt class="font-medium">Date sent</dt>
+    <%# The date typed on the build form, which is what EUSA is asked to pay on.
+        It was labelled "Date sent" for a draft nobody has necessarily sent —
+        nothing in the portal records the manual send. %>
+    <dt class="font-medium">BACS date</dt>
     <dd><%= reimbursements_date(@batch.date_sent) %></dd>
     <dt class="font-medium">EUSA draft created</dt>
     <dd>
@@ -12,12 +15,16 @@
         <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No: needs a look") %>
       <% end %>
     </dd>
-    <dt class="font-medium">Producers notified</dt>
+    <%# What is actually recorded is that the send was ATTEMPTED, not that it
+        arrived: BatchProcessor sets the flag after the Graph call returns, and
+        a bounce afterwards is invisible here. "Yes" read as delivery. %>
+    <dt class="font-medium">Producer emails</dt>
     <dd>
       <% if @batch.producer_notifications_sent %>
-        <%= render BadgeComponent.new(type: :success, pill: true).with_content("Yes") %>
+        <%= render BadgeComponent.new(type: :success, pill: true).with_content("Sent") %>
+        <span class="text-gray-500">(sending was recorded as successful; delivery is not tracked)</span>
       <% else %>
-        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No: needs a look") %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Not sent: needs a look") %>
       <% end %>
     </dd>
     <% if @batch.sharepoint_backup_url.present? %>
@@ -55,7 +62,13 @@
         <tbody>
           <% @expenses.each do |expense| %>
             <tr class="border-b border-gray-100 align-top">
-              <td class="py-1 pr-3"><%= expense.auto_number %></td>
+              <%# Open the claim itself: the rows named a number and nothing
+                  else, so checking one meant searching for it by hand. %>
+              <td class="py-1 pr-3">
+                <%= link_to expense.auto_number,
+                            edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                            class: "text-primary underline" %>
+              </td>
               <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
               <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
               <td class="py-1 pr-3"><%= expense.budget&.display_name %></td>

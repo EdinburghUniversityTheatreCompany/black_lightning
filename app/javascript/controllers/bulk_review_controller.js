@@ -13,6 +13,7 @@ export default class extends Controller {
     "approveButton",
     "rejectButton",
     "counter",
+    "reason",
   ]
 
   connect() {
@@ -48,7 +49,16 @@ export default class extends Controller {
             } before continuing.`
     }
     if (this.hasRejectButtonTarget) {
-      this.rejectButtonTarget.disabled = none
+      // Gated on the reason too, not just on a selection. The reason box is
+      // shared with "Approve selected" and so cannot carry `required`, and
+      // without this the irreversible "and email each producer?" confirm fired
+      // BEFORE the server refused the blank reason — agreeing to something
+      // that was never going to happen.
+      const reasonGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
+      this.rejectButtonTarget.disabled = none || !reasonGiven
+      this.rejectButtonTarget.title = reasonGiven
+        ? ""
+        : "Type a reason above: it is emailed to the producer."
       this.rejectButtonTarget.dataset.turboConfirm = `Reject ${selected} expense${
         selected === 1 ? "" : "s"
       } and email each producer?`

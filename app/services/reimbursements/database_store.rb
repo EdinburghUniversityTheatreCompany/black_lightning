@@ -148,6 +148,45 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
+    # The registry in the order the People screen reads it: by name, blanks
+    # last, id as the tiebreak.
+    #
+    # Ordered in SQL on purpose. The column collates utf8mb4_unicode_ci, which
+    # folds accents, while Ruby's String comparison is byte-wise — so an
+    # in-memory sort would put "Ábel" after "Zoe" and disagree with every other
+    # ordered list in the portal. The id tiebreak keeps two people of the same
+    # name in a stable order across page loads.
+    def people_in_name_order
+      @people_in_name_order ||=
+        Person.includes(:payment_details)
+              .order(Arel.sql("CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END"), :name, :id)
+              .to_a
+    end
+
+    # The owner sign-off (or finance override) covering one claim, or nil.
+    # The endorsing user is preloaded because every caller names them.
+    def endorsement_for_expense(record_id)
+      OwnerEndorsement.includes(:overridden_by).for_expense(record_id).first
+    end
+
+    # The same, for a list of claims in one query — the Review queue draws a
+    # chip per card and would otherwise fire a query each.
+    def endorsements_by_expense(record_ids)
+      return {} if record_ids.empty?
+
+      OwnerEndorsement.includes(:overridden_by)
+                      .where(expense_record_id: record_ids).index_by(&:expense_record_id)
+    end
+
+    # How many claims each person has SUBMITTED, keyed by their record id.
+    # One grouped query, because the People index would otherwise count per
+    # row — and the count is a link to that person's filtered claim list.
+    def expense_counts_by_person_id
+      @expense_counts_by_person_id ||=
+        Expense.where.not(person_id: nil).group(:person_id).count
+               .transform_keys(&:to_s)
+    end
+
     # Every configured cost centre, by name. Memoized like every other list, so
     # the exporters' id->centre lookup costs one query per request however many
     # rows they name a centre on.
@@ -576,6 +615,15 @@ module Reimbursements
       bust_expenses!
     end
 
+    # See #update_expense!: a present-and-nil value for one of these clears the
+    # column instead of being read as "not edited here".
+    #
+    # foreign_amount ONLY, deliberately. `amount` keeps the compacted
+    # "nil means leave it alone" contract that four other write paths
+    # (BatchProcessor, the reject path, Review#save, the producer form) rely
+    # on, and every one of those validates it as positive before writing.
+    CLEARABLE_EXPENSE_COLUMNS = %i[foreign_amount].freeze
+
     def update_expense!(record_id, attrs)
       expense = Expense.find(record_id)
       columns = expense_columns(attrs)
@@ -583,6 +631,15 @@ module Reimbursements
       # nil-compaction would otherwise make the link settable but never
       # removable.
       columns[:budget_id] = nil if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
+      # Money columns the finance edit form may deliberately CLEAR.
+      # #expense_columns compacts nils away, which reads a missing key as "not
+      # edited here" — right for a form that posts a subset, but it made
+      # blanking the invoice amount a no-op that looked like a save: the field
+      # came back with the old figure still in it. A key that is present and
+      # nil is an instruction, not an omission.
+      CLEARABLE_EXPENSE_COLUMNS.each do |key|
+        columns[key] = nil if attrs.key?(key) && attrs[key].nil?
+      end
       expense.update!(columns)
       bust_expenses!
       expense

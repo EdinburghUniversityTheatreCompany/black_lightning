@@ -1,6 +1,7 @@
 <p class="mb-3 text-gray-600">
   Every expense the finance team can see, whatever its status. Filter by status or budget,
-  or search by description, payee, payment reference, amount or number, then open any one to
+  or search by description, who it is paid to, who submitted it, payment reference, amount or
+  number, then open any one to
   edit it (at any status, including ones already sent to EUSA or paid). Pending and Approved
   expenses are also editable from the
   <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
@@ -25,17 +26,29 @@
     </div>
     <div>
       <%= label_tag :q, "Search", class: FormStyles::LABEL %>
-      <%= text_field_tag :q, @query, placeholder: "description, payee, ref, £, or #",
+      <%= text_field_tag :q, @query, placeholder: "description, payee, submitter, ref, £, or #",
                          class: input_classes(width: "w-64") %>
     </div>
     <label class="flex items-center gap-2 text-sm">
       <%= check_box_tag :attention, "1", @attention_only %>
       Needs attention only
     </label>
+    <%# Carried through Apply as a hidden field, so narrowing one person's
+        claims by status does not silently widen back to everybody's. %>
+    <% if @person_filter.present? %>
+      <%= hidden_field_tag :person, @person_filter %>
+    <% end %>
     <%= submit_tag "Apply", class: btn_classes(:secondary, :sm) %>
-    <% if @status_filter.present? || @budget_filter.present? || @query.present? || @attention_only %>
+    <% if @status_filter.present? || @budget_filter.present? || @query.present? ||
+          @attention_only || @person_filter.present? %>
       <%= link_to "Clear", admin_reimbursements_expense_edits_path, class: "text-sm text-gray-600 underline" %>
     <% end %>
+  <% end %>
+  <% if @person_filter.present? %>
+    <p class="mt-2 text-sm text-gray-600">
+      Showing only the claims submitted by
+      <strong><%= @person&.name.presence || @person&.email.presence || "this person" %></strong>.
+    </p>
   <% end %>
 <% end %>
 
@@ -59,7 +72,13 @@
     <p class="py-4 text-center text-gray-600">No expenses match these filters.</p>
   <% end %>
 <% else %>
-  <% headers = [ "#", "Status", "Payee", "Budget", "Amount", "Description", "Submitted", "Flags", "" ] %>
+  <%# "Paid to" is the EFFECTIVE payee — on an Invoice, the supplier — and
+      "Submitted by" is the person who filed the claim. They are different
+      people often enough that one column headed "Payee" made a producer's own
+      claims unfindable. The CSV exporter is deliberately NOT changed: an
+      export is a stable contract. %>
+  <% headers = [ "#", "Status", "Paid to", "Submitted by", "Budget", "Amount",
+                 "Description", "Submitted", "Flags", "" ] %>
   <% field_sets = @expenses.map do |expense|
        number = link_to("##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                         class: "text-primary underline font-mono")
@@ -90,12 +109,23 @@
                                            record_label: "##{expense.auto_number}") if attention[:advisory].any?)
          ].compact, " ")
        end
+       # The submitter, linked to their People row — the registry is where a
+       # wrong name, a missing email or bad bank details actually get fixed.
+       submitted_by = if expense.person&.record_id.present?
+         link_to(expense.person.name.presence || expense.person.email.presence || "(no name)",
+                 admin_reimbursements_people_path(person: expense.person.record_id,
+                                                  anchor: "person-#{expense.person.record_id}"),
+                 class: "text-primary underline")
+       else
+         "-"
+       end
        edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                       "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm))
        {
          fields: [
            expense, number, status,
            expense.effective_payee_name.presence || "-",
+           submitted_by,
            expense.budget&.display_name.presence || "-",
            amount,
            truncate(expense.description.to_s, length: 60),

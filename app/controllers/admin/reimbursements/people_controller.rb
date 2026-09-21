@@ -13,10 +13,16 @@ module Admin
     class PeopleController < FinanceController
       def index
         @title = "Reimbursements People"
+        @query = params[:q].to_s.strip
         respond_to do |format|
           format.html { load_registry }
-          # Bank details are masked to their last four digits (Exports::People).
-          format.csv { send_export ::Reimbursements::Exports::People, store.people }
+          # The on-screen filter carries through, as every other per-view CSV
+          # in this portal does. Bank details are masked to their last four
+          # digits (Exports::People), which is unchanged.
+          format.csv do
+            send_export ::Reimbursements::Exports::People,
+                        filtered_people(store.people_in_name_order)
+          end
         end
       end
 
@@ -67,16 +73,48 @@ module Admin
       end
 
       def load_registry
-        people = store.people
-        # Duplicate detection runs over the WHOLE registry, not just one page.
+        # Also reached from #update's invalid-save re-render, which never ran
+        # #index and so has not read the filter the operator was working in.
+        @query = params[:q].to_s.strip
+        # Alphabetical, blanks last — the registry used to come back in
+        # insertion order, 50 to a page, so a newly registered person landed at
+        # the bottom of the last page with no way to look them up.
+        people = store.people_in_name_order
+        # Duplicate detection runs over the WHOLE registry, not just one page,
+        # and over the WHOLE registry rather than the filtered view: a filter
+        # that hid one half of a duplicate pair would hide the warning too.
         @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(people)
-        @people = paginate(people)
+        @claim_counts = store.expense_counts_by_person_id
+        # Which row to open and scroll to: the one just saved (redirected back
+        # with ?person=), or one linked to from a Review card.
+        @open_person_id = @edit_person_id || params[:person].to_s.presence
+        @people = paginate(filtered_people(people))
+      end
+
+      # Name or email, case-insensitive substring. Filtered in Ruby over the
+      # store's one memoized list, as the expenses index does.
+      def filtered_people(people)
+        return people if @query.blank?
+
+        needle = @query.downcase
+        people.select do |person|
+          person.name.to_s.downcase.include?(needle) || person.email.to_s.downcase.include?(needle)
+        end
+      end
+
+      # Back to the registry with this person's row open and scrolled to.
+      # Saving bank details used to collapse the row and return to the top of
+      # the page, so "Mark as verified" — the obvious next click — meant
+      # finding and reopening them again.
+      def redirect_to_person(person, flash)
+        redirect_to admin_reimbursements_people_path(person: person.record_id, q: params[:q].presence,
+                                                     anchor: "person-#{person.record_id}"),
+                    **flash
       end
 
       def mark_verified
         unless @person.bank_details?
-          redirect_to admin_reimbursements_people_path,
-                      alert: "#{@person.name} has no bank details to verify."
+          redirect_to_person(@person, alert: "#{@person.name} has no bank details to verify.")
           return
         end
 
@@ -86,14 +124,14 @@ module Admin
         # right next to this button, so "Verified" can't contradict what the
         # operator can see on the same screen.
         if modulus_checker.check(@person.sort_code, @person.account_number) == ::Reimbursements::ModulusCheck::INVALID
-          redirect_to admin_reimbursements_people_path,
-                      alert: "#{@person.name}'s bank details fail the modulus check. Fix them " \
-                             "before marking as verified."
+          redirect_to_person(@person,
+                             alert: "#{@person.name}'s bank details fail the modulus check. Fix them " \
+                                    "before marking as verified.")
           return
         end
 
         store.update_person!(@person.record_id, verified: true)
-        redirect_to admin_reimbursements_people_path, notice: "#{@person.name} marked as verified."
+        redirect_to_person(@person, notice: "#{@person.name} marked as verified.")
       end
 
       def save_bank_details
@@ -113,7 +151,7 @@ module Admin
         normalized_account = ::Reimbursements::BankDetails.normalize_account_number(account_number)
 
         unless bank_details_changed?(formatted_sort, normalized_account)
-          redirect_to admin_reimbursements_people_path, notice: "No changes to save."
+          redirect_to_person(@person, notice: "No changes to save.")
           return
         end
 
@@ -126,8 +164,7 @@ module Admin
                              # over details nobody has actually re-checked.
                              verified: false,
                              notes: appended_notes(formatted_sort, normalized_account))
-        redirect_to admin_reimbursements_people_path,
-                    notice: "Bank details saved for #{@person.name}."
+        redirect_to_person(@person, notice: "Bank details saved for #{@person.name}.")
       end
 
       # Re-render the registry with this person's edit section expanded, the

@@ -15,14 +15,23 @@
 <% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
 <% endorsement = @endorsements_by_expense&.[](expense.record_id) %>
 <% endorsement_covers = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
-<% owner_names = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id)&.name }.presence %>
+<% owners = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id) }.presence %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
+<%# The finance override control is drawn only when the owner gate is the ONLY
+    thing in the way (see the Approve/Reject block below). A card blocked on
+    something else promised an override that was not on the page. %>
+<% override_offered = allow_approve && owner_gate_unmet && attention[:blocking].empty? %>
 
 <%# review-decision guards the Approve/Reject/override buttons against dropping
     unsaved edits typed into the Save form below (which is a separate <form>). See
     review_decision_controller.js. Progressive enhancement: with JS off the
     buttons keep their server default. %>
-<div class="mb-3 rounded border border-gray-200 p-3" data-controller="review-decision">
+<%# id + scroll-mt: every Review action redirects back with #expense-<id>, so
+    the operator lands on the card they acted on rather than at the top of an
+    unpaginated queue. The margin clears the admin layout's sticky header,
+    which the browser would otherwise park the card underneath. %>
+<div id="expense-<%= expense.record_id %>" class="mb-3 scroll-mt-20 rounded border border-gray-200 p-3"
+     data-controller="review-decision">
   <%# Claim details on the left, the receipt beside them on the right: checking a
       claim means reading a figure on the document against the figure in the form,
       dozens of times in a sitting, which two browser tabs make needlessly hard.
@@ -54,15 +63,35 @@
                         class: "h-4 w-4" %>
     <% end %>
     <span class="font-medium">
-      #<%= expense.auto_number %>: <%= expense.person&.name.presence || "(no payee)" %>
+      #<%= expense.auto_number %>:
+      <%# The payee's own registry row, where bank details and verification are
+          fixed — the weekly route into People was a card telling you to go
+          there in plain text. %>
+      <% if expense.person&.record_id.present? %>
+        <%= link_to expense.person.name.presence || "(no name)",
+                    admin_reimbursements_people_path(person: expense.person.record_id,
+                                                     anchor: "person-#{expense.person.record_id}"),
+                    class: "text-primary underline" %>
+      <% else %>
+        (no payee)
+      <% end %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
     </span>
+    <%# Which kind of claim this is. Without it an Invoice — EUSA paying a
+        supplier direct — renders exactly like a reimbursement. %>
+    <%= render BadgeComponent.new(type: :secondary, pill: true).with_content(expense.expense_type) %>
     <% if expense.international? %>
-      <%# The invoice figure comes first: it is what the submitter entered and
+      <%# The foreign figure comes first: it is what the submitter entered and
           what EUSA's form will say. The GBP amount beside it is finance's own
-          estimate, and is blank until they enter it. %>
-      <span>Invoice: <strong><%= reimbursements_payment_amount(expense) %></strong></span>
+          estimate, and is blank until they enter it. The label follows the
+          claim's own TYPE — an international reimbursement is not an invoice. %>
+      <span><%= expense.expense_type == Reimbursements::Expense::TYPE_INVOICE ? "Invoice" : "Claimed" %>:
+        <strong><%= reimbursements_payment_amount(expense) %></strong></span>
       <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong> GBP</span>
+      <%# The IBAN/Missing badge the helper already renders for this rail. Left
+          off, every international card showed no bank signal at all — the one
+          thing this queue exists to check. %>
+      <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
       <%= render BadgeComponent.new(type: :info, pill: true).with_content("International") %>
     <% else %>
       <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>
@@ -110,10 +139,29 @@
         <p class="text-warning">
           <span class="font-medium">Awaiting a budget owner's endorsement</span>
           (blocks approval until signed off or overridden).
-          <% if owner_names %><%= owner_names.to_sentence %>
-            <%= owner_names.one? ? "owns" : "own" %> the <%= expense.budget.display_name %> budget and
-            can sign off from My Budgets.<% end %>
-          Or use the finance override below.
+          <%= reimbursements_waiting_since(expense.submitted_at) %>
+          <% if owners %>
+            <%# Each owner's address as a mailto, so chasing one is a click
+                rather than a search through People. %>
+            <% owner_links = owners.map do |owner|
+                 label = owner.name.presence || owner.email.presence || "an owner"
+                 owner.email.present? ? link_to(label, "mailto:#{owner.email}", class: "underline") : label
+               end %>
+            <%= safe_join(owner_links, ", ") %>
+            <%= owners.one? ? "owns" : "own" %> the
+            <%= link_to expense.budget.display_name,
+                        edit_admin_reimbursements_budget_path(expense.budget.record_id),
+                        class: "underline" %>
+            budget and can sign off from My Budgets.
+          <% end %>
+          <%# The override is only drawn when nothing else blocks approval, so
+              promising it otherwise sent the operator looking for a button
+              that is not there. %>
+          <% if override_offered %>
+            Or use the finance override below.
+          <% elsif attention[:blocking].any? %>
+            Fix the blocking problem above first: the finance override only covers the owner sign-off.
+          <% end %>
         </p>
       <% end %>
       <% if attention[:advisory].any? %>
@@ -144,10 +192,25 @@
     <% end %></div>
   <% end %>
 
+  <%# The two places either fix can be made, as links rather than as the names
+      of screens to go and find. %>
+  <% fix_links = capture do %>
+    Fix the <%= link_to "payee override", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                        class: "underline" %>
+    <% if expense.person&.record_id.present? %>
+      or <%= link_to "#{expense.person.name.presence || 'their'} People record",
+                     admin_reimbursements_people_path(person: expense.person.record_id,
+                                                      anchor: "person-#{expense.person.record_id}"),
+                     class: "underline" %>
+    <% else %>
+      (this claim names no payee, so there is no People record to fix)
+    <% end %>
+  <% end %>
+
   <% if modulus == Reimbursements::ModulusCheck::INVALID %>
     <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
       Modulus check failed for the effective sort code + account number. Likely a typo:
-      fix the override or the People record before approving.
+      <%= fix_links %> before approving.
     <% end %></div>
   <% end %>
 
@@ -155,9 +218,9 @@
     <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
       <% if expense.international? %>
         No IBAN and BIC on file for this payee, so there is nothing to put on EUSA's
-        international payment form. Fix the override or the People record.
+        international payment form. <%= fix_links %>.
       <% else %>
-        No bank details on file for this payee. Fix the override or the People record.
+        No bank details on file for this payee. <%= fix_links %>.
       <% end %>
     <% end %></div>
   <% end %>
@@ -171,7 +234,10 @@
   <% if duplicates.present? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Possible duplicate of
-      <%= duplicates.map { |d| "##{d.auto_number}" }.join(", ") %>:
+      <%# The named claim, opened where it can be compared and fixed. %>
+      <%= safe_join(duplicates.map { |d|
+            link_to("##{d.auto_number}", edit_admin_reimbursements_expense_edit_path(d.record_id),
+                    class: "underline") }, ", ") %>:
       same payee and amount within 30 days. Check this isn't a double-submission.
     <% end %></div>
   <% end %>
@@ -222,6 +288,13 @@
                      include_blank: expense.budget&.record_id.blank?,
                      id: "budget_record_id_#{expense.record_id}",
                      class: input_classes %>
+      <% if expense.budget&.record_id.present? %>
+        <p class="<%= FormStyles::HINT %>">
+          <%= link_to "Open #{expense.budget.display_name}",
+                      edit_admin_reimbursements_budget_path(expense.budget.record_id),
+                      class: "text-primary underline" %>
+        </p>
+      <% end %>
     </div>
     <div>
       <%= label_tag "nominal_code_override_#{expense.record_id}", "Nominal code override", class: FormStyles::LABEL %>
@@ -284,7 +357,13 @@
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
                   method: :patch, class: "flex items-center gap-2",
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
-      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+      <%# required, so the browser stops a blank reason BEFORE the "this can't
+          be undone" confirm: agreeing to something irreversible and then being
+          told the submit was refused is the wrong order. The field is always
+          visible, so a required attribute here can never be the unreachable
+          kind that silently breaks a form. The server check stays — it is the
+          one that holds with JavaScript off. %>
+      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection", required: true,
                          "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
                          class: input_classes(width: nil) %>
       <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}",
@@ -336,7 +415,11 @@
   <dialog data-review-decision-target="dialog"
           data-action="click->review-decision#backdropClose close->review-decision#closed"
           aria-labelledby="unsaved-edits-title-<%= expense.record_id %>"
-          class="rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
+          <%# m-auto is load-bearing: Tailwind's preflight sets margin:0 on
+              every element, which defeats the UA stylesheet's dialog:modal
+              { margin: auto } and parked this dialog in the viewport's top
+              left corner, over the sidebar. %>
+          class="m-auto rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
     <div class="max-w-sm p-4">
       <h2 class="text-base font-medium" id="unsaved-edits-title-<%= expense.record_id %>"
           data-review-decision-target="title">

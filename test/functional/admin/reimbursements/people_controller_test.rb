@@ -113,6 +113,94 @@ module Admin
       assert_includes response.body, "Missing"
     end
 
+    # Every write on this page comes back with that person's row open and
+    # scrolled to. Saving bank details used to collapse the row and return to
+    # the top of the page, so "Mark as verified" — the obvious next click —
+    # meant finding and reopening them again.
+    def assert_redirected_to_person(person)
+      assert_redirected_to admin_reimbursements_people_path(person: person.record_id,
+                                                            anchor: "person-#{person.record_id}")
+    end
+
+    # --- Findable: filter, order, claims link -----------------------------
+
+    test "index filters by name" do
+      sign_in @user
+
+      get :index, params: { q: "ivy" }
+
+      names = assigns(:people).map(&:name)
+      assert_includes names, "Invalid Ivy"
+      assert_not_includes names, "Valid Vic"
+    end
+
+    test "index filters by email" do
+      sign_in @user
+
+      get :index, params: { q: "ophelia@example" }
+
+      assert_equal [ "Outside Ophelia" ], assigns(:people).map(&:name)
+    end
+
+    test "index lists people alphabetically" do
+      # Accented, because the column collates utf8mb4_unicode_ci (which folds
+      # accents) while Ruby's String comparison is byte-wise: an in-memory sort
+      # would put Ábel after Valid Vic. The blanks-last half of the ORDER BY
+      # cannot be exercised here — Person validates name's presence — but it
+      # guards the legacy rows that predate that validation.
+      create_reimbursements_person(name: "Ábel Aardvark", email: "abel@example.com")
+      sign_in @user
+
+      get :index
+
+      names = assigns(:people).map(&:name)
+      assert_equal "Ábel Aardvark", names.first
+      assert_equal names, names.sort_by { |n| n.unicode_normalize(:nfd) }
+    end
+
+    test "index links each person to their own claims" do
+      create_reimbursements_expense(person: @valid_person,
+                                    budget: create_reimbursements_budget(name: "Props"))
+      sign_in @user
+
+      get :index
+
+      assert_response :success
+      assert_select "a[href=?]", admin_reimbursements_expense_edits_path(person: @valid_person.record_id),
+                    text: "1 claim"
+      # Somebody who has never claimed says so rather than linking to nothing.
+      assert_match(/No claims/, response.body)
+    end
+
+    test "index opens and anchors the row named by ?person=" do
+      sign_in @user
+
+      get :index, params: { person: @valid_person.record_id }
+
+      assert_select "details[open]##{"person-#{@valid_person.record_id}"}"
+      assert_select "details[open]##{"person-#{@missing_person.record_id}"}", false,
+                    "only the named row opens"
+    end
+
+    test "index explains what the six badges mean, Outside spec included" do
+      sign_in @user
+
+      get :index
+
+      assert_match(/publishes no rule covering that sort code/, response.body)
+      assert_match(/does <strong>not<\/strong> mean the details are wrong/, response.body)
+    end
+
+    test "the People CSV carries the on-screen filter" do
+      sign_in @user
+
+      get :index, params: { q: "ivy" }, format: :csv
+
+      assert_response :success
+      assert_includes response.body, "Invalid Ivy"
+      assert_not_includes response.body, "Valid Vic"
+    end
+
     # --- Update: bank details ---------------------------------------------
 
     test "saving bank details writes formatted values and an audit note" do
@@ -121,7 +209,7 @@ module Admin
       patch :update, params: { id: @missing_person.record_id,
                                sort_code: "089999", account_number: "66374958" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @missing_person
       details = @missing_person.reload.payment_details
       assert_equal "08-99-99", details.sort_code
       assert_equal "66374958", details.account_number
@@ -178,7 +266,7 @@ module Admin
       patch :update, params: { id: @valid_person.record_id,
                                sort_code: "08-99-99", account_number: "66374958" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @valid_person
       assert_equal "No changes to save.", flash[:notice]
       assert_equal before, @valid_person.reload.payment_details.updated_at
     end
@@ -194,7 +282,7 @@ module Admin
       patch :update, params: { id: @valid_person.record_id,
                                sort_code: "08-99-99", account_number: "66374958" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @valid_person
       assert_equal "No changes to save.", flash[:notice]
       assert_equal "089999", @valid_person.reload.payment_details.sort_code,
                    "the identical-digits submission must not rewrite the record"
@@ -231,7 +319,7 @@ module Admin
 
       patch :update, params: { id: @valid_person.record_id, verify: "1" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @valid_person
       assert @valid_person.reload.verified?
     end
 
@@ -240,7 +328,7 @@ module Admin
 
       patch :update, params: { id: @missing_person.record_id, verify: "1" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @missing_person
       assert_match(/no bank details/, flash[:alert])
       assert_not @missing_person.reload.verified?
     end
@@ -250,7 +338,7 @@ module Admin
 
       patch :update, params: { id: @invalid_person.record_id, verify: "1" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @invalid_person
       assert_match(/fail the modulus check/, flash[:alert])
       assert_not @invalid_person.reload.verified?
     end
@@ -260,7 +348,7 @@ module Admin
 
       patch :update, params: { id: @outside_person.record_id, verify: "1" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person @outside_person
       assert @outside_person.reload.verified?
     end
 
@@ -273,7 +361,7 @@ module Admin
       patch :update, params: { id: verified_person.record_id,
                                sort_code: "20-20-20", account_number: "50502366" }
 
-      assert_redirected_to admin_reimbursements_people_path
+      assert_redirected_to_person verified_person
       assert_not verified_person.reload.verified?,
                  "a bank-detail correction must not leave a stale Verified badge standing"
     end
