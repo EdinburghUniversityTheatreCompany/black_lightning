@@ -258,4 +258,25 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes links, "in@bedlamtheatre.invalid"
     assert_includes links, ::Reimbursements::CostCentre.default.receive_mailbox
   end
+
+  # An income line's `remaining` is nil even when a figure IS set — its plan is
+  # money to raise, so "what is left" means nothing on that side. Printing the
+  # no-budget wording there contradicted the amount in the same row's Initial
+  # column.
+  test "an income line with a plan does not claim nobody set a budget" do
+    income = create_reimbursements_budget(name: "Ticket income", budget_type: "Income",
+                                          initial_budget: 800)
+
+    rendered = reimbursements_budget_remaining(income)
+
+    assert_nil income.remaining, "the fixture must reproduce the nil this guards"
+    assert_not_includes rendered, "No budget set"
+    assert_includes rendered, "Income is measured by what it raises"
+  end
+
+  test "a line with no figure at all still says nobody set a budget" do
+    bare = create_reimbursements_budget(name: "Tech", initial_budget: nil)
+
+    assert_includes reimbursements_budget_remaining(bare), "No budget set"
+  end
 end

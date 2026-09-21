@@ -121,6 +121,12 @@ ChaosRails::Application.routes.draw do
       # accepts_nested_attributes_for :budgets).
       resources :areas, only: %i[index new create edit update]
 
+      # The area PAGE is the one reimbursements screen finance and a budget
+      # OWNER share, so it cannot sit behind AreasController's finance gate —
+      # AreasController#show skips it and applies the union instead. Declared
+      # separately from the block above so that difference is visible here.
+      resources :areas, only: %i[show]
+
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index new create edit update] do
@@ -133,6 +139,13 @@ ChaosRails::Application.routes.draw do
           delete :delete_forecast
         end
       end
+
+      # A loose line's own page — the same shape as an area's, for a budget that
+      # belongs to no area. Owner-visible, so it is not finance-gated.
+      #
+      # Declared AFTER the block above on purpose: a member :show route matches
+      # any single segment, so declared first it swallows /budgets/overview.
+      resources :budgets, only: %i[show]
 
       # Multi-budget forecast revisions: one shared date + note across several
       # budgets (e.g. after a budget meeting).

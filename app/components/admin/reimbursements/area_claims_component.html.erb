@@ -1,0 +1,70 @@
+<%= render CardComponent.new(title: "Claims", html_class: "mt-4") do %>
+  <% unless any_claims? %>
+    <p class="text-gray-600">
+      No claims yet. They appear here as soon as somebody submits one against this area, with
+      where each has got to.
+    </p>
+  <% end %>
+
+  <% if any_claims? %>
+    <nav class="mb-3 flex flex-wrap gap-1" aria-label="Filter claims by where they have got to">
+      <% tabs.each do |key| %>
+        <%= link_to tab_path(key),
+                    class: "rounded border px-3 py-1 text-sm #{key == tab ? "border-gray-300 bg-white font-semibold" : "border-transparent text-gray-600 hover:bg-gray-100"}",
+                    aria: { current: (key == tab ? "page" : nil) } do %>
+          <%# Parenthesised so the count reads apart from the label: "Paid 2"
+              scans as a label of its own, and "With EUSA 1" as a date. %>
+          <%= label_for(key) %> <span class="tabular-nums">(<%= count_for(key) %>)</span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">#</th>
+            <th scope="col" class="px-3 py-2">Where it is</th>
+            <th scope="col" class="px-3 py-2 text-right">Amount</th>
+            <th scope="col" class="px-3 py-2">Line</th>
+            <th scope="col" class="px-3 py-2">What for</th>
+            <th scope="col" class="px-3 py-2">Claimed by</th>
+            <th scope="col" class="px-3 py-2">Submitted</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% claims.each do |claim| %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2 whitespace-nowrap">
+                <% if claim_path(claim) %>
+                  <%= link_to "##{claim.auto_number}", claim_path(claim), class: "font-semibold" %>
+                <% else %>
+                  <span class="font-semibold">#<%= claim.auto_number %></span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2">
+                <span class="inline-block rounded-full border px-2 text-xs font-semibold whitespace-nowrap <%= status_classes(claim) %>">
+                  <%= status_label(claim) %>
+                </span>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(claim.amount) %></td>
+              <td class="px-3 py-2"><%= claim.budget&.name %></td>
+              <td class="px-3 py-2">
+                <%= claim.description %>
+                <% if claim.expense_type == ::Reimbursements::Expense::TYPE_INVOICE %>
+                  <span class="ml-1 rounded-full border border-gray-300 px-2 text-xs text-gray-600">Invoice</span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2"><%= claim.person&.name %></td>
+              <td class="px-3 py-2 whitespace-nowrap text-gray-600">
+                <%= reimbursements_date(claim.submitted_at) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%= paginate claims %>
+  <% end %>
+<% end %>

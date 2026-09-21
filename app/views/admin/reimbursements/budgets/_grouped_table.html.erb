@@ -4,7 +4,8 @@
       measured at 1366x768 this table is 1218px of columns in a 1012px box, so
       Edit sat 87px off screen. The budget NAME is a link to the same form, so
       there are two routes to it either way. %>
-  <table class="table table-hover table-sticky-head table-pinned-actions">
+  <table class="table table-hover table-sticky-head table-pinned-actions"
+         data-controller="sticky-table">
     <thead>
       <tr>
         <% headers.each do |header| %>
@@ -25,7 +26,8 @@
         <tr class="bg-gray-50">
           <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left py-2">
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span class="font-semibold text-base"><%= area.name %></span>
+              <%= link_to area.name, admin_reimbursements_area_path(area.record_id),
+                          class: "font-semibold text-base" %>
               <%# Only shown when some of the area's lines sit in another year or cost centre. %>
               <% if visible_count < total_count %>
                 <span class="text-sm text-gray-500">

@@ -15,6 +15,13 @@ module Admin
     # the bare top-level params otherwise, so a params hash posted directly
     # (as a controller test does) works exactly like a real form submission.
     class AreasController < FinanceController
+      include ListsClaims
+
+      # The area PAGE is shared with budget owners, who do not hold the finance
+      # permission, so #show steps out from under FinanceController's gate and
+      # applies the union instead. Everything else here stays finance-only.
+      skip_before_action :authorize_finance!, only: %i[show]
+      before_action :authorize_area_page!, only: %i[show]
       before_action :set_area, only: %i[edit update]
 
       # Only the fields areas/_budget_fields.html.erb actually renders.
@@ -28,6 +35,20 @@ module Admin
       def index
         @title = "Areas"
         @areas = paginate(store.areas_for_year)
+        @people_by_id = store.people.index_by(&:record_id)
+      end
+
+      # GET /admin/reimbursements/areas/:id
+      #
+      # What one show has, has spent, and is waiting on. Read-only for an
+      # owner; finance gets the same page with the actions and the finance
+      # vocabulary beside each plain label.
+      def show
+        @title = @area.name
+        @summary = ::Reimbursements::SpendSummary.for_area(@area)
+        @expense_lines, @income_lines = @area.budgets.partition { |line| !line.income? }
+        load_claims(@area.budgets)
+        @changes = ::Reimbursements::BudgetChanges.for_area(@area)
         @people_by_id = store.people.index_by(&:record_id)
       end
 
@@ -86,6 +107,20 @@ module Admin
       end
 
       private
+
+      # Finance, or a person this area's owner set names. Anything else is a
+      # 404 rather than a 403, as ReceiptFilesController does: a 403 tells a
+      # stranger the area exists.
+      def authorize_area_page!
+        @area = store.find_area(params[:id])
+        raise ActiveRecord::RecordNotFound if @area.nil? || !area_page_visible?(@area)
+      end
+
+      def area_page_visible?(area)
+        return true if can?(:manage, :reimbursements_finance)
+
+        current_person.present? && area.owner_ids.include?(current_person.record_id)
+      end
 
       def set_area
         @area = find_or_404(:find_area)

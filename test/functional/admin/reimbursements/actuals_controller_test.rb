@@ -151,13 +151,30 @@ module Admin
     end
 
     test "shows the linked-to state per row" do
+      # Seeded here because the test used to render ONE unlinked row and pass
+      # on the page's chrome: the Finance sidebar's old "Expenses" link carried
+      # the word "Expense" until the nav was regrouped, so a bare body match was
+      # satisfied whatever the rows said.
+      budget = create_reimbursements_budget(name: "Ticket income", budget_type: "Income")
+      expense = create_reimbursements_expense(budget: budget, description: "Linked claim")
+      create_reimbursements_eusa_actual(narrative: "Paid by BACS", debit: 10,
+                                        expense_id: expense.record_id)
+      create_reimbursements_eusa_actual(narrative: "Box office", credit: 20,
+                                        budget_id: budget.record_id)
+
       sign_in @user
-      get :index
+      # The full ledger: it opens on the rows needing attention, which is
+      # exactly the view a LINKED row is filtered out of.
+      get :index, params: { state: "all" }
 
       assert_response :success
-      assert_includes response.body, "Expense"
-      assert_includes response.body, "Budget"
-      assert_includes response.body, "Unlinked"
+      # The BADGES in the "Linked to" column, not a bare body match: reading the
+      # whole page let the sidebar satisfy this (its "Expenses" link carried the
+      # word until the nav was regrouped), so it passed whatever the rows said.
+      ledger = css_select("table").map(&:text).join(" ")
+      assert_includes ledger, "Expense"
+      assert_includes ledger, "Budget"
+      assert_includes ledger, "Unlinked"
     end
 
     test "links an expense-linked actual to its finance edit page" do

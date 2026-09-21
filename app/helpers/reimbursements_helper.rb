@@ -65,6 +65,20 @@ module ReimbursementsHelper
   # (YYYY-MM-DD), or "-" when nil/blank. Accepts a Date or Time (the date part
   # is taken). Use this everywhere a reimbursements date is shown, so ad-hoc
   # strftime/iso8601/localize calls can't drift apart.
+  # How long a claim has been sitting with its owner. Days rather than a date,
+  # because "waiting 6 days" is the thing being judged and a submitted date
+  # makes the reader do the arithmetic.
+  def reimbursements_waiting_for(submitted_at)
+    return "just submitted" if submitted_at.blank?
+
+    days = (Date.current - submitted_at.to_date).to_i
+    case days
+    when ..0 then "submitted today"
+    when 1 then "waiting 1 day"
+    else "waiting #{days} days"
+    end
+  end
+
   def reimbursements_date(value)
     return "-" if value.blank?
 
@@ -260,6 +274,14 @@ module ReimbursementsHelper
   # fully spent.
   def reimbursements_budget_remaining(budget)
     if budget.remaining.nil?
+      # An INCOME line's remaining is nil even when a figure IS set: its plan is
+      # money to raise, so "what is left" means nothing on that side. Saying
+      # "No budget set" there contradicted the £800.00 in the same row's
+      # Initial column.
+      return content_tag(:span, "—", class: "text-gray-500",
+                         title: "Income is measured by what it raises (see EUSA actual), " \
+                                "not by what is left of it.") if budget.income?
+
       return content_tag(:span, "No budget set", class: "text-gray-500",
                          title: "No forecast has been logged and no initial budget was set, " \
                                 "so there is nothing left to be left of.")

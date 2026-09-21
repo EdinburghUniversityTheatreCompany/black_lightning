@@ -1,0 +1,111 @@
+<%= render CardComponent.new(title: heading, html_class: "mt-4") do %>
+  <% if lines.empty? && income_lines.empty? %>
+    <p class="text-gray-600">
+      No lines yet, so nobody can claim against <%= area&.name || "this budget" %>. A line is one
+      category of spending, such as Set or Marketing.
+      <% if finance? && area %>
+        <%= link_to "Add a line", edit_admin_reimbursements_area_path(area.record_id),
+                    class: "underline" %>.
+      <% end %>
+    </p>
+  <% end %>
+
+  <% if lines.any? %>
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">Line</th>
+            <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
+            <th scope="col" class="px-3 py-2 text-right">Budget</th>
+            <th scope="col" class="px-3 py-2 text-right">Spent</th>
+            <th scope="col" class="px-3 py-2 text-right">Waiting</th>
+            <th scope="col" class="px-3 py-2 text-right">Left</th>
+            <% if finance? %><th scope="col" class="px-3 py-2"><span class="sr-only">Actions</span></th><% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <% lines.each do |line| %>
+            <% figures = summary_for(line) %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2">
+                <span class="font-medium"><%= line.name %></span>
+                <% unless line.active %>
+                  <span class="ml-1 rounded-full border border-gray-300 px-2 text-xs text-gray-600">Closed</span>
+                <% end %>
+                <% if figures.over? %>
+                  <span class="ml-1 rounded-full border border-red-200 bg-red-50 px-2 text-xs font-semibold text-danger">Over budget</span>
+                <% end %>
+              </td>
+              <% if finance? %>
+                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "—" %></td>
+              <% end %>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <% if figures.no_budget_set? %>
+                  <span class="text-gray-500">not set</span>
+                <% else %>
+                  <%= reimbursements_money(figures.budget_amount) %>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <% if figures.no_budget_set? %>
+                  <span class="text-gray-500">no budget set</span>
+                <% elsif figures.over? %>
+                  <span class="text-danger"><%= reimbursements_money(figures.over_by) %> over</span>
+                <% else %>
+                  <%= reimbursements_money(figures.left) %>
+                <% end %>
+              </td>
+              <% if finance? %>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  <%= link_to "Edit", edit_admin_reimbursements_budget_path(line.record_id),
+                              class: ButtonComponent.classes_for(variant: :secondary, size: :sm) %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if income_lines.any? %>
+    <h3 class="mt-4 mb-2 font-medium">Income</h3>
+    <p class="mb-2 text-sm text-gray-600">
+      Money this area expects to raise. It is listed on its own because income and spending are
+      never added together.
+    </p>
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">Line</th>
+            <% if finance? %><th scope="col" class="px-3 py-2">Nominal code</th><% end %>
+            <th scope="col" class="px-3 py-2 text-right">Expected</th>
+            <th scope="col" class="px-3 py-2 text-right">Received</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% income_lines.each do |line| %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2 font-medium"><%= line.name %></td>
+              <% if finance? %>
+                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "—" %></td>
+              <% end %>
+              <td class="px-3 py-2 text-right tabular-nums">
+                <% if income_expected(line).nil? %>
+                  <span class="text-gray-500">not set</span>
+                <% else %>
+                  <%= reimbursements_money(income_expected(line)) %>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(income_received(line)) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>
