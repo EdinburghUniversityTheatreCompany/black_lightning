@@ -416,6 +416,31 @@ module Admin
         assert_no_match(/worth checking before approving/i, response.body)
       end
 
+      test "edit gives no approval advice on a settled claim" do
+        # A Paid claim opened with "This can't be approved until these are
+        # fixed" and "worth checking before approving" stacked above "already
+        # been paid" — advice about a decision nobody will take again. The
+        # index has suppressed these on non-actionable rows for a while.
+        expense = expense_at("Paid", receipt: false, budget: nil)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_no_match(/can't be approved until these are fixed/i, response.body)
+        assert_no_match(/worth checking before approving/i, response.body)
+        assert_match(/already been paid/i, response.body)
+      end
+
+      test "edit still gives approval advice on an Approved claim" do
+        expense = expense_at("Approved", receipt: false, budget: nil)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/can't be approved until these are fixed/i, response.body)
+      end
+
       # --- Edit renders at every status ------------------------------------
 
       EDITABLE_STATUSES.each do |status|
