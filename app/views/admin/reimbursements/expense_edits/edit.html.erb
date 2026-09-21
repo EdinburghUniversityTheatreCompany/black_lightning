@@ -87,6 +87,71 @@
 
 <% end %>
 
+<%# --- History: what has actually happened to this claim ---
+    Read-only. It had no timeline at all — submitted, endorsed, approved,
+    batched and paid live on four tables and no screen assembled them — so a
+    Paid claim's page was a status pill and nothing else, and the rejection
+    reason and the override note, both stored, appeared nowhere in the portal.
+    Every row is omitted when it has nothing to say, so a fresh claim shows
+    only its submission. %>
+<% has_history = @expense.submitted_at.present? || @endorsement.present? ||
+                 @expense.rejection_reason.present? || @batch.present? ||
+                 @expense.payment_confirmed_date.present? %>
+<% if has_history %>
+  <%= render CardComponent.new(title: "History", html_class: "mt-4") do %>
+    <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+      <% if @expense.submitted_at.present? %>
+        <dt class="font-medium">Submitted</dt>
+        <dd><%= reimbursements_date(@expense.submitted_at) %></dd>
+      <% end %>
+
+      <% if @endorsement&.owner_endorsement? %>
+        <dt class="font-medium">Owner sign-off</dt>
+        <dd>
+          <%= @endorsing_person&.name.presence || "an owner" %>
+          on <%= reimbursements_date(@endorsement.endorsed_at) %>
+        </dd>
+      <% elsif @endorsement&.finance_override? %>
+        <%# Who bypassed the owner gate, when, and the reason they gave. The
+            note was write-only before this. %>
+        <dt class="font-medium">Owner sign-off overridden</dt>
+        <dd>
+          <%= @endorsement.overridden_by&.name_or_email.presence || "a finance user" %>
+          on <%= reimbursements_date(@endorsement.endorsed_at) %><% if @endorsement.note.present? %>
+            — <q><%= @endorsement.note %></q>
+          <% end %>
+        </dd>
+      <% end %>
+
+      <% if @expense.rejection_reason.present? %>
+        <dt class="font-medium">Rejected</dt>
+        <dd>
+          <% if @expense.rejection_notified.present? %>
+            <%= reimbursements_date(@expense.rejection_notified) %>, producer emailed —
+          <% end %>
+          <q><%= @expense.rejection_reason %></q>
+        </dd>
+      <% end %>
+
+      <% if @batch.present? %>
+        <dt class="font-medium">In batch</dt>
+        <dd>
+          <%= link_to @batch.name.presence || @batch.record_id,
+                      admin_reimbursements_batch_path(@batch.record_id),
+                      class: "text-primary underline" %>
+          <%# "BACS date", never "sent": nothing records the manual send. %>
+          <span class="text-gray-500">(BACS <%= reimbursements_date(@batch.date_sent) %>)</span>
+        </dd>
+      <% end %>
+
+      <% if @expense.payment_confirmed_date.present? %>
+        <dt class="font-medium">Payment confirmed</dt>
+        <dd><%= reimbursements_date(@expense.payment_confirmed_date) %></dd>
+      <% end %>
+    </dl>
+  <% end %>
+<% end %>
+
 <%# Details and receipts side by side, so the figure on the document and the
     figure in the form can be read together instead of in two tabs. Stacks on
     narrow screens, where squeezing both would leave neither readable. %>

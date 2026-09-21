@@ -163,6 +163,21 @@ module Reimbursements
               .to_a
     end
 
+    # The owner sign-off (or finance override) covering one claim, or nil.
+    # The endorsing user is preloaded because every caller names them.
+    def endorsement_for_expense(record_id)
+      OwnerEndorsement.includes(:overridden_by).for_expense(record_id).first
+    end
+
+    # The same, for a list of claims in one query — the Review queue draws a
+    # chip per card and would otherwise fire a query each.
+    def endorsements_by_expense(record_ids)
+      return {} if record_ids.empty?
+
+      OwnerEndorsement.includes(:overridden_by)
+                      .where(expense_record_id: record_ids).index_by(&:expense_record_id)
+    end
+
     # How many claims each person has SUBMITTED, keyed by their record id.
     # One grouped query, because the People index would otherwise count per
     # row — and the count is a link to that person's filtered claim list.

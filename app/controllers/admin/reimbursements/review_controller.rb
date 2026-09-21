@@ -282,10 +282,15 @@ module Admin
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
         @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
-        # For the positive "Endorsed by / Cleared by finance" chip on the card,
-        # and to resolve the endorsing owner's name.
-        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
-          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
+        # For the positive "Endorsed by / Owner sign-off overridden" chip on
+        # the card, and to resolve the endorsing owner's name.
+        #
+        # Over the APPROVED claims as well as the pending ones. Built from the
+        # pending list alone, the "Owner sign-off overridden" pill vanished the
+        # moment the override succeeded — so the one record that finance
+        # bypassed a control disappeared exactly when it started to matter.
+        @endorsements_by_expense =
+          store.endorsements_by_expense((@pending + @approved).map(&:record_id))
         @people_by_id = store.people.index_by(&:record_id)
         # partition: ready first (needs_attention false, no possible duplicate),
         # attention second. A possible duplicate is folded in here (not into the

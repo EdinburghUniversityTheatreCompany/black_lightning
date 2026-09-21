@@ -877,6 +877,21 @@ module Admin
         assert_includes response.body, "Endorsed by Olga Owner"
       end
 
+      test "the Approved tab keeps the 'Owner sign-off overridden' pill" do
+        # The endorsement lookup was built from the PENDING list alone, so the
+        # one record that finance bypassed a control vanished the moment the
+        # bypass succeeded.
+        gated_expense
+        sign_in @user
+        patch :override_approve, params: { id: gated_expense.record_id }
+
+        get :index, params: { tab: "approved" }
+
+        assert_response :success
+        assert_includes assigns(:approved).map(&:record_id), gated_expense.record_id
+        assert_match(/Owner sign-off overridden/, response.body)
+      end
+
       test "editing a covered claim's amount re-opens the gate and says so" do
         endorse_gated_expense!
         sign_in @user

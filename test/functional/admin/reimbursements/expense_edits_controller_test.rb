@@ -416,6 +416,85 @@ module Admin
         assert_no_match(/worth checking before approving/i, response.body)
       end
 
+      # --- History: the claim says what happened to it ----------------------
+
+      test "edit shows nothing but the submission for a fresh claim" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_response :success
+        assert_no_match(/Owner sign-off/, response.body)
+        assert_no_match(/In batch/, response.body)
+      end
+
+      test "edit names the owner who signed the claim off, and when" do
+        expense = expense_at("Approved")
+        owner = create_reimbursements_person(name: "Olga Owner", email: "olga@example.com")
+        ::Reimbursements::OwnerEndorsement.create!(
+          expense_record_id: expense.record_id, budget_record_id: @budget.record_id,
+          endorsed_by_person_id: owner.record_id, endorsed_amount: expense.amount,
+          endorsed_at: Time.zone.parse("2026-09-01 10:00")
+        )
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/Owner sign-off/, response.body)
+        assert_match(/Olga Owner/, response.body)
+        assert_match(/2026-09-01/, response.body)
+      end
+
+      test "edit shows a finance override with its note, which was write-only before" do
+        expense = expense_at("Approved")
+        ::Reimbursements::OwnerEndorsement.create!(
+          expense_record_id: expense.record_id, budget_record_id: @budget.record_id,
+          overridden_by: @user, note: "Owner has no portal account",
+          endorsed_amount: expense.amount, endorsed_at: Time.zone.parse("2026-09-02 10:00")
+        )
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/Owner sign-off overridden/, response.body)
+        assert_match(/Owner has no portal account/, response.body)
+        assert_match(/2026-09-02/, response.body)
+      end
+
+      test "edit shows the rejection reason, which was stored and rendered nowhere" do
+        expense = expense_at("Rejected", rejection_reason: "No receipt attached",
+                                         rejection_notified: Time.zone.parse("2026-09-03 10:00"))
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/No receipt attached/, response.body)
+        assert_match(/producer emailed/, response.body)
+      end
+
+      test "edit names the batch a claim is in, linked, with its BACS date" do
+        batch = create_reimbursements_batch(name: "May run", date_sent: Date.new(2026, 5, 13))
+        expense = expense_at("Submitted", batch: batch)
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_select "a[href=?]", admin_reimbursements_batch_path(batch.record_id), text: "May run"
+        assert_match(/BACS 2026-05-13/, response.body)
+        assert_no_match(/Sent 2026-05-13/, response.body)
+      end
+
+      test "edit shows the payment-confirmed date on a Paid claim" do
+        expense = expense_at("Paid", payment_confirmed_date: Date.new(2026, 6, 1))
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_match(/Payment confirmed/, response.body)
+        assert_match(/2026-06-01/, response.body)
+      end
+
       # --- Search finds the submitter, not only the payee -------------------
 
       def third_party_claim

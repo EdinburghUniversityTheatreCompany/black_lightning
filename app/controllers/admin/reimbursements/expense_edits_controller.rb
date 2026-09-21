@@ -126,6 +126,23 @@ module Admin
         @budget_by_id = store.budgets.index_by(&:record_id)
         @attention =
           ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
+        load_history(expense)
+      end
+
+      # What has actually happened to this claim. It had no timeline at all:
+      # submitted / endorsed / approved / batched / paid live on four tables
+      # and no screen assembled them, so a Paid claim's page was a status pill
+      # and nothing else — and the rejection reason and override note, both
+      # stored, were rendered nowhere in the portal.
+      #
+      # Everything through the store, and each lookup is a single row, so
+      # opening one claim costs two extra queries rather than a scan.
+      def load_history(expense)
+        @endorsement = store.endorsement_for_expense(expense.record_id)
+        @endorsing_person =
+          store.people.find { |p| p.record_id == @endorsement.endorsed_by_person_id } if
+            @endorsement&.owner_endorsement?
+        @batch = store.find_batch(expense.batch_id.to_s) if expense.batch_id.present?
       end
 
       # All expenses, newest first, narrowed by the status/budget/attention
