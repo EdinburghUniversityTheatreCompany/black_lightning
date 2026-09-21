@@ -5,9 +5,14 @@
   # is the first thing on the row — so the one click this table exists for is
   # reachable without scrolling sideways.
   name = safe_join([
+    # The accessible name is the QUALIFIED one, because the rowgroup heading
+    # above is not announced with the link and three links reading "Marketing"
+    # are ambiguous. It deliberately does NOT start with "Edit": that is the
+    # button at the end of the row, and two controls on one row both
+    # announcing "Edit Cogito: Marketing" is worse than one.
     link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
             class: "font-medium text-primary underline",
-            "aria-label": "Edit #{budget.display_name}"),
+            "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
     reimbursements_budget_health_badge(budget)
   ].compact, " ")

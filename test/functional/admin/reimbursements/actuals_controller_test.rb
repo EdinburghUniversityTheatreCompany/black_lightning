@@ -961,6 +961,26 @@ module Admin
       assert(assigns(:budget_groups).flat_map(&:last).all? { |label, _| label.include?("·") })
     end
 
+    # The MARKUP, not just the ivar: a bare collection with group_method
+    # renders one OPTION PER GROUP — the label as its text and the whole array
+    # as its value — which looks plausible on the page and offers no budget at
+    # all. Only `as: :grouped_select` really groups.
+    test "new_expense renders real optgroups, each holding its budgets" do
+      create_reimbursements_budget(name: "Sundries", nominal_code: "500000")
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      groups = css_select("select#reimbursements_expense_form_budget_record_id optgroup")
+      assert_equal 2, groups.size
+      assert_includes groups.first["label"], "500000"
+      assert(groups.all? { |group| group.css("option").any? },
+             "an optgroup with no options offers nothing")
+      assert_includes css_select("select#reimbursements_expense_form_budget_record_id option")
+                      .map { |option| option.text.strip }.join(" "), "Sundries"
+    end
+
     test "link_expense refuses a row that is already linked" do
       sign_in @user
 
