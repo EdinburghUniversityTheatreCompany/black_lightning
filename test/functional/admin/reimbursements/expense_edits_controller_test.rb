@@ -203,7 +203,7 @@ module Admin
 
         get :index
 
-        assert_includes response.body, "Export Workbook"
+        assert_includes response.body, "Export workbook"
         assert_includes response.body, "/admin/reimbursements/export"
       end
 

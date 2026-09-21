@@ -37,16 +37,32 @@ class NavigationHelperTest < ActionView::TestCase
     assert_nil finance_category
   end
 
-  test "the nine finance-gated links all appear with the finance permission" do
+  test "every finance-gated link appears with the finance permission" do
     grant_finance_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil) # ability is memoized; force a rebuild
 
-    gated_titles = %w[Review Expenses People Budgets Build\ Batch History Reconcile
-                       EUSA\ Actuals Settings]
+    gated_titles = [ "Review claims", "All claims", "Build batch", "Batches", "Budgets",
+                     "Overview", "Areas", "Forecast revisions", "Reconcile", "Ledger",
+                     "Export workbook", "People", "Financial years", "Cost centres",
+                     "Email & integrations" ]
 
     titles = finance_category[:children].map { |child| child[:title] }
 
     gated_titles.each { |title| assert_includes titles, title }
+  end
+
+  # Fifteen flat links put the weekly work at positions 1, 2, 9 and 10, so the
+  # category is broken into the four jobs — in the order they are done.
+  test "the finance links are grouped by the job they belong to, weekly work first" do
+    grant_finance_permission(@current_user)
+    @current_user.instance_variable_set(:@ability, nil)
+
+    groups = finance_category[:children].map { |child| child[:group] }
+
+    assert_equal [ "Pay claims", "Budgets", "EUSA ledger", "Setup" ], groups.uniq
+    assert_empty groups.compact_blank.tally.select { |_, count| count.zero? },
+                 "every finance link needs a group, or it renders under the previous one"
+    assert_nil groups.find(&:blank?), "a finance link with no group: #{finance_category[:children].inspect}"
   end
 
   test "the producer portal permission alone does not reveal the finance-gated links" do

@@ -65,23 +65,36 @@ module NavigationHelper
     children << { title: "My Budgets", path: admin_reimbursements_my_budgets_path, fa_icon: "fa-user-check" } if can? :access, :reimbursements
     navbar_categories << { title: "My Reimbursements", children: children, fa_icon: "fa-receipt" }
 
-    # Finance — the finance-team-only reimbursements tooling.
+    # Finance — the finance-team-only reimbursements tooling, in the order the
+    # work is actually done rather than the order the screens were built.
+    #
+    # Fifteen flat links put the four WEEKLY items at positions 1, 2, 9 and 10,
+    # with annual setup wedged between them, so +group:+ breaks them into the
+    # four jobs: pay the claims, watch the budgets, keep the EUSA ledger true,
+    # set the thing up. The renames are the audit's: "Expenses" collided with
+    # the producer's own "My Claims", "History" named no subject, and
+    # "Settings" is really the cost centres.
     children = []
-    children << { title: "Review", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" } if can? :manage, :reimbursements_finance
-    children << { title: "Expenses", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" } if can? :manage, :reimbursements_finance
-    children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance
-    children << { title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project" } if can? :manage, :reimbursements_finance
-    children << { title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" } if can? :manage, :reimbursements_finance
-    children << { title: "Budget Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie" } if can? :manage, :reimbursements_finance
-    children << { title: "Budget Updates", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus" } if can? :manage, :reimbursements_finance
-    children << { title: "Financial Years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days" } if can? :manage, :reimbursements_finance
-    children << { title: "Build Batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" } if can? :manage, :reimbursements_finance
-    children << { title: "History", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" } if can? :manage, :reimbursements_finance
-    children << { title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" } if can? :manage, :reimbursements_finance
-    children << { title: "EUSA Actuals", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list" } if can? :manage, :reimbursements_finance
-    children << { title: "Integration Status", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" } if can? :manage, :reimbursements_finance
-    children << { title: "Settings", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" } if can? :manage, :reimbursements_finance
-    children << { title: "Export Workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" } if can? :manage, :reimbursements_finance
+    if can? :manage, :reimbursements_finance
+      children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" }
+      children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" }
+      children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" }
+      children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" }
+
+      children << { group: "Budgets", title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" }
+      children << { group: "Budgets", title: "Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie" }
+      children << { group: "Budgets", title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project" }
+      children << { group: "Budgets", title: "Forecast revisions", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus" }
+
+      children << { group: "EUSA ledger", title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" }
+      children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list" }
+      children << { group: "EUSA ledger", title: "Export workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" }
+
+      children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" }
+      children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days" }
+      children << { group: "Setup", title: "Cost centres", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" }
+      children << { group: "Setup", title: "Email & integrations", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" }
+    end
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
     # Building — the crypt climate monitor. ONE entry: Sensors is reached by a

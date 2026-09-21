@@ -7,8 +7,29 @@ class Admin::SidebarComponent < ViewComponent::Base
 
   private
 
+  # Pages that belong to a category but sit under no item's path: the two
+  # import wizards and the workbook download all live at the reimbursements
+  # root, so the whole Finance menu used to collapse the moment an operator
+  # entered one — losing their bearings exactly where the flow is longest.
+  ORPHAN_PAGES = {
+    "Finance" => %w[
+      /admin/reimbursements/budget_import
+      /admin/reimbursements/expense_import
+      /admin/reimbursements/export
+    ]
+  }.freeze
+
   def category_open?(category)
+    return true if orphan_page?(category)
+
     category[:children]&.any? { |item| active_item?(item) }
+  end
+
+  def orphan_page?(category)
+    current = normalise_path(@current_path)
+    ORPHAN_PAGES.fetch(category[:title], []).any? do |path|
+      current == path || current.start_with?("#{path}/")
+    end
   end
 
   # A nav item lights up for its own page and anything beneath it. Two things

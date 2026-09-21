@@ -60,4 +60,40 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
     assert_no_selector "a.active[href='/admin/climate']"
     assert_selector "a.active[href='/admin/climate/sensors']"
   end
+
+  # A long category is broken into the jobs it serves, with a heading each time
+  # the group changes. One level of nesting, so every link stays one click away.
+  test "renders a heading each time a category's group changes" do
+    grouped = [ { title: "Finance", fa_icon: "fa-money-bill-wave", children: [
+      { group: "Pay claims", title: "Review claims", path: "/admin/reimbursements/review", fa_icon: "fa-clipboard-check" },
+      { group: "Pay claims", title: "All claims", path: "/admin/reimbursements/expense_edits", fa_icon: "fa-pen-to-square" },
+      { group: "Setup", title: "People", path: "/admin/reimbursements/people", fa_icon: "fa-address-book" }
+    ] } ]
+
+    render_inline Admin::SidebarComponent.new(nav_items: grouped, current_user: @user,
+                                              current_path: "/admin/reimbursements/review")
+
+    headings = page.all("details p").map(&:text)
+    assert_equal [ "Pay claims", "Setup" ], headings
+  end
+
+  # The two import wizards and the workbook download sit under no item's path,
+  # so the whole category used to collapse exactly where the flow is longest.
+  test "a category stays open on a page that belongs to it but sits under no item" do
+    finance = [ { title: "Finance", fa_icon: "fa-money-bill-wave", children: [
+      { group: "Budgets", title: "Budgets", path: "/admin/reimbursements/budgets", fa_icon: "fa-sack-dollar" }
+    ] } ]
+
+    render_inline Admin::SidebarComponent.new(nav_items: finance, current_user: @user,
+                                              current_path: "/admin/reimbursements/budget_import")
+
+    assert_selector "details[open]"
+  end
+
+  test "a category with no group headings renders none" do
+    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user,
+                                              current_path: "/admin/shows")
+
+    assert_no_selector "details p"
+  end
 end

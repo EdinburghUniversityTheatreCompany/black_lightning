@@ -12,7 +12,9 @@
         <%= link_to tab_path(key),
                     class: "rounded border px-3 py-1 text-sm #{key == tab ? "border-gray-300 bg-white font-semibold" : "border-transparent text-gray-600 hover:bg-gray-100"}",
                     aria: { current: (key == tab ? "page" : nil) } do %>
-          <%= label_for(key) %> <span class="tabular-nums"><%= count_for(key) %></span>
+          <%# Parenthesised so the count reads apart from the label: "Paid 2"
+              scans as a label of its own, and "With EUSA 1" as a date. %>
+          <%= label_for(key) %> <span class="tabular-nums">(<%= count_for(key) %>)</span>
         <% end %>
       <% end %>
     </nav>
