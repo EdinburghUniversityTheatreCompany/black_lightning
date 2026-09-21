@@ -673,11 +673,6 @@ and restyles every button in the app, which is wider than the one form it was no
 
 The docs, the VS Code task and `bin/restart-web` were brought up to date on 2026-09-21. Still open:
 
-- **Nothing sets `MISE_ENV=development` locally**, only CI does, and `hk` lives in
-  `mise/config.development.toml`. So a plain shell cannot resolve `hk`, and the pre-commit hook fails
-  every `git commit` with "No version is set for shim: hk". Either the README's setup steps must say
-  to export it, or the repo should set it for everyone (a committed `.miserc.toml`, if the pinned mise
-  supports it — check before relying on it).
 - **`hk.pkl`'s `versions` step globs `mise.toml`**, which no longer exists, so a Ruby/Node bump in
   `mise/config.toml` may not trigger the drift guard. Test by bumping a version and committing.
   Its comments, and `.devcontainer/Dockerfile.dev` + `setup.sh`'s, still say `mise.toml` too.
