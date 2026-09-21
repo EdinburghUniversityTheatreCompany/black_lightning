@@ -76,6 +76,13 @@ module NavigationHelper
     # "Settings" is really the cost centres.
     children = []
     if can? :manage, :reimbursements_finance
+      # Ungrouped, above the four job groups, because it is not one of the four
+      # jobs — it is where you find out which of them is waiting on you. Needs
+      # `exact: true`: it points at the namespace root, and the sidebar marks an
+      # item active for its own page AND anything beneath it, so without it
+      # every finance screen would light this up alongside its own entry.
+      children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true }
+
       children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" }
       children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" }
       children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" }

@@ -92,7 +92,11 @@ ChaosRails::Application.routes.draw do
 
     # Producer-facing reimbursements portal (backed by the reimbursements_* MySQL tables).
     namespace :reimbursements do
-      root to: redirect("/admin/reimbursements/expenses")
+      # The portal's front door, answering each audience with its own landing:
+      # a finance user gets the dashboard, anybody else is redirected to their
+      # own claims — which is what this URL did for EVERYBODY, and why the
+      # business manager was greeted with "Submit your expenses here".
+      root to: "home#show"
       resources :expenses, only: %i[index new create edit update destroy show] do
         resources :receipts, only: %i[create destroy] do
           # The receipt bytes themselves, served by the app rather than over

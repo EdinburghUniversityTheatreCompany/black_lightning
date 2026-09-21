@@ -1,0 +1,210 @@
+<%= render "admin/reimbursements/shared/year_selector" %>
+<%= render "admin/reimbursements/shared/cost_centre_selector" %>
+
+<p class="mb-4 text-gray-600">
+  <%# The one paragraph a successor reads first. It names the weekly loop in
+      the order it is done, because the sidebar groups say what the screens
+      are and nothing said what the JOB is. %>
+  What the reimbursements portal is waiting on you for. The weekly loop is
+  <strong>review</strong> the claims people have filed, <strong>build a batch</strong> of the
+  approved ones, then <strong>send the EUSA draft</strong> it puts in your Outlook drafts. Once a
+  month EUSA's actuals export arrives and you <strong>reconcile</strong> it against the ledger.
+</p>
+
+<%= render CardComponent.new(title: "Claims") do %>
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <%= render "stat",
+               label: "To approve",
+               count: @home.to_approve.size,
+               amount: @home.to_approve_total,
+               detail: "Yours to decide.",
+               tone: :warning,
+               link_text: "Review claims",
+               path: admin_reimbursements_review_path(tab: "to_approve",
+                                                      cost_centre: selected_cost_centre&.key) %>
+    <%= render "stat",
+               label: "Waiting on a budget owner",
+               count: @home.awaiting_owner.size,
+               amount: @home.awaiting_owner_total,
+               detail: "Owners are reminded on this centre's run days; you can override.",
+               link_text: "Awaiting owner",
+               path: admin_reimbursements_review_path(tab: "awaiting_owner",
+                                                      cost_centre: selected_cost_centre&.key) %>
+    <%= render "stat",
+               label: "Approved, ready to batch",
+               count: @home.approved.size,
+               amount: @home.approved_total,
+               detail: "What the next BACS spreadsheet would pay.",
+               link_text: "Build batch",
+               path: new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key) %>
+  </div>
+<% end %>
+
+<%= render CardComponent.new(title: "The last batch", html_class: "mt-4") do %>
+  <% if @home.last_batch.nil? %>
+    <p class="text-gray-600">
+      No batch has been built yet. Approve some claims, then build a batch: that writes the BACS
+      spreadsheet, puts a covering email in this cost centre's Outlook drafts, and marks the
+      claims as sent to EUSA.
+    </p>
+    <p class="mt-2">
+      <%= link_to "Build batch",
+                  new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
+                  class: btn_classes(:secondary, :sm) %>
+    </p>
+  <% else %>
+    <% batch = @home.last_batch %>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <span class="font-medium">BACS <%= reimbursements_date(batch.date_sent) %></span>
+      <span class="text-sm">
+        <%= pluralize(@home.last_batch_expenses.size, "claim") %>
+      </span>
+      <span class="text-sm font-medium tabular-nums">
+        <%= reimbursements_money(@home.last_batch_total) %>
+      </span>
+      <% if batch.eusa_draft_created %>
+        <%= render BadgeComponent.new(type: :success, pill: true).with_content("EUSA draft created") %>
+      <% else %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft: needs a look") %>
+      <% end %>
+      <%= link_to "Batch detail", admin_reimbursements_batch_path(batch.record_id),
+                  class: btn_classes(:secondary, :sm) %>
+      <%= link_to "All batches",
+                  admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
+                  class: btn_classes(:secondary, :sm) %>
+    </div>
+    <p class="mt-2 text-sm text-gray-600">
+      <%# The portal records that it CREATED the draft; nothing records that
+          anybody sent it. Saying so is the difference between a status and a
+          guess, and sending it is the one manual step left in paying people. %>
+      The portal creates the draft; a person still has to open Outlook and send it. Nothing here
+      records whether that happened.
+    </p>
+  <% end %>
+<% end %>
+
+<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <%= render CardComponent.new(title: "EUSA ledger") do %>
+    <p class="mb-3 text-sm text-gray-600">
+      Imported ledger rows that no budget's figures account for — not linked to a claim, not
+      booked against an income line, and not one leg of an offsetting pair. Until they are
+      linked, that money is missing from every budget total.
+    </p>
+    <p class="mb-3">
+      <span class="text-2xl font-semibold tabular-nums <%= "text-warning" if @home.unattributed_count.positive? %>">
+        <%= @home.unattributed_count %>
+      </span>
+      <span class="text-sm text-gray-700">
+        <%# NET, and it can legitimately be negative (more unattributed income
+            than spend) — which is why the count is printed beside it rather
+            than the figure standing alone. %>
+        unlinked, net <%= reimbursements_money(@home.unattributed_total) %>
+      </span>
+    </p>
+    <% if @home.unattributed_preview.any? %>
+      <ul class="mb-3 flex flex-col gap-1 text-sm">
+        <% @home.unattributed_preview.each do |actual| %>
+          <li class="flex flex-wrap items-baseline gap-x-2">
+            <span class="text-gray-500"><%= reimbursements_date(actual.date) %></span>
+            <span class="grow"><%= actual.narrative.presence || actual.ref.presence || "(no narrative)" %></span>
+            <%# Debit and credit are printed apart, as the ledger prints them:
+                netting one row to a bare negative would read as bad news for
+                what is simply income nobody has booked to a line yet. %>
+            <% if actual.debit&.positive? %>
+              <span class="tabular-nums"><%= reimbursements_money(actual.debit) %></span>
+            <% else %>
+              <span class="tabular-nums"><%= reimbursements_money(actual.credit) %> in</span>
+            <% end %>
+          </li>
+        <% end %>
+        <%# The count above is the whole list and this is the first few of it,
+            so the difference has to be on screen: a "7 unlinked" heading over
+            five rows reads as a page that has lost two. %>
+        <% hidden = @home.unattributed_count - @home.unattributed_preview.size %>
+        <% if hidden.positive? %>
+          <li class="text-gray-500">and <%= pluralize(hidden, "more row") %> on the Ledger</li>
+        <% end %>
+      </ul>
+    <% end %>
+    <p class="flex flex-wrap gap-2">
+      <%= link_to "Ledger", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key),
+                  class: btn_classes(:secondary, :sm) %>
+      <%= link_to "Reconcile a new export", admin_reimbursements_reconciliation_path,
+                  class: btn_classes(:secondary, :sm) %>
+    </p>
+  <% end %>
+
+  <%= render CardComponent.new(title: "Budget health") do %>
+    <p class="mb-3 text-sm text-gray-600">
+      Lines with nothing left against their current plan — what has been approved, sent or paid
+      is already past the figure the committee agreed, as revised.
+    </p>
+    <p class="mb-3">
+      <span class="text-2xl font-semibold tabular-nums <%= "text-danger" if @home.over_budget_count.positive? %>">
+        <%= @home.over_budget_count %>
+      </span>
+      <span class="text-sm text-gray-700">
+        <%= "line".pluralize(@home.over_budget_count) %> over budget
+      </span>
+    </p>
+    <% if @home.over_budget_preview.any? %>
+      <ul class="mb-3 flex flex-col gap-1 text-sm">
+        <% @home.over_budget_preview.each do |budget| %>
+          <li class="flex flex-wrap items-baseline gap-x-2">
+            <%= link_to budget.display_name,
+                        edit_admin_reimbursements_budget_path(budget.record_id),
+                        class: "grow underline" %>
+            <span class="tabular-nums text-danger">
+              <%# -remaining, because "£412.00 over" is how it is written
+                  everywhere else here and a bare negative reads as bad news
+                  twice. %>
+              <%= reimbursements_money(-budget.remaining) %> over
+            </span>
+          </li>
+        <% end %>
+        <% hidden = @home.over_budget_count - @home.over_budget_preview.size %>
+        <% if hidden.positive? %>
+          <li class="text-gray-500">and <%= pluralize(hidden, "more line") %> over budget</li>
+        <% end %>
+      </ul>
+    <% end %>
+    <p class="flex flex-wrap gap-2">
+      <%= link_to "Budget overview",
+                  overview_admin_reimbursements_budgets_path(year: selected_financial_year&.key,
+                                                             cost_centre: selected_cost_centre&.key),
+                  class: btn_classes(:secondary, :sm) %>
+      <%= link_to "Budgets",
+                  admin_reimbursements_budgets_path(year: selected_financial_year&.key,
+                                                    cost_centre: selected_cost_centre&.key),
+                  class: btn_classes(:secondary, :sm) %>
+    </p>
+  <% end %>
+</div>
+
+<%= render CardComponent.new(title: "Reminder emails", html_class: "mt-4") do %>
+  <p class="mb-3 text-sm text-gray-600">
+    On each cost centre's run days the portal emails its finance address about claims stuck
+    waiting for approval and about the queue ready to batch, and emails each budget owner who
+    has a claim waiting on them. A blank date means it has never completed a run.
+  </p>
+  <ul class="flex flex-col gap-1 text-sm">
+    <% @home.reminder_cost_centres.each do |centre| %>
+      <li class="flex flex-wrap items-baseline gap-x-2">
+        <span class="grow"><%= centre.name %></span>
+        <span class="text-gray-600">
+          last run
+          <%= centre.last_nightly_run_on ? reimbursements_date(centre.last_nightly_run_on) : "never" %>
+        </span>
+      </li>
+    <% end %>
+  </ul>
+  <p class="mt-3">
+    <%= link_to "Email & integrations", admin_reimbursements_status_path,
+                class: btn_classes(:secondary, :sm) %>
+  </p>
+<% end %>
+
+<p class="mt-4 text-sm text-gray-500">
+  Claim totals here are the gross amounts EUSA pays. Budget figures exclude VAT, so they can be
+  lower than the amounts people claimed.
+</p>

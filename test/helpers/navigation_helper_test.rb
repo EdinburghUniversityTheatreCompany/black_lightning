@@ -41,7 +41,7 @@ class NavigationHelperTest < ActionView::TestCase
     grant_finance_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil) # ability is memoized; force a rebuild
 
-    gated_titles = [ "Review claims", "All claims", "Build batch", "Batches", "Budgets",
+    gated_titles = [ "Finance home", "Review claims", "All claims", "Build batch", "Batches", "Budgets",
                      "Overview", "Areas", "Forecast revisions", "Reconcile", "Ledger",
                      "Export workbook", "People", "Financial years", "Cost centres",
                      "Email & integrations" ]
@@ -53,16 +53,39 @@ class NavigationHelperTest < ActionView::TestCase
 
   # Fifteen flat links put the weekly work at positions 1, 2, 9 and 10, so the
   # category is broken into the four jobs — in the order they are done.
+  #
+  # Finance home is the ONE ungrouped item and it comes first: it is not one of
+  # the four jobs, it is where you find out which of them is waiting on you.
+  # Every link BELOW it must carry a group, or it renders under whichever group
+  # heading happens to precede it.
   test "the finance links are grouped by the job they belong to, weekly work first" do
     grant_finance_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil)
 
-    groups = finance_category[:children].map { |child| child[:group] }
+    children = finance_category[:children]
 
-    assert_equal [ "Pay claims", "Budgets", "EUSA ledger", "Setup" ], groups.uniq
-    assert_empty groups.compact_blank.tally.select { |_, count| count.zero? },
-                 "every finance link needs a group, or it renders under the previous one"
-    assert_nil groups.find(&:blank?), "a finance link with no group: #{finance_category[:children].inspect}"
+    assert_equal "Finance home", children.first[:title]
+    assert_nil children.first[:group]
+
+    below_home = children.drop(1)
+    assert_equal [ "Pay claims", "Budgets", "EUSA ledger", "Setup" ],
+                 below_home.map { |child| child[:group] }.uniq
+    ungrouped = below_home.reject { |child| child[:group].present? }
+    assert_empty ungrouped, "a finance link with no group: #{ungrouped.inspect}"
+  end
+
+  # Finance home points at the namespace ROOT, which is a path prefix of every
+  # other finance screen. Without exact: true the sidebar would mark it active
+  # on all of them — it marks an item active for its own page and anything
+  # beneath it.
+  test "Finance home matches its own page only" do
+    grant_finance_permission(@current_user)
+    @current_user.instance_variable_set(:@ability, nil)
+
+    home = finance_category[:children].find { |child| child[:title] == "Finance home" }
+
+    assert_equal admin_reimbursements_root_path, home[:path]
+    assert home[:exact], "Finance home would light up on every finance screen"
   end
 
   test "the producer portal permission alone does not reveal the finance-gated links" do

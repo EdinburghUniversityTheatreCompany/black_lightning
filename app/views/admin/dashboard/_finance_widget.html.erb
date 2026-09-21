@@ -1,0 +1,24 @@
+<%# locals: () %>
+<%# The dashboard had nine widgets and not one of them was financial, so a
+    business manager landing on /admin saw no sign the portal existed. Two
+    counts and a way in; everything else is on Finance home. %>
+<% counts = Reimbursements::FinanceHome.tile_counts %>
+
+<ul class="flex flex-col">
+  <li class="list-row flex items-center justify-between gap-2 py-1">
+    <span>Claims waiting for approval</span>
+    <%= link_to counts[:pending],
+                admin_reimbursements_review_path,
+                class: class_names("font-semibold", "text-warning" => counts[:pending].positive?) %>
+  </li>
+  <li class="list-row flex items-center justify-between gap-2 py-1">
+    <span>Approved, ready to batch</span>
+    <%= link_to counts[:approved],
+                new_admin_reimbursements_batch_path,
+                class: "font-semibold" %>
+  </li>
+</ul>
+
+<p class="mt-2">
+  <%= link_to "Finance home", admin_reimbursements_root_path, class: btn_classes(:secondary, :sm) %>
+</p>

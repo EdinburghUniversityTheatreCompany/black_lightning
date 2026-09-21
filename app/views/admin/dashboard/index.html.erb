@@ -31,6 +31,11 @@
         <%= render CollapsibleSectionComponent.new(title: "Resources", flush: true, start_open: true) do %>
           <%= render "resources_widget" %>
         <% end %>
+        <% if can?(:manage, :reimbursements_finance) %>
+          <%= render CollapsibleSectionComponent.new(title: link_to("Finance", admin_reimbursements_root_path), flush: true, start_open: true) do %>
+            <%= render "finance_widget" %>
+          <% end %>
+        <% end %>
         <% if current_user.committee? || can?(:manage, Admin::Staffing) %>
           <%= render CollapsibleSectionComponent.new(title: "Committee Staffing", flush: true, start_open: true) do %>
             <%= render "committee_staffing_widget" %>
