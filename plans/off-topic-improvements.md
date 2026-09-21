@@ -688,3 +688,33 @@ it by an explicit tick. No test covers either half (a holder can read early; an 
 cannot), and `"Advance Proposal Checker"` went into `Role::HARDCODED_NAMES` though nothing in the
 code asks for that role by name — the gate is the grid permission. The grid label reads
 "(temporary)": remove it, the two `Ability` blocks and the role name once the call closes.
+
+### Left behind by the finance-UX claims-side pass (2026-09-21)
+
+Noticed while fixing A–O of [plans/finance-ux-audit.md](finance-ux-audit.md) on the claims side,
+and deliberately out of that scope:
+
+- **`Exports::Expenses` has no "Submitted by" column at all.** The on-screen table now separates
+  "Paid to" (the effective payee — on an Invoice, the supplier) from "Submitted by", because they
+  are routinely different people. The exporter still carries only `Payee`, so the CSV and the
+  workbook cannot answer the question the screen now can. Appending a column is the documented
+  way to add one without moving what a saved formula points at.
+- **Batch Detail has no `<h1>` and no Reopen.** Reopen lives only on History while the batch
+  contents live only on Detail, so deciding to reopen and doing it are two screens apart.
+- **Nothing records whether a batch's EUSA draft was actually sent.** "BACS date" and "Producer
+  emails: Sent" now say only what is known, which makes the gap explicit rather than closing it:
+  `eusa_draft_web_link` reaches the operator email only, `Batch` has no column for it, and the
+  Graph probe that could answer "is it still a draft?" exists solely inside `#reopen`. Storing the
+  link and showing the probe's answer is the real fix (ranked-fix item 14).
+- **`AmountValidation.error_for` still names no field.** The GBP-amount rule was the one that made
+  an international claim uneditable and is now rail-aware, but "Enter a valid amount excl. VAT
+  greater than 0, or leave it blank." is still a bare sentence on a page with three amount fields.
+  Both callers render it as a flash rather than against the input.
+- **Blanking the GBP amount on an international claim silently keeps the old figure.** The invoice
+  amount now clears on a deliberate blank (`DatabaseStore::CLEARABLE_EXPENSE_COLUMNS`); `amount`
+  deliberately does not, because four other write paths rely on its "nil means leave it alone"
+  contract. If finance ever needs to clear a GBP estimate, that needs its own decision rather than
+  widening the escape.
+- **The sidebar's Finance links drop `?year=` and `?cost_centre=`**, so a centre picked on Review
+  is gone after one sidebar click — ranked-fix item 12, and the other half of the hand-off problem
+  the prose-to-link fixes only partly closed.
