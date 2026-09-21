@@ -37,8 +37,15 @@
 
     <p class="mb-2 text-sm text-gray-600">
       Columns read: <strong><%= ::Reimbursements::ExpenseImport::TSV_HEADERS.to_sentence %></strong>.
-      <strong><%= ::Reimbursements::ExpenseImport.required_labels.to_sentence %></strong>
-      are required on every line.
+      <%# Two different requirements, and conflating them is how this screen
+          came to call Payment reference optional while an Approved row was
+          refused for leaving it blank. %>
+      The sheet must carry
+      <strong><%= ::Reimbursements::ExpenseImport.required_labels.to_sentence %></strong>,
+      and every row must fill
+      <strong><%= ::Reimbursements::ExpenseImport.required_cell_labels.to_sentence %></strong> —
+      whatever its status. A historical claim whose bank reference nobody kept can carry any
+      short label.
       <%= link_to "Download a template",
                   template_admin_reimbursements_expense_import_path(format: :csv),
                   class: "text-primary underline", data: { turbo_frame: "_top" } %>

@@ -105,13 +105,14 @@ module Reimbursements
       },
       description: {
         label: "Description",
-        hint: "What it was for",
+        hint: "Required; what it was for",
         exact: [ "description", "details", "narrative", "purpose", "what for" ],
         contains: [ "what for", "what it was for" ]
       },
       payment_reference: {
         label: "Payment reference",
-        hint: "Optional; the reference on the bank transfer, which may repeat",
+        hint: "Required; the reference on the bank transfer, which may repeat across " \
+              "one person's claims. Any short label will do on a historical claim",
         exact: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ],
         contains: [ "payment reference", "payment ref", "bacs reference", "bacs ref" ]
       },
@@ -174,6 +175,17 @@ module Reimbursements
     # (#report_missing_columns).
     REQUIRED_FIELDS = %i[reference status budget amount].freeze
 
+    # Columns whose CELL every row has to fill — a different requirement from
+    # REQUIRED_FIELDS above, which is about columns the sheet must CARRY.
+    #
+    # The two were conflated in the form's copy and in the template's hints,
+    # and that is how the screen came to say Payment reference was optional
+    # while an Approved row was refused with "Payment reference must not be
+    # blank": the cell rules are ExpenseForm's, not this class's, and nothing
+    # tied the words to them. #required_cell_labels is what the form prints,
+    # and a test asserts ExpenseForm really refuses a blank in each.
+    REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference].freeze
+
     # Fields whose cells may hold a tab or a newline, so must be unescaped when
     # the text came back from #to_tsv. See @escaped below.
     TEXT_FIELDS = %i[reference submitter_name budget description payment_reference
@@ -199,6 +211,11 @@ module Reimbursements
     # The required columns by their canonical heading, for the form's copy.
     def self.required_labels
       REQUIRED_FIELDS.map { |field| FIELDS.fetch(field)[:label] }
+    end
+
+    # The columns every ROW must fill, by their canonical heading.
+    def self.required_cell_labels
+      REQUIRED_CELL_FIELDS.map { |field| FIELDS.fetch(field)[:label] }
     end
 
     attr_reader :entries, :financial_year, :cost_centre

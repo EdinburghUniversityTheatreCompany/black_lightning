@@ -300,6 +300,45 @@ module Admin
         assert_not claim.producer_notified
         assert_nil claim.rejection_notified
       end
+
+      # --- What the screen says is required --------------------------------
+      # The intro listed four required columns and the template called Payment
+      # reference optional, while ExpenseForm refused an Approved row for
+      # leaving it blank. Two different requirements — columns the sheet must
+      # CARRY, and cells every row must FILL — conflated in the copy.
+
+      test "every column the screen calls row-required really is" do
+        blanks = { description: "", payment_reference: "" }
+        blanks.each do |field, blank|
+          label = IMPORT::FIELDS.fetch(field)[:label]
+          assert_includes IMPORT.required_cell_labels, label,
+                          "#{label} is enforced but the screen does not say so"
+
+          sign_in @user
+          post :preview, params: import_params(tsv(row(status: STATUS::APPROVED, **{ field => blank })))
+
+          assert_match(/#{Regexp.escape(label)}/i, response.body,
+                       "a blank #{label} has to be reported by name")
+        end
+      end
+
+      test "the template hints do not call a row-required column optional" do
+        IMPORT::REQUIRED_CELL_FIELDS.each do |field|
+          hint = IMPORT::FIELDS.fetch(field)[:hint].to_s
+          refute_match(/optional/i, hint,
+                       "#{IMPORT::FIELDS.fetch(field)[:label]}'s template hint says optional")
+        end
+      end
+
+      test "the intro states both requirements separately" do
+        sign_in @user
+
+        get :show
+
+        assert_match(/sheet must carry/i, response.body)
+        assert_match(/every row must fill/i, response.body)
+        assert_match(/Payment reference/, response.body)
+      end
     end
   end
 end
