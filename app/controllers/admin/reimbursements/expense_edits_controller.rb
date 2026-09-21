@@ -70,10 +70,9 @@ module Admin
 
       def update
         expense = find_expense!
-        error = ::Reimbursements::AmountValidation.error_for(
-          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        ) || bank_detail_override_error(expense) || expense_type_error(expense) ||
-              budget_record_id_error(params[:budget_record_id])
+        error = amount_error(expense) || foreign_amount_error(expense) ||
+                bank_detail_override_error(expense) || expense_type_error(expense) ||
+                budget_record_id_error(params[:budget_record_id])
         if error
           load_edit(expense)
           flash.now[:alert] = error
@@ -81,7 +80,7 @@ module Admin
           return
         end
 
-        store.update_expense!(expense.record_id, update_attrs)
+        store.update_expense!(expense.record_id, update_attrs(expense))
         redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
       end
 
@@ -198,7 +197,100 @@ module Admin
           store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
       end
 
-      def update_attrs
+      # Which rail this save puts the claim on: the posted one where finance
+      # may still change it, the stored one otherwise.
+      #
+      # EVERY rail-aware rule below reads this rather than expense.international?
+      # — the claim's stored rail. Reading the stored one would validate the
+      # overrides the operator is leaving behind instead of the ones they just
+      # typed, which is the same class of bug as the all-or-nothing rule
+      # reading the UK trio for an international claim.
+      def posted_rail_international?(expense)
+        return expense.international? unless rail_editable?(expense)
+
+        rail = params[:payment_method].to_s
+        return expense.international? unless ::Reimbursements::Expense::PAYMENT_METHODS.include?(rail)
+
+        rail == ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
+      end
+
+      # Finance may move a claim between rails only while the money can still
+      # move — Draft, Pending and Approved. Once it is Submitted or Paid the
+      # paperwork EUSA acted on has gone out (a BACS row or an international
+      # payment form), and re-railing the record afterwards would describe a
+      # payment that never happened. Same window as expense_type_error's.
+      def rail_editable?(expense)
+        ::Reimbursements::ReviewSupport.attention_actionable?(expense)
+      end
+      helper_method :rail_editable?
+
+      # A blank GBP amount is a legitimate state on the INTERNATIONAL rail:
+      # the submitter enters the invoice figure and finance types the GBP
+      # equivalent at review, so the claim sits without one until then. The
+      # flat "Enter a valid amount greater than 0." refused every such edit —
+      # changing only the currency was rejected with a message naming none of
+      # the page's three amount fields, so no unreviewed international claim
+      # could be edited at all. It stays required on the UK rail, where the
+      # amount is what the producer actually spent.
+      #
+      # A blank is "leave it as it is", not "clear it": #update_attrs writes
+      # the parsed nil, which DatabaseStore#update_expense! compacts away.
+      # Clearing a GBP amount is not something this screen offers, and the
+      # column's "nil means leave it alone" contract is relied on by four
+      # other write paths.
+      def amount_error(expense)
+        blank_gross = params[:amount].to_s.strip.blank?
+        return nil if blank_gross && posted_rail_international?(expense)
+
+        ::Reimbursements::AmountValidation.error_for(
+          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
+        )
+      end
+
+      # The invoice figure. Blank CLEARS it (finance correcting a wrong
+      # reading is a real edit, and the approval guard already blocks on a
+      # missing one); anything unreadable is refused with the field named.
+      # Before this a blank silently did nothing and the field came back with
+      # the old value still in it, which reads as a save that was ignored.
+      def foreign_amount_error(expense)
+        return nil unless posted_rail_international?(expense)
+
+        raw = params[:foreign_amount]
+        return nil if raw.nil? || raw.to_s.strip.blank?
+
+        parsed = ::Reimbursements::AmountParser.parse(raw)
+        return nil if parsed&.positive?
+
+        "Invoice amount: enter a number greater than 0, or leave it blank."
+      end
+
+      # A rail switch changes payment_method and NOTHING ELSE, deliberately.
+      #
+      # The other rail's overrides are encrypted bank details a human typed
+      # and are inert while that rail is inactive — EffectivePayee only ever
+      # reads the active pair — so keeping them costs nothing and makes a
+      # mis-click reversible, while clearing them would be an unrecoverable
+      # wipe of details nobody can retype from memory. foreign_amount and
+      # foreign_currency are kept on the same footing: nothing reads them off
+      # a UK claim, and switching back restores the claim as it was.
+      #
+      # amount_excl_vat is left to the model: Expense's before_validation
+      # mirrors gross into ex-VAT for an international claim (a foreign
+      # invoice carries no reclaimable UK VAT), so switching TO international
+      # settles it automatically. Switching the other way leaves the two
+      # equal, which is the legitimate "no VAT itemised" state the soft VAT
+      # flag already reports — inventing a split here would deduct tax nobody
+      # can reclaim.
+      def rail_attrs(expense)
+        return {} unless rail_editable?(expense)
+
+        rail = params[:payment_method].to_s
+        return {} unless ::Reimbursements::Expense::PAYMENT_METHODS.include?(rail)
+
+        { payment_method: rail }
+      end
+
+      def update_attrs(expense)
         attrs = {
           # The parsed BigDecimal AmountValidation just approved, not the raw field:
           # AR would cast "£1,200" to 0 on the decimal column.
@@ -220,14 +312,25 @@ module Admin
           # #bank_detail_override_error validated, so what was checked and what
           # reaches EUSA's form are the identical value.
           iban_override: ::Reimbursements::BankDetails.normalize_iban(params[:iban_override].to_s),
-          bic_override: ::Reimbursements::BankDetails.normalize_bic(params[:bic_override].to_s),
-          foreign_currency: params[:foreign_currency].to_s.strip.upcase
+          bic_override: ::Reimbursements::BankDetails.normalize_bic(params[:bic_override].to_s)
         }
-        # The invoice figure, which is what EUSA's bank actually pays. Written
-        # only when a positive value is given, like excl-VAT below: a blank
-        # means "not edited here", not "clear it".
-        foreign = ::Reimbursements::AmountValidation.amount(params[:foreign_amount])
-        attrs[:foreign_amount] = foreign if foreign&.positive?
+        # Only on the rail that has a currency: a UK-rail post carries no such
+        # field, and writing "" would blank a stored one the claim gets back
+        # the moment it is switched to international again.
+        if posted_rail_international?(expense)
+          attrs[:foreign_currency] = params[:foreign_currency].to_s.strip.upcase
+        end
+        attrs.merge!(rail_attrs(expense))
+        # The invoice figure, which is what EUSA's bank actually pays. A blank
+        # now CLEARS it rather than silently leaving the old value in place —
+        # #foreign_amount_error has already refused anything unreadable, so
+        # what arrives here is either a number or a deliberate blank. Only
+        # touched on the international rail: a UK claim's form does not offer
+        # the field, so a post that omits it must not wipe a stored figure the
+        # claim would get back if it were switched.
+        if posted_rail_international?(expense)
+          attrs[:foreign_amount] = ::Reimbursements::AmountValidation.amount(params[:foreign_amount])
+        end
         # Only write excl-VAT when a positive value is given (0 means "not yet
         # known", leave the field alone), mirroring the Review save.
         excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
@@ -252,7 +355,14 @@ module Admin
           return "Payee name override #{::Reimbursements::BankDetails::PAYEE_NAME_HINT}"
         end
 
-        expense.international? ? international_override_error(payee_name) : uk_override_error(payee_name)
+        # The rail this save PUTS it on, not the one it is leaving: validating
+        # the stored rail would check the pair the operator is walking away
+        # from and let the one they just typed through unchecked.
+        if posted_rail_international?(expense)
+          international_override_error(payee_name)
+        else
+          uk_override_error(payee_name)
+        end
       end
 
       # The international rail routes on an IBAN and a BIC, so the UK trio rule
@@ -308,8 +418,9 @@ module Admin
         return nil unless type == ::Reimbursements::Expense::TYPE_INVOICE
         return nil unless ::Reimbursements::ReviewSupport.attention_actionable?(expense)
 
+        international = posted_rail_international?(expense)
         second, third =
-          if expense.international?
+          if international
             [ params[:iban_override].to_s, params[:bic_override].to_s ]
           else
             [ params[:sort_code_override].to_s, params[:account_number_override].to_s ]
@@ -320,7 +431,7 @@ module Admin
           return nil
         end
 
-        fields = expense.international? ? "name, IBAN and BIC" : "name, sort code and account number"
+        fields = international ? "name, IBAN and BIC" : "name, sort code and account number"
         "An Invoice pays the supplier directly, so it needs the payee overrides: #{fields}. " \
           "Without them this would pay #{expense.person&.name.presence || 'the submitter'} " \
           "instead. Use Reimbursement if they paid the bill themselves."

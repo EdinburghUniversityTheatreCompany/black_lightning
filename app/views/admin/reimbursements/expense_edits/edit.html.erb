@@ -157,7 +157,21 @@
     narrow screens, where squeezing both would leave neither readable. %>
 <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
   <div class="min-w-0 lg:flex-1">
-    <%= form_with url: admin_reimbursements_expense_edit_path(@expense.record_id), method: :patch do %>
+    <%# The producer form's rail controller, reused rather than copied: it
+        swaps the bank pair and the invoice-amount block for the chosen rail's
+        own, and every one of its other behaviours is guarded by a
+        has…Target check, so it degrades to exactly this much here. A second
+        controller doing the same three toggles would trip jscpd, which gates
+        duplication at 0.
+
+        None of the fields below carries HTML `required`, so hiding one cannot
+        reproduce the trap where a hidden required input makes the browser
+        refuse the whole submit silently. The server re-validates the rail it
+        is actually given (see #posted_rail_international?). %>
+    <%= form_with url: admin_reimbursements_expense_edit_path(@expense.record_id), method: :patch,
+                  data: { controller: "reimbursements-receipt",
+                          reimbursements_receipt_international_method_value:
+                            Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL } do %>
       <%= render CardComponent.new(title: "Details") do |card| %>
         <% card.with_footer do %>
           <%= render "shared/form/actions", submit: "Save changes",
@@ -171,6 +185,30 @@
             <%= select_tag :expense_type,
                            options_for_select(Reimbursements::Expense::TYPES, @expense.expense_type),
                            include_blank: @expense.expense_type.blank?, class: input_classes %>
+          <% end %>
+
+          <%# Which rail the money travels on. Finance could not change it at
+              all before: a claim filed as UK that turns out to need an IBAN
+              had to be withdrawn and resubmitted. Offered only while the
+              money can still move — on a Submitted or Paid claim the
+              paperwork EUSA acted on has already gone out, so the stored rail
+              is a record of what happened rather than a choice. %>
+          <% if rail_editable?(@expense) %>
+            <%= render "shared/form/field", label: "How is this paid?", name: :payment_method,
+                  hint: "International pays a bank outside the UK: EUSA fills in a separate payment " \
+                        "form for those and needs an IBAN and BIC instead of a sort code. Switching " \
+                        "keeps the other rail's details, so it can be switched back." do %>
+              <%= select_tag :payment_method,
+                             options_for_select(
+                               [ [ "UK bank account", Reimbursements::Expense::PAYMENT_METHOD_UK_BACS ],
+                                 [ "International (IBAN)",
+                                   Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL ] ],
+                               @expense.payment_method
+                             ),
+                             data: { reimbursements_receipt_target: "paymentMethod",
+                                     action: "change->reimbursements-receipt#paymentMethodChanged" },
+                             class: input_classes %>
+            <% end %>
           <% end %>
 
           <div class="grid gap-4 sm:grid-cols-2">
@@ -213,7 +251,11 @@
           <%# The invoice figure and its currency, which is what EUSA's bank
               actually pays. The GBP amount above stays finance's own estimate
               until reconcile corrects it. %>
-          <% if @expense.international? %>
+          <%# Rendered whatever the stored rail, hidden when it does not apply,
+              so the browser can switch to international without a round trip.
+              The server writes these two only on the international rail. %>
+          <div data-reimbursements-receipt-target="internationalAmount"
+               class="<%= "hidden" unless @expense.international? %>">
             <div class="grid gap-4 sm:grid-cols-2">
               <%= render "shared/form/field", label: "Invoice currency", name: :foreign_currency do %>
                 <%# input_classes, not simple-select2: every other select on this
@@ -224,12 +266,16 @@
                                                   @expense.foreign_currency),
                                class: input_classes %>
               <% end %>
-              <%= render "shared/form/field", label: "Invoice amount", name: :foreign_amount do %>
+              <%# Blank CLEARS it; anything unreadable is refused by name. It
+                  used to be ignored silently and come back with the old
+                  figure still in the field. %>
+              <%= render "shared/form/field", label: "Invoice amount", name: :foreign_amount,
+                    hint: "As printed on the invoice. Leave blank to clear it." do %>
                 <%= text_field_tag :foreign_amount, @expense.foreign_amount,
                                    placeholder: "as printed on the invoice", class: input_classes %>
               <% end %>
             </div>
-          <% end %>
+          </div>
 
           <div class="border-t border-gray-200 pt-3">
             <h3 class="mb-1">Payee overrides</h3>
@@ -241,12 +287,17 @@
           <%= render "shared/form/field", label: "Payee name override", name: :payee_name_override do %>
             <%= text_field_tag :payee_name_override, @expense.payee_name_override, class: input_classes %>
           <% end %>
-          <%# Only the rail's own pair is rendered. Showing both would invite
-              filling in a sort code for a payment that goes over SWIFT, and the
-              all-or-nothing rule reads whichever pair applies. %>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <% if @expense.international? %>
-
+          <%# BOTH pairs are in the markup, with the inactive one hidden, so the
+              rail select above can swap them without a round trip. Only one is
+              ever visible, so this still does not invite typing a sort code for
+              a payment going over SWIFT — and the all-or-nothing rule reads
+              whichever pair the POSTED rail names. Switching keeps the other
+              pair: they are encrypted details a human typed, inert while that
+              rail is inactive, and a silent wipe on a mis-click could not be
+              undone. %>
+          <div data-reimbursements-receipt-target="internationalFields"
+               class="<%= "hidden" unless @expense.international? %>">
+            <div class="grid gap-4 sm:grid-cols-2">
               <%= render "shared/form/field", label: "Payee IBAN", name: :iban_override do %>
                 <%= text_field_tag :iban_override,
                                    Reimbursements::BankDetails.format_iban(@expense.iban_override.to_s),
@@ -256,9 +307,11 @@
                 <%= text_field_tag :bic_override, @expense.bic_override,
                                    placeholder: "8 or 11 characters", class: input_classes %>
               <% end %>
-
-            <% else %>
-
+            </div>
+          </div>
+          <div data-reimbursements-receipt-target="ukFields"
+               class="<%= "hidden" if @expense.international? %>">
+            <div class="grid gap-4 sm:grid-cols-2">
               <%= render "shared/form/field", label: "Sort code override", name: :sort_code_override do %>
                 <%= text_field_tag :sort_code_override, @expense.sort_code_override, placeholder: "00-00-00",
                                    class: input_classes %>
@@ -267,8 +320,7 @@
                 <%= text_field_tag :account_number_override, @expense.account_number_override,
                                    placeholder: "8 digits", class: input_classes %>
               <% end %>
-
-            <% end %>
+            </div>
           </div>
         </div>
       <% end %>

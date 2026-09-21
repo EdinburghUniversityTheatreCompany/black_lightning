@@ -148,6 +148,21 @@ module Reimbursements
       assert_nil expense.reload.budget
     end
 
+    test "update_expense! clears foreign_amount when it is explicitly nil" do
+      # The one money column a present-and-nil value CLEARS. Compaction made
+      # blanking the invoice amount on the finance edit form a no-op that
+      # looked like a save: the field came back with the old figure in it.
+      expense = Expense.create!(status: Status::PENDING, amount: 5,
+                                foreign_amount: BigDecimal("640"), foreign_currency: "EUR")
+
+      store.update_expense!(expense.record_id, foreign_amount: nil, description: "kept")
+
+      expense.reload
+      assert_nil expense.foreign_amount
+      assert_equal "kept", expense.description
+      assert_equal BigDecimal("5"), expense.amount, "amount keeps the 'nil means leave it' contract"
+    end
+
     test "receipt attach and remove, guarding the last receipt on a non-draft" do
       expense = Expense.create!(status: Status::PENDING)
       store.attach_receipt!(expense.record_id, filename: "r.pdf",

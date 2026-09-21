@@ -615,6 +615,15 @@ module Reimbursements
       bust_expenses!
     end
 
+    # See #update_expense!: a present-and-nil value for one of these clears the
+    # column instead of being read as "not edited here".
+    #
+    # foreign_amount ONLY, deliberately. `amount` keeps the compacted
+    # "nil means leave it alone" contract that four other write paths
+    # (BatchProcessor, the reject path, Review#save, the producer form) rely
+    # on, and every one of those validates it as positive before writing.
+    CLEARABLE_EXPENSE_COLUMNS = %i[foreign_amount].freeze
+
     def update_expense!(record_id, attrs)
       expense = Expense.find(record_id)
       columns = expense_columns(attrs)
@@ -622,6 +631,18 @@ module Reimbursements
       # nil-compaction would otherwise make the link settable but never
       # removable.
       columns[:budget_id] = nil if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
+      # Money columns the finance edit form may deliberately CLEAR.
+      # #expense_columns compacts nils away, which reads a missing key as "not
+      # edited here" — right for a form that posts a subset, but it made
+      # blanking the invoice amount a no-op that looked like a save (the field
+      # came back with the old figure in it), and left an international claim's
+      # GBP estimate standing after finance cleared it. A key that is present
+      # and nil is an instruction, not an omission. Only this caller ever
+      # passes one: every other write path validates the amount as positive
+      # first.
+      CLEARABLE_EXPENSE_COLUMNS.each do |key|
+        columns[key] = nil if attrs.key?(key) && attrs[key].nil?
+      end
       expense.update!(columns)
       bust_expenses!
       expense

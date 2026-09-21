@@ -416,6 +416,203 @@ module Admin
         assert_no_match(/worth checking before approving/i, response.body)
       end
 
+      # --- Finance can fix the payment rail ---------------------------------
+
+      INTERNATIONAL = ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
+      UK_BACS = ::Reimbursements::Expense::PAYMENT_METHOD_UK_BACS
+
+      def international_claim(status: "Pending", **attrs)
+        expense_at(status, payment_method: INTERNATIONAL, foreign_currency: "EUR",
+                           foreign_amount: BigDecimal("640"),
+                           payee_name_override: "Studio Bühne", iban_override: "DE89370400440532013000",
+                           bic_override: "DEUTDEFF", **attrs)
+      end
+
+      # The full set of fields the form posts, so a test changing one thing
+      # does not accidentally blank the rest.
+      def edit_params(expense, **overrides)
+        { id: expense.record_id, amount: expense.amount, amount_excl_vat: expense.amount_excl_vat,
+          description: expense.description, payment_reference: expense.payment_reference,
+          expense_type: expense.expense_type, budget_record_id: expense.budget&.record_id,
+          payment_method: expense.payment_method,
+          payee_name_override: expense.payee_name_override,
+          sort_code_override: expense.sort_code_override,
+          account_number_override: expense.account_number_override,
+          iban_override: expense.iban_override, bic_override: expense.bic_override,
+          foreign_currency: expense.foreign_currency,
+          foreign_amount: expense.foreign_amount }.merge(overrides)
+      end
+
+      test "edit offers the rail while the money can still move" do
+        expense = expense_at("Approved")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_select "select#payment_method"
+        # Both pairs are in the markup so the browser can switch without a
+        # round trip; only one is visible.
+        assert_select "[data-reimbursements-receipt-target=ukFields]"
+        assert_select "[data-reimbursements-receipt-target=internationalFields]"
+      end
+
+      %w[Submitted Paid].each do |status|
+        test "edit does not offer the rail on a #{status} claim" do
+          # The paperwork EUSA acted on has gone out; the stored rail is a
+          # record of what happened, not a choice.
+          expense = expense_at(status)
+          sign_in @user
+
+          get :edit, params: { id: expense.record_id }
+
+          assert_select "select#payment_method", false
+        end
+
+        test "a posted rail is ignored on a #{status} claim" do
+          expense = expense_at(status)
+          sign_in @user
+
+          patch :update, params: edit_params(expense, payment_method: INTERNATIONAL)
+
+          assert_equal UK_BACS, expense.reload.payment_method
+        end
+      end
+
+      test "finance switches a claim onto the international rail" do
+        expense = expense_at("Pending", sort_code_override: "08-99-99",
+                                        account_number_override: "66374958",
+                                        payee_name_override: "Studio Buehne")
+        sign_in @user
+
+        patch :update, params: edit_params(expense, payment_method: INTERNATIONAL,
+                                                    iban_override: "DE89370400440532013000",
+                                                    bic_override: "DEUTDEFF",
+                                                    foreign_currency: "EUR", foreign_amount: "640")
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        expense.reload
+        assert expense.international?
+        assert_equal "DE89370400440532013000", expense.iban_override
+      end
+
+      test "a rail switch keeps the other rail's details, so it can be switched back" do
+        # They are encrypted bank details a human typed, and EffectivePayee only
+        # ever reads the ACTIVE rail's pair — so a dormant pair is inert, while
+        # wiping it on a mis-click could not be undone.
+        expense = expense_at("Pending", sort_code_override: "08-99-99",
+                                        account_number_override: "66374958",
+                                        payee_name_override: "Studio Buehne")
+        sign_in @user
+
+        patch :update, params: edit_params(expense, payment_method: INTERNATIONAL,
+                                                    iban_override: "DE89370400440532013000",
+                                                    bic_override: "DEUTDEFF",
+                                                    foreign_currency: "EUR", foreign_amount: "640")
+
+        expense.reload
+        assert_equal "08-99-99", expense.sort_code_override, "the UK pair survives the switch"
+        assert_equal "66374958", expense.account_number_override
+      end
+
+      test "switching back to UK keeps the invoice figure and its currency" do
+        expense = international_claim
+        sign_in @user
+
+        patch :update, params: edit_params(expense, payment_method: UK_BACS,
+                                                    sort_code_override: "08-99-99",
+                                                    account_number_override: "66374958")
+
+        expense.reload
+        assert_not expense.international?
+        assert_equal BigDecimal("640"), expense.foreign_amount, "nothing reads it off a UK claim, " \
+                                                                "and switching back restores the claim"
+        assert_equal "EUR", expense.foreign_currency
+      end
+
+      test "the override rule reads the rail being posted, not the one being left" do
+        # A UK claim switched to international with only a payee name must be
+        # refused for the IBAN and BIC it now needs — reading the STORED rail
+        # would check the sort-code pair it is walking away from.
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: edit_params(expense, payment_method: INTERNATIONAL,
+                                                    payee_name_override: "Studio Buehne",
+                                                    iban_override: "", bic_override: "",
+                                                    foreign_currency: "EUR")
+
+        assert_response :unprocessable_content
+        assert_match(/payee name, IBAN and BIC/, response.body)
+        assert_not expense.reload.international?, "nothing was written"
+      end
+
+      # --- An international claim with no GBP amount is still editable ------
+
+      test "an international claim with a blank GBP amount saves" do
+        # The submitter enters the invoice figure and finance types the GBP
+        # equivalent at review, so the claim legitimately sits without one.
+        # The flat "Enter a valid amount greater than 0." refused every such
+        # edit, naming none of the page's three amount fields.
+        expense = international_claim(amount: nil, amount_excl_vat: nil)
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "", amount_excl_vat: "",
+                                                    foreign_currency: "USD")
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal "USD", expense.reload.foreign_currency
+      end
+
+      test "a UK claim still needs a GBP amount" do
+        expense = expense_at("Pending")
+        sign_in @user
+
+        patch :update, params: edit_params(expense, amount: "")
+
+        assert_response :unprocessable_content
+        assert_match(/valid amount greater than 0/, response.body)
+      end
+
+      # --- Blanking the invoice amount ---------------------------------------
+
+      test "blanking the invoice amount clears it rather than silently reverting" do
+        expense = international_claim
+        sign_in @user
+
+        patch :update, params: edit_params(expense, foreign_amount: "")
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_nil expense.reload.foreign_amount,
+                   "a blank used to be ignored, and the field came back with 640.0 still in it"
+      end
+
+      test "an unreadable invoice amount is refused with the field named" do
+        expense = international_claim
+        sign_in @user
+
+        patch :update, params: edit_params(expense, foreign_amount: "six hundred")
+
+        assert_response :unprocessable_content
+        assert_match(/Invoice amount/, response.body)
+        assert_equal BigDecimal("640"), expense.reload.foreign_amount, "nothing was written"
+      end
+
+      test "a UK-rail save leaves a stored invoice figure alone" do
+        # The UK form does not offer the field, so a post that omits it must
+        # not wipe a figure the claim gets back if it is switched.
+        expense = international_claim
+        sign_in @user
+
+        patch :update, params: edit_params(expense, payment_method: UK_BACS,
+                                                    sort_code_override: "08-99-99",
+                                                    account_number_override: "66374958")
+                       .except(:foreign_amount, :foreign_currency)
+
+        expense.reload
+        assert_equal BigDecimal("640"), expense.foreign_amount
+        assert_equal "EUR", expense.foreign_currency
+      end
+
       # --- History: the claim says what happened to it ----------------------
 
       test "edit shows nothing but the submission for a fresh claim" do
