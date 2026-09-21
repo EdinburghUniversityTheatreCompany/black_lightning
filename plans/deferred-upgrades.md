@@ -1,53 +1,60 @@
 # Deferred dependency upgrades
 
-Upgrades that could **not** be applied during a dependency sweep, with the reason and the manual
-steps needed to land them later. Last reviewed: **2026-07-31**.
+Majors held back during the 2026-09-21 upgrade pass, with why and what unblocks them.
+Everything else was taken to latest (see the `chore(deps)` commits of that date).
 
-Every Ruby entry below is blocked by a constraint outside this repo — re-check with
-`bundle outdated` / `pnpm outdated`; anything still listed here is expected to appear.
+## `json` 2.21.2 → 3.x — blocked by Rails, constrained in the Gemfile
 
-## ~~`annotate` 2.6.5 → 3.x~~ — DONE: swapped to `annotaterb`
+**Held at `< 3` in the Gemfile.** json 3 made `JSON.parse`'s options **keyword-only**:
 
-**Resolved** in the annotaterb migration commit. The unmaintained `annotate` gem
-(ctran/annotate_models) capped at `activerecord < 8.0` and its 2.6.5 binary was already broken
-on Ruby 4.0 (`File.exists?`), so it was replaced with **`annotaterb` 4.22.0** (drwl/annotaterb),
-the maintained drop-in that supports Rails 8.x / Ruby 4.x. The legacy malformed RDoc schema
-blocks were stripped and regenerated in the standard plain format (RDoc format is non-idempotent
-in annotaterb). See the **Schema annotations** note in `CLAUDE.md` for the resulting setup.
+```ruby
+def parse(source, on_load: nil, object_class: nil, array_class: nil, **options)
+```
 
-## `diff-lcs` 1.6.2 → 2.0.0 (Ruby) — blocked by an upstream constraint
+Rails 8.1.3.1's `ActiveSupport::JSON.decode` still passes them positionally
+(`activesupport/lib/active_support/json/decoding.rb:25`):
 
-**Why deferred:** `diff-lcs` is a transitive dependency. `solargraph` (0.60.2) constrains it to
-`~> 1.4`, so 2.0.0 cannot be resolved until solargraph relaxes that bound. No action needed in
-this repo; it will move once solargraph ships a release that allows `diff-lcs` 2.x.
+```ruby
+data = ::JSON.parse(json, options)
+```
 
-## `rdoc` 7.2.0 → 8.0.0 (Ruby) — blocked by the same upstream constraint
+So **every** serialized / JSON column raises `ArgumentError: wrong number of arguments
+(given 2, expected 1)` on read — measured: 866 errors and 9 failures across the suite, the
+first one being any `ActiveStorage::Blob#custom_metadata` read, i.e. any attachment upload.
+Nothing in this app calls a removed json 3 API (checked: `fast_generate`, `unparse`,
+`restore`, `GenericObject`, `create_additions`, `escape_slash`, `JSON.load`/`JSON.dump` —
+none are used), so the blocker is entirely upstream.
 
-**Why deferred:** the same `solargraph` 0.60.2 pins `rdoc (~> 7.0)`. We declare `rdoc` directly
-(`group :development, :test`), but bundler cannot resolve 8.x while solargraph is in the bundle —
-`bundle update rdoc` reports "attempted to update rdoc but its version stayed the same". When
-solargraph widens the bound, note that **RDoc 8 drops the Ripper-based parser for Prism** and
-removes deprecated CLI options/directives; nothing here drives rdoc programmatically, so the
-bump should be inert for us.
+**Unblocked by:** a Rails release whose `ActiveSupport::JSON.decode` calls `JSON.parse` with
+keywords. Then delete the constraint and its comment from the Gemfile and re-run
+`bundle update json`.
 
-## `highline` 3.0.1 → 3.1.2 (Ruby) — blocked by an upstream constraint
+## `active_storage_validations` 3.0.5 → 4.1.1 — not attempted
 
-**Why deferred:** transitive via `commander` 5.0.0, which pins `highline (~> 3.0.0)` — a
-pessimistic constraint at the patch level, so even 3.1.x is out. Moves when commander does.
+Deliberately left for a pass of its own: it is the gem behind
+`Attachment::ALLOWED_CONTENT_TYPES` and the receipt intake rules, so a major wants its
+changelog read against `app/models/attachment.rb` and
+`config/initializers/sheet_music_mime_types.rb` (the Marcel registration the allow-list
+depends on) rather than a bump-and-see. Unconstrained in the Gemfile, so `bundle update
+active_storage_validations` is all it takes once someone has read the 4.0 release notes.
 
-## `rack-proxy` 0.8.3 → 1.0.1 (Ruby) — blocked by an upstream constraint
+## `rack-mini-profiler` 4.0.1 → 5.0.0 — not attempted
 
-**Why deferred:** transitive via `vite_ruby` 3.10.2, which pins
-`rack-proxy (~> 0.6, >= 0.6.1)`; `~> 0.6` disallows 1.x. Moves when vite_ruby widens it.
+Development/test only, so it gates nothing. Same reason as above: its own pass.
 
-## `dropzone` 5.9.3 → 6.0.0-beta.2 (JS) — prerelease only
+## Notes from the same pass
 
-**Why deferred:** The only newer release is `6.0.0-beta.2`, a prerelease. Held at the latest
-stable `5.9.3`. Revisit once a stable `6.0.0` ships (v6 is a rewrite — read its migration notes
-before bumping, as the API/DOM hooks change).
-
-## Held back by the supply-chain cooldown — not deferred, just young
-
-pnpm applies a 4-day `minimumReleaseAge`, so a release newer than that is skipped **by design**
-and lands on the next sweep. At the 2026-07-31 sweep that was `vite` 8.2.0 (we took 8.1.5).
-Nothing to do — do not disable the cooldown to grab it.
+- `rack-proxy` 0.8.3 → **2.0.1** did land, as a transitive bump: `vite_ruby` requires
+  `>= 0.6.1` and the batch moved vite_ruby 3.10.2 → 3.11.0. It backs
+  `ViteRuby::DevServerProxy`, which only sits in the middleware stack when a Vite dev
+  server is running, and both suites are green with it.
+- **`bundle exec vite upgrade` moves `vite` and `vite-plugin-ruby` from `dependencies` to
+  `devDependencies`, and that was reverted on purpose.** It is vite_ruby's own convention
+  and it is safe *today* only because the Dockerfile never sets `NODE_ENV` — so
+  `pnpm install --frozen-lockfile` (Dockerfile:80) still installs dev deps and
+  `rails assets:precompile` (Dockerfile:100) can find vite. Setting `NODE_ENV=production`
+  in that image, an obvious-looking optimisation, would then break the asset build with
+  "vite: not found". If the move is wanted, do it together with an explicit
+  `pnpm install --prod=false` in the Dockerfile.
+- pnpm's supply-chain cooldown held back `vite-plugin-ruby` 5.2.4 and `eslint` 10.11.0 as
+  younger than 4 days. They are not deferred, just next time.
