@@ -1,6 +1,10 @@
 <%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:, people_by_id:) %>
 <div class="table-scroll">
-  <table class="table table-hover table-sticky-head">
+  <%# table-pinned-actions keeps the Edit column against the right-hand edge:
+      measured at 1366x768 this table is 1218px of columns in a 1012px box, so
+      Edit sat 87px off screen. The budget NAME is a link to the same form, so
+      there are two routes to it either way. %>
+  <table class="table table-hover table-sticky-head table-pinned-actions">
     <thead>
       <tr>
         <% headers.each do |header| %>
