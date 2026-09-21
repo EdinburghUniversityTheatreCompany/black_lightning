@@ -68,6 +68,14 @@ module NavigationHelper
     # Finance — the finance-team-only reimbursements tooling, in the order the
     # work is actually done rather than the order the screens were built.
     #
+    # Every item is `scoped: true`: the sidebar appends the year and cost
+    # centre the operator is currently looking at (SidebarComponent's
+    # SCOPE_PARAMS), so a pot picked on one screen survives the click to the
+    # next. Without it every nav href was bare and each click silently reverted
+    # to the active year and every centre. The producer items above are NOT
+    # scoped — their own claims are deliberately neither year- nor
+    # centre-scoped.
+    #
     # Fifteen flat links put the four WEEKLY items at positions 1, 2, 9 and 10,
     # with annual setup wedged between them, so +group:+ breaks them into the
     # four jobs: pay the claims, watch the budgets, keep the EUSA ledger true,
@@ -81,27 +89,27 @@ module NavigationHelper
       # `exact: true`: it points at the namespace root, and the sidebar marks an
       # item active for its own page AND anything beneath it, so without it
       # every finance screen would light this up alongside its own entry.
-      children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true }
+      children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true, scoped: true }
 
-      children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" }
-      children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" }
-      children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" }
-      children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" }
+      children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check", scoped: true }
+      children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square", scoped: true }
+      children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export", scoped: true }
+      children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left", scoped: true }
 
-      children << { group: "Budgets", title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" }
-      children << { group: "Budgets", title: "Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie" }
-      children << { group: "Budgets", title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project" }
-      children << { group: "Budgets", title: "Forecast revisions", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus" }
+      children << { group: "Budgets", title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar", scoped: true }
+      children << { group: "Budgets", title: "Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie", scoped: true }
+      children << { group: "Budgets", title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project", scoped: true }
+      children << { group: "Budgets", title: "Forecast revisions", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus", scoped: true }
 
-      children << { group: "EUSA ledger", title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" }
-      children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list" }
-      children << { group: "EUSA ledger", title: "Export workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" }
+      children << { group: "EUSA ledger", title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced", scoped: true }
+      children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list", scoped: true }
+      children << { group: "EUSA ledger", title: "Export workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel", scoped: true }
 
-      children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" }
-      children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days" }
-      children << { group: "Setup", title: "Cost centres", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" }
-      children << { group: "Setup", title: "Email & integrations", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" }
-      children << { group: "Setup", title: "What the words mean", path: admin_reimbursements_glossary_path, fa_icon: "fa-book" }
+      children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book", scoped: true }
+      children << { group: "Setup", title: "Financial years", path: admin_reimbursements_financial_years_path, fa_icon: "fa-calendar-days", scoped: true }
+      children << { group: "Setup", title: "Cost centres", path: admin_reimbursements_settings_path, fa_icon: "fa-gear", scoped: true }
+      children << { group: "Setup", title: "Email & integrations", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse", scoped: true }
+      children << { group: "Setup", title: "What the words mean", path: admin_reimbursements_glossary_path, fa_icon: "fa-book", scoped: true }
     end
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 

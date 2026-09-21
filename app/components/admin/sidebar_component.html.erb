@@ -74,7 +74,7 @@
               <% previous_group = item[:group] %>
               <% item_class = "flex items-center gap-2 px-4 py-1.5 hover:bg-white/10" %>
               <% item_class += " text-white font-medium active" if active_item?(item) %>
-              <a href="<%= item[:path] %>" class="<%= item_class %>">
+              <a href="<%= item_href(item) %>" class="<%= item_class %>">
                 <i class="fas <%= item[:fa_icon] %> w-4 text-xs" aria-hidden="true"></i>
                 <%= item[:title] %>
               </a>

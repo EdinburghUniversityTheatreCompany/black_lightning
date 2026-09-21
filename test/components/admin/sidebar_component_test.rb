@@ -96,4 +96,81 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
 
     assert_no_selector "details p"
   end
+
+  # --- The finance selectors ----------------------------------------------
+  # A year or cost centre picked on one finance screen was dropped by every
+  # sidebar click: each nav href was bare, so the next screen silently reverted
+  # to the active year and every centre.
+
+  def scoped_items
+    [ { title: "Finance", fa_icon: "fa-money-bill-wave", children: [
+      { group: "Budgets", title: "Budgets", path: "/admin/reimbursements/budgets",
+        fa_icon: "fa-sack-dollar", scoped: true },
+      { group: "Budgets", title: "Import", path: "/admin/reimbursements/budget_import?cost_centre_id=7",
+        fa_icon: "fa-file-import", scoped: true },
+      { title: "My Claims", path: "/admin/reimbursements/expenses", fa_icon: "fa-file-invoice" }
+    ] } ]
+  end
+
+  def render_scoped(scope_params)
+    render_inline Admin::SidebarComponent.new(
+      nav_items: scoped_items, current_user: @user,
+      current_path: "/admin/reimbursements/budgets", scope_params: scope_params
+    )
+  end
+
+  test "a scoped item carries the year and cost centre the operator is on" do
+    render_scoped({ "year" => "fringe-2027", "cost_centre" => "termtime" })
+
+    assert_selector "a[href*='year=fringe-2027'][href*='cost_centre=termtime']", text: /Budgets/
+  end
+
+  test "an unscoped item is left bare" do
+    render_scoped({ "year" => "fringe-2027" })
+
+    assert_selector "a[href='/admin/reimbursements/expenses']", text: /My Claims/
+  end
+
+  test "nothing is appended when no selector is set" do
+    render_scoped({})
+
+    assert_selector "a[href='/admin/reimbursements/budgets']", text: /Budgets/
+  end
+
+  # Only the two selectors, never the page's other filter state: a ?search= or
+  # a ?page= carried onto another screen would filter it by something the
+  # operator never typed there.
+  test "other query parameters are not carried" do
+    render_scoped({ "year" => "fringe-2027", "search" => "hamlet", "page" => "3" })
+
+    assert_no_selector "a[href*='search=hamlet']"
+    assert_no_selector "a[href*='page=3']"
+  end
+
+  # An item stating a scope of its own is stating it on purpose.
+  test "an item's own query string wins over the carried one" do
+    render_scoped({ "cost_centre" => "termtime", "year" => "fringe-2027" })
+
+    assert_selector "a[href*='cost_centre_id=7'][href*='year=fringe-2027']", text: /Import/
+    assert_no_selector "a[href*='cost_centre=termtime']", text: /Import/
+  end
+
+  # "financial_year=" contains "year=", so a substring test in either direction
+  # gets one of the two coordinates wrong. The query is parsed instead.
+  test "a parameter merely containing a selector's name does not block it" do
+    items = scoped_items
+    items.first[:children].first[:path] = "/admin/reimbursements/budgets?financial_year=9"
+    render_inline Admin::SidebarComponent.new(
+      nav_items: items, current_user: @user,
+      current_path: "/admin/reimbursements/budgets", scope_params: { "year" => "fringe-2027" }
+    )
+
+    assert_selector "a[href*='financial_year=9'][href*='year=fringe-2027']", text: /Budgets/
+  end
+
+  test "marking an item active still works once its href carries a selector" do
+    render_scoped({ "year" => "fringe-2027" })
+
+    assert_selector "a.active[href*='/admin/reimbursements/budgets']", text: /Budgets/
+  end
 end

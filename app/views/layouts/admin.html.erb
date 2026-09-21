@@ -28,7 +28,10 @@
     <%= render Admin::SidebarComponent.new(
           nav_items: admin_navbar_items,
           current_user: current_user,
-          current_path: request.fullpath
+          current_path: request.fullpath,
+          # So a year or a cost centre picked on one finance screen survives
+          # the click to the next one. See SidebarComponent::SCOPE_PARAMS.
+          scope_params: request.query_parameters
         ) %>
 
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">

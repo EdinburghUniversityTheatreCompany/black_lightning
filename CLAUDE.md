@@ -532,6 +532,12 @@ survive as historical import provenance and are never written. Spec + plan in
   claims, ledger rows, batches and mailboxes. The selector is
   `FinanceController#resolve_cost_centre!`, rendered by
   `shared/_cost_centre_selector` on Budgets index + overview, Actuals, Review and Batch history.
+  - **The sidebar carries the selectors, and only those two.** `SCOPE_PARAMS` is `year` and
+    `cost_centre`; the clash check PARSES an item's own query string rather than matching
+    substrings, because `financial_year=` contains `year=` and `cost_centre_id=` is the same
+    coordinate spelled differently (and the key beats the id in `resolve_cost_centre!`). The
+    producer items are deliberately unscoped — their own claims are neither year- nor
+    centre-scoped.
   - **No `?cost_centre=` means EVERY centre**, because `CostCentre.default` is `order(:id).first`
     and defaulting to it silently empties the second centre's screens for the people who work in
     it. `?cost_centre_id=<id>` is still honoured for the budget-import links; the key wins.
@@ -549,7 +555,11 @@ survive as historical import provenance and are never written. Spec + plan in
   - **Build Batch's centre travels in a HIDDEN FIELD, not the URL** — the form posts to a bare
     path, so a POST carries no query string and the submit silently bounced to History. A request
     test cannot see this; `build_batch_cost_centre_js_test.rb` clicks the real button. The
-    sidebar's link carries no centre and never can, so `new` renders a **chooser**.
+    sidebar's link now CARRIES the selected centre (`Admin::SidebarComponent::SCOPE_PARAMS`
+    appends `?year=` and `?cost_centre=` to every `scoped: true` finance item), so Build Batch
+    opens on the pot the operator was looking at. With no centre selected — the "All" default —
+    `new` still renders a **chooser**, which is what keeps "the wizards refuse to guess" true:
+    the centre is carried from an explicit choice, never inferred.
   - **A batch's mailbox is a GUESS for anything built before this, so reopen probes a LIST**
     (derived centre, then default). Older batches all drafted into the default centre's mailbox,
     and `GraphClient#draft_message?` fails closed, so one wrong guess read as "may already have
