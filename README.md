@@ -30,14 +30,14 @@ Current key versions (kept in sync with the manifests — `Gemfile.lock`, `packa
 
 ## Development setup
 
-Toolchain versions are pinned with [mise](https://mise.jdx.dev) (`mise.toml` + `mise.lock`), and
+Toolchain versions are pinned with [mise](https://mise.jdx.dev) (`mise/config.toml` + `mise/mise.lock`), and
 pre-commit checks run through [hk](https://hk.jdx.dev) (`hk.pkl`). First-time setup:
 
 ```sh
 mise install # installs dev tools & dependencies
 ```
 
-Run the app with `mise run serve` (Puma + Vite via foreman). Run the checks CI runs with `hk run check`;
+Run the app with `mise run serve` (Puma + Vite, as two mise tasks). Run the checks CI runs with `hk run check`;
 run the test suite with `bin/rails test test:system` (start the test DB first — see the
 development guide). Lint JS with `pnpm lint`.
 
