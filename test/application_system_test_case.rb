@@ -12,10 +12,6 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
   include Warden::Test::Helpers
 
-  # Select a value in a Tom Select widget by visible text.
-  # Tom Select hides the native <select> and rewrites the label's `for` attribute
-  # to point at its own control element (suffix "-ts-control"). We strip that
-  # suffix to get back to the original select ID, then call setValue via JS.
   # Set a date input value reliably in headless Chrome.
   #
   # Chrome's <input type="date"> is segment-based (dd|mm|yyyy) and its built-in
@@ -36,12 +32,30 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   def tom_select(text, from:)
+    select_id, option_value = tom_select_option(text, from: from)
+    execute_script("document.getElementById('#{select_id}').tomselect.setValue('#{option_value}')")
+  end
+
+  # The MULTIPLE variant: adds one more choice instead of replacing the lot,
+  # which is what setValue does.
+  def tom_select_add(text, from:)
+    select_id, option_value = tom_select_option(text, from: from)
+    execute_script("document.getElementById('#{select_id}').tomselect.addItem('#{option_value}')")
+  end
+
+  private
+
+  # The select's id and the value behind a visible option label. Tom Select
+  # hides the native <select> and rewrites the label's `for` to point at its own
+  # control element (suffix "-ts-control"), so the suffix is stripped to get the
+  # original id back.
+  def tom_select_option(text, from:)
     label = find("label", text: from)
     select_id = label["for"].sub(/-ts-control$/, "")
     option_value = evaluate_script(
       "Array.from(document.getElementById('#{select_id}').options).find(o => o.text.trim() === '#{text.gsub("'", "\\'")}')?.value"
     )
     raise "tom_select: option '#{text}' not found in select '#{select_id}'" if option_value.nil?
-    execute_script("document.getElementById('#{select_id}').tomselect.setValue('#{option_value}')")
+    [ select_id, option_value ]
   end
 end

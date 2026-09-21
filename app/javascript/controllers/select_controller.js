@@ -103,6 +103,10 @@ export default class extends Controller {
 
     const plugins = []
     if (allowClear) { plugins.push("clear_button") }
+    // A multiple select renders its choices as chips; without remove_button the
+    // only way back out of one is the keyboard, and a mis-clicked owner would
+    // look permanent.
+    if (el.multiple) { plugins.push("remove_button") }
 
     const theme = "default";
 
@@ -193,6 +197,11 @@ export default class extends Controller {
 
     const ts = new this.#TomSelect(el, options)
     this.#instances.set(el, ts)
+
+    // Tom Select is initialised asynchronously (the library is import()ed), so
+    // a controller that wants to drive a widget — disable it, read it — cannot
+    // assume el.tomselect exists when IT connects. This is how it finds out.
+    el.dispatchEvent(new CustomEvent("select:ready", { bubbles: true }))
   }
 
   #ajaxLoad(el, query, callback) {
