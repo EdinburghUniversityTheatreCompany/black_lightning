@@ -668,3 +668,28 @@ on screen saying why. The apportion form works around it locally
 (`disabled:opacity-50 disabled:cursor-not-allowed` plus the two hover resets, since the primary
 variant's hover still fires on a disabled button). Adding those to `BASE_CLASSES` is the real fix
 and restyles every button in the app, which is wider than the one form it was noticed on.
+
+### Loose ends from the mise restructure (soqb, 2026-09-14..16)
+
+The docs, the VS Code task and `bin/restart-web` were brought up to date on 2026-09-21. Still open:
+
+- **Nothing sets `MISE_ENV=development` locally**, only CI does, and `hk` lives in
+  `mise/config.development.toml`. So a plain shell cannot resolve `hk`, and the pre-commit hook fails
+  every `git commit` with "No version is set for shim: hk". Either the README's setup steps must say
+  to export it, or the repo should set it for everyone (a committed `.miserc.toml`, if the pinned mise
+  supports it — check before relying on it).
+- **`hk.pkl`'s `versions` step globs `mise.toml`**, which no longer exists, so a Ruby/Node bump in
+  `mise/config.toml` may not trigger the drift guard. Test by bumping a version and committing.
+  Its comments, and `.devcontainer/Dockerfile.dev` + `setup.sh`'s, still say `mise.toml` too.
+- **`Procfile.dev` and the `foreman` gem are orphaned** — `bin/dev` was their only reader.
+- The `dev-hooks:worktree-setup` script looks for a root `mise.toml` to trust and reports
+  "No mise.toml — skipped mise trust" here; `mise trust` by hand works.
+
+### `advance_review` on proposals has no tests, and is labelled temporary
+
+8f7afd98 / 7f36c1c9 add a grid permission letting its holders read every proposal BEFORE the
+call's deadline, with `cannot :advance_review, :proposals` ahead of the grid so an admin only gets
+it by an explicit tick. No test covers either half (a holder can read early; an unticked admin
+cannot), and `"Advance Proposal Checker"` went into `Role::HARDCODED_NAMES` though nothing in the
+code asks for that role by name — the gate is the grid permission. The grid label reads
+"(temporary)": remove it, the two `Ability` blocks and the role name once the call closes.
