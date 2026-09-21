@@ -40,9 +40,41 @@ module Admin
 
       private
 
+      # How many recent sends the page lists. Enough to cover a run-day or two
+      # of reminders without turning a health dashboard into a mail archive;
+      # the search below is how you reach further back.
+      SEND_LOG_LIMIT = 50
+
       def load_cost_centres
         @title = "Integration Status"
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
+        load_send_log
+      end
+
+      # What the portal has emailed, and to whom.
+      #
+      # The page could say whether Graph was reachable and when each centre's
+      # nightly last completed, and nothing about what was actually sent — so
+      # "did this person get their reminder?" had no answer short of asking
+      # them. ?recipient= searches one address, which is the form the question
+      # is always asked in.
+      def load_send_log
+        @recipient_query = params[:recipient].to_s.strip
+        @sends =
+          if @recipient_query.present?
+            ::Reimbursements::NotificationLog.for_recipient(@recipient_query)
+                                             .recent_first.includes(:cost_centre)
+                                             .limit(SEND_LOG_LIMIT).to_a
+          else
+            ::Reimbursements::NotificationLog.recent(limit: SEND_LOG_LIMIT,
+                                                     cost_centre: selected_cost_centre).to_a
+          end
+        # Per-run counts: one line per day and kind, which is how the nightly
+        # actually happens — a run-day sends a batch of one kind to several
+        # people, and the count is the thing that looks wrong when it is wrong.
+        @send_counts = @sends.group_by { |log| [ log.sent_at.to_date, log.kind ] }
+                             .transform_values(&:size)
+                             .sort_by { |(date, kind), _| [ date, kind ] }.reverse
       end
 
       def graph

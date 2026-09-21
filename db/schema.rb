@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -944,6 +944,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_100100) do
     t.index ["cost_centre_id", "code"], name: "index_reimbursements_nominal_codes_on_centre_and_code", unique: true
   end
 
+  create_table "reimbursements_notification_logs", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.bigint "cost_centre_id"
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.string "recipient", null: false
+    t.datetime "sent_at", null: false
+    t.string "subject"
+    t.datetime "updated_at", null: false
+    t.index ["cost_centre_id", "sent_at"], name: "index_reimbursements_notification_logs_on_centre"
+    t.index ["recipient", "sent_at"], name: "index_reimbursements_notification_logs_on_recipient"
+    t.index ["sent_at", "id"], name: "index_reimbursements_notification_logs_on_sent_at"
+  end
+
   create_table "reimbursements_owner_endorsements", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "budget_record_id", null: false
     t.datetime "created_at", null: false
@@ -1293,6 +1306,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_100100) do
   add_foreign_key "reimbursements_expenses", "reimbursements_financial_years", column: "financial_year_id"
   add_foreign_key "reimbursements_expenses", "reimbursements_people", column: "person_id"
   add_foreign_key "reimbursements_nominal_codes", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_notification_logs", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "reimbursements_owner_endorsements", "users", column: "overridden_by_id"
   add_foreign_key "reimbursements_payment_details", "reimbursements_people", column: "person_id"
   add_foreign_key "roles_parents", "roles"

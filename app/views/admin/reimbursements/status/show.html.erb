@@ -72,3 +72,85 @@
     </div>
   </div>
 <% end %>
+
+<%# What the portal has actually emailed. The page could say whether Graph was
+    reachable and when each centre's nightly last completed, and nothing about
+    what was sent to whom — so "did this person get their reminder?" had no
+    answer short of asking them. %>
+<%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
+  <p class="mb-3 text-sm text-gray-600">
+    One line per recipient, newest first. This records that the portal handed the message to
+    Microsoft — a bounce afterwards is invisible here, the same limit a batch's "Producer emails:
+    sent" badge states. Nothing sent before this log existed appears.
+  </p>
+
+  <%= form_with url: admin_reimbursements_status_path, method: :get,
+                class: "mb-4 flex flex-wrap items-end gap-3" do %>
+    <%= render "shared/form/field", label: "Did this person get it?", name: :recipient,
+          html_class: "grow max-w-md",
+          hint: "An email address, exactly as it is on their People record." do %>
+      <%= text_field_tag :recipient, @recipient_query, type: "search",
+                         placeholder: "name@example.com", class: input_classes(width: nil) %>
+    <% end %>
+    <%= submit_tag "Search", class: "#{btn_classes(:secondary, :sm)} mb-4" %>
+    <% if @recipient_query.present? %>
+      <%= link_to "Clear", admin_reimbursements_status_path,
+                  class: "#{btn_classes(:secondary, :sm)} mb-4" %>
+    <% end %>
+  <% end %>
+
+  <% if @send_counts.any? && @recipient_query.blank? %>
+    <%# Per-run counts: a run-day sends a batch of one kind to several people,
+        and the count is the thing that looks wrong when it is wrong. %>
+    <p class="mb-1 text-sm font-medium">Per run</p>
+    <ul class="mb-4 flex flex-col gap-1 text-sm">
+      <% @send_counts.each do |(date, kind), count| %>
+        <li class="flex flex-wrap items-baseline gap-x-2">
+          <span class="text-gray-500"><%= reimbursements_date(date) %></span>
+          <span class="grow"><%= kind.humanize %></span>
+          <span class="tabular-nums"><%= pluralize(count, "recipient") %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if @sends.empty? %>
+    <p class="mb-0 text-gray-600">
+      <% if @recipient_query.present? %>
+        Nothing has been emailed to <strong><%= @recipient_query %></strong>. Check the address on
+        their People record — a reminder to an address nobody reads looks exactly like this.
+      <% else %>
+        Nothing has been emailed yet. Reminders go out on each cost centre's run days, and a
+        rejection or a batch notification is sent as it happens.
+      <% end %>
+    </p>
+  <% else %>
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-300 text-left text-gray-600">
+            <th scope="col" class="px-3 py-2">Sent</th>
+            <th scope="col" class="px-3 py-2">To</th>
+            <th scope="col" class="px-3 py-2">What</th>
+            <th scope="col" class="px-3 py-2">Cost centre</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @sends.each do |log| %>
+            <tr class="border-b border-gray-200">
+              <td class="px-3 py-2 whitespace-nowrap"><%= log.sent_at.to_fs(:short) %></td>
+              <td class="px-3 py-2"><%= log.recipient %></td>
+              <td class="px-3 py-2">
+                <%= log.kind.humanize %>
+                <% if log.subject.present? %>
+                  <div class="text-xs text-gray-500"><%= log.subject %></div>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-gray-600"><%= log.cost_centre&.name %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>

@@ -147,7 +147,26 @@ module Reimbursements
         template: template, layout: "reimbursements_mailer",
         assigns: assigns.merge(subject: subject, cost_centre: @cost_centre).stringify_keys
       )
-      @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
+      result = @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
+      log_send(to: to, subject: subject, template: template)
+      result
+    end
+
+    # Record what went to whom, AFTER the send and never before it.
+    #
+    # This is the one chokepoint every message here passes through, which is
+    # why the log lives at it rather than at each of the nine call sites — nine
+    # of them would drift. NotificationLog.record swallows its own failures, so
+    # a logging problem can never stop the portal telling somebody their claim
+    # was rejected; an unlogged email that went out beats a logged one that did
+    # not.
+    #
+    # The KIND is the template's own basename, so a new message type is logged
+    # the moment it exists rather than when somebody remembers to add it to a
+    # list.
+    def log_send(to:, subject:, template:)
+      NotificationLog.record(kind: File.basename(template.to_s), recipients: to,
+                             subject: subject, cost_centre: @cost_centre)
     end
   end
 end
