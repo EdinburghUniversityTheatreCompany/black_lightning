@@ -33,7 +33,7 @@ class Admin::ProposalsHelperTest < ActionView::TestCase
       @proposal.late = true
       _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
 
-      expected_labels = "<span class=\"#{BASE_BADGE_CLASSES} bg-warning/15 text-warning\">Awaiting Approval</span>\n<span class=\"#{BASE_BADGE_CLASSES} bg-danger/15 text-danger\">Late</span>\n<span class=\"#{BASE_BADGE_CLASSES} bg-danger/15 text-danger\">Has Debtors</span>"
+      expected_labels = "<span class=\"#{BASE_BADGE_CLASSES} bg-info/15 text-info\">Awaiting Approval</span>\n<span class=\"#{BASE_BADGE_CLASSES} bg-danger/15 text-danger\">Late</span>\n<span class=\"#{BASE_BADGE_CLASSES} bg-danger/15 text-danger\">Has Debtors</span>"
 
       assert_equal expected_labels, proposal_labels(@proposal, false)
     end
@@ -41,7 +41,7 @@ class Admin::ProposalsHelperTest < ActionView::TestCase
     test "labels for approved proposal" do
       @proposal.status = :approved
 
-      expected_labels = "<span class=\"#{BASE_BADGE_CLASSES} bg-info/15 text-info\">Approved</span>"
+      expected_labels = "<span class=\"#{BASE_BADGE_CLASSES} bg-success/15 text-success\">Approved</span>"
 
       assert_equal expected_labels, proposal_labels(@proposal, false)
     end
