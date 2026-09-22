@@ -129,9 +129,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   def reverted_status
     case status
-      when :awaiting_approval; nil
-      when :approved, :rejected; :awaiting_approval
-      when :successful, :unsuccessful; :approved
+    when :awaiting_approval; nil
+    when :approved, :rejected; :awaiting_approval
+    when :successful, :unsuccessful; :approved
     end
   end
 

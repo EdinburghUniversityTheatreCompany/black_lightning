@@ -251,6 +251,15 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:update, @proposal, false, false, false, "that is archived but not approved")
   end
 
+  test "admins cannot withdraw terminal proposals" do
+    @call = FactoryBot.create(:proposal_call)
+    helper_set_up_proposal
+
+    [ :rejected, :successful, :unsuccessful ].each do |status|
+      helper_test_actions(@proposal, "#{status} proposal ", @admin_ability, [], [ :withdraw ])
+    end
+  end
+
   test "users can access the proposal about page" do
     @call = FactoryBot.create(:proposal_call)
     helper_set_up_proposal

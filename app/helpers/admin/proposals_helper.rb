@@ -17,7 +17,7 @@ module Admin::ProposalsHelper
           [ get_link(proposal, :mark_successful),
             get_link(proposal, :mark_unsuccessful) ]
         else
-          [ ]
+          []
         end
 
       buttons << get_link(proposal, :revert_status, link_text: "Revert", confirm: "Are you sure you want to revert this proposal") unless proposal.awaiting_approval?

@@ -265,7 +265,7 @@ class Ability
     # You can update and unwithdraw a proposal at any time before the editing dealine.
     can [ :update, :unwithdraw ], Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
 
-    # But you can withdraw a proposal at any time.
+    # But you can withdraw a proposal at any time before it reaches a "terminal stage" (see below).
     can :withdraw, Admin::Proposals::Proposal, users: { id: user.id }
 
     # The `review proposals` grid permission (Committee and Proposal Checker) opens
@@ -286,6 +286,11 @@ class Ability
     # Withdrawn propoals and proposals before the submission deadline cannot have their status adjusted.
     cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, withdrawn: true
     cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+
+    # Rejected, unsuccessful, or successful proposals, have already completed the proposal lifecycle and so
+    # cannot be withdrawn.
+    cannot :withdraw, Admin::Proposals::Proposal,
+      status: [ :rejected, :unsuccessful, :successful ].map { |s| Admin::Proposals::Proposal.statuses[s] }
 
     # We also have an `advance review` grid permission (generally Bus Man, Set Man, Prod Man, and Secretary)
     # for proposals before the Submission Deadline.
