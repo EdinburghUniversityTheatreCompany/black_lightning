@@ -985,6 +985,13 @@ module Admin
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     end
 
+    def actuals_legacy_xls
+      file = Tempfile.new([ "actuals", ".xls" ])
+      file.write("anything")
+      file.rewind
+      Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel")
+    end
+
     def actuals_csv(text)
       file = Tempfile.new([ "actuals", ".csv" ])
       file.write(text)
@@ -1074,6 +1081,26 @@ module Admin
 
       assert_match(/EUSA's finance office exports its ledger once a month/, response.body)
       assert_match(/ask EUSA's finance office/, response.body)
+    end
+
+    # roo 3 dropped legacy .xls and we do not carry roo-xls, so an .xls got as
+    # far as Roo and came back "Can't detect the type of /tmp/actuals2026...xls
+    # - please use the :extension option to declare its type": a tmp path and a
+    # developer's instruction, shown to a finance operator. The picker no
+    # longer offers .xls, and one arriving anyway is refused in words that say
+    # what to do about it.
+    test "a legacy .xls is refused with advice rather than Roo's own message" do
+      error = assert_raises(::Reimbursements::ActualsUpload::UnreadableError) do
+        ::Reimbursements::ActualsUpload.to_text(actuals_legacy_xls)
+      end
+
+      assert_match(/\.xlsx/, error.message)
+      assert_no_match(/extension option|tmp/, error.message)
+    end
+
+    test "the file picker does not offer a format we cannot read" do
+      assert_not_includes ::Reimbursements::ActualsUpload::ACCEPT.split(","), ".xls"
+      assert_includes ::Reimbursements::ActualsUpload::ACCEPT.split(","), ".xlsx"
     end
 
     # A cell's own tab would split the row into two columns and shift every

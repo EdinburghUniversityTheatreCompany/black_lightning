@@ -12,9 +12,17 @@ module Reimbursements
   # whose results could differ from the pasted one's.
   class ActualsUpload
     # What the file picker accepts, and what this can read.
-    ACCEPT = ".xlsx,.xls,.csv,.txt,.tsv".freeze
+    ACCEPT = ".xlsx,.csv,.txt,.tsv".freeze
 
-    SPREADSHEET_EXTENSIONS = %w[.xlsx .xls].freeze
+    SPREADSHEET_EXTENSIONS = %w[.xlsx].freeze
+
+    # roo 3 dropped legacy .xls and we do not carry roo-xls, so one reached
+    # Roo and came back "Can't detect the type of /tmp/actuals…xls - please use
+    # the :extension option to declare its type" — a tmp path and a
+    # developer's instruction, shown to a finance operator. Named here so the
+    # refusal says what to do instead. EUSA's exports are .xlsx; add roo-xls if
+    # that ever stops being true.
+    LEGACY_SPREADSHEET_EXTENSIONS = %w[.xls].freeze
 
     # Raised for a file this cannot read, so the controller reports it on the
     # form rather than 500ing with the operator's upload lost.
@@ -23,7 +31,13 @@ module Reimbursements
     class << self
       def to_text(file)
         name = file.original_filename.to_s
-        if SPREADSHEET_EXTENSIONS.include?(File.extname(name).downcase)
+        extension = File.extname(name).downcase
+        if LEGACY_SPREADSHEET_EXTENSIONS.include?(extension)
+          raise UnreadableError, "this reads .xlsx, not the older .xls. Open it in Excel and " \
+                                 "choose Save As .xlsx, or paste the rows instead"
+        end
+
+        if SPREADSHEET_EXTENSIONS.include?(extension)
           spreadsheet_to_tsv(file)
         else
           # A .csv or .tsv is already the text the parser reads, and
