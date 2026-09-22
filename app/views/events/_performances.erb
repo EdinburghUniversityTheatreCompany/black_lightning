@@ -3,7 +3,11 @@
 <% schedule = Event::Schedule.for(event) %>
 <% details = event.schedule_details %>
 
-<% if schedule.kind != :none || details.any? %>
+<%#
+  FIXME(soqb): FoH think this view is cluttered. Limit to only when the data is useful (i.e. :single)
+  since pretix doesn't list performances then.
+%>
+<% if (schedule.kind != :none || details.any?) && schedule.kind == :single %>
   <%= render CardComponent.new(title: schedule.kind == :none ? 'Details' : event.occurrence_label.pluralize) do %>
     <%# One row per performance, rather than Event::Schedule's collapsed blocks.
         A run with a midnight show rendered as two overlapping ranges ("Wed 23 -
