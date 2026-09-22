@@ -192,18 +192,32 @@ module Reimbursements
     # Reconciliation.detect_offsetting_pairs applies, and nothing softer.
     #
     # Same absolute amount, opposite sign, same nominal code, same financial
-    # year — the gates the automatic detector will not pair across. The
-    # detector then SCORES the survivors on reference, period, narrative and
-    # date distance; this deliberately does not, because a person is choosing
-    # here and the governing asymmetry runs the other way: a false positive
-    # stamps real spend as noise and hides it, while an extra row on a picker
-    # costs a glance.
+    # year, same cost centre — the gates the automatic detector will not pair
+    # across. The detector then SCORES the survivors on reference, period,
+    # narrative and date distance; this deliberately does not, because a person
+    # is choosing here and the governing asymmetry runs the other way: a false
+    # positive stamps real spend as noise and hides it, while an extra row on a
+    # picker costs a glance.
+    #
+    # The cost centre is the gate with most at stake, which is why it holds
+    # here as well as in the detector: two unrelated real transactions of the
+    # same size on the same code in two different pots, stamped as cancelling
+    # out, hide real spend from BOTH pots' rollups. It is enforced in the MODEL
+    # rather than by scoping the picker's source, because #confirm_offset
+    # re-checks through this same method and the "Mark as offsetting" link
+    # carries no cost centre at all.
+    #
+    # Unlike the detector, a row with NO cost centre pairs with another that
+    # has none: those predate cost centres, and the portal reads an unplaced
+    # row as belonging everywhere rather than nowhere (DatabaseStore#in_year
+    # states the same leniency). An unplaced row and a placed one still differ.
     def offset_candidates(rows)
       rows.select do |row|
         row.id != id && row.pairable? &&
           row.signed_amount == -signed_amount &&
           row.nominal_code.to_s == nominal_code.to_s &&
-          row.financial_year_id == financial_year_id
+          row.financial_year_id == financial_year_id &&
+          row.cost_centre_id == cost_centre_id
       end
     end
 

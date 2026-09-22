@@ -1183,6 +1183,13 @@ survive as historical import provenance and are never written. Spec + plan in
   skips that leg). Rows are never deleted, finance needs the audit trail — and a
   mis-detected pair is undone with the finance-gated **"Not offsetting"** button on the
   Actuals index (`ActualsController#unoffset` + `DatabaseStore#unlink_offsetting_pair!`).
+  **Pairing two rows BY HAND applies the same five hard gates** (`EusaActual#offset_candidates`)
+  and deliberately none of the scoring: a person is choosing, so an extra row on the picker costs
+  a glance while a false positive hides real spend. The cost-centre gate lives in the MODEL, not
+  in the picker's source — `#confirm_offset` re-checks through the same method and the "Mark as
+  offsetting" link carries no centre, so scoping the list alone would leave the write open. A row
+  with NO cost centre pairs with another that has none (rows predating cost centres are read as
+  belonging everywhere, per `#in_year`), which is the one place it is laxer than the detector.
   **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`,
   Mick's call): it nets to zero, so converting it would invent spend. Unlinked *debit* rows
   can be converted (`ExpenseForm.from_actual` + `ActualsController#new_expense/#create_expense`),

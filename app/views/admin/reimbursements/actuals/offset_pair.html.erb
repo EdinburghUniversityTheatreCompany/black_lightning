@@ -29,8 +29,8 @@
       <%# Naming the four gates is the only way the operator can tell "nothing
           matches" from "I am looking in the wrong place". %>
       Nothing on the ledger can cancel this row out. A counterpart has to be the same amount on
-      the opposite side, on the same nominal code and in the same financial year, and be attached
-      to nothing itself.
+      the opposite side, on the same nominal code, in the same financial year and the same cost
+      centre, and be attached to nothing itself.
     </p>
   <% end %>
 <% else %>
@@ -41,10 +41,9 @@
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
-        Same amount, opposite side, same nominal code, same financial year, and attached to
-        nothing itself. Nothing here is ranked by how likely it is, unlike the automatic matcher,
-        and rows from another cost centre are listed too, so check the date, the narrative and
-        the pot before choosing.
+        Same amount, opposite side, same nominal code, same financial year and cost centre, and
+        attached to nothing itself. Nothing here is ranked by how likely it is, unlike the
+        automatic matcher, so check the date and the narrative before choosing.
       </p>
 
       <div class="space-y-1">
