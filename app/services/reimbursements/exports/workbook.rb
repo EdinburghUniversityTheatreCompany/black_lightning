@@ -94,11 +94,12 @@ module Reimbursements
           [ "Financial year", @store.financial_year&.label || "Every year" ],
           [ "Cost centre", @store.cost_centre&.name || "Every cost centre" ],
           [ "Sheets", SHEETS.map { |exporter_class, _| exporter_class::SHEET_NAME }.join(", ") ],
-          # People is the one sheet the scope does not reach, and a reader
-          # totalling it against the others has to know that.
-          [ "Note", "Every sheet covers the year and cost centre above, except People: a payee " \
-                    "has no cost centre, and the same person claims from whichever pot their " \
-                    "claim's budget belongs to." ],
+          # A reader totalling one sheet against another has to know the scope
+          # is not uniform: People has no cost centre at all, and only three
+          # sheets read a year-scoped reader (see SHEETS).
+          [ "Note", "The cost centre covers every sheet except People, which has none. The " \
+                    "year covers Budgets, Areas and Forecast revisions only; Claims, the " \
+                    "ledger and Batches cover every year." ],
           [ "Bank details", "Masked to the last four digits. Only the BACS spreadsheet EUSA is " \
                             "paid from carries full numbers." ]
         ]

@@ -196,7 +196,7 @@
                 <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) if row.credit.positive? %></td>
                 <td class="py-1 text-gray-600">
                   <%= if row.debit.positive?
-                        "No matching submitted expense"
+                        "No matching Submitted or Paid claim"
                       elsif row.credit.positive?
                         "No matching income budget"
                       else

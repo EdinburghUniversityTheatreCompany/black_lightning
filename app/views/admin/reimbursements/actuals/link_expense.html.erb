@@ -20,8 +20,9 @@
 <% if @candidates.empty? %>
   <%= render CardComponent.new(title: "Which claim did this pay?") do %>
     <p class="mb-0 text-gray-600">
-      No unpaid claims to link this to. Every claim on file is already Paid, so this row is
-      either income, someone else's, or a cost nobody claimed - in which case
+      No claim here can be settled by this row. Paid claims are settled already, and drafts and
+      rejected claims are never offered. So this row is income, someone else's, or a cost nobody
+      claimed - in which case
       <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id) %>
       instead.
     </p>

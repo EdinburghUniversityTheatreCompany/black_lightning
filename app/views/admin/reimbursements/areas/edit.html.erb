@@ -30,10 +30,10 @@
   <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
     <div><dt class="text-gray-500" title="The agreed figure, and what it is a total of (picked on the form above)."><%= @area.basis_label %></dt><dd class="font-medium"><%= reimbursements_money(@area.projected_amount) %></dd></div>
     <div><dt class="text-gray-500" title="How much of the agreed total has been split out into budget lines, on the basis picked above. Lines with no agreed figure of their own are skipped, not counted as zero.">Allocated to lines</dt><dd class="font-medium"><%= reimbursements_area_allocation(@area) %></dd></div>
-    <div><dt class="text-gray-500" title="The part of the agreed total not yet assigned to a line. Not spare money.">Unallocated</dt><dd class="font-medium"><%= reimbursements_money(@area.unallocated) %></dd></div>
+    <div><dt class="text-gray-500" title="Agreed total less what the lines add up to: a gap in the plan, not headroom. Give it to a line before anyone claims against it.">Unallocated</dt><dd class="font-medium"><%= reimbursements_money(@area.unallocated) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@area.committed_amount) %></dd></div>
     <div>
-      <dt class="text-gray-500" title="The agreed total less committed spend, the one figure here that is the same on both bases. Committed counts claims, and income that has landed is an EUSA ledger figure rather than a claim, so there is nothing to net against it. On a net allowance whose income has arrived, this reads lower than the room really left.">Remaining</dt>
+      <dt class="text-gray-500" title="Agreed total less committed spend, the same on both bases: income that has landed is a ledger figure, not a claim. So on a net allowance whose income has arrived, this reads lower than the room really left.">Remaining</dt>
       <dd class="font-medium <%= "text-danger" if @area.remaining&.negative? %>"><%= reimbursements_money(@area.remaining) %></dd>
     </div>
   </dl>

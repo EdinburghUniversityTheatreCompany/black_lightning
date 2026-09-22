@@ -21,8 +21,9 @@
       <%= f.input :ends_on, as: :date, label: "Ends on" %>
     </div>
     <p class="<%= FormStyles::HINT %> -mt-2 <%= show_key ? 'mb-4' : 'mb-0' %>">
-      Both are for reference on this screen. The active year is whichever one you've switched to,
-      not whichever one today falls inside.
+      Neither date switches anything on: the active year is whichever one you've switched to,
+      not whichever one today falls inside. The start date is what badges a stood-down year
+      Past rather than Draft, so fill it in.
     </p>
 
     <% if show_key %>

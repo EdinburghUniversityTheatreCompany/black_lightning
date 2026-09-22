@@ -32,8 +32,7 @@
           matches" from "I am looking in the wrong place". %>
       Nothing on the ledger can cancel this row out. A counterpart has to be the same amount on
       the opposite side, on the same nominal code and in the same financial year, and be attached
-      to nothing itself. Those are the same requirements the automatic matcher will not pair
-      across.
+      to nothing itself.
     </p>
   <% end %>
 <% else %>
@@ -45,8 +44,9 @@
     <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
         Same amount, opposite side, same nominal code, same financial year, and attached to
-        nothing itself. These are the requirements only; unlike the automatic matcher, nothing
-        here is ranked by how likely it is, so check the date and the narrative before choosing.
+        nothing itself. Nothing here is ranked by how likely it is, unlike the automatic matcher,
+        and rows from another cost centre are listed too, so check the date, the narrative and
+        the pot before choosing.
       </p>
 
       <div class="space-y-1">

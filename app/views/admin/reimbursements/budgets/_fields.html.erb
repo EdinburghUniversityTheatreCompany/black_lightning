@@ -107,8 +107,8 @@
           can switch its descendants off, which is what stops the browser
           posting owner_ids at all once an area is chosen. %>
       <%= render "shared/form/field", label: "Owners", name: :owner_ids,
-            hint: "Everyone who owns this budget. A line placed in an area takes " \
-                  "its owners from the area, and they are set there." do %>
+            hint: "Everyone who owns this budget. A line placed in an area takes the " \
+                  "area's owners instead." do %>
         <%# Only `simple-select2`, never input_classes — Tom Select copies the
             classes onto the wrapper that already draws the box. `select_tag`
             emits no hidden empty field of its own, and without it clearing

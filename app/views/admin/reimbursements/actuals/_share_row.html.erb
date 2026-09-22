@@ -13,7 +13,7 @@
     <%# Only `simple-select2`: Tom Select copies the select's classes
         onto its own wrapper, which already draws the box. %>
     <%= select_tag "shares[#{index}][budget_id]",
-          options_for_select(budgets.map { |b| [ b.display_name, b.record_id ] },
+          options_for_select(budgets.map { |b| [ b.picker_label, b.record_id ] },
                              share[:budget_id]),
           id: "share_#{index}_budget_id", class: "simple-select2",
           include_blank: "No budget" %>

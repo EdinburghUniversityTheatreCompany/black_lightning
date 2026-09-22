@@ -75,6 +75,26 @@ Always maintain the URL as state with readable parameters where possible for GET
 
 **To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.**
 
+## Admin copy is written for a regular user of the screen
+
+Explanatory prose in the admin costs screen real estate on every visit, and it is read by
+somebody who uses that screen weekly, not by a first-timer. So it earns its space only by saying
+something they cannot work out from the controls in front of them:
+
+- **Lead with what the reader can act on**, never with the format of the list below it ("one line
+  per recipient, newest first" is what the table already shows).
+- **State the consequence, not the mechanism.** "A bounce afterwards is invisible here" earns its
+  line; "the portal hands the message to Microsoft" is our plumbing.
+- **A limitation is only worth printing with what to do about it**, and a date or a number that
+  is knowable is printed rather than described ("before 2026-09-19", not "before this log
+  existed").
+- **Cut cross-references to other screens' matching quirks.** They help nobody doing the task in
+  front of them.
+- **Traps survive the cut, shorter.** Much of this file is a rule someone learned the hard way;
+  where a screen states one, the wording gets tighter, never deleted.
+- **The producer-facing screens are the exception** (`expenses/**`, `reimbursements/emails/**`):
+  a student producer files a claim once or twice a term, so more explanation is right there.
+
 ## Admin forms
 
 One vocabulary for every admin form. `FormStyles` (top of

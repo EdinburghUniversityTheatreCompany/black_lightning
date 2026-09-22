@@ -84,8 +84,9 @@
       <%# So nobody chases by hand believing nothing else will. The nightly job
           names every gated claim to each of its owners on every due run day,
           with no age threshold (see NightlyBatchJob#remind_budget_owners). %>
-      Every owner named below is emailed about their outstanding claims automatically, on each of
-      this cost centre's nightly run days, until they sign off or the claim is rejected.
+      An owner with an address on file is reminded on each run day until they sign off or the
+      claim is rejected. An owner with no address is never emailed: chase them, or override the
+      sign-off below.
     <% end %>
     <%# Bulk OVERRIDE, and deliberately no bulk approve: bulk approve skips
         every gated claim, so a "0 approved" summary is all it could ever

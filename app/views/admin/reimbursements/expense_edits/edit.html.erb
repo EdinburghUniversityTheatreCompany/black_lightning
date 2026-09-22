@@ -3,7 +3,7 @@
 <% modulus = ::Reimbursements::ReviewSupport.modulus_result(@expense, modulus_checker) %>
 
 <p class="mb-3 text-gray-600">
-  Finance edit for a single expense at any status. Changes save immediately.
+  Finance edit for a single expense at any status, including Submitted and Paid.
   <%= link_to "All expenses", admin_reimbursements_expense_edits_path, class: "text-primary underline" %>
   or the <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
 </p>
