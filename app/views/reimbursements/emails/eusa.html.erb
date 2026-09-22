@@ -1,22 +1,12 @@
-<%# The operator's own covering note replaces the default OPENING only. The
-    table, the totals and the sign-off below are always generated: they are
-    what EUSA reads to move money, and the Build Batch form used to hand the
-    whole lot over as an editable HTML textarea. %>
-<% if local_assigns[:note_html].present? %>
-  <%= note_html %>
-<% else %>
-  <%# The fallback is the composer's, so the placeholder list on the Build
-      Batch form promises the same name this line prints. %>
-  <p>Hi <%= eusa_contact_name.presence || ::Reimbursements::EusaEmailComposer::DEFAULT_CONTACT %>,</p>
+<p>Hi <%= eusa_contact_name.presence || "Finance Team" %>,</p>
 
-  <p>
-    Please find attached the BACS request from <%= cost_centre_name %> for <%= reimbursements_date(bacs_date) %>,
-    covering <%= expense_count %> <%= "expense".pluralize(expense_count) %> totalling
-    <%= reimbursements_money(total) %>.
-  </p>
+<p>
+  Please find attached the BACS request from <%= cost_centre_name %> for <%= reimbursements_date(bacs_date) %>,
+  covering <%= expense_count %> <%= "expense".pluralize(expense_count) %> totalling
+  <%= reimbursements_money(total) %>.
+</p>
 
-  <p>Individual receipts are also attached, named by date, budget and description.</p>
-<% end %>
+<p>Individual receipts are also attached, named by date, budget and description.</p>
 
 <% if international_count.positive? %>
   <p>

@@ -80,11 +80,7 @@ module Admin
           sender_name: params[:sender_name].presence || default_sender,
           eusa_recipient: params[:eusa_recipient].presence || @cost_centre.eusa_recipient_or_default,
           eusa_subject: params[:eusa_subject].presence,
-          # The operator writes PLAIN TEXT; the body is composed here, from the
-          # same composer the job would use with no overrides, so the job's
-          # contract is unchanged and nothing on the money path had to move.
-          # A blank note passes nothing, which is exactly what it meant before.
-          eusa_body_html: composed_body_html(bacs_date),
+          eusa_body_html: params[:eusa_body].presence,
           operator_emails: Array(current_user.try(:email)).compact_blank,
           attempt_id: attempt.id
         )
@@ -163,12 +159,6 @@ module Admin
         @sender_name = default_sender
         @eusa_recipient = @cost_centre.eusa_recipient_or_default
         @default_email = compose_default_email(@bacs_date, @sender_name)
-        # What each {{placeholder}} would expand to for THIS batch, for the
-        # list beside the note field.
-        @substitutions = ::Reimbursements::EusaEmailComposer.new.substitution_values(
-          expenses: @expenses, bacs_date: @bacs_date, sender_name: @sender_name,
-          cost_centre: @cost_centre
-        )
       end
 
       # Delete the stale EUSA draft this batch created, then build the reopen
@@ -321,21 +311,6 @@ module Admin
 
       def default_sender
         current_user.try(:full_name).presence || @cost_centre.finance_sender_name
-      end
-
-      # The body to send, or nil to let the job compose the default — which is
-      # what an untouched form has always meant.
-      def composed_body_html(bacs_date)
-        note = params[:eusa_note].to_s.strip
-        return nil if note.blank?
-
-        ::Reimbursements::EusaEmailComposer.new.compose(
-          expenses: approved_expenses, bacs_date: bacs_date,
-          sender_name: params[:sender_name].presence || default_sender,
-          cost_centre: @cost_centre,
-          eusa_contact_name: params[:eusa_contact_name].to_s,
-          note: note
-        ).body_html
       end
 
       def compose_default_email(bacs_date, sender_name)

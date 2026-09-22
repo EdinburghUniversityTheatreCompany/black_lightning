@@ -249,7 +249,7 @@
     <%# The fx-rate controller shows the rate the typed pair implies, so the
         arithmetic finance was doing in their head is on the form. It knows no
         real rate and claims none — see the controller. %>
-    <%= tag.div(reimbursements_fx_rate_data(expense)) do %>
+    <div <%= tag.attributes(reimbursements_fx_rate_data(expense)) %>>
       <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: FormStyles::LABEL %>
       <% if expense.international? %>
         <p class="mb-1 text-sm text-gray-600">
@@ -265,7 +265,7 @@
       <% if expense.international? %>
         <p class="mt-1 mb-0 text-sm text-gray-600" data-fx-rate-target="output" aria-live="polite"></p>
       <% end %>
-    <% end %>
+    </div>
     <div>
       <%# A foreign invoice carries no reclaimable UK VAT, so ex-VAT follows the
           gross automatically and asking for it would invite a deduction nobody

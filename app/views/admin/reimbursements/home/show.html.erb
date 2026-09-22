@@ -114,13 +114,11 @@
             <%# Debit and credit are printed apart, as the ledger prints them:
                 netting one row to a bare negative would read as bad news for
                 what is simply income nobody has booked to a line yet. %>
-            <span class="tabular-nums">
-              <% if actual.debit&.positive? %>
-                <%= reimbursements_money(actual.debit) %>
-              <% else %>
-                <%= reimbursements_money(actual.credit) %> in
-              <% end %>
-            </span>
+            <% if actual.debit&.positive? %>
+              <span class="tabular-nums"><%= reimbursements_money(actual.debit) %></span>
+            <% else %>
+              <span class="tabular-nums"><%= reimbursements_money(actual.credit) %> in</span>
+            <% end %>
           </li>
         <% end %>
         <%# The count above is the whole list and this is the first few of it,
