@@ -29,8 +29,8 @@ class Admin::Proposals::CallsController < AdminController
       .where(admin_proposals_calls: { archived: [ false, nil ] })
       .order("admin_proposals_calls.editing_deadline ASC")
 
-    @awaiting_approval = scoped.where(status: :awaiting_approval)
-    @approved = scoped.where(status: :approved)
+    @awaiting_approval = scoped.awaiting_approval
+    @approved = scoped.approved
 
     # Surface every open call so the view can show a "New Proposal" CTA even for calls with no proposals yet.
     @open_calls = Admin::Proposals::Call.open.order(:editing_deadline)

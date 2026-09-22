@@ -4,12 +4,9 @@
 <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
 <p class="mb-3 text-gray-600">
-  The same budgets down two axes: grouped by nominal code, the axis EUSA's ledger uses, and
-  grouped by area, the show or project the committee agreed a total for. Expense and income
-  budgets are totalled separately, since adding spend to income gives a figure that is neither.
-  Expected outturn is the greater of the current projection and what's already been spent or
-  committed, so the number never drops below reality; it is left blank on income lines, where
-  the same figure would read as best-case income instead.
+  The same budgets down two axes: by nominal code, the axis EUSA's ledger uses, and by area,
+  the show the committee agreed a total for. Expense and income budgets are totalled separately,
+  since adding spend to income gives a figure that is neither.
 </p>
 
 <%= render "admin/reimbursements/shared/glossary_terms",
@@ -124,11 +121,9 @@
     end
   %>
   <p class="text-sm text-gray-600 mb-3">
-    EUSA ledger rows that are linked to neither an expense nor a budget, so no line above
-    counts them. That includes rows on a nominal code that <em>does</em> have a budget: a
-    budget only counts the actuals reconciled to it, because several budgets can share one
-    code. Offsetting pairs are left out, since an accrual and its reversal net to zero.
-    Resolve them on the
+    EUSA ledger rows linked to neither an expense nor a budget, so nothing above counts them,
+    <em>including</em> rows on a nominal code that does have a budget. Offsetting pairs are left
+    out. Resolve them on the
     <%= link_to "EUSA Actuals ledger", ledger_path.call, class: "text-primary underline" %>
     (link a row to the claim it paid, convert a debit into an expense, or split a credit
     across income budgets) and it stops showing here.

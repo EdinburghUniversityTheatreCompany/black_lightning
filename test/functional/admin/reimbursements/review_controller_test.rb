@@ -1075,7 +1075,8 @@ module Admin
 
         assert_select "a[href=?]", "mailto:olga@example.com", text: "Olga Owner"
         assert_match(/Waiting 6 days\./, response.body)
-        assert_match(/emailed about their outstanding claims automatically/, response.body)
+        assert_match(/reminded on each run day/, response.body)
+        assert_match(/no address is never emailed/, response.body)
       end
 
       test "override_approve stores the finance override note" do

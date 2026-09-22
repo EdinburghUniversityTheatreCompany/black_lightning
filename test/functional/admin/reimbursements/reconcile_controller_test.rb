@@ -1093,8 +1093,8 @@ module Admin
 
       get :show
 
-      assert_match(/EUSA's finance office exports its ledger once a month/, response.body)
-      assert_match(/ask EUSA's finance office/, response.body)
+      assert_match(/emails its ledger export once a month/, response.body)
+      assert_match(/ask them for the latest one/, response.body)
     end
 
     # roo 3 dropped legacy .xls and we do not carry roo-xls, so an .xls got as

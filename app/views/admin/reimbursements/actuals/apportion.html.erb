@@ -38,8 +38,7 @@
                         apportion_total_currency_value: "£" } do %>
     <%= render CardComponent.new(title: "Split it across") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
-        Leave a row blank if you do not need it. A budget can only take one share, so if a show
-        genuinely has two, add them together.
+        A budget can only take one share, so if a show genuinely has two, add them together.
       </p>
 
       <%# The five rows are a starting point, not a ceiling: a Stripe payout can

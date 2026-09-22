@@ -192,7 +192,7 @@ module LinkHelper
       :get
     when :destroy
       :delete
-    when :approve, :reject, :mark_successful, :mark_unsuccessful
+    when :approve, :reject, :withdraw, :unwithdraw, :mark_successful, :mark_unsuccessful, :revert_status
       :put
     else
       raise(ArgumentError, "There is no default HTTP method for the specified action #{action}")

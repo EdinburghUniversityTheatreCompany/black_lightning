@@ -191,19 +191,25 @@ module Reimbursements
     # The rows this one could cancel out with: the HARD requirements
     # Reconciliation.detect_offsetting_pairs applies, and nothing softer.
     #
-    # Same absolute amount, opposite sign, same nominal code, same financial
-    # year — the gates the automatic detector will not pair across. The
-    # detector then SCORES the survivors on reference, period, narrative and
-    # date distance; this deliberately does not, because a person is choosing
-    # here and the governing asymmetry runs the other way: a false positive
-    # stamps real spend as noise and hides it, while an extra row on a picker
-    # costs a glance.
+    # No scoring, unlike the detector: a person is choosing, so an extra row on
+    # the picker costs a glance while a false positive hides real spend.
+    #
+    # The cost centre is checked in the MODEL rather than by scoping the
+    # picker's source, because #confirm_offset re-checks through this same
+    # method and the "Mark as offsetting" link carries no centre — scoping the
+    # list alone would leave the write open. Two same-size rows on one code in
+    # two pots, stamped as cancelling out, leave BOTH pots' rollups short.
+    #
+    # Laxer than the detector in one place: two rows with NO centre pair, since
+    # rows predating cost centres are read as belonging everywhere rather than
+    # nowhere (the leniency DatabaseStore#in_year states).
     def offset_candidates(rows)
       rows.select do |row|
         row.id != id && row.pairable? &&
           row.signed_amount == -signed_amount &&
           row.nominal_code.to_s == nominal_code.to_s &&
-          row.financial_year_id == financial_year_id
+          row.financial_year_id == financial_year_id &&
+          row.cost_centre_id == cost_centre_id
       end
     end
 

@@ -207,26 +207,31 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-    # Same for successful and unsuccessful
+    # Same for successful...
 
     situation = "after the editing deadline, but that is successful"
 
     @proposal.status = :successful
 
-    # 4A: Everyone can see proposals that have been approved...
     helper_test_proposal(:read, @proposal, true, true, true, situation)
-    # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-
+    # Same for unsuccessful...
 
     situation = "after the editing deadline, but that is unsuccessful"
 
     @proposal.status = :unsuccessful
 
-    # 4A: Everyone can see proposals that have been approved...
     helper_test_proposal(:read, @proposal, true, true, true, situation)
-    # 4B: ...and can no longer update proposals.
+    helper_test_proposal(:update, @proposal, false, false, false, situation)
+
+    situation = "after the editing deadline, but that is withdrawn"
+
+    # Same for withdrawn...
+
+    @proposal.withdrawn = true
+
+    helper_test_proposal(:read, @proposal, true, true, true, situation)
     helper_test_proposal(:update, @proposal, false, false, false, situation)
   end
 
@@ -244,6 +249,16 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:read, @proposal, true, true, false, "that is archived but not approved")
     # 5C: ...and no one can edit archived proposals.
     helper_test_proposal(:update, @proposal, false, false, false, "that is archived but not approved")
+  end
+
+  test "admins cannot withdraw terminal proposals" do
+    @call = FactoryBot.create(:proposal_call)
+    helper_set_up_proposal
+
+    [ :rejected, :successful, :unsuccessful ].each do |status|
+      @proposal.status = status
+      helper_test_actions(@proposal, "#{status} proposal ", @admin_ability, [], [ :withdraw ])
+    end
   end
 
   test "users can access the proposal about page" do

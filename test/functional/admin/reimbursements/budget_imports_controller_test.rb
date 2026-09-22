@@ -641,8 +641,8 @@ module Admin
 
         assert_select "p" do |paragraphs|
           assert paragraphs.any? { |p|
-            p.text.squish.include?("unticking a line leaves it where it is, but the area the " \
-                                   "sheet named still gains the owner named beside it")
+            p.text.squish.include?("Unticking a move above does not withhold the owner, " \
+                                   "and the area the sheet named still gains them")
           }, "the panel must say the owner grant and the re-home tick are decoupled"
         end
       end

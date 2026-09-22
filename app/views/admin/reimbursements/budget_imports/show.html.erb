@@ -48,7 +48,7 @@
           one (year, cost centre), so neither can be assumed — whichever side the
           link prefilled arrives selected, and the operator picks the other. %>
       <%= render "shared/form/field", label: "Financial year", name: :year,
-            hint: "Which year's budgets these are.", html_class: "sm:w-1/2" do %>
+            html_class: "sm:w-1/2" do %>
         <%= select_tag :year,
                        options_from_collection_for_select(selectable_financial_years, :key, :label,
                                                           selected_financial_year&.key),
@@ -61,7 +61,7 @@
           rule. The prompt stands until the operator picks — unless a link
           prefilled the centre, or there is only one and nothing to choose. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
-            hint: "Which pot these budgets belong to.", html_class: "sm:w-1/2" do %>
+            html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,
                        options_from_collection_for_select(selectable_cost_centres, :id, :name,
                                                           chosen_cost_centre&.id),

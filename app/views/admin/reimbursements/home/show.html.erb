@@ -5,10 +5,7 @@
   <%# The one paragraph a successor reads first. It names the weekly loop in
       the order it is done, because the sidebar groups say what the screens
       are and nothing said what the JOB is. %>
-  What the reimbursements portal is waiting on you for. The weekly loop is
-  <strong>review</strong> the claims people have filed, <strong>build a batch</strong> of the
-  approved ones, then <strong>send the EUSA draft</strong> it puts in your Outlook drafts. Once a
-  month EUSA's actuals export arrives and you <strong>reconcile</strong> it against the ledger.
+  What the reimbursements portal is waiting on you for.
   <%# The front door is where a successor starts, so the glossary is named
       here before any of the screens that use its words. %>
   New to this? <%= link_to "What the words mean", admin_reimbursements_glossary_path,
@@ -49,7 +46,7 @@
     <p class="text-gray-600">
       No batch has been built yet. Approve some claims, then build a batch: that writes the BACS
       spreadsheet, puts a covering email in this cost centre's Outlook drafts, and marks the
-      claims as sent to EUSA.
+      claims Submitted.
     </p>
     <p class="mt-2">
       <%= link_to "Build batch",
@@ -140,8 +137,7 @@
 
   <%= render CardComponent.new(title: "Budget health") do %>
     <p class="mb-3 text-sm text-gray-600">
-      Lines with nothing left against their current plan. What has been approved, sent or paid
-      is already past the figure the committee agreed, as revised.
+      Lines with nothing left against their current plan.
     </p>
     <p class="mb-3">
       <span class="text-2xl font-semibold tabular-nums <%= "text-danger" if @home.over_budget_count.positive? %>">

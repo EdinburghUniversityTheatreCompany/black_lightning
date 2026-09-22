@@ -19,11 +19,9 @@
     routine and a file they have never seen. %>
 <%= render CardComponent.new(title: "Where this sheet comes from", html_class: "mb-4") do %>
   <p class="mb-0 text-sm text-gray-600">
-    EUSA's finance office exports its ledger once a month and emails it out: one row per
-    transaction that actually hit the account, for every cost centre. It lands weeks after the
-    BACS run it confirms, so a claim sent to EUSA this week is normally reconciled next month.
-    Upload the file as it arrived, or copy the rows out of Excel and paste them. If it has not
-    come, ask EUSA's finance office for the latest actuals export; nothing here can fetch it.
+    EUSA's finance office emails its ledger export once a month, and it lands weeks after the
+    BACS run it confirms. If it has not come, ask them for the latest one: nothing here can
+    fetch it.
   </p>
 <% end %>
 

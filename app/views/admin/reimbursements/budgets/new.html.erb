@@ -9,10 +9,8 @@
     <% end %>
 
     <p class="mb-4 text-sm text-gray-600">
-      For the one-off line that turns up mid-year. To set a whole year up, import the committee's
-      spreadsheet from
-      <%= link_to "Financial years", admin_reimbursements_financial_years_path,
-                  class: "text-primary underline" %> instead.
+      For the one-off line that turns up mid-year. To set a whole year up, use
+      <strong>Import budgets</strong> on the budgets list.
       <% if selected_financial_year %>
         This budget will belong to <strong><%= selected_financial_year.label %></strong>.
       <% end %>

@@ -6,9 +6,8 @@
       no scope, and no way to choose one — and the scope inside the file was
       mixed (Budgets followed the active year while everything else was all of
       history) with nothing saying so. %>
-  Everything the portal holds, as one spreadsheet. Use it for the end-of-run handover to EUSA, an
-  accountant, or next year's committee. Pick the year and cost centre above; the file covers
-  exactly what is selected, and says so on its own first sheet.
+  Everything the portal holds, as one spreadsheet, for the end-of-run handover to EUSA, an
+  accountant, or next year's committee. The cover sheet records what the file covers.
 </p>
 
 <%= render CardComponent.new(title: "What you'll get") do |card| %>
@@ -55,10 +54,11 @@
   </div>
 
   <p class="mt-3 mb-0 text-sm text-gray-600">
-    Every sheet covers the year and cost centre selected above, <strong>except People</strong>:
-    a payee has no cost centre, and the same person claims from whichever pot their claim's
-    budget belongs to. Bank details are masked to their last four digits. Only the BACS
-    spreadsheet EUSA is paid from carries full numbers.
+    The cost centre scopes every sheet <strong>except People</strong>: a payee has no cost
+    centre, and the same person claims from whichever pot their claim's budget belongs to. The
+    year scopes <strong>Budgets, Areas and Forecast revisions</strong> only; Claims, the ledger
+    and Batches always cover every year. Bank details are masked to their last four digits, and
+    only the BACS spreadsheet EUSA is paid from carries full numbers.
   </p>
 <% end %>
 

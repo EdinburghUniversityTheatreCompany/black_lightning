@@ -75,6 +75,26 @@ Always maintain the URL as state with readable parameters where possible for GET
 
 **To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.**
 
+## Admin copy is written for a regular user of the screen
+
+Explanatory prose in the admin costs screen real estate on every visit, and it is read by
+somebody who uses that screen weekly, not by a first-timer. So it earns its space only by saying
+something they cannot work out from the controls in front of them:
+
+- **Lead with what the reader can act on**, never with the format of the list below it ("one line
+  per recipient, newest first" is what the table already shows).
+- **State the consequence, not the mechanism.** "A bounce afterwards is invisible here" earns its
+  line; "the portal hands the message to Microsoft" is our plumbing.
+- **A limitation is only worth printing with what to do about it**, and a date or a number that
+  is knowable is printed rather than described ("before 2026-09-19", not "before this log
+  existed").
+- **Cut cross-references to other screens' matching quirks.** They help nobody doing the task in
+  front of them.
+- **Traps survive the cut, shorter.** Much of this file is a rule someone learned the hard way;
+  where a screen states one, the wording gets tighter, never deleted.
+- **The producer-facing screens are the exception** (`expenses/**`, `reimbursements/emails/**`):
+  a student producer files a claim once or twice a term, so more explanation is right there.
+
 ## Admin forms
 
 One vocabulary for every admin form. `FormStyles` (top of
@@ -200,6 +220,10 @@ gitignored `mise.local.toml` still sits at the root and still layers on top. Pre
 - **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
   auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
   skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
+  **It reads YOUR dev database, so a pending migration silently strips real columns from models
+  you never touched** — pull someone's migration, commit anything, and their new column vanishes
+  from its annotation in your diff. Run `bin/rails db:migrate` before committing after a pull;
+  the tell is an unrelated model in `git diff --stat`.
 - **Gate status (see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
   `herb-lint` (ERB) and `jscpd` (duplication, threshold 0) are **gating** — their backlogs were
   ratcheted to 0. `herb-analyze` stays advisory (`|| true`) only for the two HTML-email fragment
@@ -1163,6 +1187,13 @@ survive as historical import provenance and are never written. Spec + plan in
   skips that leg). Rows are never deleted, finance needs the audit trail — and a
   mis-detected pair is undone with the finance-gated **"Not offsetting"** button on the
   Actuals index (`ActualsController#unoffset` + `DatabaseStore#unlink_offsetting_pair!`).
+  **Pairing two rows BY HAND applies the same five hard gates** (`EusaActual#offset_candidates`)
+  and deliberately none of the scoring: a person is choosing, so an extra row on the picker costs
+  a glance while a false positive hides real spend. The cost-centre gate lives in the MODEL, not
+  in the picker's source — `#confirm_offset` re-checks through the same method and the "Mark as
+  offsetting" link carries no centre, so scoping the list alone would leave the write open. A row
+  with NO cost centre pairs with another that has none (rows predating cost centres are read as
+  belonging everywhere, per `#in_year`), which is the one place it is laxer than the detector.
   **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`,
   Mick's call): it nets to zero, so converting it would invent spend. Unlinked *debit* rows
   can be converted (`ExpenseForm.from_actual` + `ActualsController#new_expense/#create_expense`),

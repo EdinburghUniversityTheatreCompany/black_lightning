@@ -1,7 +1,6 @@
 <p class="mb-3 text-gray-600">
-  The health of the external services the reimbursements flows depend on. The last nightly-run
-  date per cost centre is a plain database read and always shown; the live service probes run
-  only when you press <strong>Run checks</strong>, so an idle visit doesn't wait on Microsoft.
+  What the portal has emailed, and whether Microsoft is reachable. Press
+  <strong>Run checks</strong> to probe the live services.
 </p>
 
 <%= render CardComponent.new(title: "Last nightly run") do %>
@@ -43,8 +42,8 @@
         </div>
         <% if addresses.empty? %>
           <p class="text-xs text-danger mt-1">
-            Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
-            than marking the day handled, so nothing is lost, but nothing is sent either.
+            Nobody gets this cost centre's reminders until an address is set. The nightly keeps
+            retrying until one is.
           </p>
         <% end %>
       </li>
@@ -79,18 +78,18 @@
     answer short of asking them. %>
 <%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
-    One line per recipient, newest first. This records that the portal handed the message to
-    Microsoft. A bounce afterwards is invisible here, the same limit a batch's "Producer emails:
-    sent" badge states. Nothing sent before this log existed appears.
+    Every reminder and notification the portal sent, and to which address. It records the
+    handover to Microsoft, not delivery: a bounce or a full mailbox after that is invisible here.
+    Automatic replies to emailed-in receipts are not listed.
   </p>
 
   <%= form_with url: admin_reimbursements_status_path, method: :get,
                 class: "mb-4 flex flex-wrap items-end gap-3" do %>
-    <%= render "shared/form/field", label: "Did this person get it?", name: :recipient,
+    <%= render "shared/form/field", label: "What was sent to this address?", name: :recipient,
           html_class: "grow max-w-md",
-          hint: "An email address, exactly as it is on their People record." do %>
+          hint: "The whole address; a partial one finds nothing." do %>
       <%= text_field_tag :recipient, @recipient_query, type: "search",
-                         placeholder: "name@example.com", class: input_classes(width: nil) %>
+                         placeholder: "name@example.com", class: input_classes %>
     <% end %>
     <%= submit_tag "Search", class: "#{btn_classes(:secondary, :sm)} mb-4" %>
     <% if @recipient_query.present? %>
@@ -103,6 +102,11 @@
     <%# Per-run counts: a run-day sends a batch of one kind to several people,
         and the count is the thing that looks wrong when it is wrong. %>
     <p class="mb-1 text-sm font-medium">Per run</p>
+    <p class="mb-1 text-sm text-gray-600">
+      The <%= @send_log_limit %> newest messages only, so a large run can show fewer recipients
+      than it sent.<% if @send_log_since %> Log starts
+      <%= reimbursements_date(@send_log_since) %>.<% end %>
+    </p>
     <ul class="mb-4 flex flex-col gap-1 text-sm">
       <% @send_counts.each do |(date, kind), count| %>
         <li class="flex flex-wrap items-baseline gap-x-2">
@@ -120,7 +124,7 @@
         Nothing has been emailed to <strong><%= @recipient_query %></strong>. Check the address on
         their People record: a reminder to an address nobody reads looks exactly like this.
       <% else %>
-        Nothing has been emailed yet. Reminders go out on each cost centre's run days, and a
+        Nothing has been emailed yet. Reminders go out on each cost centre's run days; a
         rejection or a batch notification is sent as it happens.
       <% end %>
     </p>

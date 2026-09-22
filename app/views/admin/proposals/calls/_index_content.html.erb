@@ -1,4 +1,4 @@
-<% can_act = can?(:approve, Admin::Proposals::Proposal) %>
+<% can_act = can_act_on_proposals(@awaiting_approval) || can_act_on_proposals(@approved) %>
 <% redirect_param = { redirect_to: admin_proposals_calls_path } %>
 
 <%= render CardComponent.new do %>
@@ -58,16 +58,7 @@
 
         <% field_sets = proposals.map do |proposal|
           fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-          if can_act
-            approve_link = proposal.has_debtors ?
-              get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
-              get_link(proposal, :approve, query_params: redirect_param)
-
-            fields << safe_join([
-              approve_link,
-              get_link(proposal, :reject, query_params: redirect_param)
-            ].compact, " ")
-          end
+          fields << safe_join(proposal_action_buttons(proposal).compact, " ") if can_act
           { fields: fields }
         end %>
 
@@ -103,12 +94,7 @@
 
         <% field_sets = proposals.map do |proposal|
           fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-          if can_act
-            fields << safe_join([
-              get_link(proposal, :mark_successful, query_params: redirect_param),
-              get_link(proposal, :mark_unsuccessful, query_params: redirect_param)
-            ].compact, " ")
-          end
+          fields << safe_join(proposal_action_buttons(proposal).compact, " ") if can_act
           { fields: fields }
         end %>
 

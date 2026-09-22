@@ -1214,6 +1214,51 @@ module Admin
       refute_includes assigns(:candidates).map(&:record_id), linked.record_id
     end
 
+    # Two unrelated real transactions of the same size on one code in two pots,
+    # stamped as cancelling out, hide real spend from BOTH pots' rollups, and
+    # re-pasting cannot repair it because dedup then skips both legs.
+    test "never offers a counterpart from another cost centre" do
+      other = create_second_reimbursements_cost_centre
+      ours = counterpart_for_unlinked(cost_centre_id: @unlinked.cost_centre_id)
+      theirs = counterpart_for_unlinked(cost_centre_id: other.id)
+      sign_in @user
+
+      get :offset_pair, params: { id: @unlinked.record_id }
+
+      ids = assigns(:candidates).map(&:record_id)
+      assert_includes ids, ours.record_id
+      refute_includes ids, theirs.record_id, "two pots' rows never cancel each other out"
+    end
+
+    # The picker is a read that goes stale, and the link carries no cost centre
+    # at all, so the gate has to hold on the write too.
+    test "refuses a counterpart from another cost centre on submit" do
+      other = create_second_reimbursements_cost_centre
+      theirs = counterpart_for_unlinked(cost_centre_id: other.id)
+      sign_in @user
+
+      post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: theirs.record_id }
+
+      assert_match(/can no longer be paired/, flash[:alert])
+      refute @unlinked.reload.offset?
+      refute theirs.reload.offset?
+    end
+
+    # Rows predating cost centres carry none, and the portal reads an unplaced
+    # row as belonging everywhere rather than nowhere.
+    test "two rows with no cost centre still pair, but not with a placed row" do
+      @unlinked.update!(cost_centre_id: nil)
+      unplaced = counterpart_for_unlinked(cost_centre_id: nil)
+      placed = counterpart_for_unlinked(cost_centre_id: create_second_reimbursements_cost_centre.id)
+      sign_in @user
+
+      get :offset_pair, params: { id: @unlinked.record_id }
+
+      ids = assigns(:candidates).map(&:record_id)
+      assert_includes ids, unplaced.record_id
+      refute_includes ids, placed.record_id
+    end
+
     test "pairing two rows stamps both and each can undo it" do
       match = counterpart_for_unlinked
       sign_in @user

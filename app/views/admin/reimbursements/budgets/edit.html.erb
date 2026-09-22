@@ -45,8 +45,8 @@
 
 <%= render CardComponent.new(title: "Budget forecasts", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
-    A versioned log of projected-spend updates for this budget. The latest feeds the
-    current forecast above. Add a new one whenever the projection changes.
+    The newest entry here is the <strong>Projected</strong> figure above. Add one whenever the
+    projection changes.
   </p>
 
   <%= form_with url: forecast_admin_reimbursements_budget_path(@budget.record_id), method: :post,
@@ -130,7 +130,7 @@
                         method: :delete, class: btn_classes(:danger, :sm),
                         "aria-label": "Delete forecast from #{reimbursements_date(forecast.date)}",
                         form: { class: "inline-block",
-                                data: { turbo_confirm: "Remove this forecast? This changes the budget's rolled-up current forecast." } } %>
+                                data: { turbo_confirm: "Remove this forecast? This changes the budget's Projected figure." } } %>
                 </td>
               </tr>
             <% end %>

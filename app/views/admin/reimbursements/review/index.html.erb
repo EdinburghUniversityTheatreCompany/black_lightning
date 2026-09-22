@@ -5,9 +5,8 @@
 <div data-controller="scroll-to" data-scroll-to-param-value="focus"></div>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 <p class="mb-3 text-gray-600">
-  Review submitted expenses before they go to EUSA. Each card shows a live modulus
-  check on the details the money will actually be paid to, plus any duplicate or override
-  warnings. Fix anything that needs attention, then approve or reject.
+  Review submitted expenses before they go to EUSA. Fix anything flagged, then approve or
+  reject. UK claims with bank details on file carry a live modulus check.
   <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
 
@@ -76,16 +75,14 @@
       total <%= reimbursements_money(awaiting_owner_total) %>.
     </p>
     <%= render AlertComponent.new(type: :info) do %>
-      These are with their budget owners, who endorse them on their own My Budgets page. They are
-      not yours to approve yet. Each card names the owners. Where no owner can act (nobody holds a
-      portal account, say), you can override the sign-off and approve it here; the override is
-      recorded against your account. A claim on a budget with no owner never appears here. It goes
-      straight to To approve.
+      These are with their budget owners, who endorse them from My Budgets. Where no owner can
+      act, override the sign-off here: the override is recorded against your account.
       <%# So nobody chases by hand believing nothing else will. The nightly job
           names every gated claim to each of its owners on every due run day,
           with no age threshold (see NightlyBatchJob#remind_budget_owners). %>
-      Every owner named below is emailed about their outstanding claims automatically, on each of
-      this cost centre's nightly run days, until they sign off or the claim is rejected.
+      An owner with an address on file is reminded on each run day until they sign off or the
+      claim is rejected. An owner with no address is never emailed: chase them, or override the
+      sign-off below.
     <% end %>
     <%# Bulk OVERRIDE, and deliberately no bulk approve: bulk approve skips
         every gated claim, so a "0 approved" summary is all it could ever

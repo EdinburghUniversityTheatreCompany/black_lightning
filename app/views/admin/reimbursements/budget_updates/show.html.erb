@@ -83,9 +83,9 @@
 
 <%= render CardComponent.new(title: "Remove this update", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
-    This deletes the <%= pluralize(@rows.size, "forecast") %> it logged, so every line goes back
-    to the figure it had before. The claims charged to those lines are untouched, nobody is
-    emailed, and the budgets themselves are not deleted. There is no undo for this, but the same
+    Deletes the <%= pluralize(@rows.size, "forecast") %> it logged. Each line goes back to the
+    figure it had before, except the lines marked above as already superseded, which do not move.
+    Claims are untouched, no budgets are deleted and nobody is emailed. No undo, but the same
     revision can be logged again from
     <%= link_to "New budget update", new_admin_reimbursements_budget_update_path,
                 class: "underline" %>.
