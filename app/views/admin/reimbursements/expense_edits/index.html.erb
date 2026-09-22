@@ -1,12 +1,6 @@
 <p class="mb-3 text-gray-600">
-  Every expense the finance team can see, whatever its status. Filter by status or budget,
-  or search by description, who it is paid to, who submitted it, payment reference, amount or
-  number, then open any one to
-  edit it (at any status, including ones already sent to EUSA or paid). Pending and Approved
-  expenses are also editable from the
-  <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
-  Know the exact number or record ID?
-  <%= link_to "Jump straight to it", find_admin_reimbursements_expense_edits_path, class: "text-primary underline" %>.
+  Every claim finance can see, at any status. Open one to edit it, or
+  <%= link_to "jump straight to a number", find_admin_reimbursements_expense_edits_path, class: "text-primary underline" %>.
 </p>
 
 <%= render CardComponent.new(title: "Filter & search") do %>

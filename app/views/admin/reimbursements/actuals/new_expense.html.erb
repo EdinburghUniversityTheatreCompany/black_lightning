@@ -1,9 +1,7 @@
 <%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
 
 <p class="mb-3 text-gray-600">
-  This EUSA row is a cost the Students' Association levied on us directly, not a claim anyone
-  submitted. Recording it as a From-EUSA expense charges it to a budget so the budget's spend is
-  honest. The money has already gone, so it is created as <strong>already paid</strong>: it never
+  Charges this EUSA cost to a budget. It is created <strong>already paid</strong>, so it never
   enters the review queue or a BACS batch, and nobody is emailed.
 </p>
 
@@ -44,7 +42,7 @@
           collection: @budget_groups, group_method: :last, group_label_method: :first,
           label_method: :first, value_method: :last,
           include_blank: "Pick a budget",
-          hint: "Which budget this cost comes out of. The lines on this row's nominal code " \
+          hint: "The lines on this row's nominal code " \
                 "are listed first." %>
     <%= f.input :description, label: "Description",
           hint: "Prefilled from the ledger narrative; tidy it up if it's cryptic." %>

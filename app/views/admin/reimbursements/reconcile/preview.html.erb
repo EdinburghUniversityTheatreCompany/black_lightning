@@ -5,11 +5,9 @@
     missing two, and was headed nothing at all. %>
 <h2 class="mb-2 text-lg font-semibold">Step 2: Review the matches</h2>
 <p class="mb-3 text-gray-600">
-  Review the matches below. Every row is imported under the cost centre its own Cost Centre
-  column names. Debits are matched to Submitted or Paid expenses, credits to income budgets,
-  both within that row's cost centre. Rows that cancel each other out are proposed as
-  offsetting pairs for you to confirm. When you're happy, apply the reconciliation to save
-  everything and mark the matched expenses Paid. Nobody is emailed.
+  Every row is imported under the cost centre its own Cost Centre column names, and is matched
+  within that centre: debits to Submitted or Paid claims, credits to income budgets. Applying
+  marks the matched claims Paid. Nobody is emailed.
 </p>
 
 <% if flash.now[:alert].present? %>

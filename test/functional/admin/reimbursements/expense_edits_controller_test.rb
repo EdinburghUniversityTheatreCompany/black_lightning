@@ -775,7 +775,7 @@ module Admin
         assert_response :success
         assert_no_match(/can't be approved until these are fixed/i, response.body)
         assert_no_match(/worth checking before approving/i, response.body)
-        assert_match(/already been paid/i, response.body)
+        assert_match(/already paid/i, response.body)
       end
 
       test "edit still gives approval advice on an Approved claim" do
@@ -1197,7 +1197,7 @@ module Admin
 
         get :edit, params: { id: expense.record_id }
 
-        assert_match(/already been sent to EUSA/i, response.body)
+        assert_match(/already sent to EUSA/i, response.body)
       end
 
       test "shows an already-paid note for a Paid expense" do
@@ -1206,7 +1206,7 @@ module Admin
 
         get :edit, params: { id: expense.record_id }
 
-        assert_match(/already been (sent to EUSA|paid)/i, response.body)
+        assert_match(/already (sent to EUSA|paid)/i, response.body)
       end
 
       test "shows no such note for a Pending expense" do

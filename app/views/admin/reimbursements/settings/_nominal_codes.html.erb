@@ -12,9 +12,8 @@
   <%= render CardComponent.new(title: "Nominal codes", html_class: "mt-4") do %>
     <p class="text-sm text-gray-600 mb-3">
       The accounts <%= cost_centre.name %>'s budget lines are booked against, as EUSA's ledger
-      names them. Each label started as a guess taken from the budgets already carrying its code,
-      so it is worth reading them through. Retiring a code takes it out of the list without
-      touching the rows already booked against it.
+      names them. Retiring a code takes it out of the list without touching the rows already
+      booked against it.
     </p>
 
     <% if codes.empty? %>

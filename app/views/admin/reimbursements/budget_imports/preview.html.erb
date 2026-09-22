@@ -221,10 +221,9 @@
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       <p class="font-medium">Who will sign off for each area after this import</p>
       <p class="text-gray-600">
-        An area's owners are everyone its lines name, and importing never removes one. Any one
-        of them can endorse a claim on the area's budgets. Remove an owner on the area itself.
-        Owners are separate from the moves above: unticking a line leaves it where it is, but
-        the area the sheet named still gains the owner named beside it.
+        Owners are added, never removed: take one off on the area itself. Unticking a move
+        above does <strong>not</strong> withhold the owner, and the area the sheet named still
+        gains them.
       </p>
       <ul class="mt-2 space-y-1">
         <% owner_sets.each do |set| %>

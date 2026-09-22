@@ -1,11 +1,9 @@
 <%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
 
 <p class="mb-3 text-gray-600">
-  An accrual and its reversal cancel each other out, so neither is real spend. The reconcile
-  wizard proposes the pairs it is confident about; this records one it did not, and it is also
-  the way back after <strong>Not offsetting</strong>, which returns both rows to ordinary
-  ledger rows and, until now, could not be undone. Both rows stay on the ledger either way, and
-  nobody is emailed.
+  Record a pair the reconcile wizard did not propose, or re-pair two rows after
+  <strong>Not offsetting</strong>. Both rows stay on the ledger and stop counting as spend or
+  income. Nobody is emailed.
 </p>
 
 <%= render CardComponent.new(title: "The row you are pairing") do %>

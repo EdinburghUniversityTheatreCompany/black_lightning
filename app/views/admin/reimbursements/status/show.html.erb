@@ -42,8 +42,8 @@
         </div>
         <% if addresses.empty? %>
           <p class="text-xs text-danger mt-1">
-            Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
-            than marking the day handled, so nothing is lost, but nothing is sent either.
+            Nobody gets this cost centre's reminders until an address is set. The nightly keeps
+            retrying until one is.
           </p>
         <% end %>
       </li>

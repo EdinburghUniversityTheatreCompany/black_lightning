@@ -29,14 +29,13 @@
           wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
           hint: "This cost centre's own finance mailbox. It gets the nightly reminders: claims " \
                 "stuck awaiting approval, and the queue ready to batch. Separate several " \
-                "addresses with semicolons. (A claim waiting on a budget owner is emailed to " \
+                "addresses with a semicolon or a comma. (A claim waiting on a budget owner is emailed to " \
                 "that owner instead, not here.)" %>
     <% if @cost_centre.notification_recipients_empty? %>
       <div class="mb-4">
         <%= render AlertComponent.new(type: :warning) do %>
           <strong>Nobody gets this cost centre's reminders</strong> until an address is set here.
-          The nightly logs a warning and retries rather than marking the day handled, so nothing
-          is lost, but nothing is sent either.
+          The nightly keeps retrying until one is.
         <% end %>
       </div>
     <% end %>

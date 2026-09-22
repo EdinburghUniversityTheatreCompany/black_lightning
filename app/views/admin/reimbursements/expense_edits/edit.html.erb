@@ -66,14 +66,12 @@
   <%# --- Already-processed note (Submitted / Paid) --- %>
   <% if @expense.status == Reimbursements::Status::SUBMITTED %>
     <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
-        This expense has <strong>already been sent to EUSA</strong>. Edits here won't change what
-        EUSA has already processed. Update it only to keep our records straight, then follow up with
-        EUSA directly if the payment itself needs to change.
+        <strong>Already sent to EUSA.</strong> Editing here updates our records only: talk to
+        EUSA if the payment itself has to change.
       <% end %></div>
   <% elsif @expense.status == Reimbursements::Status::PAID %>
     <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
-        This expense has <strong>already been paid</strong>. Edits here won't change what EUSA has
-        already processed. Update it only to keep our records straight.
+        <strong>Already paid.</strong> Editing here updates our records only.
       <% end %></div>
   <% end %>
 
