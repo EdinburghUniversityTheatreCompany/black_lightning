@@ -94,8 +94,7 @@ module Reimbursements
           [ "Financial year", @store.financial_year&.label || "Every year" ],
           [ "Cost centre", @store.cost_centre&.name || "Every cost centre" ],
           [ "Sheets", SHEETS.map { |exporter_class, _| exporter_class::SHEET_NAME }.join(", ") ],
-          # A reader totalling one sheet against another has to know the scope
-          # is not uniform: People has no cost centre at all, and only three
+          # The scope is not uniform: People has no cost centre, and only three
           # sheets read a year-scoped reader (see SHEETS).
           [ "Note", "The cost centre covers every sheet except People, which has none. The " \
                     "year covers Budgets, Areas and Forecast revisions only; Claims, the " \

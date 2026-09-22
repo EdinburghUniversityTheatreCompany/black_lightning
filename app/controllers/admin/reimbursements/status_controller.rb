@@ -75,9 +75,8 @@ module Admin
         @send_counts = @sends.group_by { |log| [ log.sent_at.to_date, log.kind ] }
                              .transform_values(&:size)
                              .sort_by { |(date, kind), _| [ date, kind ] }.reverse
-        # The page has to say how far back it can see. "Nothing before this log
-        # existed" is unanswerable from the screen; a date is checkable against
-        # the run the operator is asking about.
+        # Printed on the card, so a stretch with no rows reads as before the log
+        # rather than as a quiet week.
         @send_log_since = ::Reimbursements::NotificationLog.minimum(:sent_at)
         @send_log_limit = SEND_LOG_LIMIT
       end
