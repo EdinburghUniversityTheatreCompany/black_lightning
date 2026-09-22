@@ -5,7 +5,7 @@ module Admin::ProposalsHelper
 
   def proposal_action_buttons(proposal)
     if can?(:approve, proposal)
-      action_buttons =
+      buttons =
         case proposal.status
         when :awaiting_approval
           approve_link = proposal.has_debtors ?
@@ -17,21 +17,23 @@ module Admin::ProposalsHelper
           [ get_link(proposal, :mark_successful),
             get_link(proposal, :mark_unsuccessful) ]
         else
-          []
+          [ ]
         end
+
+      buttons << get_link(proposal, :revert_status, link_text: "Revert", confirm: "Are you sure you want to revert this proposal") unless proposal.awaiting_approval?
     else
-      action_buttons = []
+      buttons = []
     end
 
     if can?(:withdraw, proposal)
       if proposal.withdrawn?
-        action_buttons << get_link(proposal, :unwithdraw)
+        buttons << get_link(proposal, :unwithdraw)
       else
-        action_buttons << get_link(proposal, :withdraw, confirm: "are you sure you want to withdraw this ")
+        buttons << get_link(proposal, :withdraw, confirm: "are you sure you want to withdraw this ")
       end
     end
 
-    action_buttons
+    buttons
   end
 
   def proposal_labels(proposal, pull_right, show_debtors: true)

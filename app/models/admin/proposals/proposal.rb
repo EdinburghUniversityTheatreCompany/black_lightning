@@ -119,13 +119,19 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def label_css_class
     case status
     when :awaiting_approval
-      "bg-warning"
-    when :approved
       "bg-info"
-    when :successful
+    when :successful, :approved
       "bg-success"
     when :rejected, :unsuccessful
       "bg-danger"
+    end
+  end
+
+  def reverted_status
+    case status
+      when :awaiting_approval; nil
+      when :approved, :rejected; :awaiting_approval
+      when :successful, :unsuccessful; :approved
     end
   end
 

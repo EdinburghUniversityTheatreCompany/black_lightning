@@ -252,7 +252,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
-    delete :withdraw, params: { id: proposal.id }
+    put :withdraw, params: { id: proposal.id }
 
     assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdrawn action."
     assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdrawn action."
@@ -279,7 +279,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval, withdrawn: true)
 
-    delete :withdraw, params: { id: proposal.id }
+    put :withdraw, params: { id: proposal.id }
 
     assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdraw action."
     assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdraw action."
@@ -367,6 +367,28 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert assigns(:proposal).successful?, "The proposal status should not have changed."
     assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
+  end
+
+  test "revert_status on an approved proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :revert_status, params: { id: proposal.id }
+
+    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting approval after requesting the reset_status action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now awaiting approval." ], flash[:success]
+  end
+
+  test "revert_status on an unsuccessful proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :unsuccessful)
+
+    put :revert_status, params: { id: proposal.id }
+
+    assert assigns(:proposal).approved?, "The proposal is not approved after requesting the reset_status action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now approved." ], flash[:success]
   end
 
   test "user without approve permission cannot change status via update" do
