@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -143,6 +143,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
     t.string "show_title"
     t.bigint "status", null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.boolean "withdrawn", default: false, null: false
     t.index ["call_id"], name: "index_admin_proposals_proposals_on_call_id"
     t.index ["status"], name: "index_admin_proposals_proposals_on_status"
   end

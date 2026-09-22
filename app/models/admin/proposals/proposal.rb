@@ -12,6 +12,7 @@
 #  publicity_text :text(16777215)
 #  show_title     :string(255)
 #  status         :bigint           not null
+#  withdrawn      :boolean          default(FALSE), not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
 #  call_id        :integer
@@ -33,11 +34,12 @@ class Admin::Proposals::Proposal < ApplicationRecord
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
 
   enum :status,
-    awaiting_approval: 0,
-    approved: 1,
-    rejected: 2,
-    successful: 3,
-    unsuccessful: 4
+    [ :awaiting_approval,
+      :approved,
+      :rejected,
+      :successful,
+      :unsuccessful ],
+    instance_methods: false, unscoped: true, default: :awaiting_approval
 
   belongs_to :call, class_name: "Admin::Proposals::Call"
 
@@ -54,6 +56,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   normalizes :show_title, with: ->(show_title) { show_title&.strip }
 
+  scope :awaiting_approval, -> { where(status: :awaiting_approval, withdrawn: false) }
+  scope :approved, -> { where(status: :approved, withdrawn: false) }
+
   # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
   DISABLED_PERMISSIONS = %w[read].freeze
 
@@ -63,6 +68,34 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   def self.ransackable_associations(auth_object = nil)
     %w[call users]
+  end
+
+  def status
+    super.to_sym
+  end
+
+  def withdrawn?
+    withdrawn
+  end
+
+  def awaiting_approval?
+    !withdrawn? && status == :awaiting_approval
+  end
+
+  def approved?
+    !withdrawn? && status == :approved
+  end
+
+  def rejected?
+    !withdrawn? && status == :rejected
+  end
+
+  def successful?
+    !withdrawn? && status == :successful
+  end
+
+  def unsuccessful?
+    !withdrawn? && status == :unsuccessful
   end
 
   # Creates an instance of Admin::Answer for every question in the call.
@@ -85,14 +118,20 @@ class Admin::Proposals::Proposal < ApplicationRecord
   #
   def label_css_class
     case status
-    when "awaiting_approval"
-      "bg-warning"
-    when "approved"
+    when :awaiting_approval
       "bg-info"
-    when "successful"
+    when :successful, :approved
       "bg-success"
-    when "rejected", "unsuccessful"
+    when :rejected, :unsuccessful
       "bg-danger"
+    end
+  end
+
+  def reverted_status
+    case status
+    when :awaiting_approval; nil
+    when :approved, :rejected; :awaiting_approval
+    when :successful, :unsuccessful; :approved
     end
   end
 

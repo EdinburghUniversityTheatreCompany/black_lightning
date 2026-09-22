@@ -248,6 +248,59 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as rejected." ], flash[:success]
   end
 
+  test "withdraw unwithdrawn proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :withdraw, params: { id: proposal.id }
+
+    assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdrawn action."
+    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdrawn action."
+    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the withdrawn action"
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been withdrawn." ], flash[:success]
+  end
+
+  test "unwithdraw unwithdrawn proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :unwithdraw, params: { id: proposal.id }
+
+    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting_approval after requesting the unwithdrawn action."
+    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the unwithdrawn action."
+    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the unwithdrawn action"
+
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not withdrawn." ], flash[:error]
+  end
+
+  test "withdraw withdrawn proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval, withdrawn: true)
+
+    put :withdraw, params: { id: proposal.id }
+
+    assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdraw action."
+    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdraw action."
+    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the withdraw action"
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is already withdrawn." ], flash[:error]
+  end
+
+  test "unwithdraw withdrawn proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval, withdrawn: true)
+
+    put :unwithdraw, params: { id: proposal.id }
+
+    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting_approval after requesting the unwithdraw action."
+    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the unwithdraw action."
+    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the unwithdraw action"
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is no longer withdrawn." ], flash[:success]
+  end
+
   test "approve already approved proposal" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
 
@@ -316,6 +369,28 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
   end
 
+  test "revert_status on an approved proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :revert_status, params: { id: proposal.id }
+
+    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting approval after requesting the reset_status action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now awaiting approval." ], flash[:success]
+  end
+
+  test "revert_status on an unsuccessful proposal" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :unsuccessful)
+
+    put :revert_status, params: { id: proposal.id }
+
+    assert assigns(:proposal).approved?, "The proposal is not approved after requesting the reset_status action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now approved." ], flash[:success]
+  end
+
   test "user without approve permission cannot change status via update" do
     sign_out @admin
     @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
@@ -359,6 +434,18 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_equal [ "This proposal was not successful" ], flash[:error]
   end
 
+  test "should not convert when the proposal has been withdrawn" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :successful, withdrawn: true)
+
+    assert_no_difference "Show.count" do
+      put :convert, params: { id: proposal.id }
+    end
+
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "This proposal was not successful" ], flash[:error]
+  end
+
   test "about" do
     get :about
 
@@ -369,7 +456,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
-    put :approve, params: { id: proposal.id, redirect_to: admin_proposals_calls_path }
+    @request.headers[:"HTTP_REFERER"] = admin_proposals_calls_path
+    put :approve, params: { id: proposal.id }
 
     assert_redirected_to admin_proposals_calls_path
   end
@@ -378,7 +466,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
-    put :approve, params: { id: proposal.id, redirect_to: "https://evil.example.com" }
+    @request.headers[:"HTTP_REFERER"] = "https://evil.example.com"
+    put :approve, params: { id: proposal.id }
 
     assert_redirected_to admin_proposals_proposal_path(proposal)
   end
@@ -387,7 +476,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
 
-    put :mark_successful, params: { id: proposal.id, redirect_to: admin_proposals_calls_path }
+    @request.headers[:"HTTP_REFERER"] = admin_proposals_calls_path
+    put :mark_successful, params: { id: proposal.id }
 
     assert_redirected_to admin_proposals_calls_path
   end
@@ -396,7 +486,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
-    put :approve, params: { id: proposal.id, redirect_to: admin_proposals_call_proposals_path(@call) }
+    @request.headers[:"HTTP_REFERER"] = admin_proposals_call_proposals_path(@call)
+    put :approve, params: { id: proposal.id }
 
     assert_redirected_to admin_proposals_call_proposals_path(@call)
   end
