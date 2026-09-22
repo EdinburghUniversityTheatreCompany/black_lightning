@@ -84,8 +84,27 @@ mean" block on the budget screens plus a legend for the six People badges.
 | 24 | The area form's nested row cannot set a line's type or amount, so it lands as a £0 Expense line |
 | 25 | Settings: move the PowerShell/IT section to its own page; nine buttons on it say "Save" |
 | 26 | FX help on the GBP amount an international claim needs |
-| 27 | A template editor for the EUSA covering email instead of a raw-HTML textarea |
+| 27 | A template editor for the EUSA covering email instead of a raw-HTML textarea (**attempted and reverted — read the note below before retrying**) |
 | 28 | The expense import's docs and validation disagree about whether Payment reference is required |
+
+**Item 27 was built and reverted** (`ad0d4461`, `d99ff601`, reverted by `ebd09724`). It replaced
+the "Body (HTML)" textarea with a plain-text note plus `{{placeholders}}`, on the grounds that a
+mistyped tag could silently break the claims table. Mick's ruling, and the constraints any second
+attempt has to meet:
+
+- **Editing the HTML has never mangled the table in practice.** The risk the change was built
+  around was this audit's guess, not experience.
+- **The table is a convenience for searching old email, not what EUSA pays from.** The figures
+  they act on are in the BACS spreadsheet.
+- **The whole email has to stay editable.** The note could only replace the OPENING paragraph,
+  and that paragraph is the only place the batch total, the claim count and the "receipts are
+  also attached" line are ever rendered — so any note at all sent EUSA a table with no stated
+  total, and the form's preview rendered the note-LESS body, so the operator could not see it
+  happen. It also removed every edit that is not the opening: a sentence after the table, a
+  changed sign-off, a dropped row.
+
+So a replacement must keep the full body editable, and if it generates any part of the message it
+must generate the total and count OUTSIDE whatever the operator's text replaces.
 
 Also open, from the mock review: the three defaults in
 [area-pages-design.md](area-pages-design.md) ("With EUSA" as a label, pending claims counting

@@ -16,13 +16,22 @@ module Reimbursements
 
     SPREADSHEET_EXTENSIONS = %w[.xlsx].freeze
 
-    # roo 3 dropped legacy .xls and we do not carry roo-xls, so one reached
-    # Roo and came back "Can't detect the type of /tmp/actuals…xls - please use
-    # the :extension option to declare its type" — a tmp path and a
-    # developer's instruction, shown to a finance operator. Named here so the
-    # refusal says what to do instead. EUSA's exports are .xlsx; add roo-xls if
-    # that ever stops being true.
+    # roo 3 dropped legacy .xls and we do not carry roo-xls, so one reaching
+    # Roo surfaces its internals to a finance operator. EUSA's exports are
+    # .xlsx; add roo-xls if that stops being true.
     LEGACY_SPREADSHEET_EXTENSIONS = %w[.xls].freeze
+
+    # The OLE2 signature a legacy .xls opens with. Checked as well as the
+    # extension: the picker offers only .xlsx now, so an operator holding an
+    # old file renames it, and a renamed one reaches rubyzip instead.
+    LEGACY_SPREADSHEET_MAGIC = "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b.freeze
+
+    LEGACY_SPREADSHEET_ADVICE = "this reads .xlsx, not the older .xls. Open it in Excel and " \
+                                "choose Save As .xlsx, or paste the rows instead.".freeze
+
+    # Appended where the cause is not known. Every message raised here carries
+    # advice exactly once, so callers must not add their own.
+    GENERIC_ADVICE = "Save it as .xlsx or .csv, or paste the rows instead.".freeze
 
     # Raised for a file this cannot read, so the controller reports it on the
     # form rather than 500ing with the operator's upload lost.
@@ -32,10 +41,7 @@ module Reimbursements
       def to_text(file)
         name = file.original_filename.to_s
         extension = File.extname(name).downcase
-        if LEGACY_SPREADSHEET_EXTENSIONS.include?(extension)
-          raise UnreadableError, "this reads .xlsx, not the older .xls. Open it in Excel and " \
-                                 "choose Save As .xlsx, or paste the rows instead"
-        end
+        raise UnreadableError, LEGACY_SPREADSHEET_ADVICE if legacy_spreadsheet?(file, extension)
 
         if SPREADSHEET_EXTENSIONS.include?(extension)
           spreadsheet_to_tsv(file)
@@ -47,16 +53,24 @@ module Reimbursements
       rescue UnreadableError
         raise
       rescue StandardError => e
-        raise UnreadableError, e.message
+        raise UnreadableError, "#{e.message}. #{GENERIC_ADVICE}"
       end
 
       private
+
+      def legacy_spreadsheet?(file, extension)
+        return true if LEGACY_SPREADSHEET_EXTENSIONS.include?(extension)
+
+        head = file.read(LEGACY_SPREADSHEET_MAGIC.bytesize)
+        file.rewind
+        head == LEGACY_SPREADSHEET_MAGIC
+      end
 
       def spreadsheet_to_tsv(file)
         require "roo" # lazy: kept out of the boot heap (Gemfile require: false)
         sheet = Roo::Spreadsheet.open(file.path, extension: File.extname(file.original_filename.to_s).delete("."))
                                 .sheet(0)
-        raise UnreadableError, "that sheet is empty" if sheet.last_row.nil?
+        raise UnreadableError, "that sheet is empty." if sheet.last_row.nil?
 
         (1..sheet.last_row).filter_map { |i| tsv_line(sheet.row(i)) }.join("\n")
       end

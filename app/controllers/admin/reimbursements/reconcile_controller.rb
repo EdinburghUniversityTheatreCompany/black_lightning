@@ -183,8 +183,8 @@ module Admin
         ::Reimbursements::ActualsUpload.to_text(file)
       rescue ::Reimbursements::ActualsUpload::UnreadableError => e
         @upload_error = true
-        flash.now[:alert] = "Couldn't read that file: #{e.message}. Save it as .xlsx or .csv, " \
-                            "or paste the rows instead."
+        # The message already carries its advice; adding more states it twice.
+        flash.now[:alert] = "Couldn't read that file: #{e.message}"
         nil
       end
 

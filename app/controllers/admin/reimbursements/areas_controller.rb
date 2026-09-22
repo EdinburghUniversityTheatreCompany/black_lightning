@@ -234,15 +234,17 @@ module Admin
       # one through reaches save!, which raises and 500s the form instead of
       # reporting anything the operator can act on.
       def budget_row_error(row)
-        return nil unless row.key?("name") || row.key?("nominal_code")
+        # None of these keys means absent rather than incomplete (a detach-only
+        # params hash). The list must be the lambda's, or a row carrying only a
+        # figure reads as absent here and touched there, and save! raises.
+        return nil if ::Reimbursements::Area::TYPED_BUDGET_ROW_FIELDS.none? { |key| row.key?(key) }
 
         if row[:id].present?
           return "A budget line's name can't be blank." if row[:name].blank?
 
           return nil
         end
-        # The untouched "Add" template row, which Area's reject_if drops. Read
-        # from the model so the two cannot disagree about what untouched means.
+        # The untouched "Add" row, read from the model's own reject_if.
         return nil if ::Reimbursements::Area::UNTOUCHED_BUDGET_ROW.call(row)
         return nil if row[:name].present? && row[:nominal_code].present?
 

@@ -87,19 +87,20 @@ module Reimbursements
     # collision there.
     validates :name, uniqueness: { scope: [ :financial_year_id, :cost_centre_id ] }
 
-    # What an untouched "Add budget line" row looks like. NOT :all_blank: the
-    # row's Type select has no blank option, so it posts budget_type whether or
-    # not the operator touched the row, and :all_blank therefore never fired
-    # for it. The row was built with no name, Budget validates the name, and
-    # the save raised — click Add, change your mind, Save, lose the form.
+    # The fields the operator FILLS IN, as opposed to the wider permitted list
+    # in AreasController::BUDGET_ROW_FIELDS.
+    TYPED_BUDGET_ROW_FIELDS = %w[name nominal_code initial_budget].freeze
+
+    # NOT :all_blank: the row's Type select has no blank option, so an
+    # untouched "Add budget line" row still posts budget_type, was never blank,
+    # and reached save! with no name.
     #
-    # Blankness is judged on the fields the operator fills, so a figure typed
-    # with no name is KEPT and reported by AreasController#budget_row_error,
-    # which reads this same lambda. The two must agree: a row one calls
-    # untouched and the other calls incomplete is either a silent 500 or a
-    # line silently dropped.
+    # AreasController#budget_row_error judges a row by the same list, and must:
+    # a row one calls untouched and the other calls incomplete is either a
+    # silent 500 or a line silently dropped. A figure typed with no name is
+    # touched, so it is kept and reported rather than discarded.
     UNTOUCHED_BUDGET_ROW = lambda do |attrs|
-      attrs["id"].blank? && %w[name nominal_code initial_budget].all? { |key| attrs[key].blank? }
+      attrs["id"].blank? && TYPED_BUDGET_ROW_FIELDS.all? { |key| attrs[key].blank? }
     end
 
     accepts_nested_attributes_for :budgets, allow_destroy: false,

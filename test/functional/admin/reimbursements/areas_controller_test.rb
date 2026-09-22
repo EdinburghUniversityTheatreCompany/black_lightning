@@ -243,6 +243,23 @@ module Admin
         assert_empty area.reload.budgets
       end
 
+      # #budget_row_error's key guard listed only name and nominal_code, so a
+      # row carrying neither KEY read as absent while the lambda read it as
+      # touched: built with no name, and the save raises. Unreachable from the
+      # rendered form, which always posts both inputs, but it is the same 500
+      # the lambda exists to close and a truncated POST reaches it.
+      test "a row posting only a figure, with no name or code key at all, is reported" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { budget_type: "Expense", initial_budget: "500" } }
+        }
+
+        assert_response :unprocessable_entity
+        assert_empty area.reload.budgets
+      end
+
       # A figure typed with no name is a half-filled row, not an untouched one,
       # so it must be REPORTED. Dropping it silently would lose a line the
       # operator believes they added.

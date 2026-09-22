@@ -985,11 +985,14 @@ module Admin
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     end
 
-    def actuals_legacy_xls
-      file = Tempfile.new([ "actuals", ".xls" ])
-      file.write("anything")
+    # The OLE2 compound-file signature every legacy .xls opens with, so the
+    # +name+ can lie about the format the way a renamed file does.
+    def actuals_legacy_xls(name: "actuals.xls")
+      file = Tempfile.new([ "actuals", File.extname(name) ])
+      file.binmode
+      file.write("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b + ("\x00".b * 64))
       file.rewind
-      Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel")
+      Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel", original_filename: name)
     end
 
     def actuals_csv(text)
@@ -1096,6 +1099,32 @@ module Admin
 
       assert_match(/\.xlsx/, error.message)
       assert_no_match(/extension option|tmp/, error.message)
+    end
+
+    # The picker now offers only .xlsx, so an operator holding a legacy file
+    # renames it rather than converting it. Roo is then told "xlsx", rubyzip
+    # fails on bytes that are not a zip, and its raw message — tmp path
+    # included — is what the operator reads. The CONTENT decides, not the name.
+    test "an .xls renamed .xlsx is still recognised as the older format" do
+      error = assert_raises(::Reimbursements::ActualsUpload::UnreadableError) do
+        ::Reimbursements::ActualsUpload.to_text(actuals_legacy_xls(name: "actuals.xlsx"))
+      end
+
+      assert_match(/older \.xls/, error.message)
+      assert_no_match(/tmp|Zip|zip/, error.message)
+    end
+
+    # Every message carries its own advice, chosen where the cause is known, so
+    # the flash must not bolt a second copy on: the operator was reading
+    # "…or paste the rows instead. Save it as .xlsx or .csv, or paste the rows
+    # instead."
+    test "the flash states the advice once" do
+      sign_in @user
+
+      post :preview, params: { actuals_file: actuals_legacy_xls }
+
+      message = response.body[/Couldn't read that file: [^"<]*/]
+      assert_equal 1, message.scan(/paste the rows instead/).size, message
     end
 
     test "the file picker does not offer a format we cannot read" do
