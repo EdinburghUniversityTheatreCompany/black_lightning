@@ -79,18 +79,23 @@
     answer short of asking them. %>
 <%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
-    One line per recipient, newest first. This records that the portal handed the message to
-    Microsoft. A bounce afterwards is invisible here, the same limit a batch's "Producer emails:
-    sent" badge states. Nothing sent before this log existed appears.
+    <strong>What the portal sent, and to which address.</strong> It cannot tell you the message
+    was <em>read</em>, or even that it arrived: the portal hands each one to Microsoft, and a
+    bounce or a full mailbox after that is invisible here.
+    <% if @send_log_since %>
+      Messages sent before <%= reimbursements_date(@send_log_since) %> are not listed, because
+      that is when this log started. Searching an address covers every cost centre, not just the
+      one selected above.
+    <% end %>
   </p>
 
   <%= form_with url: admin_reimbursements_status_path, method: :get,
                 class: "mb-4 flex flex-wrap items-end gap-3" do %>
-    <%= render "shared/form/field", label: "Did this person get it?", name: :recipient,
+    <%= render "shared/form/field", label: "What was sent to this address?", name: :recipient,
           html_class: "grow max-w-md",
-          hint: "An email address, exactly as it is on their People record." do %>
+          hint: "Exactly as it is on their People record." do %>
       <%= text_field_tag :recipient, @recipient_query, type: "search",
-                         placeholder: "name@example.com", class: input_classes(width: nil) %>
+                         placeholder: "name@example.com", class: input_classes %>
     <% end %>
     <%= submit_tag "Search", class: "#{btn_classes(:secondary, :sm)} mb-4" %>
     <% if @recipient_query.present? %>
@@ -103,6 +108,10 @@
     <%# Per-run counts: a run-day sends a batch of one kind to several people,
         and the count is the thing that looks wrong when it is wrong. %>
     <p class="mb-1 text-sm font-medium">Per run</p>
+    <p class="mb-1 text-sm text-gray-600">
+      The <%= @send_log_limit %> newest messages only, so a large run can show fewer recipients
+      here than it sent. Search an address to reach further back.
+    </p>
     <ul class="mb-4 flex flex-col gap-1 text-sm">
       <% @send_counts.each do |(date, kind), count| %>
         <li class="flex flex-wrap items-baseline gap-x-2">
@@ -120,7 +129,7 @@
         Nothing has been emailed to <strong><%= @recipient_query %></strong>. Check the address on
         their People record: a reminder to an address nobody reads looks exactly like this.
       <% else %>
-        Nothing has been emailed yet. Reminders go out on each cost centre's run days, and a
+        Nothing has been emailed yet. Reminders go out on each cost centre's run days; a
         rejection or a batch notification is sent as it happens.
       <% end %>
     </p>
