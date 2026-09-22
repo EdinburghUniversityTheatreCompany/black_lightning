@@ -220,6 +220,10 @@ gitignored `mise.local.toml` still sits at the root and still layers on top. Pre
 - **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
   auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
   skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
+  **It reads YOUR dev database, so a pending migration silently strips real columns from models
+  you never touched** — pull someone's migration, commit anything, and their new column vanishes
+  from its annotation in your diff. Run `bin/rails db:migrate` before committing after a pull;
+  the tell is an unrelated model in `git diff --stat`.
 - **Gate status (see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
   `herb-lint` (ERB) and `jscpd` (duplication, threshold 0) are **gating** — their backlogs were
   ratcheted to 0. `herb-analyze` stays advisory (`|| true`) only for the two HTML-email fragment

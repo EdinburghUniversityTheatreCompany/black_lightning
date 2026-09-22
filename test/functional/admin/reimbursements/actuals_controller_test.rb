@@ -1214,11 +1214,9 @@ module Admin
       refute_includes assigns(:candidates).map(&:record_id), linked.record_id
     end
 
-    # The gate the automatic detector calls irrecoverable if missed: two
-    # unrelated real transactions of the same size on the same code in two
-    # different pots, stamped as cancelling out, hide real spend from BOTH
-    # pots' rollups. The manual path applies the detector's hard requirements,
-    # and this was the one it did not.
+    # Two unrelated real transactions of the same size on one code in two pots,
+    # stamped as cancelling out, hide real spend from BOTH pots' rollups, and
+    # re-pasting cannot repair it because dedup then skips both legs.
     test "never offers a counterpart from another cost centre" do
       other = create_second_reimbursements_cost_centre
       ours = counterpart_for_unlinked(cost_centre_id: @unlinked.cost_centre_id)
@@ -1246,9 +1244,8 @@ module Admin
       refute theirs.reload.offset?
     end
 
-    # Rows that predate cost centres carry none, and the portal reads an
-    # unplaced row as belonging everywhere rather than nowhere. Two of them
-    # still pair; an unplaced row and a placed one do not.
+    # Rows predating cost centres carry none, and the portal reads an unplaced
+    # row as belonging everywhere rather than nowhere.
     test "two rows with no cost centre still pair, but not with a placed row" do
       @unlinked.update!(cost_centre_id: nil)
       unplaced = counterpart_for_unlinked(cost_centre_id: nil)
