@@ -342,11 +342,14 @@ survive as historical import provenance and are never written. Spec + plan in
   (`Reimbursements::NotificationLog`, written at `Notifier#send_email`, the single chokepoint).
   The KIND is the template's basename, so a new message type logs itself. `record` swallows its
   own failures: an unlogged email that went out beats a logged one that did not.
-- **The EUSA covering email is a plain-text NOTE with `{{placeholders}}`, not raw HTML.** The
-  operator's text is escaped before it becomes paragraphs; the claims table, totals and sign-off
-  are always generated. An unknown placeholder is left exactly as typed — a visible typo beats a
-  silent hole in a sentence. Nothing on the money path moved: the body is still composed and
-  still passed as `eusa_body_html`, and a blank note passes nothing.
+- **The EUSA covering email's whole body is operator-editable raw HTML** ("Body (HTML)" on Build
+  Batch, prefilled with the composed message). Replacing it with a plain-text note plus
+  `{{placeholders}}` was tried and **reverted** (`ebd09724`): editing the markup has never
+  mangled the table in practice, and the table is there for searching old email rather than being
+  what EUSA pays from — the figures they act on are in the BACS spreadsheet. **The batch total,
+  the claim count and the "receipts are also attached" line exist ONLY in the opening paragraph
+  of `emails/eusa.html.erb`; nothing below the table restates them.** So anything that replaces
+  the opening drops all three silently. See plan item 27.
 - **Everything goes through the store built by `Reimbursements.build_store`** — the
   AR-backed `Reimbursements::DatabaseStore`, the single data gateway with a frozen
   public API. No cache layer: lists are memoized per instance (one store per

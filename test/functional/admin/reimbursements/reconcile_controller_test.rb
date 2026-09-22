@@ -995,6 +995,17 @@ module Admin
       Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel", original_filename: name)
     end
 
+    # A .xlsx by name and by first bytes (so it is not caught as legacy) that
+    # Roo still cannot open: the blanket rescue's path.
+    def actuals_unreadable_xlsx
+      file = Tempfile.new([ "actuals", ".xlsx" ])
+      file.binmode
+      file.write("not a zip at all")
+      file.rewind
+      Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel",
+                                   original_filename: "actuals.xlsx")
+    end
+
     def actuals_csv(text)
       file = Tempfile.new([ "actuals", ".csv" ])
       file.write(text)
@@ -1112,6 +1123,24 @@ module Admin
 
       assert_match(/older \.xls/, error.message)
       assert_no_match(/tmp|Zip|zip/, error.message)
+    end
+
+    # Dropping the flash's blanket advice left the empty-sheet refusal stating
+    # no next step at all, while the comment above GENERIC_ADVICE claimed every
+    # message carried one. Each raise site is pinned so the invariant is true.
+    test "every refusal states a next step" do
+      upload = ::Reimbursements::ActualsUpload
+
+      messages = [
+        assert_raises(upload::UnreadableError) { upload.to_text(actuals_legacy_xls) }.message,
+        assert_raises(upload::UnreadableError) { upload.to_text(actuals_xlsx([ [] ])) }.message,
+        assert_raises(upload::UnreadableError) { upload.to_text(actuals_unreadable_xlsx) }.message
+      ]
+
+      messages.each do |message|
+        assert_match(/paste (the rows|them)/, message, message)
+        assert_no_match(/\.\./, message, "a doubled full stop: #{message}")
+      end
     end
 
     # Every message carries its own advice, chosen where the cause is known, so

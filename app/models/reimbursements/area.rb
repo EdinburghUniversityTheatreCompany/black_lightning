@@ -95,10 +95,10 @@ module Reimbursements
     # untouched "Add budget line" row still posts budget_type, was never blank,
     # and reached save! with no name.
     #
-    # AreasController#budget_row_error judges a row by the same list, and must:
-    # a row one calls untouched and the other calls incomplete is either a
-    # silent 500 or a line silently dropped. A figure typed with no name is
-    # touched, so it is kept and reported rather than discarded.
+    # AreasController#budget_row_error judges a row by the same list, and the
+    # two must agree: a row one calls untouched and the other calls incomplete
+    # is either a silent 500 or a line silently dropped. A figure typed with no
+    # name is touched, so it is kept and reported rather than discarded.
     UNTOUCHED_BUDGET_ROW = lambda do |attrs|
       attrs["id"].blank? && TYPED_BUDGET_ROW_FIELDS.all? { |key| attrs[key].blank? }
     end

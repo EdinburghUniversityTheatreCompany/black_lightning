@@ -211,8 +211,7 @@ module Admin
       end
 
       # Budget itself validates only the name, so what a budget row may leave
-      # blank is decided here. A row posting neither field is absent rather
-      # than incomplete (a detach-only params hash).
+      # blank is decided here.
       def budget_rows_error
         rows = permitted_budgets_attributes
         return nil if rows.blank?

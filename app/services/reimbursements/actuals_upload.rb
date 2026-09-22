@@ -30,8 +30,14 @@ module Reimbursements
                                 "choose Save As .xlsx, or paste the rows instead.".freeze
 
     # Appended where the cause is not known. Every message raised here carries
-    # advice exactly once, so callers must not add their own.
+    # a next step exactly once, so callers must not add their own.
     GENERIC_ADVICE = "Save it as .xlsx or .csv, or paste the rows instead.".freeze
+
+    # The format advice would be wrong here: the file read fine, it is the
+    # FIRST sheet that has no rows, which is what an export of the wrong tab
+    # looks like.
+    EMPTY_SHEET_ADVICE = "that sheet is empty. Check the rows are in the file's first sheet, " \
+                         "or paste them instead.".freeze
 
     # Raised for a file this cannot read, so the controller reports it on the
     # form rather than 500ing with the operator's upload lost.
@@ -53,7 +59,7 @@ module Reimbursements
       rescue UnreadableError
         raise
       rescue StandardError => e
-        raise UnreadableError, "#{e.message}. #{GENERIC_ADVICE}"
+        raise UnreadableError, "#{e.message.to_s.sub(/\.\z/, '')}. #{GENERIC_ADVICE}"
       end
 
       private
@@ -70,7 +76,7 @@ module Reimbursements
         require "roo" # lazy: kept out of the boot heap (Gemfile require: false)
         sheet = Roo::Spreadsheet.open(file.path, extension: File.extname(file.original_filename.to_s).delete("."))
                                 .sheet(0)
-        raise UnreadableError, "that sheet is empty." if sheet.last_row.nil?
+        raise UnreadableError, EMPTY_SHEET_ADVICE if sheet.last_row.nil?
 
         (1..sheet.last_row).filter_map { |i| tsv_line(sheet.row(i)) }.join("\n")
       end
