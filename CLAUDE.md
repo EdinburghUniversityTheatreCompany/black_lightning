@@ -420,6 +420,13 @@ survive as historical import provenance and are never written. Spec + plan in
   - **An area naming nobody switches its budgets' sign-off gate OFF** — `OwnerReview
     .gate_applies?` is false with no owners, so a budget with its own owner attached to an
     ownerless area stops needing endorsement entirely. Both forms warn.
+  - **`reject_if: :all_blank` cannot judge a row holding a select with no blank option.** The
+    area form's nested budget row posts `budget_type` whether or not the operator touched it, so
+    an untouched "Add budget line" row stopped being blank, was built with no name and 500d the
+    save on Budget's name validation. `Area::UNTOUCHED_BUDGET_ROW` judges blankness on the fields
+    the operator fills, and `AreasController#budget_row_error` reads the SAME lambda: a row one
+    calls untouched and the other calls incomplete is either a silent 500 or a line silently
+    dropped.
   - **A budget inherits its area's cost centre and financial year** (`before_validation` on
     Budget, filling blanks only, so it can never move a placed line). The area form's nested
     rows carry only a name and a code, and an unstamped line is lenient-scoped into EVERY

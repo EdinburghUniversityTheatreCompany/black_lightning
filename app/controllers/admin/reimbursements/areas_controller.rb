@@ -241,9 +241,9 @@ module Admin
 
           return nil
         end
-        # Both blank on a new row is the untouched "Add" template row, which
-        # reject_if: :all_blank drops.
-        return nil if row[:name].blank? && row[:nominal_code].blank?
+        # The untouched "Add" template row, which Area's reject_if drops. Read
+        # from the model so the two cannot disagree about what untouched means.
+        return nil if ::Reimbursements::Area::UNTOUCHED_BUDGET_ROW.call(row)
         return nil if row[:name].present? && row[:nominal_code].present?
 
         "A new budget line needs a name and a nominal code."

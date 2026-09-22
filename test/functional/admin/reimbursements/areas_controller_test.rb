@@ -224,6 +224,42 @@ module Admin
         assert_equal "Cogito Autumn", area.reload.name
       end
 
+      # The "Add budget line" row's Type select has no blank option, so every
+      # such row posts budget_type whether or not the operator touched it, and
+      # :all_blank stopped seeing it as blank. It was then built with no name
+      # and reached save!, which raises: click Add, change your mind, Save, and
+      # the whole form is lost to a 500. What counts as untouched has to be the
+      # fields the operator actually fills.
+      test "an untouched Add budget line row is dropped rather than 500ing the form" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { name: "", nominal_code: "",
+                                         budget_type: "Expense", initial_budget: "" } }
+        }
+
+        assert_redirected_to edit_admin_reimbursements_area_path(area.record_id)
+        assert_empty area.reload.budgets
+      end
+
+      # A figure typed with no name is a half-filled row, not an untouched one,
+      # so it must be REPORTED. Dropping it silently would lose a line the
+      # operator believes they added.
+      test "a new budget row carrying only a figure is reported, not dropped" do
+        area = create_reimbursements_area(name: "Cogito")
+
+        patch :update, params: {
+          id: area.record_id, name: "Cogito",
+          budgets_attributes: { "0" => { name: "", nominal_code: "",
+                                         budget_type: "Expense", initial_budget: "500" } }
+        }
+
+        assert_response :unprocessable_entity
+        assert_match(/needs a name and a nominal code/, flash[:alert].to_s + response.body)
+        assert_empty area.reload.budgets
+      end
+
       test "a code-less line can still be detached from its area" do
         area = create_reimbursements_area(name: "Cogito")
         line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
