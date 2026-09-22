@@ -111,7 +111,7 @@ module Reimbursements
 
       raise MissingRecordError,
             "#{RECORDED_COLUMN} is gone, so which area each line was in cannot be recorded or " \
-            "restored — the backfill is no longer reversible"
+            "restored, so the backfill is no longer reversible"
     end
     private_class_method :ensure_column!
   end

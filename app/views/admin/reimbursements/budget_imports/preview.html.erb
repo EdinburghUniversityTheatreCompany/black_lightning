@@ -156,7 +156,7 @@
             <tr class="border-t border-gray-200">
               <td class="py-1 pr-4"><%= revision[:area_name] %></td>
               <td class="py-1 pr-4 text-right">
-                <%= revision[:from] ? number_to_currency(revision[:from], unit: "£") : "—" %>
+                <%= revision[:from] ? number_to_currency(revision[:from], unit: "£") : "-" %>
               </td>
               <td class="py-1 pr-4 text-right font-medium">
                 <%= number_to_currency(revision[:amount], unit: "£") %>
@@ -175,7 +175,7 @@
         <%= @import.absent_budgets.one? ? "isn't" : "aren't" %> in this sheet.
       </p>
       <p class="text-gray-600">
-        Nothing will happen to <%= @import.absent_budgets.one? ? "it" : "them" %> — importing never
+        Nothing will happen to <%= @import.absent_budgets.one? ? "it" : "them" %>. Importing never
         deletes a budget, because its claims and history hang off it.
         <%# The one panel whose names NECESSARILY span areas, with nowhere to
             put a heading: bare, two shows each missing a Marketing and an
@@ -188,7 +188,7 @@
         <p class="mt-1 text-amber-800">
           <%= @import.superseded_absent_budgets.map(&:display_name).to_sentence %>
           <%= @import.superseded_absent_budgets.one? ? "carries" : "carry" %> an area's name as a
-          prefix, and this sheet creates the same line inside that area. Nothing is merged —
+          prefix, and this sheet creates the same line inside that area. Nothing is merged, so
           check whether the older line should be retired.
         </p>
       <% end %>
@@ -221,7 +221,7 @@
     <div class="mt-4 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
       <p class="font-medium">Who will sign off for each area after this import</p>
       <p class="text-gray-600">
-        An area's owners are everyone its lines name, and importing never removes one — any one
+        An area's owners are everyone its lines name, and importing never removes one. Any one
         of them can endorse a claim on the area's budgets. Remove an owner on the area itself.
         Owners are separate from the moves above: unticking a line leaves it where it is, but
         the area the sheet named still gains the owner named beside it.
@@ -316,7 +316,7 @@
         </p>
         <p>
           Leave a line ticked to follow the sheet. Untick it if somebody moved that line on
-          purpose — an unticked line stays where it is, and an area nothing lands in isn't
+          purpose: an unticked line stays where it is, and an area nothing lands in isn't
           created at all.
         </p>
         <%# Always posted, so an untick is a real "no" rather than a missing parameter. %>
@@ -331,7 +331,7 @@
                                 id: checkbox_id, class: "#{checkbox_classes} mt-0.5" %>
               <div>
                 <%= label_tag checkbox_id, class: "cursor-pointer" do %>
-                  <strong><%= re_home[:budget_name] %></strong> —
+                  <strong><%= re_home[:budget_name] %></strong> ·
                   <%= re_home[:from_area_name].presence || "no area" %>
                   <%# Qualified only when the names would otherwise read
                       "Cogito -> Cogito": the FROM side when that area sits

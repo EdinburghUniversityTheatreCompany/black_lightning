@@ -47,7 +47,7 @@
           among them would read as a different kind of control. %>
       <%= select_tag :area_id,
             options_from_collection_for_select(areas, :record_id, :name, area_id),
-            include_blank: "— none —", class: input_classes,
+            include_blank: "No area", class: input_classes,
             data: { reimbursements_budget_area_target: "area",
                     action: "change->reimbursements-budget-area#areaChanged" } %>
     <% end %>

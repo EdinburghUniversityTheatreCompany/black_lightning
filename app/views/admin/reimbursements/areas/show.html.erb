@@ -75,7 +75,7 @@
                 <%= change.subject %><% if change.area_total? %> <span class="text-gray-500">(agreed total)</span><% end %>
               </td>
               <td class="px-3 py-2 text-right tabular-nums">
-                <%= change.first? ? "—" : reimbursements_money(change.from) %>
+                <%= change.first? ? "-" : reimbursements_money(change.from) %>
               </td>
               <td class="px-3 py-2 text-right font-medium tabular-nums">
                 <%= reimbursements_money(change.to) %>

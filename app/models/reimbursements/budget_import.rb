@@ -50,7 +50,7 @@ module Reimbursements
 
         others = BudgetImport.budget_labels(declined).to_sentence(last_word_connector: " and ")
         "Matched #{BudgetImport.budget_label(budget)}. #{others} " \
-          "#{declined.one? ? 'is' : 'are'} named the same — give this row an Area cell if you " \
+          "#{declined.one? ? 'is' : 'are'} named the same. Give this row an Area cell if you " \
           "meant #{declined.one? ? 'that one' : 'one of those'}."
       end
     end
@@ -921,10 +921,10 @@ module Reimbursements
     def duplicate_instruction(group)
       prefixed = group.find { |row| row[:area].blank? && prefix_area_for(row[:name]) }
       unless prefixed
-        return "Name it once — two lines are told apart by their area, not by the name alone."
+        return "Name it once: two lines are told apart by their area, not by the name alone."
       end
 
-      "Name it once — #{prefixed[:name].inspect} already names " \
+      "Name it once: #{prefixed[:name].inspect} already names " \
         "#{prefix_area_for(prefixed[:name])}, so an Area cell would not tell them apart."
     end
 
@@ -993,7 +993,7 @@ module Reimbursements
         clash = stored[key]&.name || seen[key]
         if clash
           @errors << "#{name.inspect} and #{clash.inspect} are the same area name as far as " \
-                     "the database is concerned — it ignores accents. Spell the area one way."
+                     "the database is concerned, which ignores accents. Spell the area one way."
         else
           seen[key] = name
         end

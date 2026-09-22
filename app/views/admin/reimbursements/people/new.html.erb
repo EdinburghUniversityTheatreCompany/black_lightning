@@ -12,7 +12,7 @@
 
     <p class="mb-4 text-sm text-gray-600">
       Adds someone to the payee registry so they can be given a budget to own, without
-      waiting for them to file a claim. No bank details are asked for here — a budget owner
+      waiting for them to file a claim. No bank details are asked for here: a budget owner
       may never claim a penny, and someone who does claim enters their own details in the
       portal. They'll show as <strong>Unverified</strong> until they do.
     </p>
@@ -23,7 +23,7 @@
 
     <%= render "shared/form/field", label: "User account", name: :user_id,
           hint: "Start typing a name. Only existing Black Lightning accounts can be " \
-                "registered — if they haven't got one yet, they need to sign up first." do %>
+                "registered. If they haven't got one yet, they need to sign up first." do %>
       <%# Only `simple-select2`: Tom Select copies the select's classes onto its
           own wrapper, which already draws the box. Remote-sourced rather than a
           full list of options, because there are thousands of accounts. %>

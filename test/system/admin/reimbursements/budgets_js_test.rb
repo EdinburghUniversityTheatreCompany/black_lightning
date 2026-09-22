@@ -8,7 +8,7 @@ module Admin
     # nested-fields shape could not deliver its params at all, and that was
     # only caught by a browser test clicking the real button. This proves the
     # <select> the browser actually renders carries the budget to its new area,
-    # and that clearing it back to "— none —" detaches it.
+    # and that clearing it back to "No area" detaches it.
     class BudgetsJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -36,7 +36,7 @@ module Admin
         budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
 
         visit edit_admin_reimbursements_budget_path(budget.record_id)
-        select "— none —", from: "Area"
+        select "No area", from: "Area"
         click_on "Save budget"
 
         assert_text "Budget saved"
@@ -83,7 +83,7 @@ module Admin
         select "Cogito", from: "Area"
         assert_selector ".ts-wrapper.disabled"
 
-        select "— none —", from: "Area"
+        select "No area", from: "Area"
         assert_no_selector ".ts-wrapper.disabled"
       end
 
@@ -119,7 +119,7 @@ module Admin
 
       # The compound path, clicked: the select is year- and centre-scoped while
       # area_id writes unscoped, so an area the picker does not offer read
-      # "— none —" and an unrelated Save detached the budget.
+      # "No area" and an unrelated Save detached the budget.
       test "a Save that changes only the notes keeps an area from another year" do
         ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
         next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")

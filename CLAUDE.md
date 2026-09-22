@@ -426,7 +426,7 @@ survive as historical import provenance and are never written. Spec + plan in
     year's and EVERY centre's list and into every producer's picker.
   - **The area `<select>` must always offer the budget's own area.** It is drawn from
     `areas_for_year` (scoped) while `area_id` writes unscoped and `""` detaches, so an area
-    from another year read "— none —" and any Save silently detached it.
+    from another year read "No area" and any Save silently detached it.
   - **A forecast belongs to exactly one of a budget or an area** (model validation + a MySQL
     CHECK constraint — the app pins mysql:8.4 everywhere, so CHECK is enforced). An area
     forecast revises the show's agreed total, a budget forecast a category's allocation. It

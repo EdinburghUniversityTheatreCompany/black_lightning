@@ -6,7 +6,7 @@
     <% skipped = @import.entries_in(:already_imported) %>
     <% if skipped.any? %>
       <li>
-        <strong><%= pluralize(skipped.size, "line") %></strong> skipped — already imported
+        <strong><%= pluralize(skipped.size, "line") %></strong> skipped, already imported
         under the same ID.
       </li>
     <% end %>
@@ -31,8 +31,8 @@
       </p>
       <p>
         <%= live.map { |expense| "##{expense.auto_number} (#{expense.status})" }.to_sentence %>.
-        An Approved claim will be put on the next BACS spreadsheet for this cost centre — EUSA
-        pays it again — and its payee emailed; a Pending one is in Review now and its budget
+        An Approved claim will be put on the next BACS spreadsheet for this cost centre (EUSA
+        pays it again) and its payee emailed; a Pending one is in Review now and its budget
         owners are reminded nightly. Change the status on the claim if that isn't what you meant.
       </p>
     </div>

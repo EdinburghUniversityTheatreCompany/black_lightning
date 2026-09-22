@@ -687,8 +687,8 @@ module Admin
 
         assert_response :success
         panel = css_select("p.text-gray-600").map { |node| node.text.squish }
-                                             .find { |text| text.include?("importing never deletes") }
-        assert_equal "Nothing will happen to them — importing never deletes a budget, because its " \
+                                             .find { |text| text.include?("never deletes a budget") }
+        assert_equal "Nothing will happen to them. Importing never deletes a budget, because its " \
                      "claims and history hang off it. Improverts: Marketing and Improverts: Other.",
                      panel
       end
@@ -746,7 +746,7 @@ module Admin
         post :preview, params: preview_params(cogito_sheet)
 
         assert_select "label[for=?]", "re-home-#{budget.record_id}" do |labels|
-          assert_equal "Cogito: Marketing — Cogito (Fringe 2026) → Cogito (new)",
+          assert_equal "Cogito: Marketing · Cogito (Fringe 2026) → Cogito (new)",
                        labels.sole.text.squish
         end
       end

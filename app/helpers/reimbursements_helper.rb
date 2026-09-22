@@ -194,7 +194,7 @@ module ReimbursementsHelper
   def blank_cost_centre_options(cost_centres)
     [ [ "Choose a cost centre…", "" ] ] +
       cost_centres.map { |centre| [ "#{centre.name} (#{centre.eusa_code})", centre.id.to_s ] } +
-      [ [ "Skip these rows — they are not ours", Reimbursements::ActualsAttribution::SKIP ] ]
+      [ [ "Skip these rows: they are not ours", Reimbursements::ActualsAttribution::SKIP ] ]
   end
 
   # Who a submitter writes to about a claim finance has already picked up.
@@ -317,7 +317,7 @@ module ReimbursementsHelper
       # money to raise, so "what is left" means nothing on that side. Saying
       # "No budget set" there contradicted the £800.00 in the same row's
       # Initial column.
-      return content_tag(:span, "—", class: "text-gray-500",
+      return content_tag(:span, "-", class: "text-gray-500",
                          title: "Income is measured by what it raises (see EUSA actual), " \
                                 "not by what is left of it.") if budget.income?
 

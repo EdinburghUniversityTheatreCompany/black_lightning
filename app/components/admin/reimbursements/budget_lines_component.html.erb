@@ -38,7 +38,7 @@
                 <% end %>
               </td>
               <% if finance? %>
-                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "—" %></td>
+                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "-" %></td>
               <% end %>
               <td class="px-3 py-2 text-right tabular-nums">
                 <% if figures.no_budget_set? %>
@@ -92,7 +92,7 @@
             <tr class="border-b border-gray-200">
               <td class="px-3 py-2 font-medium"><%= line.name %></td>
               <% if finance? %>
-                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "—" %></td>
+                <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "-" %></td>
               <% end %>
               <td class="px-3 py-2 text-right tabular-nums">
                 <% if income_expected(line).nil? %>

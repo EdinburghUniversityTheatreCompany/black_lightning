@@ -441,7 +441,7 @@ module Reimbursements
       return if missing.empty?
 
       @errors << "The sheet has no #{missing.to_sentence} column#{'s' if missing.many?}. " \
-                 "Every claim needs #{missing.many? ? 'those' : 'that'} — start from the " \
+                 "Every claim needs #{missing.many? ? 'those' : 'that'}. Start from the " \
                  "template if you're not sure of the headings."
     end
 
@@ -485,7 +485,7 @@ module Reimbursements
     def reference_error(row, duplicated)
       if row[:reference].blank?
         "This line has no ID. Give every claim one (its row number in your own sheet " \
-          "will do) — it's what stops a second import creating the same claim twice."
+          "will do). It's what stops a second import creating the same claim twice."
       elsif row[:reference].length > IMPORT_KEY_LIMIT
         "That ID is too long: #{row[:reference].length} characters, and the limit is " \
           "#{IMPORT_KEY_LIMIT}."
@@ -531,7 +531,7 @@ module Reimbursements
           "screen. Give their email instead."
       else
         "#{(row[:payee_email].presence || row[:submitter_name]).inspect} isn't anyone on the " \
-          "People screen. Register them there first — an import never creates anyone."
+          "People screen. Register them there first: an import never creates anyone."
       end
     end
 

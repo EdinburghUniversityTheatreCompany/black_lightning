@@ -179,7 +179,7 @@ module Admin
         paste_sheet with: sheet(claim("TT-1", budget: "Termtime props"))
         click_on "Preview import"
 
-        assert_text "Preview: Fringe 2027 — #{termtime.name}"
+        assert_text "Preview: Fringe 2027 · #{termtime.name}"
         click_on "Import 1 claim"
         assert_text "Imported into Fringe 2027"
 

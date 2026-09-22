@@ -214,14 +214,14 @@
           server will reject is worse than no hint at all. %>
       <p data-reimbursements-receipt-target="ukPayeeCopy"
          class="<%= 'hidden' if form.international? %> mb-4 text-sm text-gray-600">
-        Fill this out when EUSA should pay a third party directly — which is what an
+        Fill this out when EUSA should pay a third party directly, which is what an
         <strong>Invoice</strong> means, so all three are required there. Leave all three blank
         to be reimbursed yourself.
       </p>
       <p data-reimbursements-receipt-target="internationalPayeeCopy"
          class="<%= 'hidden' unless form.international? %> mb-4 text-sm text-gray-600">
         An international payment goes straight to the payee's own bank, so their account name,
-        IBAN and BIC are always required — there is nothing on file to fall back to.
+        IBAN and BIC are always required: there is nothing on file to fall back to.
       </p>
     </div>
     <%= f.input :payee_name_override, label: "Payee account name" %>
@@ -232,7 +232,7 @@
     <div data-reimbursements-receipt-target="internationalFields"
          class="<%= 'hidden' unless form.international? %>">
       <%= f.input :iban_override, label: "Payee IBAN",
-            hint: "As printed on the invoice. Spaces are fine — we check the IBAN's own " \
+            hint: "As printed on the invoice. Spaces are fine. We check the IBAN's own " \
                   "check digits, so a mistyped one is caught here rather than by the bank." %>
       <%= f.input :bic_override, label: "Payee BIC / SWIFT code",
             hint: "8 or 11 characters, e.g. DEUTDEFF or DEUTDEFF500." %>

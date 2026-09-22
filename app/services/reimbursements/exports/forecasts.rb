@@ -43,7 +43,7 @@ module Reimbursements
       # The revision a forecast came in under, named the way the log names it:
       # its effective date, plus its note where there is one.
       def update_label(budget_update)
-        [ budget_update.effective_date&.iso8601, budget_update.note.presence ].compact.join(" — ")
+        [ budget_update.effective_date&.iso8601, budget_update.note.presence ].compact.join(" · ")
       end
     end
   end

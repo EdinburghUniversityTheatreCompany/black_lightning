@@ -48,7 +48,7 @@ module Reimbursements
       # revert the migration that adds this column and then this one.
       unless scope.model.connection.column_exists?(scope.model.table_name, RECORDED_COLUMN)
         raise MissingRecordError, "#{RECORDED_COLUMN} is gone, so the names #strip! took off " \
-                                  "cannot be restored — the rollback window closed when it was dropped"
+                                  "cannot be restored: the rollback window closed when it was dropped"
       end
 
       ActiveRecord::Base.transaction do
@@ -108,7 +108,7 @@ module Reimbursements
              .join(" and ")
       end
       "stripping the area prefix would leave two lines in one area with the same name " \
-        "(#{pairs.join('; ')}) — rename one of them before migrating"
+        "(#{pairs.join('; ')}). Rename one of them before migrating"
     end
     private_class_method :collision_message
   end

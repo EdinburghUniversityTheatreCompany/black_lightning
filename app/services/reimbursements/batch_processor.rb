@@ -310,7 +310,7 @@ module Reimbursements
         unless current&.status == Status::APPROVED
           result.errors << "ALREADY CLAIMED: expense #{expense.auto_number} is no longer Approved " \
             "(now #{current&.status || 'deleted'}), so something else has taken it since this batch " \
-            "was selected. It IS in this run's EUSA draft (#{result.eusa_draft_web_link}) — check it " \
+            "was selected. It IS in this run's EUSA draft (#{result.eusa_draft_web_link}). Check it " \
             "is not about to be paid twice before you send that draft."
           next false
         end

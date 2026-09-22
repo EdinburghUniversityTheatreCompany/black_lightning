@@ -9,7 +9,7 @@
 <%# The heading names its own destination. The page <h1> can't: it sits outside
     this frame, so it still says whatever the page loaded with. %>
 <%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}" \
-                                    "#{" — #{selected_cost_centre.name}" if selected_cost_centre}") do %>
+                                    "#{" · #{selected_cost_centre.name}" if selected_cost_centre}") do %>
   <p class="mb-4 text-sm text-gray-600">
     Nothing has been written yet. Check the lines below, then confirm at the bottom.
   </p>
@@ -108,7 +108,7 @@
       <ul class="mt-1 list-disc pl-5">
         <li>
           An <strong>Approved</strong> claim goes on the next BACS spreadsheet built for this
-          cost centre — <strong>EUSA pays it again</strong> — and its payee is emailed to say so.
+          cost centre (<strong>EUSA pays it again</strong>) and its payee is emailed to say so.
         </li>
         <li>
           A <strong>Pending</strong> or <strong>Draft</strong> claim lands in the Review queue,

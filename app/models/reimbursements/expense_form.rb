@@ -318,7 +318,7 @@ module Reimbursements
     def budget_still_offerable
       return if draft? || !stale_budget?
 
-      errors.add(:budget_record_id, "is no longer available — the finance team removed or " \
+      errors.add(:budget_record_id, "is no longer available. The finance team removed or " \
                                     "retired it while you were filling this in. Everything else " \
                                     "you typed has been kept: pick another budget and submit again.")
     end
