@@ -15,7 +15,16 @@ module Admin
     # URL the sidebar's "My Claims" resolves under would be a regression on
     # what a plain redirect did. The branch is in #show instead.
     class HomeController < FinanceController
+      # FinanceController has already SKIPPED the base portal gate to put the
+      # finance one in its place, so skipping THAT alone left this URL behind
+      # nothing but :access, :backend — the one URL every audience lands on
+      # first, and the only one in the namespace behind no portal permission.
+      #
+      # Neither permission implies the other (a Business Manager is granted
+      # reimbursements_finance and not access/reimbursements), so the gate is
+      # their UNION and #show branches inside it.
       skip_before_action :authorize_finance!
+      before_action :authorize_front_door!
 
       def show
         return redirect_to(admin_reimbursements_expenses_path) unless finance?
@@ -25,6 +34,12 @@ module Admin
       end
 
       private
+
+      def authorize_front_door!
+        return if can?(:access, :reimbursements) || finance?
+
+        authorize! :access, :reimbursements
+      end
 
       def finance?
         can?(:manage, :reimbursements_finance)

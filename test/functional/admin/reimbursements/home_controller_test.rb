@@ -19,6 +19,18 @@ module Admin
 
       # --- Who lands where ---------------------------------------------------
 
+      # The finance permission cannot be a before_action here (a producer has
+      # to reach the front door), but FinanceController has already SKIPPED the
+      # base portal gate, so skipping the finance one too left this URL behind
+      # nothing but :access, :backend. Nothing leaked, because the redirect
+      # target 403s them anyway, but the gate the rest of the namespace is
+      # built on was simply absent on the one URL everybody lands on first.
+      test "someone with no portal access at all cannot reach the front door" do
+        sign_in users(:committee)
+        get :show
+        assert_response :forbidden
+      end
+
       test "requires sign-in" do
         get :show
         assert_redirected_to new_user_session_path
