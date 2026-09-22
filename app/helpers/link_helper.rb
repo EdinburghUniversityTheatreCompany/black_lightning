@@ -180,7 +180,7 @@ module LinkHelper
     case action
     when :show     then nil
     when :new      then :primary
-    when :destroy, :reject, :mark_unsuccessful then :danger
+    when :destroy, :reject, :withdraw, :mark_unsuccessful then :danger
     when :approve, :mark_successful then :success
     else :secondary
     end
@@ -190,9 +190,9 @@ module LinkHelper
     case action
     when :show, :index, :edit, :new
       :get
-    when :destroy
+    when :destroy, :withdraw
       :delete
-    when :approve, :reject, :mark_successful, :mark_unsuccessful
+    when :approve, :reject, :unwithdraw, :mark_successful, :mark_unsuccessful
       :put
     else
       raise(ArgumentError, "There is no default HTTP method for the specified action #{action}")

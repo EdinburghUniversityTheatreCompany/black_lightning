@@ -565,6 +565,8 @@ ChaosRails::Application.routes.draw do
         member do
           put "approve"
           put "reject"
+          delete "withdraw"
+          put "unwithdraw"
           put "mark_successful"
           put "mark_unsuccessful"
           put "convert"

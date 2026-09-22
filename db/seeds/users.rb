@@ -25,11 +25,14 @@ seed_user("president@bedlamtheatre.co.uk", "Patrick", "Brennan",
   roles: [ :member, "Committee" ], bio: "Current EUTC President.")
 seed_user("secretary@bedlamtheatre.co.uk", "Sarah", "Chambers",
   roles: [ :member, "Committee" ], bio: "Secretary and archivist.")
-seed_user("treasurer@bedlamtheatre.co.uk", "Tom", "Whitfield",
-  roles: [ :member, "Committee" ], bio: "Treasurer keeping the books balanced.")
-seed_user("techmanager@bedlamtheatre.co.uk", "Maya", "Patel",
+seed_user("business@bedlamtheatre.co.uk", "Tom", "Whitfield",
+  roles: [ :member, "Committee" ], bio: "Business manager keeping the books balanced.")
+seed_user("tech@bedlamtheatre.co.uk", "Maya", "Patel",
   roles: [ :member, "Committee", "DM Trained", "First Aid Trained" ],
   bio: "Tech manager and resident lighting designer.")
+seed_user("productions@bedlamtheatre.co.uk", "Ziggy", "Lockwood",
+  roles: [ :member, "Committee", "Productions Manager" ],
+  bio: "Making sure all the EUTC productions are running smoothly.")
 seed_user("welfare@bedlamtheatre.co.uk", "Jamie", "Ellis",
   roles: [ :member, "Committee", "Welfare Contact" ],
   bio: "Welfare and equalities officer.")

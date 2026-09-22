@@ -207,26 +207,31 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-    # Same for successful and unsuccessful
+    # Same for successful...
 
     situation = "after the editing deadline, but that is successful"
 
     @proposal.status = :successful
 
-    # 4A: Everyone can see proposals that have been approved...
     helper_test_proposal(:read, @proposal, true, true, true, situation)
-    # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-
+    # Same for unsuccessful...
 
     situation = "after the editing deadline, but that is unsuccessful"
 
     @proposal.status = :unsuccessful
 
-    # 4A: Everyone can see proposals that have been approved...
     helper_test_proposal(:read, @proposal, true, true, true, situation)
-    # 4B: ...and can no longer update proposals.
+    helper_test_proposal(:update, @proposal, false, false, false, situation)
+
+    situation = "after the editing deadline, but that is withdrawn"
+
+    # Same for withdrawn...
+
+    @proposal.withdrawn = true
+
+    helper_test_proposal(:read, @proposal, true, true, true, situation)
     helper_test_proposal(:update, @proposal, false, false, false, situation)
   end
 

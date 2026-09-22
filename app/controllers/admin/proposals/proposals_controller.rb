@@ -69,7 +69,7 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize! :create, @proposal
 
     # Set the default status.
-    @proposal.status = "awaiting_approval"
+    @proposal.status = :awaiting_approval
 
     super
   end
@@ -115,8 +115,6 @@ class Admin::Proposals::ProposalsController < AdminController
 
   ##
   # PUT /admin/proposals/proposals/1/reject
-  #
-  # PUT /admin/proposals/proposals/1/reject.json
   ##
   def reject
     if @proposal.awaiting_approval?
@@ -129,6 +127,32 @@ class Admin::Proposals::ProposalsController < AdminController
     respond_to do |format|
       format.html { redirect_to post_action_redirect_path }
       # format.json { head :no_content }
+    end
+  end
+
+  def withdraw
+    if @proposal.withdrawn?
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is already withdrawn.")
+    else
+      @proposal.update!(withdrawn: true)
+        helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been withdrawn.")
+    end
+
+    respond_to do |format|
+      format.html { redirect_to post_action_redirect_path }
+    end
+  end
+
+  def unwithdraw
+    if @proposal.withdrawn?
+      @proposal.update!(withdrawn: false)
+        helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is no longer withdrawn.")
+    else
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not withdrawn.")
+    end
+
+    respond_to do |format|
+      format.html { redirect_to post_action_redirect_path }
     end
   end
 
@@ -199,11 +223,16 @@ class Admin::Proposals::ProposalsController < AdminController
   # Allow approve/reject/mark_* actions triggered from the pending dashboard to return there
   # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
   def post_action_redirect_path
+    def rec(p)
+      Rails.application.routes.recognize_path p
+    end
     allowed = [
       admin_proposals_calls_path,
       admin_proposals_call_proposals_path(@proposal.call)
     ]
-    return params[:redirect_to] if allowed.include?(params[:redirect_to])
+
+    recd = rec request.referrer
+    return request.referrer if allowed.any? { |p| rec(p) == recd }
 
     admin_proposals_proposal_path(@proposal)
   end

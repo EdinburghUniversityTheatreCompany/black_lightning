@@ -70,17 +70,9 @@ class Ability
       cannot :advance_review, :proposals
 
       # Apply role-based grid permissions before proposal restrictions so the proposal rules always take precedence.
-      set_permissions_based_on_grid(user)
+      set_permissions_based_on_grid user
 
-      # Even admins should not be able to read proposals before the submission deadline has been passed.
-      # These must come after set_permissions_based_on_grid so the grid cannot override them.
-      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
-      can [ :update, :read, :delete ], Admin::Proposals::Proposal, users: { id: user.id }
-      can [ :index, :create ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
-
-      if can?(:advance_review, :proposals)
-        can :read, Admin::Proposals::Proposal
-      end
+      proposal_permissions user
 
       return
     end
@@ -155,26 +147,6 @@ class Ability
     # All users can autocomplete all users
     can :autocomplete, User
 
-    # People can see debt status for users on proposals they are on.
-    # It is disabled because it is currently more efficient to just do this on the proposal show thing.
-    # proposals_with_current_user = Admin::Proposals::Proposal.joins(:team_members).where('team_members.user_id = ?', user.id)
-    # shared_proposal_user_ids = TeamMember.where(teamwork: proposals_with_current_user).pluck(:user_id)
-
-    # can :debt_status, User, id: shared_proposal_user_ids
-
-    # Give committee and proposal viewers the read permission using the grid.
-    # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
-    can :read, Admin::Proposals::Proposal, users: { id: user.id }
-    # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
-    can :read, Admin::Proposals::Proposal, status: [ :approved, :successful, :unsuccessful ]
-
-    can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
-
-    can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
-
-    # Everyone can read the about page.
-    can :about, Admin::Proposals::Proposal
-
     # Because otherwise you also cannot read the proposals due to the url structure.
     can :read, Admin::Proposals::Call
 
@@ -182,7 +154,7 @@ class Ability
 
     can :read, Admin::Feedback, show: { users: { id: user.id } }
 
-    team_member_roles_that_can_update_shows = %w[Director Producer Co-Producer Assistant Producer]
+    team_member_roles_that_can_update_shows = [ "Director", "Producer", "Co-Producer", "Assistant Producer" ]
     team_member_roles_that_can_update_shows.each do |role|
       can %I[read update], Show, team_members: { position: role, user_id: user.id }
       can %I[read create update delete], Review, event: { team_members: { position: role, user_id: user.id } }
@@ -208,19 +180,7 @@ class Ability
 
     set_permissions_based_on_grid(user)
 
-    # The `review proposals` grid permission (Committee and Proposal Checker by default) opens
-    # every proposal once its call's submission deadline has passed — approved, rejected or
-    # awaiting — and the index of all of them. Proposal is deliberately NOT a model row in the
-    # grid because its rules are time-based, so this is a miscellaneous permission and has to sit
-    # after set_permissions_based_on_grid, which is what makes can?(:review) true.
-    if can?(:review, :proposals)
-      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
-      can :index, Admin::Proposals::Proposal
-    end
-
-    if can?(:advance_review, :proposals)
-      can :read, Admin::Proposals::Proposal
-    end
+    proposal_permissions user
 
     # Producers on future shows can use the bulk debt checker
     if TeamMember
@@ -280,6 +240,58 @@ class Ability
         picture.access_level == 1 &&
           ((item = picture.authorizable_item).nil? || can?(:show, item))
       end
+    end
+  end
+
+  # Permissions for proposals (common between admin and regular user).
+  #
+  # These must come after set_permissions_based_on_grid so the grid cannot override them.
+  def proposal_permissions(user)
+    # No one (even admins) should be able to read proposals before the submission deadline has passed.
+    cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+
+    # Everyone can read the about page.
+    can :about, Admin::Proposals::Proposal
+
+    # All users can make proposals for submission deadlines in the future.
+    can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+
+    # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
+    can :read, Admin::Proposals::Proposal, users: { id: user.id }
+    # Users can see all approved proposals, whether current or archived.
+    can :read, Admin::Proposals::Proposal,
+      status: [ :approved, :successful, :unsuccessful ].map { |s| Admin::Proposals::Proposal.statuses[s] }
+
+    # You can update and unwithdraw a proposal at any time before the editing dealine.
+    can [ :update, :unwithdraw ], Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
+
+    # But you can withdraw a proposal at any time.
+    can :withdraw, Admin::Proposals::Proposal, users: { id: user.id }
+
+    # The `review proposals` grid permission (Committee and Proposal Checker) opens
+    # every proposal once its call's submission deadline has passed — approved, rejected or
+    # awaiting — and the index of all of them. Proposal is deliberately NOT a model row in the
+    # grid because its rules are time-based, so this is a miscellaneous permission and has to sit
+    # after set_permissions_based_on_grid, which is what makes can?(:review) true.
+    if can?(:review, :proposals)
+      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
+      can :index, Admin::Proposals::Proposal
+    end
+
+    # Prod Man is able to help out with proposals after the submission deadline.
+    if can?(:manage_after_submission, :proposals)
+      can :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
+    end
+
+    # Withdrawn propoals and proposals before the submission deadline cannot have their status adjusted.
+    cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, withdrawn: true
+    cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+
+    # We also have an `advance review` grid permission (generally Bus Man, Set Man, Prod Man, and Secretary)
+    # for proposals before the Submission Deadline.
+    # This permission is a little contentious, but company consensus is positive.
+    if can?(:advance_review, :proposals)
+      can :read, Admin::Proposals::Proposal
     end
   end
 end
