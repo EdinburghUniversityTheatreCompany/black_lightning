@@ -23,10 +23,9 @@
       If that's not you, send this page to IT.
     </p>
     <p>
-      The manual Microsoft 365 steps the app can't do itself. You only need these when
-      <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
-      The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID <code><%= app_id %></code>)
-      already exists; what's left is authorising this cost centre's own mailboxes and site below.
+      The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID
+      <code><%= app_id %></code>) already exists, so what's left is authorising this cost centre's
+      own mailboxes and site below.
     </p>
 
     <div>
@@ -142,7 +141,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
     <%= link_to "#{@cost_centre.name}'s settings",
                 edit_admin_reimbursements_setting_path(@cost_centre.key), class: "underline" %>,
     <strong>Run access check</strong> probes this cost centre's mailboxes and site with the app's
-    own credentials. Allow 30 minutes to 2 hours after the mailbox grant before it goes green —
+    own credentials. Allow 30 minutes to 2 hours after the mailbox grant before it goes green:
     a red row inside that window is not a second problem.
   </p>
 <% end %>

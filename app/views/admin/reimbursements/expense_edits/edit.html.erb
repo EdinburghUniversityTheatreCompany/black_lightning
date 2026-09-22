@@ -131,8 +131,8 @@
         <dt class="font-medium">Owner sign-off overridden</dt>
         <dd>
           <%= @endorsement.overridden_by&.name_or_email.presence || "a finance user" %>
-          on <%= reimbursements_date(@endorsement.endorsed_at) %><% if @endorsement.note.present? %>
-            — <q><%= @endorsement.note %></q>
+          on <%= reimbursements_date(@endorsement.endorsed_at) %><% if @endorsement.note.present? %>:
+            <q><%= @endorsement.note %></q>
           <% end %>
         </dd>
       <% end %>
@@ -141,7 +141,7 @@
         <dt class="font-medium">Rejected</dt>
         <dd>
           <% if @expense.rejection_notified.present? %>
-            <%= reimbursements_date(@expense.rejection_notified) %>, producer emailed —
+            <%= reimbursements_date(@expense.rejection_notified) %>, producer emailed:
           <% end %>
           <q><%= @expense.rejection_reason %></q>
           <%# The reason and the stamp are kept after a reopen, so on a claim

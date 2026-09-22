@@ -130,7 +130,7 @@ module Admin
         note = params[:override_note].to_s.strip
         if note.blank?
           return redirect_to_review(alert: "Say why you're overriding sign-off before doing it " \
-                                           "in bulk — it's the only record of the decision.")
+                                           "in bulk. It's the only record of the decision.")
         end
 
         expenses = selected_pending_expenses
@@ -337,7 +337,7 @@ module Admin
                                     "That is the figure EUSA's international payment form asks for.")
         when :skipped_no_gbp_amount
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a GBP amount. " \
-                                    "Enter what the payment is expected to cost in pounds — the budget " \
+                                    "Enter what the payment is expected to cost in pounds. The budget " \
                                     "counts it in GBP, and reconciliation corrects it to the rate the " \
                                     "bank charged.")
         when :skipped_awaiting_endorsement

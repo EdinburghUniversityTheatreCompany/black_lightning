@@ -47,7 +47,7 @@
     <p class="mb-3 text-gray-600">
       <%= pluralize(@attribution.unassigned_blank_rows.size, "row") %> in this paste
       <%= @attribution.unassigned_blank_rows.size == 1 ? "has" : "have" %> no cost centre of
-      <%= @attribution.unassigned_blank_rows.size == 1 ? "its" : "their" %> own — the export
+      <%= @attribution.unassigned_blank_rows.size == 1 ? "its" : "their" %> own. The export
       left the column out or blank. Say which cost centre they belong to, or skip them if they
       are not ours. Nothing at all is imported until you answer.
     </p>
@@ -313,7 +313,7 @@
     <%= render CardComponent.new(title: "Step 3: Apply reconciliation") do %>
       <% if @attribution.blank_choice_required? %>
         <p class="mb-3 text-warning">
-          Answer the cost-centre question above first. Until then nothing here can be applied —
+          Answer the cost-centre question above first. Until then nothing here can be applied,
           not even the rows that do have a cost centre, because importing those while the rest
           quietly vanished is exactly what this step exists to prevent.
         </p>

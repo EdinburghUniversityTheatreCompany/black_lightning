@@ -3,7 +3,7 @@
 <p class="mb-3 text-gray-600">
   An accrual and its reversal cancel each other out, so neither is real spend. The reconcile
   wizard proposes the pairs it is confident about; this records one it did not, and it is also
-  the way back after <strong>Not offsetting</strong> — which returns both rows to ordinary
+  the way back after <strong>Not offsetting</strong>, which returns both rows to ordinary
   ledger rows and, until now, could not be undone. Both rows stay on the ledger either way, and
   nobody is emailed.
 </p>
@@ -32,7 +32,8 @@
           matches" from "I am looking in the wrong place". %>
       Nothing on the ledger can cancel this row out. A counterpart has to be the same amount on
       the opposite side, on the same nominal code and in the same financial year, and be attached
-      to nothing itself — the same requirements the automatic matcher will not pair across.
+      to nothing itself. Those are the same requirements the automatic matcher will not pair
+      across.
     </p>
   <% end %>
 <% else %>
@@ -43,7 +44,7 @@
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
-        Same amount, opposite side, same nominal code, same financial year — and attached to
+        Same amount, opposite side, same nominal code, same financial year, and attached to
         nothing itself. These are the requirements only; unlike the automatic matcher, nothing
         here is ranked by how likely it is, so check the date and the narrative before choosing.
       </p>

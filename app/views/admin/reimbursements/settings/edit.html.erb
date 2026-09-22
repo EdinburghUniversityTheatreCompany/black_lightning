@@ -27,7 +27,7 @@
     <%= f.input :notification_email, label: "Notification email",
           placeholder: "finance@bedlamfringe.co.uk",
           wrapper_html: { class: (@cost_centre.notification_recipients_empty? ? "mb-2" : "mb-4") },
-          hint: "This cost centre's own finance mailbox. It gets the nightly reminders — claims " \
+          hint: "This cost centre's own finance mailbox. It gets the nightly reminders: claims " \
                 "stuck awaiting approval, and the queue ready to batch. Separate several " \
                 "addresses with semicolons. (A claim waiting on a budget owner is emailed to " \
                 "that owner instead, not here.)" %>
@@ -36,7 +36,7 @@
         <%= render AlertComponent.new(type: :warning) do %>
           <strong>Nobody gets this cost centre's reminders</strong> until an address is set here.
           The nightly logs a warning and retries rather than marking the day handled, so nothing
-          is lost &mdash; but nothing is sent either.
+          is lost, but nothing is sent either.
         <% end %>
       </div>
     <% end %>
@@ -54,7 +54,7 @@
             hint: "Where the completed BACS request email (with the bank-detail attachments) is sent. " \
                   "Leave blank to use EUSA finance's default address." %>
       <%= f.input :eusa_contact_name, label: "EUSA contact name", placeholder: "Finance Team",
-            hint: "Who the BACS request email greets — the EUSA finance person handling our payments. " \
+            hint: "Who the BACS request email greets: the EUSA finance person handling our payments. " \
                   "Leave blank to open with \"Hi Finance Team,\"." %>
       <%= f.input :eusa_signature_name, label: "EUSA email signature name",
             hint: "Who that email is signed off as when no operator name is available. " \
@@ -77,8 +77,8 @@
   <%= link_to "What IT has to do in Microsoft 365",
               microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key),
               class: "underline font-medium" %>
-  — mailbox authorisation and the SharePoint grant. Day-to-day use needs none of it, and that
-  page is safe to forward.
+  covers mailbox authorisation and the SharePoint grant. Day-to-day use needs none of it, and
+  that page is safe to forward.
 <% end %>
 
 <%= render CardComponent.new(title: "Check Microsoft access", html_class: "mt-4") do %>
@@ -109,7 +109,7 @@
 
 <%= render CardComponent.new(title: "Budgets", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
-    Set this cost centre's budgets up from the committee's spreadsheet — paste it or upload the
+    Set this cost centre's budgets up from the committee's spreadsheet: paste it or upload the
     .xlsx, check what it would do, then confirm. You pick the financial year in the wizard, so the
     same sheet can be imported into next year while this one is still being paid out of.
   </p>

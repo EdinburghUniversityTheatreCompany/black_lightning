@@ -79,12 +79,12 @@
       <% owner_names = owners_from_area.owners.map { |person| person.name.presence || person.email } %>
       <p class="text-sm text-gray-700">
         <% if owner_names.any? %>
-          Owned by <%= owner_names.to_sentence %> —
+          Owned by <%= owner_names.to_sentence %>
         <% else %>
-          <%= render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner")) %> —
+          <%= render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner")) %>
         <% end %>
-        <%= link_to "edit on the area", edit_admin_reimbursements_area_path(owners_from_area.record_id),
-              class: "text-primary underline" %>
+        (<%= link_to "edit on the area", edit_admin_reimbursements_area_path(owners_from_area.record_id),
+              class: "text-primary underline" %>)
       </p>
       <% if owner_names.empty? %>
         <%# An area naming nobody switches the gate OFF for every line under it
@@ -129,7 +129,7 @@
         rather than read out as it is re-traversed. %>
     <p class="text-sm text-gray-700" hidden aria-live="polite"
        data-reimbursements-budget-area-target="notice">
-      This line goes in an area, so it takes the area's owners — set them on the area itself.
+      This line goes in an area, so it takes the area's owners. Set them on the area itself.
     </p>
   <% end %>
 

@@ -1,8 +1,8 @@
 <%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
 
 <p class="mb-3 text-gray-600">
-  One credit can only sit on one budget, so a payout covering several shows — a Stripe
-  settlement, a sponsor's single transfer — lands entirely on whichever line it is attached to.
+  One credit can only sit on one budget, so a payout covering several shows (a Stripe
+  settlement, a sponsor's single transfer) lands entirely on whichever line it is attached to.
   Splitting it gives each income line its own share instead. The parts have to add up to the
   row exactly: this divides the money that arrived, it does not estimate it.
 </p>
@@ -38,7 +38,7 @@
                         apportion_total_currency_value: "£" } do %>
     <%= render CardComponent.new(title: "Split it across") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
-        Leave a row blank if you do not need it. A budget can only take one share — if a show
+        Leave a row blank if you do not need it. A budget can only take one share, so if a show
         genuinely has two, add them together.
       </p>
 

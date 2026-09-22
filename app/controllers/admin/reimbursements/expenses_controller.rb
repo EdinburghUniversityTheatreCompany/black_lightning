@@ -122,7 +122,7 @@ module Admin
       end
 
       def budget_gone_error
-        @form.errors.add(:budget_record_id, "is no longer available — the finance team removed " \
+        @form.errors.add(:budget_record_id, "is no longer available: the finance team removed " \
                                             "or retired it just now. Everything else you typed " \
                                             "has been kept: pick another budget and submit again.")
       end
@@ -142,8 +142,8 @@ module Admin
       def dropped_budget_note
         return "" unless @form.dropped_stale_budget?
 
-        " The budget you'd picked is no longer available, so it has been cleared — " \
-          "pick another one before you submit."
+        " The budget you'd picked is no longer available, so it has been cleared. " \
+          "Pick another one before you submit."
       end
 
       # The expense exists by now, so an attachment failure must not 500

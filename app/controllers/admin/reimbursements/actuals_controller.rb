@@ -312,7 +312,7 @@ module Admin
       rescue ::Reimbursements::DatabaseStore::ClaimFromRowError
         redirect_to actuals_path_with_filters,
                     alert: "That claim was created FROM this row, so there is nothing to unlink it " \
-                           "back to — the claim only exists because of it. Delete the claim instead, " \
+                           "back to: the claim only exists because of it. Delete the claim instead, " \
                            "and the row goes back to offering \"Create expense\"."
       end
 
@@ -369,7 +369,7 @@ module Admin
         return "That row is already part of an offsetting pair." if actual.offset?
         return "That row is split across budgets, so unpick the split first." if actual.apportioned?
         if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
-          return "That row is linked to a claim or a budget. Unlink it first — marking it " \
+          return "That row is linked to a claim or a budget. Unlink it first: marking it " \
                  "offsetting would hide spend that a claim or a line is still counting."
         end
 

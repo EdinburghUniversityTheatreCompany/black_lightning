@@ -76,10 +76,10 @@
       total <%= reimbursements_money(awaiting_owner_total) %>.
     </p>
     <%= render AlertComponent.new(type: :info) do %>
-      These are with their budget owners, who endorse them on their own My Budgets page — they are
+      These are with their budget owners, who endorse them on their own My Budgets page. They are
       not yours to approve yet. Each card names the owners. Where no owner can act (nobody holds a
       portal account, say), you can override the sign-off and approve it here; the override is
-      recorded against your account. A claim on a budget with no owner never appears here — it goes
+      recorded against your account. A claim on a budget with no owner never appears here. It goes
       straight to To approve.
       <%# So nobody chases by hand believing nothing else will. The nightly job
           names every gated claim to each of its owners on every due run day,

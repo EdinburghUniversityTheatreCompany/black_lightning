@@ -22,7 +22,7 @@
 
 <%= render CardComponent.new(title: "Notification recipients", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
-    Who gets each cost centre's nightly reminders — claims stuck awaiting approval, and the queue
+    Who gets each cost centre's nightly reminders: claims stuck awaiting approval, and the queue
     ready to batch. The nightly run sends a third reminder, one per budget owner with a claim
     awaiting their sign-off; that one goes to the owners themselves, not to these addresses.
   </p>
@@ -44,7 +44,7 @@
         <% if addresses.empty? %>
           <p class="text-xs text-danger mt-1">
             Nobody gets this cost centre's reminders. The nightly logs a warning and retries rather
-            than marking the day handled, so nothing is lost — but nothing is sent either.
+            than marking the day handled, so nothing is lost, but nothing is sent either.
           </p>
         <% end %>
       </li>
@@ -80,7 +80,7 @@
 <%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
     One line per recipient, newest first. This records that the portal handed the message to
-    Microsoft — a bounce afterwards is invisible here, the same limit a batch's "Producer emails:
+    Microsoft. A bounce afterwards is invisible here, the same limit a batch's "Producer emails:
     sent" badge states. Nothing sent before this log existed appears.
   </p>
 
@@ -118,7 +118,7 @@
     <p class="mb-0 text-gray-600">
       <% if @recipient_query.present? %>
         Nothing has been emailed to <strong><%= @recipient_query %></strong>. Check the address on
-        their People record — a reminder to an address nobody reads looks exactly like this.
+        their People record: a reminder to an address nobody reads looks exactly like this.
       <% else %>
         Nothing has been emailed yet. Reminders go out on each cost centre's run days, and a
         rejection or a batch notification is sent as it happens.

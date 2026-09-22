@@ -32,6 +32,6 @@ en:
       actuals: "EUSA's own ledger rows as imported, with what each one is linked to."
       budgets: "Every budget line with its plan, what is committed and what EUSA's ledger says landed."
       areas: "The shows and committees lines hang off: agreed total, what it covers, and who owns it."
-      forecast-revisions: "Every logged revision of a plan — the date, the figure and the reason."
+      forecast-revisions: "Every logged revision of a plan: the date, the figure and the reason."
       people: "The payee registry. Bank details masked to their last four digits."
       batches: "Each BACS submission to EUSA: when, how many claims, and what they totalled."

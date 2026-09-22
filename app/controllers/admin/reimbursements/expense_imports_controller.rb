@@ -42,7 +42,7 @@ module Admin
       NOTHING_PASTED_ALERT = "Paste the claims sheet, or choose an .xlsx file, first.".freeze
 
       NO_COST_CENTRE_CHOSEN_ALERT =
-        "Choose which cost centre paid these claims. Nothing has been imported — the sheet " \
+        "Choose which cost centre paid these claims. Nothing has been imported, and the sheet " \
         "you pasted is still below.".freeze
 
       # Deliberately does NOT assert what happened. Two things reach here: a
@@ -54,8 +54,8 @@ module Admin
       # rows and the import can never succeed. Naming the fix covers both.
       RACED_ALERT =
         "Nothing was imported: one of those IDs is already on a claim in the portal. " \
-        "Either somebody imported this sheet while you were looking at it — preview it again " \
-        "to see what is left — or an ID differs from one already imported only by an " \
+        "Either somebody imported this sheet while you were looking at it (preview it again " \
+        "to see what is left), or an ID differs from one already imported only by an " \
         "accent, which the database counts as the same. Renaming it fixes that.".freeze
 
       # Names no year, for the same reason the budget import's doesn't: the

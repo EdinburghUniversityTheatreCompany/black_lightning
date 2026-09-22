@@ -22,10 +22,10 @@ module Reimbursements
     # screens render exactly this list under "What these columns mean".
     MONEY = [
       Term.new(key: :initial_budget, term: "Initial budget",
-               definition: "The figure agreed when the line was set up — from the committee's " \
-                           "spreadsheet, or typed when the line was created. It is never " \
-                           "rewritten by a later revision, so it stays the thing a plan is " \
-                           "measured against."),
+               definition: "The figure agreed when the line was set up, either from the " \
+                           "committee's spreadsheet or typed in when the line was created. " \
+                           "It is never rewritten by a later revision, so it stays the thing " \
+                           "a plan is measured against."),
       Term.new(key: :projected, term: "Projected",
                definition: "The line's current plan: the latest forecast logged against it, " \
                            "falling back to the initial budget when none has been. Marked " \
@@ -35,14 +35,14 @@ module Reimbursements
                definition: "Claims that are Approved, Submitted or Paid. Money the theatre has " \
                            "agreed to spend, whether or not it has left the account yet."),
       Term.new(key: :pipeline, term: "Pipeline",
-               definition: "Claims still Pending — asked for, not yet approved. Kept apart from " \
+               definition: "Claims still Pending: asked for, not yet approved. Kept apart from " \
                            "Committed so Committed keeps its meaning.",
                also: "waiting for approval"),
       Term.new(key: :remaining, term: "Remaining",
                definition: "The plan less what is Committed. It deliberately IGNORES the " \
                            "pipeline, because this is the figure finance reads when deciding " \
                            "whether a line is overspent. Blank, never £0, when nobody set a " \
-                           "plan — a zero there would read as \"fully spent\"."),
+                           "plan: a zero there would read as \"fully spent\"."),
       Term.new(key: :left, term: "Left",
                definition: "The plan less what is Committed AND what is waiting for approval. " \
                            "A different question from Remaining, and the one an owner is " \
@@ -59,10 +59,10 @@ module Reimbursements
                            "with no forecast logged, because the plan then IS the agreed figure; " \
                            "blank only when no initial budget was ever set."),
       Term.new(key: :eusa_actual, term: "EUSA actual",
-               definition: "What EUSA's own ledger says landed on this line, net of credits — " \
-                           "read off their monthly export, not from anything the portal did. " \
-                           "Its divergence from Paid is the signal that something needs " \
-                           "reconciling.")
+               definition: "What EUSA's own ledger says landed on this line, net of credits. " \
+                           "It is read off their monthly export, not from anything the " \
+                           "portal did. Its divergence from Paid is the signal that something " \
+                           "needs reconciling.")
     ].freeze
 
     # How the money is organised.
@@ -74,7 +74,7 @@ module Reimbursements
                also: "a show, a project"),
       Term.new(key: :cost_centre, term: "Cost centre",
                definition: "One pot of money, with its own budgets, claims, ledger rows, " \
-                           "batches and mailboxes — Bedlam Fringe and the termtime theatre are " \
+                           "batches and mailboxes. Bedlam Fringe and the termtime theatre are " \
                            "separate pots. Choosing none on a screen means every pot, never " \
                            "one of them."),
       Term.new(key: :financial_year, term: "Financial year",
@@ -87,8 +87,8 @@ module Reimbursements
                            "this portal is linked line by line rather than matched on the code."),
       Term.new(key: :budget_update, term: "Forecast revision",
                definition: "A revision of the plan, logged with a date and a reason so the " \
-                           "history survives. One revision can cover several lines at once — a " \
-                           "budget meeting's worth — and can be opened and undone as a unit.",
+                           "history survives. One revision can cover several lines at once (a " \
+                           "budget meeting's worth) and can be opened and undone as a unit.",
                also: "budget update, forecast")
     ].freeze
 
@@ -116,7 +116,7 @@ module Reimbursements
                            "for a person to send. Sending it is the one step the portal does " \
                            "not do."),
       Term.new(key: :bacs_date, term: "BACS date",
-               definition: "The payment date typed on the build form — what EUSA is asked to " \
+               definition: "The payment date typed on the build form: what EUSA is asked to " \
                            "pay on. It is not a record that anything was sent; nothing in the " \
                            "portal records the manual send.")
     ].freeze
@@ -125,8 +125,8 @@ module Reimbursements
     LEDGER = [
       Term.new(key: :actuals, term: "Actuals",
                definition: "EUSA's own ledger export, imported monthly. One row per transaction " \
-                           "that actually hit the account — the record against which everything " \
-                           "the portal believes is checked.",
+                           "that actually hit the account, and the record against which " \
+                           "everything the portal believes is checked.",
                also: "the EUSA ledger"),
       Term.new(key: :reconcile, term: "Reconcile",
                definition: "Matching a month's actuals export to the claims the portal already " \
@@ -135,8 +135,8 @@ module Reimbursements
       Term.new(key: :offsetting_pair, term: "Offsetting pair",
                definition: "An accrual and the reversal that cancels it. Together they net to " \
                            "zero, so NEITHER is real spend and both are left out of every " \
-                           "total — while staying on the ledger, because finance needs the " \
-                           "audit trail."),
+                           "total. They stay on the ledger, because finance needs the audit " \
+                           "trail."),
       Term.new(key: :unattributed, term: "Unlinked",
                definition: "A ledger row no budget's figures account for: attached to no claim, " \
                            "booked against no income line, and not one leg of an offsetting " \
@@ -144,7 +144,7 @@ module Reimbursements
                            "total.",
                also: "unattributed, needs attention"),
       Term.new(key: :apportion, term: "Split across budgets",
-               definition: "Dividing one credit between several income lines — a Stripe payout " \
+               definition: "Dividing one credit between several income lines. A Stripe payout " \
                            "covering a week of shows lands as a single row, and without this " \
                            "the whole of it would count as one show's income.")
     ].freeze

@@ -43,7 +43,7 @@ module Admin
       NOTHING_PASTED_ALERT = "Paste the budget sheet, or choose an .xlsx file, first.".freeze
 
       NO_COST_CENTRE_CHOSEN_ALERT =
-        "Choose which cost centre these budgets belong to. Nothing has been imported — the " \
+        "Choose which cost centre these budgets belong to. Nothing has been imported, and the " \
         "sheet you pasted is still below.".freeze
 
       # The page heading names NO year, deliberately. The year is a field on the

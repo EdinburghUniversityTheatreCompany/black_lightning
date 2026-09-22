@@ -60,7 +60,7 @@
             <th scope="rowgroup" colspan="11" class="text-left font-semibold py-2">
               Nominal code <%= rollup.code %><%
                 label = nominal_code_labels[rollup.code.to_s.downcase] %><% if label.present? %>
-                <span class="font-normal text-gray-600">— <%= label %></span>
+                <span class="font-normal text-gray-600">· <%= label %></span>
               <% end %>
             </th>
           </tr>
@@ -130,8 +130,8 @@
     code. Offsetting pairs are left out, since an accrual and its reversal net to zero.
     Resolve them on the
     <%= link_to "EUSA Actuals ledger", ledger_path.call, class: "text-primary underline" %>
-    — link a row to the claim it paid, convert a debit into an expense, or split a credit
-    across income budgets — and it stops showing here.
+    (link a row to the claim it paid, convert a debit into an expense, or split a credit
+    across income budgets) and it stops showing here.
   </p>
 
   <% if @unattributed_by_code.empty? %>
