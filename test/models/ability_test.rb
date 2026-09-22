@@ -256,6 +256,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_set_up_proposal
 
     [ :rejected, :successful, :unsuccessful ].each do |status|
+      @proposal.status = status
       helper_test_actions(@proposal, "#{status} proposal ", @admin_ability, [], [ :withdraw ])
     end
   end
