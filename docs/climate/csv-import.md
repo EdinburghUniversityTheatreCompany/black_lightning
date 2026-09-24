@@ -76,7 +76,7 @@ using the same parser as the manual upload. To switch it on:
 
 1. Create or pick a shared mailbox, e.g. `climatesensors@bedlamtheatre.co.uk`.
 2. Give the Entra app access to it. See [graph-mailbox-rbac.md](../graph-mailbox-rbac.md).
-3. Set `CLIMATE_MAILBOX` (fnox in development, credentials in production).
+3. Set `CLIMATE_MAILBOX` in the production credentials (or ENV).
 4. Point Govee's scheduled export at that address.
 
 Leave it unset and the job logs and returns, so an environment without a mailbox stays quiet.

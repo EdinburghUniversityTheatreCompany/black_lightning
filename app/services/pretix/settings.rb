@@ -3,7 +3,7 @@
 module Pretix
   ##
   # Config and secrets for the pretix REST API. Reads +PRETIX_*+ from the
-  # environment first (Kamal-friendly, fnox in development), then per-environment
+  # environment first (Kamal-friendly), then per-environment
   # Rails credentials under +pretix:+, following Reimbursements::Settings.
   module Settings
     # The shop runs on a custom domain, but the API is only served from pretix.eu.

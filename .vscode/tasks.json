@@ -12,8 +12,7 @@
     {
       "label": "Dev server",
       "type": "shell",
-      "//": "fnox resolves dev secrets (reimbursements Graph/Airtable) from Bitwarden into ENV. Optional: collaborators without fnox just start without those secrets.",
-      "command": "if command -v fnox >/dev/null 2>&1; then exec fnox exec -- mise run serve; else echo 'fnox not installed: starting without fnox-managed secrets.'; exec mise run serve; fi",
+      "command": "mise run serve",
       "dependsOn": ["Start MySQL (docker)"],
       "isBackground": true,
       "presentation": {

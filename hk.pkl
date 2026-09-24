@@ -151,7 +151,7 @@ local linters = new Mapping<String, Step> {
     }
     // GitHub Actions security (credential persistence, template injection, token scope). hk builtin.
     ["zizmor"] = Builtins.zizmor
-    // Secret scanning (defense-in-depth alongside fnox). hk builtin.
+    // Secret scanning. hk builtin.
     ["gitleaks"] = Builtins.gitleaks
     // Block accidentally-committed large files. hk builtin.
     ["check-added-large-files"] = Builtins.check_added_large_files

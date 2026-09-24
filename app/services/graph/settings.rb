@@ -6,14 +6,14 @@ module Graph
   # Reads +GRAPH_*+ first, then falls back to the +REIMBURSEMENTS_AZURE_*+ names
   # the reimbursements portal has always used. The fallback is deliberate and
   # not temporary: there is one Entra app registration for the organisation, so
-  # renaming the variables would have broken every existing fnox and production
+  # renaming the variables would have broken every existing ENV and production
   # credential entry for no gain.
   module Settings
     extend ::Settings::Base
 
     reads_from env: "GRAPH", credentials: :graph
     # Not a temporary fallback: there is one Entra app registration for the
-    # organisation, so renaming these would break every existing fnox and
+    # organisation, so renaming these would break every existing ENV and
     # production credential entry for no gain.
     reads_from env: "REIMBURSEMENTS", credentials: :reimbursements
 

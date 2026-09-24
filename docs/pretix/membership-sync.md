@@ -102,7 +102,7 @@ of member roles — would expire real members' pricing on the first pass. `Clien
 `WritesSuppressedError` rather than silently no-opping, so a suppressed write is visible instead
 of looking like success.
 
-The token itself comes from `PRETIX_API_TOKEN` (fnox in development) or credentials under
+The token itself comes from `PRETIX_API_TOKEN` (ENV) or credentials under
 `pretix:`. Development credentials are publicly readable in this repo, so the real token must
 never go there.
 

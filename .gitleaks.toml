@@ -11,8 +11,8 @@
 # default ruleset; the allowlist is
 # PATH-SCOPED to gitignored runtime/secret locations only — app/config SOURCE stays fully scanned,
 # so a real secret hardcoded in code is still caught. (Force-adding a secret into one of these
-# paths with `git add -f` would evade the scan; the env-to-fnox skill is the path to get the
-# plaintext secret out of the repo entirely.)
+# paths with `git add -f` would evade the scan; moving it into the
+# encrypted production credentials is the way to get it out of the repo entirely.)
 [extend]
 useDefault = true
 

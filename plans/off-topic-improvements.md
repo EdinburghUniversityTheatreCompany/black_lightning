@@ -225,18 +225,15 @@ the difference between a shared concern and a concern with one real user and one
 
 ## Manual follow-ups after the AI removal (2026-07-31)
 
-*Noticed while removing the Gemini extraction and the finance AI checker.* Three things the
+*Noticed while removing the Gemini extraction and the finance AI checker.* Things the
 code change can't do itself, all outside the repo:
 
-1. **Revoke the Google API key.** Nothing reads `gemini_api_key` any more, but the key itself is
-   still live. Revoke it in Google AI Studio, then delete the `gemini-api-key` secret from
-   Bitwarden Secrets Manager. `fnox.toml` is gitignored, so its `REIMBURSEMENTS_GEMINI_API_KEY`
-   line was removed on this machine only — anyone else with a checkout has to delete their own
-   copy of that line, or `fnox exec` keeps doing a dead Bitwarden lookup and exporting the key
-   into their dev shell.
-2. **Drop `gemini_api_key:` from the production credentials.**
-   `bin/rails credentials:edit --environment production` — the development credentials never
-   held a value (they're publicly readable). Harmless if left, but it's dead secret material.
+1. **Revoke the Google API key** in Google AI Studio. Nothing reads `gemini_api_key` any more,
+   but the key itself is still live. (Its Bitwarden copy and the production-credentials entry
+   were removed on 2026-09-24, when BlackLightning stopped using fnox.)
+2. **Revoke the old reimbursements Airtable PAT** at airtable.com. Nothing has read it since the
+   MySQL migration; `airtable_pat` and the `reimbursements_airtable:` ID map left the production
+   credentials on 2026-09-24.
 3. **Check the public Privacy Policy.** It is a CMS `Block` row, not a file, so no grep of this
    repo can tell you whether it mentions sending receipts to Google. If it does, edit it in the
    admin CMS — it would now be describing processing that no longer happens.

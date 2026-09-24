@@ -147,7 +147,7 @@ module Reimbursements
     # The gate has to be "no outbound Graph SIDE EFFECT", not merely "no outbound
     # mail": upload and delete are the two calls carrying bank details.
     # BatchProcessor uploads the BACS xlsx (full sort codes and account numbers)
-    # and every receipt BEFORE create_draft, so an ungated dev shell holding fnox
+    # and every receipt BEFORE create_draft, so an ungated dev shell holding real
     # Azure credentials would PUT them into PRODUCTION SharePoint on a Build
     # Batch, and reopen could DELETE a real draft out of the live mailbox.
     #

@@ -232,7 +232,7 @@ gitignored `mise.local.toml` still sits at the root and still layers on top. Pre
   but the remaining NOT-NULL / FK / unique-index findings need data-aware backfill migrations on the
   legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
 - **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
-  `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
+  `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider moving them into the production credentials.
   The **CI `gitleaks git` job scans full history** (the hk step only scans the working tree), so
   it surfaces dead secrets committed years ago. Reviewed historical findings that are NOT live
   (doc examples, PEM marker lines, rotated/dead keys) are baselined by fingerprint in
@@ -860,9 +860,10 @@ survive as historical import provenance and are never written. Spec + plan in
   callers must write `AmountValidation.amount` / `.amount_excl_vat` — the parsed
   BigDecimal — never the raw param: AR casts a string to a decimal column with `to_d`, so
   a validated "£1,200" handed through raw would store **0**.
-- **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
-  the *development* credentials are publicly readable, so no secret values there), then
-  per-env credentials `reimbursements:` (production only).
+- **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first, then
+  per-env credentials `reimbursements:`. Real values live **only** in the production credentials
+  (the *development* credentials are publicly readable), so Graph/Azure is unconfigured in
+  development by design.
 - **Outbound Graph calls are gated to production** (`Settings.outbound_enabled?`): true in
   production, elsewhere only with `REIMBURSEMENTS_ENABLE_OUTBOUND` set (the test suite opts in
   via `test_helper.rb`, since it fakes the transport). **This is why email-in appears to do
@@ -872,7 +873,7 @@ survive as historical import provenance and are never written. Spec + plan in
   because a plausible return value there is indistinguishable from success and would stamp
   `receipts_offloaded` on receipts that were never backed up (the flag that tells a producer it
   is safe to delete their only copy). Read-only Graph probes stay live in dev, so the Settings
-  integration dashboard still works. Without this, a dev machine holding fnox Azure credentials
+  integration dashboard still works. Without this, a dev shell with real Azure credentials exported
   would email real producers and PUT the BACS spreadsheet into production SharePoint.
 - **Bank details are encrypted at rest** (ActiveRecord Encryption, non-deterministic):
   `sort_code`/`account_number`/`notes` on `Reimbursements::PaymentDetails`, and the
@@ -880,9 +881,9 @@ survive as historical import provenance and are never written. Spec + plan in
   `Reimbursements::Expense`. Nothing queries these by value (non-deterministic would break that);
   the money path reads the decrypted attributes. Keys: production credentials under
   `active_record_encryption:` (Rails' railtie reads them automatically); development takes
-  `REIMBURSEMENTS_AR_ENCRYPTION_*` from ENV (fnox) **falling back to throwaway literals in
+  `REIMBURSEMENTS_AR_ENCRYPTION_*` from ENV (optional) **falling back to throwaway literals in
   `config/application.rb`** — needed because an encrypted attribute requires a key on write even
-  when blank, so without them every `Expense.create!` in a fnox-less dev shell raised; test uses
+  when blank, so without them every `Expense.create!` in a dev shell without them raised; test uses
   literals in `config/environments/test.rb`. `development.key` is *committed*, so real key
   material must never go in `development.yml.enc`.
   - **The rollout is complete** (production backfilled 2026-07-26; every value in all six columns
@@ -1042,7 +1043,7 @@ survive as historical import provenance and are never written. Spec + plan in
   stay faked (FakeHttp, FakeGraphClient) through `class_attribute` builder
   seams on `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test
   helper `message` — it collides with Minitest's internal `message(msg, ending)`. A dev
-  shell's fnox-exported `REIMBURSEMENTS_*` vars leak real credentials into tests — strip
+  shell with real `REIMBURSEMENTS_*` vars exported leaks them into tests — strip
   them when running the suite by hand. A two-cost-centre world is built with
   `create_second_reimbursements_cost_centre` — never a second fixture row (see the nightly
   job's note above), and never inline, because `jscpd` gates duplication at 0 and three

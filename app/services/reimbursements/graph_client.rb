@@ -209,7 +209,7 @@ module Reimbursements
     # or the test suite, which fakes the transport anyway).
     #
     # The scope is deliberately "no outbound side effect", not "no outbound mail":
-    # the same fnox Azure credentials that let a dev shell read a real tenant also
+    # the same real Azure credentials that let a dev shell read a real tenant also
     # let it write to one, and SharePoint upload / message delete were the two
     # writes carrying bank details. Read-only probes (#check_mailbox,
     # #check_reachable, #draft_message?, #get_site, #list_drives,

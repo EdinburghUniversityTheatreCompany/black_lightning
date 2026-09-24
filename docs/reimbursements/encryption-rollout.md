@@ -35,7 +35,7 @@ cleartext.
 | Env | Source | Notes |
 |---|---|---|
 | production | `config/credentials/production.yml.enc` under `active_record_encryption:` | Rails' `active_record` railtie reads these automatically. |
-| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV (fnox), else the throwaway literals in `config/application.rb` | `config/credentials/development.key` is **committed**, so `development.yml.enc` protects nothing — key material must never go there. The literals exist because an encrypted attribute needs a key on write even when blank: without them every `Expense.create!` in a fnox-less dev shell raised "Missing Active Record encryption credential". |
+| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV if set, else the throwaway literals in `config/application.rb` | `config/credentials/development.key` is **committed**, so `development.yml.enc` protects nothing — key material must never go there. The literals exist because an encrypted attribute needs a key on write even when blank: without them every `Expense.create!` in a dev shell without them raised "Missing Active Record encryption credential". |
 | test | literal dummy keys in `config/environments/test.rb` | Throwaway, test-only, safe to commit. |
 
 ## Rollout sequence (production)

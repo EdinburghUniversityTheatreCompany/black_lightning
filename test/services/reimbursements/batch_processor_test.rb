@@ -339,7 +339,7 @@ module Reimbursements
 
     # Driven through the REAL GraphClient rather than the fake, because the fake
     # has no outbound gate to exercise. A dev shell
-    # holding fnox Azure credentials that clicks Build Batch must not PUT a
+    # holding real Azure credentials that clicks Build Batch must not PUT a
     # spreadsheet of full sort codes and account numbers into production
     # SharePoint. And the suppressed path has to stay coherent: BatchProcessor must
     # NOT come away believing the files exist, or an operator reading

@@ -74,7 +74,7 @@ Rails.application.configure do
   # ActiveRecord Encryption dummy keys for the test suite. These are
   # throwaway, test-only key material — safe to commit — so the reimbursements
   # bank-detail encryption roundtrip has deterministic keys without depending on
-  # ENV/fnox or credentials. Production/development source their keys elsewhere
+  # ENV or credentials. Production/development source their keys elsewhere
   # (see config/application.rb).
   config.active_record.encryption.primary_key = "test_ar_encryption_primary_key_000000000"
   config.active_record.encryption.deterministic_key = "test_ar_encryption_deterministic_key_0000"

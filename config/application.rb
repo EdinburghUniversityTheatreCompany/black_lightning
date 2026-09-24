@@ -91,7 +91,7 @@ module ChaosRails
     #                  `active_record_encryption:` (Rails' active_record railtie
     #                  reads those automatically; nothing is wired here).
     #   development -> REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY /
-    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV (fnox),
+    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV if set,
     #                  falling back to the throwaway literals below. Dev
     #                  credentials are PUBLIC, so real key material must never
     #                  live in development.yml.enc.
@@ -120,7 +120,7 @@ module ChaosRails
     config.active_record.encryption.validate_column_size = false
 
     if Rails.env.development?
-      # Throwaway fallbacks so a dev shell without the fnox exports can still
+      # Throwaway fallbacks so a dev shell without those ENV vars can still
       # write an expense: an encrypted attribute needs a key on write even when
       # it is blank, so with none configured every Expense.create! raises
       # "Missing Active Record encryption credential". These protect nothing —

@@ -3,8 +3,8 @@
 module Settings
   ##
   # The ENV-then-credentials lookup every integration's Settings module does:
-  # read +PREFIX_KEY+ from the environment first (Kamal-friendly in production,
-  # fnox in development), then the per-environment Rails credentials under a
+  # read +PREFIX_KEY+ from the environment first (Kamal-friendly in production),
+  # then the per-environment Rails credentials under a
   # namespace. Four modules had grown their own copy of it.
   #
   #   module Pretix
