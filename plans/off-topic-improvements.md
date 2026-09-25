@@ -750,3 +750,13 @@ mirrors `amount_excl_vat` to the gross on the international rail, and switching 
 does not restore the split, so a mis-click costs the VAT figure. Rare (production has no
 international claims yet) and visible on the form; the fix is to keep the UK figure somewhere
 while the rail is international, or to warn on the switch.
+
+### The duplicates page can give two rows one DOM id, so a merge leaves a stale row
+
+`admin/duplicates/index.html.erb` ids every row `pair-<a>-<b>` in all of its sections, and the
+merge and "not a duplicate" turbo streams remove that id. A pair listed in two sections (same id
+value AND a similar name) renders the id twice, and `turbo_stream.remove` takes only the first,
+so the second row stays on screen offering an action on a pair that is already resolved.
+herb-lint 0.11.0's `html-no-duplicate-ids` flags these lines; CI is pinned to 0.10.4 until they
+are fixed (see `hk.pkl`). The fix: remove by a class or data attribute, or have the stream remove
+every section's row.
