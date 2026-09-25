@@ -19,8 +19,11 @@ local linters = new Mapping<String, Step> {
     }
     // --- ERB linting (herb) -----------------------------------------------------
     // HTML-aware ERB toolchain. `analyze` is pure libherb (parse errors, no network);
-    // `lint` delegates to npx @herb-tools/linter (version pinned to the herb gem, needs `node`
-    // — see mise.toml) and reads `.herb.yml`. Glob-gated to ERB so a Ruby-only commit skips them.
+    // `lint` runs @herb-tools/linter through npx at an EXPLICIT version (needs `node` — see
+    // mise.toml) and reads `.herb.yml`. `bundle exec herb lint` is NOT pinned: it runs a bare
+    // `npx @herb-tools/linter`, i.e. whatever npm published last, which is how 0.11.0's new
+    // html-no-duplicate-ids findings turned CI red on 2026-09-25. Bump it here and in ci.yml
+    // together. Glob-gated to ERB so a Ruby-only commit skips them.
     // herb-lint is now GATING (the ERB backlog was cleared to 0 errors/warnings — see the
     // ratchet-gates work + plans/off-topic-improvements.md). herb-analyze stays ADVISORY (`|| true`)
     // only because app/views/shared/mail/_header.html.erb and _footer.html.erb are intentional
@@ -34,8 +37,8 @@ local linters = new Mapping<String, Step> {
     }
     ["herb-lint"] {
         glob = "**/*.erb"
-        check = "bundle exec herb lint app/"
-        fix = "bundle exec herb lint app/ --fix"
+        check = "npx --yes @herb-tools/linter@0.10.4 app/"
+        fix = "npx --yes @herb-tools/linter@0.10.4 app/ --fix"
     }
     // --- Schema annotations (annotaterb, auto-regenerate) -----------------------
     // Custom step: regenerate the `# == Schema Information` blocks on models when a model or

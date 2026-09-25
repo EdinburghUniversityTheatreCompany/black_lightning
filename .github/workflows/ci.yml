@@ -70,9 +70,10 @@ jobs:
         run: bundle exec herb analyze app/ || true
 
       - name: Lint ERB templates (herb)
-        # `herb lint` delegates to npx @herb-tools/linter (version pinned to the herb gem); the
+        # Pinned to the version hk.pkl runs; bump the two together. `bundle exec herb lint` runs
+        # an UNPINNED npx, so a new linter release can fail a commit that touched no ERB. The
         # runner ships Node. --github emits Actions annotations.
-        run: bundle exec herb lint app/ --github
+        run: npx --yes @herb-tools/linter@0.10.4 app/ --github
 
       - name: Executable bits on shipped scripts
         # Any tracked file whose first line is a shebang must be mode 100755 in the index — with
