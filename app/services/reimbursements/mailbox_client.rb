@@ -10,7 +10,7 @@ module Reimbursements
     NotFoundError = ::GraphAuth::NotFoundError
 
     def initialize(mailbox: CostCentre.default&.receive_mailbox, settings: ::Graph::Settings,
-                   http: nil, clock: nil)
+                   http: nil, clock: nil, sleeper: nil)
       super
     end
   end

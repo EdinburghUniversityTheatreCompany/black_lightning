@@ -203,6 +203,47 @@ module Reimbursements
       assert_raises(MailboxClient::Error) { client.unread_messages }
     end
 
+    # Graph's own gateway answers 502/503/504 for a moment now and then; one
+    # 502 on each of two mailboxes reached Honeybadger on 23 Sep 2026.
+    def build_pausing_client(responses)
+      pauses = []
+      client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
+                                 http: FakeHttp.new(responses), clock: -> { Time.zone.local(2026, 7, 9, 12) },
+                                 sleeper: ->(seconds) { pauses << seconds })
+      [ client, pauses ]
+    end
+
+    [ 502, 503, 504 ].each do |status|
+      test "a GET answered #{status} is retried once after a pause" do
+        client, pauses = build_pausing_client([ token_response, [ status, "UnknownError" ], messages_response([]) ])
+
+        assert_equal [], client.unread_messages
+        assert_equal [ GraphAuth::TRANSIENT_RETRY_DELAY ], pauses
+      end
+    end
+
+    test "a GET still failing after its retry raises Error with the second status" do
+      client, pauses = build_pausing_client([ token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ])
+
+      error = assert_raises(MailboxClient::Error) { client.unread_messages }
+      assert_includes error.message, "(503)"
+      assert_equal 1, pauses.size
+    end
+
+    test "a 500 is not retried: it is Graph refusing the request, not its gateway" do
+      client, pauses = build_pausing_client([ token_response, [ 500, "boom" ] ])
+
+      assert_raises(MailboxClient::Error) { client.unread_messages }
+      assert_empty pauses
+    end
+
+    test "a write answered 502 is not retried, since the first attempt may have landed" do
+      client, pauses = build_pausing_client([ token_response, [ 502, "UnknownError" ] ])
+
+      assert_raises(MailboxClient::Error) { client.reply("msg1", html: "<p>Thanks</p>") }
+      assert_empty pauses
+    end
+
     # The real Graph error body when a message no longer exists (handled or
     # deleted by hand in Outlook between the poll's listing and the mutation).
     ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",

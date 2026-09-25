@@ -312,6 +312,17 @@ module Reimbursements
       end
     end
 
+    test "a GET answered 502 is retried once after a pause" do
+      pauses = []
+      client = GraphClient.new(settings: settings, clock: -> { Time.zone.local(2026, 7, 9, 12) },
+                               http: FakeHttp.new([ token_response, [ 502, "UnknownError" ],
+                                                    [ 200, { id: "inbox" }.to_json ] ]),
+                               sleeper: ->(seconds) { pauses << seconds })
+
+      assert client.check_mailbox("finance@example.com")
+      assert_equal [ GraphAuth::TRANSIENT_RETRY_DELAY ], pauses
+    end
+
     test "upload_to_folder's small-file PUT raises Error on any other non-2xx (graph_raw_request)" do
       client, = build_client([ token_response, [ 500, "boom" ] ])
 

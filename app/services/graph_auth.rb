@@ -10,10 +10,19 @@
 # The including object must set +@http+ (a transport callable
 # +(method, uri, headers, body) -> [status, body_string]+), +@settings+
 # (responding to azure_tenant_id / azure_client_id / azure_client_secret) and
-# +@clock+ (a +-> { Time }+) in its initializer.
+# +@clock+ (a +-> { Time }+) in its initializer, and may set +@sleeper+ (a
+# +->(seconds)+, the test seam for the transient-retry pause).
 module GraphAuth
   GRAPH_URL = "https://graph.microsoft.com/v1.0".freeze
   TOKEN_URL = "https://login.microsoftonline.com".freeze
+
+  # Graph's own gateway answers these for a moment now and then (HB 134482370:
+  # one 502 on each of two mailboxes, hours apart, both fine on the next poll).
+  # A GET is retried once after a pause; a write never is, because a 502 does
+  # not say whether the first attempt landed, and a replayed reply is a second
+  # email to a producer.
+  TRANSIENT_STATUSES = [ 502, 503, 504 ].freeze
+  TRANSIENT_RETRY_DELAY = 2
 
   class Error < StandardError; end
 
@@ -45,8 +54,11 @@ module GraphAuth
   # follow-up URLs). Raises AuthError on 401/403, Error on any other non-2xx.
   def graph_request(http_method, path, params: nil, body: nil)
     uri = graph_uri(path, params)
-    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => "application/json" }
-    status, response_body = @http.call(http_method, uri, headers, body&.to_json)
+    status, response_body = send_graph_request(http_method, uri, body)
+    if http_method == :get && TRANSIENT_STATUSES.include?(status)
+      (@sleeper || method(:sleep)).call(TRANSIENT_RETRY_DELAY)
+      status, response_body = send_graph_request(http_method, uri, body)
+    end
 
     raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
     unless (200..299).cover?(status)
@@ -56,6 +68,11 @@ module GraphAuth
     end
 
     response_body.blank? ? {} : JSON.parse(response_body)
+  end
+
+  def send_graph_request(http_method, uri, body)
+    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => "application/json" }
+    @http.call(http_method, uri, headers, body&.to_json)
   end
 
   # Authed request whose body is sent verbatim (not JSON-encoded) under an

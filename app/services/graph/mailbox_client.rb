@@ -23,11 +23,12 @@ module Graph
 
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
-    def initialize(mailbox:, settings: Graph::Settings, http: nil, clock: nil)
+    def initialize(mailbox:, settings: Graph::Settings, http: nil, clock: nil, sleeper: nil)
       @mailbox = mailbox
       @settings = settings
       @http = http || ::HttpTransport
       @clock = clock || -> { Time.current }
+      @sleeper = sleeper
       @folder_ids = {}
     end
 

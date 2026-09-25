@@ -43,10 +43,11 @@ module Reimbursements
     # delete the stale draft) and its +web_link+ (opened in Outlook to review + send).
     Draft = Struct.new(:id, :web_link, keyword_init: true)
 
-    def initialize(settings: Settings, http: nil, clock: nil)
+    def initialize(settings: Settings, http: nil, clock: nil, sleeper: nil)
       @settings = settings
       @http = http || ::HttpTransport
       @clock = clock || -> { Time.current }
+      @sleeper = sleeper
     end
 
     # Create a draft in the shared mailbox and return a Draft (its message id +
