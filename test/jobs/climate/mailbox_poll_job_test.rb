@@ -11,20 +11,28 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   class FakeMailbox
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
-    attr_reader :processed, :read
+    attr_reader :processed, :read, :attachment_requests
 
-    def initialize(messages: {}, attachments: {})
+    def initialize(messages: {}, attachments: {}, bodies: {}, sender: "govee@example.com")
       @messages = messages
       @attachments = attachments
+      @bodies = bodies
+      @sender = sender
       @processed = []
       @read = []
+      @attachment_requests = []
     end
 
     def unread_messages
-      @messages.map { |id, subject| Message.new(id: id, subject: subject, from_address: "govee@example.com") }
+      @messages.map do |id, subject|
+        Message.new(id: id, subject: subject, from_address: @sender, body_text: @bodies.fetch(id, ""))
+      end
     end
 
-    def attachments(id) = @attachments.fetch(id, [])
+    def attachments(id)
+      @attachment_requests << id
+      @attachments.fetch(id, [])
+    end
 
     def mark_read_and_move(id, folder)
       @read << id
@@ -136,6 +144,42 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   test "leaves a message with no CSV attachment unread" do
     create_climate_sensor
     fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Just a note" }, attachments: { "1" => [] }))
+
+    Climate::MailboxPollJob.perform_now
+
+    assert_empty fake.read
+  end
+
+  # What Govee's scheduled export sends, with no attachment, on a day the
+  # sensor never reached its cloud (the bodyPreview Graph returns, verbatim).
+  NO_DATA_BODY = "Dear customer, No data in the time period you've chosen. Please choose another " \
+                 "time period and export the data. Govee Home! This email was sent automatically by"
+
+  test "files Govee's no-data notice instead of leaving it unread for every poll" do
+    create_climate_sensor
+    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => NO_DATA_BODY },
+                                       sender: "no-reply@govee.com"))
+
+    Climate::MailboxPollJob.perform_now
+
+    assert_equal [ [ "1", :processed ] ], fake.processed
+    assert_empty fake.attachment_requests, "a no-data notice has nothing to fetch"
+  end
+
+  test "the no-data wording from anyone but Govee stays unread for a human" do
+    create_climate_sensor
+    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => NO_DATA_BODY },
+                                       sender: "someone@example.com"))
+
+    Climate::MailboxPollJob.perform_now
+
+    assert_empty fake.read
+  end
+
+  test "any other Govee email with no CSV stays unread" do
+    create_climate_sensor
+    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => "Your export is ready" },
+                                       sender: "no-reply@govee.com"))
 
     Climate::MailboxPollJob.perform_now
 

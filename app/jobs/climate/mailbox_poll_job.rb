@@ -20,6 +20,12 @@ module Climate
     CSV_EXTENSIONS = %w[.csv .txt].freeze
     CSV_CONTENT_TYPES = %w[text/csv application/csv text/plain].freeze
 
+    # On a day the sensor never reached Govee's cloud, the scheduled export sends
+    # this instead of a CSV. Left unread, every one of them was fetched and logged
+    # again each poll forever. The dashboard's stale badge is what reports the gap.
+    GOVEE_SENDER_DOMAIN = "@govee.com".freeze
+    GOVEE_NO_DATA = "No data in the time period".freeze
+
     class_attribute :mailbox_builder,
                     default: -> { ::Graph::MailboxClient.new(mailbox: Settings.mailbox) }
 
@@ -51,6 +57,8 @@ module Climate
     end
 
     def process(mailbox, message)
+      return file_no_data_notice(mailbox, message) if govee_no_data?(message)
+
       attachments = csv_attachments(mailbox, message)
       return skip(message, "no CSV attachment") if attachments.empty?
 
@@ -66,6 +74,15 @@ module Climate
       # nothing worse than a repeated no-op next cycle.
       mailbox.mark_read_and_move(message.id, :processed)
       Rails.logger.info("[climate] imported #{imported} readings from #{message.subject.inspect}")
+    end
+
+    def govee_no_data?(message)
+      message.from_address.end_with?(GOVEE_SENDER_DOMAIN) && message.body_text.include?(GOVEE_NO_DATA)
+    end
+
+    def file_no_data_notice(mailbox, message)
+      mailbox.mark_read_and_move(message.id, :processed)
+      Rails.logger.info("[climate] Govee had no data to export for #{message.subject.inspect}; filed it")
     end
 
     def csv_attachments(mailbox, message)
