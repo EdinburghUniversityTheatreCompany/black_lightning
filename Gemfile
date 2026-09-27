@@ -26,7 +26,7 @@ gem "simple_form"
 # "wrong number of arguments (given 2, expected 1)" — 866 errors across the
 # suite. Drop the constraint once Rails ships a release that calls it with
 # keywords. See plans/deferred-upgrades.md.
-gem "json", "< 3"
+gem "json", "< 4"
 gem "kaminari"
 gem "commonmarker"
 
