@@ -117,8 +117,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)
       vite-plugin-ruby:
-        specifier: ^5.2.3
-        version: 5.2.3(vite@8.3.0(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1))
+        specifier: ^5.2.4
+        version: 5.2.4(vite@8.3.0(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1))
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1669,8 +1669,8 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  vite-plugin-ruby@5.2.3:
-    resolution: {integrity: sha512-WwUa91eE1A5veI2UiU2WVtTKmmvha8zoCccSi3rT978W43QT+SXzAHYuJ8cirPq58E1ct4okmOCWpsyEbUl6Tw==}
+  vite-plugin-ruby@5.2.4:
+    resolution: {integrity: sha512-DdFjS7TB8mgPx0Zhsf4kqgZYKxlZHgbyiijAj8l4OTbkEF1Lvk7U/HAGOKWjlpPR9RgatwNGZ1wZwAhyMJBcHg==}
     peerDependencies:
       vite: '>=5.0.0'
 
@@ -3374,7 +3374,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite-plugin-ruby@5.2.3(vite@8.3.0(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)):
+  vite-plugin-ruby@5.2.4(vite@8.3.0(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)):
     dependencies:
       obug: 2.2.1
       tinyglobby: 0.2.17
