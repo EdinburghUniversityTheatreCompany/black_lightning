@@ -672,6 +672,9 @@ module Admin
       assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
       assert_equal ::Reimbursements::Status::PAID, expense.status
       assert_equal @unlinked.date, expense.payment_confirmed_date
+      # Not the day finance clicked: the lists sort and date claims by this, and
+      # a conversion done weeks after the charge must not read as a new claim.
+      assert_equal @unlinked.date, expense.submitted_at.to_date
       assert_equal BigDecimal("42.0"), expense.amount
       assert_equal BigDecimal("42.0"), expense.amount_excl_vat
       assert_equal "Room hire recharge", expense.description

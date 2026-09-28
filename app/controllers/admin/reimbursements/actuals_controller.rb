@@ -119,8 +119,11 @@ module Admin
         # click would double-count the same EUSA charge.
         expense = store.create_expense_for_actual!(
           @actual.record_id,
+          # submitted_at takes the ledger date too, or before_create stamps the
+          # day of the click and a months-old charge sorts as a new claim.
           @form.create_attrs(nil).merge(status: ::Reimbursements::Status::PAID,
-                                        payment_confirmed_date: @actual.date)
+                                        payment_confirmed_date: @actual.date,
+                                        submitted_at: @actual.date&.beginning_of_day)
         )
         redirect_to admin_reimbursements_actuals_path,
                     notice: "Expense ##{expense.auto_number} created from this EUSA row and " \
