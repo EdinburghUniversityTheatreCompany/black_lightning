@@ -42,7 +42,7 @@
     </div>
   <% end %>
 <% else %>
-  <% headers = [ "Status", "Description", "Budget", "Amount", "Created", "Receipts", "" ] %>
+  <% headers = [ "Status", "Description", "Budget", "Amount", "Submitted", "Receipts", "" ] %>
   <% field_sets = @expenses.map do |expense|
        status = safe_join([
          reimbursements_producer_status_badge(expense.status),

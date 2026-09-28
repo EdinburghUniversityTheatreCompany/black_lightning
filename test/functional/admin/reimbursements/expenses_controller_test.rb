@@ -50,6 +50,8 @@ module Admin
       assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
       assert_includes response.body, "Fake blood"
       assert_not_includes response.body, "Someone else&#39;s"
+      assert_select "th", text: "Submitted"
+      assert_select "th", text: "Created", count: 0
     end
 
     test "links the user to their payee record by email on first visit" do
@@ -370,6 +372,24 @@ module Admin
       # read-only page (both are present on the edit page — this discriminates it).
       assert_select "input[name='reimbursements_expense_form[amount]']", 0
       assert_select "button[data-action='receipts-upload#remove']", 0
+    end
+
+    # The date shown is submitted_at, which before_create stamps on a draft as
+    # well, so a draft's date is when it was started rather than submitted.
+    test "show labels the claim's date Submitted, and Started while it is a draft" do
+      submitted = create_reimbursements_expense(person: @person, budget: @budget,
+                                                status: ::Reimbursements::Status::PENDING)
+      draft = create_reimbursements_expense(person: @person, budget: @budget,
+                                            status: ::Reimbursements::Status::DRAFT)
+      sign_in @user
+
+      get :show, params: { id: submitted.record_id }
+      assert_select "dt", text: "Submitted"
+      assert_select "dt", text: "Created", count: 0
+
+      get :show, params: { id: draft.record_id }
+      assert_select "dt", text: "Started"
+      assert_select "dt", text: "Submitted", count: 0
     end
 
     # --- In-page receipt viewer -------------------------------------------

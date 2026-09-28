@@ -20,7 +20,7 @@
     <div><dt class="text-gray-500">Amount excl. VAT</dt><dd class="font-medium"><%= reimbursements_money(@expense.amount_excl_vat) %></dd></div>
     <div><dt class="text-gray-500">Budget</dt><dd class="font-medium"><%= reimbursements_value(@expense.budget&.display_name) %></dd></div>
     <div><dt class="text-gray-500">Payment reference</dt><dd class="font-medium"><%= reimbursements_value(@expense.payment_reference) %></dd></div>
-    <div><dt class="text-gray-500">Created</dt><dd class="font-medium"><%= reimbursements_date(@expense.submitted_at) %></dd></div>
+    <div><dt class="text-gray-500"><%= @expense.draft? ? "Started" : "Submitted" %></dt><dd class="font-medium"><%= reimbursements_date(@expense.submitted_at) %></dd></div>
     <% if @expense.payment_confirmed_date.present? %>
       <div><dt class="text-gray-500">Paid on</dt><dd class="font-medium"><%= reimbursements_date(@expense.payment_confirmed_date) %></dd></div>
     <% end %>
