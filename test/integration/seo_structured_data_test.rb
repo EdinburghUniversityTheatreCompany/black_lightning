@@ -5,6 +5,10 @@ require "test_helper"
 # surfaces entirely.
 class SeoStructuredDataTest < ActionDispatch::IntegrationTest
   setup do
+    # Every date below is literal, so the clock is pinned ahead of the run:
+    # once it ends the show is archived, its title gains "(2026)" and the
+    # shows index drops it.
+    travel_to Time.zone.local(2026, 9, 20, 12)
     @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true,
                                      price: "£7/£8/£10", start_date: Date.new(2026, 9, 23),
                                      end_date: Date.new(2026, 9, 26))
