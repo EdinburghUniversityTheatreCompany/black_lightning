@@ -40,23 +40,30 @@
     <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
       <%= number_field_tag :initial_budget, reimbursements_amount_value(initial_budget), step: "0.01", class: input_classes %>
     <% end %>
+    <%# Before Area, because it narrows Area: the controller drops every
+        option tagged with another centre. %>
+    <% if cost_centres.size > 1 %>
+      <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
+        <%= select_tag :cost_centre_id,
+                       options_from_collection_for_select(cost_centres, :id, :name, cost_centre_id),
+                       class: input_classes,
+                       data: { reimbursements_budget_area_target: "costCentre",
+                               action: "change->reimbursements-budget-area#costCentreChanged" } %>
+      <% end %>
+    <% end %>
     <%= render "shared/form/field", label: "Area", name: :area_id,
           hint: "Leave blank for a standalone line like Contingency or payroll." do %>
       <%# input_classes, not simple-select2: the Type and Cost centre selects on
           this form are already plain styled ones, and a lone Tom Select widget
           among them would read as a different kind of control. %>
       <%= select_tag :area_id,
-            options_from_collection_for_select(areas, :record_id, :name, area_id),
+            options_for_select(
+              areas.map { |area| [ area.name, area.record_id, { data: { cost_centre_id: area.cost_centre_id } } ] },
+              area_id
+            ),
             include_blank: "No area", class: input_classes,
             data: { reimbursements_budget_area_target: "area",
                     action: "change->reimbursements-budget-area#areaChanged" } %>
-    <% end %>
-    <% if cost_centres.size > 1 %>
-      <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
-        <%= select_tag :cost_centre_id,
-                       options_from_collection_for_select(cost_centres, :id, :name, cost_centre_id),
-                       class: input_classes %>
-      <% end %>
     <% end %>
   </div>
 

@@ -1172,7 +1172,7 @@ module Admin
         assert_nil budget.reload.area
       end
 
-      # The <select> offers store.areas_for_year (year- AND centre-scoped)
+      # The <select> offers only areas in the budget's own year and centre
       # while area_id writes unscoped, where "" means detach. So whenever the
       # budget's own area is outside the rendered set the select read
       # "— none —", and ANY Save — one changing only the notes — nilled a link
@@ -1631,6 +1631,43 @@ module Admin
 
         assert_match(/different cost centre/, flash[:alert])
         assert_nil @props.reload.area_id, "a refused Save must not attach the area"
+      end
+
+      # The picker must offer only areas area_scope_error would accept: an
+      # option the Save then refuses is a form that lies about what it can do.
+      test "the edit form offers only areas in the budget's own cost centre" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+        create_reimbursements_area(name: "Termtime show", cost_centre: other)
+        create_reimbursements_area(name: "Fringe show", cost_centre: ::Reimbursements::CostCentre.default)
+        create_reimbursements_area(name: "Unplaced show", cost_centre: nil)
+        @props.update!(cost_centre: ::Reimbursements::CostCentre.default)
+
+        get :edit, params: { id: @props.record_id }
+
+        names = css_select("select#area_id option").map(&:text)
+        assert_includes names, "Fringe show"
+        assert_includes names, "Unplaced show", "an unstamped area is lenient-scoped into every centre"
+        assert_not_includes names, "Termtime show"
+      end
+
+      # On new the centre is still being chosen, so every centre's areas are
+      # rendered and the browser filters them by the Cost centre select —
+      # which needs each option to say which centre it belongs to, and the
+      # Cost centre field to come first.
+      test "the new form tags each area with its cost centre and asks for the centre first" do
+        sign_in @user
+        other = create_second_reimbursements_cost_centre
+        area = create_reimbursements_area(name: "Termtime show", cost_centre: other)
+        unplaced = create_reimbursements_area(name: "Unplaced show", cost_centre: nil)
+
+        get :new
+
+        assert_select "select#area_id option[value=?][data-cost-centre-id=?]", area.record_id, other.id.to_s
+        assert_select "select#area_id option[value=?]:not([data-cost-centre-id])", unplaced.record_id
+        assert_select "select#cost_centre_id[data-reimbursements-budget-area-target=costCentre]"
+        assert_operator response.body.index('id="cost_centre_id"'), :<, response.body.index('id="area_id"'),
+                        "the cost centre is chosen before the area it narrows"
       end
 
       test "create inside an area with nobody ticked writes no own-owner rows" do

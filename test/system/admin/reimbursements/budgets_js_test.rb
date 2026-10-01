@@ -117,6 +117,35 @@ module Admin
         assert_equal [ person.record_id ], budget.own_owners.map(&:record_id)
       end
 
+      # The new form renders every centre's areas; the Cost centre select
+      # narrows them, and a choice the new centre does not hold is dropped
+      # rather than posted for the server to refuse.
+      test "choosing a cost centre narrows the area picker to that centre's areas" do
+        fringe = ::Reimbursements::CostCentre.default
+        termtime = create_second_reimbursements_cost_centre
+        create_reimbursements_area(name: "Fringe show", cost_centre: fringe)
+        create_reimbursements_area(name: "Termtime show", cost_centre: termtime)
+        create_reimbursements_area(name: "Unplaced show", cost_centre: nil)
+
+        visit new_admin_reimbursements_budget_path
+        select fringe.name, from: "Cost centre"
+        assert_equal [ "No area", "Fringe show", "Unplaced show" ], area_option_names
+        select "Fringe show", from: "Area"
+
+        select termtime.name, from: "Cost centre"
+        assert_equal [ "No area", "Termtime show", "Unplaced show" ], area_option_names
+        assert_equal "", find_field("Area").value, "an area from the old centre must not stay chosen"
+
+        select "Termtime show", from: "Area"
+        fill_in "Name", with: "Marketing"
+        fill_in "Nominal code", with: "432320"
+        click_on "Create budget"
+
+        assert_text "Budget created"
+        budget = ::Reimbursements::Budget.find_by!(name: "Marketing")
+        assert_equal [ "Termtime show", termtime ], [ budget.area.name, budget.cost_centre ]
+      end
+
       # The compound path, clicked: the select is year- and centre-scoped while
       # area_id writes unscoped, so an area the picker does not offer read
       # "No area" and an unrelated Save detached the budget.
@@ -134,6 +163,12 @@ module Admin
         budget.reload
         assert_equal "Checked with the committee", budget.notes
         assert_equal area, budget.area
+      end
+
+      private
+
+      def area_option_names
+        find_field("Area").all("option").map(&:text)
       end
     end
   end

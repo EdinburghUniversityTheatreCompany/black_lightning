@@ -86,7 +86,7 @@ module Admin
         @title = "New budget"
         @people = store.people
         @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-        @areas = store.areas_for_year
+        @areas = new_budget_areas
       end
 
       def create
@@ -96,7 +96,7 @@ module Admin
           @title = "New budget"
           @people = store.people
           @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-          @areas = store.areas_for_year
+          @areas = new_budget_areas
           flash.now[:alert] = error
           return render(:new, status: :unprocessable_entity)
         end
@@ -110,12 +110,13 @@ module Admin
       def edit
         @title = "Budget: #{@budget.display_name}"
         @people = store.people
-        # The budget's OWN area is always offered, however the page is scoped.
-        # areas_for_year is year- and cost-centre-scoped while area_id writes
-        # unscoped ("" detaches), so an area outside the rendered set left the
-        # select reading "No area" and any Save — one changing only the
-        # notes — nilled a link nobody touched.
-        @areas = (store.areas_for_year + [ @budget.area ]).compact.uniq
+        # Only the areas area_scope_error would accept for THIS line — the
+        # budget's own year and centre, not the page's selector — plus its OWN
+        # area, always: area_id writes unscoped ("" detaches), so an area
+        # outside the rendered set left the select reading "No area" and any
+        # Save — one changing only the notes — nilled a link nobody touched.
+        @areas = (assignable_areas(year: @budget.financial_year, centre: @budget.cost_centre) +
+                  [ @budget.area ]).compact.uniq
         @forecasts = store.budget_forecasts(@budget.record_id)
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
         # edit form (no JS), so a mistyped forecast can be corrected in place.
@@ -282,6 +283,28 @@ module Admin
 
         mismatch_error("cost centre", area.cost_centre&.name, centre&.name) ||
           mismatch_error("financial year", area.financial_year&.label, year&.label)
+      end
+
+      # Every centre's areas for the year: the line's centre is still being
+      # chosen on this form, so the browser narrows the list to the one picked
+      # (reimbursements-budget-area#costCentreChanged) and area_scope_error
+      # refuses a mismatch that gets past it.
+      def new_budget_areas
+        assignable_areas(year: selected_financial_year)
+      end
+
+      # The areas a line in +year+ and +centre+ may join, on the same lenient
+      # terms as mismatch_error — an unset side matches anything — so the
+      # picker never offers an area the Save would then refuse.
+      def assignable_areas(year:, centre: nil)
+        store.areas.select do |area|
+          lenient_match?(area.financial_year_id, year&.id) &&
+            lenient_match?(area.cost_centre_id, centre&.id)
+        end
+      end
+
+      def lenient_match?(area_value, budget_value)
+        area_value.nil? || budget_value.nil? || area_value == budget_value
       end
 
       # Nil when either side is unset: an unstamped area or line is
