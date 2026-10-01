@@ -203,6 +203,11 @@ gitignored `mise.local.toml` still sits at the root and still layers on top. Pre
   builds; `macos-x64` (Intel Mac) falls back to a source compile.
 
 - **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
+- **The Gemfile's `cooldown: 4` needs Bundler ≥ 4.0.13, and an older one ignores it without a
+  word.** Ruby 4.0.2's built-in Bundler is 4.0.6, which was `BUNDLED WITH` here until 2026-10-01, so
+  no gem was cooled down until then. Keep `BUNDLED WITH` at or above 4.0.13 (bump it with
+  `bundle update --bundler=<version>`). You can tell it is working when an update lists the young
+  releases it held back ("available in N days").
 - **The pre-commit hook AUTOCORRECTS, so a green test run before `git commit` does not
   guarantee a green tree after it.** When the commit output says `rubocop – N files modified`,
   re-run the tests for those files: the autocorrect is applied and committed without anything
