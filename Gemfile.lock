@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/mickzijdel/rubocop-mick.git
-  revision: dfe7cb803597355db87ee5498e4cd36c1c5bc1c0
+  revision: 8ef4c69a4685b0b5b93c2a72385551dba7186970
   specs:
     rubocop-mick (0.1.0)
       lint_roller (~> 1.1)
@@ -431,7 +431,7 @@ GEM
       psych (>= 4.0.0)
       tsort
     recaptcha (5.21.2)
-    regexp_parser (2.12.0)
+    regexp_parser (2.13.0)
     reline (0.7.0)
       io-console (~> 0.5)
     request_store (1.7.0)
