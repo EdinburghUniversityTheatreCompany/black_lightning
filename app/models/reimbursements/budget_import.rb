@@ -220,9 +220,19 @@ module Reimbursements
 
     def entries_in(bucket) = @entries.select { |entry| entry.bucket == bucket }
 
-    # The area a row LANDS in, rendered so the operator can catch a wrong
-    # adoption.
-    def area_name_for(entry) = create_area_name(entry)
+    # The area a row LANDS in: its cell, or for a create with a blank cell the
+    # area its name prefixes, on #row_key's terms. Grouping and creating must
+    # agree, or the next converted sheet creates the line again inside the
+    # area. A MATCHED row keeps its cell: moving a stored line on a prefix is a
+    # bigger claim. In first-seen casing, so "cogito" cannot mint a second
+    # area. The preview renders it so the operator can catch a wrong adoption.
+    def area_name_for(entry)
+      return entry.area_name if entry.area_name.present?
+      return unless entry.budget.nil?
+
+      prefix = prefix_area_for(entry.row[:name])
+      prefix && (first_seen_names[self.class.match_key(prefix)] || prefix)
+    end
 
     # Whether that area came off the row's NAME rather than its cell.
     def area_adopted?(entry) = entry.area_name.blank? && area_name_for(entry).present?
@@ -231,7 +241,7 @@ module Reimbursements
     # +area_name:+ (one this import creates, resolved inside import_budgets!).
     def creates
       entries_in(:create).map do |entry|
-        area_name = create_area_name(entry)
+        area_name = area_name_for(entry)
         { name: self.class.bare_name(entry.row[:name], area_name),
           nominal_code: entry.row[:nominal_code],
           budget_type: entry.row[:budget_type], initial_budget: entry.row[:amount],
@@ -254,7 +264,7 @@ module Reimbursements
     # #area_creates narrowed to areas something lands in: a create's, or a
     # ticked re-home's. Unticking every re-home must not mint an orphan area.
     def area_creates_for(re_homes)
-      wanted = (entries_in(:create).map { |entry| create_area_name(entry) } +
+      wanted = (entries_in(:create).map { |entry| area_name_for(entry) } +
                 re_homes.map { |re_home| re_home[:area_name] })
                .compact_blank.map { |name| self.class.match_key(name) }.to_set
       area_creates.select { |attrs| wanted.include?(self.class.match_key(attrs[:name])) }
@@ -773,7 +783,7 @@ module Reimbursements
     # to: the one the sheet names, else the budget's own. Empty for a line in
     # no area, whose owners stay on the budget.
     def resolve_owner_target(entry)
-      name = create_area_name(entry)
+      name = area_name_for(entry)
       if name.present?
         key = self.class.match_key(name)
         existing = existing_area_for(key)
@@ -867,19 +877,6 @@ module Reimbursements
     def sheet_area_names
       @sheet_area_names ||= @rows.filter_map { |row| row[:area].presence }
                                  .uniq { |name| self.class.match_key(name) }
-    end
-
-    # The area a row lands in: its cell, or for a create with a blank cell the
-    # area its name prefixes, on #row_key's terms. Grouping and creating must agree, or the next
-    # converted sheet creates the line again inside the area. A MATCHED row
-    # keeps its cell: moving a stored line on a prefix is a bigger claim. In
-    # first-seen casing, so "cogito" cannot mint a second area.
-    def create_area_name(entry)
-      return entry.area_name if entry.area_name.present?
-      return unless entry.budget.nil?
-
-      prefix = prefix_area_for(entry.row[:name])
-      prefix && (first_seen_names[self.class.match_key(prefix)] || prefix)
     end
 
     # The matched line's area where it differs from the row's cell, nil when
