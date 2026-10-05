@@ -1,15 +1,12 @@
 <%# locals: (budget:, name_area: true) %>
-<%# name_area: false only where the AREA is already the heading above this row
-    (_area_group). The nominal-code card groups by code, where three shows'
-    "Marketing" lines sit under 432320 with nothing to tell them apart. %>
+<%# name_area: false only under an area heading (_area_group). Under a nominal
+    code, three shows' "Marketing" lines need the area to tell them apart. %>
 <tr>
   <td>
     <%= link_to (name_area ? budget.display_name : budget.name).presence || "-",
           edit_admin_reimbursements_budget_path(budget.record_id),
           class: "text-primary underline" %>
-    <%# The SAME badge the budgets index draws, through the one helper: this
-        screen showed no health signal at all, so a line badged red there
-        rendered in plain black here. %>
+    <%# The same health badge the index draws. %>
     <%= reimbursements_budget_health_badge(budget) %>
     <% unless budget.active %>
       <span class="text-gray-400 text-xs">(hidden)</span>

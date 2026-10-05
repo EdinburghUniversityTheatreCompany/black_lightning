@@ -1,9 +1,6 @@
 <%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:, people_by_id:) %>
 <div class="table-scroll">
-  <%# table-pinned-actions keeps the Edit column against the right-hand edge:
-      measured at 1366x768 this table is 1218px of columns in a 1012px box, so
-      Edit sat 87px off screen. The budget NAME is a link to the same form, so
-      there are two routes to it either way. %>
+  <%# table-pinned-actions: at 1366x768 the Edit column sat 87px off screen. %>
   <table class="table table-hover table-sticky-head table-pinned-actions"
          data-controller="sticky-table">
     <thead>
@@ -17,10 +14,8 @@
       <% area = areas_by_id[area_id] %>
       <% visible_count = budgets_by_area_id[area_id].size %>
       <%# area.budgets is preloaded (store.areas), so .size reads the loaded
-          array rather than issuing a COUNT — the "does not grow" test above
-          checks that. It's every line ever linked to the area (the same scope
-          Area#committed_amount/#allocated sum over), matching the figures
-          beside it, not just the lines in the selected year and cost centre. %>
+          array, not a COUNT. It counts every line linked to the area, matching
+          the figures beside it. %>
       <% total_count = area.budgets.size %>
       <tbody data-area="<%= area_id %>">
         <tr class="bg-gray-50">
@@ -34,16 +29,9 @@
                   <%= visible_count %> of <%= pluralize(total_count, "line") %> shown
                 </span>
               <% end %>
-              <%# The agreed figure carries the same label as the overview card:
-                  it names what the total is a total OF, which is what decides
-                  whether the income lines below count against it. Suppressed
-                  entirely when nobody agreed a total, as the overview card
-                  suppresses it: "Agreed total (expenses) -" reads as a claim
-                  about expenses rather than as an unset plan. %>
               <%# no_budget_set?, not projected_amount.nil?: a £0 total with
-                  nothing allocated is a figure nobody filled in, and
-                  "Agreed total (expenses) £0.00" reads as a claim about
-                  expenses rather than as an unset plan. %>
+                  nothing allocated is unset, and "Agreed total (expenses) £0.00"
+                  would read as a claim about expenses. %>
               <% unless area.no_budget_set? %>
                 <span class="text-sm text-gray-600">
                   <%= area.basis_label %> <%= reimbursements_money(area.projected_amount) %>
@@ -58,9 +46,8 @@
               <span class="text-sm text-gray-600">
                 Committed <%= reimbursements_money(area.committed_amount) %>
               </span>
-              <%# Nil means nobody agreed a total (every backfilled area starts
-                  here) — rendering "£0.00" there would read as fully overspent,
-                  so it is left out entirely rather than shown as a zero. %>
+              <%# Nil when nobody agreed a total: left out, since £0.00 would
+                  read as fully overspent. %>
               <% unless area.remaining.nil? %>
                 <span class="text-sm <%= "text-danger font-medium" if area.remaining.negative? %>">
                   Remaining <%= reimbursements_money(area.remaining) %>

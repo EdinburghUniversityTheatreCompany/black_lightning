@@ -18,9 +18,8 @@
         new_admin_reimbursements_budget_path(year: selected_financial_year&.key,
                                              cost_centre: selected_cost_centre&.key),
         class: btn_classes(:primary, :sm) %>
-  <%# Carries both selectors' choices through, so the import lands in the year
-      and the cost centre whose budgets are on screen rather than whichever is
-      active (or the first centre in the list). %>
+  <%# Both selectors carry through, so the import lands in the year and centre
+      on screen. %>
   <%= link_to "Import budgets",
         admin_reimbursements_budget_import_path(year: selected_financial_year&.key,
                                                 cost_centre: selected_cost_centre&.key),
@@ -43,10 +42,6 @@
        title: "The greater of the current projection and what's already been spent or committed, " \
               "so the number never drops below reality. Blank on income lines, where the same " \
               "figure would read as best-case income instead.") %>
-  <%# "Projected", not "Current forecast" — the overview's column for the same
-      idea was already called that, and the two printed DIFFERENT numbers. One
-      name, one figure (Budget#projected_amount), marked where it is falling
-      back to the initial. %>
   <% projected_header = content_tag(:span, "Projected",
        title: "The line's current plan: the latest logged forecast, falling back to the " \
               "initial budget, which is marked as such.") %>

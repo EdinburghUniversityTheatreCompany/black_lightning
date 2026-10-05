@@ -1,9 +1,7 @@
 require "test_helper"
 
 module Reimbursements
-  # The small presenter that subtotals a group of budgets sharing a nominal
-  # code for the overview page — each metric is the sum of the group's budgets,
-  # treating a budget's nil figure as zero.
+  # The overview's per-nominal-code subtotal; a nil figure counts as zero.
   class NominalCodeRollupTest < ActiveSupport::TestCase
     def build_budget(**attrs)
       Budget.create!(name: "B", **attrs)

@@ -1,8 +1,7 @@
 require "test_helper"
 
 module Reimbursements
-  # The computed replacements for the Airtable rollups/formulas, confirmed
-  # against the base schema export: committed/paid sum amount_excl_vat,
+  # Budget's computed figures: committed/paid sum amount_excl_vat,
   # current_forecast is the latest forecast, remaining/variance derive from it.
   class BudgetTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
@@ -60,12 +59,6 @@ module Reimbursements
     end
 
     # --- Remaining falls back to the initial budget -------------------------
-    #
-    # Budget#remaining read the forecast alone, so a freshly imported financial
-    # year showed "-" on every line under an area heading that printed a
-    # Remaining of its own, and so did any line created by hand with an initial
-    # figure. That is day one of every year, and it is what #projected_amount
-    # (and Area#remaining) have always meant by "the plan".
 
     test "remaining falls back to the initial budget when no forecast is logged" do
       budget = build_budget(initial_budget: 450)
@@ -95,15 +88,12 @@ module Reimbursements
       budget = build_budget
       add_expense(budget, status: Status::APPROVED, excl_vat: 100)
 
-      # Nil, never zero: a 0 there reads as fully overspent, which is why
-      # Area#remaining is nil in the same case.
+      # Nil, never zero: a 0 reads as fully overspent.
       assert_nil Budget.find(budget.id).remaining
     end
 
-    # An income line's plan is a target to RAISE and committed_amount is spend
-    # somebody recorded against it, so "target less spend" is not money left
-    # over. Falling it back onto the initial figure would put a number meaning
-    # nothing on every income line.
+    # An income plan is a target to raise, so target less spend is not money
+    # left over.
     test "an income line does not take the initial-budget fallback" do
       income = build_budget(name: "Box office", budget_type: "Income", initial_budget: 800)
 
@@ -118,11 +108,6 @@ module Reimbursements
     end
 
     # --- A £0 plan is unset, not a cap of nothing ---------------------------
-    #
-    # Mick's call. Production carries many termtime areas whose agreed total is
-    # £0 with real spend against them; reading the 0 as a cap made every one of
-    # them over budget, in red, for ever — a permanent false alarm, which is
-    # how a real one stops being read.
 
     test "a line whose plan is exactly zero reads as having no budget set" do
       budget = build_budget(initial_budget: 0)
@@ -152,10 +137,6 @@ module Reimbursements
     end
 
     # --- Variance -----------------------------------------------------------
-    #
-    # With no forecast logged the plan IS the agreed figure, so the drift is
-    # genuinely zero rather than unknown — a fact about the line. Blank stays
-    # for the case that really is undefined: no initial budget to drift from.
 
     test "variance is zero, not blank, when the plan is still the initial budget" do
       budget = build_budget(initial_budget: 450)
@@ -322,10 +303,7 @@ module Reimbursements
     end
 
     test "expected_outturn is blank for an Income budget" do
-      # "The greater of the projection and what's already been spent" is a
-      # worst-case cost. On an income line the same max reads as BEST-case
-      # income, the opposite direction, so it would be actively misleading:
-      # blank instead of a wrong number.
+      # On an income line the max would read as best-case income.
       income = build_budget(name: "Ticket income", budget_type: "Income", initial_budget: 8000)
       EusaActual.create!(budget: income, nominal_code: "8000", credit: BigDecimal("3000"))
 
@@ -343,9 +321,6 @@ module Reimbursements
     end
 
     # --- display_name --------------------------------------------------------
-    # The ONE composition every screen, reminder, email and receipt filename
-    # reads. Stripping the "Area: " prefix left three live Fringe lines all
-    # called "Marketing" on one nominal code.
 
     test "display_name names the area a line belongs to" do
       area = Area.create!(name: "Cogito")
@@ -363,11 +338,8 @@ module Reimbursements
       assert_equal cogito.name, improverts.name
       assert_not_equal cogito.display_name, improverts.display_name
     end
-    # display_name is load-bearing: BudgetImport.bare_name splits on its colon,
-    # FilenameSanitizer builds receipt filenames from it, and ReviewSupport
-    # .auto_payment_reference derives the BACS reference EUSA sees from it. The
-    # picker label has to be a SEPARATE string, or prefixing a dropdown would
-    # silently change the reference on every future payment.
+    # display_name is load-bearing (import matching, receipt filenames, the BACS
+    # reference), so the picker label must be a SEPARATE string.
     test "picker_label prefixes the cost centre without touching display_name" do
       centre = picker_cost_centre(key: "fringe-picker", eusa_code: "F40p")
       budget = build_budget(name: "Other", cost_centre: centre)
@@ -385,8 +357,7 @@ module Reimbursements
     end
 
     test "picker_label is the display name when the budget has no cost centre" do
-      # An unplaced line is lenient-scoped into every centre's screens, so there
-      # is no centre to name and a bare "- Other" would read as a missing one.
+      # An unplaced line belongs to every centre, so there is none to name.
       budget = build_budget(name: "Other", cost_centre: nil)
 
       assert_equal "Other", budget.picker_label
@@ -418,9 +389,8 @@ module Reimbursements
       assert_equal BigDecimal("1500"), other.reload.eusa_actual_amount
     end
 
-    # An apportioned row carries no budget_id (apportion_actual! clears it),
-    # so the two sets never overlap. A row linked WHOLE must still be counted
-    # exactly once.
+    # A split row has no budget_id, so the two sets never overlap; a row
+    # linked whole is counted once.
     test "a fully linked row is counted once, not twice" do
       budget = create_reimbursements_budget(name: "Show A", budget_type: "Income")
       create_reimbursements_eusa_actual(credit: 900, budget: budget)
@@ -428,8 +398,8 @@ module Reimbursements
       assert_equal BigDecimal("900"), budget.reload.eusa_actual_amount
     end
 
-    # An Expense line's figure totals through its EXPENSES, so an allocation
-    # to one is not income it earned and must not appear in its rollup.
+    # An expense line totals through its expenses, so an allocation is not
+    # income it earned.
     test "an expense budget's figure is untouched by allocations" do
       budget = create_reimbursements_budget(name: "Props", budget_type: "Expense")
       actual = create_reimbursements_eusa_actual(credit: 500)

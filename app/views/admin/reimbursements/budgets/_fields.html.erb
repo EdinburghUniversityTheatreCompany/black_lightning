@@ -1,22 +1,17 @@
 <%# locals: (form:, people:, name:, nominal_code:, budget_type:, initial_budget:, active:, owner_ids:, notes:, cost_centres: [], cost_centre_id: nil, areas: [], area_id: nil, owners_from_area: nil) %>
-<%# The budget fields, shared by new (values from params) and edit (values
-    from the budget). The cost centre picker only exists on new and only when
-    there is a choice to make. %>
-<%# select:ready, because the owners widget is built after an async import():
-    this controller's connect runs first, so a form rendered with an area
-    already chosen would disable the fieldset and leave the widget looking live. %>
+<%# Shared by new and edit. The cost centre picker shows on new only, and only
+    with a choice to make. %>
+<%# select:ready: the owners widget is built after an async import(), so a form
+    opened with an area chosen would otherwise disable the fieldset and leave
+    the widget looking live. %>
 <div class="flex flex-col gap-4" data-controller="reimbursements-budget-area"
      data-action="select:ready->reimbursements-budget-area#areaChanged">
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <%= render "shared/form/field", label: "Name", name: :name do %>
       <%= text_field_tag :name, name, class: input_classes %>
     <% end %>
-    <%# A datalist, NOT a select: the curated list is a set of suggestions, and
-        a code absent from it is legitimate (BudgetImport allows a blank one and
-        the overview has a "(none)" bucket), so refusing an unlisted code would
-        make the list a constraint nobody agreed to. Until now the labels
-        finance maintains on Settings fed nothing at all and this was bare
-        free text. %>
+    <%# A datalist, NOT a select: the curated codes are suggestions, and an
+        unlisted code is legitimate. %>
     <%= render "shared/form/field", label: "Nominal code", name: :nominal_code,
           hint: (if nominal_code_suggestions.any?
                    "Start typing to pick from the codes finance maintains on Settings, " \
@@ -40,8 +35,8 @@
     <%= render "shared/form/field", label: "Initial budget (£)", name: :initial_budget do %>
       <%= number_field_tag :initial_budget, reimbursements_amount_value(initial_budget), step: "0.01", class: input_classes %>
     <% end %>
-    <%# Before Area, because it narrows Area: the controller drops every
-        option tagged with another centre. %>
+    <%# Before Area, which it narrows: the controller drops every option tagged
+        with another centre. %>
     <% if cost_centres.size > 1 %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id do %>
         <%= select_tag :cost_centre_id,
@@ -53,9 +48,8 @@
     <% end %>
     <%= render "shared/form/field", label: "Area", name: :area_id,
           hint: "Leave blank for a standalone line like Contingency or payroll." do %>
-      <%# input_classes, not simple-select2: the Type and Cost centre selects on
-          this form are already plain styled ones, and a lone Tom Select widget
-          among them would read as a different kind of control. %>
+      <%# A plain select, not Tom Select, to match the Type and Cost centre
+          selects beside it. %>
       <%= select_tag :area_id,
             options_for_select(
               areas.map { |area| [ area.name, area.record_id, { data: { cost_centre_id: area.cost_centre_id } } ] },
@@ -73,14 +67,9 @@
   </label>
 
   <% if owners_from_area %>
-    <%# READ-ONLY, and deliberately so. The area owns and its budgets inherit,
-        so Budget#owners READS the area's owners while sync_owner_ids! WRITES
-        the budget's own rows — an editable list here reads one table and
-        writes another, deleting the own-owner rows the backfill kept so it
-        can be reversed (silently, since the screen keeps showing the area's
-        owners). BudgetsController#budget_params omits owner_ids entirely for
-        an area-bound budget, so nothing posted from here can be written
-        either. Ownership is edited on the AREA. %>
+    <%# READ-ONLY: Budget#owners reads the area's owners while sync_owner_ids!
+        writes the line's own rows, so an editable list would read one table and
+        write another. Ownership is edited on the area. %>
     <div>
       <p class="<%= FormStyles::LABEL %>">Owners</p>
       <% owner_names = owners_from_area.owners.map { |person| person.name.presence || person.email } %>
@@ -94,33 +83,27 @@
               class: "text-primary underline" %>)
       </p>
       <% if owner_names.empty? %>
-        <%# An area naming nobody switches the gate OFF for every line under it
-            (OwnerReview.gate_applies? is false with no owners), so the form
-            that can attach a line to one says so. %>
+        <%# An area naming nobody switches sign-off OFF for every line under it
+            (OwnerReview.gate_applies?). %>
         <p class="mt-1 text-sm text-warning">
           This area names nobody, so claims on this line skip budget-owner sign-off entirely.
         </p>
       <% end %>
     </div>
   <% else %>
-    <%# Disabled by the reimbursements-budget-area controller the moment an area
-        is chosen, because the area owns and its budgets inherit: the list would
-        write own_owners, which Budget#owners stops reading as soon as there is
-        an area. BudgetsController refuses such a post rather than storing rows
-        nothing consults, so with JavaScript off the operator is told; with it
-        on they never reach the refusal. %>
+    <%# Disabled by reimbursements-budget-area once an area is chosen, since the
+        area's owners then apply. With JavaScript off the controller refuses the
+        post instead. %>
     <fieldset data-reimbursements-budget-area-target="owners">
-      <%# The fieldset is the DISABLING wrapper, not a grouping: only a fieldset
-          can switch its descendants off, which is what stops the browser
-          posting owner_ids at all once an area is chosen. %>
+      <%# A fieldset because only a fieldset can disable its descendants, so the
+          browser posts no owner_ids once an area is chosen. %>
       <%= render "shared/form/field", label: "Owners", name: :owner_ids,
             hint: "Everyone who owns this budget. A line placed in an area takes the " \
                   "area's owners instead." do %>
-        <%# Only `simple-select2`, never input_classes — Tom Select copies the
-            classes onto the wrapper that already draws the box. `select_tag`
-            emits no hidden empty field of its own, and without it clearing
-            everyone posts no owner_ids key at all; it sits INSIDE the fieldset
-            so a disabled fieldset drops it too. %>
+        <%# Only simple-select2: Tom Select copies classes onto its wrapper, which
+            draws the box. select_tag emits no hidden empty field, so clearing
+            everyone would post no owner_ids; it sits INSIDE the fieldset so a
+            disabled fieldset drops it too. %>
         <%= hidden_field_tag "owner_ids[]", "", id: nil %>
         <%= select_tag :owner_ids,
               options_from_collection_for_select(
@@ -130,10 +113,8 @@
               data: { placeholder: "Search people…" } %>
       <% end %>
     </fieldset>
-    <%# aria-live, because the control that changes is the one being taken away:
-        a screen reader lands on a disabled fieldset with nothing said about
-        why. On the live region, not on the fieldset, so it is announced once
-        rather than read out as it is re-traversed. %>
+    <%# aria-live on the notice, not the fieldset, so taking the list away is
+        announced once. %>
     <p class="text-sm text-gray-700" hidden aria-live="polite"
        data-reimbursements-budget-area-target="notice">
       This line goes in an area, so it takes the area's owners. Set them on the area itself.

@@ -34,21 +34,18 @@ module Reimbursements
   class BudgetForecast < ApplicationRecord
     include RecordId
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true, inverse_of: :forecasts
-    # An area-level forecast revises the area's agreed total rather than one
-    # budget's allocation. Exactly one of budget/area is set — see
-    # belongs_to_exactly_one_owner below.
+    # An area forecast revises the area's agreed total. Exactly one of
+    # budget/area is set.
     belongs_to :area, class_name: "Reimbursements::Area", optional: true, inverse_of: :forecasts
-    # The batched revision that logged this forecast, when it came from a
-    # multi-budget "budget update" rather than a standalone per-budget entry.
+    # Set when the forecast came from a multi-budget update.
     belongs_to :budget_update, class_name: "Reimbursements::BudgetUpdate",
                                optional: true, inverse_of: :forecasts
 
     validates :amount, presence: true
     validate :belongs_to_exactly_one_owner
 
-    # The PORO exposed the linked budget's record id string (compared against
-    # budget.record_id in the Store and views); AR's own reader would return
-    # the integer FK.
+    # A String, to match Budget#record_id keys (e.g. the budget_updates index's
+    # @budgets_by_id).
     def budget_id = self[:budget_id]&.to_s
 
     # Display label: "<budget or area> - YYYY-MM-DD".
@@ -58,9 +55,7 @@ module Reimbursements
 
     private
 
-    # Belt and braces on top of the CHECK constraint added in
-    # AllowAreaBudgetForecasts: this gives the operator a readable message,
-    # the constraint catches a write that bypasses AR validations.
+    # Belt and braces over the CHECK constraint, for a readable message.
     def belongs_to_exactly_one_owner
       return if budget_id.present? ^ area_id.present?
 

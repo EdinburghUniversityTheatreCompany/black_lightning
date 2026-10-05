@@ -35,8 +35,8 @@
 #
 module Reimbursements
   ##
-  # A budget category. The rollups are computed here rather than stored — all
-  # amounts excl-VAT, mirroring the BACS spreadsheet:
+  # A budget line. Its rollups are computed, never stored, all excl-VAT like the
+  # BACS spreadsheet:
   #
   #   committed_amount = Σ amount_excl_vat, status ∈ {Approved, Submitted, Paid}
   #   total_paid       = Σ amount_excl_vat, status = Paid
@@ -45,8 +45,7 @@ module Reimbursements
   #   remaining        = projected_amount − committed_amount (nil with no plan)
   #   variance         = projected_amount − initial_budget (nil without initial)
   #
-  # Each is memoized per instance — one Store lives per request, so a Review
-  # render costs one query per figure, not one per card per figure.
+  # Each is memoized per instance; one store lives per request.
   class Budget < ApplicationRecord
     include RecordId
     include BudgetHealth
@@ -64,77 +63,45 @@ module Reimbursements
     # Expense budgets' actuals hang off their expenses (expense.eusa_actuals).
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
                             dependent: :nullify, inverse_of: :budget
-    # This line's share of the credit rows finance has SPLIT across several
-    # income budgets. An apportioned row carries no budget_id, so these never
-    # overlap with #eusa_actuals above.
+    # Shares of credit rows split across income budgets. A split row carries
+    # no budget_id, so these never overlap #eusa_actuals.
     has_many :actual_allocations, class_name: "Reimbursements::ActualAllocation",
                                   dependent: :destroy, inverse_of: :budget
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast",
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
                                  dependent: :destroy, inverse_of: :budget
-    # The rows on the budget itself. Read directly ONLY when the budget has no
-    # area — the backfill leaves them in place so it can be reversed, so a
-    # budget in an area has both, and the area's are the live ones (#owners).
+    # Read only for a line in no area. The backfill keeps them on area lines so
+    # it can be reversed; there the area's owners are live (#owners).
     has_many :own_owners, through: :budget_ownerships, source: :person
 
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
-    # A line created inside its area's form carries only a name and a nominal
-    # code, so it would land with no cost centre and no financial year — and
-    # DatabaseStore#in_year / #in_cost_centre are deliberately lenient, so an
-    # unstamped line appears in EVERY year's and EVERY centre's list and
-    # (active by default) in every producer's budget picker in both centres.
-    # The area is the line's parent, so inherit its coordinates here rather
-    # than in one controller: every present and future path that hangs a
-    # budget off an area gets it. Only ever fills a BLANK, so it can never
-    # move a line out of the pot that already owns it — the same rule as
-    # DatabaseStore#adopt_budget!. A consequence worth stating, since it is a
-    # write nobody asked for: an unstamped legacy line already in an area gets
-    # stamped by the next unrelated Save. That is the intended direction (the
-    # area is its parent, and it is what adopt_budget! does on an import).
+    # A line made on its area's form has no cost centre or year, and an
+    # unstamped line is lenient-scoped into every year's and centre's lists and
+    # pickers, so it inherits the area's. Fills BLANKS only, so it never moves a
+    # placed line out of its pot (an unstamped line is stamped on its next Save).
     before_validation :inherit_area_scoping
 
-    # What to call this line wherever a person reads it ON ITS OWN. The ONE
-    # composition: anything naming a budget to a person reads this rather than
-    # building its own, and every list of budgets is ORDERED by it, or the
-    # labels read out of order under a sort on the bare name.
-    #
-    # The bare name stays correct exactly where the area is already beside it:
-    # the grouped budgets index's rowgroup heading, the overview's area card,
-    # an export's own Area column, the name FIELD on the budget form.
-    # A COLON, not a dash, and that is a correctness choice rather than a
-    # style one: it is the spelling BudgetImport.bare_name splits on, so a
-    # label copied off a screen into the committee's spreadsheet resolves to
-    # the line it names. A dash does not — it reads as a whole new name and
-    # buckets as a create, which is the duplicate-line failure the two-spelling
-    # matcher exists to prevent. (Colons are stripped by FilenameSanitizer, so
-    # a receipt filename is unaffected.)
+    # The one name for a line read on its own; lists of budgets are ordered by
+    # it. The bare name is right only where the area is already beside it.
+    # The COLON is correctness: BudgetImport.bare_name splits on it, so a label
+    # copied into the committee's sheet resolves to its line, where a dash
+    # would bucket as a create (a duplicate line).
     def display_name
       area ? "#{area.name}: #{name}" : name.to_s
     end
 
-    # How this line reads in a <select>, and NOWHERE else.
-    #
-    # It has to be separate from #display_name, which is load-bearing:
-    # BudgetImport.bare_name splits on its colon to match a re-imported line,
-    # FilenameSanitizer builds receipt filenames from it, and
-    # ReviewSupport.auto_payment_reference derives the BACS reference EUSA sees
-    # from it. Prefixing THAT to label a dropdown would silently change the
-    # reference on every future payment.
-    #
-    # The prefix earns its place because active_budgets — which fills every
-    # submitter's picker — is deliberately NOT cost-centre scoped, so a producer
-    # really is choosing between several centres' lines with nothing else on
-    # screen to tell them apart.
+    # A <select> label only. It must stay separate from #display_name, which
+    # the BACS payment reference, receipt filenames and import matching read.
+    # The centre prefix is needed because active_budgets is not centre-scoped.
     def picker_label
       cost_centre ? "#{cost_centre.picker_prefix} - #{display_name}" : display_name
     end
 
-    # The area owns and its budgets inherit; a budget with no area owns
-    # itself. Owner links are People record id STRINGS, because OwnerReview
-    # and the budgets UI compare them against person.record_id.
+    # The area owns and its budgets inherit. owner_ids are record id STRINGS,
+    # compared against person.record_id by OwnerReview and the budgets UI.
     def owners
       area ? area.owners : own_owners
     end
@@ -143,11 +110,8 @@ module Reimbursements
       owners.map(&:record_id)
     end
 
-    # Diff-syncs the budget's OWN owners join table to exactly +person_ids+
-    # (numeric ids) — the one sync path for the store's budget edit and the
-    # importer. Writes here regardless of whether the budget is in an area:
-    # the rows are the reversible record described on #own_owners, not the
-    # live read.
+    # Diff-syncs the OWN owner rows to exactly +person_ids+ (numeric ids),
+    # whether or not the line is in an area.
     def sync_owner_ids!(person_ids)
       person_ids = person_ids.map(&:to_i)
       budget_ownerships.where.not(person_id: person_ids).destroy_all
@@ -156,9 +120,8 @@ module Reimbursements
       end
     end
 
-    # The rollups use the association preload when the store loaded it (the
-    # budgets index would otherwise pay ~3 queries per card), falling back to
-    # SQL for a budget loaded on its own.
+    # The rollups read the store's preload when it is loaded (the index would
+    # otherwise pay ~3 queries per line) and SQL otherwise.
     def committed_amount
       @committed_amount ||=
         if expenses.loaded?
@@ -188,80 +151,46 @@ module Reimbursements
         end
     end
 
-    # What is left against the line's CURRENT PLAN.
-    #
-    # The plan is #projected_amount — the latest forecast, falling back to the
-    # initial figure — which is the same reading Area#remaining has always had
-    # and the same figure the overview's Projected column prints. It used to
-    # read current_forecast alone, so a freshly imported financial year showed
-    # "-" on every line under an area heading that printed a Remaining, and so
-    # did any line created by hand with an initial figure and no forecast yet.
-    # That is day one of every financial year.
-    #
-    # Nil ONLY when nobody has set a figure at all — no forecast AND no initial
-    # budget. There is then genuinely nothing to be left of, and the screens
-    # say "no budget set" rather than printing a dash (a 0 would read as fully
-    # overspent, the reason Area#remaining is nil in the same case).
-    #
-    # INCOME budgets keep the old forecast-only reading, deliberately. On an
-    # income line the plan is a target to RAISE and committed_amount is spend
-    # somebody recorded against it, so "target less spend" is not money left
-    # over — falling that back onto the initial figure would put a number on
-    # every income line that means nothing. Nothing reads it for a decision
-    # either: over_budget? is false for income by definition.
+    # What is left of the plan (#projected_amount). Nil when nobody set a
+    # figure, since a 0 would read as fully overspent. An income line reads its
+    # forecast alone: its plan is a target to raise, so falling back to the
+    # initial figure would mean nothing.
     def remaining
       plan = income? ? current_forecast : projected_amount
       return nil if plan.nil?
-      # A plan of exactly £0 is a figure nobody filled in, not a cap of
-      # nothing — see PlannedAmount. Without this a £0 line with real spend
-      # reads as over budget, in red, forever.
+      # A £0 plan is unset, not a cap (PlannedAmount).
       return nil if no_budget_set?
 
       plan - committed_amount
     end
 
-    # How far the current plan has drifted from the figure the committee
-    # agreed. Reads #projected_amount for the reason #remaining does, so with
-    # no forecast logged it is £0.00 — the plan IS the agreed figure, which is
-    # a fact about the line and not an unknown.
-    #
-    # Nil when there is no initial budget: you cannot drift from a plan nobody
-    # set, and that case stays blank rather than claiming a zero.
+    # The plan's drift from the agreed figure: £0.00 with no forecast (the
+    # plan IS the agreed figure), nil without an initial budget.
     def variance
       return nil if no_budget_set? || initial_budget.nil?
 
       projected_amount - initial_budget
     end
 
-    # --- Overview rollups ---------------------------------------------------
-    # The "current plan" for the line: the latest logged forecast, falling back
-    # to the initial figure when none has been logged. Nil only when neither
-    # exists (an untracked line).
+    # The plan: the latest forecast, else the initial budget.
     def projected_amount
       current_forecast || initial_budget
     end
 
-    # The portal's own view of what's been paid (status = Paid). Named to sit
-    # beside eusa_actual_amount, whose divergence from it is a reconciliation
-    # signal.
+    # Paid in the portal. Beside eusa_actual_amount, a gap between the two is a
+    # reconciliation signal.
     def paid_portal_amount
       total_paid
     end
 
-    # The EUSA ledger's view of what actually landed on this line, NET. For an
-    # Expense budget that's the debits less the credits on the actuals
-    # reconciled to its expenses; for an Income budget it's the credits less the
-    # debits booked directly against the budget. Netting matters both ways: a
-    # supplier refund or a credit note genuinely reduces what a line cost, and
-    # summing debits alone left a £900 line reading £900 when the true net was
-    # £600 (and dragged expected_outturn up with it).
+    # What the EUSA ledger says landed on this line, NET: an expense line's
+    # debits less credits on its expenses' actuals, an income line's credits
+    # less debits booked against it. A refund reduces a line.
     def eusa_actual_amount
       @eusa_actual_amount ||= income? ? credit_actual_total : debit_actual_total
     end
 
-    # Pending expenses not yet approved: money in the pipeline that hasn't
-    # reached Committed. Kept separate so Committed keeps its meaning
-    # (Approved/Submitted/Paid).
+    # Pending claims, kept apart from committed_amount.
     def pipeline_amount
       @pipeline_amount ||=
         if expenses.loaded?
@@ -271,15 +200,9 @@ module Reimbursements
         end
     end
 
-    # The most this line could realistically end up COSTING: the greater of the
-    # current projection and what's already been spent or committed, so the
-    # number never drops below reality as spend lands.
-    #
-    # Nil for an Income budget, deliberately. The same max over income figures
-    # is best-case income, the opposite direction from "never drops below
-    # reality" — a £8,000 target with £3,000 banked would report £8,000 as
-    # though it were assured. Better blank than confidently wrong; the
-    # projection and the EUSA actual are both still shown on their own.
+    # The most the line could end up costing, never below what is already
+    # spent or committed. Nil for income, where the same max would read as
+    # best-case income.
     def expected_outturn
       return nil if income?
 
@@ -295,22 +218,15 @@ module Reimbursements
       self.financial_year_id ||= area.financial_year_id
     end
 
-    # Income booked straight against an Income budget (budget_id set), credits
-    # less debits: a debit on an income line is income handed back.
-    # (#to_a on a loaded association reuses the preload, so this stays one query
-    # for a budget loaded on its own and none for one the store preloaded.)
+    # Credits less debits booked on the line (a debit is income handed back).
+    # #to_a reuses the preload when there is one.
     def credit_actual_total
       -EusaActual.net(eusa_actuals.to_a) + allocated_credit_total
     end
 
-    # This line's share of the rows that were split across several income
-    # budgets. Counted alongside the rows attached whole, never instead of
-    # them: apportion_actual! clears an apportioned row's budget_id, so the
-    # two sets are disjoint and nothing is counted twice.
-    #
-    # Reads the preloaded association where budgets_with_actuals loaded it,
-    # so the overview costs no per-budget query, and falls back to a SUM for
-    # a budget read on its own.
+    # This line's shares of split rows, counted beside the rows linked whole:
+    # apportion_actual! clears a split row's budget_id, so the sets are
+    # disjoint. Reads the preload where budgets_with_actuals loaded it.
     def allocated_credit_total
       if actual_allocations.loaded?
         actual_allocations.sum { |allocation| allocation.amount || 0 }
@@ -319,10 +235,9 @@ module Reimbursements
       end
     end
 
-    # Spend on the actuals reconciled to this budget's expenses, debits less
-    # credits. Both branches net through EusaActual.net (which also drops
-    # offsetting legs), so a preloaded and a freshly-queried budget can never
-    # report different figures.
+    # Debits less credits on the actuals of this line's expenses. Both branches
+    # net through EusaActual.net (which drops offsetting legs), so preloaded and
+    # fresh reads agree.
     def debit_actual_total
       if expenses.loaded? && expenses.all? { |e| e.association(:eusa_actuals).loaded? }
         expenses.sum { |e| EusaActual.net(e.eusa_actuals) }

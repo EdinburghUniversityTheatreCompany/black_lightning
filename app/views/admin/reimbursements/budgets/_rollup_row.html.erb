@@ -1,8 +1,6 @@
 <%# locals: (label:, rollup:, row_class: "border-t border-gray-300 font-medium") %>
-<%# One totals row of the overview table (a per-code-and-type subtotal or a
-    per-type grand total), so every total on the page is built from the same
-    cells in the same order as the budget rows above it. Expected outturn is
-    blank for an income total on purpose — see NominalCodeRollup#expected. %>
+<%# One totals row, built from the same cells in the same order as the budget
+    rows. Expected outturn is blank for an income total (RollupTotals#expected). %>
 <tr class="<%= row_class %>">
   <td colspan="2" class="text-right"><%= label %></td>
   <td class="text-right"><%= reimbursements_money(rollup.initial) %></td>
@@ -12,9 +10,6 @@
   <td class="text-right"><%= reimbursements_money(rollup.paid_portal) %></td>
   <td class="text-right"><%= reimbursements_money(rollup.eusa_actual) %></td>
   <td class="text-right"><%= reimbursements_money(rollup.expected) %></td>
-  <%# A group's remaining and variance, summed the way every other column here
-      is (a nil line counting as zero), so the two health columns total under
-      the rows that carry them rather than leaving the footer short. %>
   <td class="text-right <%= "text-danger" if rollup.remaining.negative? %>">
     <%= reimbursements_money(rollup.remaining) %>
   </td>

@@ -6,9 +6,8 @@
       <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
     <% end %>
 
-    <%# owner_ids is the budget's OWN rows, which is what this form writes —
-        never @budget.owner_ids, which resolves through the area. An
-        area-bound budget renders them read-only instead (owners_from_area). %>
+    <%# owner_ids are the budget's OWN rows, which this form writes, never
+        @budget.owner_ids (resolved through the area). %>
     <%= render "fields", form: form, people: @people,
           name: @budget.name, nominal_code: @budget.nominal_code, budget_type: @budget.budget_type,
           initial_budget: @budget.initial_budget, notes: @budget.notes,
@@ -25,16 +24,12 @@
     <p class="mb-3"><%= health_badge %></p>
   <% end %>
   <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-    <%# "Projected", the same one name the index and the overview use. The raw
-        latest forecast is in the forecast log directly below this card. %>
     <div><dt class="text-gray-500">Projected</dt><dd class="font-medium"><%= reimbursements_budget_projected(@budget) %></dd></div>
     <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@budget.committed_amount) %></dd></div>
     <div><dt class="text-gray-500">Pipeline</dt><dd class="font-medium" title="Pending expenses not yet approved."><%= reimbursements_money(@budget.pipeline_amount) %></dd></div>
     <div><dt class="text-gray-500">Paid (portal)</dt><dd class="font-medium"><%= reimbursements_money(@budget.paid_portal_amount) %></dd></div>
     <div><dt class="text-gray-500">EUSA actual</dt><dd class="font-medium" title="Reconciled EUSA ledger spend for this line."><%= reimbursements_money(@budget.eusa_actual_amount) %></dd></div>
     <div><dt class="text-gray-500">Expected outturn</dt><dd class="font-medium" title="The greater of the current projection and what's already been spent or committed, so the number never drops below reality. Blank on income lines, where the same figure would read as best-case income instead."><%= reimbursements_money(@budget.expected_outturn) %></dd></div>
-    <%# Both read the same helper the index row does, so the colouring and the
-        "no budget set" wording cannot drift between the two screens. %>
     <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium"><%= reimbursements_budget_remaining(@budget) %></dd></div>
     <div>
       <dt class="text-gray-500">Variance</dt>
@@ -54,8 +49,8 @@
     <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount, html_class: "w-40" do %>
       <%= number_field_tag :amount, nil, step: "0.01", class: input_classes %>
     <% end %>
-    <%# html_class: "" drops the partial's default mb-4 — in an items-end row it
-        would float this field above its neighbours, which pass their own class. %>
+    <%# html_class: "" drops the field's default mb-4, which would lift it above
+        its neighbours in this items-end row. %>
     <%= render "shared/form/field", label: "Date", name: :date, html_class: "" do %>
       <%= date_field_tag :date, Date.current, class: input_classes(width: nil) %>
     <% end %>
@@ -123,8 +118,7 @@
                         edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),
                         "aria-label": "Edit forecast from #{reimbursements_date(forecast.date)}",
                         class: btn_classes(:secondary, :sm) %>
-                  <%# inline-block on the button_to FORM (not the inner button) so
-                      Delete sits beside Edit instead of dropping to its own line. %>
+                  <%# inline-block on the button_to FORM so Delete sits beside Edit. %>
                   <%= button_to "Delete",
                         delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id),
                         method: :delete, class: btn_classes(:danger, :sm),

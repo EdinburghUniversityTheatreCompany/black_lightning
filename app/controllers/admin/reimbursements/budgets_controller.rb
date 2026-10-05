@@ -1,31 +1,17 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team management of the budgets: an overview of every
-    # budget's financials (initial, rolled-up current forecast, committed, total
-    # paid, remaining, variance), an edit form for the operator-editable fields
-    # (name, nominal code, visible-to-submitters, notes, initial budget, budget
-    # type and the many-to-many People owners), and a forecast-history log with
-    # an "add a projected-spend update" action that appends a Budget Forecasts
-    # record.
-    #
-    # The rollups (current_forecast, committed_amount, total_paid, remaining,
-    # variance) are read-only displays — Budget derives them from the claims.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Finance's budget screens: index, overview, the edit form and its forecast
+    # log. #show is also open to the line's own owners.
     class BudgetsController < FinanceController
       include ListsClaims
 
-      # A loose line's page is shared with its owners, who hold no finance
-      # permission — the same union, and the same 404, as an area's page.
+      # A loose line's page is also open to its owners, who hold no finance
+      # permission (the same union and 404 as an area's page).
       skip_before_action :authorize_finance!, only: %i[show]
       before_action :authorize_budget_page!, only: %i[show]
       before_action :set_budget, only: %i[edit update forecast update_forecast delete_forecast]
 
-      # GET /admin/reimbursements/budgets/:id
-      #
-      # A loose line's own page, the area page's shape without a lines table.
       def show
         @title = @budget.name
         @summary = ::Reimbursements::SpendSummary.for_budget(@budget)
@@ -35,15 +21,11 @@ module Admin
 
       def index
         @title = "Reimbursements Budgets"
-        # This table (and its CSV) shows the EUSA-actual rollup per line, so it's
-        # one of the two readers that pays for the actuals preload.
+        # budgets_with_actuals: this table and its CSV print each line's EUSA actual.
         sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
         @people_by_id = store.people.index_by(&:record_id)
-        # The unscoped, fully-preloaded id->Area lookup (owners, and each
-        # area's budgets' expenses/forecasts) — the grouped index reads every
-        # area figure off THESE objects, never off budget.area, or each
-        # area's committed_amount/allocated would N+1 across its budgets'
-        # expenses and forecasts.
+        # Area figures are read off these preloaded objects, never off
+        # budget.area, whose unloaded #budgets would N+1.
         @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
           # Not paginated: a page boundary split an area's lines across pages.
@@ -52,10 +34,8 @@ module Admin
         end
       end
 
-      # A finance overview of the same budgets down two axes — EUSA's nominal
-      # code and Bedlam's areas — each with a subtotal per group and per budget
-      # type, plus a separate list of the EUSA ledger rows no budget's figures
-      # account for.
+      # The same budgets by nominal code and by area, plus the EUSA ledger rows
+      # no budget accounts for.
       def overview
         @title = "Budget overview"
         grouped = store.budgets_by_nominal_code
@@ -66,22 +46,16 @@ module Admin
         @unattributed_by_code = unattributed.group_by do |actual|
           actual.nominal_code.presence || ::Reimbursements::DatabaseStore::NO_CODE_LABEL
         end
-        # The two real health numbers, so they sit above the fold instead of
-        # under ~120 table rows. The over-budget count is taken over the SAME
-        # budgets the cards total (the page's year and cost centre), or the
-        # summary would count lines the tables below do not show.
+        # Over the same scoped budgets the cards total, so the summary counts
+        # only lines the tables show.
         @over_budget_count = grouped.values.flatten.count(&:over_budget?)
-        # COUNT as well as net, because the net is debits less credits and can
-        # legitimately be NEGATIVE (more unattributed income than spend) — a
-        # bare negative in the headline reads as bad news, which everywhere
-        # else in this portal it is.
+        # A count beside the net, which is debits less credits and can
+        # legitimately be negative.
         @unattributed_count = unattributed.size
         @unattributed_total = ::Reimbursements::EusaActual.net(unattributed)
       end
 
-      # One budget line by hand. The spreadsheet import is the way a year gets
-      # set up; this is for the single line that turns up mid-year and isn't
-      # worth a re-import.
+      # One line by hand; a whole year comes in through the budget import.
       def new
         @title = "New budget"
         @people = store.people
@@ -110,16 +84,13 @@ module Admin
       def edit
         @title = "Budget: #{@budget.display_name}"
         @people = store.people
-        # Only the areas area_scope_error would accept for THIS line — the
-        # budget's own year and centre, not the page's selector — plus its OWN
-        # area, always: area_id writes unscoped ("" detaches), so an area
-        # outside the rendered set left the select reading "No area" and any
-        # Save — one changing only the notes — nilled a link nobody touched.
+        # The areas area_scope_error accepts for this line, plus its own area
+        # always: area_id writes unscoped, so an unrendered area made any Save
+        # nil the link.
         @areas = (assignable_areas(year: @budget.financial_year, centre: @budget.cost_centre) +
                   [ @budget.area ]).compact.uniq
         @forecasts = store.budget_forecasts(@budget.record_id)
-        # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
-        # edit form (no JS), so a mistyped forecast can be corrected in place.
+        # ?edit_forecast=<id> renders that row as an inline edit form.
         @editing_forecast_id = params[:edit_forecast].presence
       end
 
@@ -173,14 +144,8 @@ module Admin
 
       private
 
-      # The curated codes the budget form suggests, and the labels the overview
-      # prints beside a bare code. Both read the SELECTED cost centre, which
-      # with none chosen means every centre — the "All" default every finance
-      # screen has.
-      #
-      # Until now the labels finance maintains on a cost centre's Settings page
-      # were rendered nowhere else at all: the budget form's code was free text
-      # and the overview printed bare digits.
+      # The codes the form suggests and the overview's labels, for the selected
+      # cost centre (none selected means every centre).
       def nominal_code_suggestions
         @nominal_code_suggestions ||=
           ::Reimbursements::NominalCode.suggestions_for(selected_cost_centre)
@@ -193,11 +158,8 @@ module Admin
       end
       helper_method :nominal_code_labels
 
-      # The overview's second axis: the SAME budgets the nominal-code card
-      # totals, regrouped under their area, so the two cards can never quote
-      # different money for one page. The area objects come from store.areas,
-      # the preloaded reader every area figure has to be read off — never
-      # budget.area, whose own #budgets is unloaded and would N+1.
+      # The budgets the nominal-code card totals, regrouped by area. Areas come
+      # from store.areas, never budget.area, whose unloaded #budgets would N+1.
       def build_area_rollups(budgets)
         areas_by_id = store.areas.index_by(&:record_id)
         by_area_id = budgets.group_by { |budget| budget.area&.record_id }
@@ -205,8 +167,8 @@ module Admin
         @area_rollups = by_area_id
                         .map { |id, group| ::Reimbursements::AreaRollup.new(area: areas_by_id[id], budgets: group) }
                         .sort_by { |rollup| rollup.name.to_s.downcase }
-        # Nil rather than an empty rollup, so the view renders no "Not in an
-        # area" heading on a portal whose lines all sit in one.
+        # Nil, not empty, so no "Not in an area" heading renders when every
+        # line has an area.
         @unassigned_rollup = unassigned && ::Reimbursements::AreaRollup.new(area: nil, budgets: unassigned)
       end
 
@@ -219,9 +181,7 @@ module Admin
         false
       end
 
-      # Finance, or a person this line's own owner set names. A line INSIDE an
-      # area is reached through the area's page instead, since that is where its
-      # figures and its siblings are.
+      # Finance, or one of the line's owners; anyone else gets a 404.
       def authorize_budget_page!
         @budget = store.find_budget(params[:id])
         raise ActiveRecord::RecordNotFound if @budget.nil? || !budget_page_visible?(@budget)
@@ -241,9 +201,8 @@ module Admin
         edit_admin_reimbursements_budget_path(@budget.record_id)
       end
 
-      # The budget write path has no model-backed form object, so a blank
-      # name/nominal code or a mangled budget_type param has to be caught here
-      # or it reaches the store with no feedback to the operator.
+      # No form object backs this write, so the checks that tell the operator
+      # what is wrong live here.
       def budget_validation_error(attrs, budget = @budget)
         return "Enter a budget name." if attrs[:name].blank?
         return "Enter a nominal code." if attrs[:nominal_code].blank?
@@ -255,23 +214,10 @@ module Admin
           owner_ids_error(attrs[:owner_ids])
       end
 
-      # A line in an area must sit in the SAME cost centre and financial year
-      # as the area. Budget's own inherit_area_scoping fills blanks only — so it
-      # can never move a line somebody has already placed — and #create always
-      # hands it a centre (chosen_cost_centre falls back to the default), so the
-      # inheritance never fired on the create path and the mismatch was written
-      # silently.
-      #
-      # It matters because the two readings then disagree and neither is wrong:
-      # the grouped budgets index scopes its ROWS to the selected centre and
-      # year while an area's subtotal covers the whole area, and the overview's
-      # area card says the same thing about lines outside its scope. A line
-      # deliberately placed in another year's area is a real state; one created
-      # by a form that never mentioned the clash is a mistake nobody can see.
-      #
-      # Refused rather than silently re-homed: moving the line into the area's
-      # centre would move money between pots on a save the operator thinks is
-      # about a name.
+      # A line in an area must share the area's cost centre and year
+      # (inherit_area_scoping fills blanks only, and #create always sets a
+      # centre). Refused, never re-homed: moving the line to the area's centre
+      # would move money between pots on a Save about a name.
       def area_scope_error(attrs, budget)
         return nil unless attrs.key?(:area_id)
 
@@ -293,9 +239,8 @@ module Admin
         assignable_areas(year: selected_financial_year)
       end
 
-      # The areas a line in +year+ and +centre+ may join, on the same lenient
-      # terms as mismatch_error — an unset side matches anything — so the
-      # picker never offers an area the Save would then refuse.
+      # Lenient like mismatch_error (an unset side matches anything), so the
+      # picker never offers an area the Save refuses.
       def assignable_areas(year:, centre: nil)
         store.areas.select do |area|
           lenient_match?(area.financial_year_id, year&.id) &&
@@ -307,9 +252,8 @@ module Admin
         area_value.nil? || budget_value.nil? || area_value == budget_value
       end
 
-      # Nil when either side is unset: an unstamped area or line is
-      # lenient-scoped into every centre and year on purpose, and inheritance
-      # will fill the blank rather than contradict it.
+      # Nil when either side is unset: an unstamped area or line belongs to
+      # every centre and year, and inheritance fills the blank.
       def mismatch_error(label, area_value, budget_value)
         return nil if area_value.blank? || budget_value.blank? || area_value == budget_value
 
@@ -317,12 +261,10 @@ module Admin
           "(#{budget_value}). Pick an area from #{budget_value}, or leave Area blank."
       end
 
-      # The owners ticked on a form that is ALSO putting the line in an area
-      # would be written to own_owners, which Budget#owners never reads once
-      # there is an area — so they are refused rather than stored where nothing
-      # consults them. Only where the form OFFERED the list: a budget already
-      # in an area renders it read-only, and whatever a stale page posts there
-      # is ignored rather than refused (budget_params drops the key).
+      # Owners ticked for a line going into an area would land in own_owners,
+      # which Budget#owners never reads once there is an area, so they are
+      # refused. A line already in an area renders no list, and what a stale
+      # page posts is ignored (budget_params drops the key).
       def owners_in_area_error(budget)
         return nil if budget.area_id || posted_area_id.blank?
         return nil if Array(params[:owner_ids]).reject(&:blank?).empty?
@@ -331,10 +273,8 @@ module Admin
           "never be read. Untick them and set them on the area, or leave Area blank."
       end
 
-      # Operator-editable budget attributes. Rollups/formulas are never written.
-      # +active+ (visible-to-submitters) comes from a checkbox, so absence means
-      # "off". +initial_budget+ is only sent when a valid number is given, so a
-      # blank field can't zero it.
+      # +active+ is a checkbox, so absence means off. A blank or unreadable
+      # initial_budget is left out, so it cannot zero the figure.
       def budget_params(budget = @budget)
         attrs = {
           name: params[:name].to_s.strip,
@@ -343,23 +283,14 @@ module Admin
           budget_type: params[:budget_type].presence || budget.budget_type,
           active: params[:active].present?
         }
-        # A form that renders the picker always posts it, so an ABSENT param is
-        # a caller that never offered the field — "no change", the same guard
-        # budget_type has. A posted "" is still the deliberate detach the
-        # select's "No area" option means.
+        # An absent area_id means no change (the form offered no picker); a
+        # posted "" is the "No area" option, a deliberate detach.
         attrs[:area_id] = params[:area_id].presence if params.key?(:area_id)
-        # Ownership is edited on the AREA, so an area-bound budget's form shows
-        # its inherited owners read-only and NOTHING it posts may be written:
-        # Budget#owner_ids reads the area's owners while sync_owner_ids! writes
-        # the budget's own rows, so a Save that carried the area's list would
-        # delete the own-owner rows the backfill kept in order to be
-        # reversible, and an ownerless area's empty list would delete them all
-        # (where.not(person_id: []) compiles to WHERE 1=1). Omitting the KEY,
-        # not sending [], is what stops update_budget! syncing at all.
-        # The area the line is BEING GIVEN, never only the one it already has:
-        # #create builds a Budget.new whose area_id is nil until these attrs
-        # are assigned, so reading the record alone let every owner ticked
-        # while creating a line inside an area through into own_owners.
+        # Ownership is edited on the area. For a line in (or going into) one,
+        # omit the KEY rather than send []: syncing would rewrite the own rows
+        # the backfill keeps, and an empty list is where.not(person_id: []),
+        # i.e. WHERE 1=1. Read the area being GIVEN, not only the record's:
+        # #create's Budget.new has area_id nil.
         unless budget.area_id || posted_area_id.present?
           attrs[:owner_ids] = Array(params[:owner_ids]).reject(&:blank?)
         end
@@ -368,8 +299,6 @@ module Admin
         attrs
       end
 
-      # The area this form is posting, or nil where it offered no picker at all
-      # ("" is the select's "No area", a deliberate detach).
       def posted_area_id
         params[:area_id].presence
       end

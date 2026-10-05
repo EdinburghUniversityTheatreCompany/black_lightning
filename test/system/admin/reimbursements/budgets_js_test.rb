@@ -2,13 +2,8 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # The budget-side area picker, clicked for real. A request-level test POSTs
-    # straight to :update with whatever params the test author typed, so it
-    # cannot see a form the browser itself fails to submit correctly — Task 7's
-    # nested-fields shape could not deliver its params at all, and that was
-    # only caught by a browser test clicking the real button. This proves the
-    # <select> the browser actually renders carries the budget to its new area,
-    # and that clearing it back to "No area" detaches it.
+    # The budget form's area picker and owners list, clicked for real: a
+    # request test cannot see what the browser fails to send.
     class BudgetsJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -43,13 +38,8 @@ module Admin
         assert_nil budget.reload.area
       end
 
-      # M8, clicked. The owners fieldset and the area picker are one control
-      # between them: a request test posts whatever params its author typed, so
-      # it can assert the server REFUSES owner_ids alongside an area but cannot
-      # see whether a browser sends them at all. A disabled fieldset submits
-      # none of its controls, which is what keeps the operator away from that
-      # refusal — and what leaves the budget's own owner rows untouched instead
-      # of synced to an empty list.
+      # A disabled fieldset submits none of its controls, so the browser sends
+      # no owner_ids and the own rows stay untouched rather than synced to [].
       test "choosing an area on the new-budget form takes the owners list away" do
         create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         area = create_reimbursements_area(name: "Cogito")
@@ -70,9 +60,8 @@ module Admin
                      "the browser must send no owner_ids at all for a line going into an area"
       end
 
-      # A disabled fieldset stops the browser SUBMITTING its controls, but Tom
-      # Select's own control is divs and goes on looking live inside one — so an
-      # operator would pick owners that are then silently dropped.
+      # A disabled fieldset stops the browser submitting its controls, but Tom
+      # Select's control is divs and goes on looking live inside one.
       test "choosing an area visibly locks the owners widget" do
         create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         create_reimbursements_area(name: "Cogito")
@@ -87,9 +76,8 @@ module Admin
         assert_no_selector ".ts-wrapper.disabled"
       end
 
-      # The form can OPEN with an area already chosen (?area_id=), and the
-      # widget is built after an async import() — so without the select:ready
-      # handshake the fieldset is disabled and the widget is left looking live.
+      # Opened with ?area_id=, the widget is built after an async import(), so
+      # without the select:ready handshake it is left looking live.
       test "a form opened with an area already chosen locks the widget too" do
         create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         area = create_reimbursements_area(name: "Cogito")
@@ -99,8 +87,8 @@ module Admin
         assert_selector ".ts-wrapper.disabled"
       end
 
-      # The other half of the same control: with no area chosen the list is the
-      # live one, so a green test above cannot be a fieldset that never enables.
+      # With no area the list is live, so the tests above cannot pass on a
+      # fieldset that never enables.
       test "a line in no area still saves the owners ticked on the same form" do
         person = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         create_reimbursements_area(name: "Cogito")
@@ -117,9 +105,8 @@ module Admin
         assert_equal [ person.record_id ], budget.own_owners.map(&:record_id)
       end
 
-      # The new form renders every centre's areas; the Cost centre select
-      # narrows them, and a choice the new centre does not hold is dropped
-      # rather than posted for the server to refuse.
+      # The Cost centre select narrows the areas, and drops a choice the new
+      # centre does not hold rather than post it for the server to refuse.
       test "choosing a cost centre narrows the area picker to that centre's areas" do
         fringe = ::Reimbursements::CostCentre.default
         termtime = create_second_reimbursements_cost_centre
@@ -146,9 +133,8 @@ module Admin
         assert_equal [ "Termtime show", termtime ], [ budget.area.name, budget.cost_centre ]
       end
 
-      # The compound path, clicked: the select is year- and centre-scoped while
-      # area_id writes unscoped, so an area the picker does not offer read
-      # "No area" and an unrelated Save detached the budget.
+      # The picker is year- and centre-scoped while area_id writes unscoped, so
+      # it must still offer the budget's own area.
       test "a Save that changes only the notes keeps an area from another year" do
         ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
         next_year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027")

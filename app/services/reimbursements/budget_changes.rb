@@ -1,30 +1,18 @@
 module Reimbursements
   ##
-  # "Changes to the budget": one area's forecast log, its own revisions and
-  # its lines' in one list, oldest first.
-  #
-  # A forecast row stores only the NEW amount, so "what changed" has to be
-  # reconstructed by walking each line's own log in order from the figure it
-  # started with. Doing that per line rather than across the area matters: two
-  # lines revised at the same budget meeting are two independent sequences,
-  # and reading them as one would report each new amount as a change from the
-  # other line's.
-  #
-  # An area's own forecasts revise the show's AGREED TOTAL and its lines'
-  # revise an allocation inside it, so each entry says which it was.
+  # An area's forecast log, its own revisions (of the agreed total) and its
+  # lines', oldest first. A forecast stores only the new amount, so each line's
+  # log is walked on its own: two lines revised at one meeting are independent.
   class BudgetChanges
     Entry = Struct.new(:date, :subject, :area_total, :from, :to, :reason, :budget_update_id,
                        keyword_init: true) do
-      # Whether this row revises the show's agreed total rather than one line.
       def area_total? = area_total
 
-      # A first forecast against a line that started with no figure at all is
-      # not a change from anything — it is somebody finally setting one.
+      # A first figure on a line that had none, not a change.
       def first? = from.nil?
     end
 
-    # Read off an area loaded through the store, whose own forecasts and whose
-    # lines' forecasts are both preloaded.
+    # Expects an area from the store, with its and its lines' forecasts preloaded.
     def self.for_area(area)
       entries = sequence(area.forecasts, area.initial_budget, area.name, area_total: true)
       area.budgets.each do |line|
@@ -51,9 +39,8 @@ module Reimbursements
     end
     private_class_method :sequence
 
-    # Oldest first, and never by id: a forecast log is edited and re-dated from
-    # the budget edit page, so insertion order is not the order the committee
-    # agreed things in.
+    # By date, never by id: forecasts are re-dated on the edit page, so
+    # insertion order is not the order things were agreed in.
     def self.ordered(forecasts)
       forecasts.sort_by { |forecast| [ forecast.date || forecast.created_at&.to_date || Date.new(0), forecast.id.to_i ] }
     end
