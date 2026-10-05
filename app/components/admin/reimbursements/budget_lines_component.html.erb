@@ -95,13 +95,13 @@
                 <td class="px-3 py-2 text-gray-500 tabular-nums"><%= line.nominal_code.presence || "-" %></td>
               <% end %>
               <td class="px-3 py-2 text-right tabular-nums">
-                <% if income_expected(line).nil? %>
+                <% if line.no_budget_set? %>
                   <span class="text-gray-500">not set</span>
                 <% else %>
-                  <%= reimbursements_money(income_expected(line)) %>
+                  <%= reimbursements_money(line.projected_amount) %>
                 <% end %>
               </td>
-              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(income_received(line)) %></td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(line.eusa_actual_amount) %></td>
             </tr>
           <% end %>
         </tbody>
