@@ -438,23 +438,13 @@ module Reimbursements
     # An unreadable amount is carried on VERBATIM: the blocked preview
     # re-renders from this text and must still show the cell to fix.
     def cell_for(row, field)
-      case field
-      when :amount
-        case row[:amount]
-        when nil then ""
-        when :unreadable then row[:raw_amount].to_s
-        else row[:amount].to_s("F")
-        end
-      when :area_budget
-        case row[:area_budget]
-        when nil then ""
-        when :unreadable then row[:raw_area_budget].to_s
-        else row[:area_budget].to_s("F")
-        end
-      when :owner_emails
-        Array(row[:owner_emails]).join("; ")
-      else
-        row[field].to_s
+      value = row[field]
+      case value
+      when nil then ""
+      when :unreadable then row[:"raw_#{field}"].to_s
+      when BigDecimal then value.to_s("F")
+      when Array then value.join("; ")
+      else value.to_s
       end
     end
 
