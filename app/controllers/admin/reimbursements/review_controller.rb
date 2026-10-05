@@ -38,16 +38,7 @@ module Admin
       end
 
       def save
-        expense = find_queue_expense!
-        error = ::Reimbursements::AmountValidation.error_for(
-          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        ) || budget_record_id_error(params[:budget_record_id])
-        if error
-          redirect_to_review(alert: error)
-          return
-        end
-
-        apply_edits(expense)
+        expense = save_edits(find_queue_expense!) or return
 
         notice = "Saved changes to ##{expense.auto_number}."
         notice += " #{GATE_REOPENED_BY_EDIT}" if @gate_reopened_by_edit
@@ -55,15 +46,13 @@ module Admin
       end
 
       def approve
-        expense = find_queue_expense!
-        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
+        expense = save_edits_if_asked(find_queue_expense!) or return
         redirect_with_approve_result(expense, approve_expense(expense))
       end
 
       # Finance override of the owner sign-off gate. Every other blocker still refuses.
       def override_approve
-        expense = find_queue_expense!
-        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
+        expense = save_edits_if_asked(find_queue_expense!) or return
         # Never write a gate-satisfying override row while a hard block remains:
         # a later plain approve would sail past it.
         blocker = approve_blocker(expense)
@@ -98,8 +87,7 @@ module Admin
       end
 
       def reject
-        expense = find_queue_expense!
-        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
+        expense = save_edits_if_asked(find_queue_expense!) or return
         reason = params[:rejection_reason].to_s.strip
         if reason.blank?
           redirect_to_review(alert: "A rejection reason is required.")
@@ -375,10 +363,11 @@ module Admin
         "#{rejected} rejected, #{emailed} producer#{'s' unless emailed == 1} emailed."
       end
 
-      # Save Changes in the unsaved-edits dialog: persist the card's edits before
-      # the decision, in the same request. Invalid edits redirect and return nil,
-      # so the edits and the decision stand or fall together.
-      def save_edits_before_decision(expense)
+      # Save Changes in the unsaved-edits dialog sends the card's edits with the decision.
+      def save_edits_if_asked(expense) = params[:save_changes].present? ? save_edits(expense) : expense
+
+      # Invalid edits redirect and return nil, so edits and a decision stand or fall together.
+      def save_edits(expense)
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
         ) || budget_record_id_error(params[:budget_record_id])
