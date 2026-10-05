@@ -79,11 +79,11 @@
               </td>
               <td class="py-1 pr-4"><%= entry.row[:budget_type] %></td>
               <td class="py-1 pr-4 text-right">
-                <%= number_to_currency(bucket == :revise ? entry.budget.projected_amount : entry.row[:amount],
-                                       unit: "£") if (bucket == :revise ? entry.budget.projected_amount : entry.row[:amount]) %>
+                <% shown = bucket == :revise ? entry.budget.projected_amount : entry.row[:amount] %>
+                <%= reimbursements_money(shown) if shown %>
               </td>
               <% if bucket == :revise %>
-                <td class="py-1 pr-4 text-right font-medium"><%= number_to_currency(entry.row[:amount], unit: "£") %></td>
+                <td class="py-1 pr-4 text-right font-medium"><%= reimbursements_money(entry.row[:amount]) %></td>
               <% end %>
               <td class="py-1 pr-4">
                 <%= entry.row[:owner_emails].join(", ") %>
@@ -140,10 +140,10 @@
             <tr class="border-t border-gray-200">
               <td class="py-1 pr-4"><%= revision[:area_name] %></td>
               <td class="py-1 pr-4 text-right">
-                <%= revision[:from] ? number_to_currency(revision[:from], unit: "£") : "-" %>
+                <%= reimbursements_money(revision[:from]) %>
               </td>
               <td class="py-1 pr-4 text-right font-medium">
-                <%= number_to_currency(revision[:amount], unit: "£") %>
+                <%= reimbursements_money(revision[:amount]) %>
               </td>
             </tr>
           <% end %>
