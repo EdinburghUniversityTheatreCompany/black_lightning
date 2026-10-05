@@ -3,11 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The wizard moved out from under :financial_years when it grew a cost
-    # centre selector — a budget line is matched by name within one (year, cost
-    # centre) and the two are orthogonal, so neither belongs in the path. Bookmarks
-    # of the old year-nested URL still have to land somewhere useful, carrying
-    # their year across as the selector param.
+    # Bookmarks of the old year-nested URL land on the import, carrying their
+    # year across as the selector param.
     class BudgetImportRoutingTest < ActionDispatch::IntegrationTest
       include ReimbursementsTestHelpers
       include Devise::Test::IntegrationHelpers

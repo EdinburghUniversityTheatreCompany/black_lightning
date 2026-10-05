@@ -1,17 +1,11 @@
 module Admin
   module Reimbursements
     ##
-    # An area's budget lines, each with the same four figures as the headline
-    # block above, plus its income lines in a table of their own.
-    #
-    # **Income is never totalled with spend** — the standing rule in this
-    # portal — so an income line cannot be a row here: its "budget" is money to
-    # RAISE, and a Left column that subtracted claims from it would be counting
-    # the wrong way round. Income gets expected-against-received instead, which
-    # is the only pair of figures that means anything on that side.
+    # An area's budget lines with the headline block's four figures, plus its
+    # income lines apart. Income is never totalled with spend: its budget is
+    # money to RAISE, so income lines get expected-against-received instead.
     class BudgetLinesComponent < ViewComponent::Base
-      # A component gets no helpers of its own, and these two are how every
-      # money figure and date in this portal is written.
+      # A component gets no helpers of its own.
       delegate :reimbursements_money, :reimbursements_date, to: :helpers
 
       def initialize(lines:, income_lines:, finance:, area: nil)
@@ -29,9 +23,8 @@ module Admin
 
       def any? = lines.any? || income_lines.any?
 
-      # A one-line area whose line carries the area's own name (the median
-      # shape in production: "Tech" inside "Tech") would print the word twice
-      # for no information, so the table says so once in its heading instead.
+      # A one-line area whose line has the area's own name ("Tech" in "Tech",
+      # the median shape) says so once, in the heading.
       def single_line_named_after_area?
         lines.one? && income_lines.empty? && lines.first.name.to_s.strip == area&.name.to_s.strip
       end

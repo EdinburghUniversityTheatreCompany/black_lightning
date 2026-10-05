@@ -3,14 +3,9 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # Every way OUT of an import wizard, clicked.
-    #
-    # Both wizards live in one Turbo Frame, because Turbo Drive discards a
-    # non-redirect response to a form POST and a stateless wizard cannot
-    # redirect. The cost of that is invisible to every request test: a link
-    # inside a frame navigates THE FRAME, so a link to a page with no matching
-    # frame replaces the wizard with Turbo's "Content missing" and dead-ends the
-    # operator. Every escape link shipped that way until this test.
+    # Every way OUT of an import wizard, clicked. A link inside the wizard's
+    # Turbo Frame navigates the frame, so one to a page without that frame
+    # shows "Content missing", which no request test can see.
     class ImportWizardFramesJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 

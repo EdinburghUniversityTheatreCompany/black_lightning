@@ -1,34 +1,9 @@
 module Admin
   module Reimbursements
     ##
-    # Import budgets from the committee's spreadsheet. A three-step wizard,
-    # deliberately the same shape as Reconcile:
-    #
-    #   1. show    — pick the year and the cost centre, paste the sheet or
-    #                upload the xlsx.
-    #   2. preview — parse and categorise (create / revise / unchanged /
-    #                invalid), plus the lines already in the year that the
-    #                sheet doesn't mention.
-    #   3. apply   — write the lot in ONE transaction.
-    #
-    # STATELESS, like Reconcile: an upload is normalised to TSV on the way in
-    # and carried through the preview in a hidden field, so nothing is kept in
-    # the session or on disk, and apply re-parses and re-validates from scratch
-    # rather than trusting what the preview decided.
-    #
-    # BOTH COORDINATES ARE FORM FIELDS, because a budget line is matched by name
-    # within one (financial year, cost centre) and the two are orthogonal —
-    # neither owns the wizard, so neither can be a path segment without hiding
-    # the other. They ride the query string instead, so an entry point prefills
-    # whichever side it knows (a year from the budgets index, a cost centre from
-    # its settings page) and the operator picks the other.
-    #
-    # The year reuses FinanceController's `?year=` selector, which also scopes
-    # the store — so "does this line already exist?" is asked of the year being
-    # imported into, never of the year that happens to be active.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Imports the committee's budget spreadsheet: show (year, cost centre and
+    # the sheet), preview, then apply in one transaction. Stateless, like
+    # Reconcile: the preview carries the sheet on as canonical TSV.
     class BudgetImportsController < FinanceController
       include ReadsImportSource
 
@@ -46,17 +21,12 @@ module Admin
         "Choose which cost centre these budgets belong to. Nothing has been imported, and the " \
         "sheet you pasted is still below.".freeze
 
-      # The page heading names NO year, deliberately. The year is a field on the
-      # form now, and the <h1> sits OUTSIDE the wizard's Turbo Frame — so a
-      # preview of a different year than the one the page loaded with left the
-      # heading saying "Import budgets: 2026/27" above a card saying
-      # "Preview: 2027/28". Each step's own heading, inside the frame, states
-      # the year it is actually talking about.
+      # Names no year: the <h1> sits outside the wizard's Turbo Frame, so it
+      # would go stale when a preview names another year. Each step's own
+      # heading names it.
       before_action -> { @title = "Import budgets" }
 
-      # Says so up front on a portal with no years or no cost centres, rather
-      # than letting the operator paste a sheet into empty selects and find out
-      # at the preview step.
+      # Flags a portal with no years or centres before anything is pasted.
       def show
         destination_available?
       end
@@ -64,8 +34,6 @@ module Admin
       def preview
         return render(:show) unless source_present?
         return render(:show, status: :unprocessable_entity) unless destination_available?
-        # Step 1 again, with the paste still in the box — the operator has to
-        # name the pot before seeing a preview of what would land in it.
         return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
@@ -79,12 +47,9 @@ module Admin
 
         build_import
 
-        # Re-validated here, not merely trusted from the preview: apply parses
-        # the text afresh, so anything unreadable has to stop it a second time.
+        # Re-validated, not trusted from the preview: apply parses afresh.
         return render_blocked_preview unless @import.valid?
 
-        # Areas narrowed to the ones something will actually land in: unticking
-        # every re-home must not leave an empty area behind.
         re_homes = ticked_re_homes
         @result = store.import_budgets!(creates: @import.creates, revisions: @import.revisions,
                                         owner_syncs: @import.owner_syncs,
@@ -97,8 +62,7 @@ module Admin
         render :apply
       end
 
-      # The columns the importer reads, with a row explaining each, as a CSV to
-      # start from. The importer skips that explanation row if it is left in.
+      # The columns the importer reads plus a hint row, which it skips.
       def template
         import = ::Reimbursements::BudgetImport
         send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
@@ -116,10 +80,8 @@ module Admin
         )
       end
 
-      # Whether there is anything to import INTO at all. Distinct from "the
-      # operator hasn't picked a cost centre yet", which #render_blocked_preview
-      # handles: this is a portal with no years or no centres set up, where the
-      # form's selects would be empty and there is nothing to choose.
+      # Whether there is anything to import INTO. Distinct from no centre picked
+      # yet (#cost_centre_chosen?): this is a portal with no years or centres.
       def destination_available?
         if selected_financial_year.nil?
           flash.now[:alert] = NO_FINANCIAL_YEAR_ALERT
@@ -132,15 +94,9 @@ module Admin
         false
       end
 
-      # The re-homes the operator left TICKED. The preview renders a blank
-      # hidden entry beside the boxes, so the parameter is always present when
-      # the bucket was shown: an absent key means unticked, never "we didn't
-      # ask".
-      #
-      # Selected out of this apply's OWN re-parsed list, so a key matching
-      # nothing here (the sheet edited between steps, the budget deleted, a
-      # hand-made request) moves nothing. Unticked and unmatched both read as
-      # "leave the grouping alone", as Reconcile's pair keys do.
+      # The preview always posts a blank entry, so an absent key is a real
+      # untick. Selected from this apply's own re-parsed list, so a key that
+      # matches nothing here moves nothing.
       def ticked_re_homes
         keys = params[:re_home_budget_ids]
         return [] unless keys.is_a?(Array)
@@ -149,24 +105,17 @@ module Admin
         @import.re_homes.select { |re_home| ticked.include?(re_home[:key].to_s) }
       end
 
-      # Re-render the preview with the problems shown rather than redirecting:
-      # a forty-line paste must survive the refusal.
+      # Re-rendered rather than redirected, so a forty-line paste survives.
       def render_blocked_preview
-        # The cost centre is settled before the preview is ever drawn now
-        # (#cost_centre_chosen?), so the only thing that can still block here
-        # is a line the sheet spells wrong.
         flash.now[:alert] = "Nothing was imported. Fix the lines flagged below and try again."
         render :preview, status: :unprocessable_entity
       end
 
-      # Names the import in the forecast history, so a figure that moved can be
-      # traced back to the spreadsheet that moved it.
       def import_note
         "Imported from the budget spreadsheet on #{I18n.l(Date.current, format: :long)}"
       end
 
-      # Both coordinates carry through "Start again" and "Cancel", so a refused
-      # import comes back to the form the operator filled in, not a blank one.
+      # Both coordinates carry through "Start again" and "Cancel".
       def import_path
         admin_reimbursements_budget_import_path(
           year: selected_financial_year&.key, cost_centre: chosen_cost_centre&.key

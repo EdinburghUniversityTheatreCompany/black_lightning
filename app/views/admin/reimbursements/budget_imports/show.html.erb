@@ -1,18 +1,13 @@
-<%# The whole wizard lives in one Turbo Frame, the same as Reconcile: preview
-    and apply POST the sheet back and render their step directly, because the
-    wizard is stateless and a redirect can't carry the paste. OUTSIDE a frame
-    Turbo Drive rejects non-redirect form responses and silently discards them
-    — the buttons render a perfectly good page server-side that never reaches
-    the screen. Inside the frame a direct render is valid. %>
+<%# Every step lives in one Turbo Frame: Turbo Drive drops a non-redirect
+    response to a form POST, and a stateless wizard cannot redirect without
+    losing the paste. Inside a frame a direct render works. %>
 <%= turbo_frame_tag "budget_import" do %>
-<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
-    Turbo Frame navigates THE FRAME, and a destination with no matching frame
-    lands as "Content missing" instead of the page. %>
+<%# A link out of the frame needs turbo_frame: "_top", or it lands as
+    "Content missing". %>
 <%= render "shared/back_link", text: "All budgets", turbo_frame: "_top",
            path: admin_reimbursements_budgets_path(year: selected_financial_year&.key) %>
 
-<%# Flash lives in the layout, outside this frame, so a frame-only response
-    would never show it. %>
+<%# The layout's flash is outside this frame. %>
 <% if flash[:alert].present? %>
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
@@ -44,9 +39,6 @@
     </p>
 
     <div class="flex flex-col gap-4">
-      <%# Both halves of the destination. A budget line is matched by name within
-          one (year, cost centre), so neither can be assumed — whichever side the
-          link prefilled arrives selected, and the operator picks the other. %>
       <%= render "shared/form/field", label: "Financial year", name: :year,
             html_class: "sm:w-1/2" do %>
         <%= select_tag :year,
@@ -55,11 +47,6 @@
                        class: input_classes %>
       <% end %>
 
-      <%# NO preselect of selectable_cost_centres.first. A whole committee
-          spreadsheet into the wrong pot is a large quiet mistake, and
-          everywhere else here "none" means "every centre" as a stated safety
-          rule. The prompt stands until the operator picks — unless a link
-          prefilled the centre, or there is only one and nothing to choose. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,

@@ -3,14 +3,9 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # The budget import wizard, clicked for real.
-    #
-    # A request test POSTs to #preview and #apply with whatever parameters it
-    # likes, so it passes just as happily when the real form never sends them.
-    # The wizard is stateless: the sheet survives into apply only through the
-    # hidden fields the preview renders, and one of them (`canonical`) is what
-    # tells apply the text is this class's OWN escaped output rather than
-    # something the operator typed.
+    # The budget import wizard, clicked for real. A request test POSTs
+    # whatever parameters it likes; only a click proves the preview's hidden
+    # fields (the sheet, the `canonical` marker, the ticks) reach apply.
     class BudgetImportJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -23,10 +18,7 @@ module Admin
         login_as users(:member)
       end
 
-      # TSV_HEADERS leads with the two AREA columns, so a row stating only a
-      # budget line has to leave them blank — otherwise every cell shifts one
-      # column left and the sheet imports a budget named "Expense". Padded
-      # here rather than in each row so the call sites stay readable.
+      # Leaves the two leading Area columns blank, or every cell shifts left.
       def sheet(*rows) = ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
 
       def area_sheet(*rows)
@@ -37,10 +29,8 @@ module Admin
         ([ "Area\tBudget name\tNominal code\tType\tBudget amount\tOwner emails" ] + rows).join("\n")
       end
 
-      # A budget name is what an existing line is MATCHED on, so rewriting a
-      # backslash sequence in it is silent corruption of the key. Only a browser
-      # proves the marker is really posted: the request test hands apply the
-      # parameter itself.
+      # A budget name is the match key, so a rewritten backslash would be silent
+      # corruption. The request test hands apply the marker itself.
       test "a backslash the operator typed survives preview into apply" do
         visit admin_reimbursements_budget_import_path
 
@@ -58,12 +48,8 @@ module Admin
         assert_equal "Costume\\next week", ::Reimbursements::Budget.sole.name
       end
 
-      # The re-home test below clicks a button whose count was never in doubt.
-      # THIS is the sheet the owner column exists for — the committee's same
-      # file re-sent with owners filled in and no figures changed — and the
-      # button was DISABLED for it, reading "Nothing to import" directly under
-      # a panel naming the owner it was about to add. Only a click sees that:
-      # the request test POSTs :apply and never touches the button.
+      # The same file re-sent with owners filled in and no figures changed: the
+      # button must not be disabled, and only a click touches the button.
       test "an owner-only sheet can actually be imported" do
         cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                             financial_year: @year)
@@ -87,10 +73,8 @@ module Admin
         assert_equal [ alice.record_id ], cogito.reload.owner_ids
       end
 
-      # Only a browser proves the ticks reach apply AT ALL: the request test
-      # hands #apply the parameter itself, so it passes just as happily when
-      # the form renders no checkbox — and a `name[]` checkbox array is
-      # exactly where Rack's parsing has bitten this wizard's siblings.
+      # A `name[]` checkbox array is where Rack's parsing has bitten this
+      # wizard's siblings.
       test "a ticked re-home moves its line and an unticked one is left alone" do
         improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                                 financial_year: @year)
