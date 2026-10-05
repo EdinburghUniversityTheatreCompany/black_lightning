@@ -60,7 +60,7 @@
                   <% if @import.area_adopted?(entry) %>
                     <span class="text-gray-600">(from its name)</span>
                   <% end %>
-                  <% if bucket == :create && @import.area_creates.any? { |a| a[:name] == area_name } %>
+                  <% if bucket == :create && @import.area_new?(entry) %>
                     <span class="text-amber-700">(new)</span>
                   <% end %>
                 <% end %>

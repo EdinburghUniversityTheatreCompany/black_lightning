@@ -263,6 +263,20 @@ module Reimbursements
       assert_equal area.record_id, import.creates.first[:area_id]
     end
 
+    test "every row landing in a new area is new, however its cell is cased" do
+      sheet = <<~TSV
+        Area\tBudget\tNominal code\tType\tAmount
+        Cogito\tSet\t432320\tExpense\t500
+        cogito\tProps\t432330\tExpense\t600
+      TSV
+
+      import = build_import(sheet)
+      assert(import.entries.all? { |entry| import.area_new?(entry) })
+
+      stored = build_import(sheet, existing_areas: [ area_named("Cogito") ])
+      assert(stored.entries.none? { |entry| stored.area_new?(entry) })
+    end
+
     test "a line with a blank Area column is left area-less" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount

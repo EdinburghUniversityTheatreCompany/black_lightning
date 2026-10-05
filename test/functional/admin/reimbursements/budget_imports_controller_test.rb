@@ -156,6 +156,19 @@ module Admin
         end
       end
 
+      test "preview marks every row landing in a new area as new, however its cell is cased" do
+        sign_in @user
+
+        post :preview, params: preview_params(
+          "Area\tBudget\tNominal code\tType\tAmount\n" \
+          "Cogito\tSet\t432320\tExpense\t500\n" \
+          "cogito\tProps\t432330\tExpense\t600"
+        )
+
+        assert_select "div.overflow-x-auto:not(.mt-2) td:first-child span.text-amber-700",
+                      text: "(new)", count: 2
+      end
+
       # Two lines of one name would render alike without these labels.
       test "preview states the line each row matched, and what the loose reading passed over" do
         cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,

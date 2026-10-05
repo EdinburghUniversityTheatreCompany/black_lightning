@@ -237,6 +237,13 @@ module Reimbursements
     # Whether that area came off the row's NAME rather than its cell.
     def area_adopted?(entry) = entry.area_name.blank? && area_name_for(entry).present?
 
+    # Whether that area is one this import creates. By #match_key, because a
+    # row's own cell may be cased differently from the name #area_creates keeps.
+    def area_new?(entry)
+      name = area_name_for(entry)
+      name.present? && existing_area_for(self.class.match_key(name)).nil?
+    end
+
     # A line naming an area carries +area_id:+ (one already here) or
     # +area_name:+ (one this import creates, resolved inside import_budgets!).
     def creates
