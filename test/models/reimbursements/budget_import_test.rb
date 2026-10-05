@@ -871,51 +871,28 @@ module Reimbursements
       assert_empty import.re_homes, "the lines are already in the area the sheet names"
     end
 
-    # The other direction: the stored line still has the prefix.
-    test "a bare sheet name matches a stored line that still carries the prefix" do
-      area = area_named("Cogito")
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
-                                            initial_budget: 400, financial_year: @year,
-                                            cost_centre: @cost_centre)
+    test "a stored line is matched by its area plus either spelling of its name" do
+      areas = %w[Cogito Improverts].index_with { |name| area_named(name) }
+      {
+        # Not yet renamed, sheet already bare.
+        [ "Cogito", "Cogito: Marketing", "Cogito", "Marketing" ] => :revise,
+        # The same, with no Area cell.
+        [ "Cogito", "Cogito: Marketing", "", "Marketing" ] => :revise,
+        # The whitespace the rename tolerated.
+        [ "Improverts", "Retreat", "Improverts", "Improverts:  Retreat" ] => :revise,
+        # Another show's prefix is part of the name, not stripped.
+        [ "Cogito", "Retreat", "Cogito", "Improverts: Retreat" ] => :create,
+        [ nil, "Contingency", "", "Contingency" ] => :revise
+      }.each do |(area_name, stored, cell, typed), bucket|
+        area = areas[area_name]
+        budget = create_reimbursements_budget(name: stored, area: area, initial_budget: 400,
+                                              financial_year: @year, cost_centre: @cost_centre)
 
-      import = build_import(area_sheet("Cogito", "Marketing"),
-                            existing_budgets: [ budget ], existing_areas: [ area ])
+        import = build_import(area_sheet(cell, typed),
+                              existing_budgets: [ budget ], existing_areas: [ area ].compact)
 
-      assert_equal :revise, import.entries.sole.bucket
-      assert_equal budget.record_id, import.entries.sole.budget.record_id
-    end
-
-    test "the whitespace the rename tolerated is the whitespace matching tolerates" do
-      area = area_named("Improverts")
-      budget = create_reimbursements_budget(name: "Retreat", area: area, initial_budget: 400,
-                                            financial_year: @year, cost_centre: @cost_centre)
-
-      import = build_import(area_sheet("Improverts", "Improverts:  Retreat"),
-                            existing_budgets: [ budget ], existing_areas: [ area ])
-
-      assert_equal :revise, import.entries.sole.bucket
-    end
-
-    # Only the line's OWN area's prefix comes off.
-    test "a prefix that is not this line's area is not stripped" do
-      area = area_named("Cogito")
-      budget = create_reimbursements_budget(name: "Retreat", area: area, initial_budget: 400,
-                                            financial_year: @year, cost_centre: @cost_centre)
-
-      import = build_import(area_sheet("Cogito", "Improverts: Retreat"),
-                            existing_budgets: [ budget ], existing_areas: [ area ])
-
-      assert_equal :create, import.entries.sole.bucket
-    end
-
-    test "an area-less line matches exactly as it always did" do
-      budget = create_reimbursements_budget(name: "Contingency", initial_budget: 400,
-                                            financial_year: @year, cost_centre: @cost_centre)
-
-      import = build_import(tsv("Contingency\t4000\tExpense\t500\t\t"),
-                            existing_budgets: [ budget ])
-
-      assert_equal :revise, import.entries.sole.bucket
+        assert_equal bucket, import.entries.sole.bucket, [ area_name, stored, cell, typed ].inspect
+      end
     end
 
     # The committee's untouched old file: prefixed names, no Area column.
@@ -929,19 +906,6 @@ module Reimbursements
       assert_empty import.entries_in(:create)
       assert_equal budgets.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
       assert_empty import.absent_budgets
-    end
-
-    # The bare spelling of the same file, also with no Area column.
-    test "a bare name with no Area column still matches a line that carries the prefix" do
-      area = area_named("Cogito")
-      budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
-                                            initial_budget: 400, financial_year: @year,
-                                            cost_centre: @cost_centre)
-
-      import = build_import(tsv("Marketing\t432320\tExpense\t500\t\t"),
-                            existing_budgets: [ budget ])
-
-      assert_equal :revise, import.entries.sole.bucket
     end
 
     # A loose line literally named "Cogito: Marketing" collides with Cogito's
