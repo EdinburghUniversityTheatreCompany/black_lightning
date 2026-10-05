@@ -337,7 +337,7 @@ module Reimbursements
       matched_entries.filter_map do |entry|
         next if entry.owner_ids.empty?
         next if entry.budget.area
-        next if entry.budget.own_owners.map(&:record_id).sort == entry.owner_ids.map(&:to_s).sort
+        next if entry.budget.own_owners.map(&:record_id).sort == entry.owner_ids.sort
 
         { budget_id: entry.budget.record_id, owner_ids: entry.owner_ids }
       end
@@ -621,7 +621,7 @@ module Reimbursements
       loose.first if loose.one?
     end
 
-    def stored_under(index, key) = key.nil? ? [] : index.fetch(key, [])
+    def stored_under(index, key) = index.fetch(key, [])
 
     # At most one answers: #row_error refuses a key several areas share.
     def existing_area_for(name_key) = @existing_areas_by_name.fetch(name_key, []).first
@@ -678,7 +678,8 @@ module Reimbursements
       elsif row[:amount] == :unreadable
         "#{row[:raw_amount].inspect} isn't an amount. Leave it blank to keep the current figure."
       elsif row[:area_budget] == :unreadable
-        "#{row[:raw_area_budget].inspect} isn't an amount for #{area_label(row)}'s Area total. " \
+        "#{row[:raw_area_budget].inspect} isn't an amount for " \
+          "#{row[:area].presence&.inspect || 'this line'}'s Area total. " \
           "Leave it blank if the total isn't agreed yet."
       elsif row[:area].present? && (areas = colliding_areas(self.class.match_key(row[:area])))
         ambiguous_area_error(row, areas)
@@ -703,10 +704,6 @@ module Reimbursements
 
       "Name it once: #{prefixed[:name].inspect} already names " \
         "#{prefix_area_for(prefixed[:name])}, so an Area cell would not tell them apart."
-    end
-
-    def area_label(row)
-      row[:area].presence&.inspect || "this line"
     end
 
     # Area names as first typed, keyed by #match_key, so a later "cogito "
@@ -828,8 +825,6 @@ module Reimbursements
       self.class.match_key(bare) == self.class.match_key(create[:name])
     end
 
-    def area_attrs_for(entry) = area_attrs_for_name(entry.area_name)
-
     def area_attrs_for_name(name)
       return {} if name.blank?
 
@@ -844,7 +839,7 @@ module Reimbursements
         # Read after this import's own owner column, or a sheet naming an owner
         # for the target area would warn falsely.
         to_area_has_owners: area_will_have_owners?(existing, key),
-        key: entry.budget.record_id }.merge(area_attrs_for(entry))
+        key: entry.budget.record_id }.merge(area_attrs_for_name(entry.area_name))
     end
 
     # Why +area+ is outside this import's year and centre, so a
