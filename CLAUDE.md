@@ -2,1393 +2,1037 @@
 
 
 ## Packages
-Ruby on Rails 8.1 
+Rails 8.1, minitest, Tailwind v4 site-wide, Stimulus for all JavaScript sprinkles. Vite, not
+jsbundling, cssbundling or importmaps; Propshaft serves some images and page-specific JavaScript.
 
-Use pnpm for package management rather than npm, yarn, or bun. The pnpm version is pinned in
-`package.json`'s `packageManager` field (the single source of truth) and provided by **corepack**:
-the dev container and host enable it via the `corepack enable` `postinstall` on the node tool (`mise/config.toml`), and CI's `pnpm/action-setup` reads the same field (no `version:`
-pin). To bump pnpm, run `corepack use pnpm@<version>` (it rewrites `packageManager` with a fresh
-integrity hash) — do not hand-edit the hash.
-
-We use minitest for testing.
-
-The entire site currently uses Tailwind v4
-
-Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps. We use propshaft too to serve some images and JavaScript files that are only used on a few pages
+**Use pnpm, never npm, yarn or bun.** Its version is pinned only in `package.json`'s
+`packageManager` field and provided by corepack (the `corepack enable` `postinstall` on the node
+tool in `mise/config.toml`; CI's `pnpm/action-setup` reads the same field, so give it no
+`version:` pin). Bump it with
+`corepack use pnpm@<version>`; never hand-edit the integrity hash.
 
 ## JavaScript
-Prefer writing Stimulus controllers that go into the `app/javascript/controllers` folder. Custom modules go into the `app/javascript/lib folder`.
-
-JavaScript that is only used on specific pages should go into the `app/assets` folder so it can be loaded by Propshaft.
-
-Stylesheets also live in `app/javascript/styles` so they can be handled by Vite.
-
-Third-party CSS/JS vendored verbatim (not authored by us, not meant to go through Tailwind/PostCSS)
-goes in `vendor/assets/{stylesheets,javascripts}` instead of `app/assets` — Propshaft auto-registers
-that directory too, and it's already excluded from jscpd/duplication scanning via the blanket
-`**/vendor/**` glob in `.jscpd.json`, so no per-file exclusion entry is needed.
+- Stimulus controllers go in `app/javascript/controllers`, custom modules in `app/javascript/lib`,
+  stylesheets in `app/javascript/styles` (Vite).
+- JavaScript used only on specific pages goes in `app/assets` (Propshaft).
+- Third-party CSS/JS vendored verbatim (not ours, not for Tailwind/PostCSS) goes in
+  `vendor/assets/{stylesheets,javascripts}`, not `app/assets`. Propshaft registers it and
+  `.jscpd.json`'s `**/vendor/**` glob already excludes it, so it needs no per-file exclusion.
 
 ## Maintain Documentation
 
-If you learn something about the project that would be useful context for other agents looking at the codebase, add it to this file at the end of your to do list.
+If you learn something other agents would need, add it to this file as the last item of your
+to-do list.
 
 ## URL as state
-Always maintain the URL as state with readable parameters where possible for GET actions.
+Always keep GET state in the URL, with readable parameters where possible.
 
 ## Button Styling
 
-`ButtonComponent` (`app/components/button_component.rb`) is the single source of truth for all button styles. **Never use Bootstrap `btn btn-*` classes** — those shims have been removed.
-
-### Variants: `:primary`, `:secondary`, `:danger`, `:success`, `:warning`, `:info`, `:link`
-### Sizes: `:sm`, `:md` (default), `:lg`
+`ButtonComponent` (`app/components/button_component.rb`) is the single source of truth for button
+styles. **Never use Bootstrap `btn btn-*` classes**; the shims are gone. Variants: `:primary`,
+`:secondary`, `:danger`, `:success`, `:warning`, `:info`, `:link`. Sizes: `:sm`, `:md` (default),
+`:lg`. To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.
 
 ### How to render a button
 
-**Model resource links — use `get_link` (handles permissions + path generation):**
 ```erb
+<%# Model resource links: get_link handles permissions and paths %>
 <%= get_link(@user, :edit) %>
-<%= get_link(@user, :destroy) %>
-<%= get_link(User, :new) %>
-<%# Override variant explicitly %>
 <%= get_link(@user, :show, variant: :primary) %>
-<%# Custom link target for nested routes %>
+<%# Custom target for nested routes %>
 <%= get_link(Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show)) %>
-```
-
-**Non-model links — use `link_to` with `btn_classes`:**
-```erb
-<%= link_to "Cancel", some_path, class: btn_classes(:secondary) %>
+<%# Non-model links and form submits %>
 <%= link_to "Import", new_admin_membership_import_path, class: btn_classes(:primary, :sm) %>
-```
-
-**Form submits — use `btn_classes`:**
-```erb
 <%= f.submit "Save", class: btn_classes(:primary) %>
-<%= f.button :submit, "Agree", class: btn_classes(:success) %>
-```
-
-**Inside ViewComponent templates — use `ButtonComponent.classes_for` directly** (components don't get helpers auto-included):
-```erb
-<%= link_to "Cancel", @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
+<%# Inside ViewComponent templates (components don't get helpers) %>
 <%= f.submit "Save", class: ButtonComponent.classes_for(variant: :primary, size: :sm) %>
 ```
 
-**To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.**
-
 ## Admin copy is written for a regular user of the screen
 
-Explanatory prose in the admin costs screen real estate on every visit, and it is read by
-somebody who uses that screen weekly, not by a first-timer. So it earns its space only by saying
-something they cannot work out from the controls in front of them:
+Admin prose costs space on every visit and is read by someone who uses the screen weekly. It earns
+its place only by saying what the controls cannot:
 
-- **Lead with what the reader can act on**, never with the format of the list below it ("one line
-  per recipient, newest first" is what the table already shows).
-- **State the consequence, not the mechanism.** "A bounce afterwards is invisible here" earns its
-  line; "the portal hands the message to Microsoft" is our plumbing.
-- **A limitation is only worth printing with what to do about it**, and a date or a number that
-  is knowable is printed rather than described ("before 2026-09-19", not "before this log
-  existed").
-- **Cut cross-references to other screens' matching quirks.** They help nobody doing the task in
-  front of them.
-- **Traps survive the cut, shorter.** Much of this file is a rule someone learned the hard way;
-  where a screen states one, the wording gets tighter, never deleted.
-- **The producer-facing screens are the exception** (`expenses/**`, `reimbursements/emails/**`):
-  a student producer files a claim once or twice a term, so more explanation is right there.
+- **Lead with what the reader can act on**, never with the format of the list below it.
+- **State the consequence, not the mechanism.** "A bounce afterwards is invisible here", not "the
+  portal hands the message to Microsoft".
+- **Print a limitation only with what to do about it**, and print a knowable date or number
+  ("before 2026-09-19", not "before this log existed").
+- **Cut cross-references to other screens' matching quirks.**
+- **Traps survive the cut, shorter.** Tighten a screen's trap wording; never delete it.
+- **Producer-facing screens are the exception** (`expenses/**`, `reimbursements/emails/**`): a
+  producer files a claim once or twice a term, so more explanation is right there.
 
 ## Admin forms
 
-One vocabulary for every admin form. `FormStyles` (top of
-`config/initializers/simple_form_tailwind.rb`) holds the control classes; simple_form's wrappers
-read it, and so do the hand-rolled `form_with url:` forms through `input_classes` /
-`file_input_classes` / `checkbox_classes` and `shared/form/_field` (label above, control yielded,
-error and hint below). Never type `border border-gray-300 rounded …` into a view again.
+**One vocabulary for every admin form.** `FormStyles` (top of
+`config/initializers/simple_form_tailwind.rb`) holds the control classes, read by simple_form's
+wrappers and by hand-rolled `form_with url:` forms through `input_classes` / `file_input_classes`
+/ `checkbox_classes` and `shared/form/_field`. Never type `border border-gray-300 rounded …` into a
+view.
 
 - **Model-backed forms use simple_form**: `simple_horizontal_form_for` + `shared/pages/form` for
-  the label-column layout the older admin uses, plain `simple_form_for` (vertical wrappers) for
-  the stacked finance layout. **Flat-param forms** (`params[:name]`, no model) wrap a
-  `CardComponent` in `form_with` and put `render "shared/form/actions"` in `card.with_footer`, so
-  Save and Cancel sit in the grey footer on every form. **That nesting order is load-bearing**: the
-  footer is a component SLOT, so a `form_with` opened INSIDE the card renders its submit button
-  outside the `<form>` and the button silently does nothing. A request-level test cannot see this
-  (it POSTs straight to the action); only a browser test clicking the real button catches it.
-- **A form whose POST answers by RENDERING a page must opt out of Turbo** (`data: { turbo: false }`),
-  as `Admin::ImportFormComponent` and the climate import do. Turbo accepts only a redirect or a
-  4xx/5xx for a form submission and drops a 200 silently, so the button does nothing — all four bulk
-  importers sat broken that way for four months. Inside a Turbo Frame a 200 is fine, which is why the
-  reimbursements wizards need no opt-out. Only a browser test sees it.
+  the older label-column layout, plain `simple_form_for` for the stacked finance layout.
+- **Flat-param forms** (no model) wrap a `CardComponent` in `form_with` and put
+  `render "shared/form/actions"` in `card.with_footer`. **The `form_with` must open outside the
+  card**: the footer is a slot, so a form opened inside renders its submit button outside the
+  `<form>` and the button does nothing. Only a browser test catches it.
+- **A form whose POST answers by rendering a page must set `data: { turbo: false }`** (as
+  `Admin::ImportFormComponent` and the climate import do). Turbo silently drops a 200 answer to a
+  form submission. Inside a Turbo Frame a 200 is fine (so the reimbursements wizards need no
+  opt-out). Only a browser test sees it.
 - `shared/back_link` is the "← All …" line above a card; `shared/form/paste_or_upload` is the
-  paste-box-plus-file-input pair the budget import, climate import and Reconcile share.
-- **`shared/form/field`'s `html_class` DEFAULTS to `mb-4`, and passing any class replaces it.** In a
-  one-line `flex items-end` row that margin lifts the field a clear 16px above its neighbours, so a
-  field with no width class of its own needs an explicit `html_class: ""` — the sibling that passes
-  `w-40` or `grow` has silently dropped the margin already.
-- **A select Tom Select will take over must carry only `simple-select2`.** Tom Select copies the
-  `<select>`'s classes onto its `.ts-wrapper`, which already draws the box, so `border … w-72` on
-  the select renders a box inside a box. simple_form's `CollectionSelectInput` strips the classes
-  for you; a `select_tag` must not add them. The single border comes from `.ts-control` in
-  Tom Select's own CSS: overriding it away leaves the widget with no box at all.
-- **A `multiple` Tom Select needs the empty hidden field beside it, and cannot be switched off by
-  a disabled fieldset alone.** Rails emits the hidden `name[]` field for `collection_select …
-  multiple: true`; a hand-rolled `select_tag` must add it, or taking the last choice off posts no
-  key at all and the old list survives. And Tom Select draws its control from divs, so it goes on
-  looking live inside a disabled fieldset even though the browser submits nothing — the budget
-  form's owners list has to call `tomselect.disable()` as well. Tom Select is built after an async
-  `import()`, so a controller that drives a widget listens for the `select:ready` event
-  `select_controller` dispatches rather than assuming `el.tomselect` exists when it connects.
+  shared paste-box-plus-file-input pair.
+- **`shared/form/field`'s `html_class` defaults to `mb-4`, and any class you pass replaces it.** In
+  a `flex items-end` row a field with no width class of its own needs `html_class: ""`, or it sits
+  16px above its neighbours.
+- **A select Tom Select takes over must carry only `simple-select2`.** Tom Select copies its
+  classes onto `.ts-wrapper`, so a border there draws a box inside a box (simple_form's
+  `CollectionSelectInput` strips them; a `select_tag` must not add them). The one border is
+  Tom Select's `.ts-control`: never override it away.
+- **A `multiple` Tom Select needs the empty hidden `name[]` field beside it** (Rails emits it for
+  `collection_select … multiple: true`; a hand-rolled `select_tag` must add it), or removing the
+  last choice posts no key and the old list survives.
+- **A disabled fieldset does not disable a Tom Select** (it looks live while submitting nothing):
+  call `tomselect.disable()` too.
+- **Tom Select is built after an async `import()`**: listen for the `select:ready` event
+  `select_controller` dispatches; never assume `el.tomselect` exists on connect.
 - **Receipt add/remove on both expense edit pages answers a turbo stream** replacing
-  `#receipts-gallery` (`AttachesReceipts#respond_with_receipts_gallery`, `finance: true` for the
-  finance routes), with a redirect for a plain post; `shared/_receipts_dropzone` is the drop
-  target both pages render inside the `receipts-upload` controller element.
+  `#receipts-gallery` (`AttachesReceipts#respond_with_receipts_gallery`, `finance: true` on the
+  finance routes), and a redirect for a plain post. Both render `shared/_receipts_dropzone` inside
+  the `receipts-upload` controller element.
 
 ## Link Helper
 
-**Use `get_link` from `LinkHelper` for button-style links to model resources.**
-
-The `get_link` helper provides:
-- Consistent styling via `ButtonComponent` based on action type (auto-detected)
-- Automatic CanCanCan permission checking
-- Automatic path generation for model resources
+**Use `get_link` from `LinkHelper` for button-style links to model resources.** It picks the
+`ButtonComponent` style from the action, checks CanCanCan permissions and builds the path.
 
 ## ViewComponents
-When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
+Check for an applicable skill, and create a preview (a cop requires one).
 
-- **The namespace says who renders it, so check before adding one.** Top level = both sites
-  (`ImageComponent`, `GalleryComponent`, `SearchFormComponent`, `CardComponent`); `Admin::` and
-  `Public::` = only that site. A component rendered from both sites with an `Admin::`/`Public::`
-  prefix is a lie about where it is used, which is what #245 was about.
-- **`app/views/shared/` is not a second home for reusable markup.** A reusable piece is a
-  component; what is left there is the admin/public page scaffolding (`shared/pages/*`) and the
-  form field vocabulary (`shared/form/*`), both of which read controller ivars or wrap a form
-  builder. There is no `app/views/admin/shared/` — two directories called "shared" is how a
-  component came to render `shared/attachments_gallery` while the partial lived under
-  `admin/shared/`, 500ing questionnaires#show in production.
-- **A `@admin_site` read from inside markup becomes a constructor argument** when that markup
-  becomes a component (`GalleryComponent#show_tags`, `TeamCreditsComponent#admin_site`) — the
-  component must not reach for controller state.
-- **Write `alt:` as a literal keyword at the `image_tag` call**, not merged in from Ruby. herb's
-  `html-img-require-alt` reads the template statically and cannot see an alt that arrives inside
-  an options hash.
-- **`MdEditorComponent` takes `layout:`** — `:horizontal` (the admin default, a label column
-  beside the editor) or `:vertical` for the three public forms, whose other fields stack. Only
-  the vertical layout styles the `<label>`; horizontal puts it in an already-styled column.
-- **The public site's form classes come from `bootstrap_compat.css`, and the shim has to name
-  the class simple_form actually emits.** `simple_horizontal_form_for` resolves to the *bootstrap*
-  `horizontal_*` wrappers off the admin site, which emit `col-form-label` and `form-text` —
-  neither of which was shimmed, so every label and hint on the three public forms
-  (complaints, opportunity submission, profile completion) rendered browser-default next to a
-  14px control. The layout classes (`form-group row`, `col-sm-3`, `col-sm-9`) are deliberately
-  **not** shimmed, which is why those forms stack rather than sitting in two columns.
+- **The namespace says who renders it.** Top level = both sites (`ImageComponent`,
+  `GalleryComponent`, `SearchFormComponent`, `CardComponent`); `Admin::` / `Public::` = only that
+  site. A component both sites render must not carry either prefix.
+- **`app/views/shared/` is not a home for reusable markup**; a reusable piece is a component. Only
+  page scaffolding (`shared/pages/*`) and the form field vocabulary (`shared/form/*`) stay there,
+  because they read controller ivars or wrap a form builder.
+  Never create `app/views/admin/shared/`: two "shared" directories have had a component render a
+  partial from the wrong one and 500 in production.
+- **A `@admin_site` read in markup becomes a constructor argument** when the markup becomes a
+  component (`GalleryComponent#show_tags`, `TeamCreditsComponent#admin_site`). A component must
+  not reach for controller state.
+- **Write `alt:` as a literal keyword at the `image_tag` call.** herb's `html-img-require-alt`
+  cannot see an alt merged in from an options hash.
+- **`MdEditorComponent` takes `layout:`**: `:horizontal` (admin default, label column) or
+  `:vertical` for the three public forms (complaints, opportunity submission, profile completion).
+  Only vertical styles the `<label>`.
+- **Public-site form classes come from `bootstrap_compat.css`, which must shim the class
+  simple_form actually emits.** Off the admin site `simple_horizontal_form_for` uses the bootstrap
+  `horizontal_*` wrappers, emitting `col-form-label` and `form-text`. `form-group row`,
+  `col-sm-3` and `col-sm-9` are deliberately not shimmed, so those forms stack.
 
 ## Dev Environment (mise + hk)
 
-Toolchain is pinned with **mise**, and its config lives in `mise/`, not the repo root: `mise/config.toml`
-(+ `mise/mise.lock`) pins Ruby and Node and holds the tasks; `mise/config.development.toml`
-(+ `mise/mise.development.lock`) adds the dev tools (`hk`, `pkl`, `gitleaks`, `zizmor`, `actionlint`) and
-is read **only when `MISE_ENV=development`**. The committed `.miserc.toml` sets that for every checkout
-(CI sets it explicitly too); delete it and `hk` stops resolving, so the pre-commit hook fails every commit
-with "No version is set for shim: hk". Production never runs mise, so none of this reaches the image. A worktree's
-gitignored `mise.local.toml` still sits at the root and still layers on top. Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
-(`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
-`mise install && hk install` once to swap the git hooks over.
+**mise config lives in `mise/`, not the repo root.** `mise/config.toml` (+ `mise/mise.lock`) pins
+Ruby and Node and holds the tasks; `mise/config.development.toml` (+ `mise/mise.development.lock`)
+adds `hk`, `pkl`, `gitleaks`, `zizmor`, `actionlint`, read only when `MISE_ENV=development`. The
+committed `.miserc.toml` sets that (CI sets it explicitly); without it every commit fails with "No
+version is set for shim: hk". Production never runs mise. A worktree's gitignored
+`mise.local.toml` sits at the repo root and layers on top. Pre-commit runs through **hk** (`hk.pkl`; overcommit is gone):
+run `mise install && hk install` once.
 
-- **Ruby is installed precompiled, not built from source.** `mise/config.toml` pins
-  `ruby = { version = "…", compile = false }`, so mise downloads a precompiled portable Ruby from
-  **jdx/ruby** (its default provider) instead of compiling via ruby-build — a ~12s download vs
-  minutes. jdx/ruby's Linux builds run in manylinux2014 containers (glibc 2.17 floor) and bundle
-  their own OpenSSL/libyaml/libffi, so the binary is portable across glibc ≥ 2.17 (the Debian-trixie
-  devcontainer + CI are fine) and needs no build toolchain *for Ruby*. `compile = false` is set
-  explicitly so a contributor's global mise `compile` default can't flip `mise/mise.lock`. The devcontainer
-  still ships a C toolchain + headers because the app's **native gems** (bcrypt, mysql2, nio4r, puma, …)
-  are compiled by `bundle install`. Only `linux-x64`, `linux-arm64`, and `macos-arm64` have jdx/ruby
-  builds; `macos-x64` (Intel Mac) falls back to a source compile.
-
-- **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
-- **The Gemfile's `cooldown: 4` needs Bundler ≥ 4.0.13, and an older one ignores it without a
-  word.** Ruby 4.0.2's built-in Bundler is 4.0.6, which was `BUNDLED WITH` here until 2026-10-01, so
-  no gem was cooled down until then. Keep `BUNDLED WITH` at or above 4.0.13 (bump it with
-  `bundle update --bundler=<version>`). You can tell it is working when an update lists the young
-  releases it held back ("available in N days").
-- **The pre-commit hook AUTOCORRECTS, so a green test run before `git commit` does not
-  guarantee a green tree after it.** When the commit output says `rubocop – N files modified`,
-  re-run the tests for those files: the autocorrect is applied and committed without anything
-  re-checking it. `Rails/OutputSafety` is the one that has bitten — it rewrites
-  `"…".html_safe` into `safe_join(...)`, which is a VIEW HELPER, so in a PORO (a composer, an
-  exporter, anything rendered from a job) the corrected code raises `NoMethodError` at runtime
-  and the commit looks clean. Where the string really is safe by construction, keep `html_safe`
-  and disable the cop on that line with the reason.
-- **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
-  `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
-  `debride`/`flay`/`jscpd` (dead-code + duplication), `gitleaks`, `actionlint` + `zizmor`
-  (GitHub Actions correctness + security), exec-bit + large-file guards, and `versions`
-  (toolchain-drift guard — mirrors the CI `versions` job; keep the two in sync by hand).
-  `bin/rails test` also runs as an hk step.
-- **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
-  auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
-  skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
-  **It reads YOUR dev database, so a pending migration silently strips real columns from models
-  you never touched** — pull someone's migration, commit anything, and their new column vanishes
-  from its annotation in your diff. Run `bin/rails db:migrate` before committing after a pull;
-  the tell is an unrelated model in `git diff --stat`.
-- **Gate status (see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
-  `herb-lint` (ERB) and `jscpd` (duplication, threshold 0) are **gating** — their backlogs were
-  ratcheted to 0. `herb-analyze` stays advisory (`|| true`) only for the two HTML-email fragment
-  partials it can't parse standalone. `database_consistency` is still advisory: its length
-  validations are satisfied and the legacy integer-PK checkers are scoped in `.database_consistency.yml`,
-  but the remaining NOT-NULL / FK / unique-index findings need data-aware backfill migrations on the
-  legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
-- **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
-  `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider moving them into the production credentials.
-  The **CI `gitleaks git` job scans full history** (the hk step only scans the working tree), so
-  it surfaces dead secrets committed years ago. Reviewed historical findings that are NOT live
-  (doc examples, PEM marker lines, rotated/dead keys) are baselined by fingerprint in
-  `.gitleaksignore` (each entry commented with why) — the default ruleset still fails on any NEW
-  secret. We deliberately don't rewrite history to purge them: they're all dead, and it would
-  reSHA ~3900 commits (back to the 2012 root) while GitHub may still cache the old objects.
-- **Large-file guard:** committed files over 512 KB fail CI's `audit` job (and hk's
-  `check-added-large-files`). PNG illustrations that trip it compress well as PNG8 palette
-  (`convert … PNG8:out.png && optipng -o5`) with no visible loss — they're flat-colour art.
-- **The dev container is mise-driven — keep it in sync.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
-  installs *only* the `mise` binary plus OS build/runtime libs; `mise/config.toml`/`mise/mise.lock` are the single
-  source of truth for Ruby, Node, and the dev tools, installed by `mise install` in
-  [.devcontainer/setup.sh](.devcontainer/setup.sh). **Never** pin a language version in the devcontainer
-  (no `ruby:x.y` base, no `apt-get install nodejs`) — that reintroduces drift. When you change the
-  toolchain (a new mise tool, a Ruby/Node bump) or the dev-env standard (`DEV_ENV_VERSION`), check
-  whether the devcontainer needs a matching change: new native build deps go in `Dockerfile.dev`, new
-  bootstrap steps go in `setup.sh`. The mise toolchain is cached on the `mise-data` compose volume.
+- **Ruby is precompiled** (`compile = false`, from jdx/ruby; glibc ≥ 2.17, bundles its own
+  OpenSSL/libyaml/libffi). It is explicit so a global mise `compile` default cannot flip
+  `mise/mise.lock`. The devcontainer still needs a C toolchain for native gems (bcrypt, mysql2,
+  nio4r, puma, …). Builds exist only for `linux-x64`, `linux-arm64`, `macos-arm64`; `macos-x64`
+  compiles from source.
+- **Run all checks with `hk run check`** (CI mirrors its steps); autofix with `hk run fix`. **Plain
+  `hk run check` scans only the working diff**, so verify a branch with
+  `hk run check --from-ref <base> --to-ref HEAD`.
+- **Never `git stash`.** `refs/stash` is shared by every worktree and live session, so
+  `git stash pop` can take someone else's work. Use a throwaway commit and `git reset --soft`.
+- **`HK_SKIP_HOOK=1` does not stop hk's repo-wide stash.** When another session may be working in
+  the repo, commit with `--no-verify` and run the checks over the branch afterwards.
+- **The Gemfile's `cooldown: 4` needs Bundler ≥ 4.0.13; older ones ignore it silently** (Ruby
+  4.0.2's built-in Bundler is 4.0.6). Keep `BUNDLED WITH` at or above that
+  (`bundle update --bundler=<version>`). It is working when an update lists
+  held-back releases ("available in N days").
+- **The pre-commit hook autocorrects, so tests green before `git commit` prove nothing after it.**
+  When it reports `rubocop – N files modified`, re-run those tests. `Rails/OutputSafety` rewrites
+  `"…".html_safe` into `safe_join(...)`, a view helper, which raises `NoMethodError` in a PORO.
+  Where the string is safe by construction, keep `html_safe` and disable the cop on that line with
+  the reason.
+- **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint`, `herb`, `annotate-models`, `brakeman`,
+  `bundler-audit`, `fasterer`, `database_consistency`, `debride`/`flay`/`jscpd`, `gitleaks`,
+  `actionlint` + `zizmor`, exec-bit and large-file guards, `versions` (keep in sync by hand with
+  the CI `versions` job), and `bin/rails test`.
+- **`annotate-models` is fix-only** (never a CI gate): committing a model or `db/schema.rb` runs
+  `annotaterb models`, skipping when no DB is reachable. **It reads your dev database, so a pending
+  migration strips real columns from models you never touched.** Run `bin/rails db:migrate` before
+  committing after a pull; the tell is an unrelated model in `git diff --stat`.
+- **Gate status** ([plans/off-topic-improvements.md](plans/off-topic-improvements.md)): `herb-lint`
+  and `jscpd` (threshold 0) gate. `herb-analyze` is advisory (`|| true`) only for the two
+  HTML-email fragment partials it cannot parse standalone. `database_consistency` is advisory: legacy integer-PK checkers are
+  scoped in `.database_consistency.yml`; the NOT-NULL / FK / unique-index findings need data-aware
+  backfill migrations. Two herb rules are disabled in `.herb.yml`.
+- **Secrets:** `gitleaks` scans the tree, with gitignored secret paths allowlisted in
+  `.gitleaks.toml`. Real plaintext secrets still sit in `config/` (move them to production
+  credentials). The hk step scans only the working tree; the CI `gitleaks git` job scans full
+  history. Reviewed dead findings are baselined by fingerprint in `.gitleaksignore`, each with a
+  comment; any new secret still fails. Never rewrite history to purge them:
+  all are dead, and it would re-SHA ~3900 commits.
+- **Committed files over 512 KB fail** CI's `audit` job and hk's `check-added-large-files`.
+  Flat-colour PNGs shrink with no visible loss as PNG8: `convert … PNG8:out.png && optipng -o5`.
+- **The devcontainer is mise-driven.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
+  installs only `mise` plus OS libs; [.devcontainer/setup.sh](.devcontainer/setup.sh) runs
+  `mise install`, and `mise/config.toml` / `mise/mise.lock` are the single source of truth for
+  Ruby, Node and the dev tools. **Never pin a language version there** (no `ruby:x.y` base, no
+  `apt-get install nodejs`): that reintroduces drift. When the toolchain or `DEV_ENV_VERSION` changes, native build deps go
+  in `Dockerfile.dev`, bootstrap steps in `setup.sh`. The toolchain is cached on the `mise-data`
+  volume.
+- **Read [docs/production-host.md](docs/production-host.md) before running anything heavy on the
+  production host.** 1.7 GB RAM, `fuse-overlayfs` Docker and a 44 GB disk: two heavy I/O jobs at
+  once have taken the site down.
 
 ## Dev Server
 
-- **Run with `mise run serve`** — a mise task ([mise/config.toml](mise/config.toml)) running `serve:app` (Puma) and `serve:assets` (Vite) side by side. There is no `bin/dev` and no foreman any more. **Start one yourself when you need it** (a screenshot, a visual check, driving the real app) — this overrides the global "ask the user first" default. Check the port is free first (`ss -ltn | grep ":${PORT:-3000}"`) and run it in the background.
-- **A provisioned worktree gets its own ports** — `PORT` and `VITE_RUBY_PORT` come from a gitignored `mise.local.toml` (see `.worktree-isolate.conf`), so a worktree's server never fights the main checkout's :3000. Run `mise run serve` from the worktree directory or you will start a second server on the wrong port against the wrong database.
-- **Stop the dev server before `bin/rails test:system`** — a running dev server makes ~57 unrelated system tests fail, and the failures point nowhere near the cause.
-- **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
-- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here. It finds Puma by the process tag, which is the checkout's directory name, so it restarts its own checkout's server and never another worktree's.
-- **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `mise run serve` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
+- **Run with `mise run serve`** (`serve:app` Puma + `serve:assets` Vite; no `bin/dev`, no foreman).
+  **Start one yourself when you need it** (screenshot, visual check); this overrides the global
+  "ask the user first" default. Check the port first (`ss -ltn | grep ":${PORT:-3000}"`) and run it
+  in the background.
+- **A provisioned worktree has its own ports** (`PORT`, `VITE_RUBY_PORT` in its gitignored
+  `mise.local.toml`; see `.worktree-isolate.conf`). Run `mise run serve` from the worktree, or you
+  get a server on the wrong port against the wrong database.
+- **Stop the dev server before `bin/rails test:system`**, or ~57 unrelated system tests fail, nowhere near the cause.
+- **App code reloads per request; boot-time state needs `bin/restart-web`** (`config/initializers`,
+  `config/*`, `Gemfile`, env vars, new or enum-backed columns). `touch tmp/restart.txt` does
+  nothing here. It finds Puma by the checkout's directory name, so it never restarts another
+  worktree's.
+- **`vite.config` or JS dependency changes need a full restart**: `Ctrl-C` `mise run serve` and
+  rerun it (or rerun the VS Code "Dev server" task).
 
 ## Background jobs (Solid Queue)
 
-- **`config/recurring.yml` schedules are read in `config.time_zone` ("Edinburgh"), not the
-  container's clock.** Solid Queue ≥ 1.5 appends `SolidQueue.time_zone` (resolved from
-  `config.time_zone` → `Europe/London`) to any schedule that names no zone of its own, so
-  "at 9pm every day" means 9pm *Edinburgh*. Before 1.5 it meant 9pm in the process's local
-  time, and the production container sets no `TZ`, so it meant 9pm UTC — i.e. every daily job
-  now fires an hour earlier in UTC terms through BST, and unchanged through GMT. This is the
-  reading the schedule names imply; to go back to clock time, set
-  `config.solid_queue.time_zone = nil`.
-- **Two recurring tasks due at the same second deadlock, and Solid Queue drops one silently.**
-  The scheduler enqueues each due task in turn; concurrent inserts into `solid_queue_jobs` /
-  `solid_queue_recurring_executions` race, InnoDB kills one, and `RecurringTask#enqueue` rescues
-  the `EnqueueError`, logs it and returns false — **no retry, no failed-job row**, so a lost
-  occurrence is indistinguishable from one that was never scheduled. Two jobs sharing 3am cost
-  roughly half of `pretix_reconcile_memberships`' runs before this was found.
-  - **Every daily schedule sits on its own minute, and none is divisible by 5**, because
-    `reimbursements_mailbox_poll` runs every 5 minutes and owns every such minute.
-    `recurring_schedule_test` enforces both, so a new job added "at 3am" fails the suite.
-  - `RecurringEnqueueRetry` (prepended in an initializer) retries a deadlocked enqueue up to
-    three times with jittered backoff. It is the net under the staggering, not a substitute.
-    Retrying is safe because `RecurringExecution.record` wraps the job row and the execution row
-    in one transaction — a deadlock rolls back both, and a first attempt that did commit is
-    caught by the unique index on `(task_key, run_at)`.
-- The queue schema is **schema-loaded, not migrated** (`db/queue_schema.rb`,
-  `migrations_paths: db/queue_migrate`). `bin/rails generate solid_queue:update` copies any new
-  gem migrations in — as of 1.6.0 it ships none, and our schema matches the gem's table set.
+- **`config/recurring.yml` times are `config.time_zone` ("Edinburgh"), not the container clock**
+  (Solid Queue ≥ 1.5 appends `SolidQueue.time_zone` to a schedule naming no zone). For clock time,
+  set `config.solid_queue.time_zone = nil`.
+- **Two recurring tasks due the same second deadlock, and Solid Queue drops one silently**
+  (`RecurringTask#enqueue` rescues the `EnqueueError`: no retry, no failed-job row).
+  - **Every daily schedule sits on its own minute, none divisible by 5**
+    (`reimbursements_mailbox_poll` owns those). `recurring_schedule_test` enforces both.
+  - `RecurringEnqueueRetry` (prepended in an initializer) retries a deadlocked enqueue up to three
+    times with jittered backoff: a net under the staggering, not a substitute. It is safe because
+    `RecurringExecution.record` writes both rows in one transaction and the unique
+    `(task_key, run_at)` index catches an attempt that committed.
+- **The queue schema is schema-loaded, not migrated** (`db/queue_schema.rb`,
+  `migrations_paths: db/queue_migrate`). `bin/rails generate solid_queue:update` copies in new gem
+  migrations (none as of 1.6.0; our schema matches the gem's tables).
 
 ## Database & Migrations
 
-- **Multi-database app.** `bin/rails db:rollback` errors with "must run the namespaced task". Use `bin/rails db:rollback:primary STEP=n` (namespaces: `primary`, `queue`, `cache`).
-- **Legacy tables use integer primary keys, not bigint.** `opportunities` and other older tables have `id: :integer`. A new child table's foreign key to such a table must use `t.references :parent, type: :integer` (or `t.integer`), otherwise the FK migration aborts with a column-type mismatch. New tables you create default to bigint `id`, which is fine for FKs pointing *to* them.
-- **The running dev server caches the DB schema at boot.** After a migration that adds columns, the already-running server will 500 (e.g. "Undeclared attribute type for enum ... must be backed by a database column") until it is restarted. Run `bin/restart-web` after migrating (see **Dev Server** above).
+- **Multi-database app.** Use `bin/rails db:rollback:primary STEP=n` (namespaces `primary`,
+  `queue`, `cache`); bare `db:rollback` errors.
+- **After a failed MySQL migration, run `bin/rails db:migrate:status` before any rollback.** MySQL
+  DDL auto-commits partway, so a blind `STEP=1` can revert an unrelated migration.
+- **Legacy tables have integer primary keys** (`opportunities` and other older ones). A foreign key
+  to one must be `t.references :parent, type: :integer` (or `t.integer`), or the FK migration
+  aborts. New tables default to bigint.
+- **The running dev server caches the schema at boot**: after adding columns it 500s (e.g.
+  "Undeclared attribute type for enum ...") until `bin/restart-web`.
 
 ## Schema annotations
 
-Models carry `# == Schema Information` blocks maintained by **`annotaterb`** (replaced the unmaintained, Rails-8-incompatible `annotate` gem). Config is `.annotaterb.yml`; the `lib/tasks/annotate_rb.rake` hook re-annotates models automatically on `db:migrate` in development. Regenerate manually with `bundle exec annotaterb models`. **Keep `:format_rdoc: false` (plain format)** — annotaterb's RDoc output is non-idempotent (it re-appends the Foreign Keys section + terminator on each run), causing endless churn. Only models are annotated (`exclude_factories/fixtures/tests: true`).
+`annotaterb` (config `.annotaterb.yml`; not the Rails-8-incompatible `annotate` gem) maintains models' `# == Schema Information` blocks;
+`lib/tasks/annotate_rb.rake` re-runs it on `db:migrate` in development, or run
+`bundle exec annotaterb models`. Only models are annotated
+(`exclude_factories/fixtures/tests: true`). **Keep `:format_rdoc: false`**: RDoc output
+re-appends its Foreign Keys section on every run.
 
-## Attachments — allowed file types
+## Attachments: allowed file types
 
-`Attachment::ALLOWED_CONTENT_TYPES` (`app/models/attachment.rb`) is the server-side allow-list for uploads (there is no browser `accept` filter). `active_storage_validations` resolves an upload's type via `Marcel::MimeType.for(declared_type: blob.content_type, name: blob.filename)` and **raises `ArgumentError` if an allow-listed string is unknown to Marcel** — so any type Marcel doesn't ship must first be registered in `config/initializers/sheet_music_mime_types.rb` (and the server restarted, since initializers are boot-time state). For **container-based** formats (zip- or xml-wrapped, e.g. `.mscz`/`.mxl`/`.musicxml`), register the type with the container as a `parent:` so Marcel keeps the specific type instead of resolving to bare `application/zip`/`application/xml` — otherwise you'd have to allow the bare container type, which would let *any* zip/xml through.
+`Attachment::ALLOWED_CONTENT_TYPES` (`app/models/attachment.rb`) is the only upload allow-list
+(no browser `accept` filter).
+
+- **Every allow-listed type must be known to Marcel**, or `active_storage_validations` raises
+  `ArgumentError`. Register missing ones in `config/initializers/sheet_music_mime_types.rb` and
+  restart the server.
+- **Register a zip- or xml-wrapped format (`.mscz`/`.mxl`/`.musicxml`) with the container as
+  `parent:`**, so Marcel keeps the specific type. Never allow bare `application/zip` or
+  `application/xml`: it lets any zip/xml through.
 
 ## Permissions
 
-The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
+The grid discovers models via `ApplicationRecord.descendants` in
+`Admin::PermissionsController#set_models_and_roles`. Add a child model managed only through its
+parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) to the exclusion list there.
 
-- **What a role MAY DO is a grid permission; WHO someone is stays a role check.** Gate on
-  `can?(:access, :committee)` / `can?(:review, :proposals)`, never on `has_role?("Committee")`.
-  `User#member?` / `User#committee?` are the facts (membership import, staffing eligibility,
-  badges; `with_role(:member)` for the set queries), and must never be grantable from a grid
-  checkbox: a stray tick on another role would mass-mail its holders and mint them pretix
+- **What a role may do is a grid permission; who someone is stays a role check.** Gate on
+  `can?(:access, :committee)` / `can?(:review, :proposals)`, never `has_role?("Committee")`.
+  `User#member?` / `User#committee?` (and `with_role(:member)`) are facts and must never be
+  grantable from a grid checkbox: a stray tick would mass-mail that role and mint pretix
   memberships overnight. `member?` excludes life members, who count only for pretix discounts.
-- **A miscellaneous-only grid subject must be a symbol (`proposals`), never a model name.** A
-  grid save calls `update_permission` for every listed subject with only the actions the grid
-  offers, so a misc-only `"Admin::Proposals::Proposal"` row deleted the `manage` rows stored
-  before that class left the model rows (2026-05-08) — the rows non-admins approve with.
-- **A miscellaneous permission can only be read AFTER `set_permissions_based_on_grid`**, which
-  for non-admins runs late in `Ability#initialize`. A `can?(:review, …)` placed higher up reads
-  false for everyone; put derived rules next to the `:duplicate` / `:membership_import` ones.
+- **A miscellaneous-only grid subject must be a symbol (`proposals`), never a model name.** A grid
+  save calls `update_permission` for every listed subject with only the actions the grid offers,
+  deleting the other stored rows (such as the `manage` rows non-admins approve with).
+- **A miscellaneous permission reads false until `set_permissions_based_on_grid` has run**, late in
+  `Ability#initialize` for non-admins. Put derived rules next to the `:duplicate` /
+  `:membership_import` ones.
 - **Every role name referenced in code is in `Role::HARDCODED_NAMES`** (matched case-insensitively
-  via `Role.hardcoded_name?`, because the code asks for `:member` and `"Member"` alike). It blocks
-  rename and delete only; archiving creates a suffixed sibling and is unaffected.
-- **A new permission that replaces a role check needs a data migration** granting it to the roles
-  that had the access (see the two `Grant…Permission` migrations of 2026-09-05) AND the matching
-  fixture rows: test and CI databases are schema-loaded, so the migration never runs there.
+  by `Role.hardcoded_name?`, as code asks for `:member` and `"Member"` alike). It blocks rename and delete only; archiving is unaffected.
+- **A new permission replacing a role check needs a data migration** granting it to the roles that
+  had the access (like the two `Grant…Permission` migrations of 2026-09-05) **and** matching
+  fixture rows, since test and CI databases are schema-loaded.
 
 ## Reimbursements portal
 
 Producer-facing expense portal under `/admin/reimbursements`
-(`Admin::Reimbursements::BaseController < AdminController`), gated by the grid
-permission `access`/`reimbursements` (a symbol subject like `:backend`; listed in
-`Admin::PermissionsController`'s miscellaneous permissions) and linked from the admin
-sidebar's Finance category. Data lives in the local `reimbursements_*` MySQL tables
-(`Reimbursements::{Expense,Person,Budget,…}` AR models, receipts on ActiveStorage). The
-Airtable backend was retired in the post-flip cleanup — the `REIMBURSEMENTS_BACKEND`
-switch, the `Reimbursements::Airtable::*` POROs, the Solid-Cache-fronted Airtable
-`Store`, and the importer are all gone (see the "Done" note in
-`docs/reimbursements/mysql-migration-and-roadmap.md`). The `airtable_record_id` columns
-survive as historical import provenance and are never written. Spec + plan in
-`docs/superpowers/specs|plans/`.
+(`Admin::Reimbursements::BaseController < AdminController`), gated by the grid permission
+`access`/`reimbursements` (a symbol subject like `:backend`, listed in
+`Admin::PermissionsController`'s miscellaneous permissions), linked from the sidebar's Finance
+category. Data is in the `reimbursements_*` MySQL tables (`Reimbursements::{Expense,Person,Budget,…}`,
+receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch, no
+`Reimbursements::Airtable::*`); `airtable_record_id` columns are import provenance, never written.
 
-- **`/admin/reimbursements` is the portal's FRONT DOOR for both audiences**
-  (`HomeController#show`): a finance user gets the dashboard, anyone else is redirected to their
-  own claims, which is what the URL did for everybody. The branch is IN the action, not a
-  before_action — a producer has access to the portal and must not 403 at its root.
-  `Reimbursements::FinanceHome` assembles the figures off existing readers and invents no second
-  reading of anything; its totals are GROSS `amount` ("how much money is about to move"), never
-  the ex-VAT figure the budget rollups use.
-- **`Reimbursements::Glossary` is the ONE definition of every word the portal uses.** The budget
-  and review screens print a subset inline (`shared/_glossary_terms`), so a column note cannot
-  drift from the glossary; `.terms` RAISES on an unknown key rather than printing a shorter list.
-  The page is on the BASE portal permission, not the finance one — an owner reads "committed" and
-  "endorse" on their area page, a producer reads "Submitted" on their claim.
-- **Undo exists now, and each undo reverses what its forward action wrote.** Ledger `unlink`
-  detaches a row from a claim AND reverses the settlement (`settle_expense_from_actual!` writes
-  Paid + `payment_confirmed_date`, so clearing the link alone leaves a claim reading Paid with no
-  evidence); it REFUSES a From-EUSA claim created by that row, which has no earlier state.
-  `offset_pair` re-pairs two rows by hand, applying the detector's HARD requirements and
-  deliberately not its scoring. A budget update can be opened and removed as a unit
-  (`delete_budget_update!` DESTROYS its forecasts — `dependent: :nullify` would leave every
-  revision in place and merely unlabelled). A rejected claim reopens to PENDING, never Approved,
-  so it re-enters the owner gate.
-- **Every email the Notifier sends is logged, one row per recipient**
-  (`Reimbursements::NotificationLog`, written at `Notifier#send_email`, the single chokepoint).
-  The KIND is the template's basename, so a new message type logs itself. `record` swallows its
-  own failures: an unlogged email that went out beats a logged one that did not.
-- **The EUSA covering email's whole body is operator-editable raw HTML** ("Body (HTML)" on Build
-  Batch, prefilled with the composed message). Replacing it with a plain-text note plus
-  `{{placeholders}}` was tried and **reverted** (`ebd09724`): editing the markup has never
-  mangled the table in practice, and the table is there for searching old email rather than being
-  what EUSA pays from — the figures they act on are in the BACS spreadsheet. **The batch total,
-  the claim count and the "receipts are also attached" line exist ONLY in the opening paragraph
-  of `emails/eusa.html.erb`; nothing below the table restates them.** So anything that replaces
-  the opening drops all three silently. See plan item 27.
-- **Everything goes through the store built by `Reimbursements.build_store`** — the
-  AR-backed `Reimbursements::DatabaseStore`, the single data gateway with a frozen
-  public API. No cache layer: lists are memoized per instance (one store per
-  request/job run). `DatabaseStore::LastReceiptError` guards removing an expense's last
-  receipt. Never hit AR models directly from controllers/jobs — go through the store.
+- **`eusa_code` stays on `CostCentre`; never model EUSA codes as an entity.** If a centre's code
+  ever differs by year, add a thin `financial_year_cost_centres` join (year x centre to
+  `eusa_code`, plus per-year run-days and mailboxes if needed).
+- **`/admin/reimbursements` is the front door for both audiences** (`HomeController#show`):
+  finance gets the dashboard, anyone else is redirected to their own claims. The branch is in the
+  action, not a before_action, so a producer never 403s there. `Reimbursements::FinanceHome`
+  reads existing readers only and totals GROSS `amount`, never the ex-VAT rollup figure.
+- **`Reimbursements::Glossary` is the one definition of every portal word.** Screens print
+  subsets inline via `shared/_glossary_terms`; `.terms` raises on an unknown key. The page needs
+  only the base portal permission, not finance: owners and producers read it too.
+- **Each undo reverses exactly what its forward action wrote.** Ledger `unlink` also reverses the
+  settlement (Paid + `payment_confirmed_date` from `settle_expense_from_actual!`) and refuses a
+  From-EUSA claim the row created (it has no earlier state). `offset_pair` re-pairs two rows by
+  hand with the detector's hard requirements, not its scoring. A budget update can be opened and
+  removed as a unit; `delete_budget_update!` DESTROYS its forecasts (`dependent: :nullify` would
+  leave them unlabelled). A rejected claim reopens to Pending, never Approved, so it re-enters the
+  owner gate.
+- **Every Notifier email is logged, one row per recipient** (`Reimbursements::NotificationLog`,
+  written in `Notifier#send_email`, the single chokepoint; kind = template basename, so a new type
+  logs itself). `record` swallows its own failures: an unlogged sent email beats a logged unsent
+  one.
+- **The EUSA covering email's body is operator-editable raw HTML** ("Body (HTML)" on Build Batch,
+  prefilled with the composed message). Plain text plus `{{placeholders}}` was tried and reverted
+  (`ebd09724`): the table is for searching old email, and EUSA pays from the BACS spreadsheet.
+  **The batch total, claim count and "receipts are also attached" line exist only in the opening
+  paragraph of `emails/eusa.html.erb`**, so replacing it drops all three silently.
+- **Everything goes through `Reimbursements.build_store`** (`Reimbursements::DatabaseStore`, the
+  single gateway, frozen public API). Never hit AR models from controllers or jobs. No cache:
+  lists are memoized per instance, one store per request or job run.
+  `DatabaseStore::LastReceiptError` guards removing an expense's last receipt.
 - **Budget figures and the overview** (`Reimbursements::Budget`, `NominalCodeRollup`,
   `/admin/reimbursements/budgets/overview`):
-  - **`eusa_actual_amount` is linkage-based and NET.** An Expense budget counts the actuals
-    reconciled to its *expenses*, an Income budget the ones booked against its `budget_id`;
-    matching on nominal code would be wrong because several budgets share a code. Both
-    directions net through `EusaActual.net` (debits less credits, offsetting legs dropped),
-    so a refund reduces a line instead of inflating it.
-  - Because the rollups are linkage-based, the overview's second card
-    (`DatabaseStore#unattributed_actuals`) is what stops unlinked spend disappearing: rows
-    linked to neither an expense nor a budget, offsetting legs excluded. It is NOT
-    "nominal code with no budget" — that older definition hid unlinked spend behind any
-    budget sharing the code, and suppressed every blank-code row.
-  - **Expense and Income budgets are never totalled together** (£10k spend + £8k income is
-    not £18k of anything). Every total comes from `NominalCodeRollup#by_type`.
-    **`expected_outturn` is nil for an Income budget** and renders blank/empty everywhere
-    (overview, index, edit, CSV, xlsx): the "never below reality" max reads as *best-case*
-    income on that side.
-  - **`Budget#remaining` reads the PLAN (`projected_amount`), not the forecast alone**, so a
-    freshly imported year does not read "-" on every line; `variance` follows it, and is £0.00
-    rather than blank when no forecast has been logged (the plan IS the agreed figure). An
-    INCOME line keeps the forecast-only reading: its plan is a target to raise while
-    `committed_amount` is spend recorded against it, so a fallback there would mean nothing.
-    Nil only with no figure at all, and the screens print "No budget set"
-    (`reimbursements_budget_remaining`) rather than a bare dash.
-  - **"Projected" is the ONE name for that figure** on the index, the overview and the edit card
-    (`reimbursements_budget_projected`, marking `(initial)` where no forecast is logged). They
-    used to say "Current forecast" and "Projected" for two different numbers. The EXPORTS keep
-    both columns and both names — an export column is never renamed or reordered.
-  - **`store.budgets` deliberately does NOT preload actuals** — only
-    `store.budgets_with_actuals` does (budgets index/overview + the Budgets export sheet).
-    Don't "fix" a caller by switching it: the producer's budget `<select>` used to load the
-    whole expenses + actuals ledger to draw a dropdown.
+  - **`eusa_actual_amount` is linkage-based and net.** Expense budgets count actuals reconciled
+    to their expenses, Income budgets those booked against their `budget_id`; never match on
+    nominal code (budgets share codes). Both net through `EusaActual.net` (debits less credits,
+    offsetting legs dropped), so a refund reduces a line.
+  - **`DatabaseStore#unattributed_actuals` keeps unlinked spend visible** (overview's second
+    card): rows linked to neither an expense nor a budget, offsetting legs excluded. Not "nominal
+    code with no budget", which hid spend behind any budget sharing the code.
+  - **Never total Expense and Income budgets together**; every total comes from
+    `NominalCodeRollup#by_type`. **`expected_outturn` is nil for an Income budget** and blank
+    everywhere (overview, index, edit, CSV, xlsx): its max would read as best-case income.
+  - **`Budget#remaining` reads the plan (`projected_amount`)**, so a fresh import has figures;
+    `variance` follows, £0.00 with no forecast. An Income line stays forecast-only (its plan is a
+    target to raise). Nil only with no figure, printed "No budget set"
+    (`reimbursements_budget_remaining`), never a dash.
+  - **"Projected" is the one on-screen name for that figure** (`reimbursements_budget_projected`,
+    `(initial)` with no forecast logged). Exports keep both columns and names: never rename or
+    reorder an export column.
+  - **Only `store.budgets_with_actuals` preloads actuals** (budgets index, overview, Budgets export
+    sheet), not `store.budgets`. Don't switch a caller: the producer's budget `<select>` once
+    loaded the whole ledger that way.
 - **Areas** (`Reimbursements::Area`, `Admin::Reimbursements::AreasController`) group a show's
   budget lines under one agreed total and one owner set.
-  - **The area owns and its budgets inherit.** `Budget#owners` resolves through the area when
-    it has one; `own_owners` is the budget's own rows, KEPT (not deleted) so the backfill is
-    reversible, and the area's owners win wherever both exist.
-  - **Ownership is EDITED on the area, and a writer writes the table the gate actually READS.**
-    `#owners` resolves through the area, so a screen offering an editable owner list for an
-    area-bound budget would read one table and write another: the budget form renders the
-    inherited owners read-only and omits `owner_ids` from its params entirely, and the importer
-    sends an area-bound line's owner to the AREA while `#owner_syncs` takes only the lines that
-    have none. Each comparison is against the rows it writes — comparing `owner_ids`, which
-    reads through the area, could never converge and re-reported the same sync for ever. A blank
-    list is the dangerous one — `where.not(person_id: [])` is `WHERE 1=1`.
-  - **A budget named on its own has to name its area** (`Budget#display_name`, the one
-    composition — `"Cogito: Marketing"`). **The separator is a COLON, and that is correctness,
-    not style:** it is the spelling `BudgetImport.bare_name` splits on, so a label copied off a
-    screen into the committee's spreadsheet resolves to the line it names. A dash reads as a
-    whole new name and buckets as a CREATE — the duplicate-line failure the two-spelling matcher
-    exists to prevent. `FilenameSanitizer` strips the colon to a space (it is illegal on Windows
-    and in SharePoint), so a receipt filename reads `Cogito Props` and still names the show.
-    The prefix strip made the stored names non-unique:
-    three live Fringe lines are called `Marketing`, all on nominal code 432320, so a picker
-    offering them bare charges another show AND moves the claim to that show's owner gate. Every
-    picker, reminder, email, receipt filename and the auto-derived BACS payment reference reads
-    it, and `active_budgets` is ordered by it. The BARE name is right only where the area is
-    already beside it — the grouped index's rowgroup heading, the overview's area card, an
-    export's own Area column, the name FIELD on the budget form.
-  - **`Budget#picker_label` is a SEPARATE string from `display_name`, and must stay so.** It
-    prefixes the cost centre's `short_code` (falling back to `eusa_code`, edited on Settings) so a
-    producer can tell two centres' lines apart — `active_budgets` is deliberately not cost-centre
-    scoped. Prefixing `display_name` itself would change the BACS payment reference EUSA sees on
-    every future payment, the receipt filenames, and the spelling `BudgetImport.bare_name` matches
-    on. It is used in `<select>` collections and nowhere else.
-  - **An area naming nobody switches its budgets' sign-off gate OFF** — `OwnerReview
-    .gate_applies?` is false with no owners, so a budget with its own owner attached to an
-    ownerless area stops needing endorsement entirely. Both forms warn.
-  - **`reject_if: :all_blank` cannot judge a row holding a select with no blank option.** The
-    area form's nested budget row posts `budget_type` whether or not the operator touched it, so
-    an untouched "Add budget line" row stopped being blank, was built with no name and 500d the
-    save on Budget's name validation. `Area::UNTOUCHED_BUDGET_ROW` judges blankness on the fields
-    the operator fills, and `AreasController#budget_row_error` reads the SAME lambda: a row one
-    calls untouched and the other calls incomplete is either a silent 500 or a line silently
-    dropped.
-  - **A budget inherits its area's cost centre and financial year** (`before_validation` on
-    Budget, filling blanks only, so it can never move a placed line). The area form's nested
-    rows carry only a name and a code, and an unstamped line is lenient-scoped into EVERY
-    year's and EVERY centre's list and into every producer's picker.
-  - **The area `<select>` must always offer the budget's own area.** It is drawn from
-    `areas_for_year` (scoped) while `area_id` writes unscoped and `""` detaches, so an area
-    from another year read "No area" and any Save silently detached it.
-  - **A forecast belongs to exactly one of a budget or an area** (model validation + a MySQL
-    CHECK constraint — the app pins mysql:8.4 everywhere, so CHECK is enforced). An area
-    forecast revises the show's agreed total, a budget forecast a category's allocation. It
-    can't be area-only: 14 of the 31 live Fringe budgets have no area, Contingency among them.
-  - **A plan of EXACTLY £0 counts as unset, not as a cap of nothing**
-    (`Reimbursements::PlannedAmount#no_budget_set?`, included by Budget AND Area). Production
-    carries many termtime areas with a £0 agreed total and real spend, and reading the 0 as a cap
-    made every one of them over budget in red for ever. Nil, or zero with nothing allocated under
-    it; an area whose £0 total HAS allocated lines is left as a real statement, the lines
-    contradicting the total. `remaining`, `variance`, `unallocated` and (through `remaining`)
-    `over_budget?` all go quiet on it.
-  - **`remaining` and `unallocated` are nil, never zero, when nobody agreed a total** — the
-    state every backfilled area starts in; a 0 there would read as "fully overspent".
-  - **The backfill is a SERVICE, not migration code** (`Reimbursements::AreaBackfill`), because
-    test/CI databases are schema-loaded so a data migration never runs there and could never be
-    tested. Its `down` REFUSES when the area tree shows signs of hand-editing.
-  - **`reimbursements_budgets.name_before_area_rename` is the prefix rename's only recording
-    surface, so dropping it while the rename is applied makes the rename permanently
-    irreversible.** `AreaRename.restore!` (same service shape, same reason) puts back the recorded
-    STRING byte-for-byte, only where the name is still the one `strip!` left, and asks the LIVE
-    schema for the column so it raises `MissingRecordError` rather than silently doing nothing.
-    Restoring by RULE instead would re-prefix lines the strip refused to touch, which makes every
-    area reproducible from its budgets and so DISARMS `BackfillReimbursementsAreas#down`'s refusal
-    — turning a guard against unwinding a hand-edited area tree into a silent delete of areas and
-    their owner rows. Phase 2b's Task 8 will drop the column and close that rollback window on
-    purpose; it has NOT run — the column is still there and the rename is still reversible.
-  - **A rollback of the backfill RECORDS where each line was**
-    (`Reimbursements::AreaMembership`, `reimbursements_budgets.area_before_rollback`), because
-    `AreaBackfill` re-homes only the lines whose NAME reproduces their area: one created,
-    moved or imported into an area came back with its name intact and its area gone, and
-    re-migrating never restored it. The record carries the area's IDENTITY (name, centre,
-    year — an id would dangle, `down` deletes the rows) **and its owner list**, since
-    `seed_owners!` seeds an area from its children's own rows and so rebuilt an area naming
-    nobody, switching sign-off off under it. **The recording migration's version sits BELOW
-    the backfill's**: a rollback reverses in descending order, so the column outlives the
-    `down` that writes it instead of being dropped first.
-  - **A validation must not read a column the backfill's own migration predates.**
-    `Area`'s `budget_basis` inclusion is guarded by `has_attribute?`, because
-    `BackfillReimbursementsAreas#up` creates areas through the live model and runs BEFORE the
-    migration that adds that column — without the guard every `db:migrate` after a rollback
-    died in `AreaBackfill` with `NoMethodError`, so the areas could be unwound but never put
-    back. Every future column on a model a data-migration service writes repeats this.
-  - **The budget form REFUSES the owners ticked for a line going into an area**, rather than
-    writing them to `own_owners`, which `Budget#owners` stops reading the moment there is an
-    area. The guard reads the area the form is GIVING the line, not the one the record already
-    has — `#create` builds a `Budget.new` whose `area_id` is nil until the post is assigned.
-    A Stimulus controller disables the whole fieldset when an area is chosen, so the browser
-    posts no `owner_ids` at all and the own-owner rows are left alone instead of synced to an
-    empty list. A budget ALREADY in an area is unchanged: its form offers no list, and what a
-    stale page posts is still ignored rather than refused.
-  - **Area figures must be read off `store.areas`** (unscoped, preloads `:forecasts` and
-    `budgets: [:expenses, :forecasts]`), never off `budget.area` — whose `budgets` collection
-    is unloaded, so reading a subtotal that way N+1s (measured: 10→36 queries vs 32→31). The
-    area's OWN forecasts are in that preload because `Area#projected_amount` reads its forecast
-    log, which is a query per area on every screen showing an agreed total.
-  - **The grouped budgets index's subtotal covers the whole area**, while the rows shown are
-    scoped to the selected year and cost centre (the index is not paginated) — the row states
-    when fewer lines are visible than exist.
-  - **The overview's area card totals the budgets the SCREEN is scoped to** (`AreaRollup`, the
-    same budgets the nominal-code card totals), while "not yet allocated" beside it is worked out
-    over every line ever linked to the area, in any year or centre. The agreed total counts no
-    lines at all — it is the area's own forecast — so the heading's warning names only the
-    allocation figure, never the agreed total. A budget CAN hold an area from another year, which
-    is what makes the two disagree.
-    - **That warning states no DIRECTION**, and that is the only wording true in all four cases:
-      an out-of-scope EXPENSE line always reduces the figure, an out-of-scope INCOME line raises
-      it on a `net` basis and moves it not at all on a spend cap. An earlier "already subtracted
-      from" was false on two of the four, and "already counted in" on one.
-  - **An area declares what its agreed total is a total OF** (`areas.budget_basis`,
-    `Area::BASIS_LABELS`), because it is genuinely both: a SHOW gets a spend cap — the £800 it
-    raises buys it no more room — while a COMMITTEE gets a net allowance, where money raised
-    genuinely raises what it may spend. `expenses` leaves income lines out of `Area#allocated`
-    entirely; `net` subtracts them. Default `expenses` with **no backfill**: every area came from
-    the Phase 1 backfill of show-shaped lines, and a spend cap never reports more room than there
-    is. The two labels are the words on the FORM and the words on every card, so a finance user
-    picks what they read back.
-    - **The basis governs the AREA's agreed-total arithmetic ONLY.** `AreaRollup#by_type` keeps
-      its two separate subtotals on both bases — "what did this area spend" is a different
-      question from "how much room has it left", and only the second ever nets the types
-      together. Letting the basis reach `by_type` would break the standing rule that Expense and
-      Income budgets are never totalled.
-    - **`Area#remaining` is the ONE figure on a basis-labelled card that does not read the
-      basis**, deliberately. `committed_amount` counts CLAIMS, and a claim filed against an
-      income line is spend recorded on it, not income received — netting it would raise the room
-      left by money somebody spent. Income that landed is `Budget#eusa_actual_amount`, an EUSA
-      ledger figure, and nothing here mixes a committed figure with an actual one. The edit
-      card's `<dt>` carries that as a `title`. **So on a net area whose income has landed it
-      reads LOWER than the room really left** — understating is the direction this portal errs
-      in, and a basis-aware figure needs its own name plus a decision on whether an EUSA credit
-      may raise it.
-    - **The grouped index and the area edit card print a netted allocation as its two halves**
-      ("Allocated £400.00 of spend less £800.00 of income"), never as a bare negative: you
-      cannot allocate minus four hundred pounds, a negative money figure means bad news
-      everywhere else in this portal (`remaining.negative?` is `text-danger` a cell right), and
-      1,000 − (−400) = 1,400 makes the row reconcile only by subtracting a negative. One
-      derivation for both, `reimbursements_area_allocation` — the card printed the bare negative
-      for a whole branch while the index did not.
-    - **A rollback past `20260911100600` returns EVERY area to a spend cap, and nothing records
-      it.** The `down` drops the column and the `up` re-adds it with the `expenses` default, so a
-      declared net allowance comes back declaring nothing — its not-yet-allocated figure drops by
-      the whole of its income with no event on screen. **Re-declare the net areas after any such
-      rollback.** Conservative direction (an area reads as having less room, never more), which
-      is why it ships: the basis is NOT carried in `area_before_rollback` because a rollback
-      reverts in DESCENDING version order, so this column is already gone when
-      `AreaMembership.record!` runs — and a `STEP=1` rollback, the likeliest way here, never runs
-      that recorder at all. Recording it needs a scratch column of its own. Phase 2c.
-  - **Area names are unique within one (financial year, cost centre)** by model validation —
-    the composite index is NOT unique and couldn't cover this alone: MySQL permits multiple
-    NULLs through a unique index, and an area with no year/centre yet has NULLs in both.
-  - **`strong_migrations` blocks `add_reference … foreign_key:` on a populated table** — the
-    areas/area-forecast migrations use the gem's own MySQL pattern (`add_reference` then
-    `add_foreign_key` inside `safety_assured` with `SET SESSION foreign_key_checks = 0/1`);
-    `safety_assured` must wrap the `execute` calls too, not just `add_foreign_key`.
+  - **The area owns, its budgets inherit.** `Budget#owners` resolves through the area, whose
+    owners win. `own_owners` are kept, not deleted, so the backfill stays reversible.
+  - **Owners are edited on the area, and every writer writes the table the gate reads.** The
+    budget form shows an area-bound line's owners read-only and omits `owner_ids`; the importer
+    sends its owner to the area, and `#owner_syncs` takes only lines with no area. Compare
+    against the rows you write (`owner_ids` reads through the area, so never converges). A blank
+    list is dangerous: `where.not(person_id: [])` is `WHERE 1=1`.
+  - **The budget form refuses owners ticked for a line going into an area**, rather than writing
+    them to `own_owners`, which `Budget#owners` stops reading once there is an area. The guard
+    reads the area the form is giving (`#create`'s `Budget.new` has nil `area_id` until assigned).
+    A Stimulus controller disables the fieldset once an area is chosen, so no `owner_ids` post and
+    own-owner rows are left alone. A line already in an area offers no list; a stale post is
+    ignored.
+  - **An area naming nobody switches its budgets' sign-off gate off** (`OwnerReview
+    .gate_applies?`), even for a budget with its own owner. Both forms warn.
+  - **A budget shown on its own names its area** (`Budget#display_name`: `"Cogito: Marketing"`).
+    Stored names repeat across shows, so a bare name in a picker charges another show and moves
+    the claim to its owner gate. Pickers, reminders, emails, receipt filenames and the derived
+    BACS reference read it; `active_budgets` is ordered by it. Bare only beside the area (grouped
+    index heading, overview area card, an export's Area column, the form's name field).
+    - **The separator is a colon, for correctness**: `BudgetImport.bare_name` splits on it, so a
+      copied label resolves; a dash imports as a duplicate create. `FilenameSanitizer` turns the
+      colon into a space (illegal on Windows and SharePoint), so `Cogito Props` still names the
+      show.
+  - **`Budget#picker_label` stays separate from `display_name`**, `<select>` collections only. It
+    prefixes `CostCentre#picker_prefix` (`short_code`, else `eusa_code`) because `active_budgets`
+    is not centre-scoped. On `display_name` it would change the BACS reference, receipt filenames
+    and what `BudgetImport.bare_name` matches.
+  - **`reject_if: :all_blank` cannot judge a row whose select has no blank option** (the nested
+    row always posts `budget_type`, so an untouched row 500'd). `Area::UNTOUCHED_BUDGET_ROW`
+    judges the fields the operator fills, and `AreasController#budget_row_error` must read the
+    same lambda.
+  - **A budget inherits its area's cost centre and financial year** (`before_validation`, blanks
+    only, so a placed line never moves). An unstamped line is lenient-scoped into every year,
+    centre and producer picker.
+  - **The area `<select>` must always offer the budget's own area**: it comes from
+    `areas_for_year` (scoped), `area_id` writes unscoped and `""` detaches, so Save would detach
+    another year's area.
+  - **A forecast belongs to exactly one of a budget or an area** (validation + MySQL CHECK,
+    enforced on the pinned mysql:8.4). Area forecast = the show's agreed total; budget forecast =
+    a line's allocation. It cannot be area-only: many lines (Contingency) have no area.
+  - **A plan of exactly £0 counts as unset** (`Reimbursements::PlannedAmount#no_budget_set?`, in
+    Budget and Area): nil, or zero with nothing allocated under it. Many termtime areas have £0 and
+    real spend, and a cap of nothing would show them all over budget for ever. `remaining`,
+    `variance`, `unallocated` and `over_budget?` go quiet on it.
+  - **`remaining` and `unallocated` are nil, never zero, with no agreed total**; zero reads as
+    fully overspent.
+  - **Read area figures off `store.areas`** (unscoped, preloads `:forecasts` and
+    `budgets: [:expenses, :forecasts]`; the area's own `:forecasts` because `Area#projected_amount`
+    reads them), never `budget.area`, whose unloaded `budgets` N+1s.
+  - **The grouped index's area subtotal covers the whole area**; its rows are scoped to year and
+    centre, and the row says when fewer lines are shown than exist.
+  - **The overview's area card totals the budgets the screen is scoped to** (`AreaRollup`), while
+    "not yet allocated" covers every line ever linked to the area (a budget can hold another
+    year's area). The heading's warning names only the allocation figure (the agreed total is the
+    area's own forecast) and **states no direction**: an out-of-scope Expense line reduces it, an
+    Income line raises it on `net` and leaves it alone on a spend cap.
+  - **Area names are unique per (financial year, cost centre) by model validation**; a unique
+    index cannot do it, since MySQL lets NULLs through and a new area may have NULL year and
+    centre.
+  - **`areas.budget_basis` declares what the agreed total is a total of** (`Area::BASIS_LABELS`,
+    the same words on form and cards): `expenses` (a show's spend cap; income lines left out of
+    `Area#allocated`) or `net` (a committee's allowance; income subtracted). Default `expenses`,
+    no backfill: every existing area came from show-shaped lines, and a cap never overstates room.
+    - **The basis governs only the agreed-total arithmetic.** `AreaRollup#by_type` keeps separate
+      Expense and Income subtotals on both bases, which are never totalled together.
+    - **`Area#remaining` deliberately ignores the basis**: `committed_amount` counts claims, and
+      a claim on an income line is spend, not income; landed income is
+      `Budget#eusa_actual_amount`, and committed and actual figures are never mixed (the edit
+      card's `<dt>` `title` says so). A net area with landed income so reads lower than its real
+      room (understating is the safe direction); fixing that needs a new named figure and a
+      decision on EUSA credits (backlog: "`Area#remaining` understates a net-basis area whose income
+      has landed").
+    - **Print a netted allocation as two halves, never a bare negative** ("Allocated £400.00 of
+      spend less £800.00 of income"), since a negative money figure reads as overspend here.
+      Both the grouped index and the edit card use `reimbursements_area_allocation`.
+    - **A rollback past `20260911100600` returns every area to a spend cap, recording nothing**
+      (the `down` drops the column, the `up` re-adds it as `expenses`). Re-declare the net areas
+      afterwards. It ships because it errs conservative (less room, never more).
+      `area_before_rollback` cannot carry the basis: rollbacks run in descending version order,
+      so the column is gone before `AreaMembership.record!` runs, and `STEP=1` never runs it; it
+      needs its own scratch column. Backlog: plans/off-topic-improvements.md, "A rollback past
+      `20260911100600` forgets every area's basis".
+  - **The backfill is a service, not migration code** (`Reimbursements::AreaBackfill`), since
+    schema-loaded test databases never run data migrations. Its `down` refuses when the area tree
+    shows hand-editing.
+  - **A backfill rollback records each line's area** (`Reimbursements::AreaMembership`,
+    `reimbursements_budgets.area_before_rollback`), because `AreaBackfill` re-homes only lines
+    whose name reproduces their area. It stores the area's identity (name, centre, year; an id
+    would dangle) and owner list (`seed_owners!` would otherwise rebuild it ownerless, switching
+    sign-off off). **The recording migration's version sits below the backfill's**, so (rollbacks
+    run in descending order) its column outlives the `down` that writes it.
+  - **`reimbursements_budgets.name_before_area_rename` is the prefix rename's only record; dropping
+    it makes the rename irreversible.** `AreaRename.restore!` puts back the recorded string
+    byte-for-byte, only where the name is still what `strip!` left, and raises `MissingRecordError`
+    if the live schema lacks the column. Never restore by rule: re-prefixing lines the strip
+    skipped makes every area reproducible from its budgets, which disarms
+    `BackfillReimbursementsAreas#down`'s refusal, turning it into a silent delete of areas and
+    their owner rows. Dropping the column is a backlog item that runs only on Mick's word
+    (plans/off-topic-improvements.md, "Closing the area rename's rollback window"); it has not run,
+    so the rename is still reversible.
+  - **A validation must not read a column newer than the backfill migration.** `Area`'s
+    `budget_basis` inclusion is guarded by `has_attribute?` because
+    `BackfillReimbursementsAreas#up` creates areas through the live model before that column
+    exists. Every future column on a model a data-migration service writes needs the same guard.
+  - **`strong_migrations` blocks `add_reference … foreign_key:` on a populated table.** Use the
+    gem's MySQL pattern: `add_reference`, then `add_foreign_key` inside `safety_assured` with
+    `SET SESSION foreign_key_checks = 0/1`, `safety_assured` wrapping the `execute` calls too.
+
 - **Financial years** (`Reimbursements::FinancialYear`, `Admin::Reimbursements::FinancialYearsController`).
-  Each Fringe recurs with its own budgets; a year is built as a **draft** (create → import its
-  budgets → check) and switched to with `activate!`, never a checkbox on the edit form —
-  activating changes every submitter's budget picker. `activate!` stands the incumbent down and
-  promotes the target in one transaction (`only_one_active` rejects the record otherwise, and a
-  target that fails to save must not leave the portal with NO active year).
-  - **The selector is `?year=<key>` on the budget screens only** (`FinanceController
-    #resolve_financial_year!`, defaulting to the active year; an unknown key alerts and falls
-    back). Expenses, Review, Actuals, Batches and Reconcile are deliberately NOT year-scoped yet.
-  - **Which store reads are scoped is the design, not an oversight.** `store.budgets` stays
-    UNSCOPED — its callers are id→budget lookups (Review, the expenses index, every export, the
-    nightly job) and the reconcile matcher, so scoping it would blank the budget name on last
-    year's claims and stop the year-boundary tail of EUSA credits matching their income line.
-    `budgets_for_year` / `budgets_with_actuals` / `budget_updates` are scoped.
-    **`active_budgets` follows the ACTIVE year, never the selected one**, so a finance user
-    browsing next year's draft can't file against it.
-  - **A row with no year counts as belonging to the year being viewed** (`DatabaseStore#in_year`),
-    the same leniency the reconcile matcher gives a budget with no cost centre: every row
-    predating financial years is unstamped until `reimbursements:financial_year_backfill` runs,
-    and the strict reading would empty the budget list and every submitter's budget picker with
-    nothing on screen to explain it.
-  - **`BaseController::DEFAULT_STORE_BUILDER` exists so a test can put the seam back.** The
-    store seam takes `financial_year:` AND `cost_centre:`; restoring it by hand as
-    `-> { build_store }` drops both, and `class_attribute` makes that stick for the rest of the
-    process — every later scoped page in that worker then renders every year's and every cost
-    centre's budgets at once. A fake that ignores scoping is written `->(**) { fake }`.
-- **Cost centres** (`Reimbursements::CostCentre`, `?cost_centre=<key>`). One pot's budgets,
-  claims, ledger rows, batches and mailboxes. The selector is
-  `FinanceController#resolve_cost_centre!`, rendered by
-  `shared/_cost_centre_selector` on Budgets index + overview, Actuals, Review and Batch history.
-  - **The sidebar carries the selectors, and only those two.** `SCOPE_PARAMS` is `year` and
-    `cost_centre`; the clash check PARSES an item's own query string rather than matching
-    substrings, because `financial_year=` contains `year=` and `cost_centre_id=` is the same
-    coordinate spelled differently (and the key beats the id in `resolve_cost_centre!`). The
-    producer items are deliberately unscoped — their own claims are neither year- nor
-    centre-scoped.
-  - **No `?cost_centre=` means EVERY centre**, because `CostCentre.default` is `order(:id).first`
-    and defaulting to it silently empties the second centre's screens for the people who work in
-    it. `?cost_centre_id=<id>` is still honoured for the budget-import links; the key wins.
-  - **`CostCentre.default` names an arbitrary pot the moment a second row exists.** Never reach for
-    it where the right answer is knowable (the claim's centre, the batch's, the selector), and
-    never on a path that moves money or emails a producer — that was the whole class of bug fixed
-    2026-09-10. `.sole_configured` is the "nothing to choose" read.
-  - **A read-only filter may be lenient; anything that MOVES MONEY must assign each claim exactly
-    one owner.** `#in_cost_centre` puts an unplaced row in EVERY centre's scope (the leniency
-    `#in_year` states); the money path reads `#expenses_owned_by_cost_centre`, where an unplaced
-    claim falls to the DEFAULT centre — `BuildBatchJob`'s `limits_concurrency` key is PER CENTRE,
-    so two builds don't serialise and a claim owned by both reaches two live EUSA drafts.
-    `NightlyBatchJob` uses the same strict rule, so the centre told about a claim can pay it, and
-    `BatchProcessor#mark_submitted` re-reads and refuses a claim no longer Approved.
-  - **Build Batch's centre travels in a HIDDEN FIELD, not the URL** — the form posts to a bare
-    path, so a POST carries no query string and the submit silently bounced to History. A request
-    test cannot see this; `build_batch_cost_centre_js_test.rb` clicks the real button. The
-    sidebar's link now CARRIES the selected centre (`Admin::SidebarComponent::SCOPE_PARAMS`
-    appends `?year=` and `?cost_centre=` to every `scoped: true` finance item), so Build Batch
-    opens on the pot the operator was looking at. With no centre selected — the "All" default —
-    `new` still renders a **chooser**, which is what keeps "the wizards refuse to guess" true:
-    the centre is carried from an explicit choice, never inferred.
-  - **A batch's mailbox is a GUESS for anything built before this, so reopen probes a LIST**
-    (derived centre, then default). Older batches all drafted into the default centre's mailbox,
-    and `GraphClient#draft_message?` fails closed, so one wrong guess read as "may already have
-    been sent" — untrue and inescapable.
-  - **A budget import ADOPTS the unplaced line it matched** (`BudgetImport#adoptions`), or the same
-    leniency has two committees revising one shared row forever and neither getting its own.
-  - **Which reads are scoped is the design.** `budgets_for_year` / `budgets_with_actuals` /
-    `unattributed_actuals` / `expenses_for_cost_centre` / `eusa_actuals_for_cost_centre` /
-    `batches_for_cost_centre` are; **`budgets`, `expenses`, `eusa_actuals` and `active_budgets` are
-    NOT** — id→record lookups, Reconcile's pools, and every submitter's budget picker.
-    **`Exports::Workbook` reads the scoped reader for every sheet** or its sheets stop adding up.
-  - **Neither Expense nor Batch has a cost-centre column.** An expense resolves one through its
-    budget; a batch through the expenses it holds — so the reopen mailbox must be read BEFORE the
-    revert unlinks them. Review's three tabs, their counts and the CSV come off ONE scoped list.
-  - **A centre's nominal codes are maintained ON its Settings edit page**, per the spec, by
-    `settings/_nominal_codes` + `Admin::Reimbursements::NominalCodesController` (writes only, no
-    index; `settings/:key/nominal_codes`, finance-gated as Settings is; `NominalCodeSeed` filled
-    the list with GUESSED labels the screen corrects).
-    - **The section is a SIBLING of the cost centre's `simple_form`, never nested in it** — a form
-      inside a form is invalid HTML and the inner submit silently does nothing, the same class as
-      the card-footer trap. Each control is its own small form, and every write answers a **turbo
-      stream replacing `#nominal_codes` plus a `toast`**, so the centre's form is not re-rendered
-      and a half-typed mailbox survives; the toast carries the notice a redirect's flash would
-      lose, rendering outside the replaced section. Only a browser test sees any of this.
-    - **Retiring beats deleting and the CONTROLLER decides which**: a code any historical row
-      carries — a budget line OR an imported EUSA actuals row, both storing it as a string — is
-      deactivated so it leaves the pickers and still labels those rows, and only an unreferenced
-      code is deleted. The row's Retire/Delete wording is a prediction made when the page
-      rendered, and it reads the SAME counts `#in_use?` decides by. A row with NO centre counts
-      in EVERY centre (it is lenient-scoped into every centre's screens).
-    - `code` is never updatable: every budget, actuals row and export stores it as a string, so a
-      rename strands them all. The Settings `before_action` loading the section covers `update`
-      as well as `edit`, because a refused save re-renders `:edit`.
+  A year is built as a **draft** (create, import its budgets, check) and switched to with
+  `activate!`, never a checkbox on the edit form: activating changes every submitter's budget
+  picker. `activate!` stands the incumbent down and promotes the target in one transaction:
+  `only_one_active` rejects a second active year, and a target that fails to save must never
+  leave no active year.
+  - **The selector is `?year=<key>`, on the budget screens only**
+    (`FinanceController#resolve_financial_year!`; defaults to the active year, an unknown key
+    alerts and falls back). Expenses, Review, Actuals, Batches and Reconcile are deliberately not year-scoped yet.
+  - **`store.budgets` stays unscoped**: its callers are id→budget lookups (Review, the expenses
+    index, exports, the nightly job) and the reconcile matcher, so scoping it blanks last year's
+    budget names and stops year-boundary EUSA credits matching their income line.
+    `budgets_for_year`, `budgets_with_actuals` and `budget_updates` are scoped.
+    **`active_budgets` follows the active year, never the selected one**, so nobody files against
+    a draft.
+  - **A row with no year belongs to the year being viewed** (`DatabaseStore#in_year`), or rows
+    unstamped until `reimbursements:financial_year_backfill` runs would silently empty the budget
+    list and every picker.
+  - **In a test, restore the store seam with `BaseController::DEFAULT_STORE_BUILDER`, never
+    `-> { build_store }`**, which drops the seam's `financial_year:` and `cost_centre:`; through
+    `class_attribute` that sticks for the process, unscoping every later page in that worker. A
+    fake that ignores scoping is `->(**) { fake }`.
+- **Cost centres** (`Reimbursements::CostCentre`, `?cost_centre=<key>`): one pot's budgets,
+  claims, ledger rows, batches and mailboxes. Selector: `FinanceController#resolve_cost_centre!`,
+  rendered by `shared/_cost_centre_selector` on Budgets index and overview, Actuals, Review and
+  Batch history.
+  - **The sidebar carries these two selectors and nothing else**:
+    `Admin::SidebarComponent::SCOPE_PARAMS` (`year`, `cost_centre`) is appended to every
+    `scoped: true` finance item. The clash check parses the item's query string, never substring
+    matches (`financial_year=` contains `year=`; `cost_centre_id=` is the same coordinate). Producer
+    items are unscoped, as their own claims are.
+  - **No `?cost_centre=` means every centre**, never `CostCentre.default`, which would empty the
+    second centre's screens. `?cost_centre_id=<id>` still works (budget-import links); the key wins.
+  - **`CostCentre.default` (`order(:id).first`) is an arbitrary pot once a second row exists.**
+    Never use it where the answer is knowable (the claim's, the batch's, the selector's centre), or
+    on a path that moves money or emails a producer. `.sole_configured` is the "nothing to choose"
+    read.
+  - **A read-only filter may be lenient; anything that moves money gives each claim exactly one
+    centre.** `#in_cost_centre` puts an unplaced row in every centre. The money path reads
+    `#expenses_owned_by_cost_centre` (unplaced falls to the default centre), because
+    `BuildBatchJob`'s `limits_concurrency` key is per centre and a claim in two centres would reach
+    two live EUSA drafts. `NightlyBatchJob` uses the same rule; `BatchProcessor#mark_submitted`
+    re-reads and refuses a claim no longer Approved.
+  - **Build Batch's centre travels in a hidden field, not the URL**: the form posts to a bare
+    path, so a query string is lost. Only `build_batch_cost_centre_js_test.rb` sees it. With no
+    centre selected, `new` renders a **chooser**; the centre is never inferred.
+  - **Reopen probes a list of mailboxes** (derived centre, then default): older batches drafted
+    into the default centre's, and `GraphClient#draft_message?` fails closed, so one wrong guess
+    reads as "may already have been sent".
+  - **A budget import adopts the unplaced line it matched** (`BudgetImport#adoptions`), or two
+    committees share one row for ever.
+  - **Centre-scoped readers:** `budgets_for_year`, `budgets_with_actuals`, `unattributed_actuals`,
+    `expenses_for_cost_centre`, `eusa_actuals_for_cost_centre`, `batches_for_cost_centre`.
+    **Unscoped by design:** `budgets`, `expenses`, `eusa_actuals`, `active_budgets` (lookups,
+    Reconcile's pools, the picker). **`Exports::Workbook` uses a scoped reader for every sheet**,
+    or the sheets stop adding up.
+  - **Neither Expense nor Batch has a cost-centre column.** An expense resolves it through its
+    budget, a batch through its expenses, so reopen reads the mailbox before the revert unlinks
+    them. Review's tabs, counts and CSV come off one scoped list.
+  - **Nominal codes are edited on the centre's Settings edit page** (`settings/_nominal_codes`,
+    `Admin::Reimbursements::NominalCodesController` at `settings/:key/nominal_codes`: writes only,
+    finance-gated). `NominalCodeSeed`'s labels were guesses for the screen to correct.
+    - **The section is a sibling of the centre's `simple_form`, never nested** (a nested form's
+      submit does nothing). Each control is its own form; every write answers a turbo stream
+      replacing `#nominal_codes` plus a `toast` (it carries the notice a redirect's flash would),
+      so the centre's form is not re-rendered and a half-typed mailbox survives. Only a browser
+      test sees this.
+    - **The controller decides retire or delete**: a code on any budget line or EUSA actuals row
+      is deactivated (leaves the pickers, still labels those rows); only an unreferenced one is
+      deleted. The row's Retire/Delete label reads the same counts as `#in_use?`. A row with no
+      centre counts in every centre.
+    - **`code` is never updatable**: rows and exports store it as a string. The Settings
+      `before_action` loading the section covers `update` too, as a refused save re-renders
+      `:edit`.
 
 - **Setting a year up = importing the committee's spreadsheet** (`Reimbursements::BudgetImport`,
   `Admin::Reimbursements::BudgetImportsController`, `DatabaseStore#import_budgets!`). Paste TSV or
-  upload .xlsx (both via the shared `ImportParsing` concern, as the membership import does) →
-  preview → apply. **Stateless like Reconcile**: an upload is normalised to canonical TSV
-  (`BudgetImport#to_tsv`, escaping tabs/newlines inside a cell) and carried through the preview in
-  a hidden field, so apply re-parses and re-validates rather than trusting the preview.
-  - **Only the preview's OWN TSV is unescaped**, marked by a `canonical` hidden field it renders
-    and `ReadsImportSource#input_type` reads back as `:canonical_tsv`. Unescaping every input
-    rewrote a typed `Costume\next week` with a real newline before storing it AND before matching
-    it, so a revision arrived as a create beside the line it meant to update. Both wizards share
-    the flag; one that renders no marker reads everything as `:paste`.
-  - **Both coordinates are query params on ONE top-level route**
-    (`/admin/reimbursements/budget_import?year=&cost_centre_id=`), never a path segment: years are
-    orthogonal to cost centres, so nesting under either hides the other from the entry points that
-    know it. `?year=` is FinanceController's own selector, so the store is already year-scoped.
-    Entry points prefill the half they know — a financial year, the budgets index (its selected
-    year), a cost centre's settings page (that centre).
-  - **The page `<h1>` must not name the year.** It sits OUTSIDE the wizard's Turbo Frame, so a
-    preview of a year other than the one the page loaded with left the heading and the card
-    stating different years. Each step's heading, inside the frame, names its own.
-  - Buckets, within one `(financial year, cost centre)`: **create / revise / unchanged / invalid**,
-    plus `absent_budgets` (in the year, not in the sheet) which is **reported and never deleted** —
-    a budget's claims and history hang off it.
-  - **A line is matched by its AREA plus its bare name, and a stored line answers to BOTH
-    spellings** (`BudgetImport.bare_name` / `.area_scoped_key` / `#resolve_budget`). Task 6 stripped
-    the `Area: ` prefix from the stored names but the committee's sheet keeps sending it, so a
-    matcher reading one spelling bucketed 17 of the 31 live Fringe budgets as creates — each with a
-    fresh `initial_budget`, the originals reported absent. The area qualifies the key, so two shows
-    each running a "Marketing" line are two keys rather than one collision; two stored lines
-    answering to one key **blocks and names them**, never a silent pick of the last.
-  - **Where SEVERAL lines answer a name and the sheet's Area cell is blank, the one in NO area is
-    the answer** (`#loose_match`): a show's `Marketing` and a standing one are two lines, and the
-    blank cell is the only thing that says which. It is the one narrow exception to the block
-    above, and it is narrow on purpose — a row that DID name an area, or a name that is itself a
-    prefixed spelling (`Cogito: Marketing` typed against a loose line called exactly that), has
-    pointed at a show already and still blocks, as do several area-bound lines with no loose one
-    among them — and so do several LOOSE ones, since the reading needs exactly one line in no
-    area. **Where exactly ONE line answers it is matched, loose or not** — a bare row
-    against a show's only `Marketing` revises that line rather than creating a loose one beside
-    it. That asymmetry is deliberate: it is what the committee's file does the day they stop
-    typing prefixes without filling the Area column in, and blocking it would refuse the whole
-    sheet.
-  - **A row whose Area cell is blank but whose NAME carries the prefix of an area the sheet names
-    keys as that area's row** (`#prefix_area_for`). `Cogito | Marketing` beside
-    `(blank) | Cogito: Marketing` is one line written twice, not the legitimate pair — both name
-    Cogito's line — and a sheet mid-transition between the two spellings is the likeliest one the
-    committee sends. It normalises the row's OWN key; a row that claimed several keys would make
-    the duplicate relation asymmetric and non-transitive, which is what Phase 2a's differential
-    harness existed for.
-  - **A CREATE adopts that area too, and is stored under the BARE remainder** (`#create_area_name`,
-    read by `#creates` and by the owner routing). Grouping and creating disagreeing about what a
-    row means is the seam behind every duplicate here: keyed as Cogito's line but created loose
-    with the prefix in its name, the next fully-converted sheet creates the line again inside the
-    area and reports the first absent. A line is stored bare whichever column named its area —
-    `Budget#display_name` composes `"Cogito: Marketing"` back, so a stored prefix renders twice.
-    **A MATCHED row keeps its Area cell alone**: `#re_homes` and the owner targets read that, and
-    moving a stored line into a show on the strength of a prefix is a larger claim than naming a
-    new one.
-  - **The preview states the line each row MATCHED** (`Entry#matched_area_label`, plus
-    `#matched_note` where the loose reading decided) wherever that differs from the Area cell the
-    sheet typed. Without it a row matched to the loose line and one matched to the show's line
-    render identically — same blank cell, same name — so "report, don't block" reported nothing
-    the operator could see on the row they typed. **An unmatched row says nothing**, or the first
-    import of a financial year — every row a create — tells the operator each one matched a line
-    in no area.
-  - **The preview's Area column reads `#area_name_for`, the area a row LANDS in**, marking
-    `(from its name)` where the importer read it off the prefix rather than the cell. The screen
-    has to agree with `#creates` about what a row means: it is the operator's only chance to catch
-    a wrong adoption, and an adopted row otherwise shows an empty cell for a line that will land
-    in a show.
-  - **`#superseded_absent_budgets` links the two panels** where a create's (area, bare name)
-    matches an absent line whose own name carries that area as a prefix. They are two lines and
-    nothing is merged — that is the ruling — but a create in one panel and an absence in another,
-    with nothing connecting them, is the one state the operator cannot resolve from the screen.
-    The prefix has to be really there, or the reading fires on the legitimate pair.
-  - **Columns are matched strictly** (`StrictColumnMatching`, shared with `ExpenseImport` — see its
-    note for the class of bug). `ImportParsing#find_column`'s "header contains the keyword" fallback
-    would read the old `Area Budget` heading as the line's own name (`budget`) *and* as the area (`area`).
-    Exact names first, multi-word substrings only; two fields resolving to one column is a blocking
-    error naming both; the preview states the column read for each field.
-  - **The sheet's owner column names the AREA for a line that has one, and an area's owners are the
-    UNION** (`#area_owner_syncs`, never subtracting). `Budget#owners` reads through the area, so an
-    owner written to such a line's `own_owners` is one no sign-off gate ever consults — a line with
-    no area is the only one that takes that write. Because the union is forgiving, a stale address
-    on one line gains sign-off over a whole show: the preview lists each area's resulting set by
-    NAME rather than counting it.
-  - **A sheet naming a different area for a stored line is REPORTED as a re-home, never applied on
-    sight** — ticked checkboxes keyed by BUDGET ID, so a re-import with the rows reordered can't
-    land a tick on another line. Untick them all and the target area isn't created either
-    (`#area_creates_for`): minting an empty container silently is the same failure as moving a line
-    silently.
-  - **A test sheet built from `TSV_HEADERS` with a hand-written data row shifts every cell when a
-    column is added to that constant**, and `bin/rails test` does not run system tests — which is
-    how adding the area-total column left a RED system test invisible for two tasks. Both budget-import test
-    files derive `HEADERS` from `TSV_HEADERS` and pad each row with the leading area cells.
-  - **The canonical headings say which column is money: `Area total` and `Budget amount` are
-    figures, `Budget name` is the line's name.** The old `Area Budget` / `Budget` / `Amount` read
-    the wrong way round and stay accepted, so the committee's sheet still imports. `#to_tsv` writes
-    the labels for the preview→apply round trip, so each label must be in its own field's `exact`
-    list, or that column silently vanishes on apply; a test pins it.
-  - **The `Area total` column is the show's agreed total, and it repeats down the area's rows**,
-    so two different values for one area BLOCK the import rather than picking one — the rule an
-    unreadable `Budget amount` already follows. Written only on create; a later, different figure is
-    reported and logged as a forecast on the AREA (`#area_revisions`) under the same
-    `BudgetUpdate` as the line revisions, compared against `Area#projected_amount` so a re-import
-    converges. The sheet is the committee's own route for revising a show's total, so dropping
-    that revision was silent. The trap is an ACCENT: `Area`'s uniqueness check runs under
-    `utf8mb4_unicode_ci`, which folds accents, and `match_key` does not — so `Cógito` beside a
-    stored `Cogito` is refused in the preview rather than 500ing the apply and losing the paste.
-  - **The preview's submit button is DISABLED when nothing is going to happen, so a bucket its
-    count forgets cannot be applied AT ALL.** It reads `#apply_work`, keyed by the
-    `import_budgets!` argument that does each thing, with a test asserting it covers every one:
-    an owner-only sheet (the committee's same file re-sent with owners filled in) used to render
-    the owner panel directly above a disabled "Nothing to import".
-  - **A BUDGET's `initial_budget` is written ONLY on create**, as an area's is. A re-import logs
-    revisions as forecasts under one `BudgetUpdate`, so `Budget#variance` keeps meaning "drift
-    from the figure the committee agreed" however often the sheet is re-sent.
-  - **An unreadable amount blocks the whole import; an unknown owner email only warns.** A
-    mis-read figure is silent wrong money; a stale committee email must not stop thirty lines
-    landing, and a missing owner surfaces visibly as an unendorsed claim. No `Person` is ever
-    auto-created from a bare email. `import_budgets!` is all-or-nothing (unlike Reconcile's
-    per-row rescue): a half-imported list has no audit value, and re-running after a fix is cheap
-    because matching is by name.
+  upload .xlsx (`ImportParsing`), preview, apply. **Stateless**: the input is normalised to
+  canonical TSV (`BudgetImport#to_tsv`, escaping in-cell tabs and newlines) and carried in a hidden
+  field, so apply re-parses and re-validates rather than trusting the preview.
+  - **Only the preview's own TSV is unescaped, in both import wizards.** The preview renders a
+    `canonical` hidden field that `ReadsImportSource#input_type` reads as `:canonical_tsv`;
+    anything else is `:paste`, kept literal: unescaping a typed `Costume\next week` stores and
+    matches a real newline (a revision becomes a create), and `C:\temp\report.pdf` is a path.
+  - **Both coordinates are query params on one top-level route**
+    (`/admin/reimbursements/budget_import?year=&cost_centre_id=`), never a path segment: years and
+    centres are orthogonal. `?year=` is FinanceController's selector, so the store arrives
+    year-scoped. Entry points prefill what they know (a financial year, the budgets
+    index's year, a centre's settings page).
+  - **The page `<h1>` must not name the year**: it is outside the wizard's Turbo Frame and goes
+    stale. Each step's heading names its own.
+  - **Buckets** per `(financial year, cost centre)`: create / revise / unchanged / invalid, plus
+    `absent_budgets` (in the year, not the sheet), **reported, never deleted** (claims
+    hang off them).
+  - **A line matches on area plus bare name, and a stored line answers to both spellings**
+    (`BudgetImport.bare_name`, `.area_scoped_key`, `#resolve_budget`): stored names lost their
+    `Area: ` prefix but the sheet still sends it, and one spelling turns revisions into creates.
+    Two stored lines answering one key **block, named**, never a silent pick.
+  - **One exception (`#loose_match`): if several lines answer, the Area cell is blank and exactly
+    one of them is in no area, that one matches.** It still blocks if the row named an area, the
+    name is itself prefixed (`Cogito: Marketing`), or there are several loose lines or none.
+    **A single answering line matches, loose or not**, deliberately: a bare row revises a show's
+    only `Marketing`, or the committee's prefix-free sheet would be refused whole.
+  - **A blank-Area row whose name carries the prefix of an area the sheet names keys as that
+    area's row** (`#prefix_area_for`): `Cogito | Marketing` beside `(blank) | Cogito: Marketing` is
+    one line twice. It normalises only the row's own key; several keys per row would make the
+    duplicate relation asymmetric and non-transitive.
+  - **A create adopts that area and is stored under the bare remainder** (`#create_area_name`,
+    read by `#creates` and owner routing), or the next converted sheet creates it again in the area.
+    `Budget#display_name` adds the prefix back, so a stored prefix renders twice. **A matched row
+    keeps its Area cell as typed** (`#re_homes` and owner targets read it): a prefix is not enough
+    to move a stored line.
+  - **The preview states the line each row matched** (`Entry#matched_area_label`, `#matched_note`
+    where the loose reading decided) wherever it differs from the typed cell. **An unmatched row
+    says nothing**, or a first import claims every row matched a line in no area.
+  - **The preview's Area column reads `#area_name_for`**, the area a row lands in, marked
+    `(from its name)` when read off the prefix. It must agree with `#creates`.
+  - **`#superseded_absent_budgets` links a create to the absent line** whose name is the create's
+    area prefix plus its bare name. Nothing is merged; the link only lets the operator see the
+    pair. The prefix must really be there, or it fires on the legitimate pair.
+  - **Columns match strictly** (`StrictColumnMatching`, shared with `ExpenseImport`), never via
+    `ImportParsing#find_column`'s "header contains keyword" fallback (it reads `Area Budget` as
+    both name and area). Exact names, then multi-word substrings only; two fields on one column
+    blocks, naming both; the preview states each field's column.
+  - **Canonical headings: `Area total` and `Budget amount` are money, `Budget name` is the
+    name.** Old `Area Budget` / `Budget` / `Amount` stay accepted. Each label `#to_tsv` writes must
+    be in its own field's `exact` list, or the column vanishes on apply (a test pins it).
+  - **`Area total` is the show's agreed total and repeats down an area's rows; two values for one
+    area block.** Written only on create; a later, different figure is reported and logged as an
+    area forecast (`#area_revisions`) under the same `BudgetUpdate`, compared
+    against `Area#projected_amount` so re-imports converge. Trap: `Area`'s uniqueness check folds
+    accents (`utf8mb4_unicode_ci`) and `match_key` does not, so `Cógito` beside `Cogito` must be
+    refused in the preview, not 500 the apply and lose the paste.
+  - **A budget's `initial_budget` is written only on create**; re-imports log forecasts under one
+    `BudgetUpdate`, so `Budget#variance` stays drift from the agreed figure.
+  - **The owner column names the area for an area-bound line, and area owners are the union**
+    (`#area_owner_syncs`, never subtracting). `own_owners` on an area-bound line reaches no
+    sign-off gate, so only a loose line takes that write. One stale address gains sign-off over a
+    whole show, so the preview lists each area's owners by name.
+  - **A different area for a stored line is a re-home, reported, never applied on sight**:
+    checkboxes keyed by budget id (survives reordering). All unticked creates no target area
+    (`#area_creates_for`).
+  - **Submit is disabled when nothing will happen, so `#apply_work` must cover every bucket**
+    (keyed by the `import_budgets!` argument doing each; a test asserts it), or a bucket such as an
+    owner-only re-send cannot be applied.
+  - **An unreadable amount blocks the whole import; an unknown owner email only warns**: a
+    misread figure is silent wrong money, a missing owner shows as an unendorsed claim. Never
+    auto-create a `Person` from a bare email. `import_budgets!` is all-or-nothing, unlike
+    Reconcile's per-row rescue; re-running is cheap as matching is by name.
+  - **Budget-import test sheets derive `HEADERS` from `TSV_HEADERS` and pad rows with the leading
+    area cells**: a hand-written row shifts when a column is added, and `bin/rails test` skips
+    system tests.
 - **Importing settled claims** (`Reimbursements::ExpenseImport`,
   `Admin::Reimbursements::ExpenseImportsController`, `DatabaseStore#import_expenses!`). Same
-  wizard shape and same two query-string coordinates as the budget import, reached from the
-  finance expenses index.
-  - **`Status` is a MANDATORY column and the importer never guesses.** Blank or unrecognised is a
-    blocking error, because the status decides everything that happens to the claim afterwards —
-    a row imported Approved enters Build Batch and emails its producer, one imported Paid never
-    does. All-or-nothing like `import_budgets!`, so an unreadable amount, an unknown payee, an
-    unknown budget or a bad status stops the lot naming the rows.
-  - **The sheet's `ID` column (headed `Reference` before 2026-09-15, still accepted) is the double-apply guard**, written to
-    `expenses.import_key` behind a UNIQUE index. The wizard is stateless, so a second click
-    re-posts the same sheet, and a claim has NO natural key the way a budget line has its name.
-    The pre-flight read gives the preview its "already imported" bucket; the index is what holds
-    when that read goes stale, and the rescued `RecordNotUnique` re-renders the preview.
-  - **A blank Submitter email is "none given", never a lookup.** Payees without an email all
-    index under `""`, so a blank cell matched whichever came last and 140 production claims went
-    to "Fringe Society". With no email the `Submitter` NAME is matched (case, spacing and accents
-    folded); a name two people share blocks the row. The column is "Submitter", not "Payee",
-    because `Payee name` is an Invoice's supplier.
-  - **Every rule comes from `ExpenseForm`, because the model has none** — `person`, `budget`,
-    `batch` and `financial_year` are all optional and status/type/method have DB defaults, so
-    `Expense.create!({})` passes. The importer sets `internal` as `from_actual` does, plus a
-    second code-only flag **`settled`** which suppresses `invoice_without_payee?` /
-    `international_without_payee?` and NOTHING else: those exist because `EffectivePayee` falls
-    back to the submitter's own details on the money path, and Build Batch reads Approved alone.
-  - **A row carrying an `Expense number` is inserted BEFORE the rows without one.** `auto_number`
-    is uniquely indexed and `create_expense!` assigns MAX+1 to a row without one — and never
-    retries past a collision on a number it was handed, calling that real data corruption.
-  - **It does NOT match columns through `ImportParsing#find_column`.** That fallback matches any
-    header *containing* a keyword, and this sheet's fields are near-anagrams: read through it a
-    "Payment reference" column answered to the dedupe key (collapsing two of a payee's claims into
-    one) and an "Account number" column answered to the expense number (numbering every later
-    claim in the portal from 66,374,959). `FIELDS` matches EXACT names first, then MULTI-WORD
-    substrings only; two fields resolving to one column is a blocking error; and **the preview
-    states the column read for each field**, which is the only thing that makes a remaining
-    mis-mapping visible. A test file that builds its sheet from `TSV_HEADERS` cannot catch any of
-    this — the realistic-heading tests are the ones that matter.
-  - **References are compared downcased**, because the `import_key` index is
-    `utf8mb4_unicode_ci`: comparing case-sensitively previewed `OLD-1` and `old-1` as two creates
-    and then rolled the whole sheet back, unrecoverably. The collation also folds accents and this
-    does not — deliberately, since over-matching would drop a new claim silently.
-  - **Escape sequences are undone only for `:canonical_tsv`**, the preview's own hidden field —
-    never for the operator's paste, where a typed `C:\temp\report.pdf` is a path, not a tab.
-  - **The import emails nobody, but what it WRITES decides what happens next.** Every producer
-    email comes from `BatchProcessor`, `NightlyBatchJob` or an explicit reject — so a row imported
-    Approved goes on the next BACS spreadsheet (EUSA pays it again) and emails its payee, and a
-    Pending one is named to its budget owners nightly. The preview and the apply screen both count
-    the non-terminal rows and say so; don't reword those into a flat "nothing was emailed".
-- **Both import wizards REFUSE to guess the cost centre** (`ReadsImportSource#cost_centre_chosen?`
-  / `#chosen_cost_centre`): they used to preselect `selectable_cost_centres.first` while
-  everywhere else here "none" means "every centre". Preview and apply both re-render step 1 with
-  the paste intact. With ONE centre configured nothing is asked — there is no question with a
-  single answer — and a centre named by `?cost_centre=` / `?cost_centre_id=` still prefills.
-- **A grouped `<select>` needs `as: :grouped_select`.** A plain simple_form `collection:` with
-  `group_method:` renders ONE OPTION PER GROUP — the group's label as the text, its whole array
-  as the value — which looks right on the page and offers nothing selectable. Assert the
-  `<optgroup>` MARKUP, not the ivar: a test reading the controller's groups passes over this.
-- **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless its
-  destination carries the same frame — otherwise Turbo replaces the wizard with "Content
-  missing". All five escape links out of the budget import shipped broken this way;
-  `shared/back_link` takes a `turbo_frame:` local now, and only a browser test sees it.
-- **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma
-  decimal). `.parse` → nil for anything unreadable; **`.parse!` distinguishes blank
-  ("nothing typed", nil) from unreadable (raises)** — the batch budget-update form needs
-  that to tell a deliberate blank from a typo, since treating both as "skip" silently kept
-  a budget on a superseded forecast. **`AmountValidation` (Review#save, expense-edit
-  #update) reads through the same parser** and adds the finance rules on top: positive,
-  within `MAX_AMOUNT` (100k, the fat-finger backstop), excl-VAT not above gross. Its
-  callers must write `AmountValidation.amount` / `.amount_excl_vat` — the parsed
-  BigDecimal — never the raw param: AR casts a string to a decimal column with `to_d`, so
-  a validated "£1,200" handed through raw would store **0**.
-- **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first, then
-  per-env credentials `reimbursements:`. Real values live **only** in the production credentials
-  (the *development* credentials are publicly readable), so Graph/Azure is unconfigured in
-  development by design.
-- **Outbound Graph calls are gated to production** (`Settings.outbound_enabled?`): true in
-  production, elsewhere only with `REIMBURSEMENTS_ENABLE_OUTBOUND` set (the test suite opts in
-  via `test_helper.rb`, since it fakes the transport). **This is why email-in appears to do
-  nothing locally — by design, not a bug.** `MailboxPollJob#perform` returns immediately;
-  `send_mail` and `create_draft` log and return a stub; `MailboxClient#reply/#move/#mark_read`
-  no-op. `upload_to_folder` and `delete_message` instead **raise** `OutboundSuppressedError`,
-  because a plausible return value there is indistinguishable from success and would stamp
-  `receipts_offloaded` on receipts that were never backed up (the flag that tells a producer it
-  is safe to delete their only copy). Read-only Graph probes stay live in dev, so the Settings
-  integration dashboard still works. Without this, a dev shell with real Azure credentials exported
-  would email real producers and PUT the BACS spreadsheet into production SharePoint.
-- **Bank details are encrypted at rest** (ActiveRecord Encryption, non-deterministic):
-  `sort_code`/`account_number`/`notes` on `Reimbursements::PaymentDetails`, and the
-  `sort_code_override`/`account_number_override`/`payee_name_override` trio on
-  `Reimbursements::Expense`. Nothing queries these by value (non-deterministic would break that);
-  the money path reads the decrypted attributes. Keys: production credentials under
-  `active_record_encryption:` (Rails' railtie reads them automatically); development takes
-  `REIMBURSEMENTS_AR_ENCRYPTION_*` from ENV (optional) **falling back to throwaway literals in
-  `config/application.rb`** — needed because an encrypted attribute requires a key on write even
-  when blank, so without them every `Expense.create!` in a dev shell without them raised; test uses
-  literals in `config/environments/test.rb`. `development.key` is *committed*, so real key
-  material must never go in `development.yml.enc`.
-  - **The rollout is complete** (production backfilled 2026-07-26; every value in all six columns
-    verified as ciphertext). `support_unencrypted_data = false`, so a stray plaintext value now
-    **raises** rather than being served, and **there is no rollback**: removing `encrypts` would
-    make the stored data unreadable, and losing the production credential keys loses the bank
-    details outright. **Encrypting a NEW column repeats the whole sequence**, because
-    `reimbursements:encrypt_backfill` cannot run while the flag is false (it must read the
-    plaintext to rewrite it): add `encrypts`, flag true, deploy, backfill, verify, flag false,
-    deploy. The backfill aborts non-zero on any failed row, since flipping the flag over an
-    unconverted row makes it unreadable. Sequence and the all-rows verification sweep in
-    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md).
-  - Rails' auto-injected `validate_column_size` guard is **off** (`config.active_record.encryption
-    .validate_column_size = false`): it measures the *decrypted* value, so it never caught the real
-    hazard, and it crashed `database_consistency` on both models. Explicit plaintext length caps on
-    the models do that job instead. Ciphertext runs roughly 2× plaintext plus envelope, which is
-    why `payee_name_override` had to become TEXT.
-- **Every open submission form holds a live reference to a budget finance may delete.**
-  `active_budgets` builds the picker, and deleting or deactivating budgets is ordinary finance
-  work, so `ExpenseForm` validates the choice against the ids the controller actually RENDERED
-  (`offerable_budget_ids`) — one rule for both, and it cannot drift from the `<select>`. Deleted
-  used to 500 on the FK and lose the whole filled-in claim (HB 134234926); deactivated still
-  satisfies the FK and quietly charged a retired line. A **draft** is exempt: `update_attrs`
-  drops the stale id and it saves, because refusing it costs the producer their typing over a
-  field they may leave blank. `DatabaseStore::BudgetGoneError` is the belt and braces for a
-  delete landing between the validation and the insert. The finance **expense-edit** form is the
-  exception and keeps existence-only `budget_record_id_error`: it deliberately offers the
-  inactive budget a claim is already on.
+  wizard and coordinates as the budget import, from the finance expenses index. All-or-nothing:
+  an unreadable amount, unknown payee or budget, or bad status stops the lot, naming the rows.
+  - **`Status` is mandatory and never guessed**; blank or unrecognised blocks. Approved enters
+    Build Batch and emails its producer, Paid never does.
+  - **The `ID` column (`Reference` still accepted) is the double-apply guard**: written to
+    `expenses.import_key` behind a unique index, since a claim has no natural key and a second
+    click re-posts. The preview's "already imported" bucket is a pre-flight read; when stale, the
+    index holds and the rescued `RecordNotUnique` re-renders the preview.
+  - **IDs are compared downcased** to match the `utf8mb4_unicode_ci` index (else `OLD-1` and
+    `old-1` preview as two creates and the apply rolls back). Accents are deliberately not folded:
+    over-matching would silently drop a new claim.
+  - **A blank Submitter email means none given, never a lookup** (all email-less payees index
+    under `""`). Then the `Submitter` name is matched (case, spacing, accents folded); a shared
+    name blocks the row. It is "Submitter", not "Payee", because `Payee name` is an Invoice's
+    supplier.
+  - **Every rule comes from `ExpenseForm`; the model has none** (`Expense.create!({})` passes).
+    The importer sets `internal` as `from_actual` does, plus **`settled`** (Submitted, Paid or
+    Rejected rows), which suppresses `invoice_without_payee?` and `international_without_payee?`
+    and nothing else: those guard the money path (`EffectivePayee` falls back to the submitter's
+    own details), which only Approved claims enter.
+  - **Rows with an `Expense number` are inserted first.** `auto_number` is unique;
+    `create_expense!` gives a numberless row MAX+1 and never retries a collision on a number it
+    was handed (data corruption).
+  - **Columns match strictly via `FIELDS`**: the fields are near-anagrams, and the substring
+    fallback read "Payment reference" as the dedupe key and "Account number" as the expense number.
+    The preview stating each field's column is the only way to see a mis-mapping. Sheets built from
+    `TSV_HEADERS` cannot catch this; the realistic-heading tests can.
+  - **The import emails nobody, but what it writes decides what happens next**: producer email
+    comes only from `BatchProcessor`, `NightlyBatchJob` or an explicit reject, so an Approved row
+    goes on the next BACS spreadsheet (EUSA pays it again) and emails its payee; a Pending one is
+    named to its budget owners nightly. Preview and apply count the non-terminal rows and say so;
+    never reword that into "nothing was emailed".
+- **Both import wizards refuse to guess the cost centre** (`ReadsImportSource#cost_centre_chosen?`
+  / `#chosen_cost_centre`); never preselect `selectable_cost_centres.first`. Preview and apply
+  re-render step 1 with the paste intact. With one centre configured nothing is asked;
+  `?cost_centre=` / `?cost_centre_id=` prefills.
+- **A grouped `<select>` needs `as: :grouped_select`.** A plain `collection:` with
+  `group_method:` renders one option per group: it looks right and selects nothing. Assert the
+  `<optgroup>` markup, not the controller's ivar.
+- **A link inside a wizard's Turbo Frame needs `data: { turbo_frame: "_top" }`** unless the
+  destination has the same frame, or the wizard becomes "Content missing". `shared/back_link`
+  takes a `turbo_frame:` local. Only a browser test sees it.
 
-- **An Invoice claim must carry the third-party payee trio** (`ExpenseForm#invoice_without_payee?`).
-  `expense_type == TYPE_INVOICE` means EUSA pays the supplier, so blank overrides are a money
-  bug, not a gap: `EffectivePayee` falls back to the **submitter's own** bank details, which
-  `ReviewSupport`'s "no bank details" block then reads as satisfied — so the claim would
-  quietly pay the producer for a bill they never paid. It is a submit-time
-  block only (drafts and email-in still save incomplete), and the message names Reimbursement
-  as the type for a bill they paid themselves. **The finance edit form applies the same rule**
-  (`ExpenseEditsController#expense_type_error`) but only while
-  `ReviewSupport.attention_actionable?` — Draft/Pending/Approved, where the money can still
-  move. Submitted and Paid records must stay re-typable without inventing bank details for a
-  supplier we never captured. That form is also the only place `expense_type` can be changed
-  after submission (and the only one offering From EUSA), so a mis-typed claim no longer needs
-  the producer to withdraw and resubmit.
-- **The Review queue has THREE tabs, and `to_approve` is the default** (`ReviewController::TABS`).
-  Awaiting owner holds the claims whose owner gate is unmet; To approve is finance's queue and
-  keeps the Ready / Needs attention split, which now means a DATA problem only. Every link into
-  the page from elsewhere carries no `?tab=` at all, so an unrecognised value must fall back to
-  `to_approve` — and `pending`, the value the tab used to have, is aliased to it for old
-  bookmarks. The owner-gate lookup sits in `#index`, not `#load_queue`, because the CSV download
-  follows the tab on screen and `#load_queue` is HTML-only. A claim on a budget with no owners
-  (or no budget) never reaches the new tab: `OwnerReview.gate_applies?` is already false for it,
-  so it goes straight to finance. The new tab renders the full card so the finance override stays
-  reachable, but deliberately has NO bulk toolbar — bulk approve skips every gated claim, so it
-  could only ever report "0 approved".
-- **`:base` errors are rendered by `shared/pages/_form`**, not by simple_form: `f.error_notification`
-  is only the generic "review the problems below" banner and has no field to hang a base error
-  under. Anything added with `errors.add(:base, …)` on a form rendered through that partial is
-  visible; a form NOT using it (bare simple_form) still needs its own rendering, or the rule
-  fails the submit with no stated reason.
-- **There is no AI in this portal, by decision (removed 2026-07-31).** The Gemini receipt
-  extractor (`Reimbursements::Extractor`, an opt-in prefill behind a consent radio group) and
-  the finance `AiChecker`/`AiCheckJob` verdict were both removed outright, along with
-  `PromptSafety`, the `ruby_llm` gem, the `gemini_api_key` setting and the four `ai_*` columns
-  on `reimbursements_expenses`. **Don't reintroduce it casually**: the disclosure it required
-  told producers we sent their receipts — and, on an invoice, a supplier's printed bank
-  details — to Google's *free* tier, where Google may keep a copy and have people read it.
-  The submission form is manual, which it always was underneath: consent was deliberately
-  never server-validated so the form stayed submittable with JavaScript off.
-  **The VAT soft-block in `ExpenseForm` stays a soft block**, now triggered only by the ex-VAT
-  amount not being below the total (`vat_itemised` was extractor-written and went with it).
-- **The nightly job reminds, it never gates** (`Reimbursements::NightlyBatchJob`). It submits
-  nothing and builds no batch — Build Batch is operator-initiated. Per due run-day it sends three
-  independent reminders: stale **Pending** claims awaiting approval, the whole **Approved** queue
-  ready to batch, and one **owner sign-off** reminder per budget owner. Claims
-  `ReviewSupport.needs_attention` flags are listed inside the approved reminder *with their
-  reasons*, never held back: the older behaviour swapped the whole list for a "manual review"
-  email, so one problem claim hid every other claim from the operator. A reminder with nothing to
-  say counts as delivered.
-  - **The Pending queue is split, and both halves must read it the same way.** Claims whose owner
-    gate is unmet are excluded from finance's stale-pending reminder and sent to the OWNERS
-    instead (`remind_budget_owners`, addressed to `Person#email`, greeted via `GreetingName`).
-    The job and `ReviewController` both partition on `OwnerReview.unmet_gate_expense_ids`, so the
-    email and the Review page's tabs cannot disagree about whose queue a claim is in.
-  - **The owner reminder has NO age threshold**, unlike finance's `PENDING_REMINDER_DAYS`: a
-    claim awaiting your sign-off is new work assigned to you, so it is named on the first due
-    run-day and re-named every run-day until endorsed or rejected. A claim with several owners is
-    named to ALL of them (any one endorsement satisfies the gate, so telling one would strand it
-    while that person is away); an owner with no email is skipped.
-  - **The owner reminder is BEST EFFORT and sits outside the `.all?`** that gates
-    `record_nightly_run!`. One budget owner's dead address must not withhold the run-day, which
-    would re-send FINANCE's reminders tomorrow over a failure that was never theirs. Failures are
-    counted and reported (`reimbursements.owner_reminder_failed`) rather than swallowed, and the
-    claim stays on Review's Awaiting owner tab either way.
-  - **`record_nightly_run!` is gated on EVERY reminder having sent**, from one call site. That
-    write marks the run-day handled forever (`nightly_due?` skips it) and there is no retry
-    queue behind these alerts, so a half-sent run must be retried whole — at the cost of
-    re-sending the reminder that worked, uncapped — a multi-day Graph outage re-sends it
-    nightly, which is the intended direction (duplicates over silence). Both reminders are
-    always *attempted*: `deliver_reminders` collects them into an array and calls `.all?`
-    precisely so the calls cannot short-circuit. Don't rewrite it into a boolean expression.
-  - **Operator recipients are the cost centre's own `notification_email`** — its shared finance
-    mailbox (`finance@bedlamfringe.co.uk`, `business@bedlamtheatre.co.uk`) — not the finance
-    permission. That permission still gates every finance SCREEN globally: a Fringe admin can
-    open a termtime claim, they just aren't emailed about it. `REIMBURSEMENTS_OPERATOR_EMAIL`
-    stays whole-portal and overrides it. The column holds several addresses separated by `;` or
-    `,`, each format-validated so a typo in a list fails the save instead of quietly losing that
-    recipient's mail. **The `notification_role` this replaced was dropped** (2026-09-07); its
-    migration backfills each centre's address from that role's members' emails first, so nobody
-    who was being emailed stops being emailed.
-  - **`record_nightly_run!` writes with `update_column`, not `update!`.** It is a bookkeeping
-    stamp on one column and must not be vetoed by an unrelated validation on the row —
-    `notification_email` being presence-validated made `update!` RAISE for exactly the centre
-    (blank address) that `REIMBURSEMENTS_OPERATOR_EMAIL` exists to keep working. The JOB decides
-    whether a run counts as delivered; the model must not refuse to write that decision down.
-  - **No recipients does NOT record the run-day.** The old code returned "delivered" for no
-    recipients, which marked the day handled forever and lost the alert; it now warns, fires a
-    `reimbursements.nightly_no_recipients` Honeybadger event, and retries tomorrow. Integration
+- **Typed money goes through `Reimbursements::AmountParser`** (`£1,200`, `12,50` comma decimal).
+  `.parse` gives nil for anything unreadable; **`.parse!` tells blank (nil) from unreadable
+  (raises)**, so the batch budget-update form never reads a typo as a deliberate skip.
+  **`AmountValidation`** (Review#save, expense-edit #update) uses the same parser and adds: positive,
+  within `MAX_AMOUNT` (100k), excl-VAT not above gross. Callers write the parsed
+  `AmountValidation.amount` / `.amount_excl_vat`, never the raw param: AR casts "£1,200" with `to_d`
+  and stores **0**.
+- **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV, then credentials
+  `reimbursements:`. Real values live only in production credentials (development's are public), so
+  Graph/Azure is unconfigured in development by design.
+- **Outbound Graph calls are gated to production** (`Settings.outbound_enabled?`), elsewhere only
+  with `REIMBURSEMENTS_ENABLE_OUTBOUND` (`test_helper.rb` sets it; the transport is faked). Without
+  it a dev shell with real Azure credentials would email producers and PUT the BACS spreadsheet into
+  production SharePoint. So email-in does nothing locally, by design: `MailboxPollJob#perform`
+  returns at once, `send_mail`/`create_draft` log and return a stub,
+  `MailboxClient#reply/#move/#mark_read` no-op. `upload_to_folder` and `delete_message` **raise**
+  `OutboundSuppressedError`: a plausible return would stamp `receipts_offloaded` (telling a producer
+  to delete their only copy) on receipts never backed up. Read-only probes stay live, so the
+  Settings integration dashboard works in dev.
+- **Bank details are encrypted at rest** (non-deterministic, so never query them by value):
+  `sort_code`/`account_number`/`iban`/`bic`/`notes` on `Reimbursements::PaymentDetails`;
+  `sort_code_override`/`account_number_override`/`payee_name_override`/`iban_override`/
+  `bic_override` on `Reimbursements::Expense`. Keys: production credentials under
+  `active_record_encryption:`; development reads `REIMBURSEMENTS_AR_ENCRYPTION_*`, falling back to
+  throwaway literals in `config/application.rb` (a write needs a key even when blank); test uses
+  literals in `config/environments/test.rb`. `development.key` is committed, so real key material
+  must never go in `development.yml.enc`.
+  - **`support_unencrypted_data = false`**, so stray plaintext raises. **There is no rollback**:
+    removing `encrypts` makes the data unreadable; losing the production keys loses it outright.
+    Production was backfilled 2026-07-26 with 0 failures; the all-rows sweep in
+    [docs/reimbursements/encryption-rollout.md](docs/reimbursements/encryption-rollout.md) has not
+    yet been run in its working form.
+  - **A brand-new column with no plaintext rows needs only `encrypts` and a deploy** (as IBAN/BIC
+    did). **An existing column holding plaintext repeats the whole sequence**: add `encrypts`, flag
+    true, deploy, `reimbursements:encrypt_backfill`, verify, flag false, deploy. The backfill must
+    read plaintext, so cannot run with the flag false, and aborts non-zero on any failed row, since
+    flipping the flag over an unconverted row makes it unreadable.
+  - **Rotating keys means appending to `primary_key`, never replacing it.** Rails encrypts with the
+    last key and decrypts with any; replacing it, or changing `key_derivation_salt`, makes every
+    stored value unreadable.
+  - `config.active_record.encryption.validate_column_size = false`: it measures the decrypted value,
+    so caught nothing real and crashed `database_consistency`. Plaintext length caps on the models
+    do the job. Ciphertext is about 2× plaintext plus envelope, hence `payee_name_override` is TEXT.
+- **The submission form validates the budget against the ids the controller RENDERED**
+  (`ExpenseForm`, `offerable_budget_ids` from `active_budgets`): finance may delete a budget (FK 500,
+  claim lost) or deactivate it (retired line charged) while a form is open. A **draft** is exempt:
+  `update_attrs` drops the stale id and saves, since refusing costs the producer their typing over a
+  field they may leave blank. `DatabaseStore::BudgetGoneError` covers a delete between
+  validation and insert. The finance **expense-edit** form keeps existence-only
+  `budget_record_id_error`, as it offers the inactive budget a claim is already on.
+- **An Invoice claim must carry the third-party payee trio** (`ExpenseForm#invoice_without_payee?`):
+  with blank overrides `EffectivePayee` falls back to the submitter's bank details, `ReviewSupport`'s
+  "no bank details" check passes, and the producer is paid for the supplier's bill. Submit-time only
+  (drafts and email-in save incomplete); the message points a self-paid bill to Reimbursement. **The
+  finance edit form applies it too** (`ExpenseEditsController#expense_type_error`), but only while
+  `ReviewSupport.attention_actionable?` (Draft/Pending/Approved), so Submitted and Paid claims stay
+  re-typable without inventing bank details for a supplier never captured. That form is the only
+  place `expense_type` changes after submission, and the only one offering From EUSA.
+- **Review has three tabs; `to_approve` is the default** (`ReviewController::TABS`). Awaiting owner
+  holds claims with an unmet owner gate; To approve's Ready / Needs attention split means a data
+  problem only. An unrecognised `?tab=` falls back to `to_approve`; `pending` is aliased to it. The
+  owner-gate lookup sits in `#index`, not `#load_queue` (HTML-only), because the CSV follows the
+  tab. A claim with no budget or an ownerless one skips Awaiting owner
+  (`OwnerReview.gate_applies?` is false). That tab renders the full card (finance override) and has
+  **no bulk toolbar**: bulk approve skips every gated claim.
+- **`:base` errors are rendered by `shared/pages/_form`**, not simple_form (`f.error_notification`
+  is only the banner). A form not using that partial must render them itself, or an
+  `errors.add(:base, …)` fails the submit with no stated reason.
+- **No AI in this portal, by decision (removed 2026-07-31); do not reintroduce it casually.** Its
+  disclosure told producers their receipts, and suppliers' printed bank details, went to Google's
+  free tier, where Google may keep and read them. Gone: `Reimbursements::Extractor`, `AiChecker`/
+  `AiCheckJob`, `PromptSafety`, `ruby_llm`, `gemini_api_key`, the four `ai_*` columns. **The VAT
+  soft-block in `ExpenseForm` stays soft**, triggered only by ex-VAT not being below the total.
+- **The nightly job reminds, it never gates** (`Reimbursements::NightlyBatchJob`): it submits nothing
+  and builds no batch (Build Batch is operator-initiated). Per due run-day it sends stale
+  **Pending**, the whole **Approved** queue, and one **owner sign-off** reminder per budget owner.
+  `ReviewSupport.needs_attention` claims are listed in the approved reminder with reasons, never
+  held back. Nothing to say counts as delivered.
+  - **Job and `ReviewController` both split Pending on `OwnerReview.unmet_gate_expense_ids`**, so
+    email and tabs agree. Gated claims go to owners (`remind_budget_owners`, `Person#email`,
+    `GreetingName`), not finance.
+  - **The owner reminder has no age threshold** (unlike `PENDING_REMINDER_DAYS`), names a claim
+    every run-day until endorsed or rejected, goes to **all** its owners (any one may endorse, so
+    telling one strands the claim while they are away), and skips an owner with no email.
+  - **The owner reminder is best effort, outside the `.all?`** gating `record_nightly_run!`, so one
+    dead owner address cannot withhold the run-day and re-send finance's reminders. Failures are
+    reported (`reimbursements.owner_reminder_failed`); the claim stays on Awaiting owner either way.
+  - **`record_nightly_run!` runs only when every finance reminder sent**, from one call site: it
+    marks the run-day handled forever (`nightly_due?`) and nothing retries, so a half-sent run is
+    retried whole (duplicates over silence). `deliver_reminders` collects results in an array and
+    calls `.all?` so all are attempted; never rewrite it as a short-circuiting expression.
+  - **It writes with `update_column`, not `update!`**, so no unrelated validation can veto the stamp
+    (`notification_email` presence made `update!` raise for a blank-address centre). The job decides
+    what counts as delivered; the model must not refuse to record it.
+  - **Operator recipients are the cost centre's `notification_email`**, not the finance permission
+    (which still gates every finance screen globally). `REIMBURSEMENTS_OPERATOR_EMAIL` is
+    whole-portal and overrides it. Several addresses split on `;` or `,`, each format-validated.
+  - **No recipients does not record the run-day**: it warns, fires the
+    `reimbursements.nightly_no_recipients` Honeybadger event and retries tomorrow; Integration
     Status badges it.
-  - **A claim whose budget names no cost centre falls to the DEFAULT centre**, not to nobody
-    (`claims_by_cost_centre_id`) — the same leniency as `DatabaseStore#in_year`. A claim
-    reminded to the wrong admins is visible and correctable; one reminded to nobody leaves a
-    producer waiting. Build Batch's emails stay **clicker-only**, deliberately.
-  - **Don't make the second cost centre a fixture.** Measured: it makes `CostCentre.default`
-    (`order(:id).first`) resolve to whichever label `FixtureSet.identify` hashes lower, and it
-    deletes the one-centre world the reconcile tests deliberately pin as a business rule. The
-    5 hand-built sites go through `create_reimbursements_cost_centre` instead.
-- **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
-  shared mailbox via `MailboxClient` (Graph app-only auth). **The app holds no Entra mail
-  permission**: Exchange grants it named mailboxes through RBAC for Applications, so the
-  retired "Reimbursements App Access" group no longer gates anything and adding a mailbox
-  to it is a convincing no-op. Authorise one by re-running `docs/graph-mailbox-rbac.ps1`
-  with the **full** list from `bin/rails graph:mailboxes`. The scope filter is replaced,
-  not appended, so a short list silently cuts off a working cost centre.
-  Every inbound receipt becomes a **blank DRAFT** (subject as the
-  description, amount/budget/reference left blank) plus the "please complete it in the
-  portal" reply.
-  Reply-then-move is the commit point; unread = will retry.
-  `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
-  subcommittee) before/when the Entra client secret dies.
-- **Every producer email greets by FIRST name through `Reimbursements::GreetingName.for`**
-  — the one derivation, because the two surfaces are written differently and must not
-  drift: the `Notifier`'s two producer templates (rejection, producer_notification)
-  are ERB, while `MailboxPollJob`'s replies are plain-Ruby
-  heredocs. It prefers the **linked `User#first_name`**, then the leading word of
-  `Person#name`, then `"there"` — the last because `PersonLink` stores the user's *email*
-  as the person name when they have no full name, so a bare split would open with "Hi
-  alice@example.com,". Callers derive the string and pass `greeting_name:`; the Notifier
-  itself stays ActiveRecord-free (`payee_name:` inside the operator-alert **row hashes**
-  is a different thing and still a full name, as is the BACS spreadsheet's payee). The
-  heredoc replies escape it (`ERB::Util`) — they have no escaping of their own and
-  `first_name` is self-service editable. `unknown_sender_html`/`rate_limited_html` keep a
-  bare "Hi," on purpose: no matched person to name.
-- **Tests**: seed real rows with the `create_reimbursements_*` helpers
-  (`test/support/reimbursements_test_helpers.rb`). Pure-logic unit tests that need a
-  value object without a DB round-trip build an unpersisted AR model and pin the
-  DB-computed readers per-instance (`define_singleton_method(:record_id) { … }`,
-  `instance_variable_set(:@receipts, …)`, `build_payment_details`). External services
-  stay faked (FakeHttp, FakeGraphClient) through `class_attribute` builder
-  seams on `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test
-  helper `message` — it collides with Minitest's internal `message(msg, ending)`. A dev
-  shell with real `REIMBURSEMENTS_*` vars exported leaks them into tests — strip
-  them when running the suite by hand. A two-cost-centre world is built with
-  `create_second_reimbursements_cost_centre` — never a second fixture row (see the nightly
-  job's note above), and never inline, because `jscpd` gates duplication at 0 and three
-  tests repeating the same setup block trips it.
-- **A claim with no bank details never reaches a batch** (`BatchProcessor#process`, a pre-flight
-  `fail_with` naming the claims). `ReviewSupport`'s approve blocker is the only other check and it
-  runs on the APPROVAL path alone, so anything that reached Approved another way — the settled-claim
-  import, a console fix — walked straight past it, and `bacs_document` reads the effective payee /
-  sort code / account number, all blank strings for a claim with no payee. 140 imported production
-  claims sat in exactly that state. It fails the WHOLE batch rather than dropping the bad rows: a
-  spreadsheet quietly short of what the operator just approved is the harder error to notice.
-- **`ReviewSupport.modulus_result` is the one rule for when the modulus check applies**, read by
-  the attention summary and by both views that draw the banner. The checker returns **INVALID for a
-  blank pair**, so a claim with no bank details drew "Modulus check failed … likely a typo" directly
-  under "no bank details" — contradictory advice over an empty field. `FakeModulusChecker` answers
-  INVALID for a blank pair too; it used to answer OUTSIDE_SPEC, which is precisely why no test could
-  see this.
-- **BACS batch invariants** (`Reimbursements::BatchProcessor`): the vendored xlsx
-  template (`lib/reimbursements/templates/EUSA_BACS_template.xlsx`) caps a batch at
-  `BacsXlsx::MAX_ROWS` (200) data rows — its GRAND TOTAL formula and the Authorisation
-  Form's cross-sheet total only cover that range, so a bigger batch raises `TemplateError`
-  rather than silently corrupting the total. `BatchProcessor#process`'s `result.success`
-  reflects whether *every* expense actually reached `Submitted` (not just whether the EUSA
-  draft was created) — a `mark_submitted` failure is the one exception to "post-draft steps
-  are best-effort," since it leaves that expense in the same double-draft danger the
-  orphan-draft guard exists to prevent. `BatchesController#reopen` won't revert/delete a
-  batch unless Graph positively confirms the stored draft is still unsent — a batch whose
-  draft was already sent by hand in Outlook must never be silently rebuilt into a second
-  live submission.
-- **Exports** (`app/services/reimbursements/exports/`): one exporter per resource
-  (`Expenses`, `Actuals`, `Budgets`, `Areas`, `Forecasts`, `People`, `Batches`) under
-  `Exports::Base`, each
-  owning its `HEADERS` and a private `#row` **once**. That single definition drives both
-  the per-view "Download CSV" (`FinanceController#send_export`, called from each index's
-  `format.csv`, with the link built as
-  `request.query_parameters.merge(format: :csv)` so the on-screen filters carry through)
-  **and** the matching sheet of the combined workbook (`Exports::Workbook`,
-  `ExportsController#download`). Add a column in the exporter, not in a controller.
-  **`GET /admin/reimbursements/export` is a PAGE** — the sheet list, each sheet's row count
-  under the current scope, and the year and centre selectors — with `#download` as a separate
-  action rather than a `?format=xlsx`, so one controller's file needs no global MIME
-  registration. The workbook opens with an "About this export" COVER SHEET recording the date,
-  year, centre and sheet list: the scope used to be mixed inside the file (Budgets followed the
-  active year, everything else was all of history) and stated nowhere. Conventions: amounts stay numeric (no "£"), dates are
-  ISO 8601 strings with blanks left empty (not the on-screen "-"), and **every cell goes
-  through `Reimbursements::CellSanitizer`** — the shared formula-injection guard that
-  `BacsXlsx` uses too. `Base#add_sheet` pins every String cell to Axlsx `:string`, or a
-  numeric-looking identifier is coerced to a number (nominal code `041000` → 41000,
-  period `03` → 3). Every exporter that can name a cost centre carries the column and
-  **appends** it, so a saved formula keeps pointing at the same column; `People` has none,
-  because a payee has no cost centre. Every exporter that can name an **area** carries that
-  column on the same terms, appended after it; `People` has none (a payee has no area) and
-  neither does `Batches` — a batch spans several shows, so one cell there would be a lie
-  rather than a blank. **Bank details in an export are masked to their last four digits**
-  via `BankDetails.mask` (also used by the People notes audit line); only the BACS
-  spreadsheet EUSA pays from carries full numbers.
+  - **A claim whose budget names no cost centre goes to the DEFAULT centre**
+    (`claims_by_cost_centre_id`), never to nobody: a wrong recipient is visible and correctable, no
+    recipient leaves a producer waiting. Build Batch's emails stay clicker-only.
+  - **Never make the second cost centre a fixture**: `CostCentre.default` (`order(:id).first`) would
+    depend on `FixtureSet.identify` hashing, and the reconcile tests pin a one-centre world. Use
+    `create_reimbursements_cost_centre`.
+- **Email-in**: `Reimbursements::MailboxPollJob` (every 5 min) polls the shared mailbox via
+  `MailboxClient` (Graph app-only). Each inbound receipt becomes a **blank DRAFT** (subject as
+  description) plus a "complete it in the portal" reply. Reply-then-move is the commit point;
+  unread means it will retry.
+  - **The app holds no Entra mail permission**: Exchange grants named mailboxes through RBAC for
+    Applications, and the "Reimbursements App Access" group gates nothing. Authorise a mailbox by
+    re-running `docs/graph-mailbox-rbac.ps1` with the **full** list from `bin/rails graph:mailboxes`:
+    the scope is replaced, not appended, so a short list cuts off a working cost centre.
+  - `CredentialsCheckJob` (daily) and `AuthError` alerts warn `alert_email` (IT subcommittee) before
+    and when the Entra client secret dies. Keep the secret under `reimbursements:`: `Graph::Settings`
+    reads `graph:` first, but `Reimbursements::GraphClient` and the expiry warning do not.
+- **Producer emails greet by first name through `Reimbursements::GreetingName.for`**, shared by the
+  `Notifier`'s ERB templates (rejection, producer_notification) and `MailboxPollJob`'s heredoc
+  replies, so they cannot drift: linked `User#first_name`, then
+  the first word of `Person#name`, then `"there"` (`PersonLink` may store an email as the name).
+  Callers pass `greeting_name:`, keeping the Notifier ActiveRecord-free; `payee_name:` in
+  operator-alert rows and the BACS payee stay full names. Heredocs must escape it with `ERB::Util`
+  (`first_name` is self-service). `unknown_sender_html`/`rate_limited_html` say a bare "Hi," on
+  purpose (no matched person).
+- **Tests**: seed rows with the `create_reimbursements_*` helpers
+  (`test/support/reimbursements_test_helpers.rb`). A pure-logic test builds an unpersisted AR model
+  and pins DB-computed readers per instance (`define_singleton_method(:record_id) { … }`,
+  `instance_variable_set(:@receipts, …)`, `build_payment_details`). External services are faked
+  (FakeHttp, FakeGraphClient) through `class_attribute` builder seams on
+  `Reimbursements::BaseController` and the jobs; no webmock. Never name a helper `message` (it
+  collides with Minitest's `message(msg, ending)`). Strip real `REIMBURSEMENTS_*` vars from your
+  shell before running the suite. Build a two-cost-centre world with
+  `create_second_reimbursements_cost_centre`, never a fixture row and never inline (`jscpd` gates at
+  0).
+- **A claim with no bank details never reaches a batch** (`BatchProcessor#process` pre-flight
+  `fail_with`, naming the claims). The approve blocker covers only the approval path, and the
+  settled-claim import or a console fix reaches Approved without it; `bacs_document` would then write
+  blank payee and account cells. It fails the **whole** batch: a spreadsheet quietly short of what
+  was approved is harder to notice.
+- **`ReviewSupport.modulus_result` is the one rule for when the modulus check applies** (attention
+  summary and both banner views). The checker returns **INVALID for a blank pair**, which would
+  print "likely a typo" under "no bank details". `FakeModulusChecker` must answer INVALID for a
+  blank pair too, or tests cannot see this.
+- **BACS batch invariants** (`Reimbursements::BatchProcessor`):
+  - `lib/reimbursements/templates/EUSA_BACS_template.xlsx` caps a batch at `BacsXlsx::MAX_ROWS`
+    (200), the range its GRAND TOTAL and the Authorisation Form's total cover; a bigger batch raises
+    `TemplateError` rather than corrupting the total.
+  - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
+    `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
+    double-draft danger the orphan-draft guard prevents.
+  - `BatchesController#reopen` reverts or deletes a batch only when Graph positively confirms its
+    draft is unsent; a draft already sent by hand must never be rebuilt into a second submission.
+
+- **Exports** (`app/services/reimbursements/exports/`): one exporter per resource (`Expenses`,
+  `Actuals`, `Budgets`, `Areas`, `Forecasts`, `People`, `Batches`) under `Exports::Base`, each
+  defining `HEADERS` and a private `#row` once. That drives both the per-view "Download CSV"
+  (`FinanceController#send_export` from each index's `format.csv`, linked as
+  `request.query_parameters.merge(format: :csv)` so filters carry through) and the workbook sheet
+  (`Exports::Workbook`, `ExportsController#download`). **Add a column in the exporter, never in a
+  controller.**
+  - **`GET /admin/reimbursements/export` is a page** (sheets, row counts in scope, year and centre
+    selectors); `#download` is a separate action, not `?format=xlsx`, so no global MIME
+    registration. The workbook opens with an "About this export" cover sheet (date, year, centre,
+    sheets), so the file states its own scope.
+  - Amounts numeric (no "£"); dates ISO 8601 strings, blanks empty (not "-"). **Every cell goes
+    through `Reimbursements::CellSanitizer`** (the formula-injection guard `BacsXlsx` shares).
+    `Base#add_sheet` pins String cells to Axlsx `:string`, or `041000` becomes 41000.
+  - **Cost centre and area columns are appended** (area after centre), so saved formulas keep their columns. `People`
+    has neither; `Batches` has no Area (a batch spans shows, so one cell would be a lie).
+  - **Bank details in an export are masked to the last four digits** (`BankDetails.mask`, also the
+    People notes audit line). Only the BACS spreadsheet carries full numbers.
 - **Receipts are served by the app, never over ActiveStorage's routes**
-  (`Admin::Reimbursements::ReceiptFilesController`). Those routes are
-  unauthenticated and permanent by design, and a receipt carries a home address, so
-  a link would have worked forever for anyone who came by it. `Attachment#attachment_id`
-  is therefore the **blob id, not the signed id** — the signed id is a bearer token for
-  those routes and must never reach the markup; `remove_receipt!` matches on the same id.
-  Streamed rather than redirected (the viewer's `<img>`/`<iframe>` must stay same-origin
-  under the CSP, and Chrome's PDF viewer wants byte ranges) and cached `private`.
-  Visibility is the union of finance, the submitter, and the budget's owners; anything
-  else 404s rather than 403s.
-- **`ReceiptIntake` strips metadata from every raster receipt**, re-encoding in the
-  same format rather than excising the EXIF segment: coordinates hide in EXIF GPS, XMP,
-  MakerNotes and the embedded thumbnail, so only a re-encode is provably complete. PDFs
-  pass through byte-for-byte. A side effect worth knowing: Marcel falls back to the
-  filename when the magic bytes match nothing, so bytes that merely claim to be a PNG
-  now have to decode as an image and are rejected if they don't.
+  (`Admin::Reimbursements::ReceiptFilesController`): those are unauthenticated and permanent, and
+  a receipt can carry a home address. So `Attachment#attachment_id` is the **blob id, never the
+  signed id** (a bearer token for those routes; it must never reach markup); `remove_receipt!`
+  matches on it. Streamed, not redirected (same-origin `<img>`/`<iframe>` under the CSP; Chrome's
+  PDF viewer wants byte ranges), cached `private`. Visible to finance, the submitter and the
+  budget's owners; anyone else gets 404, not 403.
+- **`ReceiptIntake` strips metadata from raster receipts by re-encoding in the same format**, not
+  by excising EXIF: location also hides in XMP, MakerNotes and the thumbnail. PDFs pass through
+  untouched. A file merely named as an image (Marcel falls back to the filename) must decode or
+  is rejected.
 - **Bank details are cleared after six months without a claim**
-  (`Reimbursements::BankDetailsRetention`, nightly). **`TERMINAL_STATUSES` is stated as
-  the terminal set, not the live one, on purpose**: an unrecognised status counts as live
-  and blocks the clearing, because reading a claim as finished when it isn't wipes details
-  about to be paid with no undo. Deleting a `User` destroys the linked payee's
-  `PaymentDetails` outright (`User#erase_reimbursements_bank_details`, following the stored
-  link *then* the email, as `PersonLink` does) — the Person and their claims stay, being
-  financial records. Preview with `reimbursements:bank_details_retention_preview` before
-  trusting a rule change; there is no rake entry point for the sweep itself.
-- **On-screen bank details are masked until revealed**
-  (`Admin::Reimbursements::BankDetailsComponent`). A **disclosure** control, not an access
-  control — the full pair is in the markup behind the toggle, and everyone on those screens
-  is entitled to it. The People registry is the exception: its fields hold the real values
-  so they can be edited, so they are `type="password"` toggled to text — masking the value
-  would invite saving `****4958` as an account number.
-- **Finance registers a payee from a USER ACCOUNT, and collects no bank details doing it**
-  (`PeopleController#new/#create`). A budget owner may never log in and never claim
-  (`BudgetOwner` needs no user), so "Unverified, no modulus badge" is the correct end state —
-  don't add a bank-details step to this form. It goes through `PersonLink#ensure_person!`, and
-  asks `person_for` first so a user the registry already holds under their email is reported
-  rather than duplicated. Nothing here weakens `BudgetImport`'s rule that no Person is ever
-  auto-created from a bare email; the preview just links to this form now.
-- **Reconcile emails nobody, by decision (removed 2026-08-12).** Marking an expense Paid there
-  used to send the producer a "EUSA has paid your expense" note (`Notifier#payment_confirmation`
-  plus its template, both gone). Reconciliation runs off EUSA's monthly actuals export, which
-  lands weeks after the BACS run it confirms, so the note reached people who had spent the money
-  already. The one payment-side email a producer gets is `producer_notification`, sent when
-  their claim goes into a batch. Paid is a bookkeeping state here, not an event to announce, so
-  don't wire a notification onto it again.
-- **EUSA actuals — offsetting pairs + conversion.**
-  `Reconciliation.detect_offsetting_pairs` finds the accrual/reversal legs that cancel out
-  in a pasted export. **The governing asymmetry for every judgement call here**: a false
-  positive stamps real spend as offset, which hides it from the ledger view and every
-  rollup, while a false negative just leaves rows visibly unmatched for a human. Prefer
-  missing a pair over inventing one.
-  **Hard requirements**: same absolute amount (exact BigDecimal), opposite sign, **same
-  nominal code**, same financial year. Survivors are **scored** (ref 4, nominal 2, period 1,
-  narrative prefix 1, minus a date-distance penalty of 1 or 2) and taken greedily from the
-  strongest, with a floor of 4 — so with the nominal gate every candidate starts at 2 and
-  must find 2 more points (ref alone is 4 *minus* the date penalty, so a ref match on its
-  own only clears the floor same-day). The weights are tuned against a real 309-row F40
-  export: refs match only about half the time and legs straddle months, so neither can be a
-  hard filter, but the nominal code *is* one (a Sage payment-run ref stamped across a run
-  otherwise scored 5 pairing a cost with unrelated income of the same size). Verified on
-  that export: 58 pairs with the gate, 58 without, none cross-nominal, so the tightening
-  costs nothing.
-  **The EUSA period has ONE canonical spelling: zero-padded to two digits**
-  (`Reconciliation.normalise_period`, applied in the parser, on `EusaActual`'s
-  `before_validation` and by the `PeriodNormalisation` backfill service a migration invokes).
-  Stored verbatim, the ledger filter offered `05 / 06 / 5 / 6` as four months and `?period=6`
-  returned 12 rows where `?period=06` returned 5; Sage's own export writes the month unpadded.
-  Only a purely numeric value up to two digits is touched. **`actuals_for_period` normalises
-  BOTH sides** rather than comparing stored strings, so a re-paste is still recognised as
-  already imported on a database the backfill has not reached — getting that wrong
-  double-counts real spend.
-  **The ledger opens on `?state=needs_attention`** (`EusaActual#needs_attention?`, the same
-  predicate `DatabaseStore#unattributed_actuals` reads — one definition, or a row the ledger
-  hides while the overview counts it is money with no screen to resolve it on). `include_offsets`
-  with no `state` resolves to the full ledger, since an offsetting leg is never a row needing
-  attention.
-  The preview shows every pair as a **ticked checkbox** keyed by row *content plus an
-  occurrence index* — content alone collapses two byte-identical pairs into one vote (that
-  export contains a byte-identical row group), and the occurrence index survives rows
-  shifting position, which a bare row index would not. A key that fails to match on apply
-  reads as unticked, the safe direction. Each pair also states what unticking it would pay,
-  because the "N matched expenses" count covers the unpaired rows only. Applying imports
-  both legs and stamps each `reconciliation_status: "offset"` + `offset_of_id` at the other
-  in **one transaction** (`DatabaseStore#create_offsetting_pair!`: a half-written pair leaves
-  the debit leg reading as real spend, and re-pasting can't repair it because dedup then
-  skips that leg). Rows are never deleted, finance needs the audit trail — and a
-  mis-detected pair is undone with the finance-gated **"Not offsetting"** button on the
-  Actuals index (`ActualsController#unoffset` + `DatabaseStore#unlink_offsetting_pair!`).
-  **Pairing two rows BY HAND applies the same five hard gates** (`EusaActual#offset_candidates`)
-  and deliberately none of the scoring: a person is choosing, so an extra row on the picker costs
-  a glance while a false positive hides real spend. The cost-centre gate lives in the MODEL, not
-  in the picker's source — `#confirm_offset` re-checks through the same method and the "Mark as
-  offsetting" link carries no centre, so scoping the list alone would leave the write open. A row
-  with NO cost centre pairs with another that has none (rows predating cost centres are read as
-  belonging everywhere, per `#in_year`), which is the one place it is laxer than the detector.
-  **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`,
-  Mick's call): it nets to zero, so converting it would invent spend. Unlinked *debit* rows
-  can be converted (`ExpenseForm.from_actual` + `ActualsController#new_expense/#create_expense`),
-  created **directly Paid** with `payment_confirmed_date` from the row so they never enter
-  review/batch. The conversion goes through `DatabaseStore#create_expense_for_actual!`, which
-  creates the expense and links the row in one transaction and **re-takes the convertibility
-  check inside it under a row lock** — the controller's own check is a read that goes stale on
-  a double-submitted form, and an expense created without its back-link leaves the row still
-  offering "Create expense", so the next click double-counts the same EUSA charge.
-  `NotConvertibleError` surfaces as a redirect saying nothing was created twice. `from_actual` sets an `internal` flag that admits `TYPE_FROM_EUSA` and
-  relaxes the receipt/VAT/large-amount blocks; it is deliberately **not** a permitted
-  parameter on the producer form, so a submitter can't pick the internal type to dodge the
-  receipt rule.
-- **Income apportionment — splitting one credit across several income budgets.**
-  `reimbursements_actual_allocations` carries `(eusa_actual_id, budget_id, amount)`;
-  `DatabaseStore#apportion_actual!` / `#remove_apportionment!` write and undo it, the screen is
-  `ActualsController#apportion`. Stripe pays out one lump covering a Fringe week and a ledger
-  row holds one `budget_id`, so without it the whole payout lands on one line.
-  - **CREDIT rows only.** A debit is split by converting it into several expenses, which already
-    works — and a debit budget's figure totals through its EXPENSES, a mechanism allocations
-    never reach. An offsetting leg is refused for the reason it is not convertible: it nets to
-    zero, so splitting it would invent income.
-  - **Apportioning CLEARS the row's `budget_id`**, so the allocations are the single answer to
-    whose income it is. A row holding both would have its full value counted on the old line AND
-    its shares on the new ones.
-  - **`unattributed_actuals` must therefore exclude apportioned rows**, and that exclusion runs
-    the opposite way from the rest of that list: it rejects rows that HAVE a `budget_id`, and an
-    apportioned row has none. Without it every split row reappears on the overview's
-    unlinked-spend card, and a permanent false alarm there is how a real one stops being read.
-  - **The parts must sum to `EusaActual#apportionable_total`** — credits less debits, derived as
-    `EusaActual.net` derives every rollup's figure, **never the stored `net` column**, which is
-    parsed separately from the export's own Net cell and can be blank or disagree. A short split
-    understates income silently, so the write is refused whole, in one transaction, with the
-    splittable check re-taken under a row lock (`create_expense_for_actual!`'s shape).
-  - **Two preloads, and forgetting either N+1s a page**: `:actual_allocations` on
-    `budgets_with_actuals` AND on the budgets inside `DatabaseStore#areas`, plus `:allocations`
-    behind `eusa_actuals` (or `apportioned?` fires a query per row on the ledger).
-  - **The picker is UNSCOPED**, for the reason `store.budgets` is: an EUSA credit in one year's
-    tail routinely belongs to the income line of the year it was raised in, and the Actuals
-    screens are not year-scoped at all. Active income lines only; the posted ids are validated
-    against the ids the page RENDERED.
-  - `EusaActual#allocation_summary` is the one derivation the ledger badge and the export's
-    Budget cell both print. A split row's export **Area** cell is blank on purpose — its shares
-    can sit in different areas, so one cell would be a lie (why `Batches` has no Area column).
+  (`Reimbursements::BankDetailsRetention`, nightly). **`TERMINAL_STATUSES` lists the terminal
+  set, on purpose**: an unrecognised status counts as live and blocks clearing, since wiping
+  details about to be paid has no undo. Deleting a `User` destroys the payee's `PaymentDetails`
+  (`User#erase_reimbursements_bank_details`, stored link then email); Person and claims stay
+  (financial records).
+  Preview a rule change with `reimbursements:bank_details_retention_preview`; no rake task runs
+  the sweep.
+- **On-screen bank details are masked until revealed** (`Admin::Reimbursements::BankDetailsComponent`):
+  disclosure, not access control (the full pair is in the markup, and everyone on those screens
+  may see it). The People registry's editable
+  fields hold real values as `type="password"` toggled to text, or someone saves `****4958` as an
+  account number.
+- **Finance registers a payee from a user account and collects no bank details**
+  (`PeopleController#new/#create`): a budget owner may never claim (`BudgetOwner` needs no user),
+  so "Unverified, no modulus badge" is correct. Don't add a bank-details step. It checks
+  `person_for` first (an existing match is reported, not duplicated), then
+  `PersonLink#ensure_person!`. `BudgetImport` still never creates a Person from a bare email; its
+  preview links to this form.
+- **Reconcile emails nobody, by decision: never wire a notification onto Paid.** EUSA's actuals
+  land weeks after the BACS run, so a "you've been paid" note arrived after the money was spent.
+  A producer's only payment email is `producer_notification`, when the claim enters a batch.
+  (`Notifier#payment_confirmation` and its template are gone.)
+- **EUSA actuals: offsetting pairs and conversion.** `Reconciliation.detect_offsetting_pairs`
+  finds accrual/reversal legs in a paste. **Prefer missing a pair over inventing one**: a false
+  positive hides real spend from the ledger and every rollup; a false negative just leaves rows
+  unmatched.
+  - **Hard gates**: same absolute amount (exact BigDecimal), opposite sign, same nominal code,
+    same cost centre, same financial year; a blank code or centre never pairs. Survivors score
+    (ref 4, nominal 2, period 1, narrative prefix 1, minus 1 or 2 for date distance), taken
+    greedily, floor `OFFSET_MIN_SCORE` 4. Nominal is a gate because a Sage payment-run ref spans
+    a whole run and would pair a cost with unrelated income; ref and date cannot be (refs match
+    half the time, legs straddle months).
+  - **The EUSA period is two digits, zero-padded** (`Reconciliation.normalise_period`: parser,
+    `EusaActual`'s `before_validation`, `PeriodNormalisation` backfill). Sage writes it unpadded;
+    only purely numeric values up to two digits change. **`actuals_for_period` normalises both
+    sides**, or a re-paste on an unbackfilled database double-counts spend.
+  - **The ledger opens on `?state=needs_attention`** (`EusaActual#needs_attention?`, the predicate
+    `DatabaseStore#unattributed_actuals` reads, so ledger and overview agree). `include_offsets`
+    without `state` means the full ledger.
+  - **Each pair is a ticked checkbox keyed by row content plus an occurrence index** (content alone
+    merges byte-identical pairs; a row index breaks when rows shift). An unmatched key reads as
+    unticked. Each pair says what unticking would pay.
+  - **Both legs are written in one transaction** (`DatabaseStore#create_offsetting_pair!`,
+    `reconciliation_status: "offset"` + `offset_of_id`): a half pair leaves the debit as spend,
+    and dedup stops a re-paste fixing it. Rows are never deleted (audit trail); undo with the finance-gated
+    "Not offsetting" button (`ActualsController#unoffset`, `DatabaseStore#unlink_offsetting_pair!`).
+  - **Pairing by hand applies the same five gates and no scoring** (`EusaActual#offset_candidates`):
+    a person is choosing, so an extra row costs a glance. The centre gate lives in the model, not
+    the picker's source: the "Mark as offsetting" link carries no centre, so `#confirm_offset`
+    re-checks through the same method. Unlike the detector, two centre-less rows may pair (rows
+    predating cost centres count as belonging everywhere).
+  - **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`):
+    it would invent spend. An unlinked debit converts (`ExpenseForm.from_actual`,
+    `ActualsController#new_expense/#create_expense`) straight to Paid with the row's
+    `payment_confirmed_date`, skipping review and batches.
+  - **Conversion goes through `DatabaseStore#create_expense_for_actual!`**: create and link in one
+    transaction, convertibility re-checked under a row lock, or a double submit double-counts the
+    charge. `NotConvertibleError` redirects saying nothing was created twice.
+  - `from_actual` sets `internal`, which admits `TYPE_FROM_EUSA` and relaxes the
+    receipt/VAT/large-amount blocks. **Never make it a permitted producer-form param**, or a
+    submitter dodges the receipt rule.
+- **Income apportionment** splits one credit across income budgets:
+  `reimbursements_actual_allocations` `(eusa_actual_id, budget_id, amount)`, written and undone by
+  `DatabaseStore#apportion_actual!` / `#remove_apportionment!`, screen
+  `ActualsController#apportion`. One Stripe payout covers a Fringe week; a row holds one `budget_id`.
+  - **Credit rows only.** Split a debit by converting it into several expenses (debit budgets total
+    through expenses, which allocations never reach). Offsetting legs are refused: they net to
+    zero, so splitting one invents income.
+  - **Apportioning clears the row's `budget_id`**, or its full value counts on the old line as well
+    as its shares.
+  - **`unattributed_actuals` must exclude apportioned rows explicitly**: its usual filter rejects
+    rows that have a `budget_id` and an apportioned row has none, so each would sit on the
+    overview's unlinked-spend card as a permanent false alarm.
+  - **Parts must sum to `EusaActual#apportionable_total`** (credits less debits, as `EusaActual.net`
+    derives it), **never the stored `net` column**, which is parsed separately and can be blank or
+    disagree. A short split is refused whole, in one transaction, re-checked under a row lock.
+  - **Two preloads or a page N+1s**: `:actual_allocations` on `budgets_with_actuals` and on the
+    budgets in `DatabaseStore#areas`; `:allocations` behind `eusa_actuals`.
+  - **The picker is unscoped**, like `store.budgets`: a credit in a year's tail often belongs to
+    the year it was raised in. Active income lines only; posted ids are checked against the ids
+    rendered.
+  - `EusaActual#allocation_summary` feeds both the ledger badge and the export's Budget cell. A
+    split row's export Area cell is blank on purpose (shares can sit in different areas).
+  - **Expected income is a forecast on the Income line, never a pseudo-actual**: only an EUSA
+    credit says money arrived, and an early figure that disagrees must then be resolved.
+  - **Income is not an expense type** (asked twice, rejected): no payee, receipt or approval path.
+  - **Stripe's fee is out of scope.** The payout is already net; a fee cost would be its own
+    expense line against a fees budget.
 
 ### International payments
 
 `expenses.payment_method` (`uk_bacs` / `international`) picks the rail. EUSA's international form
-is a SINGLE-payment document, so a batch emits one BACS spreadsheet for the UK claims plus one
-`InternationalXlsx` form per international claim, all on the same draft. Plan:
-[plans/international-payments.md](plans/international-payments.md).
+takes one payment, so a batch emits one BACS spreadsheet for UK claims plus one `InternationalXlsx`
+form per international claim, all on the same draft.
 
-- **`payment_method` is the discriminator, NOT the currency.** An international supplier can
-  invoice in GBP and still need an IBAN and their form. `amount`/`amount_excl_vat` stay **GBP**, so
-  every budget rollup is untouched; `foreign_amount` + `foreign_currency` hold the invoice figure
-  that goes on the form.
-- **The submitter picks the currency** from `Expense::FOREIGN_CURRENCIES`, defaulting to EUR. A
-  fixed list rather than free text: a mistyped code is a payment EUSA's bank cannot route, and
-  adding one is a single entry there. EUSA's revised form (vendored 2026-09-07) has its own
-  PAYMENT CURRENCY field, so the currency is stated on the paperwork rather than assumed.
-  **That revision moved every field below the amount down one row**, so check
-  `InternationalXlsx`'s cell constants against their A1 references before trusting them after any
-  future re-vendoring — a wrong one writes the nominal code into the cost-centre cell, silently.
-  The amount cell still carries a hardcoded "£" copied from the domestic form, so a NON-sterling
-  amount is written with a plain number format instead; GBP keeps it, being then correct.
-- **The submitter enters the invoice amount only; finance types the GBP equivalent at review.** Enforced
-  structurally — a blank `amount` is a *blocking* approval reason, and those guards run BEFORE the
-  ex-VAT one or a blank GBP amount reports the ex-VAT message instead.
-- **`effective_has_bank_details?` is rail-aware, and that is what gates approval.** It reads
-  IBAN+BIC for international. Reading the UK pair left every international claim permanently
-  unapprovable. The modulus check is skipped, not run and failed. `approve_blocker` and
-  `ReviewSupport` share the predicates rather than restating them.
-- **An international claim's ex-VAT amount mirrors its gross** (`before_validation` on Expense): a
-  foreign invoice carries no reclaimable UK VAT, so a split would deduct tax nobody can reclaim.
-- **The xlsx template caches each formula's last value, and clearing it is a correctness fix.** The
-  cache held EUSA's *sample* payment's answers, so a EUR 1,266.69 form RENDERED "UP TO £1,000:
-  FINANCE TEAM CO-ORDINATOR" — their rule sends £1,000+ to the Head of Finance. `force_recalculation`
-  sets `fullCalcOnLoad` **and** drops the cached values, because LibreOffice ignores the flag.
-  Write cells with `change_contents`, never `add_cell`, which drops the template's styling.
-- **The BACS spreadsheet is skipped when a batch has no UK claims** — an empty one reads to EUSA as
-  a request to pay nobody. The covering email states each row in its own currency; the total stays GBP.
-- **An international claim is reconciled on a PERCENTAGE window, not the penny one**
-  (`Reconciliation::INTERNATIONAL_TOLERANCE_RATE`, 5%). Its stored `amount` is finance's estimate;
-  the actual is what the bank charged after the FX spread, pounds apart on a few hundred. The UK
-  rail keeps the penny — widening it there would buy nothing and cost a wrong link. Nothing on the
-  actuals ROW says a payment was international (checked against the BED 25/26 sheet) and nothing
-  needs to: the matcher walks EXPENSES, and each knows its own rail.
-- **Settling goes through `DatabaseStore#settle_expense_from_actual!`**, shared by the reconcile
-  apply and the Actuals index's manual "Link to claim". It marks the claim Paid AND corrects an
-  international claim's amount to what EUSA charged, so the budget stops quoting the estimate.
-  A UK amount is never overwritten: it is what the producer spent, not a guess.
-- **Every finance surface reads the rail's own pair, and forgetting one is silent.** The
-  expense-edit form's all-or-nothing override rule read the UK trio, so an international claim
-  (payee name, no sort code) was **refused outright** with a message naming fields that rail does
-  not use — no international claim could be edited at all. `reimbursements_effective_modulus_badge`
-  had the same shape, badging every one of them "Bank: Missing" with its IBAN on screen.
-- **A hidden input carrying HTML `required` silently breaks the whole form.** The browser refuses to
-  submit and reports a control it cannot scroll to, so Submit just stops working — two producer
-  system tests caught this and nothing else did. `required:` follows the ACTIVE rail at render time
-  and the Stimulus controller moves the attribute (`data-rail-required`) when the rail changes.
-  **`input_html: { required: false }` does NOT suppress it** — simple_form's own `required:` option
-  wins and emits `required="required"` regardless, so the several fields in this app using that
-  pattern only work because they are never hidden.
+- **`payment_method` is the discriminator, not the currency**: a supplier may invoice in GBP and
+  still need an IBAN. `amount`/`amount_excl_vat` stay GBP, so rollups are untouched;
+  `foreign_amount` + `foreign_currency` hold the invoice figure.
+- **Currency comes from the fixed `Expense::FOREIGN_CURRENCIES`** (default EUR): a mistyped code
+  is a payment EUSA's bank cannot route. The form has its own PAYMENT CURRENCY field.
+- **After re-vendoring EUSA's template, check every `InternationalXlsx` cell constant against its
+  A1 reference.** A revision can shift rows (2026-09-07's did), and a wrong constant silently
+  writes the nominal code into the cost-centre cell. The amount cell's "£" stays for GBP; other
+  currencies get a plain number format.
+- **The submitter enters the invoice amount; finance types the GBP equivalent at review.** A blank
+  `amount` blocks approval, checked BEFORE the ex-VAT guard or the wrong message shows.
+- **`effective_has_bank_details?` is rail-aware and gates approval** (IBAN+BIC for international;
+  modulus check skipped, not failed). `approve_blocker` and `ReviewSupport` share the predicates.
+- **Every finance surface must read the rail's own fields; missing one fails silently** (the
+  expense-edit override rule and `reimbursements_effective_modulus_badge` both once read the UK
+  trio).
+- **An international claim's ex-VAT amount mirrors its gross** (`before_validation`): no
+  reclaimable UK VAT.
+- **The template caches formula values; clear them.** The cache held EUSA's sample answers and
+  named the wrong authoriser. `force_recalculation` sets `fullCalcOnLoad` AND drops the cache,
+  since LibreOffice ignores the flag. Write with `change_contents`, never `add_cell` (drops
+  styling).
+  - Authorisation rows 19-20 are left to `fullCalcOnLoad` (the thresholds are EUSA's to change),
+    so they fill in Excel and render blank in LibreOffice. Open question for EUSA: do they
+    populate when EUSA opens the form? One sample settles it.
+  - EUSA's authorisation formulas use GBP thresholds (999.99 / 1,000 / 10,000) whatever the
+    currency. Their template, not ours to fix.
+  - Leave the `\x80` bytes in the `SET UP IN CASH FLOW` / `DESIGNATION` labels: EUSA's own mojibake.
+- **No UK claims, no BACS spreadsheet**: an empty one asks EUSA to pay nobody. The covering email
+  states each row in its own currency; the total stays GBP.
+- **International claims reconcile on a percentage window**
+  (`Reconciliation::INTERNATIONAL_TOLERANCE_RATE`, 5%): the stored `amount` is an estimate and
+  the bank adds an FX spread. UK keeps the penny (wider only risks a wrong link). The matcher walks expenses, which know their
+  rail; actuals rows don't.
+- **Settle through `DatabaseStore#settle_expense_from_actual!`** (reconcile apply and "Link to
+  claim"): marks Paid and corrects an international amount to what EUSA charged. **A UK amount is
+  never overwritten**: it is what the producer spent.
+- **A hidden input with HTML `required` silently blocks the whole form.** `required:` follows the
+  active rail at render time and the Stimulus controller moves it (`data-rail-required`) on change.
+  **`input_html: { required: false }` does NOT suppress it**: simple_form's `required:` option
+  wins, so other fields using it work only because they are never hidden.
 
 ## Crypt climate monitor
 
-Temperature / humidity / dew point charts at `/admin/climate`
+Temperature, humidity and dew point charts at `/admin/climate`
 (`Admin::Climate::BaseController < AdminController`), gated by the `climate` grid permission
 (`read` to view, `manage` to configure sensors and import). Runbook:
 [docs/climate/csv-import.md](docs/climate/csv-import.md).
 
-- **Crypt readings arrive by CSV import, NOT by polling the Govee API, and that is a
-  correctness decision rather than convenience.** The Developer API has no history endpoint, and the
-  crypt's WiFi is intermittent: the sensor buffers regardless of connectivity and uploads on
-  reconnect, but a poller can only sample the present, so everything buffered during a dropout
-  stays invisible to it forever. The export contains all of it. Don't reintroduce polling.
-  The **dressing room access point** (installed early August 2026) gives the crypt sensors an
-  intermittent WiFi path, so they upload to Govee's cloud without anyone standing there with the
-  app open. That does not change any of the above: the connection still drops, the sensor's own
-  buffer is still what survives the gap, and the API still has no history endpoint.
-- **The CSV header names its own unit** (`Temperature_Celsius` / `_Fahrenheit`, following what
-  the *app* displays). `Climate::CsvImport` reads it and **refuses a file whose unit it cannot
-  identify** rather than guessing. That refusal replaced the old per-sensor verify-the-unit
-  flow, and it is the whole defence against storing Fahrenheit as Celsius.
-- **`Climate::ReadingIngest.upsert_series!` is the only write path**, shared by the manual
-  import, the mailbox job and the outdoor poller. It owns the plausibility guard
-  (-20..50 °C, 0..100 %), the dew point, and the idempotent `upsert_all`. Re-importing an
-  overlapping export is normal and harmless.
-- **Import is one step, not a preview wizard.** No per-row decisions exist, a 2-year backfill is
-  far past what a hidden-field round trip carries, and it is the same code path the mailbox job
-  calls, so manual and automatic cannot drift.
+- **Crypt readings arrive by CSV import; never reintroduce polling the Govee API.** It has no
+  history endpoint and the crypt's WiFi drops out: the sensor's buffer, in the export, holds what a
+  poller would miss. The dressing-room access point changes none of this; the link still drops.
+- **`Climate::CsvImport` refuses a file whose header unit it cannot identify**
+  (`Temperature_Celsius` / `_Fahrenheit`, following the app's display setting): the only defence
+  against storing Fahrenheit as Celsius.
+- **`Climate::ReadingIngest.upsert_series!` is the only write path** (manual import, mailbox job,
+  outdoor poller). It owns the plausibility guard (-20..50 °C, 0..100 %), the dew point and the
+  idempotent `upsert_all`; overlapping re-imports are harmless. Import is one step, not a preview
+  wizard: no per-row decisions, and a 2-year backfill is too big for a hidden-field round trip.
 - **Email ingest**: `Climate::MailboxPollJob` (every 15 min) reads CSV attachments from
-  `CLIMATE_MAILBOX` over Graph. ActionMailbox is NOT installed and M365 has no inbound webhook,
-  so this reuses the existing Graph poll instead of new ingress. **Which sensor a file belongs
-  to** falls back to the sole sensor, and anything ambiguous is left UNREAD and logged rather
-  than guessed.
-- **Graph plumbing is shared**: top-level `GraphAuth` + `Graph::MailboxClient` + `Graph::Settings`
-  (which reads `GRAPH_*` and falls back to `REIMBURSEMENTS_AZURE_*`, because there is one Entra
-  app for the org and renaming would have broken every existing credential entry).
-  `Reimbursements::MailboxClient` is a thin subclass pinning the cost-centre default and its
-  error-constant names.
-- **Outdoor data self-heals, which is why Open-Meteo won.** `OutdoorPollJob` asks for a rolling
-  `past_days` window hourly and upserts the lot, so an outage fills its own gap. Attribution
-  (CC BY 4.0) is a licence condition and is rendered on the dashboard, and the free tier is
-  non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point for Met Office / METAR.
-  - **That self-healing is also why a failed poll only reaches Honeybadger once the line has
-    been missing for a day** (`OutdoorPollJob::REPORT_FAILURE_AFTER`). The free tier sheds load
-    with the odd 503, and the next successful poll re-serves the window, so a single failure has
-    cost nothing yet — reporting it is noise. Every failure is still logged and written to
-    `last_error`, which is what the dashboard's staleness badge reads (a tighter 3h window, per
-    `Sensor::STALE_AFTER`). Never having had a reading counts as missing.
+  `CLIMATE_MAILBOX` over Graph (ActionMailbox is not installed and M365 has no inbound webhook).
+  A file goes to the sole sensor; anything ambiguous is left unread and logged, never guessed.
+- **Graph plumbing is shared**: `GraphAuth`, `Graph::MailboxClient`, `Graph::Settings` (reads
+  `GRAPH_*`, falling back to `REIMBURSEMENTS_AZURE_*`: one Entra app for the org, and renaming would
+  break existing credentials). `Reimbursements::MailboxClient` is a thin subclass pinning the
+  cost-centre default and its error-constant names.
+- **Outdoor data is Open-Meteo, which self-heals**: `OutdoorPollJob` upserts a rolling `past_days`
+  window hourly, so an outage fills its own gap. Its CC BY 4.0 attribution must stay on the
+  dashboard; the free tier is non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point
+  (Met Office / METAR).
+  - A failed poll reaches Honeybadger only after `OutdoorPollJob::REPORT_FAILURE_AFTER` (a day)
+    without readings, since the next poll re-serves the window. Every failure is still logged and
+    written to `last_error` for the staleness badge (`Sensor::STALE_AFTER`, 3h). Never having had a
+    reading counts as missing.
 - **The outdoor sensor row is ensured by `Climate::Sensor.outdoor_source!`, not a data
-  migration**, because test and CI databases are schema-*loaded*, so a data migration never
-  runs there.
-- **`Climate::SeriesQuery` must not bucket with `UNIX_TIMESTAMP`.** The mysql2 adapter doesn't
-  pin the session `time_zone`, so that reads the stored value in the *server's* zone and shifts
-  every bucket boundary by its offset. It uses `TIME_TO_SEC(TIME(recorded_at)) % n` instead,
-  keyed off a frozen allow-list. It also inserts explicit `null` points across a gap so Chart.js
-  **breaks** the line, because an interpolated line through missing data reads as a measurement
-  that never happened.
-- **Charts**: `climate_charts_controller.js` lazily `import()`s Chart.js (the cytoscape/leaflet
-  pattern). Chart.js is an ES module, so there is no `window.Chart`. The controller exposes its
-  instances as `element.climateCharts` plus a `data-climate-charts-ready` count, which is how the
-  system tests assert the exact plotted values.
-- **Which sensors are "the crypt" is stored, not inferred** (`Climate::Sensor#in_crypt`). `placement`
-  separates indoor from outdoor, but a dressing-room sensor is indoor too and would poison a
-  crypt-only worst case. Only ticked sensors feed the risk and ventilation charts; the raw history
-  charts still show every active sensor.
-- **The margin chart aggregates with `MIN(temperature_c - dew_point_c)` per row, then takes the
-  worst of them.** NOT `MIN(temperature_c) - MAX(dew_point_c)`, which takes its two figures from
-  different instants and invents a crypt that never existed, and not `AVG`, because a daily mean
-  margin can sit at 5 °C while every night touched 1. `Climate::MarginSeries` has a test that
-  fails under either wrong form.
-- **`Climate::RiskSummary` counts against hours that HAVE readings**, never hours in the range: the
-  sensors sync over an intermittent access point and routinely miss days, so "41 of 720 hours" reads
-  as 6% of a month when it means 8% of the six days covered. A coverage gap also **breaks** a
-  continuous spell, the same principle as not drawing a line across missing data.
-- **`Climate::VentilationSeries`'s worst case is the single coldest crypt sensor**, resolved once
-  from the lowest mean temperature over the range, not a composite of the lowest temperature and
-  highest dew point across sensors. A chart whose two lines came from different sensors cannot be
-  read for the gap between them, and that gap is the first thing anyone reads. It is a projection
-  over `SeriesQuery`, not new SQL, so it aggregates with `AVG` deliberately: it is read for the
-  present, and `MarginSeries` owns the historical worst case.
-- **Bucketing and sensor colours live in `Climate::Buckets` and `Climate::SeriesColors`**, shared by
-  all four chart payloads. A margin line bucketed differently from the temperature line above it
-  would be unreadable next to it, and a sensor must be the same colour on every chart.
-- **Shared Chart.js machinery is in `app/javascript/lib/climate_chart.js`.** Four chart controllers
-  and `jscpd` gating at threshold 0 means the palette, the lazy import and the end-label plugin
-  cannot be copied per controller.
+  migration**, because test and CI databases are schema-loaded.
+- **`Climate::SeriesQuery` must not bucket with `UNIX_TIMESTAMP`**: mysql2 does not pin the session
+  `time_zone`, so buckets shift by the server's offset. Use `TIME_TO_SEC(TIME(recorded_at)) % n`
+  off a frozen allow-list. Explicit `null` points across a gap make Chart.js break the line: an
+  interpolated line reads as a measurement that never happened.
+- **Charts**: `climate_charts_controller.js` lazily `import()`s Chart.js (an ES module, so no
+  `window.Chart`). It exposes `element.climateCharts` and a `data-climate-charts-ready` count,
+  which system tests use to assert plotted values.
+- **"In the crypt" is stored, not inferred** (`Climate::Sensor#in_crypt`): `placement` only
+  separates indoor from outdoor, and a dressing-room sensor would poison a crypt-only worst case.
+  Only ticked sensors feed the risk and ventilation charts; the history charts show every active
+  sensor.
+- **The margin chart takes `MIN(temperature_c - dew_point_c)` per row, then the worst of those.**
+  Never `MIN(temperature_c) - MAX(dew_point_c)` (two different instants) or `AVG` (a 5 °C daily mean
+  hides nights at 1). `Climate::MarginSeries` has a test that fails under either.
+- **`Climate::RiskSummary` counts against hours that have readings**, never hours in the range
+  (sensors miss days). A coverage gap breaks a continuous spell.
+- **`Climate::VentilationSeries` uses the single coldest crypt sensor** (lowest mean temperature
+  over the range), never a composite across sensors, or the gap between its lines means nothing. It
+  uses `AVG` over `SeriesQuery` on purpose: it is read for the present; `MarginSeries` owns the
+  worst case.
+- **Shared by all four charts**: bucketing and sensor colours in `Climate::Buckets` /
+  `Climate::SeriesColors` (one bucketing and one colour per sensor on every chart); Chart.js
+  palette, lazy import and end-label plugin in `app/javascript/lib/climate_chart.js` (`jscpd`
+  forbids copies).
 
 ## Pretix ticket widget
 
@@ -1396,162 +1040,122 @@ Inline on a show page (`shared/_pretix_widget` + `pretix_widget_controller.js`) 
 page's Buy Tickets modal (`shared/_pretix_modal` + `pretix_modal_controller.js`), both building
 through `javascript/lib/pretix.js`. All URLs come from `PretixHelper`.
 
-- **Nothing may be left to pretix's own bootstrap, which is why the script is not a `<script>`
-  tag.** Its bundle builds every `<pretix-widget>` on the page once, when it runs, and watches
-  nothing afterwards. Turbo appends a head script *before* swapping the body in, so that build
-  can land on the outgoing page — and on every later visit Turbo keeps the identical tag and
-  never re-runs it, so no widget was built again until a full reload. `lib/pretix.js` loads the
-  script itself, switches the self-build off through `pretixWidgetCallback`, and calls
-  `buildWidgets()` once the element is in place.
-- **Readiness is `window.PretixWidget.buildWidgets`, not `window.PretixWidget`** — the bundle
-  assigns that object near its start and the builder at its very end, so a script that throws
-  halfway leaves an object behind that can never build anything.
-- **Building a widget destroys its element**: pretix replaces `<pretix-widget>` with its own
-  wrapper div, so `event` can only be set once. Both surfaces render an empty container and drop
-  a fresh element in per build, or the modal shows the first show clicked and a Turbo restore
-  serves the spent markup back as a widget that does nothing.
-- **Each build leaks**: pretix keeps every widget in a private list with no teardown, so the
-  controller skips Turbo's cached-preview render (`data-turbo-preview`) rather than building
-  twice per restore visit.
-- **The widget's stylesheet comes from the shop domain, never pretix.eu** —
-  `pretix.eu/widget/v1.en.css` 404s and the bundle injects no CSS of its own, so pointing there
-  renders the widget unstyled. The shop origin must be in **both** `style-src` and
-  `style-src-elem` (browsers enforce them separately for `<link>`); `content_security_policy_test`
-  pins that. `widget/v1.*` and `widget/v2.*` are byte-identical on our shop — v1 already serves
-  the current widget, so "upgrade to v2" is not a fix for anything.
-- The modal `<dialog>` is a flex column (scoped to `[open]`, or it beats the UA's
-  `dialog:not([open]) { display: none }`) so its header stays put as the widget grows.
+- **Never leave building to pretix's own bootstrap, so the script is not a `<script>` tag.** It
+  builds every `<pretix-widget>` once and watches nothing, which under Turbo hits the outgoing page
+  and never re-runs. `lib/pretix.js` loads the script, switches the self-build off through
+  `pretixWidgetCallback`, and calls `buildWidgets()` once the element is in place.
+- **Readiness is `window.PretixWidget.buildWidgets`, not `window.PretixWidget`**: the object is
+  assigned early and the builder last, so a script that throws halfway leaves a useless object.
+- **Building destroys the element** (pretix swaps `<pretix-widget>` for its own div, so `event` is
+  set once). Both surfaces render an empty container and drop in a fresh element per build, or the
+  modal keeps the first show clicked and a Turbo restore serves a dead widget.
+- **Each build leaks** (pretix keeps every widget, with no teardown), so the controller skips
+  Turbo's cached preview (`data-turbo-preview`).
+- **The widget stylesheet comes from the shop domain, never pretix.eu**
+  (`pretix.eu/widget/v1.en.css` 404s and the bundle injects no CSS). The shop origin must be in both
+  `style-src` and `style-src-elem` (enforced separately for `<link>`);
+  `content_security_policy_test` pins it. `widget/v1.*` and `widget/v2.*` are byte-identical on our
+  shop, so "upgrade to v2" fixes nothing.
+- The modal `<dialog>` is a flex column scoped to `[open]` (otherwise it beats the UA's
+  `dialog:not([open]) { display: none }`), so its header stays put as the widget grows.
 
 ## Pretix membership sync
 
 Member ticket prices are gated behind a pretix membership, driven from the `member` / `life member`
-roles by `Pretix::MembershipSync`. Full detail in [docs/pretix/membership-sync.md](docs/pretix/membership-sync.md).
+roles by `Pretix::MembershipSync`. Full detail in
+[docs/pretix/membership-sync.md](docs/pretix/membership-sync.md).
 
-- **A membership is validated against the SHOW's date, not the purchase date**, so `date_end` caps
-  how far ahead a member can book. Cohorts ending 31 Aug silently blocked every autumn show. This
-  also rules out any short rolling window.
-- **The nightly `ReconcileMembershipsJob` is what makes this correct**; the login / import / archive
-  triggers only make it immediate. `Role#archive` removes members with `users.clear` — `delete_all`,
-  which fires **no association callbacks** — so the annual de-membering is invisible to any hook and
-  needs its explicit enqueue. Don't replace the reconcile with callbacks.
-- **Never read memberships from one whole-shop list.** pretix pages them with no unique tiebreaker
-  and no `ordering` parameter, so `LIMIT`/`OFFSET` repeats and drops rows — a live fetch returned
-  838 rows holding 626 distinct ids. A member whose row vanished looks like one with none, so the
-  reconcile would mint another every night. Read per customer.
-- **The SSO identity claim is `email`, not `sub`. Switching it LOCKS all 686 members out of the
-  shop** — it re-hashes every `identifier`, and the next login dies on the duplicate email. pretix
-  blocks the migration three separate ways, and anonymising to free the email severs every order
-  from its owner. Not recoverable; see the doc before touching it.
-- **`users.pretix_customer_identifier` is how that fragility is handled instead**: both lookups
-  resolve by the stored link first, email second (as `Reimbursements::PersonLink` does). Written
-  only on the email path, so a stale link re-points and a working one is never disturbed — which is
-  what stops the people holding two pretix accounts flip-flopping every run.
+- **A membership is validated against the show's date, not the purchase date**, so `date_end` caps
+  how far ahead a member can book. Cohorts ending 31 Aug blocked every autumn show; no short
+  rolling window works either.
+- **The nightly `ReconcileMembershipsJob` is what makes this correct**; login, import and archive
+  triggers only make it immediate. Never replace it with callbacks: `Role#archive` removes members
+  with `users.clear` (`delete_all`, no association callbacks), so the annual de-membering needs its
+  explicit enqueue.
+- **Never read memberships from one whole-shop list; read per customer.** pretix pages them with no
+  unique tiebreaker or `ordering` parameter, so `LIMIT`/`OFFSET` repeats and drops rows, and a
+  dropped member would get a new membership minted every night.
+- **The SSO identity claim is `email`, not `sub`; switching it locks every member out of the shop,
+  unrecoverably** (every `identifier` re-hashes and logins die on the duplicate email; anonymising
+  to free the email severs every order from its owner). Read the doc first.
+- **Lookups resolve by `users.pretix_customer_identifier` first, email second.** The link is
+  written only on the email path, so a stale one re-points and a working one is never disturbed
+  (people with two pretix accounts would flip-flop otherwise).
 - **Memberships cannot be deleted and customers cannot be pre-created.** Revoke with
-  `PATCH date_end`; creating a customer over the API breaks that member's next SSO login with
-  "email address is already used for a different account".
-- **Writes are gated to production** (`Settings.writes_enabled?`). There is one organizer and no
-  staging copy, so a dev machine reconciling against its own database would expire real members.
+  `PATCH date_end`. Creating a customer over the API breaks that member's next SSO login ("email
+  address is already used for a different account").
+- **Writes are gated to production** (`Pretix::Settings.writes_enabled?`): one organizer, no
+  staging copy, so a dev machine would expire real members.
 
 ## Box office display (Anthias)
 
-Public unauthenticated pages under `/display` for the box office screen, plus `/display` itself,
-which lists the playlist for whoever sets up the Pi. `Display::PagesController` resolves one panel
-per URL through `Display::Chain`; panels live in `app/services/display/panels/`.
+Public unauthenticated pages under `/display` for the box office screen; `/display` itself lists
+the playlist for whoever sets up the Pi. `Display::PagesController` resolves one panel per URL
+through `Display::Chain`; panels live in `app/services/display/panels/`.
 
-- **Anthias plays a fixed playlist of these URLs forever, unattended.** A page that renders nothing
-  is not a blank page for a moment, it is a blank screen in the box office until somebody notices
-  and reconfigures the Pi. `Chain` appends the query-less `Panels::Identity` itself so a chain
-  cannot resolve to nothing, **the empty-database test in
-  `test/functional/display/pages_controller_test.rb` is the feature**, and anything that can raise
-  mid-render is rescued for the same reason (`display_image_url` returns nil on a blob missing from
-  storage rather than 500ing the screen).
-- **The RUN DATES decide what is on the board, not the performance list.** `Display::EventPool`
-  filters on `end_date` alone: an event whose listed performances have all passed stays until its
-  run ends and states its run, because a producer who enters the first week and forgets the second
-  must not have the show vanish for that second week — partial data producing a worse result than
-  none. `on_today?` still needs positive evidence, so such an event gets no "TONIGHT" flash.
-- **An event with no `EventOccurrence` rows plays every day of its run, and no duration rule may
-  stand in for that.** It is how all ~3000 archive events behave and it is the fallback
-  `display_when` falls back *to*; a duration filter would instead drop a three-week Fringe run that
-  genuinely is on every night. The retired `performance_weekdays` column encoded the same rule.
-- **The display layout must not load `application.css`** — its unlayered `h1`-`h6` rules beat the
-  Tailwind utilities sizing this screen. `display.css` imports `tailwind-base.css` only and owns the
-  two display-scoped tokens: `--color-display-accent` (`text-primary` is 2.9:1 on black) and
-  `--leading-descender`, which every `truncate` here must be paired with or `overflow: hidden` slices
-  the descenders flat.
-- **The What's On board scrolls with pure CSS, and the scroll is self-limiting.** Show titles wrap
-  instead of truncating, so the list can outgrow the frame; `.display-marquee` translates the track
-  by `min(0px, calc(var(--display-marquee-viewport) - 100%))` — the `100%` is the track's own
-  height, so a track that fits yields a positive distance and clamps to no movement at all. That is
-  why the box takes an explicit `height` from that same variable rather than `flex-1`: the variable
-  IS the box, so the two cannot drift. `100cqh` would say this directly and needs no constant, but
-  Anthias's QtWebEngine predates container query units — the same engine that rendered the QR code
-  as a blank square. **The `17.25rem` in that variable is the panel's header, footer and padding
-  summed by hand**, which is why `_whats_on.html.erb` pins them (`h-18`, `h-9`) instead of letting
-  content size them.
-- **The marquee's pass is ONE fixed duration, so the speed varies with the distance.** That is the
-  only pacing a fixed Anthias slot can take: constant speed would make a long board need a longer
-  slot than a short one, and since the playlist holds a single number the slot would have to cover
-  the worst case, leaving every ordinary board sitting there twice as long as it needed. The
-  distance is the *overflow*, not the list — twelve short titles overflow by ~310px and twelve
-  wrapping ones by ~1030px. Don't pace it per event: that had the common case crawling at 16px/s,
-  near six seconds a row. A test asserts the slot still covers the pass, reading the duration out
-  of `display.css`.
-- **`Display::Panels::News`'s budget is in measured pixels, not guessed characters.** Every constant
-  maps to one Tailwind class in `_news.html.erb` and was measured in Chrome; `CHARS_PER_LINE = 68`
-  sits between the 76 characters a mixed-case headline fits and the 66 an all-caps one does. It was
-  55, which charged the real top headline three lines for the two it renders as and stopped the
-  slide after two items with 372px of black space under them. The list's `min-h-0 overflow-hidden`
-  is the safety net under that arithmetic: a wrong answer clips a headline instead of pushing the QR
-  code off screen.
-- **The font is self-hosted from `theme.css`, and it is Source Sans 3, not Source Sans Pro.**
-  Pro ships no weight 500 and `font-medium` is this codebase's most-used weight, so Pro would
-  render all of those at 400. Source Sans 3 is the same typeface renamed upstream, in a variable
-  build covering 200–900. Its metrics match Pro's, so the measured figures above still hold.
-- **`OnThisDay` filters on the BLOB'S FILENAME (`Event.with_uploaded_image`), not on having an
-  attachment.** `fetch_image` *attaches* a generated placeholder, so every archive event whose page
-  anyone has ever opened carries one — `joins(:image_attachment)` answers "has been looked at", not
-  "has a poster", and put the placeholders back on the screen. Placeholder blobs are the ones under
-  `ActiveStorageHelper::PREFIX`. `eager_load` adds the preload alongside that join; on its own it
-  outer-joins and silently drops the guard.
-- **Curtain times come from `EventOccurrence`, and only when someone entered them.** `display_when`
-  prints "Fri 2 Oct, 7.30pm" from `Event#next_occurrence_at`, and falls back to the bare date range
-  for an event with no occurrences — which is every archive row.
-- **The archive slide moves on one place every time it is rendered** (`Display::Rotation`, a cached
-  cursor keyed by date). Anthias comes back to that one URL every few minutes, so picking the oldest
-  match every time showed a single frame from open to close. A cache that cannot answer falls back to
-  a random pick rather than standing still.
-- **The credits QR always resolves to something** — `Event#digital_programme_url` when set, the
-  event's own page otherwise. A footer that appears for one show and vanishes for the next reads
-  as a broken slide, and the caption names whichever it got.
-- **`display_credits_layout` picks between two layouts and sizes them in measured pixels, not row
-  counts.** *Side by side* is Cast against Company; *flowed* runs both lists as one sequence down
-  the first column and into the second. It takes whichever prints the names **bigger**, tie to side
-  by side — which needs no threshold on "how lopsided": flowing only wins where a column was going
-  to waste, and 3 cast against 18 crew gains two size steps. Pixels rather than rows because the QR
-  is a different fraction of a row at each step (under three at `text-5xl`, nearly five at
-  `text-xl`), and counting it as a fixed number pushed it off the bottom for an 18-name cast.
-  Side by side puts the QR under the **shorter** list (usually the cast, hence bottom left) and
-  hard-caps each list's height so a name long enough to wrap clips the list rather than the code;
-  flowed makes it a footer, since a balanced flow leaves neither column spare.
-  Re-measure `CREDITS_*` in the browser if the header, row spacing or QR size changes.
+- **Anthias plays these URLs forever, unattended, so a page must never render nothing**: that is a
+  blank box office screen until someone reconfigures the Pi. `Chain` appends the query-less
+  `Panels::Identity` itself; **the empty-database test in
+  `test/functional/display/pages_controller_test.rb` is the feature**; anything that can raise
+  mid-render is rescued (`display_image_url` returns nil for a blob missing from storage).
+- **Run dates decide what is on the board, not the performance list.** `Display::EventPool` filters
+  on `end_date` alone, so a show whose producer entered only the first week stays up for the
+  second. `on_today?` still needs positive evidence, so such an event gets no "TONIGHT" flash.
+- **An event with no `EventOccurrence` rows plays every day of its run; no duration rule may stand
+  in for that.** Every archive event behaves so, and a duration filter would drop a three-week
+  Fringe run that is on every night.
+- **The display layout must not load `application.css`**: its unlayered `h1`-`h6` rules beat the
+  Tailwind utilities. `display.css` imports `tailwind-base.css` only and owns two tokens:
+  `--color-display-accent` (`text-primary` is 2.9:1 on black) and `--leading-descender`, which
+  every `truncate` here must carry or `overflow: hidden` slices the descenders.
+- **The What's On board scrolls in pure CSS and stays still when the list fits.** Titles wrap
+  rather than truncate, so the list can outgrow the frame. `.display-marquee` translates by
+  `min(0px, calc(var(--display-marquee-viewport) - 100%))` (`100%` is the track's own height), and
+  the box takes its `height` from the same variable (not `flex-1`) so the two cannot drift.
+  No `100cqh`: Anthias's QtWebEngine lacks container query units. **The `17.25rem` in the variable
+  is the header, footer and padding summed by hand**, so `_whats_on.html.erb` pins them (`h-18`,
+  `h-9`).
+- **The marquee pass is one fixed duration, so speed varies with the overflow**: the playlist has
+  one slot length. Never pace it per event. A test asserts the slot covers the duration in
+  `display.css`.
+- **`Display::Panels::News` budgets in pixels measured in Chrome**, each constant mapping to one
+  Tailwind class in `_news.html.erb` (`CHARS_PER_LINE = 68`, between mixed-case 76 and all-caps 66).
+  The list's `min-h-0 overflow-hidden` clips a headline rather than push the QR code off screen.
+- **The font is self-hosted Source Sans 3 (from `theme.css`), never Source Sans Pro**, which has no
+  weight 500 and so renders every `font-medium` at 400. Metrics match, so the measurements hold.
+- **`OnThisDay` filters on the blob's filename (`Event.with_uploaded_image`), not on having an
+  attachment** (never `joins(:image_attachment)`): `fetch_image` attaches a placeholder (under
+  `ActiveStorageHelper::PREFIX`) to any event whose page was opened. `eager_load` must sit beside
+  that join, never replace it: alone it outer-joins and drops the guard.
+- **Curtain times come from `EventOccurrence` only when entered.** `display_when` prints
+  "Fri 2 Oct, 7.30pm" from `Event#next_occurrence_at`, else the bare date range.
+- **The archive slide advances one place per render** (`Display::Rotation`, a cached cursor keyed
+  by date), or Anthias shows one frame all day. A cache that cannot answer falls back to a random
+  pick.
+- **The credits QR always resolves**: `Event#digital_programme_url` when set, else the event's own
+  page; the caption names which.
+- **`display_credits_layout` picks side by side (Cast against Company) or flowed (one sequence down
+  both columns), whichever prints names bigger, ties to side by side.** No lopsidedness threshold is
+  needed: flowing only wins where a column was going to waste. It sizes in measured pixels, not rows
+  (the QR is a different fraction of a row at each size). Side by side puts the QR under the shorter
+  list and caps each list's height so a wrapping name clips the list, not the code; flowed makes the
+  QR a footer. Re-measure `CREDITS_*` if the header, row spacing or QR size changes.
 
 ## Event ticket prices
 
 `events.ticket_prices` is a JSON array of `Event::TicketPrice` bands (standard / concession /
 member / other), with `booking_fee` beside it. `Event::PriceParser` reads the legacy free-text
-`price` column; `bin/rails events:backfill_ticket_prices` applies it (dry by default).
+`price` column; `bin/rails events:backfill_ticket_prices` applies it (dry by default). Nothing
+records whether it has been run with `APPLY=1` in production. The 2026-08-30 dry run over 2742
+priced events read 50%, refused 12% as pre-decimal and 38% as unreadable (795 of those "Unknown").
 
-- **`price` stays the display string every view renders.** Editing the bands in the admin
-  regenerates it, so the two cannot drift; the **backfill deliberately does not** (it writes with
-  `update_columns`), so all ~3000 archive pages keep rendering byte-identically.
-- **The parser refuses rather than guesses** — a wrong price reaches a search result as a promise
-  the box office must honour, while a refusal changes nothing. A residue check requires every
-  character to be an amount, a band word or a separator.
-- **Pre-decimal is a DATE rule, not a string rule.** 66 archive rows are shillings and pence
-  (1893–1970); `"2/6, 3/6, 5/-"` splits into five plausible-looking modern prices, and a bare
-  `"5/6"` on a 1962 show says nothing about itself. Nothing before **15 Feb 1971** is parsed.
-- **Categories are assigned by amount, never position** — `"3/4/5"` and `"£5.50/5/4.50"` both occur.
+- **`price` stays the display string every view renders.** Admin edits to the bands regenerate it;
+  the backfill deliberately does not (`update_columns`), so archive pages stay byte-identical.
+- **The parser refuses rather than guesses**: a wrong price is a promise the box office must honour.
+  A residue check requires every character to be an amount, a band word or a separator.
+- **Pre-decimal is a date rule: nothing before 15 Feb 1971 is parsed.** Shillings strings like
+  `"2/6, 3/6, 5/-"` split into plausible modern prices, and `"5/6"` says nothing about itself.
+- **Categories are assigned by amount, never position** (`"3/4/5"` and `"£5.50/5/4.50"` both occur).
 - `ticket_prices` is not an association, so `shared/form/sections/_nested_fields` needs
   `template_object:` to build its add-row template.
 
@@ -1561,243 +1165,214 @@ member / other), with `booking_fee` beside it. `Event::PriceParser` reads the le
 screen (`TeamMember.ordered`, nulls last then by name). Spec: issue #167.
 
 - **The order is the row's position in the submitted form, stamped on save by
-  `TeamMemberOrdering`** (`team_members_attributes=` on `Event` and `Proposal`). Browsers post a
-  form in document order and nested attributes are assigned in that order, so the row carries **no
-  hidden order field** and the sortable controller renumbers nothing here. Rows flagged `_destroy`
-  are skipped (no gaps) and blank template rows are left blank so `reject_if: :all_blank` still
-  drops them. Row order cannot be tested in a functional test (see **Testing**).
-- **The form renders through `TeamMember.in_display_order`, the in-memory twin of `ordered`**,
-  never the scope: after a failed save the association holds the submitted rows with their
-  errors, and a scope would query and render the stale ones. Its name tiebreak folds accents
-  (`transliterate`) because the SQL side sorts under `utf8mb4_unicode_ci`, which ignores them —
-  otherwise the form and the public page disagree on "Ábel", and the next save through the form
-  makes the form's order permanent. A test pins the two together.
+  `TeamMemberOrdering`** (`team_members_attributes=` on `Event` and `Proposal`). Browsers post in
+  document order, so there is no hidden order field and the sortable controller renumbers nothing.
+  `_destroy` rows are skipped (no gaps); blank template rows stay blank so `reject_if: :all_blank`
+  drops them. Test it in an integration test, not a functional one (see **Testing**).
+- **The form renders through `TeamMember.in_display_order`, the in-memory twin of `ordered`, never
+  the scope**: after a failed save a scope would render the stale rows instead of the submitted ones
+  with their errors. Its name tiebreak folds accents (`transliterate`) to match
+  `utf8mb4_unicode_ci`, or the form and public page disagree and the next save makes the form's
+  order permanent. A test pins the two together.
 
 ## Event performances
 
-`EventOccurrence` is one dated instance of an `Event` — nested-attribute edited on the admin event
-form, `has_many` from Event. It replaced the `performance_weekdays` column. Spec:
-[docs/superpowers/specs/2026-08-30-rich-event-data-design.md](docs/superpowers/specs/2026-08-30-rich-event-data-design.md).
+`EventOccurrence` is one dated instance of an `Event`, nested-attribute edited on the admin event
+form. It replaced the `performance_weekdays` column.
 
 - **One table for Shows, Workshops and Seasons; only the word differs.** `OCCURRENCE_LABEL` per STI
-  subclass gives "Performance" / "Session" / "Opening time", read through `Event#occurrence_label`.
+  subclass ("Performance" / "Session" / "Opening time"), read through `Event#occurrence_label`.
   Never type the word into a view.
-- **No occurrences means every day of the run**, which is every archive event — see the box office
-  section. `on_today?`, `next_occurrence` and `display_when` all branch on that, so a change to one
-  needs the same change to the others.
-- `event_occurrences.event_id` is **`:integer`**, matching `events`' legacy integer primary key.
-- **`Event::Schedule` reads the performances back as a shape**, and both the board and the event
-  page render from it: `:range` (consecutive days at one curtain time), `:weekly`, `:single`,
-  `:irregular`, `:none`. Five nights in a row is one range, not five rows.
-  - **Blocks are grouped by curtain time FIRST, then folded by consecutive date.** A Saturday
-    matinee sorts between the Friday and Saturday evenings, so one chronological pass would let it
-    cut the evening run into three.
-  - **`:weekly` is what replaced `performance_weekdays`** — same weekday, same time, gaps a
-    multiple of 7, at least 3 dates spanning over a fortnight. A date range for the Improverts
-    reads "Sep 4 – Jun 30", the exact string `display_when` exists to avoid.
-  - **A run states the WHOLE run** (Mick's call), so `display_when` is date-independent. Two
-    stretches — an evening run and its late shows, or a matinee — are BOTH stated, a line each,
-    in advance and on the night alike: naming only the block covering today advertised one and
-    hid the other, and folding both times into one span would claim a midnight show on every
-    night of the run. Past `DisplayHelper::WHEN_MAX_BLOCKS` (2, measured) the column cannot hold
-    them and the block covering today is what is left — the one date-dependent case.
-  - **The event page does NOT collapse; the board does.** `Event::Schedule`'s blocks drive
-    `display_when` only. `events/_performances` lists one row per occurrence with its badges
-    inline, because a run with a midnight show rendered as two overlapping ranges plus a separate
-    "Relaxed: Thursday" list, and the reader had to cross-reference the two.
-- **The board's when-column does not `truncate`.** It carries a run and its hours, and the longest
-  ("Wed 30 Sep – Sun 4 Oct, 10.30am – 11.30pm") wants ~700px at `text-4xl`; widening to that would
-  eat the title, so it wraps like the title does and the marquee scrolls the overflow.
-- **The box office board renders `display_price`, not `Event#price`.** The derived string
-  ("£10 / £8 concessions / £7 members") truncates in that fixed 256px column; structured bands
-  collapse to "£10/8/7".
+- **No occurrences means every day of the run.** `on_today?`, `next_occurrence` and `display_when`
+  all branch on that; change one, change all three.
+- `event_occurrences.event_id` is **`:integer`**, matching `events`' legacy primary key.
+- **`Event::Schedule` reads the performances back as a shape**: `:range` (consecutive days, one
+  curtain time), `:weekly`, `:single`, `:irregular`, `:none`.
+  - **Blocks group by curtain time first, then fold by consecutive date**, or a Saturday matinee
+    cuts the evening run into three.
+  - **`:weekly`**: same weekday and time, gaps a multiple of 7, at least 3 dates spanning over a
+    fortnight ("Every Friday, 7.30pm" instead of "Sep 4 – Jun 30").
+  - **A run states the whole run**, so `display_when` is date-independent. Two stretches (an evening
+    run plus late shows or a matinee) are both stated, a line each; folding them into one span would
+    claim a midnight show every night. Past `DisplayHelper::WHEN_MAX_BLOCKS` (2) only the block
+    covering today is shown, the one date-dependent case.
+  - **The board collapses; the event page does not.** `Event::Schedule`'s blocks drive
+    `display_when` only. `events/_performances` lists one row per occurrence with its badges inline,
+  so nobody cross-references a range against a separate list of flagged dates.
+- **The board's when-column does not `truncate`**: the longest value needs ~700px at `text-4xl`, and
+  widening to that would eat the title, so it wraps like the title and the marquee scrolls the
+  overflow.
+- **The board renders `display_price`, not `Event#price`**: structured bands collapse to "£10/8/7"
+  to fit the fixed 256px column.
 
 ### Deployment
 
-On merge, add the Improverts' Friday dates as `EventOccurrence`s in the admin, and do the same for
-any other intermittent long-running event. This replaced `performance_weekdays`, which was dropped
-with no backfill: until an event has occurrences it counts as playing every day of its run, so the
-box office board prints its raw range — "Sep 1 – Jun 30" for the Improverts, the exact string
-`display_when` exists to avoid. Three or more Fridays spanning over a fortnight render as
-"Every Friday, 7.30pm".
+On merge, add the Improverts' Friday dates (and any other intermittent long-running event's) as
+`EventOccurrence`s in the admin. `performance_weekdays` was dropped with no backfill, so until then
+the board prints the raw range ("Sep 1 – Jun 30").
 
-**Purge Cloudflare's `/robots.txt` once**, after the deploy that moved it out of `public/`. The
-edge holds a copy stored with `max-age=31536000` from `public_file_server.headers`, and it stays
-fresh regardless of what the origin now returns — a rules change deployed on 2026-08-30 was still
-being served from a 30-day-old copy. Later changes need no purge: the controller serves it with a
-one-hour cache.
+**Purge Cloudflare's `/robots.txt` once**, after the deploy that moved it out of `public/`: the
+edge holds a copy with `max-age=31536000` and keeps serving it whatever the origin returns. Later
+changes need no purge (the controller sends a one-hour cache).
 
-Robots.txt is now served by the app rather than by Thruster, so it goes down with the app — and a
-5xx robots.txt stops Googlebot crawling the site at all. The controller sends
-`stale-if-error=86400`, but Cloudflare honours that only on Enterprise and a dead Puma surfaces as
-a 521/522 that serve-stale cannot apply to. **Turn Cloudflare's Always Online on** (or add a Cache
-Rule for `/robots.txt`) so the edge keeps answering through an outage.
+**Turn Cloudflare's Always Online on** (or add a Cache Rule for `/robots.txt`). Robots.txt is now
+served by the app, so it goes down with Puma, and a 5xx robots.txt stops Googlebot crawling the
+site. The controller's `stale-if-error=86400` does not help: Cloudflare honours it only on
+Enterprise, and a dead Puma is a 521/522 that serve-stale cannot cover.
 
 ## Pretix performance sync
 
 A Bedlam show is a pretix **event series**, so a subevent maps one-for-one onto an
 `EventOccurrence`. `events.pretix_sync_performances` turns it on; `Pretix::PerformanceSync` runs
-from `Pretix::SyncPerformancesJob` every 15 minutes. Spec:
-[docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md](docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md).
+from `Pretix::SyncPerformancesJob` every 15 minutes.
 
+- **The sync is one-way: nothing writes performances to pretix.** One organizer, no staging copy
+  (`Pretix::Settings.writes_enabled?`), so a bug editing a live series cannot be undone, where one
+  editing our database can.
 - **Ownership rides on `event_occurrences.pretix_subevent_id` alone.** A row with one is pretix's
-  (times and `sold_out` overwritten each pass, destroyed when the subevent goes); a row without
-  one was typed by hand and is never touched. `access_flags`, `note` and `cancelled` are the
-  producer's on both kinds and are never written by the sync.
-- **A hand-typed row at exactly the same `starts_at` is ADOPTED, not duplicated** — the sync takes
-  it over (keeping its flags and note) instead of adding a second row beside it. A row at a
-  *different* time is left alone: that is a matinee, a preview, or a genuine disagreement, none of
-  which are the sync's to resolve.
-- **pretix answers `403`, never `404`, for an event slug it will not show you** — it declines to
-  leak whether the event exists. So *the shop is not built yet* and *the token has lost its access*
-  arrive as the same status on the same endpoint, and the only thing separating them is
-  `Client#events_readable?` (one organizer-level read, memoized per sync run). A working token
-  means the event is simply not in pretix yet; a token that can read nothing stays loud.
-- **A series that does not exist yet is a waiting state, not an error.** Ticking the box before
-  building the shop is the normal order to work in, so it is written to `events.pretix_sync_error`
-  and shown as a banner on the admin event page — never raised, never reported, or every such
-  event would alert every 15 minutes for its whole run. `pretix_synced_at` records the last good
-  read. Both are written with `update_columns`: `update!` would file a PaperTrail version per
-  event per quarter hour.
-- **`cancelled` is a human statement.** pretix has no cancellation concept — `active: false` is
-  equally *not on sale yet* — and a wrong CANCELLED on a public page is the worst error here. It
-  is why a cancelled row outlives its subevent (keeping its id, so a restored date reattaches).
-  `is_public: false` **is** treated as gone. `best_availability_state: null` is NOT sold out.
-- **The sync fetches before it writes**, so a timeout leaves the run standing instead of blanking
-  it; the job isolates per event so one broken event can't stop the rest.
-- `bin/rails pretix:enable_performance_sync` turns it on across every future event (dry by
-  default, `APPLY=1` writes). It deliberately does **not** probe pretix first — the two reasons it
-  used to are the two bullets above.
-- **`accepts_nested_attributes_for :event_occurrences` must not reject on a blank `starts_at`
-  alone.** A synced row renders its times as text, so editing its flags posts no `starts_at` —
-  the old blanket rule saved, redirected and silently discarded the change. No id means the
-  empty "Add" template row, which is what the rule is actually for.
-- Cancelled and sold out are badges on the performance's own row, and map to schema.org
-  `EventCancelled` / `SoldOut`. Cancelled outranks sold out everywhere.
+  (times and `sold_out` overwritten each pass, destroyed when the subevent goes); a row without is
+  hand-typed and never touched. `access_flags`, `note` and `cancelled` belong to the producer on
+  both kinds and are never written by the sync.
+- **A hand-typed row at exactly the same `starts_at` is adopted** (keeping its flags and note), not
+  duplicated. A row at a different time is left alone.
+- **pretix answers `403`, never `404`, for an event it will not show you**, so "shop not built yet"
+  and "token lost access" look identical. `Client#events_readable?` (one organizer-level read per
+  run) separates them; a token that can read nothing stays loud.
+- **A series that does not exist yet is a waiting state, not an error**: written to
+  `events.pretix_sync_error` and shown as a banner on the admin event page, never raised or reported
+  (ticking the box before building the shop is the normal order). `pretix_synced_at` records the
+  last good read. Write both with `update_columns` (`update!` would file a PaperTrail version every
+  15 min).
+- **`cancelled` is a human statement; the sync never infers it.** pretix has no cancellation
+  (`active: false` also means not on sale yet), and a wrong cancelled on a public page is the worst
+  error here. A cancelled row outlives its subevent, keeping its id so a restored date reattaches.
+  `is_public: false` is treated as gone. `best_availability_state: null` is not sold out.
+- **The sync fetches before it writes**, so a timeout leaves the run standing; the job isolates
+  each event so one broken event cannot stop the rest.
+- `bin/rails pretix:enable_performance_sync` turns it on for every future event (dry by default,
+  `APPLY=1` writes). It deliberately does not probe pretix first (see the two bullets above).
+- **`accepts_nested_attributes_for :event_occurrences` must reject only a row with no id and no
+  `starts_at`** (the empty "Add" template). A synced row renders its times as text, so editing its
+  flags posts no `starts_at`, and a blanket rule silently discarded the change.
+- Cancelled and sold out are badges on the performance's own row, mapped to schema.org
+  `EventCancelled` / `SoldOut`; cancelled outranks sold out everywhere. **The box office board
+  deliberately shows neither**: its layout is measured in pixels and a badge needs its own design
+  pass.
 
 ## Opportunities
 
-An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
+An `Opportunity` is a posting (a "project"). It `belongs_to :company` (optional), `has_many :roles` (`OpportunityRole`: a position + `category` enum), and carries `project`/`author`, the `compensation_type`/`experience_level` enums, `apply_url` and `email_visibility`/`contact_email`. `title` is optional: `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
 
-- **Submission is public.** Anyone may submit via `GetInvolvedController#new/#create`; logged-out submitters provide `submitter_name`/`submitter_email` (creator is `nil` → `external?`), protected by a honeypot + reCAPTCHA. Members are attributed to their account; managers can pick a different creator on the admin form. A manager entering an external submitter there is recorded as the creator (`on_behalf_of?` — creator *and* submitter present); `attribution_label` renders all three cases. All submissions are `approved: false` until reviewed. `creator_or_submitter` requires one or the other.
-- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company/compensation/experience) + a `?category=` tab, sorted EUTC-first. `active` = `listable` ordered internal-first. Per-society shareable links use `?q[company_slug_eq]=…`.
-- **Display:** one `OpportunityCardComponent` renders the project + role sub-list for the public list and the home/dashboard widgets.
-- **Review:** `Opportunity Reviewer` role; approve/reject email whoever actually submitted (`OpportunityMailer`, `notification_email` — the account creator when present, so on-behalf decisions go to the internal user, else the external submitter) with an optional note. Reviewers also get the `OpportunityDigestJob` digest. A `close` member action (aliased to `:update` in Ability) expires a posting immediately.
-- `Company` (name + `acts_as_url` slug + `internal` EUTC flag) is admin-managed via `Admin::CompaniesController`.
+- **Submission is public** (`GetInvolvedController#new/#create`, honeypot + reCAPTCHA). A logged-out submitter gives `submitter_name`/`submitter_email` and has no creator (`external?`); a member is the creator. On the admin form a manager may pick another creator, or enter an external submitter, which records the manager as creator (`on_behalf_of?`: both present). `attribution_label` renders all three cases; `creator_or_submitter` requires one of the two. Every submission starts `approved: false`.
+- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company, compensation, experience) + a `?category=` tab, EUTC first. `active` is `listable` ordered internal-first. Per-society share links use `?q[company_slug_eq]=…`.
+- **`OpportunityCardComponent`** renders the project and its roles on the public list and the home/dashboard widgets.
+- **Review** is the `Opportunity Reviewer` role, who also gets the `OpportunityDigestJob` digest. Approve/reject emails `notification_email` via `OpportunityMailer`, with an optional note: the creator when present (so an on-behalf decision goes to the internal user), else the external submitter. The `close` member action (aliased to `:update` in Ability) expires a posting at once.
+- `Company` (name, `acts_as_url` slug, `internal` EUTC flag) is managed in `Admin::CompaniesController`.
 
 ## SEO and structured data
 
-Metadata lives in `MetaHelper` (rendered by `layouts/application`), structured data in
-`SchemaHelper`, the sitemap in `SitemapsController`. Audit that produced all of it: 2026-08-30.
+Metadata is in `MetaHelper` (rendered by `layouts/application`), structured data in `SchemaHelper`,
+the sitemap in `SitemapsController`.
 
-- **`og:title`, `og:url` and the canonical are derived at RENDER time, never in
-  `ApplicationController#set_globals`.** `set_globals` is a `before_action`, so it runs before the
-  action assigns `@title` — deriving og:title there read `nil` on every request and captioned
-  every shared show "Bedlam Theatre" for years. Anything that reads `@title` belongs in
-  `MetaHelper`.
-- **`MetaHelper::CANONICAL_PARAMS` is `page` and nothing else, and `page=1` is dropped.** That is
-  what collapses Ransack's `?q[...]` space — every author, company and venue is its own URL, each
-  combining with pagination — onto the page it filters. Adding `q` there reopens an unbounded
-  crawl space; keeping `page=1` would make the canonical create the duplicate it exists to
-  collapse. `robots.txt` is served by `RobotsController`, **not** from `public/` (where
-  `public_file_server.headers` would stamp a one-year cache-control on a URL whose contents
-  change, and where the static middleware would shadow the route). It disallows the same space,
-  and must spell it
-  **percent-encoded** (`q%5B`): a crawler matches the rule against the URL it sees, and Ransack's
-  parameters arrive encoded.
-- **Variants say `format: "webp"`, not `convert:`.** Rails derives
-  `ActiveStorage::Variation#content_type` from `:format` alone; `:convert` is passed to
-  image_processing, so the bytes were WebP while every variant was served declaring
-  `image/png` or `image/jpeg`. Browsers sniff and cope — og:image validators do not.
-  **Changing a variant re-keys its URL and regenerates the whole set on first request.**
-- **In `ImageComponent`, `full_width` is styling and `priority` is loading.** They were one
-  flag (`eager_load`) and it had the performance backwards: eight cards below the fold loaded
-  eagerly while the masthead above them inherited the app-wide lazy default. Measured, correcting
-  it was worth 1552ms of homepage LCP on a throttled phone. Only a genuine LCP element passes
-  `priority`.
-- **The sitemap reads every record through `Ability.new(nil)`.** A sitemap must never advertise a
-  URL that answers 403 to the crawler following it; a test walks the event URLs and asserts each
-  renders for a guest.
-- **Member profiles are indexed on purpose.** Opting out is `users.public_profile`, which is the
-  same flag the guest ability's `:view_shows_and_bio` rule reads, so an opted-out profile is
-  neither listed in the sitemap nor reachable. Don't add a blanket `noindex`.
-- **An event with performances emits a `@graph`: the run, plus one `TheaterEvent` per
-  `EventOccurrence`.** Each performance is a TOP-LEVEL node with a `superEvent` back-link, not
-  only a nested `subEvent` — Google keys its rich results off top-level items. An event with no
-  occurrences (every archive row) emits exactly the single date-only node it always did.
-- **`offers` prefer `ticket_prices`, one named `Offer` per band; the `PRICE_PATTERN` scrape stays
-  as the fallback.** It is not legacy cruft: the parser refused ~38% of the archive outright, and
-  those rows have nothing else to offer. A wrong price in a rich result is a promise the box
-  office has to honour, so the scrape still only fires when a number can be read out.
-- **`accessibilityFeature` carries only the flags that ARE access provision**, mapped to
-  schema.org's vocabulary (`captions`, `audioDescription`, `signLanguage`, `relaxedPerformance`).
-  Preview, press night and post-show discussion are scheduling labels; publishing them there would
-  tell a search engine a press night is an accessible performance.
-- **`render_markdown` rewrites links, and one half of that must not reach an email.**
-  `LinkNormalisationHelper` does two things: a target typed without a scheme
-  ("theimproverts.co.uk") becomes absolute, and a link to our own host becomes a path so it
-  never spends a redirect. The second is right on the web and **wrong in a mail** — an email has
-  no base URL, so `href="/shows"` is dead on arrival. `MdHelper#normalise_hrefs` therefore passes
-  `relativise: web_request?`, which is false in a mailer view (no request). `MassMailer` renders
-  markdown straight from the newsletter body, so this is the whole membership's links.
-  `test/mailers/mass_mailer_test.rb` pins both halves.
-
-- **AI crawlers are blocked at Cloudflare, not in the app** — `GPTBot`, `OAI-SearchBot`,
-  `ChatGPT-User`, `ClaudeBot` and `PerplexityBot` all get a 25-byte `blocked` 403 while Google,
-  Bing, DuckDuckGo and the social scrapers pass. Nothing in this repo controls that.
+- **Derive `og:title`, `og:url` and the canonical at render time in `MetaHelper`, never in
+  `ApplicationController#set_globals`.** That `before_action` runs before the action sets `@title`,
+  so `@title` reads `nil` there. Anything that reads `@title` belongs in `MetaHelper`.
+- **`MetaHelper::CANONICAL_PARAMS` is `page` alone, and `page=1` is dropped.** That folds Ransack's
+  `?q[...]` space onto the page it filters; adding `q` reopens an unbounded crawl space, and keeping
+  `page=1` makes the canonical create a duplicate.
+- **`robots.txt` is served by `RobotsController`, never from `public/`**, where the static
+  middleware would shadow the route and `public_file_server.headers` would cache it for a year. It
+  disallows the same `q` space and must spell it percent-encoded (`q%5B`), since crawlers match
+  against the encoded URL.
+- **Variants say `format: "webp"`, never `convert:`.** `ActiveStorage::Variation#content_type`
+  reads `:format` alone, so `convert:` serves WebP bytes labelled PNG/JPEG, which og:image
+  validators reject. Changing a variant re-keys its URL and regenerates the whole set on first
+  request.
+- **In `ImageComponent`, `full_width` is styling and `priority` is loading.** Pass `priority` only
+  for a genuine LCP element; everything else stays lazy.
+- **The sitemap reads every record through `Ability.new(nil)`**, so it never lists a URL that
+  answers 403 to a crawler.
+- **Member profiles are indexed on purpose; never add a blanket `noindex`.** Opting out is
+  `users.public_profile`, the flag the guest ability's `:view_shows_and_bio` reads, so an
+  opted-out profile is neither in the sitemap nor reachable.
+- **An event with performances emits a `@graph`: the run plus one `TheaterEvent` per
+  `EventOccurrence`**, each a top-level node with a `superEvent` link (Google reads rich results
+  off top-level items only). An event with no occurrences emits the single date-only node.
+- **`offers` use `ticket_prices`, one named `Offer` per band, and fall back to the `PRICE_PATTERN`
+  scrape.** Keep the fallback: the parser refuses ~38% of the archive. It fires only when a number
+  can be read, because a wrong price in a rich result is a promise the box office must honour.
+- **`accessibilityFeature` carries only real access provision** (`captions`, `audioDescription`,
+  `signLanguage`, `relaxedPerformance`), never scheduling labels such as preview or press night.
+- **Never relativise links in an email.** `render_markdown`'s `LinkNormalisationHelper` makes a scheme-less target
+  absolute and turns a link to our own host into a path; the second is dead in an email, which has
+  no base URL. `MdHelper#normalise_hrefs` passes `relativise: web_request?`, false in a mailer, so
+  `MassMailer` newsletters keep absolute links. `test/mailers/mass_mailer_test.rb` pins both halves.
+- **AI crawlers (`GPTBot`, `OAI-SearchBot`, `ChatGPT-User`, `ClaudeBot`, `PerplexityBot`) are
+  blocked at Cloudflare with a 403, not in the app.** Nothing in this repo controls it.
 
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
 
-- **A functional test cannot pin the ORDER of nested-attribute rows.**
-  `ActionController::TestCase` encodes params with `Hash#to_query`, which **sorts** the encoded
-  keys, so `{"0" =>, "1760000000000" =>, "1" =>}` arrives as `0, 1, 1760000000000` and `"10"`
-  sorts between `"1"` and `"2"`. Anything reading row position (`TeamMemberOrdering`) needs an
-  `ActionDispatch::IntegrationTest`, where rack-test encodes in insertion order as a browser
-  serialises a form — `test/integration/admin/team_member_ordering_test.rb` is the pattern.
-
-- **The suite runs in parallel** (`parallelize` in `test_helper.rb`, capped at 8 workers —
-  measured optimum on a 20-thread machine; past the physical cores the workers contend, and
-  MySQL, shared behind the per-worker databases, is its own ceiling). `PARALLEL_WORKERS=1` to
-  debug a failure serially. **System tests are pinned to 1 worker** in
-  `application_system_test_case.rb`: in parallel they are flaky and no faster.
-  Rails gives each worker its own *database only*, so any new **shared filesystem or process
-  state needs splitting per worker** in `parallelize_setup` — the ActiveStorage disk root, the
-  generator tests' `tmp/generators`, and SimpleCov's `command_name` already are. A teardown
-  must remove `ActiveStorage::Blob.service.root`, never a hardcoded `tmp/storage`, which under
-  parallelize is another worker's data.
-- **Never put a dev-only gem in the `:test` group.** `better_errors` + `binding_of_caller` were
-  there, and both bite: they attach a `Binding` to exceptions (unmarshalable, so every parallel
-  failure became an unreportable worker crash), and `BetterErrors::Middleware` was silently
-  sitting in the *test* middleware stack swallowing app-server exceptions, which left the system
-  tests green over 8 real errors. If system tests suddenly surface server errors, that is them
-  working, not breaking.
-- **A slow suite is usually the machine, not the suite.** Same 3027 tests: 560s on the
-  `power-saver` power profile, 116s on `performance`. Check `powerprofilesctl get` first; the
-  tell is a local run losing to CI. Don't trust `/proc/cpuinfo` MHz, which reads ~500 MHz either
-  way. See [plans/test-suite-speedup.md](plans/test-suite-speedup.md) for the full profile.
-- **Minitest 6 made `load_plugins` opt-in**, so a `minitest/*_plugin.rb` on the load path
-  silently never runs — require it and push onto `Minitest.extensions` yourself.
-
-- **Validation/error messages are i18n-customised** (e.g. presence reads "must not be blank.", not Rails' default "can't be blank"). Assert on `errors[:field].present?` rather than the literal default string.
-- **Admin search-form/index table headers** translate symbol headers via `t("simple_form.labels.defaults.<key>")` (see `SearchFormHelper` and `shared/_table.erb`). A new column used as a header or search field needs a matching key in `config/locales/simple_form.en.yml` under `simple_form.labels.defaults`, or the page raises "Translation missing".
-- **The markdown editor (`MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
-- **Fixtures with an explicit `id:` break association-by-label references.** Some fixtures set an explicit `id:` (e.g. `test/fixtures/users.yml` `admin` has `id: 1`). Referencing such a record by label in another fixture's association (`creator: admin`) sets the foreign key to `ActiveRecord::FixtureSet.identify(:admin)` — a *hashed* id that does **not** equal the explicit `id`, so the loaded association (`opportunity.creator`) comes back `nil` even though `creator_id` is set. When a test relies on the association resolving, reference the explicit id directly (`creator_id: 1`), not the label.
-- **Capybara's `select` can't drive most admin selects.** `select_controller.js` replaces every
-  `.simple-select2` element with a **Tom Select** widget and hides the original `<select>`, so
-  `select "X", from: "Label"` raises `ElementNotFound`. Click the widget instead (`.ts-control`,
-  then the `.ts-dropdown-content .option`) — see `tom_select` in
-  `test/system/admin/reimbursements/producer_js_test.rb`. Tom Select fires a native `change` on
-  the underlying select, so Stimulus actions bound to it still run.
-- **Capybara's `fill_in` TYPES the first four characters of any value over 30 characters** and
-  sets the rest by JavaScript. A Tab among those four is a real Tab key and leaves a textarea, so
-  a pasted sheet opening `ID\tStatus` arrived as `IDtatus`. Set a TSV outright instead
-  (`paste_sheet` in `expense_import_js_test.rb`).
+- **After touching a Stimulus controller or a stylesheet, run `RAILS_ENV=test bin/vite build`**, or
+  about four tests fail with "Vite Ruby can't find entrypoints/admin.js", looking unrelated.
+- **A functional test cannot pin the order of nested-attribute rows.** `ActionController::TestCase`
+  encodes params with `Hash#to_query`, which sorts the keys (`"10"` lands between `"1"` and `"2"`).
+  Anything reading row position (`TeamMemberOrdering`) needs an `ActionDispatch::IntegrationTest`,
+  which keeps insertion order as a browser does: `test/integration/admin/team_member_ordering_test.rb`.
+- **The suite runs in parallel**, capped at 8 workers in `test_helper.rb` (past the physical cores
+  workers contend, and the shared MySQL is its own ceiling). `PARALLEL_WORKERS=1` debugs serially.
+  System tests are pinned to 1 worker (`application_system_test_case.rb`): in parallel they are
+  flaky and no faster.
+  - Rails splits only the database per worker, so **any new shared filesystem or process state
+    must be split in `parallelize_setup`**, as the ActiveStorage disk root, `tmp/generators` and
+    SimpleCov's `command_name` are. A teardown removes `ActiveStorage::Blob.service.root`, never a
+    hardcoded `tmp/storage` (another worker's data).
+  - Relaxing MySQL durability on the `mysql8` container (`innodb_flush_log_at_trx_commit=2`,
+    `sync_binlog=0`, `--skip-log-bin`) moves the optimum to 12 workers, about 10% faster. Not done:
+    it also affects the dev database. Use `PARALLEL_WORKERS=12` if you set it.
+- **Never put a dev-only gem in the `:test` group.** `better_errors` + `binding_of_caller` there
+  crashed parallel workers (an unmarshalable `Binding` on every exception) and
+  `BetterErrors::Middleware` swallowed app-server errors in the test stack, hiding real system-test
+  failures. System tests surfacing server errors is them working.
+- **A slow suite is usually the machine.** Check `powerprofilesctl get` first: `power-saver` runs
+  about 5x slower than `performance`. The tell is a local run losing to CI. Don't trust `/proc/cpuinfo`
+  MHz, which reads ~500 either way.
+- **Minitest 6 made `load_plugins` opt-in**, so a `minitest/*_plugin.rb` on the load path never
+  runs unless you require it and push onto `Minitest.extensions`.
+- **No mocking library**: no mocha, no `minitest/mock` (minitest 6 dropped it). Never write
+  `.stubs`/`.stub`; stub external services by toggling their config (e.g. a reCAPTCHA failure via
+  `Recaptcha.configuration.skip_verify_env.delete("test")` and no token).
+- **Validation messages are i18n-customised** ("must not be blank."). Assert
+  `errors[:field].present?`, not Rails' default string.
+- **A new admin table header or search field needs a key under `simple_form.labels.defaults` in
+  `config/locales/simple_form.en.yml`**, or the page raises "Translation missing" (`SearchFormHelper`
+  and `shared/_table.erb` translate symbol headers).
+- **A ViewComponent gets no `paginate` helper.** A component that paginates 500s, and only a test
+  rendering it with enough rows sees it.
+- **Fixtures with an explicit `id:` break association-by-label.** `test/fixtures/users.yml`'s
+  `admin` has `id: 1`, but `creator: admin` sets the FK to the hashed
+  `ActiveRecord::FixtureSet.identify(:admin)`, so the association loads `nil` though `creator_id` is set. Reference the id (`creator_id: 1`) when the association must resolve.
+- **`MdEditorComponent` cannot be driven by Playwright `fill`**: on submit it syncs its
+  contenteditable over the hidden textarea, so the form fails with a blank description. Test such
+  forms with a request-level `post :create`; rendering and other Stimulus behaviour (e.g.
+  `nested-form` Add/Remove) still test fine in the browser.
+- **Capybara's `select` cannot drive a `.simple-select2` select**: `select_controller.js` hides it
+  behind Tom Select, so it raises `ElementNotFound`. Click `.ts-control`, then the
+  `.ts-dropdown-content .option` (`tom_select` in
+  `test/application_system_test_case.rb`). Tom Select fires a native `change`, so
+  bound Stimulus actions still run.
+- **Capybara's `fill_in` types the first four characters of a value over 30 characters** and sets
+  the rest by JavaScript, so a Tab among them leaves a textarea (`ID\tStatus` became `IDtatus`).
+  Set a TSV outright (`paste_sheet` in `expense_import_js_test.rb`).
+- **Turbo drops a redirect's URL fragment**, so an anchored redirect (`…#card-12`) never reaches
+  the browser.
 - **`ActiveStorage::FileNotFoundError` in system tests usually means a poisoned test DB, not a
-  branch regression.** `ActiveStorageHelper#default_image_blob` finds the placeholder blob **by
-  filename** and returns it without checking the file still exists, so a `bin/rails runner -e test`
-  that rendered an event page commits the row (runner does not roll back) and the next suite
-  teardown wipes `ActiveStorage::Blob.service.root` under it. Every run after that serves a URL
-  for a missing file. Check `created_at` on the `active_storage_default%` blobs — if it is from
-  your session, destroy those rows and the next render re-uploads them.
-- **No mocking library:** the suite has neither mocha nor `minitest/mock` (minitest 6 dropped it). Don't write `.stubs`/`.stub`. Stub external services by toggling their config instead (e.g. force a reCAPTCHA failure with `Recaptcha.configuration.skip_verify_env.delete("test")` and no token in the request).
+  regression.**
+  `ActiveStorageHelper#default_image_blob` finds the placeholder blob by filename without checking
+  the file exists; a `bin/rails runner -e test` that rendered an event page commits the row (runner does not roll
+  back), and
+  the next teardown wipes the file. If the `active_storage_default%` blobs' `created_at` is from
+  your session, destroy those rows; the next render re-uploads them.
+- **Mutation testing: one mutation at a time, and commit first.** Two mutations together can
+  cancel into a false green, and a `git checkout <file>` reverting a mutation also destroys any
+  uncommitted fix in that file.
