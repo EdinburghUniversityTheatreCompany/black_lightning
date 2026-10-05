@@ -852,18 +852,11 @@ module Reimbursements
       parts.join(", ").presence
     end
 
-    def row_key(index)
-      @row_keys ||= {}
-      return @row_keys[index] if @row_keys.key?(index)
+    def row_key(row)
+      return if row[:name].blank?
 
-      row = @rows[index]
-      @row_keys[index] =
-        if row[:name].blank?
-          nil
-        else
-          self.class.area_scoped_key(row[:name], row[:area].presence || prefix_area_for(row[:name])) ||
-            [ nil, self.class.match_key(row[:name]) ]
-        end
+      self.class.area_scoped_key(row[:name], row[:area].presence || prefix_area_for(row[:name])) ||
+        [ nil, self.class.match_key(row[:name]) ]
     end
 
     # The area a row's NAME points at, where its cell is blank and the sheet
@@ -901,14 +894,10 @@ module Reimbursements
     # area (by cell or prefix) is identified BY that area, so "Marketing" under
     # Cogito and under nothing are two lines.
     def duplicate_rows
-      groups = Hash.new { |index, key| index[key] = [] }
-      @rows.each_index do |index|
-        groups[row_key(index)] << index unless row_key(index).nil?
-      end
-
-      @rows.each_index.to_h do |index|
-        twins = row_key(index).nil? ? [] : groups[row_key(index)] - [ index ]
-        [ index, twins.map { |other| @rows[other] } ]
+      keys = @rows.map { |row| row_key(row) }
+      groups = keys.each_index.group_by { |index| keys[index] }
+      keys.each_with_index.to_h do |key, index|
+        [ index, key ? (groups[key] - [ index ]).map { |other| @rows[other] } : [] ]
       end
     end
 
