@@ -98,10 +98,8 @@
 <div id="unattributed-actuals">
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
   <%
-    # Reconcile is the paste wizard; it has no per-row linking at all. Link to
-    # a claim, Create expense and Split across budgets all live on the EUSA
-    # Actuals ledger, which this card had been sending people away from.
-    # The same cost centre the tables above are scoped to travels with it.
+    # The ledger, not Reconcile, which has no per-row linking. It carries the
+    # cost centre the tables above are scoped to.
     ledger_path = lambda do |extra = {}|
       admin_reimbursements_actuals_path(
         { cost_centre: selected_cost_centre&.key,

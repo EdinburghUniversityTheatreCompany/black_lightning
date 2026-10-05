@@ -49,12 +49,8 @@
                  "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
                  "Remaining", "Variance", "Owners", "" ] %>
   <%
-    # Grouped off the budgets in the selected year and cost centre (not the
-    # full store list), so an area shows only its in-scope lines. Every area
-    # figure is read off @areas_by_id (store.areas — the unscoped,
-    # fully-preloaded id->record reader), never off budget.area's own
-    # #budgets, or every area's committed_amount/allocated would N+1 across
-    # its budgets' expenses and forecasts.
+    # Grouped off the scoped budgets, so an area shows only its in-scope lines.
+    # Area figures come off @areas_by_id, never budget.area (which would N+1).
     budgets_by_area_id = @budgets.group_by { |budget| budget.area&.record_id }
     none_budgets = budgets_by_area_id.delete(nil) || []
     ordered_area_ids = budgets_by_area_id.keys.sort_by { |id| @areas_by_id[id]&.name.to_s.downcase }

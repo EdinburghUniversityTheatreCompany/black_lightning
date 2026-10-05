@@ -1,25 +1,19 @@
 <%# locals: (budget:, people_by_id:) %>
 <%
-  # The line's name IS its link to the edit form. At 1366x768 the Edit button
-  # in the last column sits off the right-hand edge of the table, and the name
-  # is the first thing on the row — so the one click this table exists for is
-  # reachable without scrolling sideways.
+  # The name links to the edit form too: at 1366x768 the Edit button sits off
+  # screen.
   name = safe_join([
-    # The accessible name is the QUALIFIED one, because the rowgroup heading
-    # above is not announced with the link and three links reading "Marketing"
-    # are ambiguous. It deliberately does NOT start with "Edit": that is the
-    # button at the end of the row, and two controls on one row both
-    # announcing "Edit Cogito: Marketing" is worse than one.
+    # The accessible name is the QUALIFIED one (the rowgroup heading is not
+    # announced with the link), and deliberately does not start with "Edit",
+    # which is the row's button.
     link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
             class: "font-medium text-primary underline",
             "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
     reimbursements_budget_health_badge(budget)
   ].compact, " ")
-  # "No owner" is a warning only for a live (Visible) budget — Hidden
-  # overhead lines (payroll, NI, contracts) will never have a producer
-  # owner, so flagging them all just drowns the signal on the show
-  # budgets that genuinely need chasing.
+  # "No owner" warns only on a Visible line: hidden overheads (payroll, NI)
+  # never have one.
   owners = budget_owner_names(budget, people_by_id).presence ||
            (if budget.active
               render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
