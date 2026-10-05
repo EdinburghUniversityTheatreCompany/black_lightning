@@ -11,7 +11,6 @@ module Admin
       # unrecognised lands on the finance queue.
       TABS = %w[awaiting_owner to_approve approved].freeze
       DEFAULT_TAB = "to_approve".freeze
-      LEGACY_TABS = { "pending" => DEFAULT_TAB }.freeze
 
       # Names the edit as the cause, so a refusal it caused does not read as a
       # standing condition.
@@ -226,7 +225,6 @@ module Admin
 
       def resolve_tab
         tab = params[:tab].to_s
-        tab = LEGACY_TABS.fetch(tab, tab)
         TABS.include?(tab) ? tab : DEFAULT_TAB
       end
 
