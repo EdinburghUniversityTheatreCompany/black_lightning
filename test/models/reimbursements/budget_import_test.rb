@@ -617,7 +617,7 @@ module Reimbursements
       assert_equal [ [ "area owner update", 1 ] ], work
     end
 
-    test "unticking every re-home drops the area nothing will land in from the count" do
+    test "a re-home into a new area counts the area and the moved line" do
       elsewhere = create_reimbursements_area(name: "Improverts", financial_year: @year,
                                              cost_centre: @cost_centre)
       budget = create_reimbursements_budget(name: "Props", initial_budget: 1000, area: elsewhere,
@@ -627,11 +627,8 @@ module Reimbursements
 
       import = build_import(sheet, existing_budgets: [ budget ], existing_areas: [ elsewhere ])
 
-      ticked = import.apply_work.each_value.reject { |_, count| count.zero? }
-      assert_equal [ [ "new area", 1 ], [ "moved line", 1 ] ], ticked
-      # Apply passes the TICKED re-homes, and an area nothing lands in is never
-      # created — so the label must not promise one either.
-      assert_empty import.apply_work(re_homes: []).each_value.reject { |_, count| count.zero? }
+      work = import.apply_work.each_value.reject { |_, count| count.zero? }
+      assert_equal [ [ "new area", 1 ], [ "moved line", 1 ] ], work
     end
 
     # One owner column per line, so two lines of one area name two people, and

@@ -387,8 +387,7 @@ module Reimbursements
     # [label, count] per DatabaseStore#import_budgets! argument, for the submit
     # button. Keyed by argument (a test pins it) because the button is
     # disabled on an empty count, so a bucket missing here cannot be applied.
-    # +re_homes+ is the ticked list.
-    def apply_work(re_homes: self.re_homes)
+    def apply_work
       { area_creates: [ "new area", area_creates_for(re_homes).size ],
         creates: [ "new budget", entries_in(:create).size ],
         revisions: [ "changed figure", revisions.size ],
