@@ -1,9 +1,6 @@
 require "test_helper"
 
-##
-# Running time, doors, and age guidance: three things that were only ever written
-# in prose inside publicity_text, where nothing could read them.
-##
+# Running time, doors and the booking fee.
 class Event::DetailsTest < ActiveSupport::TestCase
   setup do
     @show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
@@ -39,8 +36,7 @@ class Event::DetailsTest < ActiveSupport::TestCase
     assert @show.errors[:doors_open_minutes_before].present?
   end
 
-  # A decimal column casts "abc" to 0 without complaint, and £0 was then published
-  # as "£0 booking fee on the door".
+  # A decimal column casts "abc" to 0, which would publish a £0 booking fee.
   test "an unreadable booking fee is rejected rather than cast to zero" do
     @show.booking_fee = "abc"
 
@@ -53,8 +49,6 @@ class Event::DetailsTest < ActiveSupport::TestCase
 
     assert_predicate @show, :valid?
   end
-
-  # --- what the running time buys ---------------------------------------
 
   test "an occurrence with no end time takes one from the running time" do
     @show.update!(duration_minutes: 135)
@@ -89,8 +83,6 @@ class Event::DetailsTest < ActiveSupport::TestCase
 
     assert_nil occurrence.doors_open_at
   end
-
-  # --- ISO 8601, which is what schema.org wants --------------------------
 
   test "the running time renders as an ISO 8601 duration" do
     { 135 => "PT2H15M", 60 => "PT1H", 45 => "PT45M", 120 => "PT2H" }.each do |minutes, expected|

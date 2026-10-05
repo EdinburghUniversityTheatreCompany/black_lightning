@@ -44,7 +44,6 @@ FactoryBot.define do
     pretix_shown { [ true, false ].sample }
     pretix_view  { [ "list", "week", "month" ].sample }
 
-    # Use fixture venue - fixtures are loaded in tests
     venue_id { Venue.first&.id }
 
     transient do
@@ -91,7 +90,7 @@ FactoryBot.define do
     author { generate(:random_name) }
     price { generate(:random_name) }
 
-    # Don't set debt dates by default - prevents expensive sync_debts callbacks
+    # No debt configuration, so adding team members syncs no debts.
     maintenance_debt_start { nil }
     staffing_debt_start { nil }
     maintenance_debt_amount { nil }

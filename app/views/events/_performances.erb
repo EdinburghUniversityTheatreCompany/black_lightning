@@ -9,13 +9,8 @@
 %>
 <% if (schedule.kind != :none || details.any?) && schedule.kind == :single %>
   <%= render CardComponent.new(title: schedule.kind == :none ? 'Details' : event.occurrence_label.pluralize) do %>
-    <%# One row per performance, rather than Event::Schedule's collapsed blocks.
-        A run with a midnight show rendered as two overlapping ranges ("Wed 23 -
-        Sat 26 September" and "Fri 25 - Sat 26 September") with the relaxed and
-        cancelled nights listed separately underneath, so the reader had to
-        cross-reference two lists to find out that the Friday has two shows and
-        one of them is cancelled. The blocks still drive the box office board,
-        where a fixed column has no room for a list. %>
+    <%# One row per performance. Event::Schedule's collapsed blocks are for the box
+        office board, where a fixed column has no room for a list. %>
     <% if schedule.occurrences.any? %>
       <ul class="divide-y divide-gray-200">
         <% schedule.occurrences.each do |occurrence| %>
@@ -24,8 +19,7 @@
             <span class="font-medium"><%= date_span(occurrence.on_date, nil, long: true) %></span>
             <span><%= time_span(occurrence.starts_at, occurrence.effective_ends_at) %></span>
 
-            <%# Cancelled outranks sold out: a night that is off is not a night
-                you missed, and showing both reads as two separate problems. %>
+            <%# Cancelled outranks sold out: showing both reads as two problems. %>
             <% if occurrence.cancelled? %>
               <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Cancelled</span>
             <% elsif occurrence.sold_out? %>

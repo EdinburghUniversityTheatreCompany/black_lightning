@@ -1,12 +1,9 @@
 require "test_helper"
 
 ##
-# The writer is reached with a plain hash by every controller today, because
-# `assign_attributes` deep-converts a permitted `Parameters` first. It is tested
-# with `Parameters` as well because that conversion is the caller's, not ours: a
-# caller that assigns `team_members_attributes=` directly hands the writer
-# `Parameters`, and skipping the stamping there would drop the order silently —
-# the failure this whole mechanism exists to prevent.
+# Parameters as well as a plain hash: update deep-converts it, but a caller
+# assigning team_members_attributes= directly passes Parameters, and its order
+# must not drop silently.
 class TeamMemberOrderingTest < ActiveSupport::TestCase
   setup do
     @show = FactoryBot.create(:show)

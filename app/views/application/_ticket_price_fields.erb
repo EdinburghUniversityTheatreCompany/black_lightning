@@ -4,8 +4,7 @@
   <%= f.input :amount, label: 'Amount', wrapper: :inline_form,
         input_html: { step: '0.01', min: 0, placeholder: 'Amount', value: f.object.amount_field_value } %>
 
-  <%# Fixed width: a select sizes itself to its longest option, so without this
-      every row ends at a different x and the Remove buttons come out ragged. %>
+  <%# Fixed width, or each select sizes to its options and the Remove buttons go ragged. %>
   <div class="w-40 shrink-0">
     <%= f.input :category, label: 'Band', wrapper: :inline_form, include_blank: false,
           collection: Event::TicketPrice::CATEGORY_LABELS.map { |value, label| [label, value] } %>

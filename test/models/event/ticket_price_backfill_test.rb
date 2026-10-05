@@ -33,8 +33,7 @@ class Event::TicketPriceBackfillTest < ActiveSupport::TestCase
                  event.reload.ticket_prices.map { |p| [ p.amount.to_f, p.category ] }
   end
 
-  # The whole reason the backfill uses update_columns. Rewriting price would
-  # change the visible text on ~3000 archive pages for no gain.
+  # Why the backfill uses update_columns.
   test "applying never rewrites the display string" do
     event = show(price: "10/8/7")
 
@@ -51,9 +50,7 @@ class Event::TicketPriceBackfillTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1"), event.reload.booking_fee
   end
 
-  # THE trap. "3/6" on a 1962 show is 3s 6d, and nothing in the string says so --
-  # only the date can. Every row before decimalisation is refused whether or not
-  # the parser could make something of it.
+  # "3/6" on a 1962 show is 3s 6d, and only the date can say so.
   test "refuses everything before decimalisation, however readable the string" do
     old = show(price: "3/6", start_date: Date.new(1962, 8, 21))
 
@@ -94,8 +91,7 @@ class Event::TicketPriceBackfillTest < ActiveSupport::TestCase
     assert_equal({ "Unknown" => 2, "TBC" => 1 }, summary.unreadable_counts)
   end
 
-  # Re-running after a parser change must not overwrite a band someone typed by
-  # hand in the admin.
+  # A re-run must not overwrite bands typed in the admin.
   test "leaves an event that already has bands alone" do
     event = show(price: "£10/8/7")
     event.update!(ticket_prices: [ { "category" => "standard", "amount" => "99" } ])

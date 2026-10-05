@@ -395,8 +395,8 @@ class ShowTest < ActiveSupport::TestCase
 
   private
 
-  # Create a show with no debt configuration and `count` team members in the
-  # uncapped "Director" position, returning the show.
+  # Members are added before any debt configuration, so their after_create sync
+  # creates nothing.
   def create_show_with_directors(count: 3)
     show = FactoryBot.create(:show,
       start_date: start_of_year,

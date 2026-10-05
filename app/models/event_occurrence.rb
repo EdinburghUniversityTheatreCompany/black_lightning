@@ -1,14 +1,6 @@
 ##
-# One dated instance of an Event: a performance of a show, a session of a
-# workshop, an opening time of a season.
-#
-# One table for all three because the columns are identical; what differs is
-# only what to call them, which each Event subclass answers with
-# +OCCURRENCE_LABEL+. See Event#occurrence_label.
-#
-# An event with NO occurrences is not an event that never happens -- it is the
-# ~3000 archive rows and anything a producer has not filled in yet, and it means
-# "every day of the run". That fallback lives in Event#on_today?.
+# One dated instance of an Event: a performance, a workshop session or a season's
+# opening time. An event with none plays every day of its run (Event#on_today?).
 ##
 # == Schema Information
 #
@@ -38,12 +30,7 @@
 #  fk_rails_...  (event_id => events.id)
 #
 class EventOccurrence < ApplicationRecord
-  # A constant rather than seven boolean columns, so adding a flag is one line
-  # instead of a migration. Order is the order they render in.
-  #
-  # Written labels first, with the stored values derived from them, so a new flag
-  # cannot be added to one and forgotten in the other. They are not humanize-able:
-  # that renders "bsl" as "Bsl".
+  # In render order. Written out because "bsl".humanize is "Bsl".
   ACCESS_FLAG_LABELS = {
     "preview" => "Preview",
     "press_night" => "Press night",
@@ -62,10 +49,9 @@ class EventOccurrence < ApplicationRecord
   CANCELLED_LABEL = "Cancelled".freeze
   SOLD_OUT_LABEL = "Sold out".freeze
 
-  # schema.org accessibilityFeature values for the flags that ARE accessibility
-  # features. Preview, press night and post-show discussion are scheduling
-  # labels, not access provision, and publishing them here would tell a search
-  # engine a press night is an accessible performance.
+  # Only the flags that are access provision. Preview, press night and post-show
+  # discussion are scheduling labels: publishing them would call a press night
+  # accessible.
   SCHEMA_ACCESSIBILITY_FEATURES = {
     "captioned" => "captions",
     "audio_described" => "audioDescription",
@@ -90,9 +76,7 @@ class EventOccurrence < ApplicationRecord
 
   default_scope -> { order(:starts_at) }
 
-  # The column is nullable -- MySQL will not take a literal default on a JSON
-  # column -- so a row that never had flags reads back nil, and every caller
-  # would need to know that.
+  # MySQL takes no literal default on a JSON column, so an unset row reads nil.
   def access_flags
     super || []
   end
@@ -101,14 +85,12 @@ class EventOccurrence < ApplicationRecord
     access_flags.include?(flag.to_s)
   end
 
-  # Nullable columns, like access_flags above: every row predating the pretix
-  # sync reads back nil, and no view should have to know that.
+  # Nullable: rows predating the pretix sync read nil.
   def sold_out? = super || false
 
   def cancelled? = super || false
 
-  # The written labels for what this occurrence is flagged as, in the constant's
-  # order rather than the order they happen to be stored in.
+  # In the constant's order, not the stored one.
   def access_flag_labels
     ACCESS_FLAG_LABELS.filter_map { |flag, label| label if access_flags.include?(flag) }
   end
@@ -117,14 +99,11 @@ class EventOccurrence < ApplicationRecord
     starts_at&.to_date
   end
 
-  # Only the flags that are genuinely about access, in schema.org's vocabulary.
   def schema_accessibility_features
     access_flags.filter_map { |flag| SCHEMA_ACCESSIBILITY_FEATURES[flag] }
   end
 
-  # When this one finishes. An explicit ends_at wins; otherwise the event's
-  # running time supplies it, which is the usual case -- a producer states the
-  # running time once rather than an end time per night.
+  # An explicit ends_at wins; otherwise the event's running time supplies it.
   def effective_ends_at
     return ends_at if ends_at.present?
     return nil if starts_at.blank? || event&.duration_minutes.blank?
@@ -132,9 +111,8 @@ class EventOccurrence < ApplicationRecord
     starts_at + event.duration_minutes.minutes
   end
 
-  # pretix states an admission time per date; we state one offset for the whole
-  # run. The specific one wins, so a synced press night with earlier doors is not
-  # overwritten by the event-wide answer.
+  # pretix's per-date admission time wins over the event-wide offset, so a synced
+  # press night keeps its earlier doors.
   def doors_open_at
     return admission_at if admission_at.present?
     return nil if starts_at.blank? || event&.doors_open_minutes_before.blank?
@@ -142,9 +120,7 @@ class EventOccurrence < ApplicationRecord
     starts_at - event.doors_open_minutes_before.minutes
   end
 
-  # Whether Pretix::PerformanceSync owns this row. A row with no subevent id was
-  # typed by hand -- a preview, a get-in, a schools matinee not sold through the
-  # shop -- and the sync never reads, updates or deletes it.
+  # A row with no subevent id was typed by hand, and the sync never touches it.
   def pretix_synced?
     pretix_subevent_id.present?
   end
@@ -158,12 +134,8 @@ class EventOccurrence < ApplicationRecord
     errors.add(:ends_at, "must be after the start time")
   end
 
-  ##
-  # The run dates and the occurrence list state the same fact twice. Without
-  # this they can contradict each other, and nothing downstream -- the display's
-  # next_occurrence, the sitemap, the schema.org output -- has any way to tell
-  # which one is lying.
-  ##
+  # The run dates and the occurrences state the same fact; without this they can
+  # contradict each other with nothing downstream able to tell which is wrong.
   def starts_at_within_run
     return if starts_at.blank? || event.nil?
     return if event.start_date.blank? || event.end_date.blank?

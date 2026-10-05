@@ -1,19 +1,12 @@
 ##
-# One priced band of an Event's tickets: "£8 concessions".
-#
-# Stored as a plain hash inside the events.ticket_prices JSON column rather than
-# in a table of its own, and wrapped here so callers get validation, a written
-# label and an exact amount instead of whatever the JSON happened to hold.
-#
-# Event#ticket_prices_attributes= accepts the same nested-attributes shape an
-# association would, so the existing nested-form UI drives these unchanged.
+# One priced band of an Event's tickets ("£8 concessions"), stored as a hash in
+# the events.ticket_prices JSON column.
 ##
 class Event::TicketPrice
   include ActiveModel::Model
   include ActiveModel::Attributes
 
-  # Written labels first, values derived from them, as EventOccurrence does.
-  # "other" carries its own label instead ("Student", "Unwaged", ...).
+  # "other" carries its own label ("Student", "Unwaged").
   CATEGORY_LABELS = {
     "standard" => "Standard",
     "concession" => "Concession",
@@ -23,8 +16,7 @@ class Event::TicketPrice
 
   CATEGORIES = CATEGORY_LABELS.keys.freeze
 
-  # How each band reads in the derived Event#price string. Standard carries no
-  # suffix: "£10 / £8 concessions / £7 members" is how a poster writes it.
+  # As a poster writes it: "£10 / £8 concessions / £7 members".
   PRICE_STRING_SUFFIXES = {
     "standard" => nil,
     "concession" => "concessions",
@@ -35,8 +27,8 @@ class Event::TicketPrice
   attribute :label, :string
   attribute :amount, :decimal
 
-  # Not stored. shared/form/sections/_nested_fields renders a hidden _destroy on
-  # every row, so the object has to answer to it or the form raises.
+  # Not stored: _nested_fields renders a hidden _destroy on every row, so the
+  # object must answer to it.
   attribute :_destroy, :boolean, default: false
 
   # A price as somebody types it: "10", "4.50", "£10".
@@ -46,19 +38,15 @@ class Event::TicketPrice
   validates :amount, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validate :amount_was_readable
 
-  # The cast is why this is needed at all: ActiveModel casts "ten" to 0 without
-  # complaint, and a band of £0 makes the whole show read as Free -- on the page,
-  # on the board, and as isAccessibleForFree in the JSON-LD. Keep what was typed
-  # so the validation can see it.
+  # Keeps what was typed for the validation: ActiveModel casts "ten" to 0, which
+  # reads as Free and sets isAccessibleForFree.
   def amount=(value)
     @raw_amount = value
     super(value.is_a?(String) ? value.sub("£", "").strip : value)
   end
 
-  # A band is never a record of its own -- it is one entry in a JSON array, keyed
-  # by nothing but its position. Answering true is also what makes the nested-form
-  # controller REMOVE a deleted row from the DOM rather than hide it and set
-  # _destroy, which is the behaviour that suits an array rebuilt from what posts.
+  # A band is never a record. True makes the nested-form controller REMOVE a
+  # deleted row rather than hide it, which suits an array rebuilt from the post.
   def new_record?
     true
   end
@@ -71,7 +59,6 @@ class Event::TicketPrice
         amount: hash["amount"] || hash[:amount])
   end
 
-  # What this band is called on screen.
   private
 
   def amount_was_readable
@@ -93,8 +80,7 @@ class Event::TicketPrice
     amount&.zero? || false
   end
 
-  # "£10", "£4.50" -- a whole number of pounds prints without the pence, because
-  # that is how every price on a poster is written.
+  # "£10", "£4.50": whole pounds print without pence, as on a poster.
   def formatted_amount
     return nil if amount.nil?
     return "£#{amount.to_i}" if amount == amount.to_i
@@ -102,8 +88,7 @@ class Event::TicketPrice
     format("£%.2f", amount)
   end
 
-  # What the number field should show. A decimal attribute renders 10 as "10.0",
-  # which is not what anyone typed.
+  # For the number field: a decimal attribute renders 10 as "10.0".
   def amount_field_value
     return nil if amount.nil?
 
@@ -117,8 +102,7 @@ class Event::TicketPrice
     [ formatted_amount, suffix ].compact.join(" ")
   end
 
-  # Written back into the JSON column. String keys, so a round trip through
-  # MySQL's JSON type reads the same way it was written.
+  # String keys, so a round trip through MySQL JSON reads the same.
   def to_h
     { "category" => category, "label" => label.presence, "amount" => amount&.to_s("F") }
   end

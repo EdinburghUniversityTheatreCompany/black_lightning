@@ -1,10 +1,6 @@
 require "test_helper"
 
-##
-# Every string in here is a real shape from the production events table, read on
-# 2026-08-30: 2742 events carry a price, in 461 distinct strings across 178
-# shapes. The counts in the comments are that census.
-##
+# Every string here is a real shape from the production events table.
 class Event::PriceParserTest < ActiveSupport::TestCase
   def parse(string)
     Event::PriceParser.parse(string)
@@ -15,10 +11,7 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     parse(string)&.prices&.map { |price| [ price.amount.to_f, price.category ] }
   end
 
-  # --- the ordinary cases ------------------------------------------------
-
-  # Both orderings occur, and often: "3/4/5" (25 rows) against "£5.50/5/4.50"
-  # (6). Categories are therefore assigned by AMOUNT, never by position.
+  # Both orderings occur, so categories go by AMOUNT, never position.
   test "reads a three-band price written cheapest-first or dearest-first" do
     expected = [ [ 5.0, "standard" ], [ 4.0, "concession" ], [ 3.0, "member" ] ]
 
@@ -48,12 +41,10 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     assert_equal [ [ 3.0, "standard" ], [ 2.5, "concession" ] ], bands("£ 3 / 2.50 ")
   end
 
-  # 62 rows. Pre-decimal pence is "d", so a "p" after the date gate is decimal.
+  # Pre-decimal pence is "d", so a "p" past the date gate is decimal.
   test "reads pence" do
     assert_equal [ [ 0.3, "standard" ] ], bands("30p")
   end
-
-  # --- named bands -------------------------------------------------------
 
   test "a named band wins over its position" do
     assert_equal [ [ 8.0, "standard" ], [ 6.0, "concession" ] ], bands("£8 / £6 concessions")
@@ -72,9 +63,6 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     assert_equal "Student", result.prices.last.label
   end
 
-  # --- free --------------------------------------------------------------
-
-  # 189 rows of "Free" plus its variants, and 29 of a bare "0" since 2015.
   test "free is a zero standard band" do
     [ "Free", "FREE", "free", "Free!", "Free Unticketed", "0" ].each do |text|
       assert_equal [ [ 0.0, "standard" ] ], bands(text), text.inspect
@@ -87,8 +75,6 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     assert_nil parse("Donation-based")
     assert_nil parse("Pay-what-you-can (all proceeds to charity)")
   end
-
-  # --- booking fees ------------------------------------------------------
 
   test "strips a booking fee off the end and records it" do
     result = parse("£2/3/4 + £1 booking fee on the door")
@@ -108,8 +94,7 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     end
   end
 
-  # "+ fees" says a fee existed without saying what it was. Recording nil is the
-  # honest answer; the prices are still readable.
+  # "+ fees" names no figure, so the fee is nil but the prices still read.
   test "a fee with no figure leaves the fee unknown but keeps the prices" do
     [ "£7/8/9 + fees", "£2/3/4+fees", "£10+fees" ].each do |text|
       result = parse(text)
@@ -119,12 +104,8 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     end
   end
 
-  # --- the pre-decimal trap ----------------------------------------------
-
-  # 66 rows, 1893-1970. "2/6, 3/6, 5/-" is 2s6d, 3s6d, 5s -- NOT five prices of
-  # £2, £6, £3, £6 and £5, which is exactly what a split on "/" reads and which
-  # looks entirely plausible in the output. The task's date gate is the primary
-  # defence; this is the second.
+  # "2/6, 3/6, 5/-" is shillings and pence, not five prices. The date gate is the
+  # main defence; this is the second.
   test "refuses shillings and pence" do
     [ "2/-, 3/-, 4/-", "3/6, 4/6, 6/-", "6/-", "6d", "4s, 3s, 2s",
       "3s 6d, 5s, 6s 6d", "5/-, 10/- if not in fancy dress", "3s, 4s, 5s 6d" ].each do |text|
@@ -132,18 +113,13 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     end
   end
 
-  # A pre-decimal row with no shilling marker is unreachable by any string rule:
-  # "3/6, 2/6" is 3s6d and 2s6d, and nothing in it says so. Four-plus amounts
-  # with no naming words is refused anyway, which catches these by luck -- the
-  # date gate is what catches them on purpose.
+  # "3/6, 2/6" has no shilling marker. Four unnamed amounts are refused anyway,
+  # but only the date gate catches these on purpose.
   test "refuses more amounts than there are bands to name" do
     assert_nil parse("1/2/3/4")
     assert_nil parse("3/6, 2/6")
   end
 
-  # --- refusals ----------------------------------------------------------
-
-  # "Unknown" alone is 1019 rows.
   test "refuses the placeholders" do
     [ "Unknown", "unknown", "TBC", "TBD", "N/A", "?", "??", "--", "-",
       "Various", "Varying", "asdsds", "Fere", "" ].each do |text|
@@ -171,12 +147,8 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     assert_nil parse(nil)
   end
 
-  # --- plausibility ------------------------------------------------------
-
-  # Both of these were found by sweeping the real parses, not by guessing: they
-  # come back as confident, ordinary-looking output, which is what makes them
-  # dangerous. "150" is £1.50 typed without the dot; "1/75" is £1.75 typed with a
-  # slash, read as a 75x spread between two bands.
+  # Both read as ordinary output: "150" is £1.50 without the dot, and "1/75" is
+  # £1.75, not a 75x spread between two bands.
   test "refuses an amount too large to be a ticket here" do
     assert_nil parse("150")
     assert_nil parse("£120/100")
@@ -195,8 +167,6 @@ class Event::PriceParserTest < ActiveSupport::TestCase
   test "a zero band does not count towards the spread" do
     assert_equal [ [ 1.5, "standard" ], [ 0.0, "concession" ] ], bands("0/1.50")
   end
-
-  # --- what comes back ---------------------------------------------------
 
   test "produces TicketPrices that are themselves valid" do
     parse("£10/8/7").prices.each { |price| assert_predicate price, :valid? }

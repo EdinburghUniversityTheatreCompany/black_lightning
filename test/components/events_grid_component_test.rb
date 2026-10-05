@@ -45,8 +45,7 @@ class EventsGridComponentTest < ViewComponent::TestCase
     assert_no_selector "div.lg\\:grid-cols-3"
   end
 
-  # Posters are cropped to a fixed ratio so a row of cards lines up. The image
-  # must not also carry h-auto, or it fights the crop box's h-full.
+  # h-auto on the image would fight the crop box's h-full.
   test "posters are cropped to a fixed ratio" do
     render_grid(1, 12)
 

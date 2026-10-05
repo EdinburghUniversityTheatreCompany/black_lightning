@@ -1,11 +1,7 @@
 class EventsGridComponent < ViewComponent::Base
-  # The grid of event cards, on the home page, a venue, and both the public and
-  # admin versions of a member's profile — which built identical items and then
-  # rendered them through two different components.
-  #
-  # Posters are cropped to a fixed ratio rather than left at their own, so a row
-  # of cards lines up; `srcset` still offers the smaller variants so a phone does
-  # not fetch a 960px poster to show it at 412.
+  # The grid of event cards on the home page, a venue and a member's profile.
+  # Posters are cropped to one ratio so a row lines up; srcset still spares a
+  # phone the 960px poster.
   POSTER_ASPECT = "aspect-[576/300]".freeze
 
   def initialize(items:, col_size:, link_to_admin_events: false)
@@ -24,8 +20,8 @@ class EventsGridComponent < ViewComponent::Base
     @col_size == 8 ? wide_column_classes : full_width_classes
   end
 
-  # The home page's two-thirds column, so it caps at three across. Four events
-  # read better as 2x2 than as a row of three and a widow.
+  # The home page's two-thirds column caps at three across, and four read better
+  # as 2x2 than as three and a widow.
   def wide_column_classes
     amount = @items.size == 4 ? 2 : @items.size
 

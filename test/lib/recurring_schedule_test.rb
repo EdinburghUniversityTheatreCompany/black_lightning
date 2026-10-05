@@ -1,13 +1,12 @@
 require "test_helper"
 require "fugit"
 
-# RecurringEnqueueRetry catches a deadlocked enqueue, but not colliding is the actual fix and it
-# costs nothing to keep.
+# Not colliding is the fix for a deadlocked enqueue; RecurringEnqueueRetry is only the net.
 class RecurringScheduleTest < ActiveSupport::TestCase
   SCHEDULES = YAML.load_file(Rails.root.join("config/recurring.yml")).freeze
 
-  # reimbursements_mailbox_poll runs every 5 minutes, so it occupies every minute divisible by
-  # five. A daily job landing on one of those collides with it every single day.
+  # reimbursements_mailbox_poll runs every 5 minutes, so a daily job on a minute divisible by
+  # five collides with it every day.
   DENSE_POLL_INTERVAL_MINUTES = 5
 
   def crons
@@ -46,10 +45,8 @@ class RecurringScheduleTest < ActiveSupport::TestCase
     assert_not_equal [ pretix.hours, pretix.minutes ], [ retention.hours, retention.minutes ]
   end
 
-  # Every 15 minutes, so it can collide every quarter hour rather than once a
-  # day. climate_mailbox_poll already sits on :00/:15/:30/:45 -- the grid the
-  # every-5-minute mailbox poll owns -- so this one is offset off it instead of
-  # joining the pile.
+  # Every 15 minutes, so it could collide every quarter hour. It is offset off the
+  # five-minute grid, which climate_mailbox_poll already shares.
   test "the pretix performance sync avoids the five-minute mailbox poll grid" do
     minutes = crons.fetch("pretix_sync_performances").minutes
 

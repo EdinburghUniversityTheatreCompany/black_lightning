@@ -27,7 +27,6 @@
 #  index_team_members_on_user_id               (user_id)
 #
 class TeamMember < ActiveRecord::Base
-  # Length validations enforcing database column limits
   validates :position, length: { maximum: 255 }
   validates :teamwork_type, length: { maximum: 255 }
   validates :position, :user, presence: true
@@ -45,26 +44,18 @@ class TeamMember < ActiveRecord::Base
 
   before_validation :default_display_order, on: :create
 
-  # +id+ last so the order is total: two members of one show can share a name
-  # (and every unstamped row shares a NULL display_order), and MySQL is free to
-  # return an undetermined tie either way from one query to the next.
+  # id last so the order is total: names and NULL display_orders tie, and MySQL
+  # may return a tie either way.
   scope :ordered, -> {
     joins(:user)
       .order(Arel.sql("ISNULL(team_members.display_order), team_members.display_order ASC, " \
                       "users.first_name ASC, users.last_name ASC, team_members.id ASC"))
   }
 
-  # The in-memory twin of +ordered+, for the edit form: after a failed save the
-  # association holds the submitted rows with their errors, and a scope would
-  # query the database and render the stale ones instead. A test pins the two
-  # to the same order.
-  #
-  # Names are folded with +transliterate+ because the SQL side sorts them under
-  # utf8mb4_unicode_ci, which ignores accents: a plain Ruby +downcase+ puts
-  # "Ábel" after "Bob" and MySQL puts it before, so the form and the public page
-  # would disagree — and the next save through the form would make the form's
-  # order permanent. An unsaved row sorts after a saved one it ties with, being
-  # the row that was just added.
+  # The in-memory twin of ordered, for the edit form: after a failed save a scope
+  # would render the stale rows. transliterate because utf8mb4_unicode_ci folds
+  # accents, and the form and the page must agree or the next save makes the
+  # form's order permanent. An unsaved row sorts after a saved one it ties with.
   def self.in_display_order(members)
     members.to_a.sort_by do |member|
       [ member.display_order ? 0 : 1, member.display_order || 0,
@@ -78,15 +69,9 @@ class TeamMember < ActiveRecord::Base
   end
   private_class_method :sort_name
 
-  # The number an appended row should take, or nil when this teamwork is not
-  # numbered at all.
-  #
-  # The obvious `display_order ||= max + 1` is a trap: on a teamwork whose rows
-  # are all unstamped, +max+ is nil and the new row takes 0 -- and because NULLs
-  # sort last (see +ordered+), that lifts it ABOVE every existing row instead of
-  # appending to them. So a teamwork is either wholly numbered or wholly not,
-  # which is the invariant TeamMemberOrdering maintains by stamping every row of
-  # a submitted form at once.
+  # nil for an unnumbered teamwork. Not max + 1 regardless: on an all-nil teamwork
+  # that is 0, and as NULLs sort last the new row would jump ABOVE every existing
+  # row. A teamwork is wholly numbered or wholly not.
   def self.next_display_order_for(teamwork)
     return 0 if teamwork.nil?
     return nil if teamwork.team_members.exists?(display_order: nil)
@@ -114,24 +99,16 @@ class TeamMember < ActiveRecord::Base
     %w[position user_id teamwork_id teamwork_type]
   end
 
-  # Public because SchemaHelper reads crew credits with it; a second copy of this
-  # regex elsewhere is a copy that drifts.
+  # Public because SchemaHelper reads it; a second copy of this regex would drift.
   def position_segments
     position.split(/\/(?![^(]*\))/).map(&:strip)
   end
 
   private
 
-  # Rows written outside the admin form -- the bulk crew import, the "Proposer"
-  # row on a new proposal, lib/tasks/imports.rake -- carried no display_order,
-  # so a crew list imported in the producer's chosen order rendered alphabetised
-  # until someone saved the form once. Numbering them here catches every writer,
-  # rather than each having to remember.
-  #
-  # Skipped for an unsaved teamwork: imports.rake builds its rows against a Show
-  # that has not been saved, so there are no siblings to count and querying for
-  # them would look for teamwork_id NULL. Archive rows sort by name anyway,
-  # which is exactly what an unnumbered teamwork gives.
+  # Numbers rows written outside the admin form (crew import, a proposal's
+  # Proposer row). Skipped for an unsaved teamwork, which imports.rake builds:
+  # there are no siblings to count, and archive rows sort by name anyway.
   def default_display_order
     return if display_order || teamwork.nil? || !teamwork.persisted?
 
@@ -149,16 +126,15 @@ class TeamMember < ActiveRecord::Base
     return if teamwork.new_record?
     return if teamwork.respond_to?(:type_changed?) && teamwork.type_changed?
 
-    # Access the association's internal target without loading from database
-    # This should avoid corrupting the association cache
+    # The loaded target, not a query, so the association cache is left intact.
     collection = teamwork.association(:team_members).target
     my_index = collection.index(self)
 
     duplicates = collection.each_with_index.select do |tm, idx|
-      tm != self && # Not the same object
-      tm.user_id == user_id && # Same user
-      !tm.marked_for_destruction? && # Not being deleted
-      (tm.persisted? || idx < my_index) # Either saved OR appears earlier in collection
+      tm != self &&
+      tm.user_id == user_id &&
+      !tm.marked_for_destruction? &&
+      (tm.persisted? || idx < my_index)
     end
 
     if duplicates.any?

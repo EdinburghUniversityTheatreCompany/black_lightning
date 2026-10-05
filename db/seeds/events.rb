@@ -55,7 +55,6 @@ def seed_workshop(name:, season:, venue:, start_date:, end_date:, tagline:, is_p
   workshop
 end
 
-# ── Season 1: Semester 1 2023-24 ──────────────────────────────────────────────
 s1 = seed_season(
   name: "Semester 1 2023-24",
   start_date: Date.new(2023, 9, 18),
@@ -90,7 +89,6 @@ seed_workshop(
   tagline: "An introduction to running the book and calling cues."
 )
 
-# ── Season 2: Semester 2 2023-24 ──────────────────────────────────────────────
 s2 = seed_season(
   name: "Semester 2 2023-24",
   start_date: Date.new(2024, 1, 15),
@@ -125,7 +123,6 @@ seed_workshop(
   tagline: "Explore physicality and spatial awareness on stage."
 )
 
-# ── Season 3: Semester 1 2024-25 ──────────────────────────────────────────────
 s3 = seed_season(
   name: "Semester 1 2024-25",
   start_date: Date.new(2024, 9, 16),
@@ -160,7 +157,6 @@ seed_workshop(
   tagline: "Unlock your vocal range and breath control."
 )
 
-# ── Season 4: Semester 2 2024-25 (current) ────────────────────────────────────
 s4 = seed_season(
   name: "Semester 2 2024-25",
   start_date: Date.new(2025, 1, 13),
@@ -189,7 +185,6 @@ seed_show(
   team: [ [ harry, "Producer" ], [ grace, "Stage Manager" ] ]
 )
 
-# ── Reviews ────────────────────────────────────────────────────────────────────
 if hamlet.reviews.empty?
   Review.create!(
     event: hamlet,

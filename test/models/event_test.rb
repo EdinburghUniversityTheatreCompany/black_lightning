@@ -162,7 +162,6 @@ class EventTest < ActionView::TestCase
   end
 
   test "get author name list" do
-    # Clear the cache to ensure test isolation
     Rails.cache.delete(Event::AUTHOR_NAME_LIST_CACHE_KEY)
 
     show_1 = FactoryBot.create(:show, author: "Author 2")
@@ -325,14 +324,12 @@ class EventTest < ActionView::TestCase
     end
   end
 
-  # The value is encoded straight into a QR code on the box office screen, where
-  # a scheme-less string opens nothing at all, and rendered as an anchor on the
-  # public page, where "javascript:" would be an anchor that runs.
+  # It becomes a QR code, where a scheme-less string opens nothing, and a public
+  # anchor, where "javascript:" would run.
   test "rejects a digital programme link with no scheme or a dangerous one" do
     [ "example.com/programme", "www.example.com", "javascript:alert(1)", "ftp://example.com",
       "https://",
-      # \A on its own would pass this: the scheme that got checked is not the
-      # one on the line that ends up in the markup.
+      # Passes a check anchored with \A alone: a newline smuggles a second scheme.
       "https://ok.example.com\njavascript:alert(1)" ].each do |url|
       event = FactoryBot.build(:event, digital_programme_url: url)
       assert_not event.valid?, "Expected #{url.inspect} to be invalid"
@@ -409,10 +406,7 @@ class EventTest < ActionView::TestCase
     assert_no_difference("Company.count") { event.destroy }
   end
 
-  # --- performances -----------------------------------------------------
-
-  # The archive is ~3000 events with no occurrence rows, and this is what keeps
-  # them behaving exactly as they did before performances existed.
+  # The ~3000 archive events have no occurrence rows.
   test "on_today? is true every day of the run when the event has no occurrences" do
     event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2, is_public: true)
 

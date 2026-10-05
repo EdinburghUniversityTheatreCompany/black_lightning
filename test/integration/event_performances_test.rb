@@ -1,15 +1,7 @@
 require "test_helper"
 
-##
-# The dated list on a public event page.
-#
-# It used to render Event::Schedule's collapsed BLOCKS -- "Wed 23 - Sat 26
-# September, 7pm" -- with the relaxed and cancelled nights named in a separate
-# list underneath. On a run with a midnight show that reads as a contradiction:
-# the Friday and Saturday appear in two overlapping ranges, and nothing says
-# those nights have two performances. Every performance now gets its own row,
-# with its own badges, so there is nothing to cross-reference.
-##
+# One row per performance with its own badges, rather than Event::Schedule's
+# collapsed blocks.
 class EventPerformancesTest < ActionDispatch::IntegrationTest
   setup do
     @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true,
@@ -100,8 +92,7 @@ class EventPerformancesTest < ActionDispatch::IntegrationTest
   end
 
   test "a past performance is still listed" do
-    # Mick's call: every date, so a producer can check what the sync pulled in
-    # and an audience can see what the run was.
+    # Every date, so a producer can check what the sync pulled in.
     @show.update!(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 12, 31))
     FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 1, 5, 19))
 

@@ -46,8 +46,7 @@ class Archives::EventsControllerTest < ActionController::TestCase
     get :index, params: { q: { name_cont: "pericles" } }, format: :turbo_stream
 
     assert_response :success
-    # Regression: the index used to return `head :ok` (empty body) for turbo_stream
-    # because no archives/events/_index_results partial existed, so live search did nothing.
+    # Regression: turbo_stream once returned an empty body, so live search did nothing.
     assert_match "index-results", response.body
     assert_includes assigns(:events), match
     assert_not_includes assigns(:events), non_match

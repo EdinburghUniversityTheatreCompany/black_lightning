@@ -7,15 +7,11 @@ class TeamMemberTest < ActiveSupport::TestCase
     event = FactoryBot.create(:event)
     user = FactoryBot.create(:user)
 
-    # Build BOTH team members in memory (simulates nested attributes)
-    # This is what happens when form submits same user twice with different positions
+    # Both in memory, as when a form posts the same user twice.
     tm1 = event.team_members.build(user_id: user.id, position: "Director")
     tm2 = event.team_members.build(user_id: user.id, position: "Producer")
 
-    # The first one should be valid
     assert tm1.valid?, "First team member should be valid"
-
-    # The second one should be invalid (duplicate user in collection)
     assert_not tm2.valid?, "Second team member should not be valid when user is already in collection"
     assert tm2.errors[:user_id].any? { |msg| msg.match?(/already a team member/) }, "Should have error message about duplicate"
   end
@@ -25,10 +21,8 @@ class TeamMemberTest < ActiveSupport::TestCase
     event2 = FactoryBot.create(:event)
     user = FactoryBot.create(:user)
 
-    # Create team member on first event
     event1.team_members.create!(user_id: user.id, position: "Director")
 
-    # Should allow same user on different event
     team_member2 = event2.team_members.build(user_id: user.id, position: "Producer")
 
     assert team_member2.valid?, "Should be valid when user is on different event"
@@ -39,10 +33,8 @@ class TeamMemberTest < ActiveSupport::TestCase
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
 
-    # Create first team member
     event.team_members.create!(user_id: user1.id, position: "Director")
 
-    # Should allow different user
     team_member2 = event.team_members.build(user_id: user2.id, position: "Producer")
 
     assert team_member2.valid?, "Should be valid when different user"
@@ -52,11 +44,9 @@ class TeamMemberTest < ActiveSupport::TestCase
     proposal = FactoryBot.create(:proposal)
     user = FactoryBot.create(:user)
 
-    # Build a team member on a Proposal (non-STI model)
-    # This should not raise NoMethodError for type_changed?
+    # A Proposal has no type column, so no type_changed?.
     team_member = proposal.team_members.build(user_id: user.id, position: "Director")
 
-    # Should be able to validate without error
     assert_nothing_raised { team_member.valid? }
   end
 
@@ -183,10 +173,7 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal members.ordered.map(&:id), TeamMember.in_display_order(members.to_a.shuffle).map(&:id)
   end
 
-  # The form sorts in Ruby and the public page in MySQL, whose collation
-  # (utf8mb4_unicode_ci) folds accents. If the two disagree, the form shows one
-  # order, the page another, and the first save through the form makes the
-  # form's order permanent.
+  # The form sorts in Ruby, the page in MySQL, whose collation folds accents.
   test "in_display_order agrees with the ordered scope on accented names" do
     show = FactoryBot.create(:show)
     abel = FactoryBot.create(:team_member, teamwork: show, position: "Sound",
@@ -213,12 +200,7 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal [ alpha_id, last_id ], ordered.map(&:id)
   end
 
-  # --- display_order for rows written outside the form -----------------------
-  #
-  # TeamMemberOrdering only numbers rows that come through
-  # team_members_attributes=. The bulk crew import, the "Proposer" row and
-  # lib/tasks/imports.rake all create rows directly, so those sorted to the
-  # bottom by name rather than in the order they were imported.
+  # display_order for rows written outside the form
 
   test "rows created on an empty teamwork are numbered in creation order" do
     show = FactoryBot.create(:show)
@@ -241,9 +223,8 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal proposer, show.team_members.ordered.last
   end
 
-  # The trap in the obvious `display_order ||= max + 1`: on an all-nil teamwork
-  # `max` is nil, so the new row takes 0 -- and since NULLs sort last it jumps
-  # ABOVE every existing row instead of appending to them.
+  # The max + 1 trap: on an all-nil teamwork the new row would take 0 and, as
+  # NULLs sort last, jump ABOVE every existing row.
   test "a row added to an unnumbered teamwork stays unnumbered" do
     show = FactoryBot.create(:show)
     zoe = FactoryBot.create(:user, first_name: "Zoe", last_name: "Zebra")
@@ -254,8 +235,6 @@ class TeamMemberTest < ActiveSupport::TestCase
     added = show.team_members.create!(user: amy, position: "Producer")
 
     assert_nil added.reload.display_order
-    # Both unnumbered, so the whole list stays in name order rather than the
-    # newest row leaping to the top.
     assert_equal [ added, legacy ], show.team_members.ordered.to_a
   end
 
@@ -267,9 +246,7 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal 7, member.reload.display_order
   end
 
-  # imports.rake builds rows against a Show that has not been saved yet, so
-  # there is no teamwork to count siblings on. Archive rows are name-ordered
-  # anyway, which is what an unnumbered teamwork gives.
+  # As imports.rake builds them.
   test "rows built on an unsaved teamwork stay unnumbered" do
     show = FactoryBot.build(:show, team_members: [
       TeamMember.new(user: FactoryBot.create(:user), position: "Director"),

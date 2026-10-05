@@ -1,24 +1,16 @@
 ##
-# Reads the free-text events.price column into structured ticket_prices for every
-# archive row the parser can read completely.
+# Reads events.price into ticket_prices for every row the parser can read
+# completely. Dry by default; check the report's refusals before APPLY=1.
 #
-# Dry by default. `bin/rails events:backfill_ticket_prices` prints the report;
-# APPLY=1 writes. Review the report against production before applying it -- the
-# parser refuses rather than guesses, and the report is where you check that its
-# refusals are the ones you expect.
-#
-# Writes with update_columns, so ONLY ticket_prices and booking_fee move. price
-# keeps whatever it says today, which is what stops ~3000 archive pages changing
-# the text they render. Editing the bands in the admin does regenerate it; see
-# Event#derive_price_from_ticket_prices.
+# update_columns, so only ticket_prices and booking_fee move and the archive
+# keeps rendering the price text it has today.
 ##
 class Event::TicketPriceBackfill
   Summary = Data.define(:considered, :parsed, :pre_decimal, :unreadable,
                         :unreadable_counts, :parsed_samples, :applied)
 
-  # Events that have a price written down and no structured bands yet. Skipping
-  # rows that already have bands makes a re-run after a parser change safe: it
-  # cannot overwrite something a producer typed by hand.
+  # Rows with bands already are skipped, so a re-run cannot overwrite bands a
+  # producer typed.
   def self.scope
     Event.unscoped.where.not(price: [ nil, "" ]).where(ticket_prices: nil)
   end

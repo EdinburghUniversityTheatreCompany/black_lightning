@@ -1,9 +1,5 @@
 require "test_helper"
 
-##
-# Reading a list of performances back as the shape a human would describe it:
-# "Wed 11 - Sun 15 October", "Every Friday", or a list when it is neither.
-##
 class Event::ScheduleTest < ActiveSupport::TestCase
   def show(start_date: Date.new(2026, 10, 11), days: 10)
     FactoryBot.create(:show, start_date: start_date, end_date: start_date + days)
@@ -28,7 +24,6 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     assert_equal :single, schedule(event).kind
   end
 
-  # The case Mick asked for: five nights in a row is a range, not five rows.
   test "consecutive nights at the same time collapse to one range" do
     event = show
     (0..4).each { |offset| perform(event, Date.new(2026, 10, 11) + offset) }
@@ -63,9 +58,7 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     assert_equal 2, schedule(event).blocks.length
   end
 
-  # A Season open 12pm-1am on Tuesday and 12pm-10pm on Wednesday shares a curtain
-  # time but not its hours. Folding them advertised Wednesday as closing at 1am,
-  # because the view prints the block's hours from its first occurrence.
+  # Folded together, the second day would advertise closing at 1am.
   test "the same opening time with a different closing time is a different block" do
     event = show
     perform(event, Date.new(2026, 10, 11), hour: 12,
@@ -86,10 +79,7 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     assert_equal 1, schedule(event).blocks.length
   end
 
-  # --- the Improverts --------------------------------------------------
-
-  # A year-long weekly fixture. A date range here reads "Sep 1 - Jun 30", the
-  # exact string the box office screen exists to avoid.
+  # A range here would read "Sep 1 - Jun 30".
   test "the same weekday every week is a weekly pattern" do
     event = show(start_date: Date.new(2026, 9, 4), days: 300)
     friday = Date.new(2026, 9, 4)

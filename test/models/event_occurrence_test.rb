@@ -28,8 +28,6 @@ class EventOccurrenceTest < ActiveSupport::TestCase
     assert occurrence.errors[:ends_at].present?
   end
 
-  # The run dates and the performance list are two statements of the same fact.
-  # Without this they can contradict each other with nothing to catch it.
   test "rejects a start time outside the event's run" do
     [ Time.zone.local(2026, 3, 2, 19, 30), Time.zone.local(2026, 3, 8, 19, 30) ].each do |outside|
       occurrence = occurrence_at(outside)
@@ -86,9 +84,7 @@ class EventOccurrenceTest < ActiveSupport::TestCase
     assert_equal [ "Preview", "Relaxed" ], occurrence.access_flag_labels
   end
 
-  # The nested form always posts one untouched blank row from its template, and
-  # its access_flags check_boxes send [""] -- which is not blank, so :all_blank
-  # never fired and saving the event failed with "starts at must not be blank".
+  # The form's untouched template row posts access_flags [""], which is not blank.
   test "an untouched blank row from the form is dropped, not saved" do
     assert_difference "EventOccurrence.count", 0 do
       assert @event.update(event_occurrences_attributes: {
@@ -120,8 +116,6 @@ class EventOccurrenceTest < ActiveSupport::TestCase
     end
   end
 
-  # --- pretix sync -----------------------------------------------------------
-
   test "an occurrence with a pretix subevent id is the sync's to manage" do
     assert occurrence_at(Time.zone.local(2026, 3, 3, 19, 30), pretix_subevent_id: 42).pretix_synced?
   end
@@ -146,8 +140,6 @@ class EventOccurrenceTest < ActiveSupport::TestCase
   end
 
   test "sold out and cancelled default to false rather than nil" do
-    # The columns are nullable -- every row predating the sync reads back nil --
-    # and every view would otherwise have to know that.
     occurrence = occurrence_at(Time.zone.local(2026, 3, 3, 19, 30))
 
     assert_not occurrence.sold_out?

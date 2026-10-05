@@ -25,9 +25,6 @@
 
 <%= f.input :age_guidance, label: 'Age guidance', placeholder: 'e.g. 14+' %>
 
-<%# The two repeating sections are cards (like the Gallery below) so each has a
-    visible end: a heading followed straight by the next plain field read as a
-    preamble to that field. %>
 <%= render(CollapsibleSectionComponent.new(title: f.object.occurrence_label.pluralize, start_open: true,
                                            html_class: "mb-4")) do %>
   <div id="event-occurrences">
@@ -67,13 +64,10 @@
     (&ldquo;Pay what you can&rdquo;).
   </p>
 
-  <%# template_object: ticket_prices is a JSON column, not an association, so
-      there is no reflection for _nested_fields to build its blank row from. %>
-  <%# Removing a band deletes its row from the DOM, so removing the LAST one posts
-      no ticket_prices_attributes key at all, ticket_prices_attributes= never
-      runs, and the bands survive a save that reported success. This sentinel
-      always posts, so an emptied collection is an empty collection. It is the
-      same trick check_boxes uses with its leading "". %>
+  <%# Removing the last band would post no ticket_prices_attributes at all, and the
+      bands would survive the save. This sentinel always posts, as check_boxes'
+      leading "" does. template_object: a JSON column has no reflection to build
+      the blank row from. %>
   <%= hidden_field_tag "#{f.object_name}[ticket_prices_attributes][sentinel][amount]", "" %>
 
   <%= render 'shared/form/sections/nested_fields',
