@@ -18,11 +18,7 @@ module Reimbursements
     end
 
     # A submitter who owns the budget needs no separate endorsement.
-    def submitter_owns_budget?(expense)
-      return false if expense.person.nil?
-
-      owned_by?(expense, expense.person)
-    end
+    def submitter_owns_budget?(expense) = owned_by?(expense, expense.person)
 
     def gate_applies?(expense)
       budget = expense.budget
