@@ -110,26 +110,19 @@ Nothing breaks while you're setting this up. Until you revoke the Entra consent 
 the old grant and the new one, and access is their union. That's exactly why verification comes
 before removal.
 
-## The migration is finished
-
-**Both manual steps were completed on 2026-09-05**, so mail access now comes from RBAC alone.
-This is the record of what was done, not a to-do list.
+## Done on 2026-09-05: mail access comes from RBAC alone
 
 1. **The tenant-wide `Mail.ReadWrite` / `Mail.Send` consent was revoked** in Entra, keeping
-   `Sites.*` and `Files.*`. The app-only token is the evidence: its `roles` claim carries
+   `Sites.*` and `Files.*`. The evidence is the app-only token: its `roles` claim carries
    `Files.ReadWrite.All`, `Sites.ReadWrite.All` and `Sites.Selected`, and no `Mail.*` at all.
    Decoding that claim is the only way to see this from outside the tenant.
-2. **The `ApplicationAccessPolicy` was removed**, once it had been shown to grant nothing: the
-   `Reimbursements App Access` group held two members while four mailboxes were answering over
-   Graph, so at least two were working from outside it. Removing it changed no answer, and an
-   unrelated mailbox still 403d afterwards.
+2. **The `ApplicationAccessPolicy` and its `Reimbursements App Access` group were removed.** The
+   group held two members while four mailboxes answered over Graph, so it was granting nothing.
 
 **If you are debugging a 403, that group and that policy are not the place to look.** Both are
-gone, and adding a mailbox to the group was a convincing no-op even before it went: it constrained
-Entra-granted permissions, and mail has none. Authorise a mailbox by re-running this script.
-
-The check that still matters is the negative one above. An unrelated mailbox must come back
-`InScope False`, and 403 over Graph. That is what proves the scope is doing the work.
+gone, and adding a mailbox to the group was a convincing no-op even before then: the policy only
+constrained Entra-granted mail permissions, and the app has none. Authorise a mailbox by
+re-running this script, and check that an unrelated mailbox still comes back `InScope False`.
 
 ## Confirming both features still work
 
@@ -156,3 +149,37 @@ Don't revoke them casually. If the per-site grant behind `Sites.Selected` was ne
 BACS upload is working *because* of `Sites.ReadWrite.All`. The sequence is: grant the reimbursements
 site explicitly (`POST /sites/{id}/permissions` with role `write`), confirm a batch upload still
 works, then revoke the two `.All` grants.
+
+## Rotating the client secret
+
+The app signs in with a client secret, and secrets expire. `CredentialsCheckJob` emails
+`alert_email` (the IT subcommittee) every day from 30 days before `azure_secret_expires_on`, and a
+Graph auth failure alerts straight away. Rotate before the date.
+
+1. Entra, **App registrations**, the app, **Certificates & secrets**, **New client secret**
+   (24 months). Copy the **Value** at once: Entra shows it only once.
+2. The tenant and client IDs do not change. They are on the app's **Overview**: Directory
+   (tenant) ID and Application (client) ID.
+3. Edit the **production** credentials (`bin/rails credentials:edit --environment production`):
+
+   ```yaml
+   reimbursements:
+     azure_tenant_id: "..."
+     azure_client_id: "..."
+     azure_client_secret: "..."             # the new Value
+     azure_secret_expires_on: "2028-07-01"  # the new expiry; the 30-day warning reads it
+     alert_email: "..."                     # who gets the warning
+   ```
+
+   Commit the re-encrypted `config/credentials/production.yml.enc` and deploy.
+4. Once a receipt has come in and a batch has been built on the new secret, delete the old one
+   in Entra.
+
+**Production credentials only.** `config/credentials/development.key` is committed, so anything in
+the development credentials is public.
+
+**Keep the secret under `reimbursements:`.** `Graph::Settings` (mailbox polling, climate included)
+reads `GRAPH_*` and a `graph:` block first, then falls back to `reimbursements:`. The
+reimbursements Graph client (drafts, sending, SharePoint) and the expiry warning read
+`reimbursements:` alone. A new secret put only under `graph:` leaves those on the old one.
+`REIMBURSEMENTS_*` environment variables override the credentials if set.
