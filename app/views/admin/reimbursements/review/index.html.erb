@@ -1,7 +1,5 @@
-<%# ?focus=expense-<id> is where the last action came back to. See
-    scroll_to_controller: the redirect's own fragment does not survive a Turbo
-    form submission, so the query parameter is what makes "keep my place"
-    work. %>
+<%# ?focus=expense-<id> survives a Turbo form submission; the redirect's
+    fragment does not. %>
 <div data-controller="scroll-to" data-scroll-to-param-value="focus"></div>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 <p class="mb-3 text-gray-600">
@@ -18,15 +16,12 @@
 <% to_approve_total = @to_approve.sum { |e| e.amount || 0 } %>
 <% approved_total = @approved.sum { |e| e.amount || 0 } %>
 
-<%# Each link is a full page navigation (a different tab: query param), not a
-    client-side toggle — role="tab"/"tablist" would claim arrow-key-navigable
-    widget behavior these plain links don't have. aria-current="page" is the
-    correct pattern for "which of these navigation links is the current one". %>
+<%# Plain navigation links, so aria-current, not role="tab", which promises
+    arrow-key widget behaviour. %>
 <nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
   <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
-  <%# Awaiting owner sits first because it is the earlier step in the claim's
-      life, not because it is the finance team's queue — "To approve" is, and it
-      is the tab every link into this page lands on. %>
+  <%# Awaiting owner sits first as the earlier step in a claim's life; To
+      approve is the default. %>
   <%= link_to "Awaiting owner (#{@awaiting_owner.size})", admin_reimbursements_review_path(tab: "awaiting_owner"),
               "aria-current": (@tab == "awaiting_owner" ? "page" : nil), class: tab_class.call(@tab == "awaiting_owner") %>
   <%= link_to "To approve (#{@to_approve.size})", admin_reimbursements_review_path(tab: "to_approve"),
@@ -34,8 +29,7 @@
   <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
               "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
   <span class="ml-auto self-center pb-1">
-    <%# ?tab= already rides along in the query parameters, so the download
-        follows whichever tab is on screen. %>
+    <%# The query carries ?tab=, so the download follows the tab. %>
     <%= link_to "Download CSV",
                 admin_reimbursements_review_path(request.query_parameters.merge(format: :csv)),
                 title: "The expenses on this tab", class: btn_classes(:secondary, :sm) %>
@@ -51,9 +45,7 @@
   <% else %>
     <p class="mb-3 text-gray-600">
       <%= @approved.size %> approved, total <%= reimbursements_money(approved_total) %>.
-      <%# The next step in the weekly loop, as a link rather than the name of a
-          page to go and find in the sidebar. Carries the selected cost centre:
-          a batch is built for ONE pot, and the one on screen is the one meant. %>
+      <%# Carries the selected cost centre: a batch is built for one pot. %>
       Ready to submit on
       <%= link_to "the Build Batch page",
                   new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
@@ -77,20 +69,13 @@
     <%= render AlertComponent.new(type: :info) do %>
       These are with their budget owners, who endorse them from My Budgets. Where no owner can
       act, override the sign-off here: the override is recorded against your account.
-      <%# So nobody chases by hand believing nothing else will. The nightly job
-          names every gated claim to each of its owners on every due run day,
-          with no age threshold (see NightlyBatchJob#remind_budget_owners). %>
+      <%# Describes NightlyBatchJob#remind_budget_owners (no age threshold). %>
       An owner with an address on file is reminded on each run day until they sign off or the
       claim is rejected. An owner with no address is never emailed: chase them, or override the
       sign-off below.
     <% end %>
-    <%# Bulk OVERRIDE, and deliberately no bulk approve: bulk approve skips
-        every gated claim, so a "0 approved" summary is all it could ever
-        report. That argues for this toolbar, not for none — one owner who
-        never opens the portal gates every claim on their show, and clearing
-        ten of them was ten forms. The note is required here though it is
-        optional on a single claim: this is the higher-consequence action and
-        the note is the only record of it. %>
+    <%# No bulk approve here: it skips every gated claim, so could only ever
+        report "0 approved". %>
     <div data-controller="bulk-review">
       <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
         <label class="flex items-center gap-2 text-sm font-medium">
@@ -138,8 +123,7 @@
     </p>
 
     <div data-controller="bulk-review">
-      <%# Bulk toolbar: tick expenses below, then approve or reject them together.
-          The per-card checkboxes are wired to this form via form="bulk-review-form". %>
+      <%# The cards' checkboxes join this form through form="bulk-review-form". %>
       <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
         <label class="flex items-center gap-2 text-sm font-medium">
           <%= check_box_tag "select_all", "1", false,
@@ -150,11 +134,8 @@
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
         <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab), method: :patch,
                       id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
-          <%# Deliberately NOT required, unlike the per-card reject box: this one
-              box is shared with "Approve selected", which needs no reason, and a
-              required attribute here would block every bulk approval. The
-              controller enables Reject selected only once it is filled in, and
-              the server refuses a blank reason either way. %>
+          <%# Deliberately NOT required: the box is shared with Approve selected.
+              bulk-review enables Reject only once it is filled. %>
           <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
                              data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
                              class: input_classes(width: nil) %>

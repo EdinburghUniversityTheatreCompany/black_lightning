@@ -34,8 +34,6 @@
                                    .with_content(addresses.any? ? pluralize(addresses.size, "address") : "No notification recipients")) %>
           <span><strong><%= cost_centre.name %></strong></span>
           <span class="text-gray-500"><%= addresses.to_sentence %></span>
-          <%# The audit's "Change it under Settings" sentence, as the link it
-              should always have been: straight to THIS centre's own page. %>
           <%= link_to "Change under #{cost_centre.name} Settings",
                       edit_admin_reimbursements_setting_path(cost_centre.key),
                       class: "text-primary underline" %>
@@ -52,11 +50,6 @@
 <% end %>
 
 <%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
-  <%# The note about #run_checks staying an array, and each probe being rescued
-      on its own, is a fact about the CONTROLLER and belongs beside it — it was
-      typed into the paragraph below and rendered on screen to finance users
-      for as long as this card has existed. Anything that explains the code
-      goes in an ERB comment like this one, never in the copy. %>
   <p class="text-sm text-gray-600 mb-2">
     Probe Microsoft Graph with the app's own credentials. Graph is the only integration this
     portal has to reach, so it is the only check here.
@@ -72,10 +65,6 @@
   </div>
 <% end %>
 
-<%# What the portal has actually emailed. The page could say whether Graph was
-    reachable and when each centre's nightly last completed, and nothing about
-    what was sent to whom — so "did this person get their reminder?" had no
-    answer short of asking them. %>
 <%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
   <p class="mb-3 text-sm text-gray-600">
     Every reminder and notification the portal sent, and to which address. It records the
@@ -99,8 +88,6 @@
   <% end %>
 
   <% if @send_counts.any? && @recipient_query.blank? %>
-    <%# Per-run counts: a run-day sends a batch of one kind to several people,
-        and the count is the thing that looks wrong when it is wrong. %>
     <p class="mb-1 text-sm font-medium">Per run</p>
     <p class="mb-1 text-sm text-gray-600">
       The <%= @send_log_limit %> newest messages only, so a large run can show fewer recipients

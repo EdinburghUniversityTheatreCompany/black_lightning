@@ -2,16 +2,10 @@ require "test_helper"
 
 module Admin
   module Reimbursements
-    ##
-    # The finance-gated integration status dashboard: a page showing the last
-    # nightly-run date per cost centre (a plain DB read, always shown) plus
-    # on-demand OK/fail/skip probes of Microsoft Graph.
     class StatusControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
-      # Enable the integration secrets Settings reads (env wins over credentials),
-      # restoring the prior values afterwards. Without these Graph sits at its
-      # test-env default of "not configured".
+      # Settings reads ENV before credentials; without these Graph is "not configured".
       GRAPH_ENV = {
         "REIMBURSEMENTS_AZURE_TENANT_ID" => "tenant",
         "REIMBURSEMENTS_AZURE_CLIENT_ID" => "client",
@@ -26,8 +20,7 @@ module Admin
         original.each { |key, value| ENV[key] = value }
       end
 
-      # Fake Graph client for the reachability probe: returns true, or raises to
-      # stand in for expired Azure credentials.
+      # Raises to stand in for expired Azure credentials.
       class FakeGraph
         def initialize(ok: true)
           @ok = ok
@@ -51,8 +44,6 @@ module Admin
       teardown do
         StatusController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
-
-      # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
         get :show
@@ -81,8 +72,6 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- Show (gated render, no live calls) --------------------------------
-
       test "show renders the dashboard for a finance user" do
         sign_in @user
         get :show
@@ -90,7 +79,6 @@ module Admin
         assert_response :success
         assert_includes response.body, "Integration checks"
         assert_includes response.body, "Run checks"
-        # The page itself runs no probes.
         assert_nil assigns(:checks)
       end
 
@@ -115,8 +103,6 @@ module Admin
         assert_includes response.body, "Never"
       end
 
-      # --- Run (on-demand probes) --------------------------------------------
-
       test "run reports every integration OK when the probes succeed" do
         sign_in @user
 
@@ -135,14 +121,12 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Graph rejected the token (401)"
-        # Points a non-technical finance user at IT to rotate the server credential.
         assert_includes response.body, "Contact IT"
       end
 
       test "run skips Graph when the Azure credentials are absent" do
         sign_in @user
 
-        # Azure env deliberately unset (the test-env default).
         post :run
 
         assert_response :success
@@ -159,11 +143,8 @@ module Admin
         assert_includes response.body, "2026-06-30"
       end
 
-      # --- Notification recipients ------------------------------------------
-
       test "flags a cost centre with no notification address" do
-        # update_columns, not update!: presence is validated on the model, so
-        # this is the only way to reproduce a row that predates the validation.
+        # update_columns, not update!: reproduces a blank address that predates the validation.
         ::Reimbursements::CostCentre.default.update_columns(notification_email: nil)
         sign_in @user
 
@@ -214,8 +195,6 @@ module Admin
                         edit_admin_reimbursements_setting_path(@cost_centre.key)
       end
 
-      # A code comment about #run_checks was typed into the card's visible copy
-      # and rendered to finance users. It belongs beside the method.
       test "does not render the run_checks implementation note on screen" do
         sign_in @user
 
@@ -235,11 +214,6 @@ module Admin
         assert_includes response.media_type, "turbo-stream"
         assert_includes response.body, "integration_check_results"
       end
-
-      # --- The send log ------------------------------------------------------
-      # The page could say whether Graph was reachable and when each centre's
-      # nightly last completed, and nothing about what was sent to whom — so
-      # "did this person get their reminder?" had no answer short of asking.
 
       def logged_send(recipient:, kind: "pending_reminder", sent_at: Time.current,
                       subject: "Claims waiting", cost_centre: nil)
@@ -271,8 +245,6 @@ module Admin
         assert_equal [ "olive@example.com" ], assigns(:sends).map(&:recipient)
       end
 
-      # A reminder to an address nobody reads looks exactly like this, so the
-      # empty state says where to check rather than just "none".
       test "a recipient with nothing sent to them says so, and where to look" do
         sign_in @user
 
@@ -305,8 +277,6 @@ module Admin
         assert_equal [ "theirs@example.com" ], assigns(:sends).map(&:recipient)
       end
 
-      # --- What the Notifier records ----------------------------------------
-
       test "sending an email records one row per recipient" do
         notifier = ::Reimbursements::Notifier.new(cost_centre: @cost_centre,
                                                   graph: FakeGraphClient.new)
@@ -321,9 +291,7 @@ module Admin
         assert_equal "pending_reminder", ::Reimbursements::NotificationLog.first.kind
       end
 
-      # An unlogged email that went out beats a logged one that did not, so the
-      # recorder swallows its own failures rather than letting them reach the
-      # caller — which for the Notifier is the send it has just made.
+      # An unlogged email that went out beats a logged one that did not.
       test "a log write that cannot succeed raises nothing" do
         assert_nothing_raised do
           # sent_at is presence-validated, so create! raises inside .record.

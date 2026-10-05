@@ -1,34 +1,20 @@
 module Admin
   module Reimbursements
     ##
-    # The finance team's review queue:
-    # Pending / Approved tabs, editable expense cards, a modulus badge on the
-    # EFFECTIVE payee details, payee-override and duplicate-submission warnings,
-    # and a needs-attention partition.
-    #
-    # Actions: Save (write edits), Approve (auto-fill a BACS-safe payment
-    # reference if blank, block without effective bank details), Reject (reason
-    # required, send the rejection email, stamp rejection_notified).
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # The finance team's review queue: three tabs of editable expense cards,
+    # with Save, Approve, Reject and the owner sign-off override.
     class ReviewController < FinanceController
       include RejectsExpenses
       include AttachesReceipts
 
-      # ?tab= is the URL state. "to_approve" is the finance queue and the default
-      # -- every link into this page from elsewhere (the sidebar, the expense-edit
-      # views) carries no tab at all, so an unrecognised value has to land there
-      # too. "pending" is the value this tab used to have, still accepted so a
-      # bookmark or an in-flight redirect keeps working.
+      # ?tab= is the URL state. Links from elsewhere carry no tab, so anything
+      # unrecognised lands on the finance queue.
       TABS = %w[awaiting_owner to_approve approved].freeze
       DEFAULT_TAB = "to_approve".freeze
       LEGACY_TABS = { "pending" => DEFAULT_TAB }.freeze
 
-      # The one sentence explaining why a claim just went back to "awaiting
-      # sign-off". A plain Save says it and so must Save-then-approve: the
-      # bare "needs a budget owner's endorsement first" reads as a standing
-      # condition rather than as something this very click caused.
+      # Names the edit as the cause, so a refusal it caused does not read as a
+      # standing condition.
       GATE_REOPENED_BY_EDIT =
         "Your edit changed the amount or budget, so it needs a fresh owner sign-off.".freeze
 
@@ -36,14 +22,9 @@ module Admin
         @title = "Review Expenses"
         @tab = resolve_tab
 
-        # Every tab, its count and its CSV come off ONE list, so the tab labels
-        # can never disagree with what the tab shows. An expense has no cost
-        # centre of its own — it resolves one through its budget (see
-        # Expense#cost_centre_id), which the store already preloads.
+        # One list feeds every tab, its count and its CSV. The split happens
+        # before the format branch because the CSV follows the tab.
         expenses = store.expenses_for_cost_centre
-        # Split the Pending queue in two BEFORE the format branch: the CSV
-        # download follows the tab on screen, so it needs the same split the HTML
-        # tabs render. Everything else the queue needs is HTML-only (#load_queue).
         @pending = expenses.select(&:pending?)
         @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
         queue = ::Reimbursements::ReviewSupport.split_queue(expenses, @owner_gate_unmet_ids)
@@ -53,9 +34,6 @@ module Admin
 
         respond_to do |format|
           format.html { load_queue }
-          # The tab on screen is the tab you download. Reuses the Expenses
-          # exporter, so a Review download and an Expenses download describe a
-          # claim identically. It skips everything #load_queue does.
           format.csv { send_export ::Reimbursements::Exports::Expenses, expenses_for_tab }
         end
       end
@@ -79,27 +57,16 @@ module Admin
 
       def approve
         expense = find_queue_expense!
-        # "Save Changes" in the unsaved-edits dialog: persist the card edits
-        # first, in this same request, and abort the approval if they don't
-        # validate (save_edits_before_decision redirects then returns nil).
         expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
         redirect_with_approve_result(expense, approve_expense(expense))
       end
 
-      # Finance override of the owner-endorsement gate: record who overrode it
-      # (e.g. no owner has a portal account to endorse), then approve. Only the
-      # owner gate can be overridden this way — every other blocking reason is a
-      # genuine data problem the override still can't approve past.
+      # Finance override of the owner sign-off gate. Every other blocker still refuses.
       def override_approve
         expense = find_queue_expense!
-        # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
-        # card edits first, aborting the override if they don't validate — so no
-        # gate-satisfying override row is written for an approval that never runs.
         expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
-        # Only override the owner gate when it's the ONLY thing blocking. If a
-        # hard block (bank/budget/amount/status) remains, report that WITHOUT
-        # writing an override row — otherwise a later plain approve would sail
-        # past a gate we silently satisfied here for an approval that never ran.
+        # Never write a gate-satisfying override row while a hard block remains:
+        # a later plain approve would sail past it.
         blocker = approve_blocker(expense)
         if blocker && blocker != :skipped_awaiting_endorsement
           redirect_with_approve_result(expense, blocker)
@@ -114,18 +81,9 @@ module Admin
         redirect_with_approve_result(expense, approve_expense(expense))
       end
 
-      # Override the owner gate on every ticked claim with one shared note.
-      #
-      # The Awaiting-owner tab deliberately has no bulk APPROVE — bulk approve
-      # skips every gated claim, so it could only ever report "0 approved" —
-      # but that argument is for a bulk OVERRIDE, not for nothing: one owner
-      # who never opens the portal gates every claim on their show, and
-      # clearing ten of them was ten forms.
-      #
-      # The note is REQUIRED here though it is optional on a single claim, and
-      # the difference is deliberate: this is the higher-consequence action and
-      # the note is the only record that finance bypassed a control on several
-      # claims at once. bulk_reject requires its reason for the same reason.
+      # Override the owner gate on every ticked claim. The note is required here,
+      # though optional on one claim: it is the only record that finance bypassed
+      # a control on several claims at once.
       def bulk_override_approve
         note = params[:override_note].to_s.strip
         if note.blank?
@@ -142,8 +100,6 @@ module Admin
 
       def reject
         expense = find_queue_expense!
-        # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
-        # card edits first, aborting the rejection if they don't validate.
         expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
         reason = params[:rejection_reason].to_s.strip
         if reason.blank?
@@ -158,9 +114,6 @@ module Admin
         end
       end
 
-      # Approve every selected Pending expense in one go, reusing the single
-      # approve path per item (same bank-details block + BACS-reference auto-fill).
-      # Reports a per-item summary in the flash.
       def bulk_approve
         expenses = selected_pending_expenses
         return redirect_to_review(alert: "Select at least one expense to approve.") if expenses.empty?
@@ -169,8 +122,6 @@ module Admin
         redirect_to_review(notice: bulk_approve_summary(results))
       end
 
-      # Reject every selected Pending expense with one shared reason, reusing the
-      # single reject path per item (each producer is emailed via Graph).
       def bulk_reject
         reason = params[:rejection_reason].to_s.strip
         return redirect_to_review(alert: "A rejection reason is required.") if reason.blank?
@@ -209,10 +160,8 @@ module Admin
 
       private
 
-      # find_expense!, plus a note of where the claim sat on the tab it is
-      # being acted from. Approving or rejecting takes the card off the tab, so
-      # the position has to be read BEFORE the action — afterwards there is
-      # nothing left to read it from.
+      # find_expense!, noting the claim's place on its tab. Read BEFORE the
+      # action, which may take the card off the tab.
       def find_queue_expense!
         expense = find_expense!
         @anchor_record_id = expense.record_id
@@ -227,11 +176,9 @@ module Admin
         index ? order[(index + 1)..] : []
       end
 
-      # The tab's claims as record ids, in the order the page renders them —
-      # which for To approve is Ready then Needs attention, not store order.
-      # Read once before an action and once after, so "is it still on this tab"
-      # is answered against the queue as it now stands rather than guessed from
-      # the new status.
+      # The tab's record ids in render order (To approve is Ready, then Needs
+      # attention). Read before and after an action, so the anchor follows the
+      # queue as it now stands.
       def rendered_tab_order
         expenses = store.expenses_for_cost_centre
         pending = expenses.select(&:pending?)
@@ -253,11 +200,9 @@ module Admin
         ready + attention
       end
 
-      # Where to scroll back to. The claim just acted on when it is still on
-      # this tab; otherwise the nearest claim that rendered BELOW it, which is
-      # where the operator's eye already was. Nothing survived below it (or a
-      # bulk action, which has no single card) means no anchor at all: the top
-      # of the list, the old behaviour.
+      # The claim acted on if it is still on this tab, else the nearest one that
+      # rendered below it. nil (the top of the list) when none survived, or
+      # after a bulk action.
       def queue_anchor
         return nil if @anchor_record_id.blank?
 
@@ -271,7 +216,6 @@ module Admin
         target && "expense-#{target}"
       end
 
-      # Which expenses this tab shows -- and therefore downloads.
       def expenses_for_tab
         case @tab
         when "approved" then @approved
@@ -280,46 +224,29 @@ module Admin
         end
       end
 
-      # "to_approve" for anything unrecognised, so a bare link, a stale bookmark
-      # and a typo all land on the finance queue rather than on an empty page.
       def resolve_tab
         tab = params[:tab].to_s
         tab = LEGACY_TABS.fetch(tab, tab)
         TABS.include?(tab) ? tab : DEFAULT_TAB
       end
 
-      # Everything only the on-screen queue needs: the duplicate scan, the
-      # endorsement chips and the ready/attention partition.
+      # Everything only the on-screen queue needs.
       def load_queue
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
         @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
-        # For the positive "Endorsed by / Owner sign-off overridden" chip on
-        # the card, and to resolve the endorsing owner's name.
-        #
-        # Over the APPROVED claims as well as the pending ones. Built from the
-        # pending list alone, the "Owner sign-off overridden" pill vanished the
-        # moment the override succeeded — so the one record that finance
-        # bypassed a control disappeared exactly when it started to matter.
+        # Over the approved claims too, or the "overridden" pill vanishes the
+        # moment the override succeeds.
         @endorsements_by_expense =
           store.endorsements_by_expense((@pending + @approved).map(&:record_id))
         @people_by_id = store.people.index_by(&:record_id)
-        # partition: ready first (needs_attention false, no possible duplicate),
-        # attention second. A possible duplicate is folded in here (not into the
-        # shared needs_attention_reasons, which other callers use for expenses
-        # this per-pending-list duplicate scan was never computed for) so it's
-        # grouped with every other advisory reason instead of being a wholly
-        # separate, easy-to-miss warning box.
-        #
-        # Over @to_approve, NOT @pending: an unmet owner gate is its own tab now,
-        # so "needs attention" here means a data problem finance can actually fix.
+        # A possible duplicate counts as attention here only: the scan is per
+        # pending list, so it is not one of the shared needs_attention_reasons.
         @ready, @attention = ::Reimbursements::ReviewSupport.partition_ready(
           @to_approve, @budget_by_id, modulus_checker, @duplicates
         )
       end
 
-      # Map an approve_expense result to the redirect + flash, shared by #approve
-      # and #override_approve so their messaging never drifts.
       def redirect_with_approve_result(expense, result, approved_notice: nil)
         case result
         when :skipped_no_bank
@@ -341,10 +268,6 @@ module Admin
                                     "counts it in GBP, and reconciliation corrects it to the rate the " \
                                     "bank charged.")
         when :skipped_awaiting_endorsement
-          # Name the CAUSE when this very request created it: the Save-Changes
-          # branch of the unsaved-edits dialog can save an edit that re-opens a
-          # covering endorsement, and the bare sentence reads as a condition
-          # that was already there.
           alert = "##{expense.auto_number} needs a budget owner's endorsement first " \
                   "(or a finance override)."
           alert = "#{GATE_REOPENED_BY_EDIT} #{alert}" if @gate_reopened_by_edit
@@ -354,34 +277,16 @@ module Admin
         end
       end
 
-      # Approve one expense (shared by #approve and #bulk_approve). Blocks a
-      # stale/raced approval against an expense that's no longer Pending
-      # (:skipped_wrong_status — e.g. a double-click, or a concurrent Build
-      # Batch/reconciliation already advanced it), one with no effective bank
-      # details (:skipped_no_bank), no linked budget (:skipped_no_budget — a
-      # blank budget writes a blank nominal code straight into the BACS
-      # spreadsheet, permanently breaking reconciliation matching), or no
-      # the international EUR/GBP pair (:skipped_no_foreign_amount /
-      # :skipped_no_gbp_amount), a
-      # non-zero ex-VAT amount (:skipped_no_amount — the reconciliation
-      # matcher can never match a nil/zero amount, so the expense is paid but
-      # never marked Paid). The other "needs attention" reasons (no receipt,
-      # possible duplicate) stay advisory-only — the operator's own judgement
-      # call, not a correctness guard. Auto-fills a BACS-safe payment
-      # reference when blank. Returns :approved on success.
+      # Approve unless approve_blocker refuses; fills a BACS-safe payment
+      # reference when blank. Returns :approved or the blocker.
       def approve_expense(expense)
         blocker = approve_blocker(expense)
         return blocker if blocker
 
         attrs = { status: ::Reimbursements::Status::APPROVED }
-        # expense.budget is already guaranteed present here (approve_blocker's
-        # :skipped_no_budget guard returns early otherwise), so no nil re-check.
-        # display_name, not the bare name: three shows' "Marketing" lines
-        # derived one identical reference after the prefix strip, and the
-        # reference is what EUSA reconciles a payment back to a claim by.
-        # Only ever written for a claim that arrived without one (email-in, an
-        # actuals conversion, an import) — a stored reference is never
-        # recomputed, so nothing EUSA has already seen changes.
+        # display_name, not the bare name: three shows' "Marketing" lines would
+        # share one reference, and EUSA reconciles payments by it. A stored
+        # reference is never recomputed.
         if expense.payment_reference.to_s.strip.empty?
           reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.display_name)
           attrs[:payment_reference] = reference if reference.present?
@@ -390,47 +295,26 @@ module Admin
         :approved
       end
 
-      # The first reason this expense can't be approved, or nil if it can. Pure
-      # (no writes), so override_approve can precheck whether the owner gate is
-      # the SOLE blocker before recording an override — a hard block (bank/
-      # budget/amount) must never write a gate-satisfying override row.
+      # The first reason this expense can't be approved, or nil. Writes nothing.
       def approve_blocker(expense)
         return :skipped_wrong_status unless expense.pending?
         return :skipped_no_bank unless expense.effective_has_bank_details?
-        # A present-but-blank-record_id budget would write a blank nominal code
-        # into the BACS spreadsheet just like a nil one — guard both, so this
-        # stays in lockstep with ReviewSupport.attention_summary's "no budget"
-        # blocking reason (the UI promises the two agree).
+        # A blank budget writes a blank nominal code into the BACS spreadsheet,
+        # which EUSA can never reconcile.
         return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
-        # The international pair FIRST, read through ReviewSupport so these
-        # guards and the matching "blocking" reasons cannot drift apart. EUSA's
-        # bank pays the supplier in their own currency, so the EUR figure is
-        # what goes on the form; the GBP one is what every budget rollup counts.
-        #
-        # Before the ex-VAT guard on purpose: an international claim's ex-VAT
-        # amount mirrors its gross, so a blank GBP amount fails BOTH, and the
-        # ex-VAT message would send finance looking for a field this rail does
-        # not have.
+        # The international pair goes before the ex-VAT guard: ex-VAT mirrors the
+        # gross on that rail, so a blank GBP amount fails both, and the ex-VAT
+        # message names a field the rail lacks.
         return :skipped_no_foreign_amount if ::Reimbursements::ReviewSupport.missing_foreign_amount?(expense)
         return :skipped_no_gbp_amount if ::Reimbursements::ReviewSupport.missing_gbp_amount?(expense)
         return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
-        # A budget owner must sign off before finance approves (any one owner, or
-        # a submitter who owns the budget is auto-bypassed). Overridable by
-        # finance via override_approve; unmet here means neither has happened.
         return :skipped_awaiting_endorsement unless ::Reimbursements::OwnerReview.gate_satisfied?(expense)
 
         nil
       end
 
-      # The Pending expenses ticked in the bulk toolbar. Filtering to Pending
-      # (never trusting the posted ids alone) keeps a stale selection from acting
-      # on an already-approved/rejected expense.
-      # Write the override row (where the gate applies at all) and approve.
-      # Shared by the single-claim action and the bulk one, so the two cannot
-      # drift about what an override IS.
-      #
-      # Upserted so a re-override after an edit refreshes the snapshot (see
-      # OwnerReview.endorsement_covers?) rather than riding a stale row.
+      # Upserted, so a re-override after an edit refreshes the snapshot rather
+      # than riding a stale row.
       def override_and_approve(expense, note)
         if ::Reimbursements::OwnerReview.gate_applies?(expense)
           endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
@@ -447,11 +331,8 @@ module Admin
         approve_expense(expense)
       end
 
-      # One claim of a bulk override. The hard-block check is re-taken per
-      # claim for the reason the single action takes it: a claim with no bank
-      # details must not get a gate-satisfying override row written for an
-      # approval that never runs, or a later plain approve sails past a gate
-      # nobody cleared.
+      # One claim of a bulk override; never writes the override row while a hard
+      # block remains.
       def override_one(expense, note)
         blocker = approve_blocker(expense)
         return blocker if blocker && blocker != :skipped_awaiting_endorsement
@@ -462,9 +343,8 @@ module Admin
         approve_expense(expense)
       end
 
-      # Skips are named as DATA problems, never as "awaiting owner sign-off":
-      # that is the one thing this action just cleared, so reporting it back
-      # would read as the override having failed.
+      # Skips are named as data problems: the gate is what this action just
+      # cleared, so naming it would read as the override failing.
       def bulk_override_summary(results)
         approved = results.count(:approved)
         skipped = results.size - approved
@@ -473,6 +353,8 @@ module Admin
         "#{parts.join(', ')}."
       end
 
+      # Filtered to Pending, never trusting the posted ids, so a stale selection
+      # can't act on a claim already decided.
       def selected_pending_expenses
         ids = Array(params[:expense_ids]).compact_blank
         return [] if ids.empty?
@@ -480,8 +362,7 @@ module Admin
         store.expenses.select { |e| e.pending? && ids.include?(e.record_id) }
       end
 
-      # Names the owner-gate skips separately from the data-problem skips so
-      # finance isn't told a gated claim was "missing bank/budget/amount".
+      # Owner-gate skips are counted apart from data-problem skips.
       def bulk_approve_summary(results)
         approved = results.count(:approved)
         awaiting = results.count(:skipped_awaiting_endorsement)
@@ -496,15 +377,9 @@ module Admin
         "#{rejected} rejected, #{emailed} producer#{'s' unless emailed == 1} emailed."
       end
 
-      # Persist the card's inline edits before a decision (Approve/Reject/
-      # override), for the "Save Changes" branch of the client unsaved-edits
-      # dialog. Mirrors #save's validation exactly: on a validation failure it
-      # redirects with the error and returns nil, so the caller
-      # (`... = save_edits_before_decision(expense) or return`) aborts the
-      # decision — the edits and the decision stand or fall together, never a
-      # silent half-apply. Returns the updated expense on success. With JS off no
-      # save_changes flag is sent, so the decision keeps today's behaviour (the
-      # dialog is progressive enhancement).
+      # Save Changes in the unsaved-edits dialog: persist the card's edits before
+      # the decision, in the same request. Invalid edits redirect and return nil,
+      # so the edits and the decision stand or fall together.
       def save_edits_before_decision(expense)
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
@@ -517,11 +392,8 @@ module Admin
         apply_edits(expense)
       end
 
-      # Write the card's inline edits, recording whether that just re-opened a
-      # covering owner endorsement — editing the amount or the budget revokes
-      # it (see OwnerReview.endorsement_covers?). Both the plain Save and the
-      # save-then-decide path read the flag, so they cannot drift about how the
-      # claim's sudden return to "awaiting sign-off" is explained.
+      # Writes the card's edits, noting whether that re-opened a covering owner
+      # endorsement (editing the amount or budget revokes it).
       def apply_edits(expense)
         was_endorsed = ::Reimbursements::OwnerReview.gate_applies?(expense) &&
                        ::Reimbursements::OwnerReview.gate_satisfied?(expense)
@@ -533,33 +405,26 @@ module Admin
 
       def save_attrs
         attrs = {
-          # The parsed BigDecimal AmountValidation just approved, not the raw field:
-          # AR would cast "£1,200" to 0 on the decimal column.
+          # The parsed BigDecimal, not the raw field: AR casts "£1,200" to 0.
           amount: ::Reimbursements::AmountValidation.amount(params[:amount]),
           description: params[:description],
           payment_reference: params[:payment_reference],
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence
         }
-        # Only write excl-VAT when a positive value is given: 0 means "not yet
-        # known", so leave the field alone.
+        # An excl-VAT of 0 means "not yet known": leave the field alone.
         excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
         attrs[:amount_excl_vat] = excl_vat if excl_vat
         attrs
       end
 
-      # Keeps the operator on the tab they acted from, AND at the card they
-      # acted on (see #queue_anchor). params[:tab] is passed through verbatim
-      # (not resolve_tab'd) so a redirect with no tab stays a redirect with no
-      # tab, which every existing test and link relies on.
+      # Back to the tab and card acted on. params[:tab] is passed through
+      # verbatim, not resolve_tab'd, so no tab stays no tab.
       def redirect_to_review(flash)
         target = queue_anchor
-        # BOTH, and the query parameter is the one that actually works.
-        # Turbo submits these forms with fetch, which follows the 302 itself
-        # and never transmits a fragment — so `response.url` has none and the
-        # visit lands at the top of the page (measured: main.scrollTop 0 after
-        # approving the fifth card). The fragment is kept because a no-JS
-        # navigation honours it; scroll_to_controller reads `focus`.
+        # BOTH ?focus= and the fragment: Turbo's fetch follows the 302 itself and
+        # drops the fragment, so scroll_to_controller reads focus. A no-JS
+        # navigation honours the fragment.
         redirect_to admin_reimbursements_review_path(tab: params[:tab], focus: target,
                                                      anchor: target),
                     **flash

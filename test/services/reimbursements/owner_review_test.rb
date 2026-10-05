@@ -2,9 +2,7 @@ require "test_helper"
 
 module Reimbursements
   class OwnerReviewTest < ActiveSupport::TestCase
-    # The pure OwnerReview predicates operate on the AR models' public
-    # interface; built unpersisted with the computed record_id/owner_ids pinned
-    # per-instance to isolate the gate logic (endorsements are real AR rows).
+    # Unpersisted models with record_id and owner_ids pinned; endorsements are real rows.
     Person = Reimbursements::Person
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
@@ -70,8 +68,6 @@ module Reimbursements
     end
 
     test "an endorsement no longer covers the claim once its amount is edited" do
-      # Alice endorses a £10 claim; it's then bumped to £2000. The stale sign-off
-      # must NOT keep clearing the gate for the new, higher amount.
       OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
                                endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
                                endorsed_at: Time.current)

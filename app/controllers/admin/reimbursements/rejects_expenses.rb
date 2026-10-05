@@ -1,11 +1,9 @@
 module Admin
   module Reimbursements
     ##
-    # Reject an expense (Pending or Approved) with a reason and best-effort
-    # notify the payee. Shared by the finance Review queue and a budget owner
-    # rejecting a claim on their own budget — same state change, same email, so
-    # the submitter's experience doesn't depend on who rejected it. A send
-    # failure never blocks the rejection (the operator/owner follows up).
+    # Reject a Pending or Approved expense with a reason and email the payee.
+    # Shared by finance Review and a budget owner, so the submitter's experience
+    # does not depend on who rejected it.
     module RejectsExpenses
       extend ActiveSupport::Concern
       include ::ErrorReporting
@@ -22,11 +20,8 @@ module Admin
         notified
       end
 
-      # Send the rejection via Graph, from the send mailbox of THIS CLAIM's cost
-      # centre — not the portal's first centre, which is where every rejection
-      # used to come from whoever it belonged to. Never let a send failure block
-      # the rejection itself: a failed send just returns false so the caller
-      # leaves rejection_notified unstamped.
+      # Sent from the claim's own cost centre's mailbox. A failed send returns
+      # false, leaving rejection_notified unstamped, and never blocks the rejection.
       def notify_rejection(expense, reason)
         email = expense.person&.email
         return false if email.blank?

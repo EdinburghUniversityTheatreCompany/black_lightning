@@ -5,56 +5,34 @@
   - duplicates: array of possible-duplicate expenses, or nil
   - selectable: whether to show the bulk-select checkbox (Pending only; default false)
 %>
-<%# Nil unless the check applies — see ReviewSupport.modulus_result, which owns
-    that rule so this banner and the Review summary cannot disagree. %>
+<%# Nil unless the check applies. ReviewSupport.modulus_result owns that rule,
+    so this banner and the summary agree. %>
 <% modulus = ::Reimbursements::ReviewSupport.modulus_result(expense, modulus_checker) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
-<%# The owner-endorsement gate is a distinct, overridable blocking reason (see
-    OwnerReview) — kept out of ReviewSupport so that stays pure/AR-free. %>
+<%# The owner gate stays out of ReviewSupport, which is AR-free. %>
 <% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
 <% endorsement = @endorsements_by_expense&.[](expense.record_id) %>
 <% endorsement_covers = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
 <% owners = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id) }.presence %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
-<%# The finance override control is drawn only when the owner gate is the ONLY
-    thing in the way (see the Approve/Reject block below). A card blocked on
-    something else promised an override that was not on the page. %>
+<%# The override is offered only when the owner gate is the ONLY blocker. %>
 <% override_offered = allow_approve && owner_gate_unmet && attention[:blocking].empty? %>
 
-<%# review-decision guards the Approve/Reject/override buttons against dropping
-    unsaved edits typed into the Save form below (which is a separate <form>). See
-    review_decision_controller.js. Progressive enhancement: with JS off the
-    buttons keep their server default. %>
-<%# id + scroll-mt: every Review action redirects back with #expense-<id>, so
-    the operator lands on the card they acted on rather than at the top of an
-    unpaginated queue. The margin clears the admin layout's sticky header,
-    which the browser would otherwise park the card underneath. %>
+<%# review-decision stops the decision buttons dropping unsaved edits in the
+    separate Save form. id: every Review action redirects back to it; scroll-mt
+    clears the sticky header. %>
 <div id="expense-<%= expense.record_id %>" class="mb-3 scroll-mt-20 rounded border border-gray-200 p-3"
      data-controller="review-decision">
-  <%# Claim details on the left, the receipt beside them on the right: checking a
-      claim means reading a figure on the document against the figure in the form,
-      dozens of times in a sitting, which two browser tabs make needlessly hard.
-      The columns stack on narrow screens, where side by side would squeeze both.
-
-      Only a claim that HAS a receipt gets the second column. With no receipt
-      there is no document to read beside the form, so a side column would
-      reserve two fifths of the card, stretched to the full height of the
-      details, for an attach button — and receiptless claims sort into Needs
-      attention, i.e. the bottom of the queue, which is where that empty block
-      was showing up. items-start keeps the columns at their own heights so the
-      divider ends with the receipts rather than ruling a line down blank space.
-
-      The content below is deliberately NOT re-indented into these two wrappers:
-      two levels of indentation would rewrite every line of the card for no
-      behaviour change and bury the next real diff. %>
+  <%# Details beside the receipt, so a figure on the document can be read against
+      the form. Only a claim with receipts gets the second column; items-start
+      stops the divider running down blank space. %>
   <% has_receipts = expense.receipts.any? %>
   <div class="flex flex-col gap-4<%= " lg:flex-row lg:items-start" if has_receipts %>">
   <div class="min-w-0 lg:flex-1">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
     <% if selectable %>
-      <%# data-flagged feeds the bulk toolbar's Approve confirm, which warns
-          how many selected cards are flagged before a bulk approval fires. %>
+      <%# data-flagged feeds the bulk Approve confirm's flagged count. %>
       <%= check_box_tag "expense_ids[]", expense.record_id, false,
                         id: "select_#{expense.record_id}", form: "bulk-review-form",
                         "aria-label": "Select ##{expense.auto_number} for bulk actions",
@@ -64,9 +42,7 @@
     <% end %>
     <span class="font-medium">
       #<%= expense.auto_number %>:
-      <%# The payee's own registry row, where bank details and verification are
-          fixed — the weekly route into People was a card telling you to go
-          there in plain text. %>
+      <%# The payee's People row, where bank details are fixed. %>
       <% if expense.person&.record_id.present? %>
         <%= link_to expense.person.name.presence || "(no name)",
                     admin_reimbursements_people_path(person: expense.person.record_id,
@@ -77,20 +53,14 @@
       <% end %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
     </span>
-    <%# Which kind of claim this is. Without it an Invoice — EUSA paying a
-        supplier direct — renders exactly like a reimbursement. %>
+    <%# Without it an Invoice renders exactly like a reimbursement. %>
     <%= render BadgeComponent.new(type: :secondary, pill: true).with_content(expense.expense_type) %>
     <% if expense.international? %>
-      <%# The foreign figure comes first: it is what the submitter entered and
-          what EUSA's form will say. The GBP amount beside it is finance's own
-          estimate, and is blank until they enter it. The label follows the
-          claim's own TYPE — an international reimbursement is not an invoice. %>
+      <%# The foreign figure first: it is what EUSA's form says. The GBP amount is
+          finance's estimate, blank until entered. %>
       <span><%= expense.expense_type == Reimbursements::Expense::TYPE_INVOICE ? "Invoice" : "Claimed" %>:
         <strong><%= reimbursements_payment_amount(expense) %></strong></span>
       <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong> GBP</span>
-      <%# The IBAN/Missing badge the helper already renders for this rail. Left
-          off, every international card showed no bank signal at all — the one
-          thing this queue exists to check. %>
       <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
       <%= render BadgeComponent.new(type: :info, pill: true).with_content("International") %>
     <% else %>
@@ -103,8 +73,6 @@
       <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <% end %>
     <span>Receipts: <%= expense.receipt_count %></span>
-    <%# How long the producer has been waiting: the first thing asked of a claim
-        in the queue, and what the nightly stale-Pending reminder chases on. %>
     <span class="text-gray-500">Submitted <%= reimbursements_date(expense.submitted_at) %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
     <% if attention[:blocking].any? %>
@@ -114,8 +82,6 @@
     <% elsif attention[:advisory].any? %>
       <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Check before approving") %>
     <% end %>
-    <%# Positive confirmation the owner gate is met, so finance can see a claim
-        WAS endorsed (and, after an edit re-opens it, that it no longer is). %>
     <% if endorsement_covers && endorsement.owner_endorsement? %>
       <%= render BadgeComponent.new(type: :success, pill: true)
             .with_content("Endorsed by #{@people_by_id&.[](endorsement.endorsed_by_person_id)&.name || 'an owner'}") %>
@@ -124,9 +90,6 @@
     <% end %>
   </div>
 
-  <%# Reasons inline (not behind a click) so an operator scanning the queue
-      reads them at a glance, with blocked (fix-first) clearly separated from
-      advisory (approval still proceeds). %>
   <% if attention[:blocking].any? || attention[:advisory].any? || owner_gate_unmet %>
     <div class="mt-2 flex flex-col gap-1 text-sm">
       <% if attention[:blocking].any? %>
@@ -141,8 +104,6 @@
           (blocks approval until signed off or overridden).
           <%= reimbursements_waiting_since(expense.submitted_at) %>
           <% if owners %>
-            <%# Each owner's address as a mailto, so chasing one is a click
-                rather than a search through People. %>
             <% owner_links = owners.map do |owner|
                  label = owner.name.presence || owner.email.presence || "an owner"
                  owner.email.present? ? link_to(label, "mailto:#{owner.email}", class: "underline") : label
@@ -154,9 +115,6 @@
                         class: "underline" %>
             budget and can sign off from My Budgets.
           <% end %>
-          <%# The override is only drawn when nothing else blocks approval, so
-              promising it otherwise sent the operator looking for a button
-              that is not there. %>
           <% if override_offered %>
             Or use the finance override below.
           <% elsif attention[:blocking].any? %>
@@ -174,7 +132,6 @@
     </div>
   <% end %>
 
-  <%# --- Warnings --- %>
   <% if expense.payee_override? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
@@ -192,8 +149,6 @@
     <% end %></div>
   <% end %>
 
-  <%# The two places either fix can be made, as links rather than as the names
-      of screens to go and find. %>
   <% fix_links = capture do %>
     Fix the <%= link_to "payee override", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                         class: "underline" %>
@@ -234,7 +189,6 @@
   <% if duplicates.present? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Possible duplicate of
-      <%# The named claim, opened where it can be compared and fixed. %>
       <%= safe_join(duplicates.map { |d|
             link_to("##{d.auto_number}", edit_admin_reimbursements_expense_edit_path(d.record_id),
                     class: "underline") }, ", ") %>:
@@ -242,13 +196,10 @@
     <% end %></div>
   <% end %>
 
-  <%# --- Edit (Save) --- %>
   <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
                 method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2",
                 data: { review_decision_target: "editForm" } do %>
-    <%# The fx-rate controller shows the rate the typed pair implies, so the
-        arithmetic finance was doing in their head is on the form. It knows no
-        real rate and claims none — see the controller. %>
+    <%# fx-rate shows the rate the typed pair implies; it knows no real rate. %>
     <div <%= tag.attributes(reimbursements_fx_rate_data(expense)) %>>
       <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: FormStyles::LABEL %>
       <% if expense.international? %>
@@ -267,9 +218,6 @@
       <% end %>
     </div>
     <div>
-      <%# A foreign invoice carries no reclaimable UK VAT, so ex-VAT follows the
-          gross automatically and asking for it would invite a deduction nobody
-          can claim. %>
       <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: FormStyles::LABEL %>
       <%= number_field_tag :amount_excl_vat, reimbursements_amount_value(expense.amount_excl_vat), step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
                            class: input_classes %>
@@ -317,22 +265,16 @@
     </div>
   <% end %>
 
-  <%# --- Approve / Reject --- %>
   <div class="mt-3 flex flex-wrap items-start gap-2">
     <% if allow_approve %>
       <% if attention[:blocking].any? %>
-        <%# Blocking reasons are a hard server-side refusal, so a clickable
-            "Approve anyway?" would only bounce — disable it and let the red
-            badge + inline reasons say why. %>
+        <%# The server refuses blocking reasons, so a clickable "Approve anyway?"
+            would only bounce. %>
         <%= button_to "Approve", "#", method: :patch, disabled: true,
                       "aria-label": "Approve ##{expense.auto_number} (blocked: #{attention[:blocking].join(', ')})",
                       class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
       <% elsif owner_gate_unmet %>
-        <%# The owner gate is the only hard block. Finance can't plain-approve,
-            but CAN override the owner sign-off — recorded as who overrode, with
-            an optional reason. The confirm states the consequence and names any
-            advisory flags, so overriding a flagged claim keeps the same misclick
-            safeguard the normal Approve has. Use only when no owner can act. %>
+        <%# The confirm names any advisory flags, as plain Approve's does. %>
         <% override_confirm = "Approve ##{expense.auto_number} without an owner's sign-off? " \
              "This is recorded against your account. Use it only when no owner can sign off (e.g. no portal account)."
            override_confirm += " It is also flagged: #{attention[:advisory].join('; ')}." if attention[:advisory].any? %>
@@ -348,11 +290,8 @@
                          class: btn_classes(:warning, :sm) %>
         <% end %>
       <% else %>
-        <%# An advisory-only card gets a confirm NAMING its reasons — approval
-            commits real money to a BACS batch and advisory reasons (over
-            budget, no receipt, possible duplicate) don't block server-side, so
-            this dialog is the only thing between a misclick and an approved
-            flagged expense. Clean cards keep one-click approval. %>
+        <%# Advisory reasons don't block server-side, so this confirm is the only
+            guard between a misclick and an approved flagged claim. %>
         <%= button_to "Approve",
                       admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
                       method: :patch, "aria-label": "Approve ##{expense.auto_number}",
@@ -365,12 +304,9 @@
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
                   method: :patch, class: "flex items-center gap-2",
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
-      <%# required, so the browser stops a blank reason BEFORE the "this can't
-          be undone" confirm: agreeing to something irreversible and then being
-          told the submit was refused is the wrong order. The field is always
-          visible, so a required attribute here can never be the unreachable
-          kind that silently breaks a form. The server check stays — it is the
-          one that holds with JavaScript off. %>
+      <%# required, so a blank reason stops BEFORE the irreversible confirm. The
+          field is always visible, so it can't be the hidden kind that breaks a
+          form; the server check holds with JavaScript off. %>
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection", required: true,
                          "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
                          class: input_classes(width: nil) %>
@@ -378,13 +314,11 @@
                      data: { action: "review-decision#guard", decision_verb: "rejecting" },
                      class: btn_classes(:danger, :sm) %>
     <% end %>
-    <%# Full finance edit (any status, incl. payee overrides). %>
     <%= link_to "Edit (any status)", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                 "aria-label": "Edit ##{expense.auto_number} (any status)", class: btn_classes(:secondary, :sm) %>
   </div>
   </div>
 
-  <%# --- Receipts (opened on demand beside the details; attach/detach inline) --- %>
   <div class="min-w-0 border-t border-gray-200 pt-3<%= " lg:w-2/5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4" if has_receipts %>">
     <p class="text-sm font-medium">Receipts</p>
     <div class="mt-1">
@@ -417,16 +351,13 @@
   </div>
   </div>
 
-  <%# Unsaved-edits confirmation: shown by review_decision_controller only when
-      the Save form above has unsaved changes and a decision button is clicked.
-      The title text is set from the clicked button's verb (approving/rejecting). %>
+  <%# Shown by review_decision_controller when a decision is clicked with unsaved
+      edits; the title takes the button's verb. %>
   <dialog data-review-decision-target="dialog"
           data-action="click->review-decision#backdropClose close->review-decision#closed"
           aria-labelledby="unsaved-edits-title-<%= expense.record_id %>"
-          <%# m-auto is load-bearing: Tailwind's preflight sets margin:0 on
-              every element, which defeats the UA stylesheet's dialog:modal
-              { margin: auto } and parked this dialog in the viewport's top
-              left corner, over the sidebar. %>
+          <%# m-auto: Tailwind's preflight zeroes the margin the UA stylesheet
+              centres a modal dialog with. %>
           class="m-auto rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
     <div class="max-w-sm p-4">
       <h2 class="text-base font-medium" id="unsaved-edits-title-<%= expense.record_id %>"

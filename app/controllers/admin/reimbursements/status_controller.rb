@@ -1,21 +1,9 @@
 module Admin
   module Reimbursements
     ##
-    # Section-wide health dashboard for the reimbursements integrations, widening
-    # the Settings per-cost-centre access-check into one view of the external
-    # services the finance flows depend on: Microsoft Graph (email drafts +
-    # SharePoint).
-    #
-    # The live probes are ON-DEMAND (a "Run checks" button POSTs to #run), never
-    # on page load, so an idle visit doesn't wait on Microsoft. Each probe is
-    # rescued independently so one failing service never 500s the page — it just
-    # renders a failed row with the message.
-    #
-    # The last-nightly-run date per cost centre is a plain DB read (no external
-    # call), so it is always shown, on both #show and #run.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Health dashboard for the reimbursements integrations: the last nightly run
+    # per cost centre, the send log, and a Microsoft Graph probe that runs on
+    # demand (#run), never on page load.
     class StatusController < FinanceController
       # Injection seam for tests: the app-only Graph client (token probe).
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
@@ -28,8 +16,6 @@ module Admin
       def show
       end
 
-      # Run the live probes and render the results (a Turbo-stream update of the
-      # results region, or a full re-render for a non-Turbo request).
       def run
         @checks = run_checks
         respond_to do |format|
@@ -40,9 +26,7 @@ module Admin
 
       private
 
-      # How many recent sends the page lists. Enough to cover a run-day or two
-      # of reminders without turning a health dashboard into a mail archive;
-      # the search below is how you reach further back.
+      # A run-day or two of reminders; the recipient search reaches further back.
       SEND_LOG_LIMIT = 50
 
       def load_cost_centres
@@ -51,13 +35,7 @@ module Admin
         load_send_log
       end
 
-      # What the portal has emailed, and to whom.
-      #
-      # The page could say whether Graph was reachable and when each centre's
-      # nightly last completed, and nothing about what was actually sent — so
-      # "did this person get their reminder?" had no answer short of asking
-      # them. ?recipient= searches one address, which is the form the question
-      # is always asked in.
+      # ?recipient= searches one address: "did this person get their reminder?"
       def load_send_log
         @recipient_query = params[:recipient].to_s.strip
         @sends =
@@ -69,14 +47,12 @@ module Admin
             ::Reimbursements::NotificationLog.recent(limit: SEND_LOG_LIMIT,
                                                      cost_centre: selected_cost_centre).to_a
           end
-        # Per-run counts: one line per day and kind, which is how the nightly
-        # actually happens — a run-day sends a batch of one kind to several
-        # people, and the count is the thing that looks wrong when it is wrong.
+        # One line per day and kind: a run-day sends one kind to several people,
+        # and the count is what looks wrong when it is wrong.
         @send_counts = @sends.group_by { |log| [ log.sent_at.to_date, log.kind ] }
                              .transform_values(&:size)
                              .sort_by { |(date, kind), _| [ date, kind ] }.reverse
-        # Printed on the card, so a stretch with no rows reads as before the log
-        # rather than as a quiet week.
+        # Printed, so an empty stretch reads as before the log, not a quiet week.
         @send_log_since = ::Reimbursements::NotificationLog.minimum(:sent_at)
         @send_log_limit = SEND_LOG_LIMIT
       end
@@ -85,11 +61,8 @@ module Admin
         @graph ||= graph_builder.call
       end
 
-      # Graph is the only integration to probe today. This stays an ARRAY so
-      # adding the next one is a one-line change, and each probe is rescued on
-      # its own so one dead service renders a failed row rather than 500ing the
-      # page. (That explanation used to sit in the view's visible copy — a code
-      # comment rendered to finance users; keep it here.)
+      # Each probe rescues its own failure, so a dead service renders a failed
+      # row rather than a 500.
       def run_checks
         [ graph_check ]
       end
