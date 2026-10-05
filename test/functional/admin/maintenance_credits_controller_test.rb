@@ -7,7 +7,6 @@ class Admin::MaintenanceCreditsControllerTest < ActionController::TestCase
 
     sign_in users(:admin)
 
-    # You must update these to not directly copy the fixture but put in original data.
     @params = {
       maintenance_credit: { maintenance_session_id: @maintenance_session.id, user_id: @maintenance_credit.user_id }
     }

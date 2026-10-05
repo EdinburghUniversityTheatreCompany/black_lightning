@@ -1,7 +1,7 @@
 ##
 # Represents staffing that has many jobs. Users sign up for the Staffing_Job, not the Staffing.
 #
-# A StaffingReminderJob will be scheduled to send out reminders, and updated whenever the staffing is saved.
+# Each save (re)schedules a StaffingReminderJob.
 #
 # == Schema Information
 #
@@ -26,7 +26,6 @@
 #  index_admin_staffings_on_start_time  (start_time)
 #
 class Admin::Staffing < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :show_title, length: { maximum: 255 }
   validates :slug, length: { maximum: 255 }
   validates :scheduled_job_id, length: { maximum: 255 }
@@ -65,14 +64,10 @@ class Admin::Staffing < ApplicationRecord
 
   private
 
-  ##
-  # Remove scheduled jobs when the Staffing is deleted to prevent jobs from failing.
-  ##
+  # A reminder left queued for a deleted staffing would fail.
   def reminder_cleanup
-    # Cancel ActiveJob if exists
     if scheduled_job_id.present?
       begin
-        # Try to cancel the job in Solid Queue
         job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
         job&.destroy
       rescue => e
@@ -90,10 +85,8 @@ class Admin::Staffing < ApplicationRecord
     # Don't schedule a new job if we're just marking the current job as executed
     return if saved_change_to_reminder_job_executed? && reminder_job_executed?
 
-    # Cancel existing job if present
     if scheduled_job_id.present?
       begin
-        # Try to cancel the job in Solid Queue
         job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
         job&.destroy
       rescue => e
@@ -101,16 +94,15 @@ class Admin::Staffing < ApplicationRecord
       end
     end
 
-    # Schedule new reminder job
     job = StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
 
-    # Update attributes immediately since we're in an after_save callback
+    # update_columns: a save here would run this callback again.
     self.update_columns(
       scheduled_job_id: job.job_id,
       reminder_job_executed: false
     )
 
-    # Reset individual reminder flags so they get re-sent
+    # Every reminder goes out again for the new time.
     staffing_jobs.update_all(reminder_sent_at: nil)
   end
 

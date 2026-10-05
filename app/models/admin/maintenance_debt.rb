@@ -54,12 +54,10 @@ class Admin::MaintenanceDebt < ApplicationRecord
   end
 
   # A maintenance debt is fulfilled if it is either: attended, converted, or forgiven. Otherwise, it is not fulfilled.
-  # Or phrased differently, if the state is normal and there is no maintenance credit, it is not fulfilled yet.
   def self.unfulfilled
     where(state: 0).where.missing(:maintenance_credit)
   end
 
-  # Optimized scope for debt calculations - combines unfulfilled check with date filter
   def self.unfulfilled_before_date(on_date)
     where(state: :normal)
       .where.missing(:maintenance_credit)
@@ -134,13 +132,10 @@ class Admin::MaintenanceDebt < ApplicationRecord
   def associate_with_credit(skip_check = false)
     relevant_keys = previous_changes.keys.excluding("created_at", "updated_at")
 
-    # Clear the credit if the state has changed, just in case.
-    # Otherwise, setting a debt with an attached credit to forgiven or converted
-    # will keep the credit attached.
+    # A forgiven or converted debt must not keep its credit.
     update(maintenance_credit: nil) if relevant_keys.include?("state")
 
-    # Only reallocate if we are not checking for changes or the changes are not just the credit.
-    # if we keep reallocating when the credit changes, we will end up with a loop.
+    # Reallocating on a credit-only change would loop: reallocation itself changes the credit.
     user.reallocate_maintenance_debts if skip_check || relevant_keys != [ "maintenance_credit_id" ]
   end
 end

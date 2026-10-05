@@ -95,7 +95,6 @@ class Admin::StaffingDebt < ApplicationRecord
     where(admin_staffing_job: nil, state: :normal)
   end
 
-  # Optimized scope for debt calculations - combines unfulfilled check with date filter
   def self.unfulfilled_before_date(on_date)
     where(admin_staffing_job: nil, state: :normal)
       .where("due_by < ?", on_date)

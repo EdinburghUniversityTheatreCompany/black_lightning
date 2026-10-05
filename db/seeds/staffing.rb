@@ -1,7 +1,6 @@
 alice, ben, chloe, david, emma, finn, grace, harry, isla =
   seed_demo_users.values_at(:alice, :ben, :chloe, :david, :emma, :finn, :grace, :harry, :isla)
 
-# ── Staffing Templates ─────────────────────────────────────────────────────────
 mainterm_template = Admin::StaffingTemplate.find_or_initialize_by(name: "Standard Mainterm")
 if mainterm_template.new_record?
   mainterm_template.save!
@@ -23,7 +22,6 @@ if lunchtime_template.new_record?
   Admin::StaffingJob.create!(name: "Tech Operator", staffable: lunchtime_template)
 end
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
 def seed_staffing(slug:, show_title:, start_time:, end_time:, jobs:)
   return if Admin::Staffing.find_by(slug: slug)
 
@@ -39,7 +37,6 @@ def seed_staffing(slug:, show_title:, start_time:, end_time:, jobs:)
   end
 end
 
-# ── Season 1: Semester 1 2023-24 — Hamlet ─────────────────────────────────────
 seed_staffing(
   slug: "hamlet-opening-night-staffing",
   show_title: "Hamlet - Opening Night",
@@ -72,7 +69,6 @@ seed_staffing(
   ]
 )
 
-# ── Season 2: Semester 2 2023-24 — Cabaret ────────────────────────────────────
 seed_staffing(
   slug: "cabaret-preview-night-staffing",
   show_title: "Cabaret - Preview Night",
@@ -118,7 +114,6 @@ seed_staffing(
   ]
 )
 
-# ── Season 3: Semester 1 2024-25 — A Midsummer Night's Dream ──────────────────
 seed_staffing(
   slug: "midsummer-opening-night-staffing",
   show_title: "A Midsummer Night's Dream - Opening Night",
@@ -164,7 +159,6 @@ seed_staffing(
   ]
 )
 
-# ── Season 4: Semester 2 2024-25 — Rent ───────────────────────────────────────
 if Admin::Staffing.find_by(slug: "rent-preview-night-staffing").nil?
   staffing = Admin::Staffing.create!(
     show_title: "Rent - Preview Night",
@@ -207,7 +201,6 @@ if Admin::Staffing.find_by(slug: "new-writing-festival-2025-staffing").nil?
   Admin::StaffingJob.create!(name: "Tech Operator", staffable: staffing3)
 end
 
-# ── Upcoming: Semester 1 2025-26 (future placeholder) ─────────────────────────
 seed_staffing(
   slug: "semester-1-2025-26-mainterm-opening-staffing",
   show_title: "Semester 1 2025-26 Mainterm - Opening Night",

@@ -20,7 +20,6 @@
   <% end %>
 <% end %>
 
-<%# Exact matches (by ID and email) %>
 <% if @exact_matches.any? %>
   <%= render CardComponent.new(title: "Matched Users (#{@exact_matches.size})", variant: :success, flush: true) do %>
     <table class="table table-sm table-hover mb-0">
@@ -62,7 +61,6 @@
   <% end %>
 <% end %>
 
-<%# Fuzzy matches %>
 <% if @fuzzy_matches.any? %>
   <%= render CardComponent.new(title: "Possible Matches. Review Manually (#{@fuzzy_matches.size})", variant: :warning, flush: true) do |c| %>
     <% c.with_tools do %>
@@ -118,7 +116,6 @@
   <% end %>
 <% end %>
 
-<%# Unmatched %>
 <% if @unmatched.any? %>
   <%= render CardComponent.new(title: "Not Found (#{@unmatched.size})", variant: :secondary, flush: true) do |c| %>
     <% c.with_tools do %>

@@ -1,7 +1,4 @@
 class StaffingMailer < ApplicationMailer
-  ##
-  # Sends a calendar invite (.ics attachment) for a staffing job.
-  ##
   def calendar_invite(job, method:, recipient: nil)
     @job      = job
     @staffing = job.staffable
@@ -22,10 +19,7 @@ class StaffingMailer < ApplicationMailer
     )
   end
 
-  ##
-  # Sends a calendar cancellation without needing the job record.
-  # Used by after_destroy callbacks where the record may be gone by the time the job runs.
-  ##
+  # Takes no job: after_destroy enqueues it, and the record may be gone by the time it runs.
   def calendar_cancellation(recipient:, staffing:, job_name:, ics_data:)
     @user     = recipient
     @staffing = staffing

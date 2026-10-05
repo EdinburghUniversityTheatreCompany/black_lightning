@@ -11,18 +11,13 @@ cabaret = Show.find_by(slug: "cabaret")
 rent    = Show.find_by(slug: "rent")
 midsummer = Show.find_by(slug: "a-midsummer-nights-dream")
 
-# ── Staffing Debts ─────────────────────────────────────────────────────────────
 staffing_debts = [
-  # Past debts that have been fulfilled (forgiven or expired)
   { user: alice,  show: hamlet,  due_by: Date.new(2023, 10, 21), state: :forgiven, converted_from_maintenance_debt: false },
   { user: ben,    show: cabaret, due_by: Date.new(2024, 2, 17),  state: :forgiven, converted_from_maintenance_debt: false },
-  # Past debt causing debt (due date passed, no job assigned)
   { user: finn,   show: midsummer, due_by: Date.new(2024, 10, 20), state: :normal, converted_from_maintenance_debt: false },
-  # Upcoming debts (not yet due)
   { user: chloe,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
   { user: david,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
   { user: harry,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
-  # Converted from a maintenance debt
   { user: grace,  show: rent, due_by: Date.new(2025, 9, 1), state: :normal, converted_from_maintenance_debt: true }
 ]
 
@@ -33,18 +28,13 @@ staffing_debts.each do |attrs|
   Admin::StaffingDebt.create!(attrs)
 end
 
-# ── Maintenance Debts ──────────────────────────────────────────────────────────
 maintenance_debts = [
-  # Fulfilled debt (linked to an credit)
   { user: alice,  show: hamlet,    due_by: Date.new(2023, 12, 1),  state: :normal, converted_from_staffing_debt: false },
   { user: ben,    show: cabaret,   due_by: Date.new(2024, 4, 1),   state: :forgiven, converted_from_staffing_debt: false },
-  # Causing debt (overdue, no credit)
   { user: david,  show: midsummer, due_by: Date.new(2024, 12, 1),  state: :normal, converted_from_staffing_debt: false },
-  # Upcoming
   { user: chloe,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
   { user: finn,   show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
   { user: harry,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
-  # Converted from a staffing debt
   { user: grace,  show: rent,      due_by: Date.new(2025, 10, 1),  state: :normal, converted_from_staffing_debt: true }
 ]
 
@@ -54,7 +44,6 @@ maintenance_debts.each do |attrs|
 
   debt = Admin::MaintenanceDebt.create!(attrs)
 
-  # Link the fulfilled debt for alice/hamlet to an credit she has
   if attrs[:user] == alice && attrs[:show] == hamlet
     credit = MaintenanceCredit.find_by(user: alice)
     debt.update_column(:maintenance_credit_id, credit.id) if credit

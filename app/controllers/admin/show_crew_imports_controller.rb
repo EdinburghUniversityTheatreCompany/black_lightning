@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk importing show crew (users + team memberships).
-# Creates user accounts and adds them to an event's team.
-##
+# Bulk-imports an event's crew: creates any missing users and adds everyone to the team.
 class Admin::ShowCrewImportsController < AdminController
   include Importable
 
@@ -33,7 +30,6 @@ class Admin::ShowCrewImportsController < AdminController
       return
     end
 
-    # Check for existing team members and categorize them
     @existing_team_members = categorize_existing_team_members(@import)
 
     # Store in cache to avoid session cookie overflow (4KB limit)
@@ -64,7 +60,6 @@ class Admin::ShowCrewImportsController < AdminController
 
     results = { created: 0, added: 0, updated: 0, skipped: 0 }
 
-    # Process new/matched users
     all_items = categorized.values.flatten
     all_items.each do |item|
       index = item["index"].to_s
@@ -78,10 +73,8 @@ class Admin::ShowCrewImportsController < AdminController
         new_user.send_welcome_email
         new_user
       when "link"
-        # Use existing user (single-match bucket)
         User.find_by(id: item["existing_user_id"])
       when /\Alink_(\d+)\z/
-        # Use selected user from multi-candidate fuzzy match
         User.find_by(id: $1.to_i)
       when "skip", nil
         results[:skipped] += 1
@@ -92,14 +85,12 @@ class Admin::ShowCrewImportsController < AdminController
 
       next unless user
 
-      # Add to team if position is provided
       if row[:position].present?
         add_or_update_team_member(user, row[:position])
         results[:added] += 1
       end
     end
 
-    # Process existing team members
     existing_team_members.each do |user_id, data|
       user_id = user_id.to_i
       action = existing_actions[user_id.to_s]
@@ -138,10 +129,8 @@ class Admin::ShowCrewImportsController < AdminController
   def categorize_existing_team_members(import)
     existing = {}
 
-    # Check each imported row to see if the user is already on the team
     import.categorized.each do |bucket, items|
       items.each do |item|
-        # Collect users from both single-match and multi-match buckets
         users = item[:existing_users] || [ item[:existing_user] ].compact
         users.each do |user|
           team_member = @event.team_members.find_by(user_id: user.id)
@@ -165,7 +154,6 @@ class Admin::ShowCrewImportsController < AdminController
     existing = @event.team_members.find_by(user_id: user.id)
 
     if existing
-      # User already on team - this shouldn't happen here, but just in case
       existing.update!(position: position)
     else
       @event.team_members.create!(user: user, position: position)

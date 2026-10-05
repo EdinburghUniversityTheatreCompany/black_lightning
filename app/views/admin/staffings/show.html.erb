@@ -11,7 +11,6 @@
 
 <%= render('phone_number_warning') %>
 
-<%# Jobs table %>
 <%# Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
 <% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
 

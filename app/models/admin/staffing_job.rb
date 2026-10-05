@@ -24,7 +24,6 @@
 #  index_admin_staffing_jobs_on_user_id           (user_id)
 #
 class Admin::StaffingJob < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :staffable_type, length: { maximum: 255 }
   validates :name, presence: true
@@ -35,7 +34,7 @@ class Admin::StaffingJob < ApplicationRecord
   belongs_to :user, optional: true
   has_one :staffing_debt, class_name: "Admin::StaffingDebt", foreign_key: "admin_staffing_job_id"
 
-  after_save :send_calendar_invite_email  # must run before associate_with_debt (which calls reload, clearing saved_changes)
+  after_save :send_calendar_invite_email # before associate_with_debt, whose reload clears saved_changes
   after_save :associate_with_debt
   after_destroy :send_calendar_cancellation_email
   after_destroy :dissassociate_from_debt
@@ -51,10 +50,6 @@ class Admin::StaffingJob < ApplicationRecord
     staffable.end_time < DateTime.current
   end
 
-  ##
-  # Build an Icalendar::Calendar for this job.
-  # method: :request for new/updated invite, :cancel for cancellation.
-  ##
   def ical_calendar(method:)
     require "icalendar"
     require "icalendar/tzinfo"
@@ -87,8 +82,6 @@ class Admin::StaffingJob < ApplicationRecord
 
   private
 
-  # Build the Icalendar::Event describing this staffing job.
-  # Callers must already have required "icalendar".
   def build_ical_event
     event = Icalendar::Event.new
     event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
@@ -103,13 +96,12 @@ class Admin::StaffingJob < ApplicationRecord
   end
 
   def send_calendar_invite_email
-    # Skip for template-based jobs — they have no real date/time
+    # Skip template jobs: they have no real date or time.
     return if staffable.is_a?(Admin::StaffingTemplate)
 
     if saved_change_to_user_id?
       old_user_id, new_user_id = saved_change_to_user_id
 
-      # Send cancellation to the user who was removed
       if old_user_id.present?
         old_user = User.find(old_user_id)
         bump_calendar_sequence
@@ -123,7 +115,6 @@ class Admin::StaffingJob < ApplicationRecord
         ).deliver_later
       end
 
-      # Send invite to the newly assigned user
       if new_user_id.present?
         StaffingMailer.calendar_invite(self, method: :request).deliver_later
       end
@@ -153,7 +144,7 @@ class Admin::StaffingJob < ApplicationRecord
   def bump_calendar_sequence
     new_seq = calendar_sequence + 1
     unless destroyed?
-      update_column(:calendar_sequence, new_seq)  # bypasses callbacks
+      update_column(:calendar_sequence, new_seq)
       self.calendar_sequence = new_seq
     end
     new_seq

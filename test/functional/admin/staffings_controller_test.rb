@@ -33,7 +33,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should paginate archived staffings by slug" do
-    # Create 12 past staffings with unique show titles (each gets a unique slug).
     12.times do |i|
       FactoryBot.create(:staffing, staffed_job_count: 1, show_title: "Archived Show #{i}", start_time: DateTime.current.advance(days: -(i + 1)))
     end
@@ -41,11 +40,9 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    # With 10 per page, first page should have 10 slug groups.
     assert_equal 10, assigns(:archived_staffings).size
     assert_not_nil assigns(:archived_staffings_pagination)
 
-    # Second page should have the remaining 2.
     get :index, params: { page: 2 }
     assert_response :success
     assert_equal 2, assigns(:archived_staffings).size
@@ -339,8 +336,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_redirected_to admin_staffing_path(job.staffable)
   end
 
-  # Live-search fetch: turbo_stream + q[...] params → the results fragment (staffings updates its
-  # upcoming-/archived-staffings containers).
   test "index responds to a turbo_stream request with q params using the results fragment" do
     get :index, params: { q: { show_title_cont: "anything" } }, format: :turbo_stream
 
@@ -349,9 +344,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_match(/<turbo-stream/, response.body)
   end
 
-  # A paramless turbo_stream request (e.g. a Turbo form-submission redirect, since GenericController
-  # #destroy redirects to :index) must render the full HTML page, not the fragment. See
-  # ApplicationController#render_index_stream_or_full.
+  # A Turbo form-submission redirect arrives as a paramless turbo_stream request: render the full page.
   test "index serves a full HTML page for a paramless turbo_stream request" do
     get :index, format: :turbo_stream
 

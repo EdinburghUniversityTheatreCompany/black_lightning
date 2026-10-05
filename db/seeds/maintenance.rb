@@ -20,7 +20,7 @@ sessions_with_attendees = [
   [ Date.new(2024, 11, 9),  [ alice, ben, chloe, finn ] ],
   [ Date.new(2024, 12, 7),  [ emma, grace, harry, isla ] ],
 
-  # Semester 2 2024-25 (already partially seeded, use find_or_create_by throughout)
+  # Semester 2 2024-25
   [ Date.new(2025, 1, 18),  [ alice, ben, david, finn ] ],
   [ Date.new(2025, 2, 22),  [ chloe, emma, grace, harry, isla ] ],
   [ Date.new(2025, 3, 29),  [ alice, ben, chloe, david, finn ] ]

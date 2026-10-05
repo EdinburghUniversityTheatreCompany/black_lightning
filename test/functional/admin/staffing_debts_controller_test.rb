@@ -19,9 +19,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     assert_not assigns(:is_specific_user)
   end
 
-  # The "Show Fulfilled" checkbox reflects the cookie-remembered state via the
-  # @show_fulfilled ivar, NOT by the controller writing the value back into the
-  # live request params (which it used to do).
+  # The checkbox reads @show_fulfilled; the controller must not write the cookie back into params.
   test "show_fulfilled checkbox reflects the cookie without the controller mutating params" do
     FactoryBot.create_list(:staffing_debt, 3)
 

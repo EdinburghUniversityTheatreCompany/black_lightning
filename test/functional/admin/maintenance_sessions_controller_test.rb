@@ -99,7 +99,7 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_equal({ @user.id => 2 }, assigns(:credit_counts))
-    # The attendee appears once (deduped), not once per credit.
+    # Listed once, not once per credit.
     assert_equal 1, assigns(:users).to_a.count { |u| u.id == @user.id }
   end
 
@@ -126,21 +126,18 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
     credit_count = -> { MaintenanceCredit.where(user: @user, maintenance_session: session).count }
     assert_equal 3, credit_count.call
 
-    # Increase 3 -> 5 (builds 2)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
       maintenance_credits_attributes: { "0" => { user_id: @user.id, quantity: "5" } }
     } }
     assert_equal 5, credit_count.call
 
-    # Decrease 5 -> 1 (destroys 4)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
       maintenance_credits_attributes: { "0" => { user_id: @user.id, quantity: "1" } }
     } }
     assert_equal 1, credit_count.call
 
-    # Remove the row entirely (destroys all)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
       maintenance_credits_attributes: { "0" => { user_id: @user.id, _destroy: "1" } }
@@ -153,7 +150,6 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
     session = MaintenanceSession.create!(date: Date.current)
     2.times { session.maintenance_credits.create!(user: @user) }
 
-    # The single rendered row now points at a different user.
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
       maintenance_credits_attributes: { "0" => { user_id: other.id, quantity: "2" } }

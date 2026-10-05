@@ -6,8 +6,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     @show = FactoryBot.create(:show)
   end
 
-  # Authorization tests
-
   test "should get new" do
     get :new, params: { show_id: @show.slug }
     assert_response :success
@@ -41,8 +39,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     get :new, params: { show_id: @show.slug }
     assert_response :forbidden
   end
-
-  # Preview tests
 
   test "preview with valid paste data shows categorized results" do
     user = FactoryBot.create(:user, student_id: "s1234567")
@@ -98,8 +94,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_equal "Producer", assigns(:existing_team_members)[user.id]["current_position"]
     assert_equal "Director", assigns(:existing_team_members)[user.id]["new_position"]
   end
-
-  # Confirm tests
 
   test "confirm without cache data redirects with error" do
     post :confirm, params: { show_id: @show.slug, cache_key: "nonexistent_key" }
@@ -212,7 +206,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_show_path(@show)
     team_member.reload
-    assert_equal "Producer", team_member.position # Unchanged
+    assert_equal "Producer", team_member.position
   end
 
   test "confirm clears cache after processing" do
@@ -238,7 +232,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
 
     cache_key = "crew_import_test_#{SecureRandom.uuid}"
     Rails.cache.write(cache_key, {
-      "event_id" => other_show.id, # Different show
+      "event_id" => other_show.id,
       "categorized" => {
         "exact_match_id" => [],
         "exact_match_email" => [],
@@ -272,7 +266,6 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
       "existing_team_members" => {}
     }, expires_in: 1.hour)
 
-    # Select user2 specifically
     assert_difference("TeamMember.count", 1) do
       post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "link_#{user2.id}" } }
     end
@@ -280,15 +273,12 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(@show)
     assert @show.team_members.find_by(user_id: user2.id).present?
     assert_equal "Director", @show.team_members.find_by(user_id: user2.id).position
-    # user1 should NOT have been added
     assert_nil @show.team_members.find_by(user_id: user1.id)
   end
 
   private
 
-  # Create an existing team member (position "Producer") on @show and write a
-  # crew-import cache entry proposing a "Director" position for them.
-  # Returns [user, team_member, cache_key].
+  # A "Producer" on @show whose cached import row proposes "Director". Returns [user, team_member, cache_key].
   def setup_existing_team_member_cache
     user = FactoryBot.create(:user, student_id: "s1234567")
     team_member = @show.team_members.create!(user: user, position: "Producer")

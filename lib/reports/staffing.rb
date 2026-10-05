@@ -25,8 +25,7 @@ class Reports::Staffing
 
     current_date = Date.new(@start_year, 1, 1)
 
-    # Preload all members once. pluck the four columns we emit rather than
-    # holding a full User object per member across every 6-month period sheet.
+    # Pluck only the emitted columns, not a User per member held across every sheet.
     members = User.with_role(:member).order(:last_name, :first_name).pluck(:id, :first_name, :last_name, :email)
     member_ids = members.map(&:first)
 
@@ -37,7 +36,6 @@ class Reports::Staffing
       wb.add_worksheet(name: sheet_name) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows" ])
 
-        # BATCH: Query all show counts for all members in this period
         # Manual join needed for polymorphic association
         past_shows = TeamMember
           .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
@@ -57,8 +55,6 @@ class Reports::Staffing
           .group(:user_id)
           .count
 
-        # BATCH: Query all staffing counts for all members in this period
-        # Manual join needed for polymorphic staffable association
         staffing_counts = Admin::StaffingJob
           .joins("INNER JOIN admin_staffings ON admin_staffings.id = admin_staffing_jobs.staffable_id AND admin_staffing_jobs.staffable_type = 'Admin::Staffing'")
           .where(user_id: member_ids)

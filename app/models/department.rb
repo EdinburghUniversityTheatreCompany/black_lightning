@@ -1,11 +1,5 @@
-
-##
-# A grouping for opportunity roles (e.g. "Stage Management", "Lighting").
-#
-# +match_terms+ is a comma/newline-separated list of substrings; a role position that contains any
-# of a department's terms is suggested that department (see Department.match_for and the
-# department-suggest Stimulus controller).
-##
+# A grouping for opportunity roles (e.g. "Stage Management"). A role whose position contains one of
+# the comma or newline separated +match_terms+ is suggested that department (see .suggestions).
 # == Schema Information
 #
 # Table name: departments
@@ -23,7 +17,6 @@
 #  index_departments_on_name  (name) UNIQUE
 #
 class Department < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :match_terms, length: { maximum: 65535 }
   has_many :opportunity_roles, dependent: :nullify
@@ -34,12 +27,10 @@ class Department < ApplicationRecord
 
   default_scope { order(:ordering) }
 
-  # The match terms as a clean lower-cased list.
   def match_term_list
     match_terms.to_s.split(/[,\n]/).map { |term| term.strip.downcase }.reject(&:blank?)
   end
 
-  # The first department (by ordering) whose any match term appears in the position, or nil.
   def self.match_for(position)
     text = position.to_s.downcase
     return if text.blank?
@@ -47,7 +38,7 @@ class Department < ApplicationRecord
     all.find { |department| department.match_term_list.any? { |term| text.include?(term) } }
   end
 
-  # Find an existing department by name (case-insensitive) or build a new one.
+  # Matches the name case-insensitively.
   def self.find_or_build_by_name(name)
     name = name.to_s.strip
     return if name.blank?
@@ -55,7 +46,7 @@ class Department < ApplicationRecord
     find_by("LOWER(name) = LOWER(?)", name) || new(name: name)
   end
 
-  # Departments + their match terms, for the department-suggest Stimulus controller.
+  # For the department-suggest Stimulus controller.
   def self.suggestions
     all.map { |department| { name: department.name, terms: department.match_term_list } }
   end

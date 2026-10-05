@@ -59,12 +59,11 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
     staffing.staffing_jobs.first.update_attribute(:user, user)
 
-    # Manually execute the job
     StaffingReminderJob.new.perform(staffing.id)
 
     assert staffing.reload.reminder_job_executed, "The reminder job should be marked as executed"
 
-    # Second execution should return silently (no error)
+    # A second run returns early.
     assert_nothing_raised do
       StaffingReminderJob.new.perform(staffing.id)
     end
@@ -78,13 +77,11 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     staffing.staffing_jobs.first.update!(user: user1)
     staffing.staffing_jobs.second.update!(user: user2)
 
-    # All start with nil reminder_sent_at
     assert_nil staffing.staffing_jobs.first.reminder_sent_at
     assert_nil staffing.staffing_jobs.second.reminder_sent_at
 
     StaffingReminderJob.new.perform(staffing.id)
 
-    # Both should now have reminder_sent_at set
     assert_not_nil staffing.staffing_jobs.first.reload.reminder_sent_at
     assert_not_nil staffing.staffing_jobs.second.reload.reminder_sent_at
     assert staffing.reload.reminder_job_executed
@@ -95,14 +92,11 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     user = FactoryBot.create(:user)
     staffing.staffing_jobs.first.update!(user: user)
 
-    # Execute the job
     StaffingReminderJob.new.perform(staffing.id)
     assert_not_nil staffing.staffing_jobs.first.reload.reminder_sent_at
 
-    # Update the staffing (triggers reschedule)
     staffing.update!(show_title: "Rescheduled Show")
 
-    # reminder_sent_at should be reset
     assert_nil staffing.staffing_jobs.first.reload.reminder_sent_at
     assert_not staffing.reload.reminder_job_executed
   end
@@ -144,13 +138,11 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   end
 
   test "scheduled job is properly managed when staffing is updated" do
-    # Create a staffing with a future start time
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: 1))
 
     original_job_id = staffing.scheduled_job_id
     assert_not_nil original_job_id, "Should have a scheduled job ID"
 
-    # Update the staffing (e.g., change show title) - should reschedule job
     staffing.update!(show_title: "Updated Show Title")
 
     new_job_id = staffing.reload.scheduled_job_id
@@ -158,7 +150,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     assert_not_equal original_job_id, new_job_id, "Should have a new job ID after rescheduling"
     assert_not staffing.reminder_job_executed, "Job executed flag should be reset after rescheduling"
 
-    # But if we update just the reminder_job_executed flag to true (like the job does), it should stay true
+    # The job marking itself executed must not reschedule.
     staffing.update!(reminder_job_executed: true)
     assert staffing.reload.reminder_job_executed, "Flag should stay true when job marks itself as executed"
     assert_equal new_job_id, staffing.scheduled_job_id, "Job ID should not change when only marking as executed"

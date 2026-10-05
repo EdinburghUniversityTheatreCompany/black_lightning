@@ -38,7 +38,6 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     assert_response 403
   end
 
-  # Live-search fetch: turbo_stream + q[...] params → the #index-results fragment.
   test "index responds to a turbo_stream request with q params using the results fragment" do
     get :index, params: { q: { last_name_cont: @member.last_name } }, format: :turbo_stream
 
@@ -47,8 +46,7 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     assert_match(/<turbo-stream[^>]*target="index-results"/, response.body)
   end
 
-  # A paramless turbo_stream request (e.g. a Turbo form-submission redirect) must render the full
-  # HTML page, not the fragment. See ApplicationController#render_index_stream_or_full.
+  # A Turbo form-submission redirect arrives as a paramless turbo_stream request: render the full page.
   test "index serves a full HTML page for a paramless turbo_stream request" do
     get :index, format: :turbo_stream
 

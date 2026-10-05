@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk-checking debt status of a list of people.
-# Read-only — does not create users or modify anything.
-# Reuses UserImport matching logic to find users, then displays
-# their debt and membership status.
-##
+# Shows the debt and membership status of a pasted list of people, matched with UserImport.
+# Read-only: creates and modifies nothing.
 class Admin::DebtCheckersController < AdminController
   include Importable
 
@@ -59,7 +55,6 @@ class Admin::DebtCheckersController < AdminController
   private
 
   def build_results(import)
-    # Collect all matched users across buckets for bulk-loading debt info
     @exact_matches = []
     @fuzzy_matches = []
     @unmatched = []
@@ -92,7 +87,6 @@ class Admin::DebtCheckersController < AdminController
       @unmatched << item[:row]
     end
 
-    # Bulk-load debt status for all matched user IDs
     all_user_ids = @exact_matches.map { |m| m[:user].id } +
                    @fuzzy_matches.flat_map { |m| m[:candidates].map(&:id) }
 

@@ -5,8 +5,6 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  # Authorization tests
-
   test "should get new" do
     get :new
     assert_response :success
@@ -56,8 +54,6 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
-  # Preview tests
-
   test "preview with valid paste data shows results" do
     user = FactoryBot.create(:user, student_id: "s1234567")
 
@@ -97,7 +93,6 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     user_in_debt = FactoryBot.create(:member, student_id: "s1111111")
     user_not_in_debt = FactoryBot.create(:member, student_id: "s2222222")
 
-    # Create an overdue maintenance debt for user_in_debt
     show = FactoryBot.create(:show)
     FactoryBot.create(:maintenance_debt,
       user: user_in_debt,
