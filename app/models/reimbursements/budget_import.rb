@@ -100,10 +100,6 @@ module Reimbursements
     # skipped, or its words would block the import as an unreadable amount.
     TEMPLATE_HINTS = FIELDS.each_value.map { |spec| spec[:hint] }.freeze
 
-    # The only column a sheet must carry: everything else can be blank or
-    # defaulted, but a line with no name has nothing to match against.
-    REQUIRED_FIELDS = %i[name].freeze
-
     OWNER_SEPARATOR = /[,;\s]+/
 
     # Cells that may hold a tab or newline, so are unescaped in #to_tsv output.
@@ -560,9 +556,7 @@ module Reimbursements
     # Judged on the HEADERS, not the values: a sheet with a Budget column and
     # one empty cell gets that row flagged, not the whole sheet rejected.
     def report_missing_columns
-      missing = REQUIRED_FIELDS.reject { |field| header_for[field] }
-                               .map { |field| FIELDS.fetch(field)[:label] }
-      return if missing.empty?
+      return if header_for[:name]
 
       @errors << "Couldn't find a budget name column. Name one of the columns " \
                  "#{FIELDS.fetch(:name)[:exact].map(&:inspect).to_sentence(last_word_connector: ' or ')}, " \
