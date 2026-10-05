@@ -274,16 +274,6 @@ module Reimbursements
       end
     end
 
-    # Areas given more than one distinct Area total. Two values can't both be
-    # what the committee agreed, so #valid? refuses rather than picking one.
-    def area_total_conflicts
-      area_budget_totals.filter_map do |key, values|
-        next if values.size <= 1
-
-        { area_name: first_seen_names[key], values: values }
-      end
-    end
-
     def revisions
       entries_in(:revise).map do |entry|
         { budget_id: entry.budget.record_id, amount: entry.row[:amount] }
@@ -727,11 +717,14 @@ module Reimbursements
       end
     end
 
+    # The column repeats down the area's rows, so two values can't both be what
+    # the committee agreed: block rather than pick one.
     def report_area_total_conflicts
-      area_total_conflicts.each do |conflict|
-        amounts = conflict[:values].map { |value| value.to_s("F") }
-                                   .to_sentence(last_word_connector: " and ")
-        @errors << "#{conflict[:area_name].inspect} has more than one Area total figure in " \
+      area_budget_totals.each do |key, values|
+        next if values.size < 2
+
+        amounts = values.map { |value| value.to_s("F") }.to_sentence(last_word_connector: " and ")
+        @errors << "#{first_seen_names[key].inspect} has more than one Area total figure in " \
                    "this sheet (#{amounts}). Make every line for the area agree, or leave the " \
                    "column blank."
       end
