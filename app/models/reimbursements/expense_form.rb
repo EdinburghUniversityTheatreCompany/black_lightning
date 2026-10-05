@@ -1,27 +1,22 @@
 module Reimbursements
   ##
-  # Form object for submitting/editing an expense. When submitting, it enforces
-  # every field finance requires — the portal must not be a way around them.
-  # Saving as a DRAFT relaxes the presence rules (like
-  # email-in, gaps are completed later); format rules still apply to whatever
-  # was filled in, and submitting the draft re-runs the full validation.
+  # Form object for submitting/editing an expense. Submitting enforces every
+  # field finance requires; a DRAFT relaxes the presence rules but still checks
+  # the format of whatever was filled in.
   #
   # The VAT rule is a SOFT block: when the ex-VAT amount isn't below the total,
   # submitters must tick an acknowledgement, because the full amount then counts
-  # against their budget — but they can always submit.
+  # against their budget, but they can always submit.
   class ExpenseForm
     include ActiveModel::Model
 
     # What a receipt may be STORED as.
     ALLOWED_RECEIPT_TYPES = %w[application/pdf image/jpeg image/png image/webp].freeze
-    # Accepted at intake but never stored as-is: iOS photographs default to
-    # HEIC, so these are converted to JPEG before anything is attached (see
-    # ReceiptIntake).
+    # iOS photographs default to HEIC; ReceiptIntake converts them to JPEG.
     CONVERTED_RECEIPT_TYPES = %w[image/heic image/heif].freeze
     ACCEPTED_RECEIPT_TYPES = (ALLOWED_RECEIPT_TYPES + CONVERTED_RECEIPT_TYPES).freeze
-    # The file input's accept attribute. The extensions are listed alongside the
-    # types because browsers vary in which they match a HEIC file against, and a
-    # picker that filters the photo out is indistinguishable from "not allowed".
+    # Extensions as well as types: browsers vary in which they match a HEIC
+    # file against.
     RECEIPT_ACCEPT_ATTRIBUTE = (ACCEPTED_RECEIPT_TYPES + %w[.heic .heif]).join(",").freeze
     MAX_RECEIPT_BYTES = 5.megabytes # per-receipt upload cap; a batch mails them all as attachments
     REFERENCE_LIMIT = 18 # EUSA truncates payment references beyond this
@@ -35,9 +30,8 @@ module Reimbursements
                   :iban_override, :bic_override
     attr_writer :receipts, :require_receipts, :internal, :settled, :offerable_budget_ids
 
-    # Above this, submitting asks for a one-tick confirmation — the realistic
-    # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
-    # would otherwise sail into the finance queue and skew a budget.
+    # At or above this, submitting asks for a tick: the usual slip is pence
+    # typed as pounds.
     LARGE_AMOUNT_THRESHOLD = BigDecimal("1000")
 
     validates :expense_type, inclusion: { in: :permitted_expense_types }
@@ -55,8 +49,6 @@ module Reimbursements
       super
       self.expense_type = Expense::TYPE_REIMBURSEMENT if expense_type.blank?
       self.payment_method = Expense::PAYMENT_METHOD_UK_BACS if payment_method.blank?
-      # Euros are the common case by a distance, so the picker opens on them
-      # rather than on a blank the submitter has to notice.
       self.foreign_currency = Expense::CURRENCY_EUR if foreign_currency.blank?
     end
 
@@ -72,22 +64,15 @@ module Reimbursements
       ActiveModel::Type::Boolean.new.cast(save_as_draft)
     end
 
-    # The budget record ids the controller actually rendered into the picker,
-    # as strings (a <select> posts a string whatever the ids are).
-    #
-    # nil — the default — means the caller drew no picker, and its choice is not
-    # second-guessed: ExpenseImport resolves a real Budget row by NAME, which for
-    # a settled historical claim is legitimately an inactive or last-year line,
-    # and from_actual prefills before any controller has a list.
+    # The budget ids the controller rendered into the picker, as strings. nil
+    # means no picker was drawn (ExpenseImport, from_actual), so the choice is
+    # not second-guessed.
     def offerable_budget_ids
       @offerable_budget_ids&.map(&:to_s)
     end
 
-    # The submitter picked a budget the picker no longer offers. Finance deletes
-    # budgets and sets them inactive as ordinary work, and every open submission
-    # form holds a live reference to whatever active_budgets returned when it was
-    # drawn — so validating against the list that was RENDERED catches both with
-    # one rule, and cannot drift from what the <select> contained.
+    # Validated against the list RENDERED, which catches a budget deleted or
+    # deactivated while the form was open.
     def stale_budget?
       offered = offerable_budget_ids
       return false if offered.nil? || budget_record_id.blank?
@@ -95,54 +80,36 @@ module Reimbursements
       offered.exclude?(budget_record_id.to_s)
     end
 
-    # A draft saved with its stale budget dropped rather than refused. Read by
-    # the controller so the notice SAYS the budget went: a field the producer
-    # picked is blank again, and silently unsetting it reads as the portal
-    # losing their choice.
+    # Read by the controller so the notice says the budget was dropped.
     def dropped_stale_budget?
       draft? && stale_budget?
     end
 
-    # Set only by from_actual below (never a permitted parameter on the producer
-    # form), so a submitter can't pick the internal From-EUSA type to dodge the
-    # receipt, VAT and large-amount rules those exist to enforce on them.
+    # Set only by from_actual, never a permitted param, so a submitter can't
+    # pick From EUSA to dodge the receipt, VAT and large-amount rules.
     def internal?
       ActiveModel::Type::Boolean.new.cast(@internal)
     end
 
-    # The claim records money that has already moved (or never will) — set only
-    # by ExpenseImport, for a row whose sheet says Submitted, Paid or Rejected,
-    # and never a permitted parameter anywhere.
-    #
-    # It suppresses the two "who is this actually paying?" blocks below and
-    # NOTHING else. Those exist because EffectivePayee falls back to the
-    # SUBMITTER's own bank details, so an Invoice with no payee trio pays the
-    # producer for a bill they never paid — but the only thing that reads those
-    # details is the money path, and Build Batch reads Approved claims alone. A
-    # settled claim can never enter it, so the block protects nothing there
-    # while refusing a historical invoice whose supplier's 2019 bank details
-    # nobody has. Every other rule — amounts, lengths, the all-or-nothing
-    # override trio — still applies.
+    # Set only by ExpenseImport, for money that has already moved. Suppresses
+    # the two payee blocks and nothing else: Build Batch reads Approved claims
+    # alone, so a settled claim never reaches the money path they protect.
     def settled?
       ActiveModel::Type::Boolean.new.cast(@settled)
     end
 
-    # Anything in the receipts param that is not actually an uploaded file is
-    # dropped here rather than reaching #size / #original_filename below (a bare
-    # String answers #size but not #read) — see ReceiptContentType.uploads_from.
+    # Drops anything that is not an uploaded file (a bare String answers #size
+    # but not #read).
     def receipts
       ReceiptContentType.uploads_from(@receipts)
     end
 
-    # Every uploaded receipt, vetted and normalised once (a HEIC photo is
-    # converted to JPEG here, not on attach) so the validation and the
-    # controller's attach step agree on exactly the same bytes and filename.
+    # Vetted once, so validation and the attach step agree on the same bytes.
     def receipt_intakes
       @receipt_intakes ||= receipts.map { |file| ReceiptIntake.from_upload(file) }
     end
 
-    # The receipts that passed, as attach_receipt! keyword hashes. Only ever
-    # read after #valid?, which is what reports the ones that didn't.
+    # As attach_receipt! keyword hashes; read only after #valid?.
     def usable_receipts
       receipt_intakes.select(&:ok?).map(&:to_attachment)
     end
@@ -160,19 +127,15 @@ module Reimbursements
       parse_decimal(amount_excl_vat)
     end
 
-    # True when the submission looks like it lacks a VAT breakdown: the ex-VAT
-    # amount isn't below the total.
+    # The ex-VAT amount isn't below the total.
     def vat_missing?
       amount_decimal.present? && amount_excl_vat_decimal.present? &&
         amount_excl_vat_decimal >= amount_decimal
     end
 
-    # Read against whichever figure the submitter actually typed. For an
-    # international claim that is the foreign one, compared to a sterling
-    # threshold — approximate, but this is a fat-finger guard (pence typed as
-    # pounds, a stray digit), not an accounting rule, and a EUR 5,000 claim
-    # sailing through unconfirmed because its GBP figure is not filled in yet
-    # is exactly what it exists to stop.
+    # Reads the figure the submitter typed: the foreign amount on the
+    # international rail. A fat-finger guard, so the sterling threshold is
+    # close enough.
     def large_amount?
       typed = international? ? foreign_amount_decimal : amount_decimal
       typed.present? && typed >= LARGE_AMOUNT_THRESHOLD
@@ -184,9 +147,7 @@ module Reimbursements
     end
 
     # Attributes for Store#update_expense!. Overrides are written as empty
-    # strings (not nil) so clearing them actually clears the stored value
-    # instead of being compacted away; the status write is what promotes a
-    # draft on submission (or files it back as a draft).
+    # strings, not nil, so clearing them clears the stored value.
     def update_attrs
       {
         status: draft? ? Status::DRAFT : Status::PENDING,
@@ -201,9 +162,7 @@ module Reimbursements
         account_number_override: BankDetails.normalize_account_number(account_number_override.to_s.strip),
         payment_method: payment_method,
         foreign_amount: foreign_amount_decimal,
-        # Only stamped on the international rail: a UK claim has no foreign
-        # figure for it to describe, and a stray code beside a GBP amount reads
-        # as a claim about that amount.
+        # International only: a code beside a GBP amount reads as a claim about it.
         foreign_currency: (foreign_currency.to_s.strip.upcase.presence if international?),
         iban_override: BankDetails.normalize_iban(iban_override.to_s.strip),
         bic_override: BankDetails.normalize_bic(bic_override.to_s.strip)
@@ -230,10 +189,8 @@ module Reimbursements
       )
     end
 
-    # Pre-fills the finance form that turns an imported EUSA ledger row into a
-    # From-EUSA expense: a cost EUSA levied on us directly (a utility, a staff
-    # recharge), so there is no receipt, no VAT breakdown and no submitter. The
-    # operator still picks the budget.
+    # Prefills a From-EUSA expense from an imported ledger row: a cost EUSA
+    # levied directly, with no receipt, VAT breakdown or submitter.
     def self.from_actual(actual)
       new(
         expense_type: Expense::TYPE_FROM_EUSA,
@@ -252,17 +209,10 @@ module Reimbursements
       internal? ? Expense::TYPES : Expense::SUBMITTER_TYPES
     end
 
-    # A From-EUSA line records an already-settled cost with no receipt and no
-    # itemised VAT: the submitter-facing soft blocks have nothing to protect.
     def skip_soft_blocks?
       draft? || internal?
     end
 
-    # Accepts "£1,234.56" (comma thousands) and "12,50" (comma decimal —
-    # common for international students; naively stripping the comma would
-    # record a 100x amount). Lives in AmountParser so the finance-side budget
-    # forms read an amount identically; a blank or unreadable value is nil here
-    # and the amounts_valid validation reports it.
     def parse_decimal(value)
       AmountParser.parse(value)
     end
@@ -288,15 +238,8 @@ module Reimbursements
       end
     end
 
-    # A submitter holding a foreign invoice knows what it says and nothing
-    # about the rate EUSA's bank will get, so only the foreign amount is asked
-    # for. The GBP equivalent is finance's to enter at review — and they cannot
-    # approve without it (ReviewSupport's "no GBP amount" block), so leaving it
-    # out here loses nothing.
-    #
-    # There is no ex-VAT figure either: a foreign invoice carries no
-    # reclaimable UK VAT, so the whole amount hits the budget and
-    # Expense mirrors it automatically.
+    # Only the foreign amount: finance enters the GBP figure at review and
+    # cannot approve without it. Expense mirrors ex-VAT from gross.
     def international_amounts_valid
       unless Expense::FOREIGN_CURRENCIES.include?(foreign_currency.to_s.strip.upcase)
         errors.add(:foreign_currency, "must be one of the currencies listed.")
@@ -306,15 +249,9 @@ module Reimbursements
       errors.add(:foreign_amount, "must be a positive amount, as printed on the invoice.")
     end
 
-    # A budget that went between this form being drawn and submitted. Refusing
-    # the SUBMIT is the point — the producer's typing is all still on the
-    # re-rendered form, whereas the foreign key raising here loses the claim
-    # outright (Honeybadger 134234926).
-    #
-    # A DRAFT is exempt: it is a scratchpad whose budget may be blank anyway, so
-    # #update_attrs drops the stale id and the draft saves. Refusing it would
-    # cost the producer their typing over a field they are allowed to leave
-    # empty, which is the harm this whole rule exists to prevent.
+    # Refusing the submit keeps the producer's typing, where the foreign key
+    # raising would lose the claim (Honeybadger 134234926). A DRAFT is exempt:
+    # #update_attrs drops the stale id and it saves.
     def budget_still_offerable
       return if draft? || !stale_budget?
 
@@ -339,10 +276,8 @@ module Reimbursements
     end
 
     def overrides_valid
-      # Length first: the model caps this too (so the ciphertext fits its column),
-      # and without a form-level check an over-long invoice-mode prefill would
-      # reach store.create_expense! and raise RecordInvalid instead of re-rendering
-      # the form with a fixable error.
+      # Length first, so an over-long name re-renders the form instead of
+      # raising RecordInvalid on the model's own cap.
       if payee_name_override.to_s.length > BankDetails::PAYEE_NAME_MAX_LENGTH
         errors.add(:payee_name_override, BankDetails::PAYEE_NAME_HINT)
       end
@@ -368,9 +303,7 @@ module Reimbursements
       end
     end
 
-    # The same all-or-nothing rule, over the pair this rail actually routes on.
-    # The IBAN is mod-97 checked because it is the last point anything looks at
-    # the number before EUSA's bank acts on it.
+    # The IBAN is mod-97 checked: this is the last look before EUSA's bank acts.
     def international_overrides_valid
       errors.add(:iban_override, BankDetails::IBAN_HINT) if iban_override.present? && !BankDetails.valid_iban?(iban_override)
       errors.add(:bic_override, BankDetails::BIC_HINT) if bic_override.present? && !BankDetails.valid_bic?(bic_override)
@@ -384,20 +317,14 @@ module Reimbursements
       end
     end
 
-    # Unlike the UK rail, this applies to EVERY international claim, not only
-    # an Invoice: nobody on file has an IBAN by default, so falling back to the
-    # submitter's own details would leave the form with nothing to send.
+    # Every international claim, not only an Invoice: nobody has an IBAN on file.
     def international_without_payee?
       !draft? && !settled? &&
         BankDetails.overrides_missing?(payee_name_override, iban_override, bic_override)
     end
 
-    # EffectivePayee falls back to the SUBMITTER's own bank details, so an
-    # Invoice with no trio pays the producer for a bill they never paid — and
-    # review can't catch it, because that fallback satisfies its "no bank
-    # details" block just as a real payee would. Checked here rather than as a
-    # presence rule per field so a partly-filled trio reports the
-    # all-or-nothing message once (above) instead of both.
+    # EffectivePayee falls back to the submitter's own details, so an Invoice
+    # with no trio would pay the producer, and review cannot see it.
     def invoice_without_payee?
       expense_type == Expense::TYPE_INVOICE && !draft? && !settled? &&
         BankDetails.overrides_missing?(payee_name_override, sort_code_override,

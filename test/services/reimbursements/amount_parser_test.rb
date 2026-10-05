@@ -1,10 +1,6 @@
 require "test_helper"
 
 module Reimbursements
-  # The one lenient money parser, shared by the submitter's ExpenseForm and the
-  # finance budget forms. #parse answers nil for anything unreadable; #parse!
-  # separates "nothing typed" (nil) from "typed something that isn't a number"
-  # (raises), which is what lets a form tell a deliberate blank apart from a typo.
   class AmountParserTest < ActiveSupport::TestCase
     test "reads the formats people actually type" do
       assert_equal BigDecimal("1234.56"), AmountParser.parse("£1,234.56")
@@ -15,7 +11,6 @@ module Reimbursements
     end
 
     test "a trailing comma with one or two digits is a decimal comma, not thousands" do
-      # Naively stripping the comma would record 1250 instead of 12.50.
       assert_equal BigDecimal("12.5"), AmountParser.parse("12,50")
       assert_equal BigDecimal("12.5"), AmountParser.parse("12,5")
       # With a decimal point present, commas are thousands separators.

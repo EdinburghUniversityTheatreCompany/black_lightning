@@ -1,34 +1,16 @@
 module Reimbursements
   ##
-  # Server-side validation for the amount / amount-excl-VAT fields on the two
-  # finance write paths (Review #save and Expense edits #update). The
-  # number_field min/step attributes are client-only, so a negative or
-  # non-numeric amount can still POST straight through to store.update_expense!.
-  # Both controllers run this before any write and reject the request otherwise.
-  #
-  # - amount (gross): required to be a positive number — you can't pay £nil, £0
-  #   or a negative.
-  # - amount_excl_vat: optional; blank or "0" is the "not yet known" sentinel
-  #   (left untouched by the save), so it's only validated when a non-zero value
-  #   is given, and then it must be a positive number.
-  #
-  # Reading is delegated to AmountParser, the same lenient parser the submitter
-  # form and the budget forms use, so "£1,200" and the comma decimal "12,50" mean
-  # here what they mean everywhere else in the portal. Callers write #amount /
-  # #amount_excl_vat, which hand back the very BigDecimal that was validated, so
-  # nothing re-parses and the validated and written values cannot disagree.
+  # Server-side amount checks for the two finance write paths (Review #save and
+  # expense edits #update), read through AmountParser. Blank or "0" excl-VAT is
+  # the "not yet known" sentinel.
   module AmountValidation
-    # A generous sanity ceiling — no real Bedlam Fringe expense claim is ever
-    # going to be six figures. Catches a fat-finger typo (an extra digit, a
-    # missing decimal point) that would otherwise sail all the way through to
-    # a live BACS payment request with no other server-side backstop. It also
-    # rejects anything that read as an absurd number for a different reason,
-    # e.g. scientific notation ("1e10").
+    # Fat-finger ceiling (an extra digit reaching a live BACS request); also
+    # catches scientific notation such as "1e10".
     MAX_AMOUNT = 100_000
 
     module_function
 
-    # A human-readable error string when the amounts are invalid, else nil.
+    # An error string, or nil when the amounts are fine.
     def error_for(amount:, amount_excl_vat:)
       gross = AmountParser.parse(amount)
       return "Enter a valid amount greater than 0." unless payable?(gross)
@@ -38,9 +20,7 @@ module Reimbursements
         return "Enter a valid amount excl. VAT greater than 0, or leave it blank."
       end
 
-      # Matches the submitter-facing ExpenseForm's amounts_valid. Unchecked on
-      # the finance write paths, an excl-VAT above gross silently skews the
-      # over-budget check and reconciliation matching.
+      # An excl-VAT above gross skews the over-budget check and reconciliation.
       if payable?(net) && net > gross
         return "Amount excl. VAT can't be more than the total amount."
       end
@@ -48,23 +28,18 @@ module Reimbursements
       nil
     end
 
-    # The gross amount to WRITE, once #error_for has passed: the parsed
-    # BigDecimal, never the raw string. ActiveRecord casts a string to a decimal
-    # column with String#to_d, which reads "£1,200" as 0 — so handing the raw
-    # field through would turn an amount this module just accepted into a zero
-    # payment.
+    # The value to WRITE: AR casts a string to a decimal column with to_d, so
+    # the raw "£1,200" would store 0.
     def amount(raw)
       AmountParser.parse(raw)
     end
 
-    # The excl-VAT amount to write, or nil to leave the stored value alone:
-    # blank and 0 are both the "not yet known" sentinel.
+    # nil means leave the stored value alone.
     def amount_excl_vat(raw)
       parsed = AmountParser.parse(raw)
       parsed if parsed&.positive?
     end
 
-    # Readable as money and within the sanity ceiling.
     def payable?(value)
       !value.nil? && value.positive? && value <= MAX_AMOUNT
     end

@@ -102,10 +102,8 @@ module Admin
       }
     end
 
-    # The one place the prefix has to actually appear: active_budgets is not
-    # cost-centre scoped, so this picker is where a producer sees both centres'
-    # lines at once. Asserting on the model alone would not catch a view still
-    # mapping display_name.
+    # active_budgets is not cost-centre scoped, so the picker must say whose
+    # line each is.
     test "the budget picker names each line's cost centre" do
       centre = create_reimbursements_cost_centre(key: "picker-centre", name: "Bedlam Fringe",
                                                  eusa_code: "F41", short_code: "BF")
@@ -126,9 +124,7 @@ module Admin
       assert_response :success
       assert_includes response.body, "reimbursements-receipt"
       assert_includes response.body, "Props"
-      # Third-party payee fields are always visible (not tucked in a
-      # collapsible that hid whether they were filled), with no "In use" flag
-      # on a blank form.
+      # Payee fields always visible, with no "In use" flag on a blank form.
       assert_includes response.body, "Pay someone else"
       assert_select "input#reimbursements_expense_form_payee_name_override"
       assert_not_includes response.body, "In use"
@@ -169,7 +165,7 @@ module Admin
       assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency
       assert_equal "DE89370400440532013000", expense.iban_override
       assert_equal "DEUTDEFF500", expense.bic_override
-      # Finance supplies this at review, and cannot approve without it.
+      # Finance supplies this at review.
       assert_nil expense.amount
       assert_equal "Pending", expense.status
     end
@@ -188,9 +184,7 @@ module Admin
       assert_equal 0, ::Reimbursements::Expense.where(payment_method: "international").count
     end
 
-    # iOS photographs default to HEIC. The conversion happens at intake so the
-    # stored blob is an ordinary JPEG for every downstream consumer (viewer,
-    # the SharePoint offload, the receipts mailed with a BACS batch).
+    # Converted at intake, so every downstream reader gets an ordinary JPEG.
     test "create stores an iPhone HEIC photo as a JPEG named .jpg" do
       sign_in @user
 
@@ -217,8 +211,7 @@ module Admin
                    receipt.download
     end
 
-    # A damaged photo (or a libvips built without HEIF support) must come back
-    # through the normal validation path, not as a 500.
+    # A damaged photo (or libvips without HEIF) is a validation error, not a 500.
     test "create re-renders with a friendly error when a photo can't be read" do
       sign_in @user
 
@@ -288,9 +281,7 @@ module Admin
       assert_redirected_to admin_reimbursements_expenses_path
     end
 
-    # A :base error has no field to render under, so without the shared form
-    # partial listing them the producer sees only the generic "review the
-    # problems below" banner — a form that failed with no stated reason.
+    # A :base error has no field to render under.
     test "create shows the reason a base-level rule blocked the form" do
       sign_in @user
       params = valid_form_params.merge(payee_name_override: "Acme Props Ltd")
@@ -301,9 +292,7 @@ module Admin
       assert_includes response.body, "fill in all three: payee name, sort code, and account number"
     end
 
-    # The submitter's own bank details would otherwise stand in for the missing
-    # payee (EffectivePayee's fallback), so the claim would pay them for a bill
-    # they never paid — and review's "no bank details" block can't see it.
+    # EffectivePayee would fall back to the submitter's own details.
     test "create rejects an invoice with no third-party payee details" do
       sign_in @user
       params = valid_form_params.merge(expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
@@ -368,14 +357,11 @@ module Admin
       assert_response :success
       assert_includes response.body, "Van hire"
       assert_includes response.body, "Approved"
-      # No editable expense fields and no receipt-remove control on the
-      # read-only page (both are present on the edit page — this discriminates it).
       assert_select "input[name='reimbursements_expense_form[amount]']", 0
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 
-    # The date shown is submitted_at, which before_create stamps on a draft as
-    # well, so a draft's date is when it was started rather than submitted.
+    # before_create stamps submitted_at on a draft too, so it is when it started.
     test "show labels the claim's date Submitted, and Started while it is a draft" do
       submitted = create_reimbursements_expense(person: @person, budget: @budget,
                                                 status: ::Reimbursements::Status::PENDING)
@@ -393,8 +379,6 @@ module Admin
     end
 
     # --- In-page receipt viewer -------------------------------------------
-    # The producer reads their own receipt in the page, through the same shared
-    # partial the Review queue and the finance pages use.
 
     test "show renders the shared in-page receipt viewer, closed and unloaded" do
       sign_in @user
@@ -407,9 +391,8 @@ module Admin
       assert_select "button[data-action='receipt-viewer#show'][aria-expanded='false']" do |buttons|
         assert_equal "View receipt 1 of 1, receipt.pdf", buttons.first["aria-label"]
       end
-      # A PDF gets a real first-page thumbnail, not a generic document icon.
       assert_select "img[src=?]", receipt.preview_url
-      # The pane is present but closed, and its frame carries no src yet.
+      # The pane is closed and its frame not yet loaded.
       assert_select "div#receipt-pane-#{@expense.record_id}[hidden]"
       assert_select "iframe[data-src=?]", receipt.url
       assert_select "iframe[src]", 0
@@ -467,8 +450,7 @@ module Admin
       get :edit, params: { id: draft.record_id }
 
       assert_select "input[type=submit][value='Submit expense']"
-      # Delete draft posts its OWN form, so the destroy cannot be mistaken for the
-      # update this page also posts to the same URL.
+      # Delete draft posts its own form, apart from the update's same URL.
       assert_select "form[action=?][method=post][data-turbo-confirm]",
                     admin_reimbursements_expense_path(draft.record_id) do
         assert_select "input[name=_method][value=delete]", 1
@@ -506,9 +488,7 @@ module Admin
       assert ::Reimbursements::Expense.exists?(@other_expense.id)
     end
 
-    # A race: the producer follows an Edit link on a stale list for their own
-    # claim that review has since picked up. Fail gracefully (friendly flash
-    # redirect) rather than showing a bare 404.
+    # A stale Edit link for a claim review has since picked up.
     def own_non_editable_expense
       create_reimbursements_expense(person: @person, budget: @budget,
                                     status: ::Reimbursements::Status::APPROVED,
@@ -567,11 +547,7 @@ module Admin
     end
 
     # --- A budget that vanished while the form was open ----------------------
-    # The real incident (Honeybadger 134234926): a finance data fix deleted the
-    # budget the producer had already picked, and the submit 500ed on the
-    # foreign key, losing a claim that was completely filled in. Deleting and
-    # deactivating budgets are both ordinary finance work, so both must land the
-    # producer back on their own form.
+    # Honeybadger 134234926: a deleted budget 500ed the submit and lost the claim.
 
     # A separate budget, so deleting it can't take @expense's own row with it.
     def spare_budget(**attrs)
@@ -612,9 +588,7 @@ module Admin
       assert_includes response.body, "Blood capsules and a wig"
     end
 
-    # A draft is a scratchpad the producer may leave incomplete, so a stale
-    # budget must not cost them their typing: the budget is dropped, the draft
-    # saves, and the notice says the budget went so they can re-pick it.
+    # The notice says the budget went, so they can re-pick it.
     test "create as a draft drops the vanished budget and still saves" do
       sign_in @user
       doomed = spare_budget
@@ -649,9 +623,7 @@ module Admin
       assert_equal "Fake blood", @expense.reload.description, "nothing was written"
     end
 
-    # Belt and braces: even with the form-level rule, a delete can land between
-    # the validation and the insert. The store names that race and the
-    # controller must render it as the same fixable form error, not a 500.
+    # A delete landing between the validation and the insert.
     test "create renders the form when the store reports the budget gone mid-write" do
       sign_in @user
       store = ::Reimbursements::DatabaseStore.new

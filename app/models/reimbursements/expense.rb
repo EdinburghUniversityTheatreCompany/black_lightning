@@ -59,11 +59,8 @@
 #
 module Reimbursements
   ##
-  # An expense submission: predicates, the effective_* money-path helpers and
-  # the receipts wrapper.
-  #
-  # person/budget/batch may be nil: email-in submissions arrive with gaps the
-  # submitter fills later.
+  # An expense claim. person/budget/batch may be nil: email-in submissions
+  # arrive with gaps the submitter fills later.
   class Expense < ApplicationRecord
     include RecordId
     include EffectivePayee
@@ -76,43 +73,29 @@ module Reimbursements
     # "From EUSA" is internal bookkeeping; submitters only pick between these.
     SUBMITTER_TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE ].freeze
 
-    # Which rail the money travels on. This is the discriminator rather than
-    # the currency, because the two come apart: an international supplier can
-    # invoice in GBP and still need an IBAN and EUSA's international form.
+    # The rail, not the currency, is the discriminator: an international
+    # supplier can invoice in GBP and still need an IBAN.
     PAYMENT_METHOD_UK_BACS = "uk_bacs".freeze
     PAYMENT_METHOD_INTERNATIONAL = "international".freeze
     PAYMENT_METHODS = [ PAYMENT_METHOD_UK_BACS, PAYMENT_METHOD_INTERNATIONAL ].freeze
 
-    # Currencies the international rail accepts. EUSA's revised form carries a
-    # PAYMENT CURRENCY field of its own, so the currency is stated on the
-    # paperwork rather than assumed, and the portal is not limited to euros.
-    #
-    # A fixed list rather than free text: the submitter is a producer, not a
-    # treasurer, and a mistyped code is a payment their bank cannot route.
-    # Adding one is a single entry here — the form, the form object and the
-    # generator all read this list.
+    # A fixed list, not free text: a mistyped code is a payment EUSA's bank
+    # cannot route. Adding one is a single entry here.
     CURRENCY_EUR = "EUR".freeze
     FOREIGN_CURRENCIES = %w[
       EUR USD GBP CHF SEK NOK DKK PLN CZK CAD AUD NZD JPY
     ].freeze
 
-    # Third-party "pay a supplier directly" bank details, encrypted at rest.
-    # Non-deterministic (the default) — the money path reads the
-    # decrypted attributes via EffectivePayee; nothing queries by value.
-    # support_unencrypted_data (config/application.rb) keeps pre-encryption
-    # plaintext rows readable until the backfill runs.
+    # Third-party bank details, non-deterministic: nothing queries by value.
+    # support_unencrypted_data is false, so a plaintext value raises.
     encrypts :sort_code_override
     encrypts :account_number_override
     encrypts :payee_name_override
     encrypts :iban_override
     encrypts :bic_override
 
-    # Column fit for the encrypted trio. Rails' own auto-injected
-    # validate_column_size guard is switched off in config/application.rb because
-    # it measures the DECRYPTED value against the column limit — the wrong value
-    # — so these explicit plaintext caps are what actually keeps the ciphertext
-    # inside its column. payee_name_override lives in a TEXT column (widened for
-    # exactly this reason) and the digit fields in string(255).
+    # Rails' validate_column_size is off because it measures the decrypted
+    # value; these plaintext caps keep the ciphertext inside its column.
     validates :payee_name_override, length: { maximum: BankDetails::PAYEE_NAME_MAX_LENGTH }
     validates :sort_code_override, :account_number_override,
               length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
@@ -124,18 +107,14 @@ module Reimbursements
     belongs_to :batch, class_name: "Reimbursements::Batch", optional: true, inverse_of: :expenses
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
 
-    # Receipts. The reader below wraps these into Attachment POROs so views
-    # and services keep calling receipt.attachment_id / .url / .preview_url.
+    # Read through #receipts, which wraps them as Attachments.
     has_many_attached :receipt_files
 
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual",
                             dependent: :nullify, inverse_of: :expense
 
-    # A claim carries no cost-centre column: which pot pays it is a property of
-    # the budget it is charged to, so it moves with the budget rather than
-    # having to be kept in step with it. nil for a claim with no budget yet (an
-    # email-in draft) or a budget nobody has placed — every reader treats that
-    # as "unplaced", never as a centre of its own.
+    # No cost-centre column: the budget decides which pot pays. nil means
+    # "unplaced", never a centre of its own.
     def cost_centre
       budget&.cost_centre
     end
@@ -149,49 +128,34 @@ module Reimbursements
     validates :payment_method, inclusion: { in: PAYMENT_METHODS }
     validates :foreign_currency, inclusion: { in: FOREIGN_CURRENCIES }, allow_blank: true
 
-    # auto_number backs the human-facing "Expense #N" label. It continues from
-    # the highest number on record rather than tracking the PK, so the numbers
-    # imported with the historical claims are never handed out twice.
-    # A foreign invoice carries no reclaimable UK VAT, so the whole amount hits
-    # the budget: ex-VAT IS the gross here. Set in one place rather than asked
-    # for on each of the three forms that can write an amount, so the two
-    # figures cannot drift into a VAT deduction nobody can reclaim.
+    # A foreign invoice carries no reclaimable UK VAT, so an international
+    # claim's ex-VAT is its gross.
     before_validation lambda {
       self.amount_excl_vat = amount if international?
     }
 
+    # auto_number continues from MAX, not the PK, so imported numbers are
+    # never handed out twice.
     before_create lambda {
       self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1
       self.submitted_at ||= Time.current
     }
 
-    # AR's own reader would return the integer FK; the PORO returned the
-    # linked batch's record id STRING, compared against batch.record_id in
-    # the batches controller. Same for budget_id/person_id below — the Store
-    # and OwnerEndorsement flows pass them around as opaque strings.
     def international? = payment_method == PAYMENT_METHOD_INTERNATIONAL
 
+    # String ids, compared against record_id by the store and controllers.
     def batch_id = self[:batch_id]&.to_s
     def budget_record_id = self[:budget_id]&.to_s
     def person_record_id = self[:person_id]&.to_s
 
-    # One SharePoint URL per line in the column; the PORO exposed an Array.
+    # One SharePoint URL per line in the column.
     def sharepoint_receipt_urls
       self[:sharepoint_receipt_urls].to_s.split("\n").map(&:strip).compact_blank
     end
 
-    # Attached files wrapped back into the Attachment PORO.
-    #
-    # Every URL points at Admin::Reimbursements::ReceiptFilesController, which
-    # re-checks who is asking, and never at ActiveStorage's own routes, which
-    # are unauthenticated and permanent by design. attachment_id is therefore
-    # the BLOB ID rather than the blob's signed id: the signed id is a bearer
-    # token for those routes, so emitting one in the markup — which the remove
-    # button did — would leave the permanent link this replaced. A bare id is
-    # useless without a session, and the controller only ever resolves it
-    # within the claim in the URL.
-    #
-    # URLs are path-only, so no host configuration is needed.
+    # URLs point at ReceiptFilesController, never ActiveStorage's permanent,
+    # unauthenticated routes. attachment_id is the BLOB id, never the signed
+    # id, which is a bearer token for those routes.
     def receipts
       @receipts ||= receipt_files.map { |file| self.class.wrap_receipt(file) }
     end

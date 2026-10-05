@@ -1,9 +1,8 @@
 <p class="mb-3 text-gray-600">
   Submit your expenses here. The finance team reviews every claim, batches it to the
   Students' Association (EUSA), and EUSA pays it into your bank account.
-  <%# Every configured mailbox, not the first: email-in attributes a receipt by
-      the mailbox it arrived at, so naming one address would file a termtime
-      receipt against the Fringe pot. %>
+  <%# Every mailbox, not the first: email-in attributes a receipt by the
+      mailbox it arrived at. %>
   <% if (mailboxes = reimbursements_receive_mailbox_links).present? %>
     You can also just email a receipt to <%= mailboxes %> and finish the claim here.
   <% end %>
@@ -16,9 +15,6 @@
     <%= link_to "add your payment details", edit_admin_reimbursements_payment_details_path, class: "font-medium underline" %>.
   <% end %>
 <% else %>
-  <%# Durable, quiet confirmation that details are on file (and which account),
-      so "is my money going to the right place?" is answerable at a glance —
-      last 4 digits only. %>
   <p class="mb-3 text-sm text-gray-600">
     Payments go to your account ending <strong><%= current_person.account_number.to_s.last(4) %></strong>.
     <%= link_to "Change", edit_admin_reimbursements_payment_details_path, class: "underline" %>

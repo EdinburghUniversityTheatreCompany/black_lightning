@@ -1,13 +1,9 @@
 require "test_helper"
 
 module Reimbursements
-  # The AR Expense must keep the Airtable-era PORO's interface: string ids,
-  # the receipts wrapper, completion checks and the effective money path.
   class ExpenseTest < ActiveSupport::TestCase
-    # NOT `include Rails.application.routes.url_helpers`: Minitest collects every
-    # method whose name starts with "test_", and the route set defines
-    # test_access_admin_reimbursements_setting_path — which would run as a test
-    # and fail on its missing :key.
+    # Not `include ...url_helpers`: Minitest would collect route helpers named
+    # test_* (test_access_admin_reimbursements_setting_path) as tests.
     def routes = Rails.application.routes.url_helpers
 
     def create_expense(**attrs)
@@ -51,9 +47,7 @@ module Reimbursements
       assert_not receipt.image?
     end
 
-    # A PDF receipt is representable (poppler/mupdf render its first page), so
-    # the wrapper must carry a thumbnail: the strip draws a real first-page
-    # preview instead of a generic document icon.
+    # A PDF is representable (its first page renders), so it gets a thumbnail.
     test "a PDF receipt is wrapped with a first-page thumbnail and an inline URL" do
       expense = create_expense
       expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
@@ -66,18 +60,13 @@ module Reimbursements
       assert receipt.inline_viewable?, "a PDF renders in the browser's own viewer"
       assert_equal routes.thumbnail_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
                    receipt.preview_url
-      # Same-origin, so the <iframe> renders it rather than downloading it, and
-      # permission-checked, which ActiveStorage's own routes are not.
       assert_equal routes.inline_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id), receipt.url
-      # The viewer's Download link must save the file even for a type the browser
-      # would happily display.
       assert_equal routes.download_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
                    receipt.download_url
     end
 
     # The signed id is a bearer token for ActiveStorage's permanent,
-    # unauthenticated routes. Emitting one anywhere in the markup would leave
-    # exactly the link ReceiptFilesController exists to replace.
+    # unauthenticated routes.
     test "a receipt is identified by its blob id, never by a signed id" do
       expense = create_expense
       expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
@@ -92,9 +81,8 @@ module Reimbursements
       end
     end
 
-    # Sheet music and Office documents are in Attachment::ALLOWED_CONTENT_TYPES
-    # but are neither representable nor renderable, so the viewer has to fall
-    # back to the document icon plus a download link.
+    # Sheet music and Office documents are allowed but neither previewable nor
+    # renderable.
     test "an unrenderable receipt has no thumbnail and is not inline viewable" do
       expense = create_expense
       expense.receipt_files.attach(io: StringIO.new("PK"), filename: "score.mscz",
@@ -126,9 +114,7 @@ module Reimbursements
       assert_equal 2, expense.receipt_count
     end
 
-    # #receipts wraps each attachment in an Attachment value object, minting a signed id, a
-    # blob path and a variant representation path apiece. The batch builder and the
-    # expense-edit screen ask for the COUNT once per row, so counting must not pay for that.
+    # #receipts builds three route paths per file; the count is asked once per row.
     test "receipt_count counts attachments without building the receipt wrappers" do
       expense = create_expense
       expense.receipt_files.attach(io: File.open(Rails.root.join("test", "test.png")),
@@ -196,9 +182,7 @@ module Reimbursements
       assert_equal "ABNANL2A", expense.effective_bic
     end
 
-    # The whole reason payment_method exists: the two rails ask completely
-    # different questions of "do we know where to send the money?", and reading
-    # the wrong one is what blocked every international claim at approval.
+    # Reading the wrong rail blocked every international claim at approval.
     test "effective_has_bank_details? reads the rail's own fields, not the other's" do
       person = Person.create!(name: "Pat", email: "rail-split@example.com")
       person.create_payment_details!(sort_code: "80-22-60", account_number: "12345678")
@@ -232,9 +216,7 @@ module Reimbursements
       assert_equal "DEUTDEFF500", expense.bic_override
     end
 
-    # A foreign invoice carries no reclaimable UK VAT, so ex-VAT IS the gross.
-    # Set on the record rather than on each of the three forms that can write an
-    # amount, so the two figures cannot drift into a deduction nobody can claim.
+    # A foreign invoice carries no reclaimable UK VAT, so ex-VAT is the gross.
     test "an international claim's ex-VAT amount mirrors its GBP amount" do
       expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
                                amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67"))

@@ -1,27 +1,11 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-only editing of a single expense at ANY status — Pending,
-    # Approved, Submitted AND Paid. The Business Manager wants full
-    # flexibility, so there is deliberately NO +editable?+/status guard here
-    # (that guard belongs to the producer portal path, where a submitter may
-    # only touch their own Draft/Pending expense).
-    #
-    # Reachable from the Review cards' "Edit (any status)" link and from a
-    # lookup by auto-number or record id (so a Submitted/Paid expense
-    # that never appears on the Review tabs can still be found). Edits persist
-    # through +store.update_expense!+, which is status-agnostic; a Submitted or
-    # Paid expense shows a clear note that the edit won't change what EUSA has
-    # already processed.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Finance editing of one expense at ANY status. There is deliberately no
+    # +editable?+ guard: that belongs to the producer portal.
     class ExpenseEditsController < FinanceController
       include AttachesReceipts
 
-      # All expenses as a filterable/searchable table, newest first, each row
-      # opening the edit page above. The finance team's primary way in — the
-      # old +find+ lookup is now just the search box on this page.
       def index
         @title = "Expenses"
         @statuses = ::Reimbursements::Status.all
@@ -30,10 +14,8 @@ module Admin
 
         @status_filter = params[:status].to_s.strip
         @budget_filter = params[:budget].to_s.strip
-        # The SUBMITTER, not the effective payee: this is what People's
-        # "N claims" link opens, and a payee's claims are the ones they filed.
-        # A record id rather than a name, so two people sharing a name are two
-        # different lists.
+        # The SUBMITTER's record id (People's "N claims" link), so two people
+        # sharing a name are two lists.
         @person_filter = params[:person].to_s.strip
         @person = store.people.find { |p| p.record_id == @person_filter } if @person_filter.present?
         @query = params[:q].to_s.strip
@@ -41,16 +23,12 @@ module Admin
 
         filtered = filtered_expenses
         respond_to do |format|
-          # The whole list is already loaded and filtered in Ruby, so paginate
-          # the array rather than re-querying.
           format.html { @expenses = paginate(filtered) }
-          # Export the FULL filtered set (the on-screen filters carry through the
-          # query string) — pagination is display-only, so the CSV isn't paged.
+          # The full filtered set: pagination is display-only.
           format.csv { send_export ::Reimbursements::Exports::Expenses, filtered }
         end
       end
 
-      # Lookup: resolve a typed auto-number or record id to its edit page.
       def find
         @title = "Find an Expense"
         query = params[:q].to_s.strip
@@ -85,24 +63,10 @@ module Admin
         redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
       end
 
-      # Put a rejected claim back in the queue.
-      #
-      # A rejection was terminal: nothing in the portal wrote a status back to
-      # Pending, so a claim rejected by mistake — or one the producer has since
-      # fixed by sending the missing receipt — could only be resurrected from a
-      # console, or refiled from scratch under a new number, which loses the
-      # thread between the two.
-      #
-      # It goes back to PENDING, never straight to Approved: the claim re-enters
-      # finance's queue and the owner gate exactly as a fresh one would, so
-      # reopening can never be a way round a sign-off. The rejection reason and
-      # the notified stamp are KEPT — they are what happened, and the History
-      # card is where they are read.
-      #
-      # Nobody is emailed. The producer was told it was rejected; a second,
-      # unexplained "it is pending again" from a portal they may never have
-      # opened is worse than the operator telling them in the reply they are
-      # already writing.
+      # Back to PENDING, never Approved, so the claim re-enters the owner gate
+      # and reopening is no way round a sign-off. The rejection reason and stamp
+      # are kept as history. Nobody is emailed: the operator tells the producer
+      # in the reply they are already writing.
       def reopen
         expense = find_expense!
         unless expense.status == ::Reimbursements::Status::REJECTED
@@ -118,8 +82,6 @@ module Admin
                                  "history.")
       end
 
-      # Both answer a turbo stream for the receipts-upload dropzone on the edit
-      # page (replacing the gallery in place) and redirect for a plain post.
       def add_receipts
         expense = find_expense!
         attached, upload_errors = attach_posted_receipts(expense)
@@ -148,33 +110,19 @@ module Admin
 
       private
 
-      # Set the instance vars the edit view needs, shared by #edit and the
-      # invalid-#update re-render. Reasons the expense needs attention need the
-      # full budget set keyed by record id (over-budget check); modulus_checker
-      # is a helper_method.
+      # Shared by #edit and the invalid-#update re-render.
       def load_edit(expense)
         @expense = expense
         @title = "Edit ##{expense.auto_number}"
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
-        # The payee picker. Every registered person, in name order: a claim
-        # matched to the wrong one is corrected here, and the payee it should
-        # have gone to is as likely to be at the end of the alphabet as the
-        # start. See #person_record_id_error for why the write is guarded.
         @people = store.people_in_name_order
         @attention =
           ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
         load_history(expense)
       end
 
-      # What has actually happened to this claim. It had no timeline at all:
-      # submitted / endorsed / approved / batched / paid live on four tables
-      # and no screen assembled them, so a Paid claim's page was a status pill
-      # and nothing else — and the rejection reason and override note, both
-      # stored, were rendered nowhere in the portal.
-      #
-      # Everything through the store, and each lookup is a single row, so
-      # opening one claim costs two extra queries rather than a scan.
+      # The History card: endorsement and batch, one row each.
       def load_history(expense)
         @endorsement = store.endorsement_for_expense(expense.record_id)
         @endorsing_person =
@@ -183,9 +131,7 @@ module Admin
         @batch = store.find_batch(expense.batch_id.to_s) if expense.batch_id.present?
       end
 
-      # All expenses, newest first, narrowed by the status/budget/attention
-      # filters and the free-text search. Filtering happens in Ruby over the
-      # store's one memoized list, not as a query per filter.
+      # Newest first, filtered in Ruby over the store's one memoized list.
       def filtered_expenses
         result = store.expenses.sort_by { |e| e.submitted_at || Time.zone.at(0) }.reverse
         result = result.select { |e| e.status == @status_filter } if @status_filter.present?
@@ -200,15 +146,8 @@ module Admin
         result
       end
 
-      # Case-insensitive substring over description, effective payee name,
-      # the SUBMITTER's name and email, and payment reference; an exact match
-      # on the visible auto-number; or a numeric match on the gross amount.
-      #
-      # The submitter half is what makes "where's my money?" answerable. The
-      # search read the EFFECTIVE payee only, which on an Invoice is the
-      # supplier — so a producer who submitted a third-party bill could not be
-      # found by their own name, and the claim they are chasing did not come
-      # back for any spelling of it.
+      # The submitter as well as the effective payee: on an Invoice the payee is
+      # the supplier, and the producer chasing it searches by their own name.
       def matches_query?(expense, query)
         needle = query.downcase
         return true if expense.description.to_s.downcase.include?(needle)
@@ -229,21 +168,15 @@ module Admin
         false
       end
 
-      # Match on record id first, then on the visible auto-number. find_expense
-      # coerces a non-numeric query to no match (nil) rather than raising.
+      # Record id first, then the visible auto-number.
       def lookup_expense(query)
         store.find_expense(query) ||
           store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
       end
 
-      # Which rail this save puts the claim on: the posted one where finance
-      # may still change it, the stored one otherwise.
-      #
-      # EVERY rail-aware rule below reads this rather than expense.international?
-      # — the claim's stored rail. Reading the stored one would validate the
-      # overrides the operator is leaving behind instead of the ones they just
-      # typed, which is the same class of bug as the all-or-nothing rule
-      # reading the UK trio for an international claim.
+      # Every rail-aware rule reads the rail being POSTED, not the stored one,
+      # or it would check the overrides being left behind instead of the ones
+      # just typed.
       def posted_rail_international?(expense)
         return expense.international? unless rail_editable?(expense)
 
@@ -253,14 +186,9 @@ module Admin
         rail == ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
       end
 
-      # The posted payee has to be one the page RENDERED, the rule every other
-      # picker here follows: the write goes straight to a foreign key, so an id
-      # that names nothing is a 500 rather than a fixable form error.
-      #
-      # Unlike the budget, this is NOT narrowed by status. The motivating case
-      # is a batch of imported claims already Paid to the wrong payee, and
-      # correcting the record of who was paid is exactly what is wanted there —
-      # the form says what it does and does not change.
+      # The posted payee must be one the page rendered, or the foreign key 500s.
+      # Deliberately not narrowed by status: imported claims already Paid to
+      # the wrong payee are what this exists to correct.
       def person_record_id_error(record_id)
         return nil if record_id.blank?
         return nil if store.people_in_name_order.any? { |person| person.record_id == record_id.to_s }
@@ -268,30 +196,14 @@ module Admin
         "That person is no longer in the registry. Reload the page and pick again."
       end
 
-      # Finance may move a claim between rails only while the money can still
-      # move — Draft, Pending and Approved. Once it is Submitted or Paid the
-      # paperwork EUSA acted on has gone out (a BACS row or an international
-      # payment form), and re-railing the record afterwards would describe a
-      # payment that never happened. Same window as expense_type_error's.
+      # The rail is fixed once Submitted or Paid: the paperwork has gone out.
       def rail_editable?(expense)
         ::Reimbursements::ReviewSupport.attention_actionable?(expense)
       end
       helper_method :rail_editable?
 
-      # A blank GBP amount is a legitimate state on the INTERNATIONAL rail:
-      # the submitter enters the invoice figure and finance types the GBP
-      # equivalent at review, so the claim sits without one until then. The
-      # flat "Enter a valid amount greater than 0." refused every such edit —
-      # changing only the currency was rejected with a message naming none of
-      # the page's three amount fields, so no unreviewed international claim
-      # could be edited at all. It stays required on the UK rail, where the
-      # amount is what the producer actually spent.
-      #
-      # A blank is "leave it as it is", not "clear it": #update_attrs writes
-      # the parsed nil, which DatabaseStore#update_expense! compacts away.
-      # Clearing a GBP amount is not something this screen offers, and the
-      # column's "nil means leave it alone" contract is relied on by four
-      # other write paths.
+      # A blank GBP amount is legitimate on the international rail (finance types
+      # it at review). Blank means leave it alone: update_expense! compacts nil.
       def amount_error(expense)
         blank_gross = params[:amount].to_s.strip.blank?
         return nil if blank_gross && posted_rail_international?(expense)
@@ -301,11 +213,8 @@ module Admin
         )
       end
 
-      # The invoice figure. Blank CLEARS it (finance correcting a wrong
-      # reading is a real edit, and the approval guard already blocks on a
-      # missing one); anything unreadable is refused with the field named.
-      # Before this a blank silently did nothing and the field came back with
-      # the old value still in it, which reads as a save that was ignored.
+      # Blank clears the invoice figure (approval already blocks on a missing
+      # one); anything unreadable is refused with the field named.
       def foreign_amount_error(expense)
         return nil unless posted_rail_international?(expense)
 
@@ -318,23 +227,9 @@ module Admin
         "Invoice amount: enter a number greater than 0, or leave it blank."
       end
 
-      # A rail switch changes payment_method and NOTHING ELSE, deliberately.
-      #
-      # The other rail's overrides are encrypted bank details a human typed
-      # and are inert while that rail is inactive — EffectivePayee only ever
-      # reads the active pair — so keeping them costs nothing and makes a
-      # mis-click reversible, while clearing them would be an unrecoverable
-      # wipe of details nobody can retype from memory. foreign_amount and
-      # foreign_currency are kept on the same footing: nothing reads them off
-      # a UK claim, and switching back restores the claim as it was.
-      #
-      # amount_excl_vat is left to the model: Expense's before_validation
-      # mirrors gross into ex-VAT for an international claim (a foreign
-      # invoice carries no reclaimable UK VAT), so switching TO international
-      # settles it automatically. Switching the other way leaves the two
-      # equal, which is the legitimate "no VAT itemised" state the soft VAT
-      # flag already reports — inventing a split here would deduct tax nobody
-      # can reclaim.
+      # A rail switch changes payment_method only. The other rail's encrypted
+      # overrides are inert and kept, since wiping them is unrecoverable; ex-VAT
+      # is mirrored by the model.
       def rail_attrs(expense)
         return {} unless rail_editable?(expense)
 
@@ -346,82 +241,48 @@ module Admin
 
       def update_attrs(expense)
         attrs = {
-          # The parsed BigDecimal AmountValidation just approved, not the raw field:
-          # AR would cast "£1,200" to 0 on the decimal column.
+          # The parsed BigDecimal, never the raw field: AR casts "£1,200" to 0.
           amount: ::Reimbursements::AmountValidation.amount(params[:amount]),
           description: params[:description],
           payment_reference: params[:payment_reference],
           expense_type: params[:expense_type],
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence,
-          # WHOSE claim this is. Finance could not change it at all, so a claim
-          # matched to the wrong person — by email-in, or by the settled-claim
-          # import, where a blank Submitter email once sent 140 production
-          # claims to one payee — could only be fixed from a console.
-          #
-          # Compacted away when blank, so a form that posts no payee (or a
-          # deliberate "leave it") never unlinks the claim from its person:
-          # a claim with no payee at all is the state the BACS pre-flight
-          # exists to refuse.
+          # Blank is compacted away, never unlinking the claim from its person:
+          # the BACS pre-flight refuses a payee-less claim.
           person_record_id: params[:person_record_id].presence,
           payee_name_override: params[:payee_name_override].to_s,
-          # Persist the SAME normalized value #bank_detail_override_error just
-          # validated (dashed sort code, whitespace-stripped account number) —
-          # so what's validated and what later reaches the BACS spreadsheet
-          # are always the identical string, matching ExpenseForm's pattern.
+          # Store the same normalised strings #bank_detail_override_error validated.
           sort_code_override: ::Reimbursements::BankDetails.format_sort_code(params[:sort_code_override].to_s),
           account_number_override:
             ::Reimbursements::BankDetails.normalize_account_number(params[:account_number_override].to_s),
-          # Same rule as the pair above: store exactly the normalised string
-          # #bank_detail_override_error validated, so what was checked and what
-          # reaches EUSA's form are the identical value.
           iban_override: ::Reimbursements::BankDetails.normalize_iban(params[:iban_override].to_s),
           bic_override: ::Reimbursements::BankDetails.normalize_bic(params[:bic_override].to_s)
         }
-        # Only on the rail that has a currency: a UK-rail post carries no such
-        # field, and writing "" would blank a stored one the claim gets back
-        # the moment it is switched to international again.
+        # International only, so a UK post never blanks stored figures the claim
+        # gets back if switched again.
         if posted_rail_international?(expense)
           attrs[:foreign_currency] = params[:foreign_currency].to_s.strip.upcase
         end
         attrs.merge!(rail_attrs(expense))
-        # The invoice figure, which is what EUSA's bank actually pays. A blank
-        # now CLEARS it rather than silently leaving the old value in place —
-        # #foreign_amount_error has already refused anything unreadable, so
-        # what arrives here is either a number or a deliberate blank. Only
-        # touched on the international rail: a UK claim's form does not offer
-        # the field, so a post that omits it must not wipe a stored figure the
-        # claim would get back if it were switched.
         if posted_rail_international?(expense)
           attrs[:foreign_amount] = ::Reimbursements::AmountValidation.amount(params[:foreign_amount])
         end
-        # Only write excl-VAT when a positive value is given (0 means "not yet
-        # known", leave the field alone), mirroring the Review save.
+        # Blank or 0 means "not yet known": leave the stored value alone.
         excl_vat = ::Reimbursements::AmountValidation.amount_excl_vat(params[:amount_excl_vat])
         attrs[:amount_excl_vat] = excl_vat if excl_vat
         attrs
       end
 
-      # Only validates a field's format when it's actually present — a blank
-      # override means "no override, fall back to the payee's own bank
-      # details," same as ExpenseForm#overrides_valid. Unlike every other
-      # bank-detail write path in this diff, this finance-only "Edit (any
-      # status)" form previously wrote raw params with zero format check.
-      #
-      # Also requires the three override fields to be all-or-nothing: setting
-      # only a sort code (or only an account number) would splice a third
-      # party's partial bank details onto the payee's own remaining fields —
-      # an internally-inconsistent pair that still passes each field's own
-      # format check in isolation.
+      # Formats are checked only when present (blank falls back to the payee's
+      # own details). The trio is all-or-nothing, or a third party's partial
+      # details would be spliced onto the payee's.
       def bank_detail_override_error(expense)
         payee_name = params[:payee_name_override].to_s
         if payee_name.length > ::Reimbursements::BankDetails::PAYEE_NAME_MAX_LENGTH
           return "Payee name override #{::Reimbursements::BankDetails::PAYEE_NAME_HINT}"
         end
 
-        # The rail this save PUTS it on, not the one it is leaving: validating
-        # the stored rail would check the pair the operator is walking away
-        # from and let the one they just typed through unchecked.
         if posted_rail_international?(expense)
           international_override_error(payee_name)
         else
@@ -429,9 +290,6 @@ module Admin
         end
       end
 
-      # The international rail routes on an IBAN and a BIC, so the UK trio rule
-      # read fields it never fills: a claim with a payee name and no sort code
-      # was refused outright, with a message naming fields that do not apply.
       def international_override_error(payee_name)
         iban = params[:iban_override].to_s
         bic = params[:bic_override].to_s
@@ -470,11 +328,8 @@ module Admin
         nil
       end
 
-      # ExpenseForm's Invoice rule (no override trio means EffectivePayee pays
-      # the SUBMITTER) applies here too, but only while the money can still
-      # move: Submitted and Paid record what EUSA already did, and a historical
-      # row whose supplier details we never captured must stay re-typable
-      # instead of demanding invented bank details.
+      # ExpenseForm's Invoice rule, only while the money can still move:
+      # Submitted and Paid claims stay re-typable without invented bank details.
       def expense_type_error(expense)
         type = params[:expense_type].to_s
         return nil if type.blank?

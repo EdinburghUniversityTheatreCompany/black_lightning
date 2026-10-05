@@ -47,10 +47,7 @@ module Reimbursements
       assert_nil error(amount: "20.00", amount_excl_vat: "20.00")
     end
 
-    # Reading is AmountParser's job, so the finance forms accept the same money
-    # formats as the submitter and budget forms. A separate stricter reading here
-    # would give "what counts as an amount" two answers depending on which form
-    # you were standing in front of.
+    # The same formats AmountParser reads for every other form.
     test "a currency symbol and thousands separators are accepted" do
       assert_nil error(amount: "£1,200")
       assert_nil error(amount: "£1,200.50", amount_excl_vat: "£1,000")
@@ -61,10 +58,7 @@ module Reimbursements
       assert_equal BigDecimal("12.50"), AmountValidation.amount("12,50")
     end
 
-    # These accessors are what stop the validated and written values disagreeing:
-    # the caller writes the very BigDecimal that was validated, never the raw
-    # string. AR casts a string to a decimal column with to_d, which reads
-    # "£1,200" as 0 — a validated amount silently becoming a zero payment.
+    # AR casts a string to a decimal column with to_d, which reads "£1,200" as 0.
     test "the value to write is the parsed BigDecimal that was validated" do
       assert_equal BigDecimal("1200"), AmountValidation.amount("£1,200")
       assert_equal BigDecimal("20.5"), AmountValidation.amount("20.50")
@@ -78,9 +72,7 @@ module Reimbursements
       assert_equal BigDecimal("16.67"), AmountValidation.amount_excl_vat("16.67")
     end
 
-    # Kernel#Float accepts "0x1A" as hex (26.0) and "1e10" as scientific notation.
-    # BigDecimal rejects the hex outright, and the sanity ceiling catches the
-    # scientific notation, so neither can reach a payment.
+    # BigDecimal rejects hex; the ceiling catches scientific notation.
     test "a hex-looking amount is rejected, not silently accepted as if parsed by Float()" do
       assert_match(/valid amount/i, error(amount: "0x1A"))
     end

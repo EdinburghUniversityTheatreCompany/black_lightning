@@ -1,13 +1,8 @@
 <%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
-<%# Receipt-first expense form. The Stimulus controller holds on to the picked
-    receipt across a failed submit and drives the inline warnings; everything
-    still works with JavaScript disabled (plain manual form). %>
-<%# The primary/secondary buttons and the line beneath them adapt to what the
-    submit actually DOES, which depends on the claim's current status:
-      - new / editing a Draft: primary submits to finance, secondary keeps it a
-        private draft.
-      - editing a Pending claim: primary re-saves it in the queue, secondary
-        WITHDRAWS it back to a draft (out of the queue) — so that one confirms. %>
+<%# Everything works with JavaScript off; the Stimulus controller keeps the
+    picked receipt across a failed submit and drives the inline warnings.
+    On a Pending claim the secondary button WITHDRAWS it to a draft, so it
+    confirms. %>
 <% editing_pending = current_status == Reimbursements::Status::PENDING %>
 <%= simple_horizontal_form_for form, url: url, method: method,
       html: { multipart: true,
@@ -51,8 +46,7 @@
 
   <%= render('shared/pages/form', f: f) do %>
     <% if show_receipt_input %>
-      <%# With JS, the controller re-attaches the file the user picked and
-          hides this. This is the no-JS / no-file-attached fallback. %>
+      <%# No-JS fallback: with JS the controller re-attaches the file and hides this. %>
       <% if form.errors.any? %>
         <p class="mb-4 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
            role="status" aria-live="polite"
@@ -93,17 +87,10 @@
           input_html: { data: { reimbursements_receipt_target: "paymentMethod",
                                 action: "change->reimbursements-receipt#paymentMethodChanged" } } %>
 
-    <%# Each rail's amount fields are BOTH rendered and the server picks which is
-        visible, so the form is right with JavaScript off and after a 422
-        re-render.
-        `required:` follows the ACTIVE rail, and the Stimulus controller moves
-        the attribute when the rail changes. A hidden input carrying
-        `required` makes the browser refuse to submit the whole form, silently:
-        it reports an invalid control it cannot scroll to, so the Submit button
-        simply does nothing. simple_form's `required:` wins over
-        `input_html: { required: false }` — it emits `required="required"`
-        either way — so the attribute has to be driven by the rail, not
-        suppressed. %>
+    <%# Both rails' amounts are rendered and the server picks which is visible.
+        A hidden input carrying `required` silently blocks the whole submit, and
+        simple_form's `required:` beats `input_html: { required: false }`, so
+        the attribute follows the active rail (the controller moves it). %>
     <div data-reimbursements-receipt-target="ukAmount" class="<%= 'hidden' if form.international? %>">
       <%= f.input :amount, label: "Amount (£, incl. VAT)", required: !form.international?,
             hint: "What actually left your account, or the invoice total.",
@@ -117,8 +104,7 @@
                           data: { rail_required: true, reimbursements_receipt_target: "amountExclVat",
                                   action: "input->reimbursements-receipt#checkVat" } } %>
 
-      <%# Shown when the amounts already say VAT isn't itemised or the ack failed;
-          both amount inputs toggle it live via checkVat, so it announces. %>
+      <%# Both amount inputs toggle this live via checkVat. %>
       <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
            class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
         <p class="mb-1 text-sm">
@@ -133,14 +119,8 @@
 
     <div data-reimbursements-receipt-target="internationalAmount"
          class="<%= 'hidden' unless form.international? %>">
-      <%# Only the invoice figure is asked for, and there is no ex-VAT field: a
-          foreign invoice carries no reclaimable UK VAT, so the whole amount
-          hits the budget. The submitter knows what the invoice says and nothing
-          about the rate EUSA's bank will get, so finance enters the GBP
-          equivalent when they review it — and cannot approve without it. %>
-      <%# Not marked required and carrying no rail_required: the picker opens on
-          EUR and offers no blank, so it can never be submitted empty. simple_form
-          also refuses include_blank: false on a required field. %>
+      <%# Not required: the picker has no blank, and simple_form refuses
+          include_blank: false on a required field. %>
       <%= f.input :foreign_currency, label: "Currency", required: false,
             collection: Reimbursements::Expense::FOREIGN_CURRENCIES, include_blank: false,
             hint: "The currency the invoice is in. EUSA's form states it, so their bank pays " \
@@ -152,9 +132,7 @@
             input_html: { inputmode: "decimal", required: false, data: { rail_required: true } } %>
     </div>
 
-    <%# Soft-block a large claim (a mistyped amount would otherwise skew a
-        budget). Shown when the amount is already large or the ack failed;
-        the amount input toggles it live via checkAmount. %>
+    <%# The amount input toggles this live via checkAmount. %>
     <div data-reimbursements-receipt-target="largeAmountWarning" role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:large_amount_acknowledged].any? || form.large_amount? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
@@ -178,8 +156,7 @@
     <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
           input_html: { required: false } %>
 
-    <%# The live character counter is part of the hint, so it sits under the
-        field it counts rather than at the card edge. %>
+    <%# The live counter sits in the hint, under the field it counts. %>
     <%= f.input :payment_reference, label: "Payment reference", required: true,
           hint: safe_join([ "What EUSA puts on the bank transfer. Invoices usually specify one; " \
                             "otherwise the invoice number or a short label. ",
@@ -188,17 +165,13 @@
                         data: { reimbursements_receipt_target: "reference",
                                 action: "input->reimbursements-receipt#updateCounter" } } %>
 
-    <%# Always shown (not a collapsible): tucked in an accordion, whether a
-        third-party payee was filled in was invisible at a glance — a
-        money-path detail that should be obvious. The heading colours to
-        signal when it's in use. %>
+    <%# Always shown, never collapsed, so a filled-in payee is obvious. %>
     <% overrides_filled = form.payee_name_override.present? || form.sort_code_override.present? || form.account_number_override.present? %>
     <% invoice_selected = form.expense_type == Reimbursements::Expense::TYPE_INVOICE %>
     <div class="mb-4 border-t <%= overrides_filled ? 'border-warning/50' : 'border-gray-200' %> pt-3">
       <h3 class="mb-1">
         Pay someone else
-        <%# Server-rendered for the no-JS case and for a 422 re-render; the
-            controller's typeChanged keeps it honest as the type select changes. %>
+        <%# Server-rendered for no-JS and a 422; typeChanged updates it live. %>
         <span data-reimbursements-receipt-target="payeeOptional"
               class="<%= 'hidden' if invoice_selected || form.international? %> font-normal text-gray-500">(optional)</span>
         <span data-reimbursements-receipt-target="payeeRequired"
@@ -209,9 +182,7 @@
           <%= render BadgeComponent.new(type: :warning, pill: true).with_content("In use") %>
         <% end %>
       </h3>
-      <%# Two variants rather than one branch: the rail can change in the browser
-          after this renders, and a heading reading "(optional)" over fields the
-          server will reject is worse than no hint at all. %>
+      <%# Both variants, since the rail can change in the browser. %>
       <p data-reimbursements-receipt-target="ukPayeeCopy"
          class="<%= 'hidden' if form.international? %> mb-4 text-sm text-gray-600">
         Fill this out when EUSA should pay a third party directly, which is what an

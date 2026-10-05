@@ -3,11 +3,7 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The finance-only "edit an expense at ANY status" surface. Unlike the
-    # producer portal (Pending/Draft only) and unlike the Review queue
-    # (Pending inline), this lets the Business Manager view and edit an
-    # expense whatever its status — including Submitted and Paid — reachable
-    # from the Review cards and by a lookup on auto-number/record id.
+    # Finance editing of an expense at any status.
     class ExpenseEditsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -72,8 +68,7 @@ module Admin
 
       # --- Index: all-expenses table with filters + search ----------------
 
-      # Two budgets and two payees across three statuses, so the filter/search
-      # tests can prove narrowing (and exclusion).
+      # Two budgets and two payees across three statuses.
       def seed_multi_expenses
         person2 = create_reimbursements_person(name: "Sam Stagehand", email: "sam@example.com",
                                                sort_code: "20-00-00", account_number: "12345678")
@@ -196,8 +191,7 @@ module Admin
 
       # --- CSV export --------------------------------------------------------
 
-      # The combined workbook hangs off the Finance sidebar, which renders on
-      # every finance page — so any of them proves the link is reachable.
+      # The sidebar renders on every finance page, so any of them will do.
       test "the Finance sidebar links to the exports page" do
         sign_in @user
 
@@ -227,7 +221,6 @@ module Admin
                        "Description", "Payment reference", "Submitted", "Needs attention",
                        "Cost centre", "Area" ], rows.first
         assert_equal 4, rows.size, "header + three expenses"
-        # A concrete data row: the Paid "Stage nails" expense to Pat, £5.00, Props.
         stage = rows.find { |r| r[6] == "Stage nails" }
         assert_equal %w[3 Paid], stage.values_at(0, 1)
         assert_equal "Pat Producer", stage[2]
@@ -288,8 +281,7 @@ module Admin
 
       # --- Pagination (50 per page, filters carry across pages) ------------
 
-      # Build `count` Pending expenses, newest first by submitted_at so the
-      # ordering (and therefore which slice lands on which page) is deterministic.
+      # Distinct submitted_at dates keep the page split deterministic.
       def seed_paged_expenses(count)
         (1..count).each do |n|
           expense_at("Pending", auto_number: n, description: "Expense number #{n}",
@@ -322,8 +314,7 @@ module Admin
       end
 
       test "a status filter and a page combine (filter carries onto page 2)" do
-        # 60 Pending + 20 Paid; filtering to Pending leaves 60 (two pages), so
-        # page 2 holds the Pending remainder and never leaks a Paid expense.
+        # 60 Pending (two pages) and 20 Paid.
         (1..60).each do |n|
           expense_at("Pending", auto_number: n, description: "Pending row #{n}",
                      receipt: false, submitted_at: Time.utc(2026, 5, (n % 28) + 1))
@@ -339,15 +330,13 @@ module Admin
         assert_includes response.body, "60 expenses"
         assert_equal 10, response.body.scan(/Pending row \d+/).uniq.size, "page 2 should show the last 10 Pending rows"
         assert_equal 0, response.body.scan(/Paid row \d+/).size, "a Paid expense must never appear under the Pending filter"
-        # The Pending filter must survive onto the pager links.
         assert_match(/[?&]status=Pending/, response.body)
       end
 
       # --- Needs-attention reasons tooltip ---------------------------------
 
       test "index flags a needs-attention expense with an accessible reasons popover" do
-        # No receipt is an advisory (non-blocking) reason -> the amber "Check
-        # first" popover.
+        # No receipt is advisory, not blocking.
         expense = expense_at("Pending", receipt: false)
         sign_in @user
 
@@ -361,8 +350,7 @@ module Admin
       end
 
       test "index shows a blocked expense in a distinct danger popover" do
-        # No budget hard-blocks approval -> the red "Can't approve yet" popover,
-        # separate from any advisory one.
+        # No budget blocks approval.
         expense = expense_at("Pending", budget: nil)
         sign_in @user
 
@@ -373,8 +361,6 @@ module Admin
       end
 
       test "index suppresses the attention flag on a non-actionable (Paid) row" do
-        # Paid is done — the same flag there is noise. It must not render even
-        # though the expense would otherwise be flagged (no receipt).
         expense_at("Paid", receipt: false)
         sign_in @user
 
@@ -393,8 +379,7 @@ module Admin
       end
 
       test "edit lists advisory reasons separately from blocking ones" do
-        # No receipt = advisory; no budget = blocking. Both should show, each in
-        # its own section.
+        # No receipt is advisory; no budget is blocking.
         expense = expense_at("Pending", receipt: false, budget: nil)
         sign_in @user
 
@@ -428,8 +413,7 @@ module Admin
                            bic_override: "DEUTDEFF", **attrs)
       end
 
-      # The full set of fields the form posts, so a test changing one thing
-      # does not accidentally blank the rest.
+      # The full stored field set, so changing one field does not blank the rest.
       def edit_params(expense, **overrides)
         { id: expense.record_id, amount: expense.amount, amount_excl_vat: expense.amount_excl_vat,
           description: expense.description, payment_reference: expense.payment_reference,
@@ -450,16 +434,13 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         assert_select "select#payment_method"
-        # Both pairs are in the markup so the browser can switch without a
-        # round trip; only one is visible.
+        # Both pairs are rendered so the browser can switch rails.
         assert_select "[data-reimbursements-receipt-target=ukFields]"
         assert_select "[data-reimbursements-receipt-target=internationalFields]"
       end
 
       %w[Submitted Paid].each do |status|
         test "edit does not offer the rail on a #{status} claim" do
-          # The paperwork EUSA acted on has gone out; the stored rail is a
-          # record of what happened, not a choice.
           expense = expense_at(status)
           sign_in @user
 
@@ -496,9 +477,8 @@ module Admin
       end
 
       test "a rail switch keeps the other rail's details, so it can be switched back" do
-        # They are encrypted bank details a human typed, and EffectivePayee only
-        # ever reads the ACTIVE rail's pair — so a dormant pair is inert, while
-        # wiping it on a mis-click could not be undone.
+        # EffectivePayee reads only the active pair, so the dormant one is
+        # inert, and wiping it could not be undone.
         expense = expense_at("Pending", sort_code_override: "08-99-99",
                                         account_number_override: "66374958",
                                         payee_name_override: "Studio Buehne")
@@ -530,9 +510,7 @@ module Admin
       end
 
       test "the override rule reads the rail being posted, not the one being left" do
-        # A UK claim switched to international with only a payee name must be
-        # refused for the IBAN and BIC it now needs — reading the STORED rail
-        # would check the sort-code pair it is walking away from.
+        # Reading the stored rail would check the sort-code pair being left.
         expense = expense_at("Pending")
         sign_in @user
 
@@ -549,10 +527,7 @@ module Admin
       # --- An international claim with no GBP amount is still editable ------
 
       test "an international claim with a blank GBP amount saves" do
-        # The submitter enters the invoice figure and finance types the GBP
-        # equivalent at review, so the claim legitimately sits without one.
-        # The flat "Enter a valid amount greater than 0." refused every such
-        # edit, naming none of the page's three amount fields.
+        # Finance types the GBP figure at review, so the claim sits without one.
         expense = international_claim(amount: nil, amount_excl_vat: nil)
         sign_in @user
 
@@ -598,8 +573,7 @@ module Admin
       end
 
       test "a UK-rail save leaves a stored invoice figure alone" do
-        # The UK form does not offer the field, so a post that omits it must
-        # not wipe a figure the claim gets back if it is switched.
+        # The UK form does not post the field.
         expense = international_claim
         sign_in @user
 
@@ -695,8 +669,7 @@ module Admin
       # --- Search finds the submitter, not only the payee -------------------
 
       def third_party_claim
-        # An Invoice: the EFFECTIVE payee is the supplier, and @person — who
-        # actually filed it — appears nowhere the old search looked.
+        # An Invoice: the effective payee is the supplier, not @person who filed it.
         expense_at("Pending", payee_name_override: "Concord Theatricals Ltd",
                               sort_code_override: "08-99-99", account_number_override: "66374958",
                               expense_type: ::Reimbursements::Expense::TYPE_INVOICE)
@@ -763,10 +736,7 @@ module Admin
       end
 
       test "edit gives no approval advice on a settled claim" do
-        # A Paid claim opened with "This can't be approved until these are
-        # fixed" and "worth checking before approving" stacked above "already
-        # been paid" — advice about a decision nobody will take again. The
-        # index has suppressed these on non-actionable rows for a while.
+        # Approval advice about a decision nobody will take again.
         expense = expense_at("Paid", receipt: false, budget: nil)
         sign_in @user
 
@@ -820,16 +790,12 @@ module Admin
           assert_equal "Acme Ltd", expense.payee_name_override
           assert_equal "20-00-00", expense.sort_code_override
           assert_equal "12345678", expense.account_number_override
-          # A finance edit never changes the status.
           assert_equal status, expense.status
         end
       end
 
-      # The finance forms read money through AmountParser now, like the submitter form
-      # and the budget forms, so a pasted "£1,200" is accepted here too. It has to be
-      # the PARSED value that gets written: ActiveRecord casts a string to a decimal
-      # column with to_d, which reads "£1,200" as 0 — a validated amount would have
-      # become a zero payment.
+      # The PARSED value must be written: AR casts a string to a decimal column
+      # with to_d, which reads "£1,200" as 0.
       test "update accepts a currency-formatted amount and stores the parsed number" do
         expense = expense_at("Pending")
         sign_in @user
@@ -869,9 +835,7 @@ module Admin
 
       # --- Expense type ----------------------------------------------------
 
-      # The producer form offers Reimbursement and Invoice; finance's own From
-      # EUSA is only settable here, and re-typing here is the only way to fix a
-      # claim a producer filed wrong.
+      # From EUSA is settable only here.
       test "update re-types a claim, including to finance's own From EUSA" do
         expense = expense_at("Pending")
         sign_in @user
@@ -898,8 +862,8 @@ module Admin
         assert_equal "Reimbursement", expense.reload.expense_type, "nothing was written"
       end
 
-      # Same rule as the producer form: with no overrides, EffectivePayee falls
-      # back to the submitter's own bank details, so the Invoice would pay them.
+      # With no overrides EffectivePayee falls back to the submitter's own
+      # details, so the Invoice would pay them.
       test "update rejects switching a payable claim to Invoice with no payee overrides" do
         expense = expense_at("Approved")
         sign_in @user
@@ -927,9 +891,7 @@ module Admin
         assert_equal ::Reimbursements::Expense::TYPE_INVOICE, expense.reload.expense_type
       end
 
-      # Submitted and Paid are records of what EUSA already did, so the payment
-      # can't be misdirected any more — and a historical row whose supplier
-      # details we never captured has to stay re-typable.
+      # Settled claims stay re-typable without invented supplier details.
       %w[Submitted Paid].each do |status|
         test "update re-types an already-processed #{status} claim to Invoice without overrides" do
           expense = expense_at(status)
@@ -944,8 +906,7 @@ module Admin
         end
       end
 
-      # The other forms that post here (Review's inline save, the receipt
-      # attach/remove buttons) send no expense_type at all.
+      # Other forms posting here send no expense_type.
       test "update leaves the type alone when the field isn't posted" do
         expense = expense_at("Pending", expense_type: ::Reimbursements::Expense::TYPE_INVOICE,
                                         payee_name_override: "Acme Ltd",
@@ -1030,9 +991,7 @@ module Admin
           foreign_amount: "266.69", foreign_currency: "EUR" }.merge(overrides)
       end
 
-      # The all-or-nothing override rule reads the UK trio, and an international
-      # claim has a payee name with no sort code — so saving one refused with a
-      # message naming fields the rail does not use.
+      # The UK trio rule must not refuse an international claim.
       test "update saves an international claim instead of demanding a sort code" do
         expense = international_expense
         sign_in @user
@@ -1100,7 +1059,6 @@ module Admin
         assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.reload.foreign_currency
       end
 
-      # Same all-or-nothing rule as the UK rail, over the pair this one routes on.
       test "update rejects a half-filled international trio" do
         expense = international_expense
         sign_in @user
@@ -1111,8 +1069,7 @@ module Admin
         assert_match(/all three/i, response.body)
       end
 
-      # A Paid claim records what EUSA already did; its supplier details may
-      # never have been captured, so it must stay editable without inventing any.
+      # Its supplier details may never have been captured.
       test "update leaves a Paid international claim editable with blank overrides" do
         expense = international_expense(status: "Paid", payee_name_override: "",
                                         iban_override: "", bic_override: "")
@@ -1288,9 +1245,7 @@ module Admin
         assert_includes response.body, receipt.preview_url
       end
 
-      # ActiveStorage renders a PDF's first page, so a PDF receipt has a real
-      # thumbnail. Asking whether the file is an image (rather than whether it
-      # has a preview) drops it to a generic document icon instead.
+      # ActiveStorage renders a PDF's first page, so it gets a real thumbnail.
       test "edit renders a PDF receipt as a real first-page preview image" do
         expense = two_receipt_expense
         sign_in @user
@@ -1303,8 +1258,7 @@ module Admin
         assert_match %r{^/admin/reimbursements/expenses/\d+/receipts/\d+/thumbnail$}, first.preview_url
       end
 
-      # Request 2: the receipt opens in the page. The only remaining new-tab link
-      # is the explicit "Open in a new tab" fallback inside the viewer pane.
+      # The only new-tab link is the labelled fallback inside the viewer pane.
       test "edit opens a PDF receipt in an in-page frame rather than a new tab" do
         expense = two_receipt_expense
         sign_in @user
@@ -1314,8 +1268,6 @@ module Admin
         receipt = expense.receipts.first
         assert_match(/<iframe[^>]+data-src="#{Regexp.escape(receipt.url)}"/, response.body)
         assert_match(/<iframe[^>]+title="Receipt: a\.pdf"/, response.body)
-        # The thumbnails are buttons, and the only receipt link that still opens a
-        # tab is the explicitly labelled fallback inside the pane.
         assert_select "button[data-action='receipt-viewer#show']", 2
         new_tab_links = css_select("a[target=_blank]")
                         .select { |link| link["href"].to_s.match?(%r{/receipts/\d+/inline\z}) }
@@ -1406,11 +1358,9 @@ module Admin
 
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
       end
-      # Both banners were drawn for the same empty fields: "no bank details"
-      # from ReviewSupport, and — because the checker returns INVALID for a
-      # blank pair — "Modulus check failed ... likely a typo" right under it.
-      # The second sent finance hunting for a typo in a field that is empty.
-      # This is the state the 140 imported claims were in.
+
+      # The checker returns INVALID for a blank pair, which drew "likely a typo"
+      # under "no bank details".
       test "no modulus banner for a claim with no bank details" do
         payee = create_reimbursements_person(name: "No Bank", email: "nobank@example.com",
                                              sort_code: "", account_number: "")
@@ -1428,10 +1378,6 @@ module Admin
       end
 
       # --- Changing the payee -------------------------------------------------
-      # Finance could not change it at all, so a claim matched to the wrong
-      # person — by email-in, or by the settled-claim import, where a blank
-      # Submitter email once sent 140 production claims to one payee — could
-      # only be fixed from a console.
 
       def other_payee
         create_reimbursements_person(name: "Robin Rig", email: "robin@example.com",
@@ -1461,9 +1407,8 @@ module Admin
         assert_equal other.id, expense.reload.person_id
       end
 
-      # The case it exists for is a batch of imported claims already Paid to
-      # the wrong payee, so the window is deliberately every status — unlike
-      # the rail and the type, which stop at Approved.
+      # Every status, unlike the rail and the type: imported claims already
+      # Paid to the wrong payee are what this exists for.
       test "the payee can be corrected on a Paid claim" do
         other = other_payee
         expense = expense_at("Paid")
@@ -1499,8 +1444,6 @@ module Admin
       end
 
       # --- Reopening a rejected claim -----------------------------------------
-      # A rejection was terminal: nothing in the portal wrote a status back to
-      # Pending.
 
       test "a rejected claim can be put back in the queue" do
         expense = expense_at("Rejected", rejection_reason: "No receipt attached")
@@ -1511,9 +1454,7 @@ module Admin
         assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
       end
 
-      # Never straight to Approved: the claim re-enters finance's queue and the
-      # owner gate as a fresh one would, so reopening cannot be a way round a
-      # sign-off.
+      # Never straight to Approved, so reopening is no way round the owner gate.
       test "reopening goes to Pending, not Approved" do
         expense = expense_at("Rejected", rejection_reason: "No receipt attached")
         sign_in @user

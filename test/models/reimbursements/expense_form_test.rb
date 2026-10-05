@@ -48,11 +48,7 @@ module Reimbursements
       assert build_form(amount: "5000.00", save_as_draft: "1").valid?
     end
 
-    # --- The budget the picker offered ---------------------------------------
-    # Finance deletes and deactivates budgets as normal work, and every open
-    # submission form holds a live reference to whatever active_budgets returned
-    # when it was drawn. Validating the choice against the list the controller
-    # actually rendered covers both cases with one rule (Honeybadger 134234926).
+    # --- The budget the picker offered (Honeybadger 134234926) ---------------
 
     test "rejects a budget that was not among the ones offered" do
       form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2" ])
@@ -73,18 +69,11 @@ module Reimbursements
       assert form.valid?, form.errors.full_messages.to_sentence
     end
 
-    # Not every caller draws a picker: ExpenseImport resolves a real Budget row
-    # by name (legitimately an inactive or last-year one, for a settled claim),
-    # and from_actual prefills before the controller has a list. Those pass no
-    # offerable set and are not second-guessed here.
+    # ExpenseImport and from_actual draw no picker.
     test "skips the check when the caller offered no list" do
       assert build_form(budget_record_id: "recBud1").valid?
     end
 
-    # A draft is a scratchpad, and refusing to save one loses the producer's
-    # typing over a field they are allowed to leave blank. So the stale budget
-    # is DROPPED and the draft saves, with the drop reported so the controller
-    # can say so rather than silently unsetting a field they picked.
     test "a draft drops a stale budget instead of refusing to save" do
       form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2" ],
                         save_as_draft: "1")
@@ -140,8 +129,6 @@ module Reimbursements
       assert build_form(payment_reference: "X" * 18).valid?
     end
 
-    # The only trigger left: an ex-VAT amount that isn't below the total means
-    # the receipt showed no VAT breakdown, so the full amount hits the budget.
     test "vat soft block requires acknowledgement when excl equals total" do
       form = build_form(amount_excl_vat: "12.50")
       assert_not form.valid?
@@ -151,10 +138,7 @@ module Reimbursements
       assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
     end
 
-    # An ex-VAT amount ABOVE the total trips the soft block too, but that state
-    # is unreachable for a submitter: amounts_valid rejects it outright. Assert
-    # the hard error is what actually governs, so nobody later "fixes" this into
-    # a soft block that lets a nonsense pair through on one tick.
+    # Excl above the total trips the soft block too, but the hard error governs.
     test "excl above the total is a hard error, not merely a vat soft block" do
       form = build_form(amount_excl_vat: "20.00")
       assert_not form.valid?
@@ -181,10 +165,7 @@ module Reimbursements
     end
 
     test "rejects disallowed receipt types" do
-      # An executable disguised with a .pdf filename and a declared PDF
-      # content_type: content-type validation is now based on the actual
-      # bytes (Marcel), not the declared/filename-implied type alone, so this
-      # must be caught by what the file really is.
+      # An executable declared as a PDF: the type is read from the bytes.
       bad = Rack::Test::UploadedFile.new(
         Rails.root.join("test/fixtures/files/disguised_executable.pdf"), "application/pdf"
       )
@@ -247,10 +228,7 @@ module Reimbursements
       assert build_form.valid?
     end
 
-    # An Invoice means EUSA pays the supplier directly. Without the overrides the
-    # effective payee silently falls back to the SUBMITTER's own bank details,
-    # which review can't catch (effective_has_bank_details? is satisfied), so the
-    # portal would BACS-pay the producer for a bill they never paid.
+    # Without the overrides the effective payee falls back to the submitter.
     test "an invoice requires the third-party payee trio to submit" do
       form = build_form(expense_type: Expense::TYPE_INVOICE)
 
@@ -286,8 +264,6 @@ module Reimbursements
       assert build_form(expense_type: Expense::TYPE_REIMBURSEMENT).valid?
     end
 
-    # from_actual's internal type is finance recording an already-settled EUSA
-    # cost; there is no third party to pay and no overrides to demand.
     test "the internal From-EUSA type is not caught by the invoice rule" do
       form = ExpenseForm.from_actual(build_actual)
       form.budget_record_id = "recBud1"
@@ -349,9 +325,6 @@ module Reimbursements
       assert_not form.require_receipts?, "a cost EUSA levied directly has no receipt to attach"
     end
 
-    # A From-EUSA line has no receipt and no VAT breakdown, and can easily run
-    # into four figures: the submitter-facing soft blocks would only get in the
-    # way of recording an already-settled cost.
     test "from_actual needs no receipt, VAT tick or large-amount tick" do
       form = ExpenseForm.from_actual(build_actual(debit: BigDecimal("5000.00")))
       form.budget_record_id = "recBud1"
@@ -376,8 +349,6 @@ module Reimbursements
       assert form.valid?, form.errors.full_messages.to_sentence
     end
 
-    # The relaxations ride on an internal flag the producer form never permits,
-    # so a submitter can't pick the internal type to dodge the receipt rule.
     test "a submitted expense_type of From EUSA is still rejected on the producer form" do
       form = ExpenseForm.new(expense_type: Expense::TYPE_FROM_EUSA, amount: "10.00",
                              amount_excl_vat: "10.00", budget_record_id: "recBud1",
@@ -410,9 +381,6 @@ module Reimbursements
     end
 
     test "an international claim submits on the foreign amount alone" do
-      # The submitter knows what the invoice says and nothing about the rate
-      # EUSA's bank will get. Finance enters the GBP figure at review, and
-      # cannot approve without it.
       form = ExpenseForm.new(international_params)
 
       assert form.valid?, form.errors.full_messages.inspect
@@ -440,8 +408,6 @@ module Reimbursements
       assert form.errors[:bic_override].present?
     end
 
-    # Nobody on file has an IBAN, so falling back to the submitter's own
-    # details would leave the form with nothing to send.
     test "an international claim always needs the payee trio" do
       form = ExpenseForm.new(international_params(payee_name_override: "", iban_override: "",
                                                   bic_override: ""))
@@ -477,8 +443,6 @@ module Reimbursements
       assert_equal "SEK", ExpenseForm.new(international_params(foreign_currency: " sek ")).update_attrs[:foreign_currency]
     end
 
-    # A mistyped code is a payment EUSA's bank cannot route, which is why the
-    # picker offers a list rather than a text box.
     test "an unlisted currency is refused" do
       form = ExpenseForm.new(international_params(foreign_currency: "XYZ"))
 
@@ -486,8 +450,7 @@ module Reimbursements
       assert form.errors[:foreign_currency].present?
     end
 
-    # An international supplier can invoice in sterling, and the rail is chosen
-    # by payment_method, not by the currency.
+    # The rail is chosen by payment_method, not by the currency.
     test "GBP is a valid international currency" do
       form = ExpenseForm.new(international_params(foreign_currency: "GBP"))
 
@@ -515,9 +478,7 @@ module Reimbursements
       assert_equal Reimbursements::Expense::PAYMENT_METHOD_UK_BACS, attrs[:payment_method]
     end
 
-    # The guard exists to catch pence typed as pounds; reading the GBP field,
-    # which an international submitter never fills in, would switch it off for
-    # exactly the claims whose figures nobody has checked yet.
+    # An international submitter never fills in the GBP field.
     test "the large-amount confirmation reads the foreign amount" do
       form = ExpenseForm.new(international_params(foreign_amount: "5000"))
 
@@ -530,8 +491,6 @@ module Reimbursements
     end
 
     test "the VAT soft block never fires on an international claim" do
-      # There is no ex-VAT figure to compare: a foreign invoice carries no
-      # reclaimable UK VAT.
       form = ExpenseForm.new(international_params)
 
       assert form.valid?, form.errors.full_messages.inspect

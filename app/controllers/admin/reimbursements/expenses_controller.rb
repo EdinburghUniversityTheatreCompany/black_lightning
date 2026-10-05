@@ -1,9 +1,8 @@
 module Admin
   module Reimbursements
     ##
-    # A producer's own expenses: list with live status, receipt-first
-    # submission (with save-as-draft), and editing while an expense is still a
-    # draft or pending.
+    # A producer's own expenses: list, submission (or draft), and editing while
+    # still a draft or pending.
     class ExpensesController < BaseController
       rescue_from ExpenseNoLongerEditable, with: :expense_no_longer_editable
 
@@ -33,14 +32,12 @@ module Admin
         expense = store.create_expense!(@form.create_attrs(person.record_id))
         redirect_with_attachment_result(expense.record_id, created_notice)
       rescue ::Reimbursements::DatabaseStore::BudgetGoneError
-        # The budget went between the form-level check and the insert. Same
-        # answer as the check itself: the form comes back with everything typed.
+        # The budget went between the form-level check and the insert.
         budget_gone_error
         render_form(:new, "New Expense")
       end
 
-      # Read-only view of the submitter's own claim at any status — so they can
-      # check what they claimed and re-view their receipt while it's being paid.
+      # Read-only view of the submitter's own claim at any status.
       def show
         @expense = find_own_expense!(params[:id])
         @title = "Expense ##{@expense.auto_number}"
@@ -55,8 +52,7 @@ module Admin
 
       def update
         @expense = find_own_editable_expense!(params[:id])
-        # Receipts are managed in the gallery on edit; the form only checks
-        # the expense already carries one before a non-draft submit.
+        # Receipts are managed in the gallery on edit.
         @form = ::Reimbursements::ExpenseForm.new(
           expense_form_params.merge(require_receipts: false,
                                     expense_receipt_count: @expense.receipts.size,
@@ -72,9 +68,7 @@ module Admin
         render_form(:edit, "Edit Expense")
       end
 
-      # Discard an unsent draft entirely. Only a Draft can be deleted — a
-      # Pending claim is with the finance team, so it's withdrawn (back to
-      # Draft) via the edit form, not destroyed.
+      # Only a Draft is deleted; a Pending claim is withdrawn from its edit form.
       def destroy
         @expense = find_own_editable_expense!(params[:id])
         unless @expense.status == ::Reimbursements::Status::DRAFT
@@ -89,22 +83,16 @@ module Admin
 
       private
 
-      # A producer followed a stale Edit link for a claim the finance team has
-      # since picked up. Refuse the edit, but explain it rather than a bare 404.
+      # A stale Edit link for a claim finance has since picked up. A warning,
+      # not an alert, so it renders as a notice rather than the red error modal.
       def expense_no_longer_editable
-        # flash[:warning] (not alert/error) so this expected, not-broken state
-        # renders as a neutral notice, not the alarming red "Oops…" error modal.
         redirect_to admin_reimbursements_expenses_path,
                     flash: { warning: "That claim is now with the finance team and can't be edited. " \
                                       "You can still view it from your expenses list." }
       end
 
-      # The budgets the picker offers, memoized so the list the form is VALIDATED
-      # against and the list a re-rendered form RENDERS are one read. Finance
-      # deletes and deactivates budgets while these pages are open, so two reads
-      # in one request could legitimately disagree — and a form validated
-      # against a list it doesn't display can only produce an error the producer
-      # cannot act on.
+      # Memoized so the list the form is validated against and the list it
+      # renders are one read.
       def offerable_budgets
         @budgets ||= store.active_budgets
       end
@@ -113,8 +101,7 @@ module Admin
         offerable_budgets.map(&:record_id)
       end
 
-      # No path out of create/update may skip this: losing a filled-in claim is
-      # most of the harm in every failure here.
+      # Every failure path renders the form back, so the typing survives.
       def render_form(template, title)
         @title = title
         @budgets = offerable_budgets
@@ -135,10 +122,7 @@ module Admin
         end
       end
 
-      # A draft whose budget went while the form was open saves WITHOUT it
-      # rather than being refused (ExpenseForm#dropped_stale_budget?), so the
-      # notice has to say the field was cleared: a budget they picked silently
-      # coming back blank reads as the portal losing their choice.
+      # A draft whose budget went saves without it, and the notice must say so.
       def dropped_budget_note
         return "" unless @form.dropped_stale_budget?
 
@@ -146,9 +130,8 @@ module Admin
           "Pick another one before you submit."
       end
 
-      # The expense exists by now, so an attachment failure must not 500
-      # (retrying the form would duplicate the expense) — degrade to a flash
-      # pointing at edit, where receipts can be re-attached.
+      # The expense exists by now, so an attachment failure must not 500 (a
+      # retry would duplicate the expense): point at edit to re-attach.
       def redirect_with_attachment_result(record_id, notice)
         attach_receipts(record_id)
         redirect_to admin_reimbursements_expenses_path, notice: notice

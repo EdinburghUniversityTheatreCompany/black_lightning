@@ -2,9 +2,7 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # Browser tests for the producer-facing expense form's JS that render/
-    # functional tests can't cover. Data is served by the DatabaseStore from
-    # real seeded rows.
+    # The producer expense form's JavaScript.
     class ProducerJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -15,20 +13,15 @@ module Admin
         login_as users(:member)
       end
 
-      # The form's selects are Tom Select widgets (select_controller.js), which
-      # hide the original <select> — Capybara's own #select can't touch it. Drive
-      # the widget the way a producer does: open its control, click the option.
-      # Tom Select fires a native change on the underlying select, so Stimulus
-      # actions bound to it still run.
+      # Tom Select hides the <select>, so Capybara's #select can't reach it.
       def tom_select(option_text, select_id:)
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click
         wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
       end
 
-      # The whole point of the DataTransfer restore: a receipt the producer
-      # attached survives a server validation 422, instead of silently
-      # vanishing from the un-repopulatable file input.
+      # A file input cannot be repopulated by the server, so the controller
+      # restores it through a DataTransfer.
       test "an attached receipt survives a failed submit" do
         visit new_admin_reimbursements_expense_path
 
@@ -36,28 +29,20 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         fill_in "Amount (£, incl. VAT)", with: "10.00"
         fill_in "Amount excl. VAT (£)", with: "8.00"
-        # Fill the other HTML5-required fields so Submit reaches the server;
-        # leave only Budget blank (it's star-only client-side but required
-        # server-side), so the submit fails server-side and the form re-renders
-        # -- the case where the attached file would otherwise be lost.
+        # Budget left blank, so the submit reaches the server and fails there.
         fill_in "Description", with: "Fake blood for the show"
         fill_in "Payment reference", with: "PROPS TEST"
         click_on "Submit expense"
 
         assert_text "Kept the receipt you attached", wait: 5
-        # The file is still selected on the re-rendered input.
         still_attached = page.evaluate_script(
           "document.getElementById('reimbursements_expense_form_receipts').files.length"
         )
         assert_equal 1, still_attached, "the receipt must survive the failed submit"
       end
 
-      # The real incident (Honeybadger 134234926): a finance data fix deleted a
-      # budget while a producer had the submission form open, so the picker held
-      # a live reference to a row that no longer existed and Submit 500ed on the
-      # foreign key — losing a completely filled-in claim. Only a browser test
-      # sees this properly: it posts exactly what the picker rendered, and it is
-      # the input surviving on the re-rendered page that matters most.
+      # Honeybadger 134234926. Only a browser test posts exactly what the picker
+      # rendered and sees the input survive the re-render.
       test "a budget deleted while the form is open fails the submit, not the claim" do
         doomed = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
         visit new_admin_reimbursements_expense_path
@@ -70,15 +55,12 @@ module Admin
         fill_in "Description", with: "Ruff, doublet and hose"
         fill_in "Payment reference", with: "COSTUMES ACT1"
 
-        # The finance data fix, mid-form.
         doomed.destroy!
 
         click_on "Submit expense"
 
         assert_text "no longer available", wait: 5
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
-        # Everything they typed is still on the form, ready to re-submit against
-        # another budget.
         assert_equal "Ruff, doublet and hose",
                      find("#reimbursements_expense_form_description").value
         assert_equal "COSTUMES ACT1",
@@ -113,12 +95,9 @@ module Admin
 
       # --- The international rail --------------------------------------------
 
-      # The trap this exists for: a hidden input carrying `required` makes the
-      # browser refuse to submit the WHOLE form, and it does so silently —
-      # the control it wants to report can't be scrolled to, so Submit simply
-      # stops working. simple_form emits `required` from its own `required:`
-      # option regardless of input_html, so the attribute has to follow the
-      # active rail. Both directions are checked because only one was broken.
+      # A hidden input carrying `required` silently blocks the whole submit, and
+      # simple_form emits it from `required:` whatever input_html says, so the
+      # attribute has to follow the active rail.
       test "switching payment method moves the required attribute with the fields" do
         visit new_admin_reimbursements_expense_path
         required = lambda { |field|
@@ -137,9 +116,7 @@ module Admin
         assert_not required.call("amount_excl_vat")
       end
 
-      # Nobody has an IBAN on file, so the payee trio is always required here —
-      # a heading still reading "(optional)" over fields the server will reject
-      # is worse than no hint at all.
+      # Nobody has an IBAN on file, so the payee trio is always required here.
       test "switching to international relabels the payee section as required" do
         visit new_admin_reimbursements_expense_path
         assert_text "Pay someone else (optional)"
@@ -176,9 +153,6 @@ module Admin
         assert_nil expense.amount, "finance supplies the GBP figure at review"
       end
 
-      # EUSA's revised form carries a PAYMENT CURRENCY field, so the portal is
-      # not limited to euros: whatever the producer picks is what their bank is
-      # told to pay in.
       test "a producer can pick a currency other than euros" do
         visit new_admin_reimbursements_expense_path
 
@@ -201,9 +175,6 @@ module Admin
         assert_equal BigDecimal("500.00"), expense.foreign_amount
       end
 
-      # An Invoice pays the supplier, so the payee trio stops being optional.
-      # The label has to track the type select live — a producer who reads
-      # "(optional)", leaves the trio blank and hits Submit gets a hard stop.
       test "picking Invoice marks the payee details required" do
         visit new_admin_reimbursements_expense_path
 
@@ -221,10 +192,7 @@ module Admin
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", text: "(optional)"
       end
 
-      # The server-side hard block, and — just as important — that its reason is
-      # actually READABLE: it lands on :base, which the generic error banner
-      # doesn't list, so an unrendered base error would fail the form with no
-      # visible cause at all.
+      # The reason lands on :base, which the generic error banner does not list.
       test "submitting an invoice with no payee details shows why it was blocked" do
         visit new_admin_reimbursements_expense_path
 
@@ -243,11 +211,7 @@ module Admin
         assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
       end
 
-      # With extraction gone these are the last untested behaviours the Stimulus
-      # controller still owns, and #parseAmount's comma rule is exactly the kind
-      # of thing that regresses silently: "999,99" is a decimal comma, not a
-      # thousands separator, so a naive strip read it as 99999 and demanded a
-      # confirmation the server would never have asked for.
+      # "999,99" is a decimal comma; a naive strip reads it as 99999.
       test "the large-amount confirmation appears as the amount crosses the threshold" do
         visit new_admin_reimbursements_expense_path
 
@@ -261,9 +225,6 @@ module Admin
                         wait: 2
       end
 
-      # The other soft block. It was server-rendered only, so a producer entering
-      # 12.50 / 12.50 first learnt about it from a failed submit while the
-      # large-amount block beside it revealed itself as they typed.
       test "the missing-VAT confirmation appears as the two amounts converge" do
         visit new_admin_reimbursements_expense_path
 

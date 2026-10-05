@@ -27,8 +27,7 @@
       <%= check_box_tag :attention, "1", @attention_only %>
       Needs attention only
     </label>
-    <%# Carried through Apply as a hidden field, so narrowing one person's
-        claims by status does not silently widen back to everybody's. %>
+    <%# Hidden, so Apply keeps narrowing to one person's claims. %>
     <% if @person_filter.present? %>
       <%= hidden_field_tag :person, @person_filter %>
     <% end %>
@@ -49,9 +48,7 @@
 <div class="mb-2 flex items-center justify-between gap-3">
   <p class="text-sm text-gray-600"><%= pluralize(@expenses.total_count, "expense") %></p>
   <span class="flex flex-wrap gap-2">
-    <%# Carries the selected centre through, so the import lands in the pot
-        whose claims are on screen rather than the first in the list. The year
-        is the import's own selector and this list isn't year-scoped. %>
+    <%# Carries the selected centre, so the import lands in the pot on screen. %>
     <%= link_to "Import expenses",
                 admin_reimbursements_expense_import_path(cost_centre: selected_cost_centre&.key),
                 class: btn_classes(:secondary, :sm) %>
@@ -66,11 +63,8 @@
     <p class="py-4 text-center text-gray-600">No expenses match these filters.</p>
   <% end %>
 <% else %>
-  <%# "Paid to" is the EFFECTIVE payee — on an Invoice, the supplier — and
-      "Submitted by" is the person who filed the claim. They are different
-      people often enough that one column headed "Payee" made a producer's own
-      claims unfindable. The CSV exporter is deliberately NOT changed: an
-      export is a stable contract. %>
+  <%# "Paid to" is the effective payee (on an Invoice, the supplier). The CSV
+      keeps its "Payee" header: an export is a stable contract. %>
   <% headers = [ "#", "Status", "Paid to", "Submitted by", "Budget", "Amount",
                  "Description", "Submitted", "Flags", "" ] %>
   <% field_sets = @expenses.map do |expense|
