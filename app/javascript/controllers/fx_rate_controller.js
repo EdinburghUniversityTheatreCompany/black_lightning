@@ -1,20 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The implied exchange rate behind the GBP figure finance types for an
-// international claim.
-//
-// The submitter enters the invoice amount; finance types what it is expected
-// to cost in pounds, and the budget counts THAT figure until reconciliation
-// corrects it to what the bank charged. Nothing on the form helped with the
-// arithmetic, so a decimal slip or a currency pasted straight into the pounds
-// box went in as real money against a budget.
-//
-// The portal does not know today's rate and does not pretend to: it shows the
-// rate the typed pair IMPLIES, which an operator who knows roughly what EUR
-// buys will read at a glance, and warns only when that rate is absurd on any
-// day — a factor of 100 either way, which is what a misplaced decimal or a
-// pasted foreign figure looks like. A band tight enough to be "today's rate"
-// would be wrong the week after it was written.
+// The exchange rate implied by the GBP figure finance types for an international
+// claim. It knows no real rate, so it warns only at a factor of 100 either way:
+// a slipped decimal, or a foreign figure pasted into the pounds box.
 export default class extends Controller {
   static targets = ["amount", "output"]
   static values = {
@@ -56,8 +44,7 @@ export default class extends Controller {
     return Number.parseFloat(this.amountTarget.value)
   }
 
-  // Four places, because a weak currency's rate is a small number and two
-  // would round it to nothing.
+  // Four places: a weak currency's rate rounds to nothing at two.
   #round(value) {
     return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")
   }

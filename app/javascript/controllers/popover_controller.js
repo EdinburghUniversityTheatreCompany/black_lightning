@@ -1,21 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { createPopper } from "@popperjs/core"
 
-// Accessible click popover. A real <button> trigger toggles a panel that Popper
-// positions (with flip + overflow handling), so the reasons that used to hide in
-// a title= tooltip are now reachable by keyboard and screen readers.
-//
-// The trigger carries aria-expanded + aria-controls; opens on click / Enter /
-// Space (native button semantics), closes on Escape and outside-click. The panel
-// is portaled to <body> on connect so a table's overflow-x-auto (or any
-// transformed/clipping ancestor) can't cut it off.
+// Accessible click popover: a <button> trigger toggles a Popper-positioned panel,
+// closed by Escape or an outside click. The panel moves to <body> so an
+// overflow-x-auto or transformed ancestor cannot clip it.
 export default class extends Controller {
   static targets = ["trigger", "panel"]
 
   connect() {
     this.open = false
-    // Keep a direct reference: once the panel is moved out of this controller's
-    // subtree, `this.panelTarget` can no longer resolve it.
+    // Keep a reference: panelTarget cannot resolve it once moved.
     this.panel = this.panelTarget
     this.panel.remove()
     document.body.appendChild(this.panel)
@@ -25,8 +19,8 @@ export default class extends Controller {
   }
 
   disconnect() {
-    // TURBO GOTCHA: the panel lives on <body>, outside this element's subtree, so
-    // Turbo's cache/restore won't remove it. Tear it down here or it leaks.
+    // TURBO GOTCHA: the panel is on <body>, outside this element, so Turbo will
+    // not remove it. Remove it here or it leaks.
     this.hide()
     this.panel?.remove()
   }

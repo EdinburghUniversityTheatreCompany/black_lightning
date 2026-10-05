@@ -1,45 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Replaces the legacy app/assets/javascripts/admin/question_templates.js
-// jQuery-based TemplateLoader class.
-//
-// This controller should be placed on a wrapper element that contains both
-// the trigger button and the <dialog> rendered by Admin::ModalComponent.
-// The ModalComponent sets data-template-loader-target="dialog" on the <dialog>.
-//
-// Behaviour:
-//   * On connect, reads two <meta> tags:
-//       - templates-base-url  — JSON endpoint for the template list
-//       - templates-items-type — "questions" or "jobs"
-//   * Fetches the template list and populates the list target (the modal
-//     dropdown) via the native fetch API (no jQuery).
-//   * When the user picks a template, shows a summary in the summary target
-//     and enables the loadButton target.
-//   * When the user clicks loadButton, for each template item it:
-//       1. Queues the item in #insertQueue.
-//       2. Processes the queue one item at a time:
-//          a. Sets #pendingItem to the next queued item.
-//          b. Clicks the appropriate stimulus-rails-nested-form "add" button.
-//          c. The MutationObserver detects the inserted DOM node, fills it
-//             from #pendingItem, then advances to the next queued item.
-//
-// Why MutationObserver:
-//   stimulus-rails-nested-form inserts a cloned <template> synchronously on
-//   button click, but we use the MutationObserver as a fallback in case the
-//   synchronous count-check misses the insertion. MutationObserver is
-//   library-agnostic and works reliably regardless of insertion mechanism.
-//
-// Why a queue (not a simple forEach + null reset):
-//   MutationObserver callbacks are delivered as microtasks — asynchronously
-//   after the current task completes. If we click all add-buttons in a tight
-//   forEach loop and then reset #pendingItem to null, the observer fires after
-//   the reset and finds no item to populate. The queue ensures we advance
-//   #pendingItem only once a node is confirmed inserted and populated.
-//
-// Note: We intentionally read the meta tags on connect() rather than using
-// Stimulus data-values on the controller element. The three views that use
-// this controller set the meta tags in <head> (inside content_for :head),
-// which keeps the view diff minimal and avoids threading values through partials.
+// Loads a saved template into a questions/jobs form by clicking the form's own
+// nested-form "Add" buttons and filling each inserted row. The views set the
+// templates-base-url and templates-items-type meta tags.
 export default class extends Controller {
   static targets = ["dialog", "list", "summary", "loadButton"]
 
@@ -49,9 +12,7 @@ export default class extends Controller {
   #globalData = null
   #observer = null
 
-  // Queue of { addButtonClass, item } objects — consumed one at a time
   #insertQueue = []
-  // The item currently waiting to be populated by the MutationObserver
   #pendingItem = null
 
   connect() {
@@ -70,8 +31,6 @@ export default class extends Controller {
     this.#observer = null
   }
 
-  // Public Stimulus actions
-
   open() {
     this.dialogTarget.showModal()
   }
@@ -83,8 +42,6 @@ export default class extends Controller {
   backdropClose({ target }) {
     if (target === this.dialogTarget) this.dialogTarget.close()
   }
-
-  // Private
 
   #validateSetup() {
     if (!this.#baseUrl) {
@@ -104,10 +61,7 @@ export default class extends Controller {
     return true
   }
 
-  // Watch for DOM nodes added by stimulus-rails-nested-form so we can
-  // populate them with template data. We observe the entire document body
-  // because nested-form inserts nodes at the form level, outside this
-  // controller's element.
+  // The whole body, because nested-form inserts rows outside this element.
   #setupObserver() {
     this.#observer = new MutationObserver((mutations) => {
       if (!this.#pendingItem) return
@@ -116,9 +70,6 @@ export default class extends Controller {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue
           if (this.#fillInsertedNode(node)) {
-            // Defer the advance so this callback fully completes before the
-            // next add-button click fires, preventing multiple insertions from
-            // landing in the same observer batch.
             queueMicrotask(() => this.#advanceQueue())
             return
           }
@@ -129,9 +80,6 @@ export default class extends Controller {
     this.#observer.observe(document.body, { childList: true, subtree: true })
   }
 
-  // Try to populate the inserted node. Returns true if this node matched and
-  // was filled (even if some fields were absent), false if the node is not a
-  // recognisable nested-form-inserted row for our item type.
   #fillInsertedNode(node) {
     const item = this.#pendingItem
 
@@ -150,9 +98,6 @@ export default class extends Controller {
         return true
       }
     } else if (this.#itemsType === "jobs") {
-      // Staffing job rows do not have a specific identifying class like
-      // "question". Instead they contain a [name$="[name]"] input, which is
-      // enough to identify them as the right target.
       const nameField = node.querySelector('[name$="[name]"]')
       if (nameField) {
         nameField.value = item.name ?? ""
@@ -274,10 +219,6 @@ export default class extends Controller {
     this.#advanceQueue()
   }
 
-  // Pull the next item off the queue. Each item is processed in a separate
-  // setTimeout(0) task to ensure the previous nested-form DOM insertion has
-  // fully settled (including TomSelect initialisation) before the next
-  // add-button click fires.
   #advanceQueue() {
     if (this.#insertQueue.length === 0) {
       this.#pendingItem = null
@@ -302,19 +243,15 @@ export default class extends Controller {
       return
     }
 
-    // Snapshot the current row count so we can identify the newly added row.
     const containerSelector = this.#containerSelectorFor(addButtonClass)
     const countBefore = containerSelector
       ? document.querySelectorAll(containerSelector).length
       : -1
 
-    // Set pending BEFORE the click so the MutationObserver backup path can
-    // also fill the row if the synchronous count check fails.
     this.#pendingItem = item
 
     button.click()
 
-    // stimulus-rails-nested-form inserts synchronously. Fill the new row immediately.
     if (containerSelector && countBefore >= 0) {
       const rows = document.querySelectorAll(containerSelector)
       if (rows.length > countBefore) {
@@ -325,11 +262,8 @@ export default class extends Controller {
         return
       }
     }
-
-    // Fallback: MutationObserver will fill the row and advance the queue.
   }
 
-  // Returns a CSS selector that matches inserted rows for a given add-button class.
   #containerSelectorFor(addButtonClass) {
     if (addButtonClass === "question_add_button")     return ".nested-fields.question"
     if (addButtonClass === "notify_email_add_button") return ".nested-fields.email"
@@ -337,7 +271,6 @@ export default class extends Controller {
     return null
   }
 
-  // Fill a row's fields from a template item.
   #fillRow(row, item) {
     if (this.#itemsType === "questions") {
       if (row.classList?.contains("question")) {
@@ -380,8 +313,6 @@ export default class extends Controller {
           list.appendChild(option)
         })
 
-        // TomSelect is initialized before this async fetch completes.
-        // Sync its internal option store from the now-populated <select>.
         list.tomselect?.sync()
       })
       .catch((err) => {

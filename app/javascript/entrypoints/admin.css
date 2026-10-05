@@ -1,7 +1,6 @@
 @import "../styles/tailwind-base.css";
 
-/* Icon font and tom-select — imported here (not via JS) to avoid FOUC on page load */
-/* Hide native selects until TomSelect initialises them (it sets display:none on them anyway) */
+/* Hidden before TomSelect builds, so the native select never flashes */
 select.simple-select2 {
   display: none;
 }
@@ -21,61 +20,39 @@ select.simple-select2 {
 
 @layer components {
 
-  /* Sidebar collapsed state — !important needed to override the flex utility on the sidebar element */
+  /* !important beats the sidebar element's flex utility */
   .sidebar-collapsed {
     display: none !important;
   }
 
-  /* Sticky column headers for admin index/list tables.
-     Admin-only on purpose: this lives here rather than in the shared
-     bootstrap_compat.css because on the public site the whole page scrolls, so
-     a `top: 0` header would stick under the public header. The class is emitted
-     by shared/_table.erb regardless; without this rule it is simply inert.
-
-     Sticks the cells, not the <thead> — Safari and older Chrome ignore
-     `position: sticky` on <thead>/<tr>. The cells must be opaque or rows show
-     through as they scroll underneath, and need a stacking order above the row
-     content (but below .dropdown-menu at z-50, so popovers still open over it). */
+  /* Sticky column headers. Admin-only: the public page scrolls as a whole, so
+     top: 0 would stick under its header. Sticks the cells, because Safari and
+     older Chrome ignore position: sticky on <thead>/<tr>. Opaque cells, at z-20:
+     over the rows, under .dropdown-menu (z-50). */
   .table-sticky-head>thead th {
     @apply sticky top-0 z-20 bg-white;
 
-    /* Tailwind's preflight sets `border-collapse: collapse`, which drops a
-       sticky cell's own bottom border once it detaches. Draw the header rule as
-       an inset shadow instead so it travels with the cell. */
+    /* Preflight's border-collapse drops a detached sticky cell's border, so the
+       rule is an inset shadow that travels with the cell. */
     box-shadow: inset 0 -1px 0 var(--color-gray-200);
   }
 
-  /* A rowgroup heading (the budgets index's area rows) sticks UNDER the column
-     headers, so a row reading "Set · 439998" always has the show it belongs to
-     on screen. Measured at 1366x768 and 1440x900: the header row is 57px tall
-     at both, and the heading has to clear it or it pins on top of the columns
-     it is grouping. Re-measure if the header's padding or font changes.
-
-     Cells, not the <tr> — the same reason the header above sticks its cells:
-     Safari and older Chrome ignore `position: sticky` on a <tr>. z-10 keeps it
-     over the row content and under the header (z-20). */
+  /* A rowgroup heading (the budgets index's area rows) sticks under the column
+     headers, so the show a row belongs to stays on screen. Cells, as above;
+     z-10 is over the rows and under the header. */
   .table-sticky-head>tbody>tr>th[scope="rowgroup"] {
     @apply sticky z-10 bg-gray-50;
 
-    /* Set by sticky_table_controller from the header's measured height: the
-       header wraps to two lines at 1366px and one at 1920px, so a constant
-       leaves a gap at one of them that the rows scroll through. The fallback
-       is the two-line height, the commoner case. */
+    /* Measured by sticky_table_controller; the fallback is the two-line header. */
     top: var(--sticky-head-height, 57px);
 
-    /* Same inset-shadow trick as the header: a sticky cell's own border is
-       dropped by `border-collapse: collapse` once it detaches. */
+    /* Inset shadow for the border, as in the header. */
     box-shadow: inset 0 -1px 0 var(--color-gray-200);
   }
 
-  /* Pins a table's LAST column to the right edge of its scroll box, for a table
-     whose last column is the row's action. The budgets index is 1218px of
-     columns in a 1012px box at 1366x768, so the Edit button sat 87px off the
-     right-hand edge of the screen and the one click the table exists for meant
-     scrolling sideways first.
-
-     Opaque, or the row scrolls through underneath it. The header's corner cell
-     needs BOTH offsets and a z-index above its own row's cells. */
+  /* Pins the last (action) column to the scroll box's right edge, so a wide
+     table's Edit button is never off screen. Opaque; the header's corner cell
+     needs both offsets and a z-index above its own row. */
   .table-pinned-actions>tbody>tr>td:last-child {
     @apply sticky right-0 z-10 bg-white;
 
@@ -88,31 +65,23 @@ select.simple-select2 {
     box-shadow: inset 1px 0 0 var(--color-gray-200), inset 0 -1px 0 var(--color-gray-200);
   }
 
-  /* Scroll box for a wide table that needs its own horizontal scrollbar.
-     `overflow-x: auto` forces the other axis to compute to `auto` too, which
-     makes this element — not <main> — the scrollport the sticky header above
-     resolves against. An unbounded height therefore means it never scrolls
-     vertically and the header never sticks, so cap it. Mirrors the permissions
-     grid, the pattern this generalises. */
+  /* A wide table's own scroll box. overflow-x: auto makes this, not <main>, the
+     scrollport the sticky header resolves against, so the height is capped or
+     the header never sticks. */
   .table-scroll {
     @apply overflow-auto;
 
-    /* The 20rem floor is for zoom: browser zoom shrinks the CSS pixel, so at
-       400% (WCAG 1.4.10) `100vh - 12rem` collapses to roughly one row. Below
-       that point stop capping to the viewport and let the page scroll to the
-       rest of the box instead. */
+    /* The floor is for 400% zoom (WCAG 1.4.10), where 100vh - 12rem is about one row. */
     max-height: max(20rem, calc(100vh - 12rem));
   }
 }
 
-/* Heading styles — Tailwind resets headings; restore sensible defaults */
+/* Tailwind resets headings */
 h3 {
   @apply text-xl font-semibold text-gray-700 mb-2;
 }
 
-/* Rendered markdown deep headings: `prose` skips h5/h6 and admin has no h4–h6
-   scale, so they'd render as plain text. Ramp them beneath the h3 above. Public
-   (application.css) has its own full scale, so this is admin-only. */
+/* prose skips h5/h6 and admin has no h4-h6 scale: ramp them below h3 */
 .markdown-body h4 {
   @apply text-lg font-semibold text-gray-700 mt-6 mb-2;
 }
@@ -135,9 +104,7 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   @apply text-primary hover:text-primary-dark;
 }
 
-/* Links on primary-coloured backgrounds (footer) must stay white.
-   The admin footer lives inside <main>, so the rule above would otherwise
-   colour it red on the red background. Mirrors application.css. */
+/* The footer is inside <main>: keep its links white on the red background */
 .bg-primary a:not(.dropdown-item),
 footer a {
   color: white !important;

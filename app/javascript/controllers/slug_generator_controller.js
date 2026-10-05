@@ -1,22 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Auto-generates a URL-friendly slug from a name field as the user types.
-// Stops auto-generating once the user manually edits the slug field.
-//
-// Usage:
-//   <div data-controller="slug-generator">
-//     <input data-slug-generator-target="name"
-//            data-action="input->slug-generator#nameChanged">
-//     <input data-slug-generator-target="slug"
-//            data-action="input->slug-generator#slugChanged">
-//   </div>
+// Fills the slug from the name as the user types, until they edit the slug.
 export default class extends Controller {
   static targets = ["name", "slug"]
   static values = { manuallyEdited: Boolean }
 
   connect() {
     this.manuallyEditedValue = false
-    // Initialize slug if name is populated and slug is empty (e.g. on edit page reload)
     if (this.slugTarget.value === "" && this.nameTarget.value !== "") {
       this.#updateSlug()
     }
@@ -29,8 +19,6 @@ export default class extends Controller {
   }
 
   slugChanged() {
-    // Detect manual editing: if slug differs from what the name would generate,
-    // the user has taken control of the slug field.
     const generatedSlug = this.#generateSlug(this.nameTarget.value)
     const currentSlug = this.slugTarget.value
 
@@ -40,8 +28,6 @@ export default class extends Controller {
       this.manuallyEditedValue = false
     }
   }
-
-  // Private
 
   #updateSlug() {
     this.slugTarget.value = this.#generateSlug(this.nameTarget.value)
@@ -53,16 +39,12 @@ export default class extends Controller {
     return text
       .toLowerCase()
       .trim()
-      // Replace accented characters with basic equivalents
+      // NFD splits off accents as combining marks, which this drops
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
-      // Replace spaces and common punctuation with hyphens
       .replace(/[\s._]+/g, "-")
-      // Remove any character that isn't alphanumeric or hyphen
       .replace(/[^a-z0-9-]/g, "")
-      // Collapse consecutive hyphens
       .replace(/-{2,}/g, "-")
-      // Trim leading/trailing hyphens
       .replace(/^-+|-+$/g, "")
   }
 }

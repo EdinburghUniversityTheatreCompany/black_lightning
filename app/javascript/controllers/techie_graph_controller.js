@@ -1,8 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Stable color per year — derived from the year itself so the same year always
-// gets the same hue regardless of which other years are in the current dataset.
-// The golden angle (137°) spreads consecutive years far apart visually.
+// A fixed hue per year, whatever other years are shown. The golden angle (137°)
+// spreads consecutive years apart.
 function yearToColor(year) {
   return `hsl(${(year * 137) % 360}, 60%, 65%)`
 }
@@ -193,7 +192,6 @@ export default class extends Controller {
       directed: false,
     })
 
-    // Dim nodes beyond 3 hops
     this.#cy.nodes().forEach(n => {
       const d = distances[n.id()]
       if (d === undefined || d > 3) n.addClass("hop-far")
@@ -211,7 +209,7 @@ export default class extends Controller {
       else e.addClass("hop-far")
     })
 
-    // Snapshot positions before layout so we can animate FROM them
+    // Animate from the current positions
     const startPositions = {}
     this.#cy.nodes().forEach(n => {
       startPositions[n.id()] = { x: n.position("x"), y: n.position("y") }
@@ -231,9 +229,8 @@ export default class extends Controller {
     })
 
     conLayout.on("layoutstop", () => {
-      // Translate concentric positions so the root lands on the current viewport centre.
-      // cy.extent() is the visible model-space rectangle; its centre never changes when
-      // fit:false is used, so we can safely read it after the layout has run.
+      // Centre the root in the viewport. With fit:false the layout leaves the
+      // extent's centre where it was.
       const extent = this.#cy.extent()
       const vcx = (extent.x1 + extent.x2) / 2
       const vcy = (extent.y1 + extent.y2) / 2
@@ -245,7 +242,7 @@ export default class extends Controller {
         endPositions[n.id()] = { x: n.position("x") + dx, y: n.position("y") + dy }
       })
 
-      // Reset nodes to where they were — animation will carry them to the targets
+      // Back to the start; the animation carries them to the targets
       this.#cy.nodes().forEach(n => {
         n.position(startPositions[n.id()])
       })

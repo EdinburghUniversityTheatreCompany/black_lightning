@@ -1,7 +1,5 @@
-// Load all the stimulus controllers
 import "../controllers"
 
-// And other shared modules
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";

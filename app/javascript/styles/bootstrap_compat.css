@@ -99,17 +99,14 @@
     @apply w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30;
   }
 
-  /* col-form-label is the one simple_form's horizontal wrappers actually emit;
-     only form-label was shimmed, so every label on the three public forms that
-     use them rendered browser-default 16px next to a 14px control. Both carry
-     the same rules as FormStyles::LABEL, which is what the admin gets. */
+  /* col-form-label is what simple_form's horizontal wrappers emit. Both match
+     FormStyles::LABEL. */
   .form-label,
   .col-form-label {
     @apply block text-sm font-medium text-gray-700 mb-1;
   }
 
-  /* Matches FormStyles::HINT. Was `form-text text-muted`, and neither class had
-     any CSS, so public form hints rendered as full-strength body text. */
+  /* Matches FormStyles::HINT */
   .form-text {
     @apply block mt-1 text-xs text-gray-500;
   }
@@ -236,14 +233,12 @@
 
 }
 
-/* ============================================================
-   Public-site additions — outside @layer so specificity
-   matches Bootstrap on the public-facing site.
-   Admin site uses admin.css-specific rules for these concepts.
-   ============================================================ */
+/* Outside @layer, so these beat Tailwind's utilities on both sites (admin.css
+   imports this file too): the spacing rules below override Tailwind's mb-4,
+   px-4, gap-4 and so on with Bootstrap's values. */
 
 
-/* Bootstrap dropdown compat — hover-based for public navbar */
+/* Hover dropdowns for the public navbar */
 .nav-item.dropdown {
   position: relative;
 }
@@ -350,9 +345,8 @@
   font-size: 1.25rem;
 }
 
-/* Collapse behaviour — toggled by Stimulus navbar controller */
-/* Note: the .collapse class on the element sets visibility: collapse in some browsers;
-   override explicitly so nav links are always visible when display is active. */
+/* Toggled by the navbar controller. visibility: visible undoes the
+   visibility: collapse some browsers give .collapse. */
 .navbar-collapse {
   display: none;
   visibility: visible;
@@ -389,7 +383,7 @@
   filter: invert(1);
 }
 
-/* Bootstrap carousel compat — sliding driven by Stimulus carousel controller */
+/* Carousel, slid by the carousel controller */
 .carousel {
   position: relative;
   overflow: hidden;
@@ -511,7 +505,7 @@
   clip: rect(0, 0, 0, 0) !important;
 }
 
-/* Additional spacing/flex utilities used in public views but missing from admin shims */
+/* Spacing and flex utilities */
 .align-items-start {
   align-items: flex-start;
 }
@@ -656,7 +650,7 @@
   }
 }
 
-/* Bootstrap 5 gap utilities (used in public views with d-flex gap-N) */
+/* Bootstrap gap utilities */
 .gap-3 {
   gap: 1rem;
 }
@@ -706,13 +700,13 @@
   border-radius: 2rem;
 }
 
-/* Bootstrap row-cols additional variants not in admin.css */
+/* Bootstrap row-cols-auto */
 .row-cols-auto>.col {
   width: auto;
   flex: none;
 }
 
-/* Bootstrap font-size scale (fs-1 through fs-6) */
+/* Bootstrap font sizes */
 .fs-1 {
   font-size: 2.5rem;
 }

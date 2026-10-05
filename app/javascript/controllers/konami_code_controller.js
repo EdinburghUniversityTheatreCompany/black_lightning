@@ -1,17 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import itify_add, { itify_init } from "../lib/itify"
 
-// Easter egg: listens for the Konami code sequence on window keydown events.
-// Image URLs are resolved server-side by ItifyHelper and passed in via
-// data-konami-code-heads-value / data-konami-code-pineapple-value so images
-// are handled by Sprockets (correct fingerprinting) and not fetched until
-// the easter egg is triggered.
-//
-// Usage:
-//   <body data-controller="konami-code"
-//         data-action="keydown@window->konami-code#keyDown"
-//         data-konami-code-heads-value="<%= itify_head_urls.to_json %>"
-//         data-konami-code-pineapple-value="<%= asset_path('easter_egg/pineapple.png') %>">
+// Easter egg: the Konami code adds IT-committee heads (lib/itify.js). Image URLs
+// come from ItifyHelper via data values, so nothing is fetched until it triggers.
 export default class extends Controller {
   static values = { index: Number, heads: Array, pineapple: String }
 

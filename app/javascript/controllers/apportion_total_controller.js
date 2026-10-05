@@ -1,15 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Running total for the split-an-EUSA-credit form: says how much of the row is
-// still unallocated and holds Save disabled until the parts add up.
-//
-// The SERVER is what refuses a short split (ActualsController#total_rule_error
-// and DatabaseStore#apportion_actual! both do). This only saves the operator a
-// round trip, and states the gap while they type — an arithmetic error found
-// after the redirect is one they have to reconstruct.
-//
-// Amounts are read the way Reimbursements::AmountParser reads them, including
-// the comma decimal: naively stripping the comma from "12,50" records 1250.
+// Running total for the split-an-EUSA-credit form: what is left to allocate, with
+// Save disabled until the parts add up. The server is what refuses a short
+// split; this only saves a round trip.
 export default class extends Controller {
   static targets = ["amount", "summary", "submit"]
   static values = { target: String, currency: { type: String, default: "£" } }
@@ -58,10 +51,8 @@ export default class extends Controller {
     if (this.hasSubmitTarget) this.submitTarget.disabled = !balanced
   }
 
-  // Mirrors AmountParser: strip the currency symbol and spaces, treat a
-  // trailing ",dd" with no "." as a decimal comma, otherwise drop commas.
-  // Returns null for anything that is not a number, so the caller can say so
-  // rather than silently counting it as zero.
+  // Mirrors Reimbursements::AmountParser, comma decimal included: "12,50" is
+  // 12.50, not 1250. Null when unreadable, so it is reported rather than zero.
   #parse(value) {
     let cleaned = value.replace(/[£\s]/g, "")
     if (cleaned === "") return null
@@ -75,16 +66,13 @@ export default class extends Controller {
     return Number.isFinite(parsed) ? parsed : null
   }
 
-  // Pence, so floating-point drift can never leave a balanced split reading
-  // as a fraction of a penny out and the button stuck disabled.
+  // To pence, so float drift cannot leave a balanced split disabled.
   #round(value) {
     return Math.round(value * 100) / 100
   }
 
-  // Matches reimbursements_money's number_to_currency output, so the running
-  // total and the figure on the card beside it read the same. The separator
-  // goes into the whole part only — running it over "1500.00" would comma the
-  // decimals too.
+  // As reimbursements_money prints it. The thousands separator goes on the
+  // whole part only.
   #money(value) {
     const [whole, decimals] = value.toFixed(2).split(".")
     return `${this.currencyValue}${whole.replace(/\B(?=(\d{3})+$)/g, ",")}.${decimals}`

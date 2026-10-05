@@ -1,11 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Shared AJAX cache for all remote-source selects on this page.
-// Cache is automatically cleared on page navigation (appropriate for user data).
+// Remote search results, shared by every select for 60 seconds.
 const ajaxCache = {
   data: {},
   timestamps: {},
-  maxAge: 60000, // 60 seconds TTL
+  maxAge: 60000,
 
   generateKey(url, params) {
     const sortedParams = Object.keys(params)
@@ -31,24 +30,16 @@ const ajaxCache = {
   }
 }
 
-// Replaces the legacy app/javascript/src/shared/select2.js jQuery plugin.
-//
-// Usage: Add data-controller="select" to any element that contains
-// <select class="simple-select2"> descendants. All selects within the
-// controller element are initialised automatically on connect, and any
-// dynamically inserted selects (e.g. via stimulus-rails-nested-form) are picked up by a
-// MutationObserver scoped to the controller's element.
-//
-// Supported data attributes on the <select> element:
-//   data-remote-source    URL for AJAX autocomplete (JSON: { results: [{id, text}] })
-//   data-query-field      Query param name for the search term (default: "q")
-//   data-show-non-members "1" to include non-members in user searches
-//   data-placeholder      Placeholder text (default: "Select an option...")
-//   data-allow-clear      "true" to show a clear button
-//   data-minimum-input-length  Min chars before AJAX fires (default: 0 for local, 2 for remote)
-//   select2-with-tags     "true" to allow creating custom option values (tags mode)
+// Builds a Tom Select for every select.simple-select2 in this element, including
+// ones inserted later. Attributes on the <select>:
+//   data-remote-source          search URL (JSON: { results: [{id, text}] })
+//   data-query-field            search param name (default "q")
+//   data-show-non-members       "1" to include non-members in user searches
+//   data-placeholder            placeholder text
+//   data-allow-clear            "true" for a clear button
+//   data-minimum-input-length   chars before a search (default 0, or 2 when remote)
+//   select2-with-tags           "true" to allow typed values (tags mode)
 export default class extends Controller {
-  // Holds {element => TomSelect} so we can destroy on disconnect
   #instances = new Map()
   #observer = null
   #TomSelect = null
@@ -58,8 +49,6 @@ export default class extends Controller {
 
     this.#initAll(this.element)
 
-    // Watch for dynamically inserted selects (stimulus-rails-nested-form, Turbo frames, etc.).
-    // MutationObserver is library-agnostic.
     this.#observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
@@ -83,8 +72,6 @@ export default class extends Controller {
     this.#instances.forEach((ts) => ts.destroy())
     this.#instances.clear()
   }
-
-  // Private
 
   #initAll(root) {
     root.querySelectorAll("select.simple-select2").forEach((el) => {
@@ -114,7 +101,6 @@ export default class extends Controller {
       placeholder,
       plugins,
       render: {
-        // Show placeholder text inside the control area
         option_create: (data, escape) =>
           `<div class="create">Add <strong>${escape(data.input)}</strong>&hellip;</div>`
       }
@@ -124,8 +110,7 @@ export default class extends Controller {
       options.create = true
       options.placeholder = "Select option or enter custom value..."
 
-      // When the dropdown opens with one item already selected, move that
-      // item's text into the editable input so the user can amend it in place.
+      // Opening with one item selected moves its text into the input to amend.
       let savedValue = null
       let lastTyped = null
       let inputListener = null
@@ -138,16 +123,13 @@ export default class extends Controller {
         this.setTextboxValue(text)
         lastTyped = text
 
-        // Track user keystrokes via the native input event.
-        // Programmatic setTextboxValue() does not fire 'input', so this only
-        // captures what the user actually typed, not TomSelect's own clear-on-close.
+        // setTextboxValue fires no input event, so this sees only the user's typing.
         inputListener = (e) => { lastTyped = e.target.value }
         this.control_input.addEventListener("input", inputListener)
       }
 
-      // On close, commit whatever the user typed (or restore if they cleared it).
-      // onDropdownClose fires after TomSelect has already called setTextboxValue('')
-      // so we rely on lastTyped captured above, not the now-empty input.
+      // Commit what was typed, or restore the original if it was cleared.
+      // TomSelect has already emptied the input by now, hence lastTyped.
       options.onDropdownClose = function () {
         if (inputListener) {
           this.control_input.removeEventListener("input", inputListener)
@@ -162,7 +144,6 @@ export default class extends Controller {
             }
             this.addItem(textToSave, true)
           } else {
-            // User cleared the input entirely — restore the original value.
             if (!this.options[savedValue]) {
               this.addOption({ value: savedValue, text: savedValue })
             }
@@ -175,22 +156,18 @@ export default class extends Controller {
     }
 
     if (remoteUrl) {
-      // Use the dropdown_input plugin so the search box appears inside the
-      // dropdown placeholder is shown correctly in the collapsed control.
+      // Remote selects search from an input inside the dropdown.
       options.plugins = [...plugins, "dropdown_input"]
       options.valueField = "id"
       options.labelField = "text"
       options.searchField = ["text"]
       options.shouldLoad = (query) => query.length >= minLength
       options.load = (query, callback) => this.#ajaxLoad(el, query, callback)
-      // Don't pre-load options — only fetch when the user types
       options.preload = false
     }
 
-    // TomSelect hides the native <select> with CSS. If the native select is
-    // required, the browser's validation will try to focus a hidden element
-    // on submit and emit "not focusable" warnings. Remove required here —
-    // server-side (ActiveRecord) validations enforce the constraint instead.
+    // A required native select, hidden by TomSelect, blocks submit with a "not
+    // focusable" error. The server validates instead.
     el.removeAttribute("required")
 
     const ts = new this.#TomSelect(el, options)
@@ -220,7 +197,7 @@ export default class extends Controller {
     const cached = ajaxCache.get(cacheKey)
 
     if (cached) {
-      // Return cached data asynchronously to match AJAX behaviour
+      // Async, as a fetch would be
       setTimeout(() => callback(cached), 0)
       return
     }

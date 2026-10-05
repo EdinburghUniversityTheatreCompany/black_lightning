@@ -1,11 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 import { getMetaValue } from "../helpers"
 
-// Immediate receipt add/remove for the expense edit page. Files go straight
-// to the receipts endpoint as a plain multipart POST (not an ActiveStorage
-// direct upload) and the server's turbo stream replaces #receipts-gallery. Turbo
-// Drive is disabled app-wide, so streams are piped through
-// Turbo.renderStreamMessage by hand.
+// Immediate receipt add/remove for the expense edit page. Files go to the
+// receipts endpoint as a plain multipart POST (not an ActiveStorage direct
+// upload) via fetch, so the turbo-stream reply that replaces #receipts-gallery
+// is rendered by hand.
 export default class extends Controller {
   static targets = ["input", "status"]
   static values = { url: String }

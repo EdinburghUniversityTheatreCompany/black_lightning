@@ -1,10 +1,5 @@
-// IT committee easter egg — triggered by the Konami code via konami_code_controller.js.
-//
-// Images live in app/assets/images/easter_egg/ and are resolved server-side by
-// ItifyHelper, which passes fingerprinted asset URLs to the Stimulus controller
-// via data-konami-code-heads-value / data-konami-code-pineapple-value.
-// Call itify_init(headsArray, pineappleUrl) once on controller connect before
-// calling itify_add().
+// IT committee easter egg, triggered by konami_code_controller.js. Image URLs come
+// from ItifyHelper; call itify_init(heads, pineappleUrl) before itify_add().
 
 let itify_count = 0
 let HEADS = []

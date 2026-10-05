@@ -22,12 +22,9 @@
   @media (min-width: 1400px) { max-width: 1320px; }
 }
 
-/* ============================================================
-   Public site global styles
-   ============================================================ */
+/* Public site global styles */
 
-/* Headings — restore Bootstrap's type scale (Tailwind Preflight resets all to 1em)
-   and apply brand red to match Bootstrap's $headings-color: $red. */
+/* Bootstrap's heading scale (Preflight resets all to 1em), in brand red */
 h1 { font-size: 2.5rem; }
 h2 { font-size: 2rem; }
 h3 { font-size: 1.75rem; }
@@ -47,22 +44,20 @@ footer h1, footer h2, footer h3, footer h4, footer h5, footer h6 {
   color: white;
 }
 
-/* Global link colour — matches Bootstrap's $link-color: $red.
-   Exceptions: nav-link (white on red navbar), dropdown-item (dark on white menu),
-   buttons, badges, and text-reset (inherits parent colour). */
+/* Links are brand red, except nav links (white navbar), dropdown items (white
+   menu), buttons, badges and .text-reset (inherits). */
 a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.nav-link):not(.text-reset) {
   @apply text-primary hover:text-primary-dark;
 }
 
-/* Links on primary-coloured backgrounds (navbar, footer) must stay white.
-   Exclude .dropdown-item — dropdown menus appear on white and need dark text. */
+/* Links stay white on primary backgrounds, but not in white dropdown menus */
 .bg-primary a:not(.dropdown-item),
 footer a,
 .navbar-dark a:not(.dropdown-item) {
   color: white !important;
 }
 
-/* Public navbar branding text — centred at lg+ breakpoints like Bootstrap's text-lg-center */
+/* Public navbar branding text, centred from lg */
 .bedlam-nav-text {
   @apply text-white font-bold;
 }
@@ -70,7 +65,7 @@ footer a,
   .bedlam-nav-text { text-align: center; }
 }
 
-/* Navbar toggler — white border and icon on dark background */
+/* White navbar toggler on the dark background */
 .navbar-dark .navbar-toggler {
   border-color: rgba(255, 255, 255, 1);
 }
@@ -79,9 +74,7 @@ footer a,
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-/* ============================================================
-   General utility classes (from shared_additions)
-   ============================================================ */
+/* General utilities */
 .no-wrap {
   white-space: nowrap;
 }
@@ -90,7 +83,7 @@ footer a,
   text-align: center;
 }
 
-/* Carousel caption card — z-index so it sits above .carousel-indicators */
+/* Above .carousel-indicators */
 .carousel-caption-card {
   position: relative;
   z-index: 2;
@@ -111,9 +104,7 @@ footer a,
   }
 }
 
-/* ============================================================
-   Pretix modal (public ticketing widget)
-   ============================================================ */
+/* Pretix ticketing modal */
 dialog.pretix-modal {
   width: 100%;
   max-width: min(640px, 95vw);
@@ -126,11 +117,9 @@ dialog.pretix-modal {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Scoped to [open] so it does not beat the UA's `dialog:not([open]) { display: none }` and
-   leave the modal permanently on screen. The header is pinned and only the body scrolls:
-   swapping the widget's event list for a product list makes the content several screens tall,
-   and pretix scrolls its own widget into view — which used to carry the Close button off the
-   top of the phone with it, leaving no visible way out of the modal. */
+/* Scoped to [open] so it cannot beat the UA's dialog:not([open]) { display: none }.
+   The header is pinned and only the body scrolls: pretix scrolls its widget into
+   view, which would carry a scrolling Close button off the top of a phone. */
 dialog.pretix-modal[open] {
   display: flex;
   flex-direction: column;
@@ -175,9 +164,7 @@ dialog.pretix-modal::backdrop {
   padding: 1.25rem;
 }
 
-/* ============================================================
-   SweetAlert2 — brand colour overrides
-   ============================================================ */
+/* SweetAlert2 brand colours */
 .swal2-confirm {
   @apply bg-primary border-primary;
 }

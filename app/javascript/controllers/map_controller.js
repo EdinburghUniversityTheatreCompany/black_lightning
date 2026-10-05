@@ -13,9 +13,8 @@ export default class extends Controller {
       import("leaflet/dist/leaflet.css"),
     ])
 
-    // Leaflet's default icon path-detection reads from CSS, which breaks when bundled.
-    // Delete _getIconUrl to bypass detection and use our explicit paths instead.
-    // Images are served from public/leaflet/ (same pattern as FontAwesome in public/webfonts/).
+    // Leaflet finds its icons through CSS, which breaks once bundled, so drop the
+    // detection and point at the copies in public/leaflet/.
     delete L.Icon.Default.prototype._getIconUrl
     L.Icon.Default.mergeOptions({
       iconUrl: "/leaflet/marker-icon.png",

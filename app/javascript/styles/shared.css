@@ -1,16 +1,11 @@
-/* ============================================================
-   Styles shared between the public site and admin entrypoints.
-   Imported by both application.css and admin.css.
-
-   Note: dropzone, fancybox, and leaflet CSS are loaded dynamically
-   by their respective Stimulus controllers (not bundled here).
-   ============================================================ */
+/* Shared by application.css and admin.css. Dropzone, Fancybox and Leaflet CSS
+   load with their Stimulus controllers instead. */
 
 .turbo-progress-bar {
   background-color: var(--color-primary);
 }
 
-/* Collapsible Stimulus controller state classes */
+/* Collapsible controller state */
 [data-controller="collapsible"] .when-open {
   display: none;
 }
@@ -84,8 +79,7 @@ img.float-right {
   background: transparent;
 }
 
-/* Nested-form rows only get a drag handle when the list is sortable
-   (the wrapper gains data-sortable-item then). Hide the inert handle otherwise. */
+/* The drag handle shows only on a sortable list's rows (data-sortable-item) */
 .nested-form-wrapper:not([data-sortable-item]) [data-sortable-handle] {
   display: none;
 }

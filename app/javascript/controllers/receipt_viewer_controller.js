@@ -1,21 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
-// In-page receipt viewer: a strip of thumbnail buttons plus one large pane that
-// shows a single receipt at a time (see shared/_receipt_viewer.html.erb).
-//
-// Lazy by design. Every <img>/<iframe> in the pane ships with data-src and no
-// src, and the source is copied across the first time that receipt is shown, so
-// a twenty-claim review queue fetches no receipt documents until an operator
-// asks for one — and reopening a receipt does not refetch it.
-//
-// Visibility is toggled through the `hidden` attribute, never a class, so the
-// markup can stay free of display utilities that would outrank it.
+// Thumbnail buttons and one pane showing one receipt at a time. Sources load from
+// data-src on first show, so a review queue fetches no receipt until asked.
+// Visibility uses the `hidden` attribute, not a class, so display utilities in
+// the markup cannot outrank it.
 export default class extends Controller {
   static targets = ["pane", "thumb", "frame", "status"]
 
-  // Show the receipt whose thumbnail was activated. Activating the receipt that
-  // is already on screen closes the pane again, so one control both opens and
-  // closes it.
+  // Activating the receipt already on screen closes the pane.
   show(event) {
     const index = Number(event.currentTarget.dataset.receiptIndex)
 
@@ -45,17 +37,13 @@ export default class extends Controller {
     this.thumbTargets.forEach((thumb) => thumb.setAttribute("aria-expanded", "false"))
     if (this.hasStatusTarget) this.statusTarget.textContent = ""
 
-    // The Hide button lives inside the pane it just hid, so hand focus back to
-    // the thumbnail that opened it rather than dropping it on <body>.
+    // The Hide button is inside the pane it hid, so focus returns to the thumbnail.
     this.thumbTargets[this.#index]?.focus()
     this.#index = null
   }
 
-  // A preview that cannot be generated must degrade to the document icon
-  // instead of leaving a broken image. ActiveStorage raises PreviewError when
-  // the representation is REQUESTED, not at upload, so a malformed PDF (phone
-  // cameras and arbitrary suppliers guarantee some) surfaces here as a failed
-  // thumbnail request.
+  // ActiveStorage raises PreviewError when a preview is requested, not at upload,
+  // so a malformed PDF arrives here as a failed thumbnail: show the document icon.
   imageFailed(event) {
     const image = event.target
     image.hidden = true
