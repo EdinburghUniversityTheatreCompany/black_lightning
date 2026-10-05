@@ -296,7 +296,7 @@ module Reimbursements
     def adoptions
       return [] if cost_centre.nil?
 
-      (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+      matched_entries.filter_map do |entry|
         next if entry.budget.cost_centre_id
 
         { budget_id: entry.budget.record_id, cost_centre: cost_centre }
@@ -315,7 +315,7 @@ module Reimbursements
     # year's same-named "Cogito", and a name match would leave its spend and
     # its sign-off in that year's area.
     def re_homes
-      @re_homes ||= (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+      @re_homes ||= matched_entries.filter_map do |entry|
         next if entry.area_name.blank?
 
         key = self.class.match_key(entry.area_name)
@@ -334,7 +334,7 @@ module Reimbursements
     # never converged. An area-less line the sheet re-homes is in both lists,
     # since the move depends on the tick.
     def owner_syncs
-      (entries_in(:revise) + entries_in(:unchanged)).filter_map do |entry|
+      matched_entries.filter_map do |entry|
         next if entry.owner_ids.empty?
         next if entry.budget.area
         next if entry.budget.own_owners.map(&:record_id).sort == entry.owner_ids.map(&:to_s).sort
@@ -525,6 +525,12 @@ module Reimbursements
       flag_shared_budgets(@rows.each_index.map { |index| entry_for(index, duplicates) })
     end
 
+    # A matched line counts whether or not its figure moved.
+    def matched_entries = entries_in(:revise) + entries_in(:unchanged)
+
+    # :invalid rows can't mint an area, set a total or hand a show an owner.
+    def kept_entries = @entries - entries_in(:invalid)
+
     # Two rows that resolved to ONE stored line. #duplicate_rows compares what
     # the sheet typed, so "Marketing" and "Cogito: Marketing" get past it, and
     # applying both would write two forecasts to one budget.
@@ -706,7 +712,7 @@ module Reimbursements
     # Area names as first typed, keyed by #match_key, so a later "cogito "
     # doesn't change the casing the store is handed.
     def first_seen_names
-      @first_seen_names ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, names|
+      @first_seen_names ||= kept_entries.each_with_object({}) do |entry, names|
         next if entry.area_name.blank?
 
         names[self.class.match_key(entry.area_name)] ||= entry.area_name
@@ -716,7 +722,7 @@ module Reimbursements
     # #match_key(area name) => the distinct Area totals the sheet gives it,
     # first seen first.
     def area_budget_totals
-      (@entries - entries_in(:invalid)).each_with_object(Hash.new { |h, k| h[k] = [] }) do |entry, totals|
+      kept_entries.each_with_object(Hash.new { |h, k| h[k] = [] }) do |entry, totals|
         next if entry.area_name.blank?
 
         value = entry.row[:area_budget]
@@ -768,7 +774,7 @@ module Reimbursements
     # column feeds. Keyed by record id where the area exists, so lines reaching
     # it by cell or by a blank cell merge, else by name.
     def owner_targets
-      @owner_targets ||= (@entries - entries_in(:invalid)).each_with_object({}) do |entry, targets|
+      @owner_targets ||= kept_entries.each_with_object({}) do |entry, targets|
         next if entry.owner_ids.empty?
 
         area, key, name = resolve_owner_target(entry)
