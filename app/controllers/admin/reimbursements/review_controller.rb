@@ -53,20 +53,9 @@ module Admin
       # Finance override of the owner sign-off gate. Every other blocker still refuses.
       def override_approve
         expense = save_edits_if_asked(find_queue_expense!) or return
-        # Never write a gate-satisfying override row while a hard block remains:
-        # a later plain approve would sail past it.
-        blocker = approve_blocker(expense)
-        if blocker && blocker != :skipped_awaiting_endorsement
-          redirect_with_approve_result(expense, blocker)
-          return
-        end
-
-        result = override_and_approve(expense, params[:override_note])
-        note = result == :approved ? "Approved ##{expense.auto_number} (owner sign-off overridden)." : nil
+        result = override_one(expense, params[:override_note])
+        note = "Approved ##{expense.auto_number} (owner sign-off overridden)." if @override_written
         redirect_with_approve_result(expense, result, approved_notice: note)
-      rescue ActiveRecord::RecordNotUnique
-        # An owner endorsed a moment ago; the gate is satisfied, so just approve.
-        redirect_with_approve_result(expense, approve_expense(expense))
       end
 
       # Override the owner gate on every ticked claim. The note is required here,
@@ -299,12 +288,15 @@ module Admin
         nil
       end
 
-      # Upserted, so a re-override after an edit refreshes the snapshot rather
-      # than riding a stale row.
-      def override_and_approve(expense, note)
+      # Overrides the gate and approves. Never writes the override row while a
+      # hard block remains: a later plain approve would sail past it. Upserted,
+      # so a re-override after an edit refreshes the snapshot.
+      def override_one(expense, note)
+        blocker = approve_blocker(expense)
+        return blocker if blocker && blocker != :skipped_awaiting_endorsement
+
         if ::Reimbursements::OwnerReview.gate_applies?(expense)
-          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
-          endorsement.assign_attributes(
+          ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize.update!(
             budget_record_id: expense.budget.record_id,
             endorsed_by_person_id: nil,
             overridden_by: current_user,
@@ -312,18 +304,9 @@ module Admin
             endorsed_amount: expense.amount,
             endorsed_at: Time.current
           )
-          endorsement.save!
+          @override_written = true
         end
         approve_expense(expense)
-      end
-
-      # One claim of a bulk override; never writes the override row while a hard
-      # block remains.
-      def override_one(expense, note)
-        blocker = approve_blocker(expense)
-        return blocker if blocker && blocker != :skipped_awaiting_endorsement
-
-        override_and_approve(expense, note)
       rescue ActiveRecord::RecordNotUnique
         # An owner endorsed a moment ago; the gate is satisfied, so just approve.
         approve_expense(expense)
