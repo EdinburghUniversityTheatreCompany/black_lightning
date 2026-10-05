@@ -1,40 +1,30 @@
 [settings]
-# Maintain mise.lock (resolved versions + per-platform checksums) on every install.
-# Tools stay spec'd "latest"; the lock records what that resolved to so installs are
-# reproducible + checksum-verified (aqua-backed tools add Cosign/SLSA). Upgrade with
-# `mise upgrade`, then commit the changed mise.lock.
+# mise.lock records resolved versions and checksums, so installs are reproducible.
+# Upgrade with `mise upgrade`, then commit the changed mise.lock.
 lockfile = true
-# Prevent `mise upgrade` from resolving a tool version published in the last 4 days — same
-# supply-chain window as the Bundler/uv/npm dependency cooldowns. `mise install` is unaffected
-# (it always reproduces the locked version from mise.lock).
+# `mise upgrade` skips versions published in the last 4 days, the same cooldown as the Bundler
+# and npm dependencies. `mise install` still reproduces mise.lock.
 minimum_release_age = "4d"
 
 [tools.ruby]
 version = "4.0.2"
-# `compile = false` installs a precompiled portable Ruby from jdx/ruby (mise's default
-# precompiled provider) instead of building from source via ruby-build. The jdx/ruby Linux
-# builds run in manylinux2014 containers (glibc 2.17 floor) and bundle their own OpenSSL +
-# libyaml + libffi, so the binary is portable across glibc >= 2.17 and needs no build
-# toolchain — the devcontainer therefore ships no build-essential/libssl-dev/libyaml-dev.
+# A precompiled portable Ruby from jdx/ruby instead of a ruby-build source compile: glibc 2.17
+# floor and its own OpenSSL, libyaml and libffi, so it needs no build toolchain.
 # Set explicitly so a contributor's global mise `compile` default can't flip mise.lock.
 compile = false
 
 [tools.node]
 version = "24.13.0"
-# Enable corepack after installing node so the pnpm version pinned in package.json's
-# `packageManager` field is available (corepack downloads + verifies it on first use).
-# Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
+# Corepack provides the pnpm pinned in package.json's `packageManager`, keeping host, dev
+# container and CI in step without making pnpm a mise tool.
 postinstall = "corepack enable"
 
 [tools]
-# jscpd is NOT a mise tool — it's a Rust binary shipped via npm optional platform packages that
-# npx resolves but the mise npm backend does not. `herb lint` likewise delegates to
-# npx @herb-tools/linter (version pinned to the herb gem). flay + debride + herb + brakeman +
-# bundler-audit + fasterer + database_consistency are Gemfile dev-group gems; strong_migrations
-# is a runtime gem.
-# pnpm is NOT a mise tool either — it's pinned via the `packageManager` field in package.json and
-# provided by corepack (enabled by the postinstall hook below). That one pin is read by corepack
-# (host + dev container) AND by pnpm/action-setup in CI, so all three stay on the same pnpm.
+# jscpd is not a mise tool: it ships as npm optional platform packages that npx resolves and the
+# mise npm backend does not. `herb lint` delegates to npx @herb-tools/linter; the other linters
+# are Gemfile gems.
+# pnpm is not a mise tool either: corepack (the postinstall hook in [tools.node]) provides the
+# version in package.json's `packageManager`, which pnpm/action-setup also reads in CI.
 
 [hooks]
 postinstall = [

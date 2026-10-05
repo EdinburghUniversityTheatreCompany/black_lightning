@@ -30,9 +30,8 @@ class ApplicationController < ActionController::Base
     @base_url = request.protocol + request.host_with_port
     @current_path = request.path
 
-    # Only values that cannot change during the action belong here: this is a before_action, so
-    # anything derived from @title reads nil. og:title, og:url and the twitter:* tags are derived
-    # at render time in MetaHelper instead.
+    # A before_action, so anything derived from @title would read nil: og:title, og:url and the
+    # twitter:* tags are built at render time in MetaHelper.
     @meta = {
       description: "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.",
 
@@ -80,23 +79,15 @@ class ApplicationController < ActionController::Base
 
   private
 
-  # Partial used to render an index page's results list. Both the full-page index
-  # wrapper and the turbo_stream (live-search) response render this, so they stay
-  # in sync. Defaults to the controller's own partial; controllers that render a
-  # shared index template (e.g. the event controllers, which all render
-  # events/index) override this to point at the shared partial.
+  # The results list both the full index page and the live-search turbo_stream render.
+  # Controllers sharing an index template (the event controllers) override it.
   def index_results_partial
     "#{controller_path}/index_results"
   end
 
-  # Renders an index/list action's turbo_stream response safely.
-  #
-  # Live-search fetches (from live_search_controller) always carry q[...] params and want the
-  # `fragment` (which updates an in-page container such as #index-results). But a Turbo
-  # form-submission redirect (e.g. after #destroy) follows the 302 with the same turbo_stream Accept
-  # header and NO q params; answering that with the fragment silently does nothing when the redirect
-  # lands on a page without the target container (e.g. a show page), and the flash never shows. For a
-  # paramless turbo_stream request, render the full HTML page so Turbo performs a real navigation.
+  # Live search carries q[...] params and gets the fragment. A Turbo form-submission redirect
+  # (e.g. after #destroy) arrives as turbo_stream with no q params: the fragment would do nothing
+  # on a page without its container and the flash would never show, so it gets the full HTML page.
   def render_index_stream_or_full(fragment:, full: "index")
     if params[:q].present?
       render fragment
@@ -136,12 +127,10 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # An action that fails part-way through serving a file leaves the response holding that file's
-  # Content-Type and, when it streams, some of its bytes. respond_to above refuses to render a
-  # format that conflicts with the response's existing media type - it raises
-  # RespondToMismatchError - so without this the error page is replaced by a second, unrescued
-  # exception. The file-serving headers go too: a leftover Content-Disposition would save the
-  # error page as "photo.jpg", and the sandbox CSP would strip it of its styling.
+  # An action that failed while serving a file leaves its Content-Type (and maybe some bytes) on
+  # the response, and respond_to raises RespondToMismatchError on a conflicting media type, so
+  # the error page would become a second, unrescued exception. A leftover Content-Disposition
+  # would download the page as the file, and the sandbox CSP would strip its styling.
   def discard_failed_response
     response.reset_body!
     %w[Content-Type Content-Length Content-Disposition Content-Security-Policy].each do |header|

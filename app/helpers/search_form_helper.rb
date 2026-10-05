@@ -91,8 +91,7 @@ module SearchFormHelper
     params[:required] = false if params[:required].nil?
 
     # Remove the type and slug from the parameters since they are not relevant for the input.
-    # `except` takes varargs, so splat the keys — passing one array would delete the key
-    # `[:type, :slug]` (which never exists) and leak both through to simple_form.
+    # `except` takes varargs: one array argument would delete the key [:type, :slug] instead.
     params = params.except(:type, :slug)
 
     # Render the input itself, unless it was caught by the switch earlier and is already rendered.

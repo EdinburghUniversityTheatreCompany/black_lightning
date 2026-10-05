@@ -1,19 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-# This is not used directly but just as a backup. It lives in deploy's home/backups folder (~/backups/job.sh) and is called by the crontab on the EUSA Host VM
-# Why? Because it needs duplicacy, rclone and mysqldump, which are all available on the host.
-# This folder has a hidden .duplicacy folder that contains the duplicacy repository config.
+# A copy of ~/backups/job.sh on the EUSA host VM, run there by cron because it needs the host's
+# duplicacy, rclone and mysqldump. That folder's hidden .duplicacy holds the repository config.
 
 # You need to define the following in a file called .my.cnf in the home folder:
 # [client]
 # user=root
 # password=<the mysql root password from the mysql.key file or the bitwarden
 
-# MySQL is a Kamal accessory on the private `kamal` network and publishes no port
-# (removed deliberately in 6dfb22ee), so 127.0.0.1 on the HOST cannot reach it.
-# --single-transaction: a consistent InnoDB snapshot without locking the site out
-# of its own tables for the length of the dump.
+# MySQL is a Kamal accessory publishing no port, so the host cannot reach it on 127.0.0.1.
+# --single-transaction: a consistent snapshot without locking the site out for the dump.
 # \042 = double quote, \047 = single quote; octal avoids nesting quotes here.
 MYSQL_PW=$(sed -n 's/^password[[:space:]]*=[[:space:]]*//p' ~/.my.cnf | tr -d '\042\047\r\n')
 docker exec -e MYSQL_PWD="$MYSQL_PW" blacklightning-mysql \
@@ -35,5 +32,5 @@ rclone copy wasabi-database:bedlam-theatre-website backblaze-storage:bedlam-webs
 
 # Do not delete the dump so the latest one is always available.
 
-# Remove the database dump and notify that the backup was succesful.
+# Notify Honeybadger that the backup succeeded.
 curl https://api.honeybadger.io/v1/check_in/NeI9y6

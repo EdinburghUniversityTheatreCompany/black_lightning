@@ -1,8 +1,7 @@
 require "test_helper"
 
-# Covers the routing half of ErrorsController: an exception no controller rescued comes back
-# through the routes as a fresh GET of "/<status>" with the exception in the Rack env, and used to
-# fall through to the static catch-all and be answered with the 404 page.
+# The routing half of ErrorsController: an unrescued exception comes back as a GET of "/<status>"
+# with the exception in the Rack env.
 class ErrorPagesTest < ActionDispatch::IntegrationTest
   PAGE_NOT_FOUND = "isn&#39;t the page you are looking for".freeze
 

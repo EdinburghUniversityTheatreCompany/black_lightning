@@ -10,10 +10,8 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_response 403
   end
 
-  # set_globals seeds only what cannot change during the action. og:url and og:title used to be
-  # built here and both read @title, which the action assigns afterwards -- so og:title was
-  # always nil. MetaHelper derives them at render time now; seo_metadata_test asserts the
-  # rendered tags.
+  # og:title reads @title, which the action assigns after this before_action, so MetaHelper
+  # builds it at render time (seo_metadata_test).
   test "set globals" do
     get :index
 
@@ -22,10 +20,6 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_equal [ :description, "og:image", "viewport" ], assigns(:meta).keys
     assert_nil assigns(:meta)["og:title"], "og:title must be derived at render time, not here"
   end
-
-  # ==================
-  # Profile completion blocking tests
-  # ==================
 
   test "unauthenticated users are not blocked by profile completion" do
     get :index

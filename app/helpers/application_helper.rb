@@ -14,10 +14,8 @@ module ApplicationHelper
     end
   end
 
-  # Generates a stable proxy URL for an ActiveStorage blob, attachment, or variant.
-  # Proxy URLs are served through Rails with long-lived Cache-Control headers,
-  # unlike signed S3 redirect URLs which expire and change on every request.
-  # Only use this for public-facing images — proxy URLs do not expire.
+  # A stable, long-cached URL for a blob, attachment or variant, unlike a signed S3 redirect,
+  # which changes on every request. Public images only: a proxy URL never expires.
   def active_storage_proxy_url(image)
     if image.respond_to?(:variation)
       rails_blob_representation_proxy_url(

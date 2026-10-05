@@ -3,9 +3,8 @@ require "test_helper"
 class SearchFormHelperTest < ActionView::TestCase
   tests SearchFormHelper
 
-  # A fake form builder that records what `render_search_form_field` hands to `f.input`.
-  # The leak these tests guard is invisible in the rendered HTML — simple_form drops
-  # options it doesn't recognise — so the observable is the options hash itself.
+  # Records what `render_search_form_field` hands to `f.input`. simple_form drops options it does
+  # not recognise, so the leak is invisible in the HTML and the options hash is the observable.
   class RecordingBuilder
     attr_reader :key, :options
 
@@ -16,11 +15,8 @@ class SearchFormHelperTest < ActionView::TestCase
     end
   end
 
-  # The field-config hash carries two keys that are ours, not simple_form's: `:type` picks
-  # which renderer to use, `:slug` the i18n key for the label. Both have to be stripped
-  # before the rest of the hash is passed on. `Hash#except!` takes varargs, so the old
-  # `except!([ :type, :slug ])` deleted the key `[:type, :slug]` — which never exists — and
-  # stripped nothing.
+  # :type and :slug are ours, not simple_form's. `except!` takes varargs, so the old
+  # `except!([ :type, :slug ])` deleted the key [:type, :slug], which never exists, and stripped nothing.
   test "does not pass the config-only :type and :slug keys to the input" do
     builder = RecordingBuilder.new
 

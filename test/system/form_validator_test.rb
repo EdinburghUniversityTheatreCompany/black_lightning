@@ -33,14 +33,10 @@ class FormValidatorTest < ApplicationSystemTestCase
   test "respects server-side errors and clears them on first interaction" do
     visit new_admin_news_path
 
-    # Submit with an empty title to force a server-side error.
     click_button "Create News"
 
-    # The server re-renders the form with .is-invalid on the title input.
     assert_selector "input#event_name.is-invalid", wait: 5
 
-    # Fill in a valid value — the controller should hand off to client
-    # validation and mark the field as valid.
     fill_in "event_name", with: "Now It Is Valid"
 
     assert_selector "input#event_name.is-valid", wait: 2

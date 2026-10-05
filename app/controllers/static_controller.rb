@@ -1,9 +1,9 @@
 class StaticController < ApplicationController
   skip_authorization_check
 
-  # slug => the name the page goes by. Without these every one of them rendered
-  # <title>Bedlam Theatre</title>, including the Find Us page, which is the landing page for
-  # every "theatre near me" search.
+  # Each page has its own title and description so search engines can tell them apart (Find Us
+  # lands every "theatre near me" search). Hand-written: the editable blocks read as page
+  # content, not as a summary of it.
   PAGE_TITLES = {
     "accessibility"   => "Accessibility & Find Us",
     "black_lightning" => "Project Black Lightning",
@@ -17,10 +17,6 @@ class StaticController < ApplicationController
 
   ALLOWED_PAGES = PAGE_TITLES.keys.freeze
 
-  # Every static page gets its own, because a page sharing the site-wide boilerplate is a page
-  # search engines have to choose between. Hand-written rather than derived from the editable
-  # block: these are the eight highest-value non-event pages, and the block bodies read as page
-  # content, not as a summary of it.
   PAGE_DESCRIPTIONS = {
     "accessibility"   => "How to find Bedlam Theatre at 11B Bristo Place, Edinburgh EH1 1EZ, and what to expect when you get here: entrances, step-free access and getting around.",
     "black_lightning" => "Project Black Lightning: the open-source Rails application that runs Bedlam Theatre's website, box office admin and members' area.",

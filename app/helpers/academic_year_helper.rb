@@ -42,21 +42,17 @@ module AcademicYearHelper
     "#{start_of_year.strftime("%y")}/#{next_year_start.strftime("%y")}"
   end
 
-  # Converts a date to its academic year start year.
-  # E.g., October 2023 -> 2023 (part of 2023/24 academic year)
-  #       August 2023 -> 2022 (part of 2022/23 academic year)
+  # The year the date's academic year starts in: October 2023 -> 2023, August 2023 -> 2022.
   def date_to_academic_year(date)
     date.month >= 9 ? date.year : date.year - 1
   end
 
-  # Formats an academic year start year as a shorthand string.
-  # E.g., 2023 -> "23/24"
+  # 2023 -> "23/24"
   def format_academic_year(start_year)
     "#{start_year.to_s[-2..]}/#{(start_year + 1).to_s[-2..]}"
   end
 
-  # Formats a user's years_active array into a human-readable label with consecutive ranges.
-  # E.g., [2017, 2018, 2019, 2022, 2023] -> "active 17/18-19/20, 22/23-23/24"
+  # [2017, 2018, 2019, 2022, 2023] -> "active 17/18-19/20, 22/23-23/24"
   def format_years_active_label(years)
     return "no activity on record" if years.blank?
 

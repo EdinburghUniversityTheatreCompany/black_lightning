@@ -1,24 +1,18 @@
 # frozen_string_literal: true
 
-##
-# Shared functionality for bulk import controllers.
-# Provides common methods for parsing, caching, and user creation.
-##
+# Parsing, caching and user creation shared by the bulk import controllers.
 module Importable
   extend ActiveSupport::Concern
 
   private
 
-  # Parse the import data from params (either paste or xlsx upload)
-  # @return [Array] [data, input_type] where input_type is :paste or :xlsx
   def parse_import_params
     data = params[:paste_data].presence || params[:xlsx_file]
     input_type = params[:paste_data].present? ? :paste : :xlsx
     [ data, input_type ]
   end
 
-  # Serialize categorized import data for cache storage
-  # Converts ActiveRecord objects to IDs to avoid serialization issues
+  # Stores ids rather than records, which the cache cannot serialise.
   def serialize_import(categorized)
     categorized.transform_values do |items|
       items.map do |item|
@@ -39,8 +33,6 @@ module Importable
     end
   end
 
-  # Read and clear cache entry for import data
-  # @return [Hash, nil] The cached data or nil if not found
   def read_and_clear_cache(cache_key)
     return nil if cache_key.blank?
 
@@ -49,25 +41,18 @@ module Importable
     data
   end
 
-  # Generate a unique cache key for storing import data
-  # @param prefix [String] Prefix for the cache key (e.g., "user_import", "crew_import")
   def generate_import_cache_key(prefix)
     "#{prefix}_#{SecureRandom.uuid}"
   end
 
-  # Write import data to cache with standard expiration
   def write_import_cache(cache_key, data)
     Rails.cache.write(cache_key, data.with_indifferent_access, expires_in: 1.hour)
   end
 
-  # Generate a placeholder email for users without one
   def generate_placeholder_email
     "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk"
   end
 
-  # Create a new user from import row data
-  # @param row [Hash] The normalized row data with :email, :first_name, :last_name, etc.
-  # @return [User] The created user
   def create_user_from_row(row)
     email = row[:email].presence || generate_placeholder_email
 

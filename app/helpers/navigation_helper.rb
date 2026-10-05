@@ -51,44 +51,19 @@ module NavigationHelper
     children << { title: "Debt Checker", path: new_admin_debt_checker_path, fa_icon: "fa-magnifying-glass-dollar" }  if can? :check_debt, Admin::Debt
     navbar_categories << { title: "Staffing & Debt", children: children, fa_icon: "fa-person" }
 
-    # My Reimbursements — the producer/owner-facing surfaces (base access
-    # permission). Kept out of the finance-only "Finance" category so a
-    # producer who isn't on the finance team isn't shown a group called
-    # "Finance" containing only their personal links.
+    # The producer's own links, kept out of "Finance" so a producer is not shown a finance group.
     children = []
-    # Points at /expenses, not the namespace root: the sidebar marks an item
-    # active for its own page and anything beneath it, so the root would light
-    # up for payment_details and my_budgets too. (An item that must match its
-    # own page only can say `exact: true`.)
+    # /expenses, not the namespace root, which the sidebar would light up for every page beneath it.
     children << { title: "My Claims", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
     children << { title: "My Budgets", path: admin_reimbursements_my_budgets_path, fa_icon: "fa-user-check" } if can? :access, :reimbursements
     navbar_categories << { title: "My Reimbursements", children: children, fa_icon: "fa-receipt" }
 
-    # Finance — the finance-team-only reimbursements tooling, in the order the
-    # work is actually done rather than the order the screens were built.
-    #
-    # Every item is `scoped: true`: the sidebar appends the year and cost
-    # centre the operator is currently looking at (SidebarComponent's
-    # SCOPE_PARAMS), so a pot picked on one screen survives the click to the
-    # next. Without it every nav href was bare and each click silently reverted
-    # to the active year and every centre. The producer items above are NOT
-    # scoped — their own claims are deliberately neither year- nor
-    # centre-scoped.
-    #
-    # Fifteen flat links put the four WEEKLY items at positions 1, 2, 9 and 10,
-    # with annual setup wedged between them, so +group:+ breaks them into the
-    # four jobs: pay the claims, watch the budgets, keep the EUSA ledger true,
-    # set the thing up. The renames are the audit's: "Expenses" collided with
-    # the producer's own "My Claims", "History" named no subject, and
-    # "Settings" is really the cost centres.
+    # `scoped: true` carries the selected year and cost centre into the link (SidebarComponent::SCOPE_PARAMS).
+    # `group:` splits the list into the four jobs, in the order the work is done.
     children = []
     if can? :manage, :reimbursements_finance
-      # Ungrouped, above the four job groups, because it is not one of the four
-      # jobs — it is where you find out which of them is waiting on you. Needs
-      # `exact: true`: it points at the namespace root, and the sidebar marks an
-      # item active for its own page AND anything beneath it, so without it
-      # every finance screen would light this up alongside its own entry.
+      # Ungrouped and first. `exact: true` because the root is a prefix of every finance path.
       children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true, scoped: true }
 
       children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check", scoped: true }
@@ -113,9 +88,7 @@ module NavigationHelper
     end
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
-    # Building — the crypt climate monitor. ONE entry: Sensors is reached by a
-    # button on the dashboard rather than the sidebar. Adding it here would need
-    # `exact: true` on this entry, or /admin/climate would light up alongside it.
+    # One entry: Sensors is reached from the dashboard. A second here would need `exact: true` on this one.
     children = []
     children << { title: "Crypt Climate", path: admin_climate_dashboard_path, fa_icon: "fa-droplet" } if can? :read, :climate
     navbar_categories << { title: "Building", children: children, fa_icon: "fa-building-columns" }
@@ -172,7 +145,6 @@ module NavigationHelper
     # Remove categories that do not have any children.
     navbar_categories.reject! { |category| category[:children].empty? }
 
-    # Add logout as a standalone item
     navbar_categories << { title: "Log Out", path: destroy_user_session_path, method: :delete, fa_icon: "fa-right-from-bracket", is_logout: true }
 
     navbar_categories

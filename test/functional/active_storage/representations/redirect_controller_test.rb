@@ -6,7 +6,6 @@ class ActiveStorage::Representations::RedirectControllerTest < ActionDispatch::I
   end
 
   test "redirects successfully for valid image blob" do
-    # Attach a valid image
     @picture.image.attach(
       io: File.open(Rails.root.join("test", "test.png")),
       filename: "valid.png",
@@ -26,11 +25,7 @@ class ActiveStorage::Representations::RedirectControllerTest < ActionDispatch::I
   end
 
   test "returns 404 instead of 500 when variant processing fails" do
-    # Attach bytes that are not a valid image but claim to be a PNG, so the
-    # image backend (vips) raises a real processing error when it tries to
-    # transform the variant. Reproduces Honeybadger #131577736, where the
-    # controller's rescue clause referenced an undefined constant and turned an
-    # image-backend failure into a 500 instead of the intended 404.
+    # Bytes claiming to be a PNG, so vips raises a real processing error (Honeybadger #131577736).
     @picture.image.attach(
       io: StringIO.new("this is not a valid image"),
       filename: "broken.png",
@@ -50,11 +45,7 @@ class ActiveStorage::Representations::RedirectControllerTest < ActionDispatch::I
   end
 
   test "returns 404 instead of 500 for an unsigned variation key" do
-    # A vulnerability scanner strips the signature off the variation key and
-    # replays it against a validly signed blob id, probing whether the app will
-    # run an unsigned set of image transformations. Rails refuses (that is the
-    # point of the signature), but the refusal must read as "no such variant",
-    # not as an application crash. Reproduces Honeybadger #133797247.
+    # A scanner replaying the variation key without its signature (Honeybadger #133797247).
     @picture.image.attach(
       io: File.open(Rails.root.join("test", "test.png")),
       filename: "valid.png",
@@ -73,10 +64,8 @@ class ActiveStorage::Representations::RedirectControllerTest < ActionDispatch::I
   end
 
   test "returns 404 for a Marshal-encoded variation key" do
-    # The same scanner also replays the pre-Rails-5.2 Marshal encoding, which is
-    # the shape a deserialisation attack would take. It must never be unwrapped:
-    # a 404 here proves the payload was rejected on its missing signature,
-    # before anything looked at what it contained.
+    # The pre-Rails-5.2 Marshal encoding, a deserialisation attack's shape: it must be rejected on
+    # its missing signature before anything unwraps it.
     @picture.image.attach(
       io: File.open(Rails.root.join("test", "test.png")),
       filename: "valid.png",

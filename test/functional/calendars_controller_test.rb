@@ -2,9 +2,8 @@ require "test_helper"
 
 class CalendarsControllerTest < ActionController::TestCase
   setup do
-    # Create a future staffing with a staffed job
     @user = FactoryBot.create(:user)
-    @user.regenerate_calendar_token  # ensure token is set
+    @user.regenerate_calendar_token
     @user.reload
 
     future_staffing = FactoryBot.create(:staffing,

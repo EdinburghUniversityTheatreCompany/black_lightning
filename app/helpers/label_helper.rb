@@ -1,8 +1,7 @@
 module LabelHelper
-    # Generate the labels to be shown in the team member list & user profile.
-    # `deadline` is the proposal deadline, if applicable.
-    # `show_member_status_when` is one of :positive, :negative, :always, :never
-    # `exhaustive` is whether to display extra role labels (like admin).
+    # Labels for the team member list and the user profile. `deadline` is the proposal deadline,
+    # if any; `show_member_status_when` is :positive, :negative, :always or :never; `exhaustive`
+    # adds role labels such as Admin.
     def user_labels_for(user, deadline, show_member_status_when = :never, exhaustive = false)
         output_labels = []
 
@@ -94,11 +93,8 @@ module LabelHelper
         output_labels
     end
 
-    # Generate the labels to be shown in the team member list.
-    # `deadline` is the proposal deadline, if applicable.
     def team_member_labels_for(team_member, deadline)
-        # Display the 'Not a Member' label if the show is this academic year,
-        # or it has a deadline in the future (and is likely a proposal)
+        # Non-members are flagged on this year's shows and on proposals still open.
         show_member_status = (team_member.teamwork_type == "Event" && team_member.teamwork.this_academic_year?) || (deadline.present? && deadline.future?)
 
         show_member_status_when = show_member_status ? :negative : :never

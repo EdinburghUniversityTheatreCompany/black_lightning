@@ -12,7 +12,6 @@
 #  updated_at  :datetime         not null
 #
 class Complaint < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :subject, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }
   validates :comments, length: { maximum: 16777215 }

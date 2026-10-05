@@ -6,10 +6,6 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     @complete_user = FactoryBot.create(:user, profile_completed_at: Time.current)
   end
 
-  # ==================
-  # Show action tests
-  # ==================
-
   test "show with valid token for incomplete profile user" do
     token = @incomplete_user.profile_completion_token
 
@@ -73,17 +69,12 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_match "You need to be logged in or have a valid profile completion link", response.body
   end
 
-  # ==================
-  # Update action tests
-  # ==================
-
   test "update with valid token and consent completes profile" do
     token = @incomplete_user.profile_completion_token
     user_params = { first_name: "Updated", last_name: "Name", password: "newpassword123" }
 
     assert_nil @incomplete_user.profile_completed_at
 
-    # Should enqueue a welcome email
     assert_enqueued_emails 1 do
       patch :update, params: { token: token, user: user_params, consent: "true" }
     end
@@ -124,13 +115,11 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
   end
 
   test "update with invalid user attributes fails" do
-    # Test with a password that is too short (Devise usually requires minimum length)
     token = @incomplete_user.profile_completion_token
     user_params = { password: "ab" }
 
     patch :update, params: { token: token, user: user_params, consent: "true" }
 
-    # The save should fail due to password validation
     assert_response :unprocessable_entity
 
     @incomplete_user.reload

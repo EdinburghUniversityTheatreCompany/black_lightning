@@ -7,9 +7,7 @@ class NavigationHelperTest < ActionView::TestCase
     @current_user.ability
   end
 
-  # CanCanCan wires can?/cannot? into controllers (and so views) via its
-  # Railtie; a bare ActionView::TestCase doesn't go through that, so delegate
-  # them here the same way User itself does.
+  # ActionView::TestCase skips CanCanCan's Railtie, so delegate can?/cannot? as User does.
   def can?(...)
     current_ability.can?(...)
   end
@@ -31,9 +29,7 @@ class NavigationHelperTest < ActionView::TestCase
   end
 
   test "the nine finance-gated links are hidden without the finance permission" do
-    # A category with zero visible children is dropped entirely
-    # (navbar_categories.reject! { |c| c[:children].empty? }) — with no
-    # reimbursements permission at all, "Finance" doesn't appear at all.
+    # A category with no visible children is dropped.
     assert_nil finance_category
   end
 
@@ -51,13 +47,7 @@ class NavigationHelperTest < ActionView::TestCase
     gated_titles.each { |title| assert_includes titles, title }
   end
 
-  # Fifteen flat links put the weekly work at positions 1, 2, 9 and 10, so the
-  # category is broken into the four jobs — in the order they are done.
-  #
-  # Finance home is the ONE ungrouped item and it comes first: it is not one of
-  # the four jobs, it is where you find out which of them is waiting on you.
-  # Every link BELOW it must carry a group, or it renders under whichever group
-  # heading happens to precede it.
+  # Every link below Finance home needs a group, or it renders under whichever heading precedes it.
   test "the finance links are grouped by the job they belong to, weekly work first" do
     grant_finance_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil)
@@ -74,10 +64,7 @@ class NavigationHelperTest < ActionView::TestCase
     assert_empty ungrouped, "a finance link with no group: #{ungrouped.inspect}"
   end
 
-  # Finance home points at the namespace ROOT, which is a path prefix of every
-  # other finance screen. Without exact: true the sidebar would mark it active
-  # on all of them — it marks an item active for its own page and anything
-  # beneath it.
+  # The namespace root is a prefix of every finance path, so it needs exact: true.
   test "Finance home matches its own page only" do
     grant_finance_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil)
@@ -92,11 +79,8 @@ class NavigationHelperTest < ActionView::TestCase
     grant_producer_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil)
 
-    # The finance-only category is dropped entirely for a producer.
     assert_nil finance_category
 
-    # Their own claim/payment/budget links live in a separate My Reimbursements
-    # category, gated on the base :access permission.
     titles = my_reimbursements_category[:children].map { |child| child[:title] }
     assert_includes titles, "My Claims"
     assert_includes titles, "Payment Details"

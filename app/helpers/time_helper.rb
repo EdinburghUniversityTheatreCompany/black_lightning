@@ -26,16 +26,14 @@ module TimeHelper
     result
   end
 
-  # "7.30pm", "8pm". British house style, and the minutes are dropped on the hour
-  # rather than printing a bare ":00" that nobody says out loud.
+  # "7.30pm", "8pm": British style, minutes dropped on the hour.
   def short_time(time)
     return nil if time.blank?
 
     time.min.zero? ? time.strftime("%-l%P") : time.strftime("%-l.%M%P")
   end
 
-  # "Tue 3 Mar", "Tue 3 – Sat 7 Mar", "Tue 3 Mar – Thu 2 Apr". The repeated month
-  # is dropped, which is how anyone writing a run of dates writes them.
+  # "Tue 3 Mar", "Tue 3 – Sat 7 Mar", "Tue 3 Mar – Thu 2 Apr": a repeated month is dropped.
   def date_span(from, to, long: false)
     return nil if from.blank?
 
@@ -48,13 +46,8 @@ module TimeHelper
     "#{from.strftime("#{day} #{month}")} – #{to.strftime("#{day} #{month}")}"
   end
 
-  # "10am – 11pm", or just "7.30pm" when there is no end worth stating.
-  #
-  # Callers pass the EXPLICIT ends_at, never effective_ends_at: an end derived
-  # from the running time would print "7.30pm – 9.45pm" on every line of a show,
-  # which is noise. An occurrence that states its own end is saying something --
-  # a Season's opening hours are exactly that, and the close is the half that
-  # tells somebody when they have to be out.
+  # "10am – 11pm", or "7.30pm" with no end. Callers pass the explicit ends_at, never
+  # effective_ends_at: an end derived from the running time would print on every line of a show.
   def time_span(from, to = nil)
     return nil if from.blank?
     return short_time(from) if to.blank?

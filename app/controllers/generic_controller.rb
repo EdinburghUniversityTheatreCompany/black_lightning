@@ -101,8 +101,7 @@ module GenericController
           # format.json { render json: get_resource.errors, status: :unprocessable_entity }
         end
       rescue ActiveRecord::RecordNotUnique => e
-        # Safety net: catch database constraint violations
-        # The model validation should prevent this, but this handles race conditions
+        # Race net: the model validation catches a duplicate team member first.
         if e.message.include?("team_members") && e.message.include?("teamwork_and_user")
           get_resource.errors.add(:base, "Cannot add the same person as a team member more than once.")
           @title = edit_title

@@ -1,20 +1,10 @@
 require "application_system_test_case"
 
 module Admin
-  # Guards the sticky column headers on admin index tables (.table-sticky-head).
-  #
-  # This is a pure-CSS behaviour with one very easy way to break it: `position:
-  # sticky` resolves against the nearest ancestor whose overflow is not
-  # `visible`, and an `overflow-x-auto` wrapper (the usual way to let a wide
-  # table scroll sideways) becomes exactly that on BOTH axes. With no height it
-  # can never scroll vertically, so the header silently stops sticking while the
-  # markup still looks correct. Reading the classes doesn't catch it; measuring
-  # the rendered box does.
-  #
-  # Both tests clone the rendered rows before scrolling so the table is
-  # guaranteed taller than its scrollport regardless of how many fixtures
-  # exist — the DOM ends up identical to what a long list produces, which is all
-  # the CSS reacts to.
+  # Sticky headers on admin index tables (.table-sticky-head). `position: sticky` resolves against
+  # the nearest non-`visible` overflow ancestor, and an `overflow-x-auto` wrapper is that on both
+  # axes, so with no height the header silently stops sticking. Only measuring the box catches it.
+  # The rows are cloned first so the table is always taller than its scrollport.
   class StickyTableHeadersTest < ApplicationSystemTestCase
     include ReimbursementsTestHelpers
 
@@ -26,11 +16,9 @@ module Admin
       });
     JS
 
-    # Scrolls the scrollport until the table's top is well above it, then reports
-    # where the header cell ended up relative to the scrollport's top edge.
-    # Wrapped in an arrow IIFE because `evaluate_script` injects the script into
-    # a `return (…)`, which only accepts a single expression; an arrow keeps
-    # `arguments` bound to the injected function so the selectors still arrive.
+    # Scrolls the table's top well past the scrollport's and reports where the header cell sits.
+    # An arrow IIFE: `evaluate_script` wraps the script in `return (…)`, which takes one
+    # expression, and an arrow keeps `arguments` bound so the selectors still arrive.
     MEASURE = <<~JS.freeze
       (() => {
         const table = document.querySelector(arguments[0]);

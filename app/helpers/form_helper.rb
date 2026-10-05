@@ -38,11 +38,8 @@ module FormHelper
     simple_form_for(object, *(args << options.merge(new_options)), &block)
   end
 
-  # Control classes for the hand-rolled `form_with url:` forms (finance,
-  # climate), read from the same FormStyles constants simple_form's wrappers
-  # use. See shared/form/_field for the label + hint wrapper around them.
-  # `width:` is the one utility a caller may swap (nil for a control that sizes
-  # itself, such as a date input or a table cell's amount).
+  # Control classes for hand-rolled `form_with url:` forms, from the FormStyles constants
+  # simple_form uses. `width: nil` suits a control that sizes itself, such as a date input.
   def input_classes(*extra, width: "w-full")
     [ width, FormStyles::INPUT_BASE, *extra ].compact.join(" ")
   end

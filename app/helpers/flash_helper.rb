@@ -55,9 +55,8 @@ module FlashHelper
     end
   end
 
-  # One-stop shop for the layout's flash script: standardise, build the hash
-  # the SweetAlert pipeline consumes, and discard so a cached/re-rendered page
-  # can't replay the same messages. The caller serialises with .to_json.
+  # The hash the layout's SweetAlert script reads. Discards the flash so a cached or
+  # re-rendered page cannot replay it.
   def flash_alerts_for_script
     standardise_flash
     alert_hash = flash_as_alert_hash.to_h

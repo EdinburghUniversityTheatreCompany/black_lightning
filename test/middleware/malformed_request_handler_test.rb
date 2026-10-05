@@ -1,14 +1,11 @@
 require "test_helper"
 
 class MalformedRequestHandlerTest < ActiveSupport::TestCase
-  # Mimics what Rack does on an unparseable multipart body (bots probing for
-  # Next.js server actions): raises a Rack::BadRequest from deeper in the stack.
+  # What Rack does on an unparseable multipart body.
   RAISING_APP = ->(_env) { raise Rack::Multipart::BoundaryTooLongError, "multipart boundary not found within limit" }
   OK_APP = ->(_env) { [ 200, { "content-type" => "text/plain" }, [ "ok" ] ] }
 
-  # Rack::Lint enforces the Rack 3 SPEC (e.g. header names must be lowercase), so
-  # wrapping in it turns a non-compliant 400 response into a test failure instead
-  # of something that silently ships and only breaks under a strict server.
+  # Rack::Lint fails a 400 that breaks the Rack 3 SPEC (e.g. a header name not lowercase).
   test "rescues Rack::BadRequest and returns a Rack-spec-compliant 400" do
     app = Rack::Lint.new(MalformedRequestHandler.new(RAISING_APP))
 

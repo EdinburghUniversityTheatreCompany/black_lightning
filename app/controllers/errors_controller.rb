@@ -1,8 +1,6 @@
 ##
-# Renders the error pages that config.exceptions_app dispatches to: an exception no controller
-# rescued - raised in middleware, or raised while an error page was itself being rendered - is
-# answered by Rails re-dispatching the request to "/<status>". Those paths were unrouted, so they
-# fell through to the static catch-all and a server error came back as the 404 page.
+# Renders the error pages config.exceptions_app re-dispatches to ("/<status>") for an exception
+# no controller rescued: one raised in middleware, or while rendering an error page.
 ##
 class ErrorsController < ApplicationController
   skip_authorization_check

@@ -1,20 +1,15 @@
 require "net/smtp"
 
 class ApplicationJob < ActiveJob::Base
-  # Automatically retry jobs that encountered a deadlock
   retry_on ActiveRecord::Deadlocked
 
-  # Most jobs are safe to ignore if the underlying records are no longer available
+  # The record is gone, so there is nothing left to do.
   discard_on ActiveJob::DeserializationError
 
-  # Default queue is 'default'
   queue_as :default
 
-  # SMTP errors - retry with polynomial backoff
-  # Net::SMTPFatalError: 5xx permanent errors (some are transient)
-  # Net::SMTPServerBusy: 4xx temporary errors including Mailersend 450 rate limits
-  # :polynomially_longer uses (executions ** 4) + jitter
-  # 10 attempts spans ~30 minutes, giving rate limit windows time to reset
+  # Mailersend answers a rate limit with 450 (SMTPServerBusy), and some 5xx are transient too.
+  # 10 polynomial attempts span about 30 minutes, long enough for the window to reset.
   retry_on Net::SMTPFatalError, Net::SMTPServerBusy, wait: :polynomially_longer, attempts: 10
 
   # Configure max attempts similar to delayed_job with exponential backoff
