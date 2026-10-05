@@ -30,15 +30,8 @@
 #
 module Reimbursements
   ##
-  # A pot of money with its own budgets, admins, EUSA cost-centre code and
-  # mailboxes. Fringe (F40) is live; termtime (BED) becomes a second row when the
-  # portal takes over termtime payments — a row, not a rewrite.
-  #
-  # An ActiveRecord model rather than a frozen in-code value, because the
-  # business manager edits these operational settings in the UI (Settings). Each
-  # cost centre has its own +receive_mailbox+ (email-in) and +send_mailbox+
-  # (draft / send-from) — they may differ. Table inferred as
-  # reimbursements_cost_centres.
+  # A pot of money with its own budgets, EUSA cost-centre code, mailboxes and
+  # SharePoint folders, edited by finance on the Settings page.
   class CostCentre < ApplicationRecord
     # EUSA finance's inbox, the default recipient for the BACS request email.
     DEFAULT_EUSA_RECIPIENT = "finance@eusa.ed.ac.uk".freeze
@@ -46,25 +39,21 @@ module Reimbursements
     # A SharePoint upload destination (a drive + a folder within it).
     Folder = Struct.new(:drive_id, :folder_id, keyword_init: true)
 
-    # nightly_run_days holds Ruby wday numbers (0=Sun..6=Sat); the seed/default
-    # is [2, 4] = Tue/Thu. Stored as a JSON string so it round-trips through a
-    # plain string column (MySQL can't default a TEXT/JSON column).
+    # nightly_run_days holds Ruby wdays (0=Sun..6=Sat), stored as a JSON string
+    # so it round-trips through a plain string column (MySQL can't default a
+    # TEXT/JSON column).
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
 
-    # Cap for +short_code+, the abbreviation that prefixes this centre's budgets
-    # in a picker ("BF - Improverts: Other").
+    # Cap for +short_code+, which prefixes this centre's budgets in a picker
+    # ("BF - Improverts: Other").
     SHORT_CODE_MAX = 16
     serialize :nightly_run_days, coder: JSON
 
-    # +notification_email+ holds one or more addresses separated by ";" (the
-    # Outlook convention the business manager will type) or ",". Both are
-    # accepted because a list typed as one and read as the other would silently
-    # send the whole thing to a single unroutable address.
+    # Both ";" (Outlook's) and "," separate addresses: a list read the other way
+    # would go to one unroutable address.
     NOTIFICATION_EMAIL_SEPARATOR = /[;,]/
 
-    # The +key+ is the URL slug (`param: :key`, `find_by!(key:)`), so it must be
-    # URL-safe. Derive it from the name by default (create form leaves it blank),
-    # and enforce the slug shape whether typed or derived.
+    # +key+ is the URL slug, derived from the name when left blank.
     before_validation :derive_key_from_name
 
     validates :key, presence: true, uniqueness: true
@@ -72,49 +61,30 @@ module Reimbursements
                               message: "may only contain lowercase letters, numbers and hyphens" },
                     allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
-    # Required: a cost centre whose reminders reach nobody leaves a producer
-    # waiting indefinitely with nothing on screen to explain it.
+    # Reminders reaching nobody leave producers waiting with nothing on screen.
     validates :notification_email, presence: true
     validate :notification_email_addresses_are_valid
-    # Prevents a duplicate-mailbox/code misconfiguration once a second cost
-    # centre is seeded — e.g. two rows accidentally sharing one receive
-    # mailbox would make MailboxPollJob attribute every email-in receipt to
-    # whichever cost centre happens to be polled first.
     validates :eusa_code, uniqueness: true
-    # Short enough to prefix a dropdown option without pushing the budget's own
-    # name out of view.
     validates :short_code, length: { maximum: SHORT_CODE_MAX }, allow_blank: true
+    # Two centres sharing a mailbox would make MailboxPollJob file every
+    # email-in receipt under whichever centre is polled first.
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
     validates :send_mailbox, uniqueness: { case_sensitive: false }
-    # No format check existed anywhere on this write path — a mistyped
-    # mailbox would silently misconfigure email-in / draft-sending, and
-    # eusa_recipient feeds straight into the BACS draft's "to" address.
     validates :receive_mailbox, :send_mailbox, format: { with: URI::MailTo::EMAIL_REGEXP }
     validates :eusa_recipient, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validate :nightly_run_days_are_weekday_numbers
 
-    # How this centre names itself in front of a budget in a picker. The short
-    # code when the business manager has set one, else the EUSA code — which
-    # every centre has, so a picker can never render a bare separator.
+    # The short code, else the EUSA code every centre has.
     def picker_prefix = short_code.presence || eusa_code
 
-    # The primary cost centre (Fringe today). Multi-cost-centre flows iterate
-    # .all; .default is for the single-cost-centre call sites that predate the
-    # per-cost-centre work (mailbox poll, mailbox client).
-    #
-    # It is order(:id).first, so it is an ARBITRARY centre the moment a second
-    # row exists. Never reach for it where the right answer is knowable — the
-    # claim's own centre, the batch's, the page's ?cost_centre= — and never on a
-    # path that MOVES money or emails a producer. See .sole_configured for the
-    # "there is genuinely nothing to choose" case.
+    # order(:id).first, so an ARBITRARY centre once a second row exists. Never
+    # use it where the right answer is knowable, nor on a path that moves money
+    # or emails a producer; see .sole_configured.
     def self.default
       order(:id).first
     end
 
-    # The one configured cost centre, or nil once there is a choice to make.
-    # Producer-facing copy uses this to answer "who do I write to?" without
-    # guessing: with one centre the answer is unambiguous, and with two it has
-    # to come from the claim rather than from the table.
+    # The only cost centre, or nil once there is a choice to make.
     def self.sole_configured
       all.to_a.then { |centres| centres.one? ? centres.first : nil }
     end
@@ -129,27 +99,21 @@ module Reimbursements
       folder(sharepoint_bacs_drive_id, sharepoint_bacs_folder_id)
     end
 
-    # Build Batch needs both SharePoint destinations before it can offload files.
-    # Whether Build Batch can offload files: the drive+folder ids alone locate
-    # the destination (the site URL is only needed to BROWSE for them), so this
-    # is the upload-capability gate BatchProcessor keys off.
+    # The upload gate BatchProcessor keys off: the drive and folder ids alone
+    # locate a destination (the site URL is only needed to browse for them).
     def sharepoint_configured?
       receipts_folder.present? && bacs_folder.present?
     end
 
-    # Stricter, for the settings "SharePoint set" badge: also requires the site
-    # URL. Without it the browse/verify flow is broken and the stored folder
-    # ids can silently belong to a since-changed site — so an all-green badge
-    # would misrepresent a half-configured (or repointed) setup.
+    # Stricter, for the settings badge: also needs the site URL, without which
+    # browse/verify is broken and the stored ids may belong to a since-changed site.
     def sharepoint_fully_configured?
       sharepoint_configured? && sharepoint_site_url.present?
     end
 
-    # The Graph addressing form of the configured SharePoint site
-    # ("tenant.sharepoint.com:/sites/Finance"), or nil if no site URL is set or
-    # it doesn't parse. Used to browse the site (Sites.Selected can't search, so
-    # it addresses a granted site by path) and to fill the per-site grant command
-    # on the Settings page.
+    # The site in Graph's path form ("tenant.sharepoint.com:/sites/Finance"), or
+    # nil if unset or unparseable. Sites.Selected can't search, so sites are
+    # addressed by path.
     def sharepoint_graph_site_path
       return nil if sharepoint_site_url.blank?
 
@@ -165,26 +129,19 @@ module Reimbursements
       eusa_recipient.presence || DEFAULT_EUSA_RECIPIENT
     end
 
-    # The addresses typed into +notification_email+, in order, blanks and
-    # duplicates dropped. Empty (never nil) when the column is blank, which is
-    # what makes it safe for NotificationRecipients to test with .any?.
+    # The addresses in +notification_email+, blanks and duplicates dropped.
     def notification_emails
       notification_email.to_s.split(NOTIFICATION_EMAIL_SEPARATOR).map(&:strip).compact_blank.uniq
     end
 
-    # Nowhere to send this centre's reminders. Presence-validated above, so this
-    # only catches a row that predates the validation or was written around it
-    # (update_columns). The nightly warns and refuses to record the run-day
-    # rather than going quiet, and the Integration Status page badges it.
+    # Presence-validated, so this only catches a row that predates the
+    # validation or was written around it. The nightly then warns and does not
+    # record the run-day.
     def notification_recipients_empty?
       notification_emails.empty?
     end
 
-    # --- Copy derived from this cost centre -------------------------------
-    # Every producer- and operator-facing email, filename and sign-off reads
-    # its wording from here rather than hardcoding "Bedlam Fringe", so a second
-    # cost centre gets correct copy the moment its row exists. +subject_prefix+
-    # is the single source every subject line shares.
+    # --- Wording every email, filename and sign-off takes from the centre ----
 
     # The bracketed tag on every reimbursements email subject.
     def subject_prefix
@@ -202,9 +159,7 @@ module Reimbursements
       "#{name} BACS (automated)"
     end
 
-    # Where a submitter should write with a question. The receive mailbox is
-    # the address email-in already answers, so it is the one guaranteed to be
-    # monitored for this cost centre.
+    # Where a submitter writes with a question: email-in already watches it.
     def contact_email
       receive_mailbox
     end
@@ -214,11 +169,8 @@ module Reimbursements
       name.to_s.parameterize
     end
 
-    # --- Nightly auto-submit scheduling -----------------------------------
-    # The last-completed run date is stored on the row itself.
-    # +nightly_run_days+ uses Ruby wday (0=Sun..6=Sat), so [2, 4] = Tue/Thu.
+    # --- Nightly reminder schedule (Ruby wdays: [2, 4] is Tue/Thu) ----------
 
-    # Is +date+ one of the configured run-days? The plain schedule check.
     def nightly_run_today?(date = Date.current)
       Array(nightly_run_days).include?(date.wday)
     end
@@ -235,10 +187,8 @@ module Reimbursements
       nil
     end
 
-    # Whether the nightly should act now: a configured run-day has come due and
-    # hasn't been handled yet. Covers a catch-up run for a day the job missed
-    # (server down) and de-duplicates via +last_nightly_run_on+ so a given
-    # run-day fires at most once.
+    # Whether a run-day has come due and not been handled: catches up a day the
+    # job missed, and +last_nightly_run_on+ stops one firing twice.
     def nightly_due?(date = Date.current)
       target = most_recent_nightly_run_day(date)
       return false if target.nil?
@@ -247,8 +197,7 @@ module Reimbursements
       last_nightly_run_on < target
     end
 
-    # The next configured run-day strictly after +date+, for "try again on…"
-    # copy in the manual-review email. nil if no run-days are configured.
+    # The next run-day after +date+, for the approved-ready reminder; nil if none is configured.
     def next_nightly_run_day(date = Date.current)
       return nil if Array(nightly_run_days).empty?
 
@@ -259,15 +208,9 @@ module Reimbursements
       nil
     end
 
-    # Record a completed run so nightly_due? won't fire again for this run-day.
-    #
-    # update_column, not update!: this is a bookkeeping stamp on one column, and
-    # it must not be blocked by an unrelated validation elsewhere on the row.
-    # With notification_email presence-validated, an update! here would RAISE for
-    # a centre whose address is blank -- which is exactly the centre the
-    # REIMBURSEMENTS_OPERATOR_EMAIL override exists to keep working. The job
-    # decides whether a run counts as delivered (see NightlyBatchJob#run_for);
-    # the model must not veto writing that decision down.
+    # update_column, not update!: an unrelated validation (a blank
+    # notification_email, the very case REIMBURSEMENTS_OPERATOR_EMAIL covers)
+    # must not veto this bookkeeping stamp.
     def record_nightly_run!(date = Date.current)
       update_column(:last_nightly_run_on, date)
     end
@@ -280,15 +223,11 @@ module Reimbursements
       Folder.new(drive_id: drive_id, folder_id: folder_id)
     end
 
-    # Auto-fill the URL slug from the name when the operator didn't type one
-    # (the create form's manual "key" field lives in a collapsed Advanced
-    # section). An explicit key is left untouched so it can be overridden.
     def derive_key_from_name
       self.key = name.to_s.parameterize if key.blank? && name.present?
     end
 
-    # Every address in the list, so one typo in a three-address list is caught
-    # rather than quietly dropping that recipient's mail forever.
+    # Every address, so one typo fails the save rather than losing that recipient's mail.
     def notification_email_addresses_are_valid
       invalid = notification_emails.reject { |address| address.match?(URI::MailTo::EMAIL_REGEXP) }
       return if invalid.empty?

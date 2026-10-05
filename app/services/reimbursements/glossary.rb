@@ -1,25 +1,11 @@
 module Reimbursements
   ##
-  # The words this portal is built on, defined ONCE.
-  #
-  # There was no glossary anywhere, and the portal's best explanations were
-  # `title=` tooltips — invisible on a touch screen and to the keyboard, and
-  # present on some screens and not others. Worse, the same idea went by two or
-  # three names: claim and expense, endorse and sign-off, update and forecast
-  # and revision. For a job that changes hands every year that is most of what
-  # a successor has to learn.
-  #
-  # The definitions live here rather than in the glossary view because the
-  # budget screens print a subset of them inline (the money columns, where the
-  # reader is), and a column note that had drifted from the glossary would be
-  # worse than neither. Each entry names the reader it is written for and,
-  # where a figure has a rule that surprises people, states the rule — these
-  # are the words, not a paraphrase of them.
+  # The words this portal uses, defined once. The budget screens print some of
+  # them inline, so a column note cannot drift from the glossary.
   module Glossary
     Term = Struct.new(:key, :term, :definition, :also, keyword_init: true)
 
-    # The money columns, in the order a line is read left to right. The budget
-    # screens render exactly this list under "What these columns mean".
+    # The money columns, in the order a line is read left to right.
     MONEY = [
       Term.new(key: :initial_budget, term: "Initial budget",
                definition: "The figure agreed when the line was set up, either from the " \
@@ -158,10 +144,8 @@ module Reimbursements
 
     ALL = SECTIONS.flat_map(&:last).freeze
 
-    # The terms a screen names, in the order given, for the inline "what these
-    # columns mean" block. Raises on an unknown key rather than silently
-    # printing a shorter list: a column left unexplained is the whole failure
-    # this exists to fix.
+    # The named terms in order, for an inline block. Raises on an unknown key
+    # rather than printing a shorter list.
     def self.terms(*keys)
       keys.map do |key|
         ALL.find { |term| term.key == key } ||

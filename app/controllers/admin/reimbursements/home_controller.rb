@@ -1,25 +1,12 @@
 module Admin
   module Reimbursements
     ##
-    # The portal's front door, at /admin/reimbursements itself.
-    #
-    # This URL used to redirect EVERYBODY to the producer's own claim list, so
-    # the business manager opening the portal was greeted with "Submit your
-    # expenses here" — the single reason a newcomer could not find the job.
-    # It now answers each audience with its own landing: a finance user gets
-    # this dashboard, and anyone else is sent on to their claims exactly as
-    # before.
-    #
-    # So the finance permission CANNOT be a before_action here. A producer has
-    # access to the portal and must reach its front door; 403ing them at the
-    # URL the sidebar's "My Claims" resolves under would be a regression on
-    # what a plain redirect did. The branch is in #show instead.
+    # The portal's front door: finance gets this dashboard, anyone else is sent
+    # to their own claims. So the finance gate cannot be a before_action: a
+    # producer must reach this URL.
     class HomeController < FinanceController
-      # FinanceController has already SKIPPED the base portal gate, so skipping
-      # the finance one too would leave this URL behind nothing but
-      # :access, :backend. Neither permission implies the other (a Business
-      # Manager holds reimbursements_finance and not access/reimbursements),
-      # so the gate is their union and #show branches inside it.
+      # FinanceController already skipped the base portal gate, so the gate here
+      # is the union of the two permissions (neither implies the other).
       skip_before_action :authorize_finance!
       before_action :authorize_front_door!
 

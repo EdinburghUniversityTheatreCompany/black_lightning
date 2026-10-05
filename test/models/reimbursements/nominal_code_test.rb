@@ -33,9 +33,8 @@ module Reimbursements
       assert dupe.errors[:code].present?
     end
 
-    # PAD SPACE: 'abc' = 'abc ' under utf8mb4_unicode_ci but not under
-    # utf8mb4_0900_ai_ci (the MySQL 8 server default) — a regression guard for
-    # the table actually carrying the collation the migration pins.
+    # PAD SPACE: 'abc' = 'abc ' under utf8mb4_unicode_ci but not the server
+    # default utf8mb4_0900_ai_ci, so this guards the collation the migration pins.
     test "a trailing-space code is rejected as a duplicate" do
       cc = Reimbursements::CostCentre.default
       create_reimbursements_nominal_code(code: "432320", cost_centre: cc)
@@ -44,9 +43,6 @@ module Reimbursements
       assert dupe.errors[:code].present?
     end
 
-    # Not tidiness: BudgetFinder matches a hand-named budget line against the
-    # LABEL, so two codes sharing one have a single uncoded line answering to
-    # both — and once a line exists for either, the other can never be opened.
     test "a label is unique within its cost centre, case-insensitively" do
       cc = Reimbursements::CostCentre.default
       create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")

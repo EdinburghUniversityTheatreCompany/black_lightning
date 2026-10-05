@@ -13,8 +13,6 @@ module Admin
         @cost_centre = ::Reimbursements::CostCentre.default
       end
 
-      # Where every response puts the operator back: the cost centre's own edit
-      # page, which is where the list is maintained.
       def settings_path
         edit_admin_reimbursements_setting_path(@cost_centre.key, anchor: "nominal_codes")
       end
@@ -89,9 +87,7 @@ module Admin
         assert flash[:alert].present?
       end
 
-      # A browser posts through Turbo, and that path re-renders the section in
-      # place rather than redirecting — so the typed values survive a refusal
-      # and the cost centre's own form above is never re-rendered.
+      # Turbo re-renders the section in place, keeping what was typed.
       test "a refused add re-renders the section with what was typed" do
         sign_in @user
 
@@ -148,8 +144,6 @@ module Admin
         assert_equal "Marketing", code.reload.label
       end
 
-      # The Add form holds the record a refused ADD carries back; a refused row
-      # edit must not fill it with that row's code and label.
       test "a refused row edit leaves the add form empty" do
         code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
                                                   cost_centre: @cost_centre)

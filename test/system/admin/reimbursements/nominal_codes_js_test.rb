@@ -3,15 +3,9 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # The nominal-code list on the cost centre's own edit page, clicked for
-    # real.
-    #
-    # A request test POSTs straight to the action, so it passes just as
-    # happily when the Add button submits nothing — which is what it does if
-    # the section is nested inside the cost centre's `simple_form_for` (a form
-    # within a form is invalid HTML) or if a submit lands in a CardComponent's
-    # footer slot. Five defects across Phases 1 and 2a came from that class of
-    # gap, so the real controls are clicked here.
+    # The nominal-code controls clicked for real. A request test passes even
+    # when the Add button submits nothing: the section nested in the centre's
+    # form, or a submit in a card's footer slot.
     class NominalCodesJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -25,9 +19,7 @@ module Admin
         edit_admin_reimbursements_setting_path(@cost_centre.key)
       end
 
-      # Every row carries the same "Save label" / Retire controls, so a click
-      # has to be scoped to the row it belongs to. The button says what it
-      # saves because nine of them sat beside the cost centre's own Save.
+      # Every row has the same controls, so a click is scoped to its row.
       def row_for(nominal_code)
         "#nominal_code_#{nominal_code.record_id}"
       end
@@ -44,8 +36,7 @@ module Admin
         assert_text "432320 added"
         code = ::Reimbursements::NominalCode.find_by(cost_centre: @cost_centre, code: "432320")
         assert_equal "Marketing & publicity", code&.label
-        # The new row is on screen, its label editable in place. By field
-        # rather than by text: a label lives in an input's value.
+        # By field, not text: the label is an input's value.
         assert_field "label_#{code.record_id}", with: "Marketing & publicity"
       end
 
@@ -91,8 +82,7 @@ module Admin
         within(row_for(nominal_code)) { click_on "Retire" }
 
         assert_text "432320 retired"
-        # Still on screen, and readable: the row is what labels the budget
-        # lines already booked against the code.
+        # Still listed: it labels the lines already booked against it.
         assert_text "Retired"
         assert_field "label_#{nominal_code.record_id}", with: "Marketing"
         assert ::Reimbursements::NominalCode.exists?(nominal_code.id)

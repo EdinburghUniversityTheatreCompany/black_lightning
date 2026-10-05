@@ -2,9 +2,6 @@ require "test_helper"
 
 module Admin
   module Reimbursements
-    ##
-    # The portal had no glossary anywhere, and its best explanations were
-    # `title=` tooltips — invisible on a touch screen and to the keyboard.
     class GlossaryControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -17,9 +14,7 @@ module Admin
         assert_redirected_to new_user_session_path
       end
 
-      # Gated on the BASE portal permission, not the finance one: an owner
-      # reads "committed", "left" and "endorse" on their own area page, and a
-      # producer reads "Submitted" on a claim they sent weeks ago.
+      # The base portal permission, not finance: owners and producers read these words too.
       test "a producer with no finance permission can read it" do
         grant_producer_permission(@user)
         sign_in @user
@@ -48,9 +43,7 @@ module Admin
         end
       end
 
-      # Remaining and Left are two different figures for one English word, and
-      # the portal prints both. A glossary that did not separate them would
-      # leave the reader worse off than one that never mentioned either.
+      # Remaining and Left are different figures for one idea, and both are printed.
       test "separates Remaining from Left" do
         grant_producer_permission(@user)
         sign_in @user

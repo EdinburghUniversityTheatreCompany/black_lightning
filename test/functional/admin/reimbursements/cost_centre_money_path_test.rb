@@ -3,14 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # The places a cost centre decides where money or mail actually goes. Each
-    # of these read CostCentre.default — order(:id).first — so with a second
-    # centre configured they all named the wrong pot.
-    #
-    # The second centre is built here, not added to the fixtures: a second
-    # fixture row makes CostCentre.default resolve to whichever label
-    # FixtureSet.identify hashes lower and deletes the one-centre world the
-    # reconcile tests pin as a business rule.
+    # Where a cost centre decides where money or mail goes. The second centre is
+    # built in-test, never a fixture: a second fixture row changes CostCentre.default.
     class CostCentreMoneyPathTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -65,8 +59,8 @@ module Admin
     end
 
     ##
-    # Reopening a batch deletes its stale EUSA draft — from the mailbox that
-    # holds it, which is the send mailbox of the centre the batch was built for.
+    # Reopening a batch deletes its stale EUSA draft from the send mailbox of the
+    # centre the batch was built for.
     class ReopenDraftMailboxTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -85,9 +79,7 @@ module Admin
         BatchesController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
-      # Records which mailboxes were asked, and answers "yes, still a draft" for
-      # one of them only — so a test can pin WHERE a reopen went looking, in
-      # order, rather than only where it ended up.
+      # Holds the draft in one mailbox only, and records which were asked in order.
       class DraftInOneMailbox < FakeGraphClient
         attr_reader :probed
 
@@ -126,11 +118,8 @@ module Admin
         assert_equal @termtime.send_mailbox, @graph.deleted_messages.last[:mailbox]
       end
 
-      # Every batch built before this branch drafted into the DEFAULT centre's
-      # mailbox whatever its claims say. GraphClient#draft_message? fails closed,
-      # so guessing one mailbox and stopping turned a legacy batch into a
-      # permanent "it may already have been sent — do not reopen", which is
-      # untrue and, being derived from stored data, would never become true.
+      # Legacy batches drafted into the DEFAULT centre's mailbox, and
+      # draft_message? fails closed, so probing one mailbox would refuse them for ever.
       test "a legacy batch whose draft is in the default mailbox is still reopenable" do
         default = ::Reimbursements::CostCentre.default
         use_graph_holding_draft_in(default.send_mailbox)
@@ -155,9 +144,8 @@ module Admin
         assert_equal default.send_mailbox, @graph.deleted_messages.last[:mailbox]
       end
 
-      # The refusal has to survive: it is what stops a batch whose draft was
-      # already SENT by hand in Outlook being rebuilt into a second live
-      # submission. It just must not fire until every candidate has been asked.
+      # The refusal stops a batch already sent by hand being resubmitted; it must
+      # survive, but only once every candidate mailbox has been asked.
       test "a draft in no mailbox at all still refuses the reopen" do
         use_graph_holding_draft_in("nowhere@example.invalid")
         batch = batch_with(budget: create_reimbursements_budget(name: "Termtime props",

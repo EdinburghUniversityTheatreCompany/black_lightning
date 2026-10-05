@@ -27,8 +27,6 @@ module Reimbursements
       assert_nil Settings.azure_secret_expires_on
     end
 
-    # In the test env (non-production), outbound is gated on the explicit
-    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in.
     test "outbound_enabled? follows REIMBURSEMENTS_ENABLE_OUTBOUND outside production" do
       assert_not Rails.env.production?
       original = ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"]
@@ -49,13 +47,8 @@ module Reimbursements
       end
     end
 
-    # The OTHER half of the gate: production must send unconditionally. Nothing
-    # else in the suite runs this branch (test_helper opts the whole suite in via
-    # REIMBURSEMENTS_ENABLE_OUTBOUND), so deleting `return true if
-    # Rails.env.production?` would leave production silently refusing to send
-    # every rejection/payment email, every mailbox reply and every EUSA BACS
-    # draft — with create_draft handing back a fake "suppressed-…" id. Rails.env
-    # is assignable, so no mocking library is needed.
+    # Nothing else in the suite runs the production branch: test_helper opts the
+    # whole suite in. Rails.env is assignable, so no mock is needed.
     test "outbound_enabled? is true in production with no opt-in set at all" do
       original_env = Rails.env.to_s
       original_opt_in = ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"]

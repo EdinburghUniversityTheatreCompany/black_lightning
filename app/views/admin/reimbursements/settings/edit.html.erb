@@ -67,10 +67,6 @@
   <% end %>
 <% end %>
 
-<%# The Microsoft 365 setup steps moved to their OWN page: they are needed once
-    per cost centre, by somebody with Exchange or SharePoint admin rights who is
-    usually not the person editing these settings, and a wall of PowerShell and
-    Graph JSON sat between the routine controls an operator edits weekly. %>
 <%= render AlertComponent.new(type: :info, html_class: "mb-4") do %>
   Setting this cost centre up for the first time?
   <%= link_to "What IT has to do in Microsoft 365",

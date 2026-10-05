@@ -7,8 +7,7 @@ module Admin
 
       CC = ::Reimbursements::CostCentre
 
-      # Fake Graph client for the SharePoint folder picker: returns canned
-      # sites/drives/folder contents and records what it was asked to browse.
+      # Canned Graph answers that record what was asked.
       Site = Struct.new(:id, :name, :web_url, keyword_init: true)
       Drive = Struct.new(:id, :name, keyword_init: true)
       Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
@@ -137,10 +136,8 @@ module Admin
         assert_includes response.body, "-Resource #{@cost_centre.receive_mailbox}"
       end
 
-      # The distribution group backed an ApplicationAccessPolicy, which only ever
-      # constrained Entra-granted Mail.*; those were revoked when the app moved to
-      # RBAC for Applications. Adding a mailbox to it now does nothing, so the page
-      # must not keep offering it as the fix (docs/graph-mailbox-rbac.md).
+      # The retired group only constrained Entra-granted Mail.*, now revoked:
+      # adding a mailbox to it does nothing.
       test "edit no longer tells the operator to use the retired app-access group" do
         sign_in @user
         get :edit, params: { key: @cost_centre.key }
@@ -161,8 +158,7 @@ module Admin
         assert_includes response.body, "-Resource outbox@bedlamfringe.co.uk"
       end
 
-      # The scope filter is replaced wholesale, so a partial list silently revokes
-      # every mailbox left out of it. The page has to say so where the command is.
+      # The scope filter is replaced wholesale, so the page must say so.
       test "the Microsoft setup page warns that the mailbox scope filter is replaced rather than appended" do
         sign_in @user
         get :microsoft_setup, params: { key: @cost_centre.key }
@@ -183,9 +179,6 @@ module Admin
         assert_includes response.body, "/permissions"
       end
 
-      # The list is MAINTAINED here, not linked to from here: the spec puts it
-      # on the cost centre edit page, so the edit form for each code and the
-      # Add form are on this page.
       test "edit carries this cost centre's nominal codes, editable in place" do
         termtime = create_second_reimbursements_cost_centre
         code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
@@ -203,8 +196,7 @@ module Admin
         assert_not_includes response.body, "Termtime printing"
       end
 
-      # A form inside a form is invalid HTML and the inner submit silently does
-      # nothing, so the section must be a SIBLING of the cost centre's own form.
+      # A form inside a form is invalid HTML; its submit silently does nothing.
       test "the nominal codes section is not nested inside the cost centre form" do
         create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
         sign_in @user
@@ -303,8 +295,8 @@ module Admin
         get :edit, params: { key: @cost_centre.key, picker: "receipts" }
 
         assert_response :success
-        assert_includes response.body, "Finance Site"                            # site resolved by URL
-        assert_includes response.body, "Documents"                               # its library listed
+        assert_includes response.body, "Finance Site"
+        assert_includes response.body, "Documents"
         assert_equal [ "https://sp.sharepoint.com/sites/Finance" ], @graph.site_calls
       end
 
@@ -352,10 +344,7 @@ module Admin
         assert_nil @cost_centre.reload.sharepoint_bacs_folder_id
       end
 
-      # A save_folder POST's drive_id/folder_id come from hidden form fields —
-      # still client-controllable — and this is exactly where bank-detail-
-      # bearing BACS files get uploaded, so a tampered value must be re-verified
-      # against Graph rather than trusted outright.
+      # The ids come from hidden fields, and this folder receives bank details.
       test "a drive_id that doesn't belong to the cost centre's own site is refused, not trusted outright" do
         @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         sign_in @user
@@ -405,10 +394,9 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Mailbox #{@cost_centre.receive_mailbox}"
-        assert_includes response.body, "Granted and reachable"                 # SharePoint site OK
-        assert_includes response.body, "Reachable."                            # folders OK
-        # The BACS folder check labels itself "BACS request folder" (not the
-        # "Bacs folder" that `humanize` would produce), matching the picker heading.
+        assert_includes response.body, "Granted and reachable"
+        assert_includes response.body, "Reachable."
+        # The picker heading's wording, not "Bacs folder".
         assert_includes response.body, "BACS request folder"
         assert_includes response.body, "Receipts folder"
         assert_not_includes response.body, "Bacs folder"
@@ -436,7 +424,7 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "403"
-        assert_includes response.body, "Exchange management scope"             # remediation hint
+        assert_includes response.body, "Exchange management scope"
       end
 
       test "access check flags a SharePoint site the app can't reach" do
@@ -506,7 +494,7 @@ module Admin
 
         assert_response :success
         assert_select "form[action=?]", admin_reimbursements_settings_path
-        assert_includes response.body, "Advanced"     # the collapsed manual-key section
+        assert_includes response.body, "Advanced"
       end
 
       test "new denies members without the finance permission" do
@@ -574,8 +562,8 @@ module Admin
       test "update sets the notification email" do
         sign_in @user
 
-        # nightly_run_days must be sent: settings_params rewrites a missing key
-        # to [], which fails the weekday-numbers validation and aborts the save.
+        # settings_params turns a missing nightly_run_days into [], which fails
+        # validation and aborts the save.
         patch :update, params: { key: CC.default.key,
                                  cost_centre: { notification_email: "finance@bedlamfringe.co.uk",
                                                 nightly_run_days: %w[2 4] } }
@@ -671,10 +659,6 @@ module Admin
       end
 
       # --- The Microsoft setup page ------------------------------------------
-      # A wall of PowerShell and Graph JSON sat between the routine controls an
-      # operator edits weekly, inside the settings FORM. These steps are needed
-      # once per cost centre, by somebody with Exchange or SharePoint admin
-      # rights who is usually not the person editing the settings.
 
       test "the settings form no longer carries the Microsoft setup steps" do
         sign_in @user
@@ -682,9 +666,7 @@ module Admin
         get :edit, params: { key: @cost_centre.key }
 
         assert_response :success
-        # The runbook's own markers. "Sites.Selected" itself still appears in a
-        # one-line explanation beside the SharePoint URL field, which is the
-        # kind of sentence that belongs on the form it describes.
+        # Runbook markers only: "Sites.Selected" still appears beside the URL field.
         assert_not_includes response.body, "Test-ServicePrincipalAuthorization"
         assert_not_includes response.body, "graph.microsoft.com/v1.0/sites"
         assert_not_includes response.body, "docs/graph-mailbox-rbac.ps1"

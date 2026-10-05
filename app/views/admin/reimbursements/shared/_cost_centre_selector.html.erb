@@ -1,9 +1,5 @@
-<%# The cost-centre scope for the finance lists. URL-as-state: each centre is a
-    plain link carrying the page's other query parameters, so a filter or a CSV
-    link survives switching pot. "All" is the no-parameter state and the
-    default, because CostCentre.default is order(:id).first — defaulting to a
-    centre would silently empty the other one's screens. Renders nothing until a
-    second cost centre exists — one is not a choice. %>
+<%# Each centre is a link keeping the page's other params. "All" (no param) is
+    the default because CostCentre.default is arbitrary. Hidden with one centre. %>
 <% if selectable_cost_centres.size > 1 %>
   <div class="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Cost centre">
     <span class="text-sm text-gray-600">Cost centre:</span>

@@ -21,37 +21,25 @@
 #
 module Reimbursements
   ##
-  # One line of a cost centre's chart of accounts. Owned by that centre alone
-  # — a global list would let Fringe's admin retire a code Bedlam books
-  # against. code is a STRING and stays one: codes are zero-padded (041000),
-  # the same coercion Exports::Base#add_sheet guards against for xlsx cells.
+  # One line of a cost centre's chart of accounts, owned by that centre alone.
+  # +code+ is a string because codes are zero-padded (041000).
   class NominalCode < ApplicationRecord
     include RecordId
 
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre"
 
     validates :code, :label, presence: true
-    # case_sensitive: false because the column is utf8mb4_unicode_ci — the DB
-    # index already folds case and accents, so a case-sensitive validation
-    # would disagree with it and let a duplicate through to a RecordNotUnique.
+    # case_sensitive: false because the column is utf8mb4_unicode_ci: a
+    # case-sensitive check would let a duplicate through to RecordNotUnique.
     validates :code, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
-    # The LABEL is unique per centre too, and that is correctness: BudgetFinder
-    # matches a hand-named budget line against it, so two codes sharing a label
-    # have one uncoded line answering to both — and once a line exists for one,
-    # the other can never be opened at all. Case-insensitive for the reason
-    # above.
+    # A unique label is correctness: BudgetFinder matches a hand-named line by
+    # label, so two codes sharing one would both claim the same line.
     validates :label, uniqueness: { scope: :cost_centre_id, case_sensitive: false }
 
     scope :for_cost_centre, ->(cost_centre) { where(cost_centre: cost_centre).order(:code) }
 
-    # The ACTIVE codes to offer as suggestions, as [code, label] pairs.
-    #
-    # With a centre selected, its own list; with none — the "every centre"
-    # default every finance screen has — every centre's, deduped by code so a
-    # code both pots curate is offered once. The FIRST label wins on a clash,
-    # which is arbitrary and acceptable here precisely because this is a
-    # suggestion list: nothing is refused for being absent from it, so an
-    # imperfect label costs a glance rather than a wrong charge.
+    # Active [code, label] pairs to suggest: the centre's own, or with none
+    # every centre's deduped by code (the first label wins; it is only a hint).
     def self.suggestions_for(cost_centre)
       scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
       scope.where(active: true).order(:code, :id)
@@ -59,25 +47,16 @@ module Reimbursements
            .uniq { |code, _| code.to_s.downcase }
     end
 
-    # code => label for the screens that PRINT a stored code, keyed downcased
-    # because both this column and the ones carrying the code are
-    # utf8mb4_unicode_ci, so a row in another case means the same account.
-    # Inactive codes are included: a retired code still labels the historical
-    # rows that carry it, which is the whole reason retiring beats deleting.
+    # code => label for printing stored codes, keyed downcased as the
+    # utf8mb4_unicode_ci columns compare. Retired codes still label old rows.
     def self.labels_for(cost_centre)
       scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
       scope.order(:code, :id).pluck(:code, :label)
            .to_h { |code, label| [ code.to_s.downcase, label ] }
     end
 
-    # The rows this centre's list is answerable for: budget lines and imported
-    # EUSA ledger rows, each carrying a nominal code as a STRING rather than a
-    # link to this table, so the list is the only thing that gives one a label.
-    #
-    # Each scope takes the centre's own rows plus the ones with NO centre: an
-    # unplaced row is lenient-scoped into EVERY centre's screens
-    # (DatabaseStore#in_cost_centre), the same rule NominalCodeSeed folds an
-    # unplaced code into the default centre by.
+    # The rows carrying a code as a string: this centre's plus the unplaced
+    # (NULL centre) ones, which are lenient-scoped into every centre.
     def self.budgets_for(cost_centre)
       Budget.where(cost_centre_id: [ cost_centre&.id, nil ])
     end
@@ -86,19 +65,11 @@ module Reimbursements
       EusaActual.where(cost_centre_id: [ cost_centre&.id, nil ])
     end
 
-    # How many rows of each kind carry each of +codes+, as
-    # { "432320" => { budgets: 2, actuals: 9 } }, keyed DOWNCASED because both
-    # columns are utf8mb4_unicode_ci and a row in another case means the same
-    # account. One query per kind rather than per row, off the same pair of
-    # scopes #in_use? reads: the screen predicts what would happen to each code.
-    #
-    # Same rows, but NOT the same matching, and it can disagree one way.
-    # #in_use? asks SQL under utf8mb4_unicode_ci, which is PAD SPACE and folds
-    # accents; this keys in Ruby on #downcase, which is neither. So a budget
-    # storing "432320 " counts for #in_use? and lands under a key the row fails
-    # to find: the button predicts Delete over a code #destroy correctly
-    # retires. Safe direction, the controller re-decides, and never the reverse
-    # — anything this counts, SQL matches too.
+    # { "432320" => { budgets: 2, actuals: 9 } }, keyed downcased, so the screen
+    # can predict what #destroy will do. It can disagree with #in_use? one way:
+    # SQL under utf8mb4_unicode_ci is PAD SPACE and folds accents, #downcase is
+    # neither, so a "432320 " budget shows Delete for a code #destroy retires.
+    # That is the safe direction; never the reverse.
     def self.usage_counts(cost_centre, codes)
       budgets = tally_codes(budgets_for(cost_centre), codes)
       actuals = tally_codes(actuals_for(cost_centre), codes)
@@ -113,10 +84,7 @@ module Reimbursements
     end
     private_class_method :tally_codes
 
-    # Whether any historical row carries this code — what decides retire versus
-    # delete, read in #destroy rather than from the button that was clicked. A
-    # code a settled claim or a reconciled ledger row was booked against must
-    # stay readable, so anything at all counts.
+    # Any historical row carrying the code means retire, not delete.
     def in_use?
       self.class.budgets_for(cost_centre).exists?(nominal_code: code) ||
         self.class.actuals_for(cost_centre).exists?(nominal_code: code)

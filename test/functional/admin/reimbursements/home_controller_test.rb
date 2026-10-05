@@ -2,11 +2,6 @@ require "test_helper"
 
 module Admin
   module Reimbursements
-    ##
-    # The portal's front door. Two audiences share one URL: a finance user gets
-    # the dashboard, a producer is redirected to their own claims — which is
-    # what this URL did for EVERYBODY before, and the whole reason the business
-    # manager was greeted with "Submit your expenses here".
     class HomeControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -19,12 +14,8 @@ module Admin
 
       # --- Who lands where ---------------------------------------------------
 
-      # The finance permission cannot be a before_action here (a producer has
-      # to reach the front door), but FinanceController has already SKIPPED the
-      # base portal gate, so skipping the finance one too left this URL behind
-      # nothing but :access, :backend. Nothing leaked, because the redirect
-      # target 403s them anyway, but the gate the rest of the namespace is
-      # built on was simply absent on the one URL everybody lands on first.
+      # FinanceController skips the base portal gate, so the front door must
+      # restore it rather than sit behind :access, :backend alone.
       test "someone with no portal access at all cannot reach the front door" do
         sign_in users(:committee)
         get :show
@@ -208,9 +199,8 @@ module Admin
 
       private
 
-      # A claim of £11 in the fixture centre and one of £22 in a second one,
-      # so a scoped read and an unscoped one report different totals. Shared
-      # rather than repeated: jscpd gates duplication at 0.
+      # £11 here and £22 in a second centre, so scoped and unscoped totals
+      # differ. Shared because jscpd gates duplication at 0.
       def seed_two_cost_centres
         other = create_second_reimbursements_cost_centre
         mine = create_reimbursements_budget(name: "Mine", cost_centre: @cost_centre)

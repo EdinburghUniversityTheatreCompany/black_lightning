@@ -1,27 +1,15 @@
 module Admin
   module Reimbursements
     ##
-    # Per-cost-centre operational settings. A cost-centre picker (#index) leads
-    # to an edit form (#edit / #update) for that cost centre's mailboxes, EUSA
-    # recipient + signature, nightly run-days and the two SharePoint
-    # destinations. These live on the CostCentre row, not per-user config, so
-    # they are shared and multi-cost-centre.
-    #
-    # The SharePoint destinations are chosen with a Graph-backed folder picker
-    # (browse sites -> drives -> folders); "Use this folder" stores the drive +
-    # folder ids. Browsing is entirely server-rendered (GET params carry the
-    # navigation state) so it needs no JavaScript and is testable with a fake
-    # Graph client.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Per-cost-centre settings: mailboxes, EUSA recipient and signature, nightly
+    # run-days and the two SharePoint destinations. The folder picker browses the
+    # configured site's drives -> folders server-side (GET params carry the
+    # navigation), so it needs no JavaScript and tests with a fake Graph client.
     class SettingsController < FinanceController
       include ListsNominalCodes
 
       before_action :set_cost_centre, only: %i[edit update test_access microsoft_setup]
-      # The nominal-codes panel on the edit page. Every action that can RENDER
-      # :edit needs the list, which is #update's refused-save path and
-      # #test_access's non-turbo response as well as #edit itself.
+      # Every action that can render :edit needs the nominal-codes list.
       before_action :set_nominal_codes, only: %i[edit update test_access]
 
       # Which CostCentre columns each SharePoint destination writes.
@@ -45,9 +33,7 @@ module Admin
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
       end
 
-      # Collects only the five required fields for a valid cost centre; the
-      # mailbox-access, EUSA and SharePoint setup live on the edit page, so a new
-      # row redirects straight there to finish configuration.
+      # Only the required fields; the rest is set on the edit page #create lands on.
       def new
         @title = "New cost centre"
         @cost_centre = ::Reimbursements::CostCentre.new
@@ -71,18 +57,8 @@ module Admin
         setup_folder_picker if params[:picker].present?
       end
 
-      # The manual Microsoft 365 steps, on their own page.
-      #
-      # They were a collapsed section of the settings FORM, where a wall of
-      # PowerShell and Graph JSON sat between the routine controls an operator
-      # edits weekly. They are needed once per cost centre, by somebody with
-      # Exchange Online or SharePoint admin rights who is usually not the
-      # person editing the settings — so the page is a thing to send, which a
-      # section of somebody else's form is not.
-      #
-      # Deliberately NOT behind set_nominal_codes: it renders none of that
-      # panel, and loading it would be two queries for a page that shows it
-      # nothing.
+      # The one-off Microsoft 365 steps, on a page of their own so it can be sent
+      # to IT. No set_nominal_codes: it shows none of that panel.
       def microsoft_setup
         @title = "Microsoft setup: #{@cost_centre.name}"
       end
@@ -91,10 +67,7 @@ module Admin
         params[:folder_purpose].present? ? save_folder : save_settings
       end
 
-      # Probe this cost centre's mailboxes and SharePoint destinations with the
-      # app's own credentials, so the business manager can confirm the Microsoft
-      # grants worked before relying on email-in or Build Batch. Renders the edit
-      # page with a per-check pass/fail list.
+      # Probes the mailboxes and SharePoint destinations with the app's own credentials.
       def test_access
         @title = "Settings: #{@cost_centre.name}"
         @access_checks = run_access_checks
@@ -130,9 +103,8 @@ module Admin
         end
       end
 
-      # The new form collects only the five required fields. `key` is optional —
-      # the model derives it from `name` when blank; the Advanced section lets an
-      # operator override it.
+      # The new form collects only the required fields. +key+ may be blank: the
+      # model derives it from the name.
       def create_params
         params.require(:cost_centre).permit(
           :key, :name, :eusa_code, :short_code, :receive_mailbox, :send_mailbox, :notification_email
@@ -173,13 +145,9 @@ module Admin
         redirect_to edit_path, notice: "#{folder_label(params[:folder_purpose])} saved."
       end
 
-      # drive_id/folder_id arrive as hidden form fields the browse flow
-      # populated, but hidden fields are still client-controllable — a
-      # tampered value must not be trusted outright, since this setting is
-      # exactly where bank-detail-bearing BACS files get uploaded. Re-verify
-      # against Graph: the drive genuinely belongs to this cost centre's own
-      # configured SharePoint site, and the folder genuinely exists as a real
-      # folder within it (a nonexistent/wrong-type item 404s from Graph).
+      # The ids arrive in hidden fields, which a client can tamper with, and the
+      # BACS folder receives bank details: so check with Graph that the drive is
+      # on this centre's own site and the folder exists in it.
       def verified_folder?(drive_id, folder_id)
         return false if @cost_centre.sharepoint_site_url.blank?
 
@@ -200,11 +168,8 @@ module Admin
         mailboxes.map { |mailbox| mailbox_check(mailbox) } + [ site_check ] + folder_checks
       end
 
-      # The remediation text names the Exchange management scope, NOT the old
-      # "Reimbursements App Access" distribution group. The group only ever
-      # constrained Entra-granted Mail.* permissions, and those were revoked when
-      # the app moved to RBAC for Applications, so adding a mailbox to it now
-      # changes nothing while reading as the fix (see docs/graph-mailbox-rbac.md).
+      # The fix is the Exchange management scope, not the retired "Reimbursements
+      # App Access" group: adding a mailbox to that group now changes nothing.
       def mailbox_check(mailbox)
         graph.check_mailbox(mailbox)
         Check.new(label: "Mailbox #{mailbox}", status: :ok,
@@ -251,10 +216,8 @@ module Admin
 
       # --- Graph-backed folder picker ---------------------------------------
 
-      # Under Sites.Selected the app can't search sites, so the picker starts from
-      # the cost centre's configured site URL (resolved to a Graph site), then
-      # lists that site's drives and folders. Without a site URL there's nothing
-      # to browse — the view prompts to set one first.
+      # Sites.Selected cannot search sites, so the picker starts from the
+      # configured site URL; without one the view asks for it.
       def setup_folder_picker
         @picker = params[:picker]
         @path = browse_path
@@ -277,8 +240,7 @@ module Admin
         flash.now[:alert] = "SharePoint browse failed: #{e.message}"
       end
 
-      # The current breadcrumb: parallel path_ids/path_names params zipped into
-      # [{ id:, name: }]. The tail is the folder being listed.
+      # The breadcrumb from parallel path_ids/path_names params; the last is the folder listed.
       def browse_path
         ids = Array(params[:path_ids])
         names = Array(params[:path_names])

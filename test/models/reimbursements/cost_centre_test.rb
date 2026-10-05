@@ -135,11 +135,8 @@ module Reimbursements
     test "sharepoint_fully_configured? also requires the site URL (the badge, not the upload gate)" do
       cost_centre = CostCentre.new(sharepoint_receipts_drive_id: "d", sharepoint_receipts_folder_id: "f",
                                    sharepoint_bacs_drive_id: "d2", sharepoint_bacs_folder_id: "f2")
-      # Folders alone let BatchProcessor upload...
+      # Folders alone let BatchProcessor upload, but the badge needs the site URL.
       assert cost_centre.sharepoint_configured?
-      # ...but the "SharePoint set" badge must stay amber without the site URL,
-      # since browse/verify is broken and the folders could be from a since-
-      # changed site.
       assert_not cost_centre.sharepoint_fully_configured?
 
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance"
@@ -270,8 +267,7 @@ module Reimbursements
     end
 
     test "picker_prefix falls back to the eusa code" do
-      # The column ships empty on every existing centre and is never backfilled,
-      # so a picker must still name the centre before anyone fills it in.
+      # The column is never backfilled, so most centres have none.
       centre = CostCentre.new(eusa_code: "F40", short_code: "")
       assert_equal "F40", centre.picker_prefix
     end

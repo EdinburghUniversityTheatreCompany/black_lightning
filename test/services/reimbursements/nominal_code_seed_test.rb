@@ -93,9 +93,7 @@ module Reimbursements
       assert_empty NominalCodeSeed.plan
     end
 
-    # Two codes whose budgets share a name derive one label, and a centre's
-    # labels are unique — so the seed has to qualify rather than abort, or the
-    # committee's own data stops the whole list being seeded.
+    # Labels are unique per centre, so a clash is qualified rather than aborting the seed.
     test "two codes deriving one label are qualified rather than refused" do
       cc = CostCentre.default
       create_reimbursements_budget(name: "Marketing", nominal_code: "432320", cost_centre: cc)
@@ -119,8 +117,6 @@ module Reimbursements
              "a label the seed had to change must not read as one the data stated"
     end
 
-    # The rows #plan skips still hold their names, so a label finance already
-    # owns is not free for a code seeded later.
     test "a label an already-listed code holds is not reused" do
       cc = CostCentre.default
       create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")

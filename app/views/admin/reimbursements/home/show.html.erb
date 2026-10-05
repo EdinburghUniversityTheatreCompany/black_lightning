@@ -2,12 +2,8 @@
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
 <p class="mb-4 text-gray-600">
-  <%# The one paragraph a successor reads first. It names the weekly loop in
-      the order it is done, because the sidebar groups say what the screens
-      are and nothing said what the JOB is. %>
   What the reimbursements portal is waiting on you for.
-  <%# The front door is where a successor starts, so the glossary is named
-      here before any of the screens that use its words. %>
+  <%# Successors start here, so the glossary is named before the screens using its words. %>
   New to this? <%= link_to "What the words mean", admin_reimbursements_glossary_path,
                            class: "underline" %>.
 </p>
@@ -75,9 +71,7 @@
                   class: btn_classes(:secondary, :sm) %>
     </div>
     <p class="mt-2 text-sm text-gray-600">
-      <%# The portal records that it CREATED the draft; nothing records that
-          anybody sent it. Saying so is the difference between a status and a
-          guess, and sending it is the one manual step left in paying people. %>
+      <%# The portal records creating the draft, never that anyone sent it. %>
       The portal creates the draft; a person still has to open Outlook and send it. Nothing here
       records whether that happened.
     </p>
@@ -96,9 +90,7 @@
         <%= @home.unattributed_count %>
       </span>
       <span class="text-sm text-gray-700">
-        <%# NET, and it can legitimately be negative (more unattributed income
-            than spend) — which is why the count is printed beside it rather
-            than the figure standing alone. %>
+        <%# Net, so it can be negative: hence the count beside it. %>
         unlinked, net <%= reimbursements_money(@home.unattributed_total) %>
       </span>
     </p>
@@ -108,9 +100,8 @@
           <li class="flex flex-wrap items-baseline gap-x-2">
             <span class="text-gray-500"><%= reimbursements_date(actual.date) %></span>
             <span class="grow"><%= actual.narrative.presence || actual.ref.presence || "(no narrative)" %></span>
-            <%# Debit and credit are printed apart, as the ledger prints them:
-                netting one row to a bare negative would read as bad news for
-                what is simply income nobody has booked to a line yet. %>
+            <%# Debit and credit apart: a bare negative would read as bad news
+                for income nobody has booked yet. %>
             <% if actual.debit&.positive? %>
               <span class="tabular-nums"><%= reimbursements_money(actual.debit) %></span>
             <% else %>
@@ -118,9 +109,7 @@
             <% end %>
           </li>
         <% end %>
-        <%# The count above is the whole list and this is the first few of it,
-            so the difference has to be on screen: a "7 unlinked" heading over
-            five rows reads as a page that has lost two. %>
+        <%# A count over fewer rows reads as a page that has lost some. %>
         <% hidden = @home.unattributed_count - @home.unattributed_preview.size %>
         <% if hidden.positive? %>
           <li class="text-gray-500">and <%= pluralize(hidden, "more row") %> on the Ledger</li>
@@ -155,9 +144,7 @@
                         edit_admin_reimbursements_budget_path(budget.record_id),
                         class: "grow underline" %>
             <span class="tabular-nums text-danger">
-              <%# -remaining, because "£412.00 over" is how it is written
-                  everywhere else here and a bare negative reads as bad news
-                  twice. %>
+              <%# "£412.00 over", as elsewhere, rather than a bare negative. %>
               <%= reimbursements_money(-budget.remaining) %> over
             </span>
           </li>

@@ -1,29 +1,10 @@
 module Admin
   module Reimbursements
     ##
-    # Writes to one cost centre's chart of accounts — the codes its budget
-    # lines are booked against and the label each one carries. NominalCodeSeed
-    # filled the list from the codes the centre's budgets already had, with a
-    # label GUESSED from the commonest budget name behind each code;
-    # correcting those guesses is what these actions exist for.
-    #
-    # There is NO index: the list is maintained on the cost centre's own edit
-    # page (the spec: "maintained on the cost centre edit page"), so this
-    # controller only writes and every response puts the operator back there.
-    # It shares that page's `:key` coordinate and finds the centre exactly as
-    # SettingsController does.
-    #
-    # A browser gets a turbo stream replacing the section alone, so adding or
-    # retiring a code cannot re-render the cost centre's own form underneath
-    # and lose a half-typed mailbox; a plain form post redirects. The notice
-    # travels as a toast in the stream, because a redirect's flash is rendered
-    # outside the replaced section and would never be seen.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController — the same gate as the Settings page this belongs
-    # to. Reads the NominalCode model rather than the store: the store's public
-    # API is frozen around expenses, budgets and actuals and knows nothing of
-    # this list, which is a settings table rather than portal data.
+    # Writes to a cost centre's nominal codes, which are listed on its Settings
+    # edit page (so no index). A browser gets a turbo stream replacing that
+    # section alone, so a half-typed mailbox in the centre's own form survives.
+    # Reads NominalCode directly: it is a settings table the store does not cover.
     class NominalCodesController < FinanceController
       include ListsNominalCodes
 
@@ -44,13 +25,8 @@ module Admin
         respond_with_section(message: "#{nominal_code.code} saved.")
       end
 
-      # Retiring beats deleting, and which one happens is decided HERE rather
-      # than by the button that was clicked: the row's Retire/Delete label is a
-      # prediction made when the page rendered, and a budget line or ledger row
-      # booked against the code since then would make it wrong. A code any
-      # historical row carries is deactivated — it leaves every picker and
-      # stays readable beside the rows already booked against it, the way an
-      # absent budget is reported and never deleted.
+      # Retiring beats deleting, decided here rather than by the button, whose
+      # label was a prediction made when the page rendered.
       def destroy
         nominal_code = find_nominal_code!
         if nominal_code.in_use?
@@ -73,10 +49,7 @@ module Admin
         ::Reimbursements::NominalCode.where(cost_centre: @cost_centre).find(params[:id])
       end
 
-      # The section as it now stands, plus the message as a toast; or a
-      # redirect back to the page holding it when the post came from a browser
-      # with no JavaScript. A turbo stream is processed whatever the status, so
-      # a refusal keeps its 422.
+      # A turbo stream is processed whatever the status, so a refusal keeps its 422.
       def respond_with_section(message:, error: false, new_nominal_code: nil)
         load_nominal_codes(@cost_centre, new_nominal_code: new_nominal_code)
         @toast = { type: error ? "error" : "success", message: message }
@@ -88,11 +61,8 @@ module Admin
         end
       end
 
-      # A refused save re-renders the section. +prefill+ puts the record back
-      # in the Add form with the values that were typed — a refused ROW edit
-      # must not, or the Add form fills with that row's code and label. The
-      # HTML path can only redirect, the page belonging to another controller,
-      # so it says what was wrong and the operator retypes the one field.
+      # +prefill+ puts a refused ADD's typed values back in the Add form; a
+      # refused row edit must not, or the Add form fills with that row.
       def respond_with_error(record, prefill: false)
         respond_with_section(message: record.errors.full_messages.to_sentence, error: true,
                              new_nominal_code: (record if prefill))
@@ -106,12 +76,8 @@ module Admin
         params.permit(:code, :label)
       end
 
-      # +code+ is deliberately NOT updatable. It is the join to every budget
-      # line, actuals row and export booked against this account, all of which
-      # store the code as a string rather than a link, so rewriting it here
-      # would leave every one of them labelled by an account that no longer
-      # exists. A code typed wrong is deleted (nothing carries it yet) and
-      # added again.
+      # +code+ is not updatable: budgets, actuals and exports store it as a
+      # string, so a rename strands them. A mistyped code is deleted and re-added.
       def update_params
         params.permit(:label, :active)
       end

@@ -1,13 +1,6 @@
 <%# locals: (cost_centre:, codes:, usage_counts:, new_nominal_code:) %>
-<%# This cost centre's chart of accounts, maintained where its finance admin
-    already edits the centre.
-
-    A SIBLING of the cost-centre form above, never nested inside it: a form
-    within a form is invalid HTML and the inner submit silently does nothing,
-    the same shape of defect as a form opened inside a CardComponent's footer
-    slot. Each control below is its own small form, and every write answers
-    with a turbo stream replacing this whole div, so the centre's own form is
-    never re-rendered and a half-typed mailbox survives. %>
+<%# A SIBLING of the cost-centre form, never nested in it: a form inside a form
+    is invalid HTML and the inner submit silently does nothing. %>
 <div id="nominal_codes">
   <%= render CardComponent.new(title: "Nominal codes", html_class: "mt-4") do %>
     <p class="text-sm text-gray-600 mb-3">
@@ -33,27 +26,17 @@
                         .select { |count, _noun| count.positive? }
                         .map { |count, noun| pluralize(count, noun) } %>
           <% path = admin_reimbursements_nominal_code_path(cost_centre.key, nominal_code.record_id) %>
-          <%# id so a browser test can scope to one row: the Save and Retire
-              controls repeat down the list. %>
           <div id="nominal_code_<%= nominal_code.record_id %>"
                class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-gray-200 px-3 py-2">
-            <%# The code itself is not editable: every budget line, actuals row
-                and export stores it as a string rather than a link, so
-                rewriting it here would strand all of them. %>
             <span class="min-w-20 font-mono font-medium"><%= nominal_code.code %></span>
 
             <%= form_with url: path, method: :patch,
                           class: "flex grow basis-64 items-center gap-2" do %>
-              <%# The visible column heading would repeat down every row, so the
-                  label is for screen readers only. %>
               <%= label_tag "label_#{nominal_code.record_id}", "Label", class: "sr-only" %>
               <%= text_field_tag :label, nominal_code.label, id: "label_#{nominal_code.record_id}",
                                  class: input_classes %>
-              <%# "Save label", not "Save": nine of these sat down the page beside
-                  the cost centre's own Save, and a walker saved a nominal code
-                  while aiming at the centre form. The label is the only thing
-                  this row can change — the code is never updatable, since every
-                  budget, actuals row and export stores it as a string. %>
+              <%# "Save label", not "Save": beside the centre's own Save, a walker
+                  saved a nominal code while aiming at the centre form. %>
               <%= submit_tag "Save label", class: btn_classes(:primary, :sm),
                              "aria-label": "Save label for #{nominal_code.code}" %>
             <% end %>
@@ -73,9 +56,7 @@
               <% end %>
             <% end %>
 
-            <%# One button, two outcomes, and the controller re-decides which:
-                this wording is a prediction made when the page rendered, and a
-                row booked against the code since then would make it wrong. %>
+            <%# A prediction: the controller re-decides retire or delete. %>
             <% if booked.any? %>
               <%# No confirm: retiring is reversible with the button beside it. %>
               <%= button_to "Retire", path, method: :delete,
@@ -96,11 +77,9 @@
 
     <div class="mt-3 border-t border-gray-200 pt-3">
       <%= form_with url: admin_reimbursements_nominal_codes_path(cost_centre.key), method: :post do %>
-        <%# items-START, not items-end: the Code field carries a hint, so
-            bottom-aligning the row would drop the Label control below it. %>
+        <%# items-start, not items-end: the Code field's hint would drop Label
+            below the row. html_class replaces the field's default mb-4. %>
         <div class="flex flex-wrap items-start gap-3">
-          <%# html_class replaces the partial's default mb-4, which in a
-              one-line row lifts the field above its neighbours. %>
           <%= render "shared/form/field", label: "Code", name: "code", html_class: "w-40",
                      hint: "As EUSA writes it, zero padding included." do %>
             <%= text_field_tag :code, new_nominal_code.code, placeholder: "432320",
