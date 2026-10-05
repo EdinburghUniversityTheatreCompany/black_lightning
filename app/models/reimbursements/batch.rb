@@ -24,10 +24,8 @@ module Reimbursements
   ##
   # A batch of expenses submitted to EUSA in one BACS request.
   #
-  # There is no eusa_draft_created column: a present draft_message_id means
-  # the draft exists. Legacy batches imported from before the message id was
-  # stored have date_sent set — a sent batch necessarily had its draft — so the
-  # predicate folds that in.
+  # There is no eusa_draft_created column: a draft_message_id means the draft
+  # exists, and legacy batches, which predate the id, have a date_sent instead.
   class Batch < ApplicationRecord
     include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",
@@ -35,8 +33,7 @@ module Reimbursements
 
     validates :name, presence: true
 
-    # BatchProcessor never sends a name, and the historical batches were named
-    # after the date they were sent, so derive it the same way.
+    # BatchProcessor sends no name; historical batches were named after their date.
     before_validation -> { self.name = date_sent.to_s if name.blank? && date_sent.present? }
 
     def eusa_draft_created

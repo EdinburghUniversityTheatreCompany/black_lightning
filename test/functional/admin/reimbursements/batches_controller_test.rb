@@ -37,9 +37,8 @@ module Admin
                                       status: ::Reimbursements::Status::APPROVED)
       end
 
-      # A batch whose one linked expense is in +status+ — mirrors the old
-      # linked_expense fake. The batch derives eusa_draft_created from
-      # date_sent (legacy-sent semantics) unless draft_message_id is given.
+      # A batch with one linked expense in +status+. It reads as drafted through
+      # date_sent unless a draft_message_id is given.
       def batch_with_expense(status:, **batch_attrs)
         @batch = create_reimbursements_batch(**batch_attrs)
         @expense = create_reimbursements_expense(person: create_reimbursements_person,
@@ -71,8 +70,7 @@ module Admin
         assert_response :success
         assert_includes response.body, "Alice Producer"
         assert_includes response.body, "Create draft and process batch"
-        # Derived from the cost centre, so a second one never sends EUSA a
-        # request labelled with the Fringe's name.
+        # From the cost centre, so a second one never sends a request labelled Fringe.
         assert_includes response.body, "#{::Reimbursements::CostCentre.default.name} BACS Request",
                         "default EUSA subject is prefilled"
       end
@@ -96,9 +94,7 @@ module Admin
         assert_includes response.body, "Hi Finance Team,"
       end
 
-      # Build Batch is the one screen that would otherwise print every payee's
-      # account number the moment it loads — a page an operator has open while
-      # screen-sharing or sitting in an open-plan office.
+      # Otherwise every account number is on screen the moment the page loads.
       test "new masks bank details, keeping the full pair only behind the reveal" do
         one_approved
         sign_in @user
@@ -135,10 +131,9 @@ module Admin
 
         assert_redirected_to admin_reimbursements_batches_path
         assert_match(/building/i, flash[:notice])
-        # Nothing is processed inline in the request: no batch, no submit.
+        # Nothing is processed inline.
         assert_equal 0, ::Reimbursements::Batch.count
         assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
-        # History's in-app trace exists from the moment of the click.
         attempt = ::Reimbursements::BatchAttempt.recent_first.first
         assert attempt.building?
         assert_equal Date.new(2026, 5, 13), attempt.bacs_date
@@ -250,8 +245,7 @@ module Admin
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
                            draft_message_id: "msg-1",
                            sharepoint_backup_url: "https://sp.example/batch")
-        # A second expense on the same batch, so the row summarises rather than
-        # repeating the batch once per expense.
+        # A second expense, so the row summarises rather than repeats.
         create_reimbursements_expense(person: create_reimbursements_person(name: "Sam", email: "sam@example.com"),
                                       batch: @batch, auto_number: 12,
                                       status: ::Reimbursements::Status::PAID,
@@ -297,8 +291,7 @@ module Admin
       end
 
       test "index badges a batch whose EUSA draft is missing vs one that succeeded" do
-        # Drafted: a stored draft message id. Broken: no id AND no date_sent —
-        # the derived predicate reads that as "no EUSA draft".
+        # Broken: no draft message id AND no date_sent.
         create_reimbursements_batch(name: "Good batch", date_sent: Date.new(2026, 5, 13),
                                     draft_message_id: "AAMkGood==")
         create_reimbursements_batch(name: "Broken batch", date_sent: nil)
@@ -329,9 +322,7 @@ module Admin
         get :show, params: { id: @batch.record_id }
 
         assert_response :success
-        # EUSA draft succeeded (green "Yes"), producer emails were NOT sent
-        # (amber warning). "Not sent", because what the column records is
-        # whether the send was attempted successfully, never delivery.
+        # "Not sent": the column records the send attempt, never delivery.
         assert_includes response.body, "Not sent: needs a look"
       end
 
@@ -354,8 +345,7 @@ module Admin
       end
 
       test "reopen reverts the linked expenses and deletes the batch" do
-        # No stored draft id — nothing to confirm either way, so reopen
-        # proceeds and falls back to the manual-deletion warning.
+        # No stored draft id: nothing to confirm, so only the manual warning.
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
@@ -392,7 +382,7 @@ module Admin
 
         post :reopen, params: { id: @batch.record_id }
 
-        # The revert + batch delete still happen; only a fallback warning is added.
+        # The revert and the batch delete still happen.
         assert_redirected_to admin_reimbursements_batches_path
         assert_equal ::Reimbursements::Status::APPROVED, @expense.reload.status
         assert_not ::Reimbursements::Batch.exists?(@batch.id)
@@ -403,7 +393,7 @@ module Admin
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
                            draft_message_id: "AAMkdraft==")
         graph = use_graph
-        graph.draft_still_exists = false # already sent, deleted, or Graph couldn't be reached
+        graph.draft_still_exists = false # sent, deleted, or Graph unreachable
         sign_in @user
 
         post :reopen, params: { id: @batch.record_id }
@@ -451,8 +441,7 @@ module Admin
       # --- Saying only what is actually known --------------------------------
 
       test "History heads a batch by its BACS date, not by 'Sent'" do
-        # Nothing in the portal records whether the EUSA draft was ever sent:
-        # date_sent is the date the operator typed on the build form.
+        # Nothing records whether the draft was sent: date_sent is the typed date.
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
@@ -500,15 +489,12 @@ module Admin
         get :index
 
         assert_response :success
-        # The sidebar is built from <details>, so look for this disclosure's
-        # own summary rather than for the element.
+        # The sidebar uses <details> too, so look for this disclosure's summary.
         assert_no_match(/Show all \d+ messages/, response.body, "a short list stays inline")
         assert_match(/receipt 0 did not reach SharePoint/, response.body)
       end
 
       test "History collapses a wall of follow-up failures behind a count" do
-        # The real case: a batch whose receipt offload failed per receipt
-        # printed ~5,000 characters and pushed the batch list off the screen.
         sign_in @user
         count = ::Admin::Reimbursements::BatchesController::INLINE_FAILURE_MESSAGES + 12
         messages = Array.new(count) { |i| "receipt #{i} did not reach SharePoint" }
@@ -521,7 +507,6 @@ module Admin
         assert_response :success
         assert_match(/#{count} follow-up steps failed/, response.body)
         assert_select "details summary", text: "Show all #{count} messages"
-        # Still all there, just behind the disclosure.
         assert_match(/receipt #{count - 1} did not reach SharePoint/, response.body)
       end
 
@@ -540,9 +525,6 @@ module Admin
       end
 
       # --- The EUSA draft link ----------------------------------------------
-      # Sending the draft is the one manual step left in paying people. History
-      # and Detail both promised the link and neither could render one, because
-      # nothing stored it.
 
       test "History and Detail link the EUSA draft" do
         batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
@@ -580,8 +562,7 @@ module Admin
         assert_match(/still UNSENT/, flash[:notice])
       end
 
-      # Fails CLOSED, so this one message has to cover sent, deleted, moved and
-      # "Graph is down" alike — it must not claim the draft was sent.
+      # Fails CLOSED, so the message must not claim the draft was sent.
       test "refuses to say a draft is sent when it only failed to confirm it" do
         graph = use_graph
         graph.draft_still_exists = false

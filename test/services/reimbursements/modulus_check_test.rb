@@ -2,8 +2,7 @@ require "test_helper"
 require "tmpdir"
 
 module Reimbursements
-  # Uses a minimal synthetic rules table to exercise the Pay.UK modulus algorithm
-  # without the real files.
+  # A minimal synthetic rules table exercises the algorithm without the real files.
   class ModulusCheckTest < ActiveSupport::TestCase
     # Standard MOD11 weights: 7 6 5 4 3 2 7 6 5 4 3 2 1 0
     BASIC_MOD11 = ModulusCheck::Rule.new(
@@ -21,25 +20,16 @@ module Reimbursements
       dashed = checker([ BASIC_MOD11 ]).check("01-00-01", "00000030")
       undashed = checker([ BASIC_MOD11 ]).check("010001", "00000030")
       assert_equal undashed, dashed
-      # Pin a concrete VALID outcome too — a broken dash-stripping regex would
-      # leave the dashes in place, fail normalization, and short-circuit BOTH
-      # sides to the *same* INVALID, which "still equal" alone wouldn't catch.
-      # Asserting VALID specifically proves the digits genuinely reached (and
-      # passed) the real modulus check, not just "both sides broke the same way."
+      # VALID, not just equal: broken dash-stripping fails both sides alike.
       assert_equal ModulusCheck::VALID, dashed
     end
 
     test "a stray non-separator character fails normalization instead of being silently discarded" do
-      # A letter isn't a documented separator (only dash/space are) — it must
-      # make the sort code fail to normalize, not be dropped so the remaining
-      # 6 digits coincidentally look clean and pass.
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01-23-4X", "12345678")
     end
 
     test "a tab or newline is not a documented separator either, and must also fail normalization" do
-      # \s (rather than a literal space) would also strip tabs/newlines --
-      # a real risk for a value pasted from a spreadsheet cell -- silently
-      # reducing to a clean-looking digit string that shouldn't pass.
+      # \s would also strip a tab pasted from a spreadsheet.
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\t23\t45", "12345678")
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\n23\n45", "12345678")
     end
@@ -57,19 +47,14 @@ module Reimbursements
     end
 
     # --- Nine-digit ("nonstandard") account numbers (Pay.UK spec §2.1.2) ---
-    # Rather than a hard INVALID, a 9-digit account substitutes the sort
-    # code's last digit with the account number's own first digit, then
-    # checks only the remaining 8 digits.
 
     test "a nine-digit account substitutes the sort code's last digit and validates" do
-      # sort 019999 -> 019995 (last digit replaced by account[0]=5); account ->
-      # 90000000 (the remaining 8 digits). Verified: total=187, 187 % 11 == 0.
+      # 019999 -> 019995 and account 90000000: total 187, 187 % 11 == 0.
       assert_equal ModulusCheck::VALID, checker([ BASIC_MOD11 ]).check("019999", "590000000")
     end
 
     test "a nine-digit account can still read invalid once substituted" do
-      # Same sort substitution (account[0]=5 -> 019995), but a different
-      # account digit: total=180, 180 % 11 == 4, not zero.
+      # Total 180, 180 % 11 == 4.
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("019999", "580000000")
     end
 
@@ -99,13 +84,10 @@ module Reimbursements
     test "substitution redirects sort code into a covered range and runs the real checkdigit math" do
       rule = ModulusCheck::Rule.new(sort_from: 20_000, sort_to: 29_999, algorithm: "MOD11",
         weights: [ 7, 6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2, 1, 0 ], exception: 0)
-      # Without the substitution, 010001 isn't in this rule's 20000-29999
-      # range at all -- proving the redirect actually happened, not just that
-      # some rule happened to match.
+      # Without the substitution 010001 is outside the rule's range.
       assert_equal ModulusCheck::OUTSIDE_SPEC, checker([ rule ]).check("010001", "12345678")
 
-      # With the substitution (010001 -> 020001), the checkdigit math actually
-      # runs on the SUBSTITUTED code: total=98, 98 % 11 == 10, not zero.
+      # With it (010001 -> 020001) the math runs: total 98, 98 % 11 == 10.
       assert_equal ModulusCheck::INVALID,
                    checker([ rule ], { 10_001 => 20_001 }).check("010001", "12345678")
     end
@@ -151,8 +133,6 @@ module Reimbursements
     end
 
     test "leading-zero sort codes parse as base-10, not octal" do
-      # Regression guard for the Integer(str, 10) fix. "018000" must parse as 18000,
-      # so a rule covering 010000-019999 still applies.
       Dir.mktmpdir do |dir|
         File.write("#{dir}/valacdos.txt", "010000 019999 MOD11 7 6 5 4 3 2 7 6 5 4 3 2 1 0\n")
         File.write("#{dir}/scsubtab.txt", "")
@@ -161,12 +141,9 @@ module Reimbursements
       end
     end
 
-    # --- Exception 5: Pay.UK spec vectors (VocaLink spec §2.2.2.5) ---------
-    # Exception 5 is NOT "either check passes". Both the MOD11 first check and the
-    # DBLAL second check must pass, and each uses a checkdigit comparison rather
-    # than a plain zero remainder: the MOD11 check compares g (account[6]) against
-    # 11-remainder, the DBLAL check compares h (account[7]) against 10-remainder.
-    # The real 938000-938696 weights zero out the checkdigit positions.
+    # --- Exception 5: Pay.UK spec vectors (spec §2.2.2.5) ------------------
+    # Both checks must pass, each comparing a checkdigit: g (account[6]) with
+    # 11 - remainder, then h (account[7]) with 10 - remainder.
     EX5_MOD11 = ModulusCheck::Rule.new(sort_from: 938_000, sort_to: 938_696, algorithm: "MOD11",
       weights: [ 7, 6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2, 0, 0 ], exception: 5)
     EX5_DBLAL = ModulusCheck::Rule.new(sort_from: 938_000, sort_to: 938_696, algorithm: "DBLAL",
@@ -187,8 +164,6 @@ module Reimbursements
     end
 
     # Spec test case 23: first checkdigit correct but second incorrect -> INVALID.
-    # This is the case the old "either check passes" logic got WRONG (it would have
-    # returned valid because the first check passes).
     test "exception 5 spec vector: 938063 / 15764273 is invalid (both checks required)" do
       assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15764273")
     end
@@ -223,8 +198,7 @@ module Reimbursements
     )
 
     test "exception 1 adds 27 to the DBLAL total before taking the remainder" do
-      # Without +27 this account gives remainder 3 (would be invalid); the
-      # +27 the exception adds brings it to remainder 0.
+      # Remainder 3 without the +27, 0 with it.
       assert_equal ModulusCheck::VALID, checker([ DBLAL_RULE ]).check("010001", "00000050")
     end
 
@@ -268,11 +242,8 @@ module Reimbursements
     # --- Exception 7 -------------------------------------------------------
 
     test "exception 7 zeros all 8 weighting positions u-b, not just the sort-code 6" do
-      # account digit g (index 6) is 9, triggering the zeroing. account_clean[0]
-      # and [1] (weight positions 6/7 — the two account-side positions the old
-      # bug left un-zeroed) are non-zero: with only positions 0-5 zeroed, this
-      # vector's remainder is 0 (VALID) — the exact false positive #200/#201's
-      # bug produced. Zeroing all 8 positions (0-7) correctly gives remainder 9.
+      # g is 9. Zeroing only positions 0-5 reads this vector VALID (the false
+      # positive of #200/#201); zeroing 0-7 gives remainder 9.
       rule = BASIC_MOD11.with(exception: 7)
       assert_equal ModulusCheck::INVALID, checker([ rule ]).check("010001", "50000090")
     end
@@ -291,10 +262,7 @@ module Reimbursements
     end
 
     test "exception 6 does not bypass merely because account[0] coincidentally equals account[6]" do
-      # The old bug's condition (account[0]==account[6]) is true here (both
-      # "5"), but the spec's actual condition (g==h, i.e. account[6]==account[7])
-      # is false ("5" vs "1") -- the real MOD11 math must run instead, giving
-      # remainder 4 (INVALID), not a false-positive bypass to VALID.
+      # a == g (both 5) but g != h (5 vs 1), so the real MOD11 runs: remainder 4.
       rule = BASIC_MOD11.with(exception: 6)
       assert_equal ModulusCheck::INVALID, checker([ rule ]).check("010001", "50000051")
     end
@@ -315,9 +283,7 @@ module Reimbursements
       ModulusCheck.reset_default_checker!
       # Canonical Pay.UK test vector #1: sort 08-99-99, account 66374958 -> valid.
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("089999", "66374958")
-      # Exception 5 end-to-end on the real rule + substitution files (spec cases
-      # 14, 15 and 23): both checks must pass, so 15764273 (first passes, second
-      # fails) is invalid — the OR bug would have called it valid.
+      # Exception 5 on the real files (spec cases 14, 15 and 23).
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938611", "07806039")
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938600", "42368003")
       assert_equal ModulusCheck::INVALID, ModulusCheck.default_checker.check("938063", "15764273")

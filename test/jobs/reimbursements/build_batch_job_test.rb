@@ -58,7 +58,6 @@ module Reimbursements
       ready = alerts(:batch_ready).sole.last
       assert_equal OPERATOR, ready[:recipients]
       assert_equal "https://outlook.example/draft-1", ready[:draft_link]
-      # The alert is sent from the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
     end
 
@@ -234,8 +233,7 @@ module Reimbursements
     end
 
     test "resolves exactly its own attempt by id, never a leftover building row from a prior build" do
-      # A prior build died leaving R_old still 'building'. This run must resolve
-      # ITS row (by id), not grab the oldest building row for the cost centre.
+      # A prior build died leaving r_old 'building'.
       r_old = click_time_attempt
       r_mine = click_time_attempt
       approved_expense

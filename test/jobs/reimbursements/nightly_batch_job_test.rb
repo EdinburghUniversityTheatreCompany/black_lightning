@@ -6,14 +6,11 @@ module Reimbursements
 
     MC = ModulusCheck
 
-    # 2026-07-09 is a Thursday (wday 4); fringe's default run-days are [2, 4],
-    # so the nightly is due. 2026-07-08 is a Wednesday (not a run-day).
+    # The fixture centre's run-days are Tuesday and Thursday.
     THURSDAY = Date.new(2026, 7, 9)
     WEDNESDAY = Date.new(2026, 7, 8)
 
-    # Operator recipients come from each cost centre's own notification_email,
-    # not from the finance permission grid. FRINGE_EMAIL is what the fixture
-    # carries; SECOND_EMAIL is for the hand-built second centres below.
+    # The fixture centre's notification_email, and one for second centres.
     FRINGE_EMAIL = "finance@bedlamfringe.invalid".freeze
     SECOND_EMAIL = "finance@second.invalid".freeze
 
@@ -21,8 +18,7 @@ module Reimbursements
       def check(_sort, _account) = MC::VALID
     end
 
-    # A store whose expenses read raises, standing in for a data-layer outage —
-    # drives the nightly's top-level rescue (handle_failure).
+    # A data-layer outage, driving the job's top-level rescue.
     class BoomStore
       def expenses = raise(StandardError, "backend down")
     end
@@ -46,8 +42,7 @@ module Reimbursements
                                     submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
     end
 
-    # A budget with an owner who is NOT the submitter, so OwnerReview's gate
-    # applies and the claim is awaiting that owner's sign-off.
+    # An owner who is not the submitter, so the claim awaits their sign-off.
     def owner_person
       @owner_person ||= create_reimbursements_person(name: "Olive Owner",
                                                      email: "olive@example.com")
@@ -67,8 +62,7 @@ module Reimbursements
       @notifier = FakeNotifier.new
       NightlyBatchJob.checker_builder = -> { FakeChecker.new }
       NightlyBatchJob.graph_builder = -> { Object.new }
-      # Capture the mailbox the notifier is built for so a test can assert the
-      # operator alerts send from the cost centre's send mailbox.
+      # Records the mailbox the notifier is built for.
       NightlyBatchJob.notifier_builder = lambda do |cost_centre:, graph:|
         @notifier.instance_variable_set(:@mailbox, cost_centre.send_mailbox)
         @notifier
@@ -85,11 +79,10 @@ module Reimbursements
 
     def mailer_calls(name) = @notifier.calls.select { |call| call.first == name }
 
-    # --- Branch 1: not a run-day ------------------------------------------
+    # --- Not a run-day ----------------------------------------------------
 
     test "skips a cost centre whose run-days don't include today" do
-      # The previous run-day (Tue 07-07) is already recorded, so Wednesday has no
-      # catch-up pending and the job is not due.
+      # Tuesday is recorded, so Wednesday has no catch-up due.
       CostCentre.default.update!(last_nightly_run_on: Date.new(2026, 7, 7))
       approved_expense
 
@@ -99,7 +92,7 @@ module Reimbursements
       assert_equal Date.new(2026, 7, 7), CostCentre.default.reload.last_nightly_run_on
     end
 
-    # --- Branch 2: stale-pending reminder ---------------------------------
+    # --- Stale-pending reminder -------------------------------------------
 
     test "emails a pending reminder for submissions stuck awaiting approval" do
       pending_expense(days_ago: 5)
@@ -109,8 +102,7 @@ module Reimbursements
       reminder = mailer_calls(:pending_reminder).sole.last
       assert_equal 1, reminder[:rows].size
       assert_equal 5, reminder[:rows].first[:age_days]
-      # The approved reminder had nothing to say, which counts as delivered, so
-      # the run is recorded.
+      # Nothing approved counts as delivered.
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -122,9 +114,8 @@ module Reimbursements
       assert_empty mailer_calls(:pending_reminder)
     end
 
-    # --- Branch 2b: owner sign-off reminder --------------------------------
-    # A claim awaiting a budget owner is not finance's to act on, so it is kept
-    # out of their stale-pending reminder and the owners are emailed instead.
+    # --- Owner sign-off reminder ------------------------------------------
+    # A claim awaiting a budget owner goes to the owner, not to finance.
 
     test "a claim awaiting a budget owner is left out of the finance reminder" do
       gated_pending(days_ago: 5)
@@ -148,12 +139,9 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
-    # An owner of two shows is told "Marketing" twice with nothing to say which
-    # claim belongs to which, and this reminder is the only thing that reaches
-    # them — see Budget#display_name.
+    # An owner of two shows must be told which show's "Marketing" a claim is on.
     test "the owner reminder names the show, not just the category" do
-      # The owner goes on the AREA: Budget#owners reads through it, so a line
-      # in an ownerless area has no sign-off gate at all.
+      # The owner goes on the AREA: Budget#owners reads through it.
       area = create_reimbursements_area(name: "Cogito")
       area.owners << owner_person
       owned_budget.update!(area: area)
@@ -166,8 +154,6 @@ module Reimbursements
     end
 
     test "a claim awaiting sign-off is reminded with no age threshold" do
-      # Submitted today: finance's reminder waits PENDING_REMINDER_DAYS, but a
-      # claim newly assigned to an owner is reminded on the first due run-day.
       gated_pending(days_ago: 0)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
@@ -185,7 +171,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       assert_empty mailer_calls(:owner_sign_off_reminder)
-      # It is finance's now, and it is stale, so they get their reminder.
+      # Finance's now, and stale.
       assert_equal 1, mailer_calls(:pending_reminder).size
     end
 
@@ -216,14 +202,13 @@ module Reimbursements
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
       assert_empty mailer_calls(:owner_sign_off_reminder)
-      # Nothing was sent, but nothing failed either, so the run still records.
+      # Nothing failed either, so the run still records.
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
     test "a failed owner reminder is best effort and still records the run-day" do
-      # An owner's dead address must not withhold the run-day, which would
-      # re-send FINANCE's reminders tomorrow over a failure that was never
-      # theirs. Contrast the pending/approved reminders, which DO gate it.
+      # An owner's dead address must not withhold the run-day and re-send
+      # finance's reminders tomorrow.
       @notifier = FakeNotifier.new(fail_only: [ :owner_sign_off_reminder ])
       gated_pending(days_ago: 5)
       pending_expense(days_ago: 5)
@@ -231,19 +216,14 @@ module Reimbursements
       events = capture_honeybadger_events { NightlyBatchJob.perform_now(today: THURSDAY) }
 
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
-      # Best effort, not silent: the failure is still reported.
       assert_includes events.map(&:first), "reimbursements.owner_reminder_failed"
-      # Finance's own reminder went out regardless.
       assert_equal 1, mailer_calls(:pending_reminder).size
     end
 
-    # --- Branch 3: needs-attention is flagged, never held back ------------
+    # --- Approved reminder ------------------------------------------------
 
     test "an approved expense needing attention is still listed, flagged rather than held back" do
-      # No receipt: ReviewSupport.needs_attention_reasons flags it. The nightly
-      # is a reminder, not a gate, so the claim must still reach the operator's
-      # list (and its amount must still count towards the total) — the old
-      # behaviour replaced the whole list with a "manual review" email.
+      # No receipt, so it is flagged. A reminder, not a gate: still listed.
       approved_expense(receipt: false)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
@@ -267,8 +247,6 @@ module Reimbursements
       assert_not_empty ready[:expenses].last[:flags], "flagged claims sort to the bottom"
     end
 
-    # --- Branch 4: all clean -> ready-to-batch alert (nothing submitted) ---
-
     test "all-clean approved expenses email a ready-to-batch alert and submit nothing" do
       expense = approved_expense
 
@@ -279,22 +257,17 @@ module Reimbursements
       assert_equal "12.50", ready[:total]
       assert_not ready.key?(:draft_link), "the nightly no longer builds a draft"
       assert_empty ready[:expenses].sole[:flags], "a clean claim carries no flags"
-      # Pinned at the caller, not just in notifier_test: the Notifier renders
-      # next_run_day only when it is passed one, so dropping the kwarg here
-      # would silently lose "the next reminder is …" with every test green.
+      # Pinned here: the Notifier renders next_run_day only when it is passed one.
       assert_equal "Tuesday 14 July", ready[:next_run_day]
       assert_empty mailer_calls(:batch_ready), "no draft, so no draft-ready alert"
-      # Nothing is submitted: the nightly must not mutate expenses.
       assert_equal Status::APPROVED, expense.reload.status
-      # The alert is sent through a notifier built for the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
     test "a second cost centre with none of its own claims emails nothing and still records its run" do
-      # What survives of the old cost-centre-unscoped guard: a due centre with an
-      # empty queue must not re-remind on another centre's claims, and a reminder
-      # with nothing to say still counts as delivered, so its run-day is recorded.
+      # A due centre with an empty queue reminds nobody about another centre's
+      # claims, and still records its run-day.
       second = create_reimbursements_cost_centre(key: "extra", name: "Second Society", eusa_code: "X99",
                                                  receive_mailbox: "in@second.co.uk",
                                                  send_mailbox: "send@second.co.uk",
@@ -335,11 +308,6 @@ module Reimbursements
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      # notify() swallows the Graph error internally, so run_for's outer rescue
-      # never fires (no spurious failure email) — but the alert genuinely never
-      # reached the operator, so the run must NOT be recorded: recording it here
-      # would make nightly_due? treat this run-day as handled, silently losing
-      # the alert forever instead of retrying it the next time the job runs.
       assert_empty mailer_calls(:failure)
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
@@ -359,10 +327,7 @@ module Reimbursements
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
-    # Both reminders send independently, so a run can half-succeed. Recording the
-    # run-day marks it handled forever (nightly_due? then skips it) and there is
-    # no retry queue behind these alerts, so ANY failed send must block the
-    # record — at the cost of re-sending the one that worked tomorrow.
+    # Recording the run-day marks it handled forever, so ANY failed send blocks it.
     test "a failed pending reminder blocks recording the run, even though the approved alert sent" do
       @notifier = FakeNotifier.new(fail_only: [ :pending_reminder ])
       pending_expense(days_ago: 5)
@@ -421,9 +386,7 @@ module Reimbursements
 
       notified = capture_honeybadger_notices { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      # The approved-ready alert genuinely sent — the outer rescue must not
-      # additionally fire and send a false "FAILED" email on top of that real
-      # success just because the follow-up record write failed.
+      # The alert sent, so a failed record write must not add a FAILED email.
       assert_equal 1, mailer_calls(:approved_ready).size
       assert_empty mailer_calls(:failure)
       assert_equal 1, notified.size, "the record-write failure must still be reported"
@@ -465,9 +428,6 @@ module Reimbursements
     end
 
     test "no notification address sends nothing and does not record the run" do
-      # The old behaviour counted "nobody to email" as delivered, which recorded
-      # the run-day and lost the alert forever. Leaving it unrecorded means
-      # tomorrow's run tries again and keeps alarming until an address is set.
       # update_columns because presence is validated on the model.
       CostCentre.default.update_columns(notification_email: nil)
       approved_expense
@@ -482,8 +442,7 @@ module Reimbursements
     end
 
     test "REIMBURSEMENTS_OPERATOR_EMAIL still overrides a missing address" do
-      # The divert-everything switch must reach the send, not be cut off by the
-      # no-recipients guard in front of it.
+      # The override must not be cut off by the no-recipients guard.
       CostCentre.default.update_columns(notification_email: nil)
       ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = "ops@example.com"
       approved_expense
@@ -542,8 +501,7 @@ module Reimbursements
         receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
         notification_email: SECOND_EMAIL, nightly_run_days: [ 4 ]
       )
-      # The default centre is NOT due today, so the old skip_unscoped_cost_centre
-      # guard would have silenced termtime entirely.
+      # The default centre is not due today.
       CostCentre.default.update!(nightly_run_days: [ 1 ], last_nightly_run_on: THURSDAY - 1)
       termtime_budget = create_reimbursements_budget(name: "Termtime props")
       termtime_budget.update!(cost_centre: termtime)

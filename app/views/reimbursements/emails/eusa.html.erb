@@ -1,5 +1,7 @@
 <p>Hi <%= eusa_contact_name.presence || "Finance Team" %>,</p>
 
+<%# The batch total, the claim count and the receipts line exist ONLY in this
+    opening; nothing below restates them, so replacing it drops all three. %>
 <p>
   Please find attached the BACS request from <%= cost_centre_name %> for <%= reimbursements_date(bacs_date) %>,
   covering <%= expense_count %> <%= "expense".pluralize(expense_count) %> totalling

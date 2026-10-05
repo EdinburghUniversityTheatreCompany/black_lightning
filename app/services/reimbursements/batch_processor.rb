@@ -1,37 +1,24 @@
 module Reimbursements
   ##
-  # Orchestrates one BACS submission. A single #process call, triggered from
-  # Build Batch, does everything:
+  # One BACS submission: builds the payment documents from each claim's
+  # EFFECTIVE payee details, uploads them and the receipts to SharePoint,
+  # creates the EUSA draft, records the Batch, marks the expenses Submitted and
+  # emails the producers.
   #
-  #   1. generate the payment documents — the BACS xlsx from the EFFECTIVE
-  #      payee/sort/account/nominal, plus one international form per
-  #      international claim
-  #   2. read every receipt's bytes and rename them
-  #   3. upload the xlsx + receipts to the cost centre's SharePoint folders
-  #   4. create the EUSA draft in the cost centre's send mailbox
-  #   5. create the Batch record, mark expenses Submitted + link + store URLs
-  #   6. email producer notifications (skip anyone already notified)
-  #
-  # THE CARDINAL RULE: expenses are never marked Submitted unless the EUSA draft
+  # CARDINAL RULE: expenses are never marked Submitted unless the EUSA draft
   # was created, so a failed draft leaves them Approved and a rebuild is clean.
   # ORPHAN-DRAFT GUARD: once the draft exists a rebuild must never create a
-  # SECOND draft on the same expenses, so every post-draft step is contained here
-  # and never re-raised past the draft. Both rules, and the mark_submitted
-  # exception to "post-draft steps are best-effort", are spelled out at their
-  # call sites in #process.
+  # SECOND draft on the same expenses, so no post-draft step re-raises.
   #
-  # Long and API-heavy, so it runs from a Solid Queue job (BuildBatchJob for
-  # interactive Build Batch, NightlyBatchJob for the nightly).
+  # Long and API-heavy, so it runs from BuildBatchJob.
   class BatchProcessor
     XLSX_CONTENT_TYPE =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
 
-    # How many times to retry a post-draft write (the Batch record, or a
-    # producer_notified stamp) before giving up. Retries are immediate: a
-    # transient blip clears, and we must not sit on a live draft.
+    # How many times a post-draft write (the Batch record, a producer_notified
+    # stamp) is attempted.
     WRITE_RETRY_ATTEMPTS = 3
 
-    # The outcome handed back to the UI.
     Result = Struct.new(:success, :bacs_date, :batch_id, :expense_count, :total_amount,
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
                         :producer_notifications_sent, :receipts_uploaded, :errors, keyword_init: true)
@@ -44,8 +31,8 @@ module Reimbursements
       @xlsx = xlsx || BacsXlsx.new
       @international_xlsx = international_xlsx || InternationalXlsx.new
       @composer = composer || EusaEmailComposer.new
-      # Producer notifications send through Graph from the cost centre's send
-      # mailbox (same client as the EUSA draft), so they land in its Sent Items.
+      # Producer notifications send from the cost centre's send mailbox, so
+      # they land in its Sent Items.
       @notifier = notifier || Notifier.new(cost_centre: cost_centre, graph: graph)
       @sleeper = sleeper || ->(seconds) { sleep(seconds) }
     end
@@ -58,18 +45,11 @@ module Reimbursements
         return fail_with(result, "SharePoint folders not configured for #{@cost_centre.name}.")
       end
 
-      # Every row on the spreadsheet must say where the money goes. The approve
-      # blocker (ReviewSupport) is the only other check and it runs on the
-      # APPROVAL path alone, so a claim that reached Approved another way — the
-      # settled-claim import, a console fix — never met it, and nothing below
-      # re-asks: #bacs_document reads the effective payee/sort/account, which
-      # are blank strings for a claim with no payee at all. EUSA would receive a
-      # request to pay nobody.
-      #
-      # It fails the WHOLE batch rather than dropping the bad rows: a
-      # spreadsheet quietly short of the claims the operator just approved is
-      # the harder error to notice, and the fix is a minute's work on the named
-      # claims.
+      # The approve blocker (ReviewSupport) runs on the approval path only, so
+      # a claim that reached Approved another way (the settled-claim import, a
+      # console fix) arrives here unchecked, and its blank payee details would
+      # ask EUSA to pay nobody. Fail the WHOLE batch rather than drop rows: a
+      # spreadsheet quietly short of the approved claims is harder to notice.
       bankless = expenses.reject(&:effective_has_bank_details?)
       if bankless.any?
         return fail_with(result, "#{bankless.size} #{'claim'.pluralize(bankless.size)} have " \
@@ -79,8 +59,6 @@ module Reimbursements
                                  "or move them out of Approved.")
       end
 
-      # The UK rows collapse into one BACS spreadsheet; each international claim
-      # needs its own form, because that is the shape of EUSA's template.
       documents = build_payment_documents(expenses, bacs_date)
       renamed = collect_receipts(expenses, bacs_date)
 
@@ -91,7 +69,7 @@ module Reimbursements
                                       eusa_body_html, eusa_contact_name)
       attachments = documents + renamed.values.flatten
 
-      # CARDINAL RULE — a failed draft leaves every expense Approved.
+      # CARDINAL RULE: a failed draft leaves every expense Approved.
       begin
         draft = @graph.create_draft(
           mailbox: @cost_centre.send_mailbox, to: [ eusa_recipient ],
@@ -103,12 +81,9 @@ module Reimbursements
         return fail_with(result, "EUSA draft creation failed: #{e.message}")
       end
 
-      # ORPHAN-DRAFT GUARD — the draft is live and money will move once the
-      # operator sends it. If the Batch write can't be recovered, still mark the
-      # expenses Submitted (mark_submitted below doesn't require a batch — a nil
-      # batch_id is simply dropped by the mapper) so they leave the Approved
-      # queue (a rebuild can't re-draft them), still attempt producer
-      # notifications, and surface the orphan draft loudly for manual repair.
+      # ORPHAN-DRAFT GUARD: the draft is live. Even when the Batch write fails,
+      # mark the expenses Submitted (a nil batch_id is dropped) so a rebuild
+      # cannot re-draft them, still notify producers, and report the orphan.
       batch = create_batch(result)
       submitted = mark_submitted(result, expenses, batch, urls_by_expense)
       notifications_complete = notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
@@ -120,12 +95,9 @@ module Reimbursements
 
       flag_batch(result, batch, :producer_notifications_sent) if notifications_complete
 
-      # Every OTHER post-draft step (SharePoint uploads, producer emails, the
-      # Batch-record flags) is genuinely best-effort: a failure is real but
-      # doesn't leave the batch double-draft-risking, so it goes into
-      # result.errors without flipping success. A mark_submitted failure is
-      # different — that expense is still Approved despite being in the live
-      # draft — so success reflects whether EVERY expense reached Submitted.
+      # Other post-draft failures are best-effort: reported in result.errors
+      # without flipping success. A mark_submitted failure is the exception:
+      # that expense is in the live draft yet still Approved.
       result.success = (submitted.size == expenses.size)
       result
     rescue StandardError => e
@@ -150,14 +122,9 @@ module Reimbursements
       expenses.sum { |expense| expense.amount || 0 }
     end
 
-    # Every payment document this batch needs, as ready-to-attach Attachments:
-    # at most one BACS spreadsheet for the UK claims, plus one international
-    # form per international claim.
-    #
-    # The BACS spreadsheet is SKIPPED when there are no UK claims — a batch of
-    # only international payments would otherwise attach a spreadsheet with a
-    # header, an example row and nothing else, which reads to EUSA as a request
-    # to pay nobody.
+    # One BACS spreadsheet for the UK claims plus one form per international
+    # claim (EUSA's international form holds a single payment). The spreadsheet
+    # is skipped when there are no UK claims: an empty one asks EUSA to pay nobody.
     def build_payment_documents(expenses, bacs_date)
       uk, international = expenses.partition { |expense| !expense.international? }
 
@@ -180,9 +147,8 @@ module Reimbursements
       xlsx_attachment(filename, @xlsx.generate(rows))
     end
 
-    # One form for one claim. The amount on it is the FOREIGN one: EUSA's bank
-    # pays the supplier in their own currency, and the GBP figure beside it is
-    # only what our budgets count.
+    # The amount on the form is the FOREIGN one: EUSA's bank pays the supplier
+    # in their own currency; the GBP figure is only what our budgets count.
     def international_document(expense, bacs_date)
       payment = InternationalXlsx::Payment.new(
         payee_name: expense.effective_payee_name,
@@ -198,7 +164,7 @@ module Reimbursements
       xlsx_attachment(filename, @international_xlsx.generate(payment, format_iban: true))
     end
 
-    # Expense record id -> renamed GraphClient::Attachments, ready to upload/attach.
+    # Expense record id => renamed receipt attachments.
     def collect_receipts(expenses, bacs_date)
       expenses.each_with_object({}) do |expense, acc|
         acc[expense.record_id] = expense.receipts.each_with_index.map do |receipt, index|
@@ -214,13 +180,9 @@ module Reimbursements
       end
     end
 
-    # Best-effort: a SharePoint outage shouldn't block sending to EUSA.
-    #
-    # Every payment document goes up, and each is uploaded independently so one
-    # failure doesn't cost the rest. result.bacs_sharepoint_url records the
-    # FIRST — the BACS spreadsheet when there is one — which is the link the
-    # batch record and the operator's email quote; the international forms land
-    # beside it in the same folder, named by date and payee.
+    # Best-effort and per document: a SharePoint outage must not block sending
+    # to EUSA. bacs_sharepoint_url keeps the first upload (the BACS sheet when
+    # there is one), the link the batch record quotes.
     def upload_payment_documents(result, documents)
       folder = @cost_centre.bacs_folder
       documents.each do |document|
@@ -259,25 +221,14 @@ module Reimbursements
       GraphClient::Attachment.new(filename: filename, content: bytes, content_type: XLSX_CONTENT_TYPE)
     end
 
-    # Writes the Batch record — including the EUSA draft's message id, so a
-    # later reopen can verify the draft still exists before deleting it —
-    # retrying transient failures since the draft is already live and we must
-    # recover rather than sit on it. Before any retry beyond the first, checks
-    # whether the previous attempt actually landed despite raising
-    # (a lost response, not a lost request) and reuses that record instead of
-    # creating a second, duplicate Batch for the same live draft. Returns nil
-    # only when every attempt failed (the caller then invokes the orphan-draft
-    # guard).
+    # Retried, since the draft is already live. A retry first reuses a batch
+    # the previous attempt wrote despite raising (a lost response, not a lost
+    # request). Returns nil when every attempt failed: the orphan-draft path.
     def create_batch(result)
       batch = with_write_retry do |attempt|
         (attempt > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
-          # No eusa_draft_created: it is derived from draft_message_id, set here.
-          #
-          # draft_web_link is stored because Graph hands the webLink back ONCE,
-          # here, and it cannot be derived from the message id afterwards — so
-          # a batch written without it can never show the operator the draft
-          # they still have to send. It used to reach only the operator's own
-          # email (BuildBatchJob).
+          # draft_web_link is stored because Graph returns it only once, here;
+          # it cannot be derived from the message id later.
           @store.create_batch!(date_sent: result.bacs_date,
                                notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
                                sharepoint_backup_url: result.bacs_sharepoint_url,
@@ -291,21 +242,15 @@ module Reimbursements
       nil
     end
 
-    # +batch+ is nil on the orphan-draft path; batch_id: nil is dropped by the
-    # mapper so the batch link is simply left unset (the expense still leaves the
-    # Approved queue, which is what stops a rebuild re-drafting it).
-    #
-    # Returns the subset of +expenses+ actually confirmed Submitted, so callers
-    # (producer notification) only act on expenses that genuinely made it —
-    # never on one whose write below failed.
+    # Returns the expenses actually marked Submitted, so only their producers
+    # are notified. +batch+ is nil on the orphan-draft path.
     def mark_submitted(result, expenses, batch, urls_by_expense)
       batch_id = batch&.record_id
       expenses.select do |expense|
         urls = urls_by_expense.fetch(expense.record_id, [])
-        # Re-read before writing: this run picked its Approved set minutes ago,
-        # and +limits_concurrency+ serialises builds of the SAME centre only.
-        # Belt to the braces of DatabaseStore#expenses_owned_by_cost_centre —
-        # and it also catches a claim a human re-typed mid-run.
+        # Re-read before writing: the Approved set was picked minutes ago, and
+        # limits_concurrency serialises builds of the SAME centre only (or a
+        # human re-typed the claim mid-run).
         current = @store.find_expense(expense.record_id)
         unless current&.status == Status::APPROVED
           result.errors << "ALREADY CLAIMED: expense #{expense.auto_number} is no longer Approved " \
@@ -330,11 +275,8 @@ module Reimbursements
       end
     end
 
-    # Only true when every receipt this expense actually had was successfully
-    # uploaded to SharePoint — an expense with no receipts has nothing to
-    # offload (trivially true), but a partial or total upload failure must not
-    # be reported as offloaded, or an operator could delete the only copy of a
-    # receipt that was never actually backed up.
+    # True only when every receipt uploaded: otherwise an operator could delete
+    # the only copy of a receipt that was never backed up.
     def receipts_offloaded?(expense, uploaded_urls)
       expense.receipts.size == uploaded_urls.size
     end
@@ -345,18 +287,10 @@ module Reimbursements
         "draft. Send THIS existing draft and repair the batch record manually. DO NOT rebuild."
     end
 
-    # Producer notifications go via Graph (Notifier#producer_notification), one
-    # per payee, keyed off the LINKED person's email (not the effective override
-    # — that only steers the money). Anyone already notified for this batch is
-    # skipped. A send failure is collected into result.errors, never raised —
-    # and only the payees whose send actually succeeded are stamped
-    # producer_notified, so a rebuild re-notifies anyone the send missed.
-    #
-    # Returns whether notification is COMPLETE — true when there was nothing
-    # left to notify (everyone already notified, or no one with a real email),
-    # or every payee's send succeeded — so the caller only flags the batch's
-    # producer_notifications_sent when that's actually accurate, not merely
-    # when at least one send happened to succeed.
+    # One email per payee, to the LINKED person (an override only steers the
+    # money). Only payees whose send succeeded are stamped, so a rebuild
+    # re-notifies the rest. Returns whether notification is COMPLETE (nothing
+    # left to send, or every send succeeded), so the batch flag is accurate.
     def notify_producers(result, to_notify, bacs_date)
       grouped = to_notify.group_by { |expense| expense.person&.email.to_s.strip }
                          .reject { |email, _| email.blank? }
@@ -369,8 +303,7 @@ module Reimbursements
       sent_emails.size == grouped.size
     end
 
-    # Returns true when the send succeeded (so the caller can stamp the payee),
-    # false when it failed (collected into result.errors, never raised).
+    # False when the send failed; the failure is collected, never raised.
     def deliver_producer_email(result, email, items, bacs_date)
       line_items = items.map do |expense|
         { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
@@ -405,12 +338,8 @@ module Reimbursements
       result.errors << "Failed to flag batch #{flag}: #{e.message}"
     end
 
-    # Retries a post-draft write up to WRITE_RETRY_ATTEMPTS times, immediately
-    # (no backoff — the point is to shed a transient blip fast, not compound a
-    # real outage). Yields the current attempt number (1-based) in case the
-    # caller needs to change behavior on a retry (create_batch's dedup lookup).
-    # Re-raises once attempts are exhausted, for the caller to turn into a
-    # result.errors message.
+    # Retries with a 1s/2s back-off, yielding the 1-based attempt number
+    # (create_batch dedups on a retry). Re-raises when attempts run out.
     def with_write_retry
       attempts = 0
       begin
@@ -419,9 +348,6 @@ module Reimbursements
       rescue StandardError
         raise unless attempts < WRITE_RETRY_ATTEMPTS
 
-        # A short, immediate-but-increasing back-off so a genuine outage isn't
-        # hammered by 3 retries with zero delay between them —
-        # this runs from a background job, so a brief sleep costs nothing.
         @sleeper.call(attempts)
         retry
       end

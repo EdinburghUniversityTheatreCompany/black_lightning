@@ -27,19 +27,14 @@
 #
 module Reimbursements
   ##
-  # One Build Batch run, from click to outcome. BuildBatchJob runs in the
-  # background, so without this row a build that is still running, failed
-  # before the Batch record existed, or found nothing to build leaves no trace
-  # on History at all — its only failure signal is an email. The controller
-  # creates the row the moment the operator clicks (status "building"); the job
-  # resolves it to completed / failed / nothing_to_build.
+  # One Build Batch run, from click to outcome: History's only trace of a build
+  # that is still running, failed before its Batch existed, or found nothing.
+  # Created "building" at the click; BuildBatchJob resolves it.
   class BatchAttempt < ApplicationRecord
     STATUSES = %w[building completed failed nothing_to_build].freeze
 
-    # A build normally finishes well inside BuildBatchJob's 30-minute
-    # concurrency window; a "building" row older than this means the job died
-    # with its retries exhausted (or the queue is stuck) and History should say
-    # so instead of showing an eternal spinner.
+    # BuildBatchJob's concurrency window: a "building" row older than this
+    # means the job died or the queue is stuck, not a long build.
     STALE_AFTER = 30.minutes
 
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre"
@@ -47,13 +42,9 @@ module Reimbursements
     validates :status, inclusion: { in: STATUSES }
 
     scope :building, -> { where(status: "building") }
-    # What History surfaces as a persistent alert: in-flight builds, failures,
-    # and completed-with-warnings. A cleanly completed attempt is redundant with
-    # the Batch row itself, and "nothing_to_build" is the benign, expected
-    # outcome of a serialised double-click — surfacing it for days would be
-    # pure noise, so it's recorded but not alerted on.
-    # The trailing where applies to the whole OR, giving
-    # "(building OR failed OR completed-with-warnings) AND not dismissed".
+    # A clean build is redundant with its Batch, and nothing_to_build is the
+    # expected outcome of a serialised double-click, so neither is alerted on.
+    # The trailing where applies to the whole OR.
     scope :needing_attention, lambda {
       where(status: %w[building failed])
         .or(where(status: "completed").where.not(error_messages: [ nil, "" ]))
@@ -72,13 +63,13 @@ module Reimbursements
 
     def dismissed? = dismissed_at.present?
 
-    # Hides the alert only. See the migration for why this flags, not deletes.
+    # Hides the alert; the record stays.
     def dismiss!(email: nil)
       update!(dismissed_at: Time.current, dismissed_by_email: email.presence)
     end
 
-    # A running build resolves itself within minutes, so offering to hide it
-    # would only invite hiding something live.
+    # A running build resolves itself within minutes; offering to hide it
+    # invites hiding something live.
     def dismissible? = !(building? && !stale?)
 
     def resolve!(status:, error_messages: nil, batch_record_id: nil)

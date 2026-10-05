@@ -1,29 +1,13 @@
 module Admin
   module Reimbursements
     ##
-    # Finance-team Build Batch + History.
-    #
-    # * new / create — preview every Approved expense via its EFFECTIVE payee
-    #   (flagging "→ third party" overrides), set the BACS date / EUSA recipient
-    #   / signature and edit the EUSA email, then enqueue BuildBatchJob, which
-    #   creates the draft in the cost centre's send mailbox, offloads receipts +
-    #   the xlsx to SharePoint, records the Batch and marks the expenses Submitted.
-    # * index / show — past batches with per-batch totals and links.
-    # * reopen — revert a batch's expenses to Approved and delete it so it can be
-    #   rebuilt; blocked if any expense is already Paid (reconciled).
-    #
-    # Build Batch runs in the BACKGROUND (BuildBatchJob): the processor is
-    # API-heavy (SharePoint uploads + Graph draft) and can exceed the request
-    # timeout, and a concurrency lock on the cost centre stops a double-click
-    # double-submitting. The operator is redirected to History and emailed the
-    # draft link when it's ready.
+    # Build Batch and History. #create enqueues BuildBatchJob (a build can exceed
+    # the request timeout) and sends the operator to History; #reopen reverts a
+    # batch's expenses to Approved and deletes it so it can be rebuilt.
     class BatchesController < FinanceController
       before_action :require_cost_centre, only: %i[new create]
 
-      # How many of a build attempt's follow-up failures History prints inline
-      # before collapsing them behind a disclosure. One batch whose receipt
-      # offload failed per receipt printed fifteen near-identical paragraphs
-      # and pushed the batch list itself off the screen for seven days.
+      # How many follow-up failures History lists before collapsing them.
       INLINE_FAILURE_MESSAGES = 3
 
       def index
@@ -31,7 +15,6 @@ module Admin
         @batches = store.batches_for_cost_centre.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
         respond_to do |format|
           format.html { load_history }
-          # One row per batch, summarising its expenses (Exports::Batches).
           format.csv { send_export ::Reimbursements::Exports::Batches, @batches }
         end
       end
@@ -45,13 +28,8 @@ module Admin
         assign_new_form
       end
 
-      # Enqueue the build (BuildBatchJob serialises per cost centre, so a
-      # double-click can't double-submit) and send the operator to History; the
-      # draft link lands there and in their inbox when the background run finishes.
-      #
-      # The BACS date is validated BEFORE enqueuing: a blank/malformed date must
-      # not silently fall back to today (a wrong payment date), so re-render the
-      # form with an error and enqueue nothing.
+      # The BACS date is validated BEFORE enqueuing: a bad one must never fall
+      # back to today, a wrong payment date.
       def create
         bacs_date = parse_bacs_date(params[:bacs_date])
         if bacs_date.nil?
@@ -66,10 +44,7 @@ module Admin
           return render :new, status: :unprocessable_entity
         end
 
-        # The attempt row is History's in-app trace of this build — visible
-        # from the moment of the click (queued/running), resolved by the job
-        # (by id) to completed/failed/nothing_to_build. Without it, a build that
-        # dies before the Batch record exists is invisible outside email.
+        # History's trace of this build from the click; the job resolves it by id.
         attempt = ::Reimbursements::BatchAttempt.create!(
           cost_centre: @cost_centre, bacs_date: bacs_date,
           triggered_by_email: current_user.try(:email)
@@ -95,10 +70,8 @@ module Admin
         paid = linked.select { |expense| expense.status == ::Reimbursements::Status::PAID }
         return blocked_by_paid(paid) if paid.any?
 
-        # Resolved BEFORE the revert: a batch has no cost-centre column of its
-        # own, so its mailbox is read off the expenses it holds — and the revert
-        # is what unlinks them. Read afterwards, every reopen would fall back to
-        # the default centre and look for the draft in the wrong mailbox.
+        # Resolved BEFORE the revert: the mailbox is read off the batch's
+        # expenses, and the revert unlinks them.
         mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked))
         return blocked_by_unconfirmed_draft if batch.draft_message_id.present? && mailbox.nil?
 
@@ -109,17 +82,8 @@ module Admin
         redirect_to admin_reimbursements_batches_path, **draft_cleanup_flash(batch, reverted, mailbox)
       end
 
-      # Ask Graph whether this batch's EUSA draft is still sitting unsent, and
-      # say so — the same probe #reopen makes, surfaced on its own.
-      #
-      # Sending that draft is the one manual step left in paying people and the
-      # portal deliberately has no visibility into it, so "has it gone?" could
-      # only be answered by ATTEMPTING a reopen and reading the refusal. That is
-      # a destructive way to ask a read-only question.
-      #
-      # On demand, never on page load, for the reason StatusController's probes
-      # are: a batch list must not wait on Microsoft, and History can show a
-      # dozen batches.
+      # #reopen's probe on its own: is the EUSA draft still unsent? On demand,
+      # never on page load: a batch list must not wait on Microsoft.
       def check_draft
         batch = find_or_404(:find_batch)
         linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
@@ -134,8 +98,8 @@ module Admin
           redirect_to_history(notice: "Checked just now: this batch's EUSA draft is still UNSENT in " \
                                       "#{mailbox}. EUSA has not been asked to pay it yet.")
         else
-          # draft_message? fails CLOSED, so this covers "sent", "deleted",
-          # "moved" and "Graph is down" alike and must not claim the first.
+          # draft_message? fails CLOSED: this covers sent, deleted, moved and
+          # Graph being down alike, so it must not claim "sent".
           redirect_to_history(alert: "Couldn't confirm this batch's EUSA draft is still unsent. It may " \
                                      "already have been sent, it may have been deleted or moved, or " \
                                      "Graph couldn't be reached. Check Outlook before acting on it.")
@@ -144,9 +108,7 @@ module Admin
 
       private
 
-      # Back to wherever the check was made from — History lists every batch and
-      # Detail is one batch's page, and a probe must not move the operator off
-      # the page they are reading.
+      # Back to whichever page the check was made from (History or Detail).
       def redirect_to_history(**flash_args)
         redirect_back fallback_location: admin_reimbursements_batches_path, **flash_args
       end
@@ -161,11 +123,8 @@ module Admin
         @default_email = compose_default_email(@bacs_date, @sender_name)
       end
 
-      # Delete the stale EUSA draft this batch created, then build the reopen
-      # flash. The revert + batch delete have already happened and must stand, so
-      # a Graph failure is rescued (best-effort): the reopen still succeeds, with
-      # a warning telling the operator to delete the draft by hand. Falls back to
-      # the same manual warning when the batch has no stored draft id.
+      # The revert has already happened and stands, so a failed draft delete
+      # (or no stored draft id) only adds a delete-it-by-hand warning.
       def draft_cleanup_flash(batch, reverted, mailbox)
         if batch.draft_message_id.present?
           begin
@@ -181,20 +140,11 @@ module Admin
           alert: "Delete the old EUSA draft in Outlook manually before sending the rebuilt one." }
       end
 
-      # Where a batch's EUSA draft might be, best guess first. A Batch carries no
-      # cost-centre column, so the centre is read off the expenses it holds —
-      # exact for a batch built since Build Batch became single-centre, and a
-      # GUESS for anything older.
-      #
-      # Which is why this is a LIST. Every older batch drafted into the default
-      # centre's mailbox whatever its claims say, and GraphClient#draft_message?
-      # fails CLOSED — so one wrong guess reads as "already sent, do not reopen",
-      # untrue and, being derived from stored data, permanently untrue. Derived
-      # centre then default costs one extra Graph read and cannot get stuck.
-      #
-      # Unplaced claims are dropped from the derivation rather than falling to
-      # the default as the money path makes them: they say nothing about where a
-      # draft was written, and the default is already the last candidate.
+      # Where the draft might be, best guess first. A batch has no cost-centre
+      # column, so its centre is read off its expenses: a GUESS for batches built
+      # before single-centre builds, which all drafted into the default mailbox.
+      # A LIST because draft_message? fails CLOSED, so one wrong guess would read
+      # as permanently "already sent". Unplaced claims say nothing, so are skipped.
       def draft_mailboxes(linked_expenses)
         ids = linked_expenses.filter_map(&:cost_centre_id).uniq
         derived = ids.one? && store.cost_centres.find { |centre| centre.id == ids.first }
@@ -203,21 +153,16 @@ module Admin
           .filter_map { |centre| centre.send_mailbox.presence }.uniq
       end
 
-      # The first candidate that still holds this batch's draft, or nil if none
-      # does — which is the "it may already have been sent" refusal, now reached
-      # only after every mailbox the draft could be in has been asked.
+      # The first candidate still holding the draft; nil is the "may already
+      # have been sent" refusal.
       def mailbox_holding_draft(batch, mailboxes)
         return mailboxes.first if batch.draft_message_id.blank?
 
         mailboxes.find { |mailbox| confirmed_still_draft?(batch, mailbox) }
       end
 
-      # Reopen must never revert expenses out of a batch whose EUSA draft was
-      # already sent — the whole point of "reopen" is to safely rebuild, and a
-      # sent draft means the money is already committed. This app has no
-      # visibility into the manual "send in Outlook" step by design, so the
-      # only way to tell is asking Graph whether the stored message id is
-      # still an unsent draft right now.
+      # Reopen must never revert a batch whose draft was already sent, and only
+      # Graph can tell.
       def confirmed_still_draft?(batch, mailbox)
         graph.draft_message?(mailbox: mailbox, message_id: batch.draft_message_id)
       end
@@ -230,12 +175,9 @@ module Admin
                            "manually instead of rebuilding."
       end
 
-      # A batch is ONE centre's BACS submission — spreadsheet, EUSA draft and
-      # sender mailbox all belong to it — so the centre is settled before the
-      # form is drawn: the page's ?cost_centre=, else the sole configured centre.
-      # Never CostCentre.default once a second centre exists; that is
-      # order(:id).first, which is how termtime's claims came to be paid out of
-      # Fringe's pot, from Fringe's mailbox.
+      # A batch is ONE centre's submission: the page's ?cost_centre=, else the
+      # sole configured one. Never CostCentre.default once a second centre
+      # exists: that paid termtime's claims from Fringe's pot.
       def require_cost_centre
         @cost_centre = selected_cost_centre || sole_cost_centre
         return if @cost_centre
@@ -250,36 +192,27 @@ module Admin
         selectable_cost_centres.one? ? selectable_cost_centres.first : nil
       end
 
-      # ASK, rather than bounce. The sidebar's "Build Batch" entry carries no
-      # cost centre and never can (one link on every admin page), so redirecting
-      # here would make Build Batch unreachable from where most operators start.
+      # ASK rather than bounce: with no centre selected the sidebar's link
+      # carries none, and a redirect would make Build Batch unreachable from it.
       def render_cost_centre_chooser
         @title = "Build batch"
         render :choose_cost_centre
       end
 
-      # Read through the money path's OWNERSHIP rule, not the screens' lenient
-      # filter, so an unplaced claim cannot be built into two drafts. The same
-      # question BuildBatchJob re-asks, so what the operator confirms is what
-      # gets built.
+      # The money path's OWNERSHIP rule, not the screens' lenient filter, so an
+      # unplaced claim cannot reach two drafts. BuildBatchJob asks the same.
       def approved_expenses
         store.expenses_owned_by_cost_centre(@cost_centre)
              .select { |expense| expense.status == ::Reimbursements::Status::APPROVED }
       end
 
-      # Submitted + Paid expenses carry a batch link; these populate History.
-      # The instance vars only the History page itself needs (the CSV gets its
-      # per-batch figures from the exporter).
+      # What only the HTML page needs; the CSV gets its figures from the exporter.
       def load_history
         @expenses_by_batch = processed_expenses.group_by(&:batch_id)
-        # In-flight/failed/no-op builds (and completed-with-warnings) from the
-        # last week — a cleanly completed attempt is redundant with its Batch
-        # row, but these have no other in-app trace.
         attempts = ::Reimbursements::BatchAttempt.needing_attention
                                                  .where(created_at: 7.days.ago..)
                                                  .includes(:cost_centre).recent_first
-        # BatchAttempt carries its own cost_centre_id (NOT NULL), so this one
-        # needs no leniency: every attempt row knows which pot it was built for.
+        # Every attempt has a cost centre, so this filter needs no leniency.
         attempts = attempts.where(cost_centre_id: selected_cost_centre.id) if selected_cost_centre
         @batch_attempts = attempts
       end
@@ -292,19 +225,14 @@ module Admin
         expenses.sum { |expense| expense.amount || 0 }
       end
 
-      # Parse the submitted BACS date, or nil if it's blank/malformed — the
-      # caller re-renders the form rather than silently defaulting to today.
       def parse_bacs_date(value)
         Date.parse(value.to_s)
       rescue ArgumentError, TypeError
         nil
       end
 
-      # The form's EUSA recipient is free text overriding the cost centre's
-      # own (format-validated) configured recipient, passed straight through
-      # as the sole "to" address of the EUSA draft — it gets no format check
-      # of its own otherwise. Blank is fine (falls back to the cost centre's
-      # recipient); only a non-blank, malformed value is rejected.
+      # The override is the draft's only "to" address and is format-checked
+      # nowhere else. Blank falls back to the centre's own recipient.
       def invalid_eusa_recipient?
         params[:eusa_recipient].present? && !params[:eusa_recipient].match?(URI::MailTo::EMAIL_REGEXP)
       end

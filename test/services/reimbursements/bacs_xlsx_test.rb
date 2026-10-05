@@ -1,5 +1,5 @@
 require "test_helper"
-require "rubyXL" # BacsXlsx#generate requires it lazily; this test also parses output with RubyXL directly
+require "rubyXL" # generate requires it lazily; this test parses the output itself
 
 module Reimbursements
   class BacsXlsxTest < ActiveSupport::TestCase
@@ -37,7 +37,6 @@ module Reimbursements
       sheet = parsed(BacsXlsx.new.generate(rows))
       first = sheet.sheet_data[2]
 
-      # Leading-zero values must round-trip as literal text, not as truncated numbers.
       assert_equal "00123456", first[3].value
       assert_equal "439999", first[4].value
       assert_equal "08-99-99", first[2].value
@@ -69,8 +68,7 @@ module Reimbursements
       )
       first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
 
-      # A leading apostrophe forces the cell to literal text, so =, @, +, - values
-      # can never be interpreted as a formula by Excel / on CSV export.
+      # A leading apostrophe makes the cell literal text, never a formula.
       assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", first[0].value
       assert_equal "'@SUM(A1:A9)", first[7].value
       assert_equal "'-2+3", first[6].value
@@ -100,7 +98,6 @@ module Reimbursements
       assert_equal "'=HYPERLINK(\"http://evil\")", first[2].value
       assert_equal "'@SUM(A1:A9)", first[3].value
       assert_equal "'-2+3", first[4].value
-      # Still forced to text format, same as an ordinary bank-detail cell.
       assert_equal "@", first[2].number_format.format_code
       assert_equal "@", first[3].number_format.format_code
       assert_equal "@", first[4].number_format.format_code
@@ -112,7 +109,6 @@ module Reimbursements
       assert_equal "Alice Producer", first[0].value
       assert_equal "Fake blood", first[7].value
       assert_equal "PROPS ALICE", first[6].value
-      # Forced-text bank fields keep their leading zeros/dashes and are never prefixed.
       assert_equal "08-99-99", first[2].value
       assert_equal "00123456", first[3].value
       assert_equal "439999", first[4].value
@@ -127,9 +123,7 @@ module Reimbursements
       assert_in_delta(-12.5, cell.value, 0.001)
     end
 
-    # Defaulting a blank cost centre to "F40" books a second cost centre's spend
-    # against the Fringe and has EUSA pay it from the wrong pot, so refusing the
-    # workbook is the safe direction.
+    # Defaulting to F40 would pay a second centre's spend from the Fringe's pot.
     test "refuses to build a workbook when a row has no cost-centre code" do
       blank = rows.first.dup
       blank.cost_centre = ""

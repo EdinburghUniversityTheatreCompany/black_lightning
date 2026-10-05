@@ -1,56 +1,34 @@
 module Reimbursements
   ##
-  # Interactive Build Batch, run in the background. BatchProcessor#process — the
-  # xlsx build, every receipt upload to SharePoint, the EUSA draft and the
-  # producer emails — can exceed the Puma/proxy timeout, and run inline a
-  # double-click builds two batches / two drafts / marks Submitted twice.
-  #
-  # This job runs the SAME BatchProcessor#process the nightly uses, off the
-  # request. Two protections stop a double-submit:
-  #
-  #   * +limits_concurrency+ keyed on the cost centre serialises builds, so a
-  #     double-click can't run two processes at once; the second waits.
-  #   * the job re-selects the Approved expenses at run time. By the time a
-  #     serialised second build runs, the first has marked them Submitted, so the
-  #     Approved set is empty and the build cleanly no-ops.
-  #
-  # When the draft is ready it emails the operator the draft link (Notifier
-  # #batch_ready, as the nightly does); a failed build emails Notifier#failure.
-  # The controller enqueues this and redirects to History with a "building…"
-  # flash — the operator watches History / their inbox, not a spinning request.
+  # Build Batch off the request: BatchProcessor#process can exceed the request
+  # timeout. A double-click cannot double-submit: builds are serialised per cost
+  # centre, and the job re-selects the Approved set at run time, so a serialised
+  # second build finds nothing left and no-ops. Emails the operator the draft
+  # link (Notifier#batch_ready) or the failure.
   class BuildBatchJob < Reimbursements::ApplicationJob
     queue_as :default
 
-    # Serialise builds per cost centre: a double-click (or a rapid rebuild) can't
-    # run two BatchProcessor#process calls at once, so it can't create two drafts
-    # / two batches / mark Submitted twice. duration: is set well above the
-    # default 3-minute lock TTL — BatchProcessor#process does per-expense
-    # SharePoint uploads and a Graph draft create across a batch that can run to
-    # 200 rows, plausibly exceeding 3 minutes on its own; a lock expiring
-    # mid-run would let a concurrent second build past the single-flight
-    # guarantee this concurrency key exists to enforce.
+    # Well above the default 3-minute lock: a 200-row batch's uploads can take
+    # longer, and a lock expiring mid-run lets a second build past single-flight.
     limits_concurrency to: 1, duration: 30.minutes, key: ->(*args) {
       params = args.last.is_a?(Hash) ? args.last : {}
       "reimbursements_build_batch_#{params[:cost_centre_key]}"
     }
 
-    # Injection seams for tests (mirrors NightlyBatchJob; no mocking library).
+    # Test seams (the suite has no mocking library).
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :processor_builder,
                     default: ->(store:, graph:, cost_centre:) {
                       BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre)
                     }
-    # Operator alerts send through Graph (Notifier) from the cost centre's send
-    # mailbox, so they land in its Sent Items — the same as the nightly.
+    # Alerts send from the cost centre's send mailbox, so they land in its Sent Items.
     class_attribute :notifier_builder,
                     default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
     def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
                 eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
-      # The controller creates the BatchAttempt row at click time and passes its
-      # id, so this run resolves EXACTLY its own row. Resolving by "the oldest
-      # building row for this cost centre" instead mislabels History whenever two
-      # builds race or a prior job died. A retry re-uses the same id.
+      # The row the controller created at the click, by id: "the oldest
+      # building row" mislabels History when builds race or a prior job died.
       attempt = attempt_id && BatchAttempt.find_by(id: attempt_id)
 
       cost_centre = CostCentre.find_by(key: cost_centre_key)
@@ -60,14 +38,11 @@ module Reimbursements
         return
       end
 
-      # A direct perform_now (or a legacy enqueue) with no row: create one so the
-      # build still leaves a History trace.
+      # A run with no click-time row (a direct perform_now) still leaves a trace.
       attempt ||= BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
                                        triggered_by_email: Array(operator_emails).compact_blank.first)
-      # The approved claims THIS centre OWNS — not the whole portal's (which
-      # paid other centres' claims out of this pot) and not the screens' lenient
-      # filter (which lets two centres build the same claim).
-      # See DatabaseStore#expenses_owned_by_cost_centre.
+      # The claims this centre OWNS, not the screens' lenient filter (which
+      # lets two centres build the same claim).
       approved = store.expenses_owned_by_cost_centre(cost_centre)
                       .select { |expense| expense.status == Status::APPROVED }
       if approved.empty?
@@ -87,10 +62,8 @@ module Reimbursements
                        batch_record_id: result.batch_id)
       notify(cost_centre, result, approved, operator_emails)
     rescue GraphAuth::AuthError => e
-      # Unlike an ordinary Graph outage, a credential failure means every
-      # further Graph call (including the operator notifier itself) would
-      # fail identically — escalate straight to the IT subcommittee instead of
-      # attempting a doomed operator email.
+      # A credential failure dooms every further Graph call, the operator email
+      # included, so escalate straight to IT.
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre_key} — #{e.message}")
       GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
       attempt&.resolve!(status: "failed", error_messages: "Microsoft authentication failed: #{e.message}")
@@ -98,10 +71,7 @@ module Reimbursements
 
     private
 
-    # Memoized like +store+: graph_builder.call is invoked at two separate call
-    # sites in a single run (the processor and the notifier), and each call
-    # would otherwise mint a brand-new GraphClient — and a brand-new OAuth
-    # token fetch — of its own.
+    # The processor and the notifier share one GraphClient (one OAuth token).
     def graph
       @graph ||= graph_builder.call
     end
@@ -116,9 +86,7 @@ module Reimbursements
       Date.current
     end
 
-    # Email the operator who triggered the build: the draft link on success, the
-    # errors on failure. A Graph outage here must never leave the job in a failed
-    # state (the batch itself already ran), so it's rescued + logged.
+    # A Graph outage here must not fail the job: the batch already ran.
     def notify(cost_centre, result, approved, operator_emails)
       recipients = Array(operator_emails).compact_blank
       if recipients.empty?

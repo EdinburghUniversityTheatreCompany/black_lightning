@@ -50,8 +50,7 @@ module Admin
       end
 
       test "refuses to dismiss a build that is still running" do
-        # Hiding a live build would leave the operator thinking nothing is in
-        # flight, and a rebuild on top of it is exactly what the alert prevents.
+        # Hiding a live build invites a rebuild on top of it.
         attempt = build_attempt
 
         post :dismiss, params: { id: attempt.id }
@@ -83,8 +82,7 @@ module Admin
       end
 
       test "404s on an unknown attempt" do
-        # ApplicationController rescues RecordNotFound into its 404 page rather
-        # than letting it raise.
+        # ApplicationController rescues RecordNotFound into its 404 page.
         post :dismiss, params: { id: 0 }
 
         assert_response :not_found

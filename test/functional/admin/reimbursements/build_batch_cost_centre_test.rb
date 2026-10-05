@@ -3,16 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # Build Batch is a single-cost-centre operation: one pot's claims, one BACS
-    # spreadsheet, one EUSA draft sent from that pot's mailbox. Before this it
-    # hardcoded CostCentre.default (order(:id).first) and swept EVERY approved
-    # claim in the portal, so with two centres configured termtime's claims went
-    # into a Fringe batch.
-    #
-    # The second cost centre is built here rather than added to the fixtures:
-    # a second fixture row makes CostCentre.default resolve to whichever label
-    # FixtureSet.identify hashes lower and deletes the one-centre world the
-    # reconcile tests pin as a business rule.
+    # Build Batch is one cost centre's operation. The second centre is built here,
+    # never as a fixture (CostCentre.default would resolve by FixtureSet hash).
     class BuildBatchCostCentreTest < ActionController::TestCase
       include ReimbursementsTestHelpers
       include ActiveJob::TestHelper
@@ -47,9 +39,7 @@ module Admin
         assert_equal @termtime, assigns(:cost_centre)
       end
 
-      # ASKS rather than bounces: the sidebar's Build Batch link carries no cost
-      # centre and never can, so a redirect here made the feature unreachable
-      # from the only place most operators start.
+      # Asks rather than bounces: with no centre selected the sidebar link carries none.
       test "with several centres and none chosen, it asks which rather than picking one" do
         get :new
 
@@ -93,9 +83,7 @@ module Admin
         assert_equal "termtime", enqueued_jobs.last["arguments"].first["cost_centre_key"]
       end
 
-      # The controller's preview is only a preview: BuildBatchJob re-selects the
-      # Approved set at run time (that re-selection is what makes a serialised
-      # double-click a clean no-op), so the narrowing has to be there too.
+      # The job re-selects the Approved set at run time, so the narrowing must be there too.
       class RecordingProcessor
         attr_reader :expenses
 

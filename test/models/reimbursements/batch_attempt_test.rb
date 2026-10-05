@@ -53,8 +53,7 @@ module Reimbursements
       assert_includes attention, failed
       assert_includes attention, with_warnings
       assert_not_includes attention, clean
-      # A deduped double-click's no-op is benign and expected — recorded, but
-      # not surfaced as a lingering alert.
+      # A serialised double-click's no-op is expected: recorded, not alerted on.
       assert_not_includes attention, noop
     end
 

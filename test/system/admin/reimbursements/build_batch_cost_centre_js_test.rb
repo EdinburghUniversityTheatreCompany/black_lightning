@@ -3,14 +3,9 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # Build Batch, clicked for real, in a two-cost-centre portal.
-    #
-    # A request test cannot cover this: it POSTs straight to #create with
-    # whatever parameters it likes, so it passes just as happily when the real
-    # form never sends them. The form posts to a bare path with no query string,
-    # so the cost centre has to travel in a hidden field — exactly the
-    # card.with_footer class of defect CLAUDE.md warns about, where only a
-    # browser clicking the actual button can see the difference.
+    # Build Batch, clicked for real, in a two-cost-centre portal. The form posts
+    # to a bare path, so the centre travels in a HIDDEN FIELD; a request test
+    # POSTs whatever it likes and cannot see that, only a browser can.
     class BuildBatchCostCentreJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -35,15 +30,13 @@ module Admin
       end
 
       test "the sidebar's Build Batch asks which pot, then submits for the one chosen" do
-        # The sidebar link carries no cost centre and never can, so this is the
-        # entry point that must not dead-end.
+        # With no centre selected the sidebar link carries none: no dead end.
         visit new_admin_reimbursements_batch_path
 
         assert_text "Pick the pot this batch is for"
         click_on "Bedlam Termtime (BED)"
 
-        # The preview is the money path's ownership read, not the screens'
-        # filter: only this centre's claims may be in the spreadsheet.
+        # Only this centre's claims (the money path's ownership read).
         assert_text "Termtime gaffer tape"
         assert_no_text "Fringe gaffer tape"
 

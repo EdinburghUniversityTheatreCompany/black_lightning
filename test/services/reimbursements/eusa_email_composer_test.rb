@@ -2,8 +2,7 @@ require "test_helper"
 
 module Reimbursements
   class EusaEmailComposerTest < ActiveSupport::TestCase
-    # The composer reads the AR models' public interface (effective payee name,
-    # nominal code, amount, description); built unpersisted.
+    # Built unpersisted: the composer only reads them.
     Person = Reimbursements::Person
     Budget = Reimbursements::Budget
     Expense = Reimbursements::Expense
@@ -57,8 +56,6 @@ module Reimbursements
       assert_includes email.body_html, "Hi Craig,"
     end
 
-    # BatchProcessor still takes a per-batch contact name; the setting is only
-    # the default it falls back to.
     test "an explicit contact name overrides the cost centre's" do
       email = EusaEmailComposer.new.compose(
         expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],

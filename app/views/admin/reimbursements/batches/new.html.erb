@@ -9,9 +9,7 @@
 <% if @expenses.empty? %>
   <%= render AlertComponent.new(type: :info) do %>
     No approved expenses to batch. Approve some on
-    <%# A link, not the name of a page to go and find: this and Review's
-        Approved tab named each other in prose both ways. Carries the centre
-        this build is for, so the queue on screen is the one that feeds it. %>
+    <%# Carries this build's centre, so the queue shown is the one that feeds it. %>
     <%= link_to "the Review queue", admin_reimbursements_review_path(cost_centre: @cost_centre.key),
                 class: "text-primary underline" %> first.
   <% end %>
@@ -34,8 +32,6 @@
         <tbody>
           <% @expenses.each do |expense| %>
             <tr class="border-b border-gray-100 align-top">
-              <%# The preview is the screen whose job is checking, so each row
-                  opens the claim it is about. %>
               <td class="py-1 pr-3">
                 <%= link_to expense.auto_number,
                             edit_admin_reimbursements_expense_edit_path(expense.record_id),
@@ -47,8 +43,7 @@
                   <%= render BadgeComponent.new(type: :warning, pill: true).with_content("→ third party") %>
                 <% end %>
               </td>
-              <%# The one screen that would otherwise print every payee's
-                  account number on page load. %>
+              <%# Masked: this page would otherwise print every account number on load. %>
               <td class="py-1 pr-3">
                 <%= render Admin::Reimbursements::BankDetailsComponent.new(
                       sort_code: expense.effective_sort_code,
@@ -68,10 +63,8 @@
   <% end %>
 
   <%= form_with url: admin_reimbursements_batches_path, method: :post do %>
-    <%# Which pot this batch pays, carried in the FORM and not merely in the URL
-        that drew it: #create re-resolves the centre from the request, and a POST
-        carries no query string, so without this the submit arrived with nothing
-        and bounced the operator straight back to History. %>
+    <%# The centre travels in the FORM: #create re-resolves it and a POST
+        carries no query string. %>
     <%= hidden_field_tag :cost_centre, @cost_centre.key %>
     <%= render CardComponent.new(title: "EUSA email", html_class: "mt-4") do |card| %>
       <% card.with_footer do %>
