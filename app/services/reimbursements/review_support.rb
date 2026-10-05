@@ -134,16 +134,13 @@ module Reimbursements
     private_class_method :excl_vat_over_gross?
 
     # record_id => possible duplicates: same linked person, same gross amount,
-    # submitted within +window_days+. A missing timestamp counts as within
-    # (over-warn rather than miss one).
-    def find_duplicate_submissions(expenses, window_days: DUPLICATE_WINDOW_DAYS)
+    # submitted within DUPLICATE_WINDOW_DAYS. A missing timestamp counts as
+    # within (over-warn rather than miss one).
+    def find_duplicate_submissions(expenses)
       duplicates = {}
-      expenses.each_with_index do |first, index|
-        expenses[(index + 1)..].each do |second|
-          next if first.person.nil? || second.person.nil?
-          next if first.person.record_id != second.person.record_id
-          next if first.amount != second.amount
-          next unless submitted_within?(first.submitted_at, second.submitted_at, window_days)
+      expenses.select(&:person).group_by { |e| [ e.person.record_id, e.amount ] }.each_value do |group|
+        group.combination(2) do |first, second|
+          next unless submitted_within?(first.submitted_at, second.submitted_at)
 
           (duplicates[first.record_id] ||= []) << second
           (duplicates[second.record_id] ||= []) << first
@@ -153,10 +150,10 @@ module Reimbursements
     end
 
     # Whole-day gap (floored) within the window.
-    def submitted_within?(first_time, second_time, window_days)
+    def submitted_within?(first_time, second_time)
       return true if first_time.nil? || second_time.nil?
 
-      (first_time.to_i - second_time.to_i).abs / 86_400 <= window_days
+      (first_time.to_i - second_time.to_i).abs / 86_400 <= DUPLICATE_WINDOW_DAYS
     end
     private_class_method :submitted_within?
   end

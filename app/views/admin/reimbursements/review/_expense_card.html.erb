@@ -192,7 +192,7 @@
       <%= safe_join(duplicates.map { |d|
             link_to("##{d.auto_number}", edit_admin_reimbursements_expense_edit_path(d.record_id),
                     class: "underline") }, ", ") %>:
-      same payee and amount within 30 days. Check this isn't a double-submission.
+      same payee and amount within <%= Reimbursements::ReviewSupport::DUPLICATE_WINDOW_DAYS %> days. Check this isn't a double-submission.
     <% end %></div>
   <% end %>
 
