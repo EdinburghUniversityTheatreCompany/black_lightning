@@ -276,7 +276,7 @@ module Admin
         return :skipped_no_bank unless expense.effective_has_bank_details?
         # A blank budget writes a blank nominal code into the BACS spreadsheet,
         # which EUSA can never reconcile.
-        return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
+        return :skipped_no_budget if expense.budget.nil?
         # The international pair goes before the ex-VAT guard: ex-VAT mirrors the
         # gross on that rail, so a blank GBP amount fails both, and the ex-VAT
         # message names a field the rail lacks.

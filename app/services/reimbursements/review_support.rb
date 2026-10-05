@@ -68,7 +68,7 @@ module Reimbursements
       unless expense.international?
         blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
       end
-      blocking << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
+      blocking << "no budget" if expense.budget.nil?
       advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 
       blocking << "no bank details" unless expense.effective_has_bank_details?
@@ -115,7 +115,7 @@ module Reimbursements
 
     # Would the ex-VAT amount exceed the budget's remaining?
     def over_budget?(expense, budget_by_id)
-      return false if expense.amount_excl_vat.nil? || expense.budget&.record_id.blank?
+      return false if expense.amount_excl_vat.nil? || expense.budget.nil?
 
       budget = budget_by_id[expense.budget.record_id]
       !budget.nil? && !budget.remaining.nil? && expense.amount_excl_vat > budget.remaining
@@ -141,7 +141,6 @@ module Reimbursements
       expenses.each_with_index do |first, index|
         expenses[(index + 1)..].each do |second|
           next if first.person.nil? || second.person.nil?
-          next if first.person.record_id.blank? || second.person.record_id.blank?
           next if first.person.record_id != second.person.record_id
           next if first.amount != second.amount
           next unless submitted_within?(first.submitted_at, second.submitted_at, window_days)

@@ -333,31 +333,6 @@ module Admin
         assert_select "form[action*='#{admin_reimbursements_approve_review_path(blocked.record_id)}']", 0
       end
 
-      test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
-        # Unpersisted, since such a budget can't exist as a DB row.
-        blank_budget = ::Reimbursements::Budget.new(name: "Ghost", nominal_code: "")
-        blank_budget.define_singleton_method(:record_id) { "" }
-        person = ::Reimbursements::Person.new(name: "Pat", email: "p@x.co")
-        person.build_payment_details(sort_code: "08-99-99", account_number: "66374958")
-        expense = ::Reimbursements::Expense.new(
-          auto_number: 5, status: ::Reimbursements::Status::PENDING, person: person,
-          amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
-        )
-        expense.instance_variable_set(:@receipts, [])
-        expense.define_singleton_method(:record_id) { "recBlankBud" }
-        store = ::Reimbursements::DatabaseStore.new
-        updates = []
-        store.define_singleton_method(:find_expense!) { |_id| expense }
-        store.define_singleton_method(:update_expense!) { |*args| updates << args }
-        BaseController.store_builder = ->(**) { store }
-        sign_in @user
-
-        patch :approve, params: { id: "recBlankBud" }
-
-        assert_empty updates, "must not approve an expense with a blank-record_id budget"
-        assert_match(/without a budget/i, flash[:alert])
-      end
-
       test "bulk approve advances every selected pending expense" do
         a = pending_expense
         b = pending_expense

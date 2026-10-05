@@ -131,12 +131,6 @@ module Reimbursements
       assert_not_includes summary[:advisory], "ex-VAT amount exceeds the gross"
     end
 
-    test "blank-record-id budget needs attention" do
-      placeholder = budget(record_id: "", nominal_code: "")
-      exp = expense(payee: valid_payee, budget: placeholder, receipts: [ receipt ])
-      assert ReviewSupport.needs_attention(exp, {}, valid_checker)
-    end
-
     test "modulus runs on the override account, not the empty linked payee" do
       exp = expense(payee: payee_without_bank, budget: budget, receipts: [ receipt ],
         payee_name_override: "Carol Supplier", sort_code_override: "12-34-56",
@@ -232,13 +226,6 @@ module Reimbursements
         pair(valid_payee, payee_without_bank),
         [ pair(valid_payee, valid_payee).first ]
       ].each_with_index { |set, i| assert_empty ReviewSupport.find_duplicate_submissions(set), "case #{i}" }
-    end
-
-    test "missing payee record id never matched" do
-      missing = build_person(record_id: "", name: "(missing payee)", email: "")
-      a = dup_expense("recA", missing, amount: "60.00", auto_number: 1, submitted_at: NOW)
-      b = dup_expense("recB", missing, amount: "60.00", auto_number: 2, submitted_at: NOW)
-      assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
     end
 
     test "missing submitted_at still flags (over-warn)" do

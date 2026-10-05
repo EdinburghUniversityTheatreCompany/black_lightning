@@ -43,7 +43,7 @@
     <span class="font-medium">
       #<%= expense.auto_number %>:
       <%# The payee's People row, where bank details are fixed. %>
-      <% if expense.person&.record_id.present? %>
+      <% if expense.person %>
         <%= link_to expense.person.name.presence || "(no name)",
                     admin_reimbursements_people_path(person: expense.person.record_id,
                                                      anchor: "person-#{expense.person.record_id}"),
@@ -152,7 +152,7 @@
   <% fix_links = capture do %>
     Fix the <%= link_to "payee override", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                         class: "underline" %>
-    <% if expense.person&.record_id.present? %>
+    <% if expense.person %>
       or <%= link_to "#{expense.person.name.presence || 'their'} People record",
                      admin_reimbursements_people_path(person: expense.person.record_id,
                                                       anchor: "person-#{expense.person.record_id}"),
@@ -180,7 +180,7 @@
     <% end %></div>
   <% end %>
 
-  <% if expense.budget.nil? || expense.budget.record_id.blank? %>
+  <% if expense.budget.nil? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
       No budget linked. Pick one below before approving.
     <% end %></div>
@@ -236,15 +236,15 @@
     <div>
       <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: FormStyles::LABEL %>
       <% budget_options = @budgets.map { |b| [ b.picker_label, b.record_id ] } %>
-      <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
+      <% if expense.budget && budget_options.none? { |_, id| id == expense.budget.record_id } %>
         <% budget_options.unshift([ expense.budget.picker_label, expense.budget.record_id ]) %>
       <% end %>
       <%= select_tag :budget_record_id,
                      options_for_select(budget_options, expense.budget&.record_id),
-                     include_blank: expense.budget&.record_id.blank?,
+                     include_blank: expense.budget.nil?,
                      id: "budget_record_id_#{expense.record_id}",
                      class: input_classes %>
-      <% if expense.budget&.record_id.present? %>
+      <% if expense.budget %>
         <p class="<%= FormStyles::HINT %>">
           <%= link_to "Open #{expense.budget.display_name}",
                       edit_admin_reimbursements_budget_path(expense.budget.record_id),
