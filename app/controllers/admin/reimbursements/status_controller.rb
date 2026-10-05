@@ -5,9 +5,6 @@ module Admin
     # per cost centre, the send log, and a Microsoft Graph probe that runs on
     # demand (#run), never on page load.
     class StatusController < FinanceController
-      # Injection seam for tests: the app-only Graph client (token probe).
-      class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
-
       # One row of the integration-check results.
       Check = Struct.new(:label, :status, :detail, keyword_init: true)
 
@@ -55,10 +52,6 @@ module Admin
         # Printed, so an empty stretch reads as before the log, not a quiet week.
         @send_log_since = ::Reimbursements::NotificationLog.minimum(:sent_at)
         @send_log_limit = SEND_LOG_LIMIT
-      end
-
-      def graph
-        @graph ||= graph_builder.call
       end
 
       # Each probe rescues its own failure, so a dead service renders a failed
