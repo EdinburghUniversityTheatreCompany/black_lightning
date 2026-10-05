@@ -1,9 +1,5 @@
 @layer components {
 
-  .btn-tool {
-    @apply bg-transparent border-0 text-inherit opacity-70 hover:opacity-100 p-1 cursor-pointer rounded inline-flex items-center justify-center leading-none;
-  }
-
   /* Bootstrap text colour utilities */
   .text-dark {
     color: #212529;
@@ -22,26 +18,14 @@
     background-color: #f8f9fa;
   }
 
-  .bg-white {
-    background-color: #fff;
-  }
-
   .bg-dark {
     background-color: #343a40;
     color: #fff;
   }
 
-  .bg-transparent {
-    background-color: transparent;
-  }
-
   /* Bootstrap border-colour utilities */
   .border-secondary {
     border-color: #6c757d;
-  }
-
-  .border-primary {
-    border-color: var(--color-primary);
   }
 
   /* Bootstrap table compat */
@@ -111,10 +95,6 @@
     @apply block mt-1 text-xs text-gray-500;
   }
 
-  .form-select {
-    @apply w-full rounded border border-gray-300 px-3 py-1.5 text-sm;
-  }
-
   .form-check-label {
     @apply text-sm text-gray-700;
   }
@@ -127,10 +107,6 @@
     @apply rounded-none first:rounded-l last:rounded-r flex-1;
   }
 
-  .input-group-text {
-    @apply px-3 py-1.5 border border-gray-300 bg-gray-50 text-sm text-gray-600;
-  }
-
   .invalid-feedback {
     @apply text-xs text-red-600 mt-1;
   }
@@ -138,40 +114,6 @@
   .is-invalid {
     @apply border-red-500;
   }
-
-  /* Bootstrap modal compat — hide by default, shown via JS */
-  .modal {
-    @apply hidden fixed inset-0 z-50 overflow-auto;
-  }
-
-  .modal.show {
-    @apply flex items-center justify-center;
-  }
-
-  .modal-dialog {
-    @apply bg-white rounded shadow-lg w-full max-w-lg mx-4;
-  }
-
-  .modal-header {
-    @apply flex items-center justify-between px-4 py-3 border-b border-gray-200;
-  }
-
-  .modal-title {
-    @apply text-base font-semibold text-gray-800;
-  }
-
-  .modal-body {
-    @apply p-4;
-  }
-
-  .modal-footer {
-    @apply flex items-center gap-2 justify-end px-4 py-3 border-t border-gray-200;
-  }
-
-  .close {
-    @apply text-gray-500 hover:text-gray-700 text-xl leading-none cursor-pointer bg-transparent border-0;
-  }
-
 
   /* Bootstrap image utilities */
   .img-thumbnail {
@@ -188,31 +130,6 @@
     height: auto;
   }
 
-  /* Bootstrap utility aliases */
-  .container-fluid {
-    @apply w-full px-4;
-  }
-
-  .text-danger {
-    @apply text-red-600;
-  }
-
-  .text-success {
-    @apply text-green-600;
-  }
-
-  .text-warning {
-    @apply text-yellow-600;
-  }
-
-  .breadcrumb {
-    @apply flex gap-1 list-none text-sm text-gray-500;
-  }
-
-  .breadcrumb-item {
-    @apply flex items-center gap-1 text-gray-400;
-  }
-
   .dropdown-menu {
     @apply absolute right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-48;
   }
@@ -220,16 +137,6 @@
   .dropdown-item {
     @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50;
   }
-
-  .dropdown-header {
-    @apply px-4 py-2 text-xs font-semibold text-gray-500 uppercase;
-  }
-
-  /* Breadcrumb links */
-  .breadcrumb-item a {
-    @apply text-primary hover:text-primary-dark;
-  }
-
 
 }
 
@@ -328,13 +235,6 @@
   font-size: 1rem;
 }
 
-.navbar-brand {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-right: 1rem;
-  text-decoration: none;
-}
-
 .navbar-toggler {
   border: 1px solid currentColor;
   border-radius: 0.25rem;
@@ -369,18 +269,12 @@
 }
 
 /* navbar-dark variant */
-.navbar-dark .nav-link,
-.navbar-dark .navbar-brand {
+.navbar-dark .nav-link {
   color: white;
 }
 
 .navbar-dark .navbar-toggler {
   color: white;
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.navbar-dark .navbar-toggler-icon {
-  filter: invert(1);
 }
 
 /* Carousel, slid by the carousel controller */
@@ -422,8 +316,7 @@
   z-index: 2;
 }
 
-.carousel-indicators button,
-.carousel-indicators [data-bs-target] {
+.carousel-indicators button {
   width: 30px;
   height: 3px;
   background-color: rgba(255, 255, 255, 0.5);
@@ -432,8 +325,7 @@
   padding: 0;
 }
 
-.carousel-indicators .active,
-.carousel-indicators button.active {
+.carousel-indicators .active {
   background-color: white;
 }
 
@@ -486,15 +378,6 @@
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
 }
 
-.carousel-caption {
-  position: absolute;
-  bottom: 1.25rem;
-  left: 15%;
-  right: 15%;
-  text-align: center;
-  color: white;
-}
-
 /* Bootstrap visually-hidden / sr-only */
 .visually-hidden {
   position: absolute !important;
@@ -508,10 +391,6 @@
 /* Spacing and flex utilities */
 .align-items-start {
   align-items: flex-start;
-}
-
-.flex-wrap {
-  flex-wrap: wrap;
 }
 
 .ms-3 {
