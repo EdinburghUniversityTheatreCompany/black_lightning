@@ -306,8 +306,8 @@ module Reimbursements
     # Matched lines the sheet puts in a different area than they are in now,
     # reported for the operator to tick and never applied on sight: somebody
     # may have moved the line by hand. Carries #creates' +area_id:+ /
-    # +area_name:+. +key+ is the checkbox value and is the BUDGET ID, not a row
-    # position, so a reordered re-import cannot land a tick on another line.
+    # +area_name:+. A tick is keyed by +budget_id+, not row position, so a
+    # reordered re-import cannot land a tick on another line.
     #
     # A blank Area cell says nothing; it is not a re-home to nowhere.
     #
@@ -838,8 +838,8 @@ module Reimbursements
         to_area_name: first_seen_names[key], to_area_is_new: existing.nil?,
         # Read after this import's own owner column, or a sheet naming an owner
         # for the target area would warn falsely.
-        to_area_has_owners: area_will_have_owners?(existing, key),
-        key: entry.budget.record_id }.merge(area_attrs_for_name(entry.area_name))
+        to_area_has_owners: area_will_have_owners?(existing, key) }
+        .merge(area_attrs_for_name(entry.area_name))
     end
 
     # Why +area+ is outside this import's year and centre, so a

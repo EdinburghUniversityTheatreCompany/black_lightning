@@ -102,7 +102,7 @@ module Admin
         return [] unless keys.is_a?(Array)
 
         ticked = keys.map(&:to_s).compact_blank.to_set
-        @import.re_homes.select { |re_home| ticked.include?(re_home[:key].to_s) }
+        @import.re_homes.select { |re_home| ticked.include?(re_home[:budget_id].to_s) }
       end
 
       # Re-rendered rather than redirected, so a forty-line paste survives.

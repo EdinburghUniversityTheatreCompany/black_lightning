@@ -284,10 +284,10 @@
         <%= hidden_field_tag "re_home_budget_ids[]", "", id: nil %>
         <ul class="mt-2 space-y-2">
           <% @import.re_homes.each do |re_home| %>
-            <% checkbox_id = "re-home-#{re_home[:key]}" %>
+            <% checkbox_id = "re-home-#{re_home[:budget_id]}" %>
             <li class="flex items-start gap-2">
               <%# Keyed by BUDGET ID, not row position, so reordered rows keep their ticks. %>
-              <%= check_box_tag "re_home_budget_ids[]", re_home[:key], true,
+              <%= check_box_tag "re_home_budget_ids[]", re_home[:budget_id], true,
                                 id: checkbox_id, class: "#{checkbox_classes} mt-0.5" %>
               <div>
                 <%= label_tag checkbox_id, class: "cursor-pointer" do %>
