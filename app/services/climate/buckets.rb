@@ -48,11 +48,6 @@ module Climate
     # False at raw resolution, where a min-max band would be a zero-width artefact.
     def aggregated? = seconds > RAW_SECONDS
 
-    # DATE() buckets come back as a Date, the DATE_SUB ones as a Time.
-    def to_time(bucket)
-      bucket.is_a?(Date) && !bucket.is_a?(Time) ? bucket.beginning_of_day.in_time_zone : bucket.in_time_zone
-    end
-
     # An explicit null wherever the series skips, so the chart BREAKS the line
     # instead of interpolating: a line through missing data is a reading that
     # never happened.

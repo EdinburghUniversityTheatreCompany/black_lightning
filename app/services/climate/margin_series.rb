@@ -46,7 +46,7 @@ module Climate
 
       rows.group_by(&:first).transform_values do |sensor_rows|
         sensor_rows.map do |(_sensor_id, bucket, margin)|
-          { t: @buckets.to_time(bucket), margin: margin&.to_f&.round(2) }
+          { t: bucket.in_time_zone, margin: margin&.to_f&.round(2) }
         end
       end
     end

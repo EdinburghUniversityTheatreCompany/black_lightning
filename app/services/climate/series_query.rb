@@ -60,7 +60,7 @@ module Climate
     def point(row)
       _sensor_id, bucket, *values = row
 
-      MEASURES.keys.each_with_index.each_with_object({ t: @buckets.to_time(bucket) }) do |(measure, index), result|
+      MEASURES.keys.each_with_index.each_with_object({ t: bucket.in_time_zone }) do |(measure, index), result|
         mean, minimum, maximum = values[index * 3, 3]
         result[measure] = round(mean)
         result[:"#{measure}_min"] = round(minimum)
