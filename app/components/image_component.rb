@@ -1,8 +1,6 @@
 class ImageComponent < ViewComponent::Base
-  # full_width is a styling decision, priority a performance one. They were one
-  # flag once and the performance half was backwards, costing a measured 1552ms
-  # of homepage LCP; loading stays unset unless priority is passed, so it falls
-  # through to config.action_view.image_loading.
+  # full_width is styling, priority is loading: only an LCP element passes priority. Loading
+  # stays unset otherwise, so it falls through to config.action_view.image_loading.
   def initialize(image:, variant: nil, full_width: true, priority: false, alt: nil,
                  srcset_variants: nil, image_options: {}, proxy: false)
     @image = image
@@ -39,10 +37,8 @@ class ImageComponent < ViewComponent::Base
     @proxy ? helpers.active_storage_proxy_url(resolved) : resolved
   end
 
-  # Always an alt attribute. Every image on the site was missing one entirely, a
-  # WCAG 2.2 1.1.1 failure; an explicit empty alt at least marks an image as
-  # decorative, which is right for the ones a caption already covers. Passed from
-  # the template rather than merged in here so it is visible at the img tag.
+  # Always an alt attribute (WCAG 1.1.1); empty marks the image decorative. The template passes
+  # it so it is visible at the img tag.
   def alt_text
     @alt.to_s
   end
@@ -63,9 +59,7 @@ class ImageComponent < ViewComponent::Base
     end
   end
 
-  # A phone downloading a 960px card into a 412px viewport is roughly 2.3x the
-  # pixels it can show. Offering the smaller variants that already exist lets the
-  # browser pick; the URLs have to be proxied ones, so this needs proxy.
+  # Lets the browser pick a smaller variant on a phone. Needs proxy: srcset URLs must be proxied.
   def srcset?
     @srcset_variants.present? && @proxy
   end

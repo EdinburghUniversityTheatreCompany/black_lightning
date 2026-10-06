@@ -1,16 +1,10 @@
 require "test_helper"
 require "#{Rails.root}/lib/tasks/logic/markdown_heading_fix"
 
-# Tests the markdown:fix_heading_spaces task logic.
-#
-# The pure `fix_text` transform is the risky part (heading heuristic, fenced-code
-# tracking, and trailing closing-sequence stripping), so it gets exhaustive unit
-# coverage. `run` gets DB-backed tests to prove the dry-run/apply distinction, the
-# update_columns write path, and that every print branch works.
+# The markdown:fix_heading_spaces logic: the pure `fix_text` transform, then DB-backed `run`
+# (dry run versus apply, the update_columns write, the print branches).
 class MarkdownHeadingFixTest < ActiveSupport::TestCase
   Logic = Tasks::Logic::MarkdownHeadingFix
-
-  # --- fix_text: leading space insertion ----------------------------------
 
   test "inserts a space in a bare ATX heading missing one" do
     result, changes, skipped, glued = Logic.fix_text("##Description")
@@ -40,7 +34,6 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
   end
 
   test "leaves cosmetic-only differences alone (they render identically)" do
-    # extra spaces after the hashes, and trailing whitespace, render the same
     assert_empty Logic.fix_text("##   Foo").second
     assert_equal "### Set   ", Logic.fix_text("### Set   ").first
     assert_empty Logic.fix_text("### Set   ").second
@@ -66,8 +59,6 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_equal "## Selected", Logic.fix_text("## Selected").first
   end
 
-  # --- fix_text: loosened content rules -----------------------------------
-
   test "fixes headings that start with markdown emphasis, quotes or digits" do
     assert_equal "## **Synopsis**", Logic.fix_text("##**Synopsis**").first
     assert_equal "# “Well done”", Logic.fix_text("#“Well done”").first
@@ -91,13 +82,11 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
   end
 
   test "measures length on the cleaned content, not the raw hashes" do
-    # trailing ## would push a 3-char heading over a tiny cap if counted raw
+    # counted raw, the trailing ## would push "Foo" over a cap of 3
     _result, changes, skipped = Logic.fix_text("##Foo##", max_len: 3)
     assert_equal 1, changes.size, "content 'Foo' is 3 chars, within the cap"
     assert_empty skipped
   end
-
-  # --- fix_text: fenced code ----------------------------------------------
 
   test "never touches lines inside a fenced code block" do
     input = "##Real\n\n```\n##not a heading\n### also code\n```\n\n##Also real"
@@ -114,8 +103,6 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_equal 4, changes.first[:line_no]
   end
 
-  # --- fix_text: trailing closing-sequence stripping ----------------------
-
   test "strips a trailing closing sequence of two or more hashes" do
     assert_equal "## Week 5", Logic.fix_text("##Week 5##").first
     assert_equal "### Overview:", Logic.fix_text("###Overview:###").first
@@ -123,14 +110,13 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
   end
 
   test "leaves a space-preceded closing sequence alone (CommonMark already strips it)" do
-    # renders "Foo" as-is, so no rewrite — but if the line is touched for another
-    # reason (here a missing leading space) the closer is cleaned up too.
+    # Not rewritten alone, but cleaned up when the line is touched anyway (missing leading space).
     assert_empty Logic.fix_text("## Foo ##").second
     assert_equal "## Foo", Logic.fix_text("##Foo #").first
   end
 
   test "safe mode spares a single hash glued to the text (e.g. C#) and flags it" do
-    # already a valid heading, only the glued # — must stay byte-for-byte identical
+    # Already a valid heading: left byte-for-byte as it is.
     result, changes, _skipped, glued = Logic.fix_text("## Programming in C#")
     assert_equal "## Programming in C#", result
     assert_empty changes
@@ -152,8 +138,6 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_empty glued, "nothing left to flag once everything is stripped"
   end
 
-  # --- fix_text: misc ------------------------------------------------------
-
   test "fixes multiple broken headings across a multi-line string" do
     input = "##One\n\nBody.\n\n###Two##\n\nMore\n\n####Three"
     result, changes, = Logic.fix_text(input)
@@ -172,8 +156,6 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_equal [ "", [], [], [] ], Logic.fix_text("")
     assert_equal [ "   ", [], [], [] ], Logic.fix_text("   ")
   end
-
-  # --- run: DB-backed dry-run / apply -------------------------------------
 
   test "dry-run reports changes but writes nothing" do
     opp = FactoryBot.create(:opportunity, description: "##Description\n\nBody")

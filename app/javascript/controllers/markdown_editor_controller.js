@@ -25,7 +25,6 @@ export default class extends Controller {
       return
     }
 
-    // Textarea is kept current via listenerCtx, but sync on submit as safety net
     this.#boundSync = () => this.#syncFromEditor()
     this.#form?.addEventListener("submit", this.#boundSync, { capture: true })
   }
@@ -37,8 +36,6 @@ export default class extends Controller {
     this.#tableDialog?.remove()
     this.#destroyEditor()
   }
-
-  // Actions
 
   setMode(event) {
     const mode = event.currentTarget.dataset.mode
@@ -110,8 +107,6 @@ export default class extends Controller {
   undo() { if (this.#mode === "edit") this.#cmd(this.#cmds.undoCommand) }
   redo() { if (this.#mode === "edit") this.#cmd(this.#cmds.redoCommand) }
 
-  // Private
-
   #textarea = null
   #editor = null
   #form = null
@@ -128,11 +123,8 @@ export default class extends Controller {
   #tableDialog = null
   #tableDialogResolve = null
 
-  // Command definitions (objects with .key, used with commandsCtx.call())
   #cmds = {}
-  // Milkdown context keys (used with ctx.get())
   #ctx = {}
-  // Milkdown utility functions stored after dynamic import
   #TextSelection = null
   #replaceAll = null
   #insert = null
@@ -183,8 +175,7 @@ export default class extends Controller {
       </div>
     `
 
-    // Prevent toolbar button clicks from stealing focus away from the editor,
-    // then immediately re-focus the editor so ProseMirror commands have a valid selection.
+    // Stop toolbar clicks stealing focus, and re-focus the editor so commands have a selection.
     toolbar.addEventListener("mousedown", e => {
       if (e.target.closest(".milkdown-btn, .milkdown-tab")) {
         e.preventDefault()
@@ -262,7 +253,7 @@ export default class extends Controller {
       dialog.close()
     })
 
-    // Resolve with null on any close (Escape key, cancel button, or backdrop)
+    // Escape, Cancel and the backdrop all land here and resolve null.
     dialog.addEventListener("close", () => {
       this.#linkDialogResolve?.(null)
       this.#linkDialogResolve = null
@@ -338,7 +329,7 @@ export default class extends Controller {
 
   async #destroyEditor() {
     const editor = this.#editor
-    // Null eagerly so a reconnect racing this async destruction sees a clean slate
+    // Null eagerly so a reconnect racing this async destroy sees a clean slate.
     this.#editor = null
     this.#cmds = {}
     this.#ctx = {}
@@ -366,8 +357,7 @@ export default class extends Controller {
 
     if (mode === "edit") {
       if (prev === "source") {
-        // Replace content in the live editor — preserves the editor instance and plugins
-        // flush=true re-creates ProseMirror state (clearing undo history) to match source edits
+        // flush=true re-creates ProseMirror state, clearing undo history, to match the source edits.
         this.#editor.action(this.#replaceAll(this.#textarea.value, true))
       }
       this.#editorEl.style.display = ""
@@ -397,23 +387,20 @@ export default class extends Controller {
   }
 
   #syncFromEditor() {
-    // Textarea is already current via listenerCtx; this is a safety net for submit
+    // Source-mode typing reaches the real textarea only on a mode switch or here, at submit.
     if (this.#mode === "source") this.#textarea.value = this.#sourceTextarea.value
   }
 
   #cmd(cmdDef, payload = undefined) {
     if (!this.#editor || this.#mode !== "edit" || !cmdDef) return
-    // Focus and dispatch the command in a single action so ProseMirror reads the selection
-    // from the already-focused view, avoiding ordering assumptions across two action calls.
+    // Focus and dispatch in one action so ProseMirror reads the focused view's selection.
     this.#editor.action(ctx => {
       ctx.get(this.#ctx.editorViewCtx).focus()
       ctx.get(this.#ctx.commandsCtx).call(cmdDef.key, payload)
     })
   }
 
-  // ── Source-mode helpers ──────────────────────────────────────────────────────
-
-  // Wraps selected text (or inserts placeholder) with before/after syntax.
+  // Wraps the selection (or a placeholder) in before/after and selects the middle.
   #sourceInline(before, after, placeholder) {
     const ta = this.#sourceTextarea
     const start = ta.selectionStart
@@ -426,7 +413,6 @@ export default class extends Controller {
     ta.focus()
   }
 
-  // Inserts a markdown prefix at the start of the current line.
   #sourceLinePrefix(prefix) {
     const ta = this.#sourceTextarea
     const pos = ta.selectionStart
@@ -437,7 +423,6 @@ export default class extends Controller {
     ta.focus()
   }
 
-  // Wraps selected text (or placeholder) in a block-level syntax (e.g. fenced code).
   #sourceBlock(before, after, placeholder) {
     const ta = this.#sourceTextarea
     const start = ta.selectionStart
@@ -451,9 +436,7 @@ export default class extends Controller {
     ta.focus()
   }
 
-  // For inline marks: inserts placeholder text with the mark applied when nothing
-  // is selected, so the user can immediately type to replace it. Toggles the mark
-  // on existing selections as usual.
+  // With nothing selected, inserts the placeholder with the mark applied so typing replaces it.
   #insertInlineMark(markName, cmdDef, placeholder) {
     if (!this.#editor || this.#mode !== "edit") return
 
@@ -518,7 +501,6 @@ export default class extends Controller {
 
     this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords(), 340)
 
-    // Pre-fill text field from current selection
     let selectedText = ""
     if (this.#mode === "source") {
       const ta = this.#sourceTextarea
@@ -566,10 +548,9 @@ export default class extends Controller {
       if (!linkMark) return
 
       if (!selection.empty) {
-        // Apply link mark to selected text
         dispatch(state.tr.addMark(selection.from, selection.to, linkMark))
       } else {
-        // Insert linked text, using insertText + addMark to avoid mark inheritance stripping
+        // insertText + addMark, so the new text does not inherit (and lose) the cursor's marks.
         const from = selection.from
         const tr = state.tr.insertText(linkText, from)
         tr.addMark(from, from + linkText.length, linkMark)
@@ -640,7 +621,6 @@ export default class extends Controller {
       return
     }
 
-    // WYSIWYG: build table nodes from schema
     this.#editor.action(ctx => {
       const view = ctx.get(this.#ctx.editorViewCtx)
       view.focus()
@@ -684,9 +664,7 @@ export default class extends Controller {
     }
   }
 
-  // Returns {left, bottom} for the current cursor position, used to anchor dialogs
-  // opened via keyboard shortcut. Edit mode uses ProseMirror's coordsAtPos; source
-  // mode falls back to the top of the textarea.
+  // {left, bottom} anchor for a dialog opened by keyboard shortcut.
   #getCursorCoords() {
     if (this.#mode === "edit" && this.#editor) {
       let coords = null
@@ -704,7 +682,7 @@ export default class extends Controller {
     return null
   }
 
-  // Positions a dialog anchored below a button event or a {left, bottom} coord pair.
+  // Anchors below a button event or a {left, bottom} pair.
   #positionDialog(dialog, anchor, maxWidth = 340) {
     let left, bottom
     if (anchor?.currentTarget) {
@@ -740,7 +718,7 @@ export default class extends Controller {
     this.#fileInput.value = ""
   }
 
-  // Used by plugin-upload (drag/drop/paste) — returns ProseMirror nodes
+  // For plugin-upload (drag, drop, paste): returns ProseMirror nodes.
   async #uploadFiles(files, schema) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     const results = await Promise.all(

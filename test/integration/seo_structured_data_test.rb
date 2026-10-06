@@ -1,13 +1,10 @@
 require "test_helper"
 
-# There was no structured data anywhere -- 0 of 491 crawled pages -- which on a ticketed events
-# venue is what keeps it out of Google's event rich results and the "Things to do in Edinburgh"
-# surfaces entirely.
+# JSON-LD on the rendered pages: the markup Google's event rich results are fed from.
 class SeoStructuredDataTest < ActionDispatch::IntegrationTest
   setup do
-    # Every date below is literal, so the clock is pinned ahead of the run:
-    # once it ends the show is archived, its title gains "(2026)" and the
-    # shows index drops it.
+    # Every date below is literal, so the clock is pinned: once the run ends the show is archived
+    # (title gains "(2026)", dropped from the shows index).
     travel_to Time.zone.local(2026, 9, 20, 12)
     @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true,
                                      price: "£7/£8/£10", start_date: Date.new(2026, 9, 23),
@@ -110,11 +107,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "5.00", offers["highPrice"]
   end
 
-  # --- performances ------------------------------------------------------
-
-  # The upgrade CLAUDE.md named as the biggest one outstanding: a date-only
-  # startDate is all an event without performances can honestly claim, and it is
-  # what Google gets the poorest rich result from.
   test "each performance becomes an event of its own with a real curtain time" do
     @show.update!(duration_minutes: 135)
     FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
@@ -141,7 +133,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_includes run["subEvent"].map { |sub| sub["@id"] }, performance["@id"]
   end
 
-  # Every archive event has none, and must still be marked up exactly as before.
+  # Every archive event has no performances.
   test "an event with no performances keeps its date-only run markup" do
     get show_path(@show)
 
@@ -163,8 +155,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal %w[relaxedPerformance captions], performance["accessibilityFeature"]
   end
 
-  # A press night is a scheduling label, not access provision. Publishing it as
-  # an accessibilityFeature tells a search engine something untrue.
+  # A press night is a scheduling label, not access provision.
   test "a scheduling flag is not published as an accessibility feature" do
     FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30),
                                          access_flags: %w[press_night preview])
@@ -187,9 +178,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "2026-09-24T19:00:00+01:00", performance["doorTime"]
   end
 
-  # A Season's occurrences are the hours the venue is OPEN, not performances.
-  # Publishing them as TheaterEvents claims the theatre is staging four shows
-  # during the Fringe when it is stating box-office hours.
+  # A Season's occurrences are opening hours, not performances.
   test "a season's opening times are not published as performances" do
     season = FactoryBot.create(:season, is_public: true)
     FactoryBot.create(:event_occurrence, event: season)
@@ -201,8 +190,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal 1, events.length, "opening times must not become events of their own"
     assert_nil events.first["subEvent"]
   end
-
-  # --- structured prices -------------------------------------------------
 
   test "structured bands become one named offer each, not a scraped range" do
     @show.update!(ticket_prices: [
@@ -221,7 +208,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal [ "10.00", "8.00" ], offers["offers"].map { |offer| offer["price"] }
   end
 
-  # The parser refused ~38% of the archive, so the old scrape has to stay.
+  # The parser refused ~38% of the archive, so the scrape has to stay.
   test "an event with no bands still falls back to reading the price string" do
     get show_path(@show)
 
@@ -248,8 +235,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_not document_of_type("TheaterEvent")["isAccessibleForFree"]
   end
 
-  # --- the play and who made it ------------------------------------------
-
   test "a show names the play it is staging and who wrote it" do
     @show.update!(author: "Richard O'Brien")
 
@@ -262,7 +247,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "Richard O'Brien", work.dig("author", "name")
   end
 
-  # A workshop is not a play, so claiming one would be a lie about what it is.
+  # A workshop is not a play.
   test "a workshop features no play" do
     workshop = FactoryBot.create(:workshop, is_public: true, author: "Someone")
 
@@ -271,8 +256,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_nil document_of_type("EducationEvent")["workFeatured"]
   end
 
-  # A workshop is taught, not staged. Typed as a TheaterEvent it would turn up
-  # in theatre rich results, which is not what it is.
+  # A workshop is taught, not staged: a TheaterEvent would turn up in theatre rich results.
   test "a workshop is marked up as an EducationEvent, not a TheaterEvent" do
     workshop = FactoryBot.create(:workshop, is_public: true)
 
@@ -302,7 +286,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "Ada Lovelace", document_of_type("TheaterEvent").dig("director", "name")
   end
 
-  # "Assistant Director" is not the director, and naming them as such is wrong.
   test "an assistant director is not the director" do
     assistant = FactoryBot.create(:user)
     FactoryBot.create(:team_member, teamwork: @show, user: assistant, position: "Assistant Director")
@@ -311,8 +294,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
 
     assert_nil document_of_type("TheaterEvent")["director"]
   end
-
-  # --- running time and age ----------------------------------------------
 
   test "the running time and age guidance are published when set" do
     @show.update!(duration_minutes: 135, age_guidance: "14+")
@@ -376,10 +357,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_nil document_of_type("ItemList")
   end
 
-  # --- cancelled and sold-out performances -----------------------------------
-  #
-  # Google surfaces both in rich results, and a ticket link to a night that is
-  # off is worse than no rich result at all.
+  # Google surfaces cancelled and sold-out nights; a ticket link to one that is off is worse than none.
 
   test "a cancelled performance is marked cancelled, not scheduled" do
     FactoryBot.create(:event_occurrence, event: @show,
@@ -414,7 +392,6 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "https://schema.org/InStock", performance.dig("offers", "availability")
   end
 
-  # The run is not cancelled because one night of it is.
   test "cancelling one night leaves the run itself scheduled" do
     FactoryBot.create(:event_occurrence, event: @show,
                                          starts_at: Time.zone.local(2026, 9, 24, 19, 30), cancelled: true)

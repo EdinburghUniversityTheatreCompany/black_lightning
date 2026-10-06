@@ -1,7 +1,5 @@
 require "test_helper"
 
-# There was no sitemap at all: /sitemap.xml 404ed and robots.txt named none, leaving 164 pages of
-# archive pagination as the only route in.
 class SitemapsControllerTest < ActionDispatch::IntegrationTest
   test "the index lists one sitemap per section" do
     get sitemap_path
@@ -56,8 +54,7 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes locs, show_url(private_show)
   end
 
-  # A sitemap that advertises a URL answering 403 to the crawler reading it is worse than one
-  # that omits it.
+  # A sitemap URL that 403s the crawler is worse than an omitted one.
   test "every event URL listed actually answers 200 to a guest" do
     FactoryBot.create(:show, is_public: true)
 

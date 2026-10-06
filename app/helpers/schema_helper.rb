@@ -1,12 +1,5 @@
-##
-# JSON-LD structured data.
-#
-# Google's event rich results and the "Things to do" surfaces are fed almost entirely by Event
-# markup, which is why a ticketed venue needs this at all.
-#
-# Every method returns a plain Hash. The layout renders whatever #schema_documents collects, so a
-# page opts in by having a case here rather than by remembering to call something.
-##
+# JSON-LD structured data. Every method returns a plain Hash; the layout renders whatever
+# #schema_documents collects, so a page opts in by having a case here.
 module SchemaHelper
   CONTEXT = "https://schema.org".freeze
 
@@ -28,20 +21,15 @@ module SchemaHelper
     "https://www.youtube.com/channel/UCXxyhjT8bPvnl1oVAdRJW1Q"
   ].freeze
 
-  # Amounts in an Event#price string: "£7/£8/£10", "£5 (£4 members)", "Free".
-  # schema.org vocabulary, named once rather than repeated as literals across
-  # the run node, the performance nodes and both offer builders.
   EVENT_SCHEDULED = "https://schema.org/EventScheduled".freeze
   EVENT_CANCELLED = "https://schema.org/EventCancelled".freeze
   IN_STOCK = "https://schema.org/InStock".freeze
   SOLD_OUT = "https://schema.org/SoldOut".freeze
 
+  # Amounts in an Event#price string: "£7/£8/£10", "£5 (£4 members)", "Free".
   PRICE_PATTERN = /£\s*(\d+(?:\.\d{1,2})?)/
 
-  ##
-  # Every JSON-LD document this page should carry. The venue graph is on every page; the rest
-  # depend on what the page is.
-  ##
+  # The venue graph is on every page; the rest depend on what the page is.
   def schema_documents
     documents = [ venue_schema ]
 
@@ -53,10 +41,7 @@ module SchemaHelper
     documents.compact
   end
 
-  ##
-  # The theatre itself, and the company that runs it. One graph rather than two documents so the
-  # organisation can be referenced by @id from an event's organizer without repeating it.
-  ##
+  # One graph, so an event's organizer can reference the organisation by @id.
   def venue_schema
     {
       "@context" => CONTEXT,
@@ -78,8 +63,6 @@ module SchemaHelper
           "alternateName" => "EUTC",
           "url" => root_url,
           "sameAs" => SOCIAL_PROFILES,
-          # The charity number is already printed in the footer; it is the strongest identity
-          # signal this organisation has.
           "identifier" => { "@type" => "PropertyValue", "propertyID" => "OSCR", "value" => "SC015800" },
           "location" => { "@id" => absolute_url(VENUE_ID) }
         }
@@ -87,20 +70,13 @@ module SchemaHelper
     }
   end
 
-  ##
   # A production, and one node per performance of it.
   #
-  # The type comes from the event's own SCHEMA_TYPE (TheaterEvent for a Show, EducationEvent for
-  # a Workshop) rather than plain Event: a specific type is what Google understands, and it must
-  # not be typed in here or a new subclass silently inherits the last one's. Each EventOccurrence
-  # becomes a node of that same type of its OWN, at the top level of the graph with a superEvent
-  # pointing back at the run -- Google keys its rich results off top-level items, so a performance
-  # buried in subEvent alone would not surface, while the two-way link still says these are one
-  # production rather than N unrelated shows.
-  #
-  # An event with no occurrences -- every one of the ~3000 archive rows -- emits exactly what it
-  # emitted before: a single node with a date-only startDate.
-  ##
+  # The type comes from the event's SCHEMA_TYPE (TheaterEvent, EducationEvent), never typed in
+  # here, or a new subclass would inherit the last one's. Each EventOccurrence is a top-level node
+  # with a superEvent back to the run: Google keys rich results off top-level items, so a
+  # performance inside subEvent alone would not surface. An event with no occurrences (every
+  # archive row) emits a single node with a date-only startDate.
   def event_schema(event)
     return nil if event.start_date.blank?
 
@@ -127,10 +103,7 @@ module SchemaHelper
     }.compact
   end
 
-  ##
-  # What a hub page is listing, in order. Gives Google the productions on /events and /shows as a
-  # set rather than as whatever it can infer from the markup.
-  ##
+  # What a hub page is listing, in order.
   def item_list_schema
     {
       "@context" => CONTEXT,
@@ -141,9 +114,6 @@ module SchemaHelper
     }
   end
 
-  ##
-  # The archive is 164 pages deep, so a breadcrumb is how that hierarchy reaches a result page.
-  ##
   def breadcrumb_schema
     {
       "@context" => CONTEXT,
@@ -154,10 +124,7 @@ module SchemaHelper
     }
   end
 
-  ##
-  # [name, absolute url] pairs, root first. Derived from the route rather than declared per page,
-  # so a new listing page gets a trail without remembering to build one.
-  ##
+  # [name, absolute url] pairs, root first, derived from the route.
   def breadcrumb_trail
     trail = [ [ "Home", root_url ] ]
 
@@ -181,8 +148,7 @@ module SchemaHelper
       "@id" => event_schema_id(event),
       "name" => event.name,
       "url" => polymorphic_url(event),
-      # Dates, not datetimes, for the run as a whole: it spans days. The curtain times live on the
-      # performance nodes below.
+      # Dates, not datetimes: curtain times live on the performance nodes.
       "startDate" => event.start_date.iso8601,
       "endDate" => event.end_date&.iso8601,
       "eventStatus" => EVENT_SCHEDULED,
@@ -203,9 +169,6 @@ module SchemaHelper
     }.compact
   end
 
-  ##
-  # One node per performance, each carrying the thing the run cannot: a real curtain time.
-  ##
   def event_performance_schemas(event)
     return [] unless event.respond_to?(:event_occurrences)
     return [] unless event.occurrences_are_performances?
@@ -233,15 +196,13 @@ module SchemaHelper
     end.compact
   end
 
-  # A cancelled night is off; a sold-out one is still happening. Only the run's
-  # own node stays EventScheduled regardless -- one cancelled performance does
-  # not cancel the run.
+  # A cancelled night is off; a sold-out one is still on. The run's own node stays
+  # EventScheduled when one night is cancelled.
   def performance_status(occurrence)
     occurrence.cancelled? ? EVENT_CANCELLED : EVENT_SCHEDULED
   end
 
-  # A ticket link to a night nobody can buy into is worse than no rich result.
-  # Cancelled outranks sold out, as it does in the on-page exception lines.
+  # Cancelled outranks sold out.
   def performance_availability(occurrence)
     return SOLD_OUT if occurrence.cancelled? || occurrence.sold_out?
 
@@ -254,10 +215,7 @@ module SchemaHelper
     "#{polymorphic_url(event)}#{suffix}"
   end
 
-  ##
-  # The play, and who wrote it. Shows only: a workshop is not a play, and Event#author on one names
-  # whoever is running it rather than a playwright.
-  ##
+  # Shows only: on a workshop, Event#author names whoever teaches it, not a playwright.
   def event_work_featured(event)
     return nil unless event.is_a?(Show) && event.author.present?
 
@@ -265,10 +223,7 @@ module SchemaHelper
       "author" => { "@type" => "Person", "name" => event.author } }
   end
 
-  ##
-  # A crew credit matched EXACTLY, so "Assistant Director" is not published as the director. Team
-  # positions are free text split on "/", the same way TeamMember reads them.
-  ##
+  # Matched EXACTLY, so "Assistant Director" is not published as the director.
   def event_crew_person(event, role)
     return nil unless event.respond_to?(:team_members)
 
@@ -281,9 +236,7 @@ module SchemaHelper
     { "@type" => "Person", "name" => member.user.name }
   end
 
-  # True only when every band is zero, and FALSE when they are not -- a paid event saying so is
-  # worth stating. Nil only when there are no bands at all: we do not know it is paid, we just have
-  # nothing structured to say.
+  # True when every band is zero, false otherwise. Nil, not false, with no bands: we know nothing.
   def event_free(event)
     prices = event.ticket_prices
 
@@ -296,10 +249,8 @@ module SchemaHelper
     controller&.action_name == "show"
   end
 
-  ##
-  # The events a hub page is listing. Only on index actions, and only for collections already
-  # loaded for rendering -- this must never issue a query of its own for a script tag.
-  ##
+  # Index actions only, and only collections already loaded for rendering: this must never issue
+  # a query of its own.
   def listed_events
     return [] unless controller&.action_name == "index"
 
@@ -320,15 +271,9 @@ module SchemaHelper
     performers.map { |name| { "@type" => "Person", "name" => name } }
   end
 
-  ##
-  # Structured bands where there are any, and each one named -- "Concession £8" is a far better
-  # rich result than a bare range.
-  #
-  # Falling back to scraping Event#price is not legacy cruft: the parser refused about 38% of the
-  # archive outright, and those rows have nothing else to offer. A wrong price in a rich result is
-  # worse than no price -- it is a promise the box office has to honour -- so the scrape still only
-  # fires when a number can actually be read out.
-  ##
+  # Structured bands where there are any, each named ("Concession £8"). Scraping Event#price is
+  # not legacy cruft: the parser refused ~38% of the archive and those rows have nothing else. A
+  # wrong price is a promise the box office must honour, so it only fires when a number is readable.
   def event_offers(event, availability: IN_STOCK)
     structured = event.ticket_prices
 
@@ -381,11 +326,8 @@ module SchemaHelper
     event.pretix_shown? ? pretix_event_url(event) : polymorphic_url(event)
   end
 
-  ##
-  # The show page has already resolved this into @meta["og:image"] (an array: the banner plus
-  # every production photo). Reusing it avoids a second Event#slideshow_image_url, which calls
-  # .processed and so can generate the variant synchronously mid-render.
-  ##
+  # Reuses @meta["og:image"] (the show page has resolved it) rather than a second
+  # Event#slideshow_image_url, whose .processed can generate a variant synchronously mid-render.
   def event_image_url(event)
     from_meta = Array(@meta && @meta["og:image"]).first
     return from_meta if from_meta.present?
@@ -394,7 +336,7 @@ module SchemaHelper
 
     image.present? ? absolute_url(image) : nil
   rescue StandardError => e
-    # A blob missing from storage must not take the whole page down for a script tag.
+    # A missing blob must not 500 the page.
     Rails.logger.warn("[SchemaHelper] could not resolve image for event #{event.id}: #{e.message}")
     nil
   end

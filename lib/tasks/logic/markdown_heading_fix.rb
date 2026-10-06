@@ -1,38 +1,25 @@
-# Backfill fix for Markdown headings that render wrong under the CommonMark spec
-# used by MdHelper#render_markdown: a missing space after the `#`s (`##Description`
-# is literal text, not a heading) and a glued closing sequence (`## Week 5##` shows
-# the trailing `##` literally). See lib/tasks/markdown.rake for the runnable task.
+# Backfill for headings CommonMark renders wrong: a missing space after the `#`s (`##Description`
+# is literal text) and a glued closing sequence (`## Week 5##` shows the `##`). Run it with
+# lib/tasks/markdown.rake.
 class Tasks::Logic::MarkdownHeadingFix
-  # Guards against turning a long paragraph that merely starts with `#` into a heading.
+  # Stops a long paragraph that merely starts with `#` becoming a heading.
   MAX_HEADING_LEN = 133
 
-  # A fenced code block opener/closer: up to 3 leading spaces then 3+ ` or ~.
+  # A fence opener/closer.
   FENCE_RE = /\A {0,3}(`{3,}|~{3,})/
-  # Line-start ATX heading: 0-3 leading spaces, 1-6 `#`, then anything NOT a 7th
-  # `#`. 4+ spaces is indented code and 7+ `#` is never a heading — both fail to
-  # match. `\#` is escaped so `#{` is not read as string interpolation.
+  # An ATX heading: 0-3 spaces, 1-6 `#`, no 7th. `\#` is escaped so `#{` is not interpolation.
   HEADING_RE = /\A( {0,3})(\#{1,6})(?!#)(.*)\z/
-  # The gap between the hashes and the title — a normal space, tab, or the
-  # non-breaking space that some pasted content uses (which CommonMark does NOT
-  # accept as the heading space, so it must be normalised too).
+  # Space, tab or non-breaking space. CommonMark does NOT accept the last as a heading space.
   LEAD_GAP = /\A[ \t ]+/
-  # How to strip a closing sequence once we've decided a line needs changing.
-  # Safe: `#`s preceded by whitespace (CommonMark's own rule) or a run of 2+.
-  # Aggressive (strip_all): any trailing run, including a single glued `#`.
+  # Closing sequence to strip. Safe: after whitespace or a run of 2+. strip_all: any, even a lone `#`.
   TRAILING_SAFE = /(?:[ \t]+#+|\#{2,})[ \t]*\z/
   TRAILING_ALL = /[ \t]*#+[ \t]*\z/
-  # Whether a line's tail renders a closing `#` LITERALLY (glued, no space before
-  # it) and so is worth fixing. Space-preceded closers render clean already, and a
-  # lone glued `#` (safe mode) is spared to protect words like `C#`/`F#`.
+  # A glued closing `#` renders literally. A lone one is spared in safe mode to protect `C#`/`F#`.
   TRAILING_BAD_SAFE = /(?:[^ \t#]|\A)\#{2,}[ \t]*\z/
   TRAILING_BAD_ALL = /(?:[^ \t#]|\A)#+[ \t]*\z/
 
-  # Every Markdown-authored column in the app, keyed by model name. Kept as
-  # strings so the file can be required outside a fully-booted autoload context.
-  #
-  # CarouselItem#tagline is intentionally absent: it is rendered as PLAIN text (the
-  # carousel outputs it raw), and its form is a plain input to match, so a heading fix
-  # there would change the literal string users see rather than repair a heading.
+  # Every Markdown-authored column, keyed by model name (strings, so this loads without autoload).
+  # CarouselItem#tagline is absent on purpose: it renders as plain text.
   TARGETS = {
     "FaultReport" => [ :description ],
     "PictureTag" => [ :description ],
@@ -56,15 +43,12 @@ class Tasks::Logic::MarkdownHeadingFix
   }.freeze
 
   class << self
-    # Summary of the most recent `run`, for callers/tests that need the counts.
     attr_reader :last_summary
 
-    # Pure transform. Returns [new_string, changes, skipped, glued] where:
-    #   changes = [{ line_no:, before:, after: }]  (a space inserted / tail trimmed)
-    #   skipped = [{ line_no:, text:, reason: }]   (heading-shaped but over the cap)
-    #   glued   = [{ line_no:, text: }]            (heading left ending in a lone `#`,
-    #                                               e.g. `C#` — spared in safe mode)
-    # No database access — this is the unit-tested core.
+    # Pure transform. Returns [new_string, changes, skipped, glued]:
+    #   changes = [{ line_no:, before:, after: }]
+    #   skipped = [{ line_no:, text:, reason: }]  (heading-shaped but over the cap)
+    #   glued   = [{ line_no:, text: }]           (left ending in a lone `#`, e.g. `C#`)
     def fix_text(str, max_len: MAX_HEADING_LEN, strip_all: false)
       return [ str, [], [], [] ] if str.blank?
 
@@ -74,7 +58,7 @@ class Tasks::Logic::MarkdownHeadingFix
       in_fence = false
       fence_char = nil
 
-      # split("\n", -1) keeps trailing empty fields so join round-trips exactly.
+      # -1 keeps trailing empty fields so join round-trips.
       new_lines = str.split("\n", -1).each_with_index.map do |line, idx|
         if (fence = line.match(FENCE_RE))
           char = fence[1][0]
@@ -93,7 +77,6 @@ class Tasks::Logic::MarkdownHeadingFix
     end
 
     # simplecov:disable
-    # Iterate the target columns, print what would change, and (unless dry_run) write it.
     def run(dry_run: true, only: nil, max_len: MAX_HEADING_LEN, strip_all: false)
       targets = only ? TARGETS.slice(only) : TARGETS
       warn "No target model named #{only.inspect}." if only && targets.empty?
@@ -128,7 +111,7 @@ class Tasks::Logic::MarkdownHeadingFix
       end
     end
 
-    # Returns nil (not a heading) or a hash describing what to do with the line.
+    # nil (not a heading) or a hash saying what to do with the line.
     def classify_heading(line, max_len, strip_all)
       cr = line.end_with?("\r") ? "\r" : ""
       body = cr.empty? ? line : line[0...-1]
@@ -140,9 +123,7 @@ class Tasks::Logic::MarkdownHeadingFix
       return nil if content.empty?
 
       glued = content.end_with?("#")
-      # Only rewrite lines that actually render wrong: a missing/non-ASCII leading
-      # gap, or a literal (glued) trailing `#`. Cosmetic-only differences (trailing
-      # whitespace, a space-preceded closer) render fine and are left as-is.
+      # Only rewrite lines that render wrong; cosmetic differences are left as they are.
       leading_ok = tail.start_with?(" ", "\t")
       trailing_bad = tail.match?(strip_all ? TRAILING_BAD_ALL : TRAILING_BAD_SAFE)
       return { type: :clean, glued: glued } if leading_ok && !trailing_bad
@@ -152,7 +133,7 @@ class Tasks::Logic::MarkdownHeadingFix
       new_line == line ? { type: :clean, glued: glued } : { type: :fix, after: new_line, glued: glued }
     end
 
-    # Records a classification into the collections and returns the line to emit.
+    # Records a classification and returns the line to emit.
     def record(res, line_no, line, changes, skipped, glued)
       case res[:type]
       when :fix

@@ -1,9 +1,7 @@
 require "test_helper"
 
-# The pretix widget's stylesheet is fetched from the ticket shop's own domain. Browsers enforce
-# style-src-elem separately from style-src for <link> elements, so a shop origin missing from
-# either directive silently costs the widget all of its styling — the same end result as the
-# 404ing pretix.eu URL this replaced, and just as invisible server-side.
+# The pretix widget's stylesheet comes from the shop's domain. Browsers enforce style-src-elem
+# separately from style-src for <link>, so a shop origin missing from either silently unstyles it.
 class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
   SHOP_ORIGIN = "https://tickets.bedlamtheatre.co.uk".freeze
 

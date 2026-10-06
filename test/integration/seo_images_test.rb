@@ -1,8 +1,6 @@
 require "test_helper"
 
-# 4,943 of 4,948 images on the live site had no alt attribute at all, and the loading strategy was
-# exactly inverted: the masthead above the fold inherited the app-wide lazy default while eight
-# cards below it loaded eagerly. Measured, that cost 1552ms of homepage LCP on a throttled phone.
+# Every image carries an alt, and only the above-the-fold images load eagerly.
 class SeoImagesTest < ActionDispatch::IntegrationTest
   setup do
     @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true)
@@ -36,9 +34,8 @@ class SeoImagesTest < ActionDispatch::IntegrationTest
     assert_predicate masthead["alt"].to_s, :present?, "the masthead is inside a link, so it needs a name"
   end
 
-  # The whole point of the inversion: nothing below the fold competes with the LCP image. Two
-  # images are above it -- the masthead and the first carousel slide -- and both opt out
-  # deliberately. Everything after them waits.
+  # Nothing below the fold competes with the LCP image: the masthead and first carousel slide are
+  # the two above it.
   test "only the two above-the-fold images are eager" do
     get root_path
 

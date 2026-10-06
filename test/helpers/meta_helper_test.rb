@@ -1,9 +1,7 @@
 require "test_helper"
 
 class MetaHelperTest < ActionView::TestCase
-  # og:title used to be derived in ApplicationController#set_globals, a before_action that runs
-  # BEFORE the action assigns @title -- so it always read nil and every share was captioned
-  # "Bedlam Theatre". These tests pin the derivation to render time.
+  # og:title is derived at render time: a before_action runs before the action assigns @title.
   test "page title appends the site name when a title is set" do
     @title = "Richard O'Brien's The Rocky Horror Show"
 
@@ -48,7 +46,7 @@ class MetaHelperTest < ActionView::TestCase
     assert_includes tags, "name='twitter:image' content='https://example.com/a.png'"
   end
 
-  # Show pages assigned the whole publicity text: ~900 characters of it, newlines included.
+  # Show pages assign the whole publicity text (~900 characters, newlines included).
   test "a long description is truncated on a word boundary" do
     long = "word " * 200
     tags = meta_tags({ description: long })

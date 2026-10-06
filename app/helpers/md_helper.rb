@@ -1,15 +1,13 @@
 require "commonmarker"
 
 module MdHelper
-  # Explicit rather than relying on views mixing every helper together: render_markdown and
-  # render_plain are also called straight off `helpers` from controllers.
+  # Explicit: render_markdown is also called straight off `helpers` from controllers.
   include LinkNormalisationHelper
 
   MARKDOWN_OPTIONS = ActionView::Template::Handlers::Markdown::OPTIONS
 
-  # A single IAL token: a `.class`, an `#id`, or a `key="value"` attribute (the
-  # kramdown attribute syntax, e.g. `style="font-size:150%"`). Quotes may be the
-  # curly variants because smart-punctuation rewrites straight quotes first.
+  # A single IAL token: `.class`, `#id` or `key="value"` (kramdown syntax). Quotes may be curly
+  # because smart punctuation rewrites straight ones first.
   DQUOTE = '"“”'
   SQUOTE = "'‘’"
   IAL_TOKEN = /[.#][\w-]+|[\w-]+\s*=\s*[#{DQUOTE}][^#{DQUOTE}]*[#{DQUOTE}]|[\w-]+\s*=\s*[#{SQUOTE}][^#{SQUOTE}]*[#{SQUOTE}]/
@@ -32,22 +30,15 @@ module MdHelper
       iframe
       details summary
     ],
-    # aria-label carries the heading self-link's accessible name: commonmarker
-    # renders that anchor as an EMPTY <a>, so without the label a screen reader
-    # announces an unlabelled link. Inert markup, no injection surface beyond
-    # the title/alt entries already here.
+    # aria-label: commonmarker renders the heading self-link as an empty <a>, so without it a
+    # screen reader announces an unlabelled link.
     attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow
                    aria-label])
+    # markdown_editor_controller.js puts the same classes on its preview and editor panes; keep them in step.
     %(<div class="markdown-body prose max-w-none">#{normalise_hrefs(sanitized)}</div>).html_safe
-    # Note that these classes are also added in the markdown_editor_controller to the preview rendered there
-    # so it matches. Search for previewContents.classList
   end
 
-  ##
-  # A link target typed without a scheme ("theimproverts.co.uk") is a relative path to a browser,
-  # so it resolved against the site root and 404ed. Fixed here rather than row by row, because a
-  # content editor can type one at any time.
-  ##
+  # Fixes link targets typed without a scheme or against our own www. host.
   def normalise_hrefs(html)
     fragment = Nokogiri::HTML5.fragment(html)
     relativise = web_request?
@@ -59,10 +50,7 @@ module MdHelper
     fragment.to_html
   end
 
-  ##
-  # True when this markup is being rendered into a page served from our own origin. A mailer view
-  # has no request, and an email cannot resolve a relative href against anything.
-  ##
+  # False in a mailer view: there is no request, and a relative href is dead in an email.
   def web_request?
     respond_to?(:request) && request.present?
   rescue StandardError
@@ -128,21 +116,15 @@ module MdHelper
     doc.to_html
   end
 
-  # commonmarker >= 2.9 renders a heading's self-link AFTER the text
-  # (`<h2 id="slug">Text<a class="anchor"></a></h2>`; 2.8 put it first), so the
-  # text node carrying a trailing IAL is the second-to-last child, not the last.
+  # commonmarker >= 2.9 puts a heading's self-link after the text
+  # (`<h2 id="slug">Text<a class="anchor"></a></h2>`), so the trailing IAL is the second-to-last child.
   def ial_text_node(node)
     children = node.children
     heading_anchor?(children.last) ? children[-2] : children.last
   end
 
-  # An `{ #id }` IAL renames the heading commonmarker already pointed its
-  # self-link at, so the link has to follow or it dangles.
-  #
-  # The accessible name is rebuilt for the same reason: commonmarker derives
-  # `aria-label` from the RAW source, so it still reads "Link to heading \'My
-  # Heading { .text-danger }\'" after the token has been stripped from the text.
-  # Rewritten from the cleaned text, which is what the heading now says.
+  # An `{ #id }` IAL renames the heading, so its self-link has to follow or it dangles.
+  # The aria-label is rebuilt too: commonmarker derives it from the RAW source, token included.
   def realign_heading_anchor(node)
     anchor = node.children.last
     return unless heading_anchor?(anchor)

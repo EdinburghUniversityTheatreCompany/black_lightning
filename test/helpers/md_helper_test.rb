@@ -110,8 +110,7 @@ class MdHelperTest < ActionView::TestCase
     assert_not_includes result, "{ #my-anchor }"
   end
 
-  # Both guard MdHelper#ial_text_node / #realign_heading_anchor against
-  # commonmarker moving the heading self-link again.
+  # Guards #ial_text_node and #realign_heading_anchor against commonmarker moving the self-link.
   test "IAL on a heading keeps the self-link pointing at the heading" do
     result = render_markdown("## Heading { #my-anchor }")
     assert_match(/<h2[^>]*id="my-anchor"/, result)
@@ -125,18 +124,14 @@ class MdHelperTest < ActionView::TestCase
     assert_match(%r{>My Heading<a[^>]*class="anchor"}, result)
   end
 
-  # commonmarker labels each heading self-link, but the anchor renders as an
-  # empty <a> -- so without the label a screen reader announces an unlabelled
-  # link. The sanitizer allow-list has to permit the attribute or it is stripped.
+  # The anchor renders as an empty <a>, so the sanitizer must let aria-label through.
   test "a heading self-link keeps its accessible name through the sanitizer" do
     result = render_markdown("## My Heading")
 
     assert_match(%r{<a[^>]*aria-label="Link to heading 'My Heading'"}, result)
   end
 
-  # Allowing aria-label through would otherwise leak the IAL token into the
-  # accessible name: commonmarker derives the label from the RAW source, so it
-  # reads "{ .text-danger }" long after the text has been cleaned.
+  # commonmarker derives the label from the RAW source, so the IAL token would leak into it.
   test "a heading self-link's accessible name drops the IAL token" do
     result = render_markdown("## My Heading { .text-danger }")
 

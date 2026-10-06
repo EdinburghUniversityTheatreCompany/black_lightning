@@ -1,12 +1,10 @@
 require "test_helper"
 
-# The tags a crawler and a link-preview scraper actually read, asserted against the rendered
-# layout rather than the helper -- the bug these replace was a timing one between a before_action
-# and the action, which a helper-level test cannot see.
+# The tags crawlers and link previews read, asserted against the rendered layout: the bug was
+# before_action timing, which a helper test cannot see.
 class SeoMetadataTest < ActionDispatch::IntegrationTest
   setup do
-    # Dated forward on purpose: a finished run has its year appended to disambiguate it from a
-    # revival, which is covered in seo_page_titles_test.
+    # Dated forward on purpose: a finished run gains a year suffix (see seo_page_titles_test).
     @show = FactoryBot.create(:show, name: "The Rocky Horror Show", is_public: true,
                                      start_date: Date.current + 7, end_date: Date.current + 14)
   end
@@ -46,9 +44,8 @@ class SeoMetadataTest < ActionDispatch::IntegrationTest
     assert_equal canonical, css_select("meta[property='og:url']").first["content"]
   end
 
-  # Ransack's q[...] space is unbounded -- every author, company and venue is its own URL, and
-  # each combines with pagination. Collapsing it onto the unfiltered page is what stops those
-  # competing with the page they filter.
+  # Ransack's q[...] space is unbounded; collapsing it onto the unfiltered page stops it
+  # competing with the page it filters.
   test "a ransack-filtered index canonicalises to the unfiltered index" do
     get archives_events_path, params: { q: { author_cont: "Richard O'Brien" } }
 

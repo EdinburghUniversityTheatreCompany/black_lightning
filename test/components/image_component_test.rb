@@ -8,16 +8,14 @@ class ImageComponentTest < ViewComponent::TestCase
   def thumb  = ApplicationController.helpers.thumb_variant
   def medium = ApplicationController.helpers.medium_variant
 
-  # Serving the full-size blob is almost always a caller's mistake, so it is loud
-  # in development and test and only a warning in production.
+  # Serving the full-size blob is a caller's mistake: loud locally, a warning in production.
   test "refuses to render without a variant in a local environment" do
     assert_raises(ArgumentError) do
       render_inline(ImageComponent.new(image: image))
     end
   end
 
-  # WCAG 2.2 1.1.1: an explicit empty alt still marks an image as decorative,
-  # where a missing attribute says nothing at all.
+  # WCAG 1.1.1: an empty alt marks an image decorative; a missing one says nothing.
   test "always emits an alt attribute, empty when none is given" do
     render_inline(ImageComponent.new(image: image, variant: thumb))
 
@@ -30,8 +28,7 @@ class ImageComponentTest < ViewComponent::TestCase
     assert_selector "img[alt='A poster']"
   end
 
-  # full_width is styling, priority is loading. They were one flag once, with the
-  # performance half backwards.
+  # full_width is styling, priority is loading.
   test "leaves loading unset unless it is the priority image" do
     render_inline(ImageComponent.new(image: image, variant: thumb))
 

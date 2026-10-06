@@ -1,9 +1,6 @@
 require "test_helper"
 
-# Twenty pages -- every static page, every /about/* and /get_involved/* subpage -- rendered
-# <title>Bedlam Theatre</title> and the site-wide boilerplate description. They are the pages
-# that should win "Edinburgh student theatre", "student theatre auditions Edinburgh" and, for the
-# Find Us page, every "theatre near me" query.
+# Static pages and editable-block subpages name themselves in the title and description.
 class SeoPageTitlesTest < ActionDispatch::IntegrationTest
   GENERIC_DESCRIPTION = "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.".freeze
 
@@ -11,9 +8,7 @@ class SeoPageTitlesTest < ActionDispatch::IntegrationTest
     StaticController::PAGE_TITLES.each do |page, expected|
       get static_path(page)
 
-      # /welcome_week is claimed by an earlier redirect route to get_involved/welcome_week, so
-      # its static template is never reached. It stays in the map because the map is also the
-      # allow-list, and dropping it would change which pages the controller will render.
+      # /welcome_week is claimed by an earlier redirect route; it stays in the map as the allow-list.
       next if response.redirect?
 
       assert_response :success, "GET /#{page} did not render"
@@ -67,8 +62,8 @@ class SeoPageTitlesTest < ActionDispatch::IntegrationTest
     block.destroy
   end
 
-  # A block whose body is only a nav redirect has no prose to describe the page with; falling
-  # back beats describing the page as "EXTERNAL_URL https://...".
+  # A block whose body is only a nav redirect has no prose: fall back rather than describe the
+  # page as "EXTERNAL_URL https://...".
   test "a block with no usable prose falls back to the site description" do
     block = Admin::EditableBlock.create!(name: "Elsewhere", url: "about/elsewhere", admin_page: false, content: "")
 
@@ -90,7 +85,6 @@ class SeoPageTitlesTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Four pairs of shows shared a title exactly and competed with each other in search.
   test "a finished show is disambiguated by the year it ran" do
     old_show = FactoryBot.create(:show, name: "The History Boys", is_public: true,
                                         start_date: Date.new(2019, 3, 1), end_date: Date.new(2019, 3, 4))

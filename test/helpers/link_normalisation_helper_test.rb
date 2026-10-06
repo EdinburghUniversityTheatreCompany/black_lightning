@@ -3,8 +3,7 @@ require "test_helper"
 class LinkNormalisationHelperTest < ActionView::TestCase
   include LinkNormalisationHelper
 
-  # The live site 404ed on /get_involved/theimproverts.co.uk and
-  # /https:/wiki.bedlamtheatre.co.uk/history -- both a link target typed without a scheme.
+  # Typed without a scheme, these resolved against the site root and 404ed.
   test "a bare domain becomes an absolute external link" do
     assert_equal "https://theimproverts.co.uk", normalise_link_target("theimproverts.co.uk")
     assert_equal "https://wiki.bedlamtheatre.co.uk/history", normalise_link_target("wiki.bedlamtheatre.co.uk/history")
@@ -17,7 +16,7 @@ class LinkNormalisationHelperTest < ActionView::TestCase
     assert_equal "#section", normalise_link_target("#section")
   end
 
-  # "index.html" has a dot and no scheme but is plainly a file, not a host.
+  # "index.html" has a dot and no scheme but is a file, not a host.
   test "a filename is not mistaken for a domain" do
     assert_equal "index.html", normalise_link_target("index.html")
     assert_equal "programme.pdf", normalise_link_target("programme.pdf")
@@ -28,7 +27,7 @@ class LinkNormalisationHelperTest < ActionView::TestCase
     assert_equal "tel:+441312255705", normalise_link_target("tel:+441312255705")
   end
 
-  # Two of these sat in the navbar, so every page on the site carried two needless 301s.
+  # Each of these costs a 301 to the apex.
   test "a link to our own www host becomes a path" do
     assert_equal "/archives/events", normalise_link_target("https://www.bedlamtheatre.co.uk/archives/events")
     assert_equal "/venues", normalise_link_target("https://www.bedlamtheatre.co.uk/venues")
@@ -58,8 +57,7 @@ class LinkNormalisationHelperTest < ActionView::TestCase
   end
 end
 
-# The renderers that consume the normalisation, so a schemeless link in DB content cannot reach
-# the page as a relative path again.
+# The renderer wiring: a schemeless link in DB content must not reach the page as a relative path.
 class MarkdownLinkNormalisationTest < ActionView::TestCase
   include MdHelper
 

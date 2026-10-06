@@ -32,12 +32,7 @@ class MarkdownControllerTest < ActionController::TestCase
     image = fixture_file_upload("test_image.png", "image/png")
     post :upload, params: { image: image, item_type: "News", item_id: news_item.id }
     assert_response :success
-    # The record THIS request created, found by the unique name the response
-    # hands back. Attachment carries `default_scope { order("name ASC") }`, so
-    # `Attachment.last` is the alphabetically last row in the table -- not the
-    # newest -- and any row sorting after "md-upload-..." silently stands in
-    # for the one under test. Harmless against a schema-loaded worker database,
-    # wrong against a seeded one.
+    # Attachment's default_scope orders by name, so Attachment.last is not the newest row.
     attachment = Attachment.find_by!(name: JSON.parse(response.body)["alt"])
     assert_equal news_item, attachment.item
   end

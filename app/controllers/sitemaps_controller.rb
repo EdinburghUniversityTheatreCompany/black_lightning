@@ -1,17 +1,11 @@
-##
-# An index plus one file per section rather than a single file: the sections grow at very
-# different rates, so a crawler can re-fetch only the one that changed. Without this the only
-# route into the archive is 164 pages of pagination.
-##
+# An index plus one file per section, so a crawler can re-fetch only the section that changed.
 class SitemapsController < ApplicationController
   skip_authorization_check
 
-  # sitemaps.org caps a single file at 50,000 URLs. No section is near that, but a cap that is
-  # never checked is a cap that silently breaks the day it is passed.
+  # sitemaps.org caps a file at 50,000 URLs.
   MAX_URLS_PER_SECTION = 50_000
 
-  # A literal map rather than a name interpolated into send, which Brakeman flags as a dangerous
-  # send however well the allow-list guards it.
+  # A literal map, not an interpolated send: Brakeman flags that however well it is guarded.
   SECTION_BUILDERS = {
     "pages" => :pages_entries, "events" => :events_entries, "news" => :news_entries,
     "venues" => :venues_entries, "members" => :members_entries
@@ -19,8 +13,7 @@ class SitemapsController < ApplicationController
 
   SECTIONS = SECTION_BUILDERS.keys.freeze
 
-  # How often each section is worth re-crawling. Advisory -- Google largely ignores changefreq,
-  # but Bing and others still read it.
+  # Advisory: Google largely ignores changefreq, Bing and others still read it.
   CHANGE_FREQUENCIES = {
     "pages" => "monthly", "events" => "daily", "news" => "weekly",
     "venues" => "monthly", "members" => "monthly"
@@ -46,8 +39,7 @@ class SitemapsController < ApplicationController
 
   private
 
-  # Everything hand-written that is not a record: the hubs, the static pages and every
-  # editable-block subpage.
+  # The hubs, the static pages and every editable-block subpage.
   def pages_entries
     fixed = [
       root_url, events_url, shows_url, workshops_url, seasons_url, news_index_url,
@@ -63,8 +55,7 @@ class SitemapsController < ApplicationController
     end
   end
 
-  # accessible_by keeps unpublished events out: a sitemap must never advertise a URL that
-  # answers 403 to the crawler reading it.
+  # accessible_by keeps unpublished events out: a sitemap must not advertise a URL that 403s.
   def events_entries
     capped(Event.accessible_by(guest_ability).where.not(slug: [ nil, "" ])) do |event|
       { loc: polymorphic_url(event), lastmod: event.updated_at }
@@ -79,20 +70,15 @@ class SitemapsController < ApplicationController
     capped(Venue.accessible_by(guest_ability)) { |venue| { loc: venue_url(venue), lastmod: venue.updated_at } }
   end
 
-  # Members are indexed on purpose. Opting out is public_profile, which is exactly what the
-  # guest ability's :view_shows_and_bio rule reads, so an opted-out profile is never listed here
-  # and 403s if a crawler reaches it anyway.
+  # Members are indexed on purpose. Opting out is public_profile, which the guest ability's
+  # :view_shows_and_bio rule reads, so an opted-out profile is neither listed nor reachable.
   def members_entries
     capped(User.accessible_by(guest_ability, :view_shows_and_bio)) do |user|
       { loc: user_url(user), lastmod: user.updated_at }
     end
   end
 
-  ##
-  # Reads a section in batches and stops at the cap, so a sitemap never instantiates the whole
-  # table. Members alone run to five figures, and the cap used to be applied after loading all
-  # of them.
-  ##
+  # Reads in batches and stops at the cap, so a section never loads its whole table.
   def capped(scope)
     entries = []
 
