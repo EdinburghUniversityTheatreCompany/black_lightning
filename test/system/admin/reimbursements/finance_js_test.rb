@@ -2,19 +2,12 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # Browser tests for the three finance-surface JS interactions that render
-    # tests can't cover: the accessible needs-attention popover (open on click /
-    # close on Escape) and the Fancybox receipts lightbox.
-    #
-    # Data is served by the DatabaseStore from real seeded rows; a fake modulus
-    # checker keeps the tests off the gitignored Pay.UK rule files. Capybara
-    # serves the app in-process, so setting the class attributes here is visible
-    # to the request thread.
+    # What only a browser sees on the finance screens. Capybara serves the app
+    # in-process, so the class-attribute seams set here reach the request thread.
     class FinanceJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
-      # Always-VALID modulus verdict, so a fully-detailed payee never trips a
-      # "needs attention" bank-details reason and "no receipt" is the only flag.
+      # Always VALID, so "no receipt" is the only needs-attention flag.
       class FakeChecker
         def check(_sort_code, _account_number)
           ::Reimbursements::ModulusCheck::VALID
@@ -37,10 +30,8 @@ module Admin
         ReviewController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
       end
 
-      # Receipts default to a PDF poppler can render. The suite-wide default
-      # bytes are a stub header, fine wherever no preview is requested -- but in
-      # a browser the review page requests one, and the stub raises
-      # ActiveStorage::PreviewError. Only the fallback test below wants that.
+      # Defaults to a PDF poppler can render: the suite's stub bytes raise
+      # ActiveStorage::PreviewError when a browser requests a preview.
       def seed_expense(status:, receipt: true, **attrs)
         expense = create_reimbursements_expense(person: @person, budget: @budget, status: status,
                                                 receipt: false, **attrs)
@@ -48,15 +39,10 @@ module Admin
         expense
       end
 
-      # Capybara re-raises app-server exceptions as test errors, so a test that
-      # deliberately uploads an unpreviewable file has to opt out -- otherwise
-      # the PreviewError whose handling it asserts fails it instead.
-      #
-      # Deliberately NOT scoped to a block. The browser fetches the preview
-      # asynchronously and Capybara collects late errors when it resets sessions
-      # in after_teardown, so on a slow machine the PreviewError lands after the
-      # test body has returned -- green locally, red on CI. The opt-out has to
-      # outlive the reset, hence restoring below it rather than around the body.
+      # Capybara re-raises app-server exceptions, so a test that uploads an unpreviewable
+      # file must opt out. Deliberately not block-scoped: the preview is fetched
+      # asynchronously and a late PreviewError lands after the body, during the session
+      # reset in after_teardown, so the opt-out has to outlive it.
       def tolerate_server_errors
         Capybara.raise_server_errors = false
       end
@@ -67,9 +53,6 @@ module Admin
         Capybara.raise_server_errors = true
       end
 
-      # A PDF poppler can actually render, so the first-page preview these tests
-      # assert on is a real one. The suite's default receipt bytes are a stub
-      # header that raises ActiveStorage::PreviewError at generation time.
       def renderable_pdf_bytes
         file_fixture("renderable_receipt.pdf").binread
       end
@@ -78,17 +61,15 @@ module Admin
         file_fixture("renderable_receipt.png").binread
       end
 
-      # The src ATTRIBUTE of every frame in a pane, in strip order. nil means
-      # that receipt has never been fetched.
+      # The src attribute of every frame in a pane, in strip order; nil means never fetched.
       def frame_sources(pane_id)
         evaluate_script(
           "Array.from(document.querySelectorAll('##{pane_id} iframe')).map(f => f.getAttribute('src'))"
         )
       end
 
-      # Whether an <img> actually decoded. A thumbnail that fails is hidden by
-      # receipt_viewer#imageFailed in favour of the document icon, so "visible"
-      # alone would pass before the request even finished.
+      # Whether an <img> decoded: a failed thumbnail is hidden by receipt_viewer#imageFailed,
+      # so "visible" alone would pass before the request finished.
       def image_rendered?(selector, timeout: 5)
         deadline = Time.current + timeout
         script = <<~JS
@@ -107,7 +88,6 @@ module Admin
         page.driver.browser.manage.window.resize_to(width, height)
       end
 
-      # (a) The accessible reasons popover on the finance expenses table.
       test "needs-attention popover opens on click and closes on Escape" do
         expense = seed_expense(status: "Pending", receipt: false)
 
@@ -123,13 +103,11 @@ module Admin
         assert_selector "##{panel}", visible: true
         within("##{panel}") { assert_text "no receipt" }
 
-        # Escape closes it and returns focus to the trigger.
         trigger.send_keys(:escape)
         assert_equal "false", trigger["aria-expanded"]
         assert_no_selector "##{panel}"
       end
 
-      # (a2) Clicking anywhere outside the popover closes it too, not just Escape.
       test "needs-attention popover closes on an outside click" do
         expense = seed_expense(status: "Pending", receipt: false)
 
@@ -147,8 +125,7 @@ module Admin
         assert_no_selector "##{panel}"
       end
 
-      # (b) The Fancybox lightbox still opens an image full screen — from inside
-      # the viewer pane, which is where the lightbox link now lives.
+      # The Fancybox lightbox opens from inside the viewer pane.
       test "clicking a receipt thumbnail opens the Fancybox lightbox" do
         expense = seed_expense(status: "Approved", receipt: false)
         attach_test_receipt(expense, filename: "receipt.png", content_type: "image/png",
@@ -161,17 +138,14 @@ module Admin
         find("a[data-fancybox='receipts-#{expense.record_id}']").click
         assert_selector ".fancybox__container", wait: 5
 
-        # Escape dismisses the lightbox.
         find("body").send_keys(:escape)
         assert_no_selector ".fancybox__container"
       end
 
       # --- In-page receipt viewer -------------------------------------------
 
-      # A card's receipt opens in place, one at a time, and only when asked for:
-      # a twenty-claim queue that fetched twenty PDFs on load would be slower
-      # than the tab-flipping it replaces, so the "no src before opening"
-      # assertions are the point.
+      # A receipt opens in place, one at a time, and only when asked for: a twenty-claim
+      # queue fetching twenty PDFs on load would be slower than the tab-flipping it replaced.
       test "a receipt pane opens on demand, lazily, and switches from the strip" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "first.pdf", bytes: renderable_pdf_bytes)
@@ -180,12 +154,10 @@ module Admin
 
         visit admin_reimbursements_review_path
 
-        # Closed, and nothing fetched.
         assert_no_selector "##{pane}"
         assert_equal [ nil, nil ], frame_sources(pane)
 
-        # A receipt URL identifies the file by id, not by name, so the wrapper's
-        # own URL is what says which of the two was actually fetched.
+        # A receipt URL names the file by id, so it says which of the two was fetched.
         first, second = expense.reload.receipts
 
         find("button[aria-label='View receipt 1 of 2, first.pdf']").click
@@ -205,8 +177,7 @@ module Admin
         assert_no_selector "##{pane}"
       end
 
-      # A PDF's first page renders fine, so it gets a real thumbnail rather than
-      # the generic document icon an is-it-an-image test would leave it with.
+      # A PDF gets a real first-page thumbnail, not the generic document icon.
       test "a PDF receipt renders a real first-page preview in the strip" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
@@ -220,9 +191,8 @@ module Admin
                            visible: true
       end
 
-      # A malformed PDF only raises ActiveStorage::PreviewError when the preview
-      # is REQUESTED, so a producer's dodgy upload surfaces as a failed thumbnail
-      # request. It has to leave a document icon, not a broken image.
+      # A malformed PDF raises PreviewError only when the preview is requested, so it
+      # surfaces as a failed thumbnail request. It must leave a document icon, not a broken image.
       test "a receipt whose preview cannot be generated falls back to the document icon" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense) # the suite default: a stub PDF header poppler cannot render
@@ -235,8 +205,7 @@ module Admin
         assert_no_selector "#{label} img", visible: true
       end
 
-      # Side by side is the whole request; on a phone it has to stack instead of
-      # squeezing both columns into unreadable slivers.
+      # On a phone the columns must stack, not squeeze into slivers.
       test "the receipt pane sits beside the claim details, and stacks on a phone" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
@@ -263,17 +232,14 @@ module Admin
         resize_window_to(1400, 1400)
       end
 
-      # The attach form, i.e. the last row of the receipts block. Reached through
-      # its file field because the remove-receipt buttons post to a URL with the
-      # same /receipts prefix.
+      # The last row of the receipts block, found through its file field because the
+      # remove-receipt buttons post to a URL with the same /receipts prefix.
       def attach_form
         find("input[name='receipts[]']").find(:xpath, "ancestor::form[1]")
       end
 
-      # A claim with nothing to read beside the form must not be given a column
-      # anyway: two fifths of the card, stretched to the height of the details,
-      # holding an attach button — and since a receiptless claim always sorts
-      # into Needs attention, that empty block lands at the bottom of the queue.
+      # A claim with no receipt gets no column: two fifths of the card holding only an
+      # attach button.
       test "a claim with no receipt is not given a receipt column at all" do
         seed_expense(status: "Pending", receipt: false)
 
@@ -287,9 +253,8 @@ module Admin
                         "and sits below the details rather than beside them"
       end
 
-      # The column a receipted claim does get must end with its own content. A
-      # stretched column rules the divider down blank space to the card floor,
-      # which is what the empty area looked like.
+      # The receipt column must end with its content, not rule the divider down blank
+      # space to the card floor.
       test "the receipt column ends with its content instead of stretching to the card floor" do
         expense = seed_expense(status: "Pending", receipt: false)
         attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
@@ -305,20 +270,16 @@ module Admin
                         "the column stops at its last row rather than being stretched"
       end
 
-      # (d) The Reconcile wizard's forms render their next step directly (the
-      # stateless wizard re-POSTs the full paste, so it can't redirect). That
-      # only works inside a Turbo Frame — outside one, Turbo Drive silently
-      # discards a non-redirect form response and the button does nothing,
-      # which is exactly the regression this guards against.
+      # The wizard renders its next step directly (the stateless re-POST can't redirect),
+      # which works only inside a Turbo Frame: outside one Turbo drops the response and the
+      # button does nothing.
       test "reconcile Parse and match actually advances the wizard in a real browser" do
         visit admin_reimbursements_reconciliation_path
 
-        # Error path: garbage renders the parse error in place.
         fill_in "Actuals data (tab- or comma-separated, include the header row)", with: "not parseable"
         click_on "Parse and match"
         assert_text "Could not parse actuals", wait: 5
 
-        # Happy path: a valid row advances to the Step 2/3 preview.
         fill_in "Actuals data (tab- or comma-separated, include the header row)",
                 with: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet\n" \
                       "439999\tF40\tBACS001\t15/03/2026\t03\tSystem Test Row\t\t123.45\t\t123.45"
@@ -328,11 +289,8 @@ module Admin
         assert_text "Nobody is emailed"
       end
 
-      # (d2) Two byte-identical offsetting pairs must be two independently
-      # tickable rows in a real browser. On a content-only key both rows share
-      # one DOM id, so the second row's label activates the FIRST checkbox and
-      # unticking one silently offsets both, stamping a genuine transaction as
-      # bookkeeping noise.
+      # Identical offsetting pairs need distinct DOM ids, or the second row's label
+      # activates the first checkbox and unticking one unticks both.
       test "unticking one of two identical offsetting pairs leaves the other ticked" do
         accrual = "331300\tF40\tJ000000884\t27/04/2026\t01\tVenue hire accrual\tShow\t10.00\t\t10.00"
         reversal = "331300\tF40\tJ000000884\t28/04/2026\t02\tVenue hire accrual\tShow\t\t10.00\t-10.00"
@@ -354,10 +312,8 @@ module Admin
         assert boxes.last.checked?, "unticking one pair must not untick the other"
       end
 
-      # (d3) The way back out of a mis-detected offsetting pair, clicked for
-      # real: the confirm is a SweetAlert dialog (Turbo.config.forms.confirm is
-      # replaced in setup/index.js), so a plain button_to + turbo_confirm has to
-      # survive that indirection inside the results table.
+      # The confirm is a SweetAlert dialog (Turbo.config.forms.confirm is replaced in
+      # setup/index.js), which a plain button_to + turbo_confirm has to survive.
       test "the Not offsetting button undoes a pair through its confirm dialog" do
         accrual = create_reimbursements_actual(nominal_code: "331300", period: "04",
                                                narrative: "Venue hire accrual",
@@ -382,10 +338,8 @@ module Admin
         assert_not reversal.reload.offset?
       end
 
-      # (e) A rejected (422) form save must still SHOW its flash error. Turbo
-      # never fires turbo:load for non-redirect form responses, so the old
-      # turbo:load-only flash listener left these saves failing with zero
-      # visible feedback — the page just redrew silently.
+      # A rejected (422) save must still show its flash error: Turbo fires no turbo:load
+      # for a non-redirect response.
       test "a rejected settings save shows its validation error" do
         visit edit_admin_reimbursements_setting_path("fringe")
         fill_in "Receive mailbox (email-in)", with: "not-an-email"
@@ -394,19 +348,16 @@ module Admin
         assert_selector ".swal2-container", text: "Receive mailbox is invalid", wait: 5
       end
 
-      # Capybara's `select` cannot drive these — select_controller.js replaces
-      # every .simple-select2 with a Tom Select widget and hides the underlying
-      # <select>. Click the widget instead.
+      # Capybara's `select` cannot drive a Tom Select (select_controller.js hides the
+      # <select>): click the widget instead.
       def tom_select(option_text, select_id:)
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click
         wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
       end
 
-      # A remote-source Tom Select (data-remote-source) loads nothing until the
-      # operator types, and the dropdown_input plugin puts the search box inside
-      # the dropdown rather than in the control. So: open it, type, then click
-      # the option the AJAX round trip brought back.
+      # A remote Tom Select loads nothing until typed into, and its search box is inside the
+      # dropdown: open it, type, then click the option the AJAX round trip returned.
       def tom_select_remote(query, option_text, select_id:)
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click
@@ -414,11 +365,7 @@ module Admin
         wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first, wait: 5).click
       end
 
-      # (f) The new-cost-centre form creates a row and lands on its settings
-      # page. Plain fill + submit is safe here — this form has no markdown editor.
-      #
-      # The notification email is REQUIRED, so leaving it blank re-renders the
-      # form.
+      # Plain fill + submit is safe here: no markdown editor.
       test "creating a cost centre from the form lands on its settings page" do
         visit admin_reimbursements_settings_path
         click_on "New cost centre"
@@ -430,7 +377,6 @@ module Admin
         fill_in "Notification email", with: "stv-finance@example.co"
         click_on "Create cost centre"
 
-        # Auto-derived slug drives the settings URL we land on.
         assert_current_path edit_admin_reimbursements_setting_path("system-test-venue"), wait: 5
         assert_text "System Test Venue"
 
@@ -440,9 +386,8 @@ module Admin
         assert_equal [ "stv-finance@example.co" ], created.notification_emails
       end
 
-      # (g) Editing a Review card then hitting Approve must not silently drop the
-      # edit: a dirty Save form pops the three-option confirmation dialog, and
-      # Cancel leaves the page and the edit intact.
+      # A dirty card must not silently drop its edit on Approve: it pops the three-option
+      # dialog, and Cancel leaves the edit intact.
       test "a dirty review card intercepts Approve with the unsaved-edits dialog" do
         seed_expense(status: "Pending")
 
@@ -461,18 +406,14 @@ module Admin
           click_button "Cancel"
         end
 
-        # Cancel keeps us on the Review page with the edit still typed in.
         assert_no_selector "dialog[open]"
         assert_selector "h1", text: "Review Expenses"
         assert_field "Description", with: "Edited in the browser"
       end
 
-      # (g3) The Save Changes branch, end to end. Nothing else drives
-      # saveThenDecide / #injectEditFields: the server tests hand-craft the flat
-      # params this JS is supposed to produce, so dropping the injected
-      # save_changes input (or the edit fields themselves) would leave every
-      # "Save Changes" click silently discarding the operator's edits and
-      # deciding on the un-edited claim.
+      # Save Changes is the only end-to-end driver of saveThenDecide / #injectEditFields:
+      # the server tests hand-craft the params, so dropping the injected inputs would
+      # silently discard every edit.
       test "Save Changes saves the edit and then runs the decision" do
         expense = seed_expense(status: "Pending", description: "Original wording")
 
@@ -488,7 +429,7 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.status, "and the decision must run"
       end
 
-      # (g4) The Discard branch: the decision runs, the edit does NOT land.
+      # Discard: the decision runs, the edit does not land.
       test "Discard Changes runs the decision without saving the edit" do
         expense = seed_expense(status: "Pending", description: "Original wording")
 
@@ -504,31 +445,23 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
       end
 
-      # (g5) An aborted Save leaves its injected hidden inputs in the DOM unless
-      # they are cleared, so the NEXT decision — including an explicit "Discard
-      # Changes" — carries the edit and save_changes=1 and commits the very edit
-      # the operator discarded. Reachable on the override-approve form, which
-      # always carries a turbo-confirm the operator can cancel.
+      # An aborted Save must not leave injected inputs in the DOM for a later Discard to
+      # commit. Reachable on the override-approve form, whose turbo-confirm can be cancelled.
       test "an aborted Save Changes leaves nothing behind for a later Discard to commit" do
         owner = create_reimbursements_person(name: "Olga Owner", email: "olga@example.com")
         owned = create_reimbursements_budget(name: "Owned", nominal_code: "4100", owners: [ owner ])
         expense = seed_expense(status: "Pending", budget: owned, description: "Original wording")
 
-        # The claim is charged to a budget Olga owns and was not submitted by
-        # her, so its owner gate is unmet and it sits on the Awaiting owner tab
-        # -- not the default To approve one. That tab is where the override
-        # form this test drives lives.
+        # Olga's gate is unmet, so the claim is on Awaiting owner, where the override form lives.
         visit admin_reimbursements_review_path(tab: "awaiting_owner")
 
         fill_in "Description", with: "Edited then abandoned"
         click_button "Approve (override sign-off)"
         within("dialog[open]") { click_button "Save Changes" }
-        # The override form's own turbo-confirm: cancelling it aborts the submit
-        # with the injected fields already appended to the form.
+        # Cancelling the override's own confirm aborts the submit with the fields appended.
         within(".swal2-container") { click_button "Cancel" }
         assert_no_selector ".swal2-container"
 
-        # Second run at the same decision, this time discarding the edit.
         click_button "Approve (override sign-off)"
         within("dialog[open]") { click_button "Discard Changes" }
         within(".swal2-container") { click_button "Yes" }
@@ -540,9 +473,8 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
       end
 
-      # (g6) The native Escape key closes the dialog without going through the
-      # Cancel button, so the close event is what has to reset the pending
-      # decision. Behaviourally it must match Cancel: edit intact, nothing decided.
+      # Escape bypasses the Cancel button, so the close event must reset the pending
+      # decision, matching Cancel.
       test "Escape closes the unsaved-edits dialog and decides nothing" do
         expense = seed_expense(status: "Pending")
 
@@ -559,20 +491,15 @@ module Admin
         assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
       end
 
-      # (g7) The dirty check serialises the Save form as name=value pairs. Joined
-      # RAW, a value containing the separators could make two DIFFERENT sets of
-      # field values serialise to the same string — the form then reads as
-      # pristine and the decision drops the edits without ever offering the
-      # dialog. The pair below collides exactly that way unencoded: the seeded
-      # payment reference is longer than the input's maxlength, which only
-      # constrains typing, so both states are reachable in a real browser.
+      # The dirty check must encode separators, or two different sets of values serialise
+      # alike, the form reads as pristine and the decision drops the edits. The seeded
+      # payment reference exceeds maxlength, which only constrains typing.
       test "the dirty check is not defeated by separators inside a field value" do
         expense = seed_expense(status: "Pending", description: "x",
                                payment_reference: "y&payment_reference=z")
 
         visit admin_reimbursements_review_path
 
-        # Same unencoded serialisation as the seeded state, different values.
         fill_in "Description", with: "x&payment_reference=y"
         fill_in "Payment reference", with: "z"
         click_button "Approve", exact: true
@@ -582,11 +509,8 @@ module Admin
                      "the decision must not have run behind the operator's back"
       end
 
-      # (g2) A pristine card never shows the unsaved-edits dialog — the decision's
-      # own turbo-confirm (a SweetAlert here) fires as usual.
-      #
-      # The reason is filled in first because the box is now `required`: see the
-      # test below, which is the whole point of that attribute.
+      # A pristine card skips the dialog; the decision's own confirm fires. The reason is
+      # filled in first because the box is `required`.
       test "a pristine review card skips the dialog and runs the normal confirm" do
         seed_expense(status: "Pending")
 
@@ -599,14 +523,9 @@ module Admin
         assert_selector ".swal2-container", wait: 5
       end
 
-      # Keeping your place is the whole point of the anchored redirect, and a
-      # request test cannot see whether the browser actually moved. It nearly
-      # did not: a fragment in the redirect's Location header does NOT survive
-      # a Turbo form submission — Turbo submits with fetch, fetch follows the
-      # 302 itself, and a fragment is never transmitted — so the first cut came
-      # back with main.scrollTop still 0. The ?focus= parameter is what works.
+      # A fragment in a redirect does not survive a Turbo form submission (fetch follows the
+      # 302 and never transmits it), so ?focus= is what scrolls to the next card.
       test "approving a card comes back scrolled to the next one" do
-        # Tall enough that the second card is well below the fold.
         first = seed_expense(status: "Pending", amount: 111, amount_excl_vat: 100)
         second = seed_expense(status: "Pending", amount: 222, amount_excl_vat: 200)
 
@@ -620,10 +539,8 @@ module Admin
                "expected <main> to have scrolled to the anchored card, got scrollTop #{scrolled}"
       end
 
-      # Rejecting is irreversible and emails the producer, so agreeing to it
-      # over a submit the server was always going to refuse is the wrong order.
-      # The browser now stops a blank reason BEFORE the confirm — which only a
-      # browser test can see, since a request test POSTs straight to the action.
+      # Only a browser sees `required` stop a blank rejection before the can't-be-undone
+      # confirm; a request test POSTs straight to the action.
       test "a blank rejection reason never reaches the can't-be-undone confirm" do
         seed_expense(status: "Pending")
 
@@ -635,9 +552,8 @@ module Admin
         assert_no_selector "dialog[open]", wait: 1
       end
 
-      # The bulk toolbar's single reason box is SHARED with "Approve selected",
-      # so it cannot carry `required` — Reject selected is disabled until a
-      # reason is typed instead.
+      # The bulk reason box is shared with "Approve selected", so it cannot be `required`:
+      # Reject selected is disabled until a reason is typed.
       test "bulk Reject selected stays disabled until a reason is typed" do
         expense = seed_expense(status: "Pending")
 
@@ -654,8 +570,7 @@ module Admin
 
       # --- Bank-detail masking ------------------------------------------------
 
-      # Build Batch is the screen that would otherwise show every payee's account
-      # number on load. Masked, revealed on a deliberate click, and hidden again.
+      # Build Batch would otherwise show every payee's account number on load.
       test "bank details on Build Batch are masked until revealed" do
         ::Reimbursements::CostCentre.default.update!(
           sharepoint_receipts_drive_id: "drvR", sharepoint_receipts_folder_id: "fldR",
@@ -680,8 +595,7 @@ module Admin
         assert_no_text "66374958"
       end
 
-      # The People registry's fields hold the real values so they can be edited,
-      # so they are hidden the way a password is rather than masked.
+      # The People fields hold the real values to be editable, so they hide like a password.
       test "the People registry hides bank details in the edit fields until revealed" do
         visit admin_reimbursements_people_path
         find("summary", text: "Pat Producer").click
@@ -697,10 +611,8 @@ module Admin
 
       # --- Registering a user as a payee --------------------------------------
       #
-      # A request test cannot see form STRUCTURE (form_with opened inside the
-      # CardComponent puts the footer's submit button outside the <form>, and
-      # the button then silently does nothing), and it cannot drive the Tom
-      # Select user picker at all. Both are what this covers.
+      # A request test cannot see form structure (form_with inside CardComponent puts the
+      # footer submit outside the <form>) nor drive the Tom Select user picker.
       test "finance registers an existing user account as a payee, with no bank details" do
         visit admin_reimbursements_people_path
         click_on "Register a person"
@@ -719,11 +631,7 @@ module Admin
 
       # --- Linking an EUSA row to a claim -------------------------------------
       #
-      # This exists because a request-level test cannot see form STRUCTURE. The
-      # first version of this screen opened form_with INSIDE the CardComponent,
-      # so the footer slot rendered the submit button outside the <form> and the
-      # button silently did nothing, while every functional test passed by
-      # POSTing straight to the action.
+      # Same form-structure trap as above: functional tests POST straight to the action.
       test "linking an EUSA row settles the claim and corrects an international amount" do
         claim = create_reimbursements_expense(
           person: @person, budget: @budget, status: ::Reimbursements::Status::SUBMITTED,

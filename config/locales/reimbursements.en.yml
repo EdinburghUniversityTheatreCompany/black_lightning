@@ -1,10 +1,7 @@
-# Human-facing attribute names + messages for the reimbursements ActiveModel
-# forms, so validation errors read in the user's terms ("Budget", "Amount
-# excl. VAT") instead of leaking humanized internal attribute names ("Budget
-# record", "Amount excl vat", "Vat acknowledged").
+# Attribute names for the reimbursements forms, so errors read "Budget", not "Budget record".
 en:
   activemodel:
-    # Match the rest of the app's activerecord customisation (errors.en.yml).
+    # As errors.en.yml does for activerecord.
     errors:
       messages:
         blank: "must not be blank."
@@ -21,11 +18,8 @@ en:
         sort_code_override: "Payee sort code"
         account_number_override: "Payee account number"
         receipts: "Receipt"
-  # One line per sheet of the combined export, keyed by the exporter's own
-  # SLUG, so the Export page describes the workbook from the same list the
-  # workbook is built from (Exports::Workbook::SHEETS). A sheet added there
-  # without a line here falls back to "One row per record." rather than
-  # raising — an export must never fail over its own caption.
+  # One line per export sheet, keyed by the exporter's SLUG. A sheet with no line here
+  # falls back to "One row per record." rather than raising.
   reimbursements:
     export_sheets:
       expenses: "Every claim: who, how much, which budget, what status, and which batch paid it."

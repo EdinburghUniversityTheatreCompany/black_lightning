@@ -1,9 +1,6 @@
 module Reimbursements
   ##
-  # Shared base for every reimbursements job: the one definition of
-  # +store_builder+/+store+, which MailboxPollJob, NightlyBatchJob and
-  # BuildBatchJob all need. CredentialsCheckJob doesn't touch the store, but
-  # inheriting the unused seam costs nothing.
+  # Base for reimbursements jobs: the store_builder seam and +store+.
   class ApplicationJob < ::ApplicationJob
     include ::ErrorReporting
 

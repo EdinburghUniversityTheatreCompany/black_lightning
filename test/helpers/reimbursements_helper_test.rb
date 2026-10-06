@@ -20,7 +20,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "modulus badge renders a warning 'Missing' badge for a payee with no bank details" do
-    # Missing blocks approval like INVALID does, so it's a warning, not neutral.
+    # Missing blocks approval like INVALID, so it is a warning, not neutral.
     html = reimbursements_modulus_badge(person_with(sort_code: "", account_number: ""))
     assert_includes html, "Missing"
     assert_includes html, "text-warning"
@@ -120,9 +120,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_equal "£1,234.50", reimbursements_money("1234.50")
   end
 
-  # The area allocation is printed on two screens — the grouped budgets index
-  # and the area edit card — and the rule that a netted allocation is never a
-  # bare negative held on one of them only until this became a single helper.
+  # The allocation prints on the grouped index and the area edit card.
   def netted_area(spend: 400, income: 800, basis: "net")
     area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
                                       budget_basis: basis)
@@ -143,8 +141,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "reimbursements_area_allocation states a spend cap as one figure" do
-    # An income line is left out of a spend cap entirely, so there are no
-    # halves to state.
+    # A spend cap leaves income out, so there are no halves.
     assert_equal "£400.00", reimbursements_area_allocation(netted_area(basis: "expenses"))
   end
 
@@ -153,8 +150,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "reimbursements_amount_value pads a decimal column's value to 2dp" do
-    # A BigDecimal's own to_s renders "100.0" into a number input, a pence
-    # short of the figure reimbursements_money prints beside it.
+    # A BigDecimal's own to_s renders "100.0" into a number input.
     assert_equal "100.00", reimbursements_amount_value(BigDecimal("100"))
     assert_equal "12.50", reimbursements_amount_value(BigDecimal("12.5"))
   end
@@ -167,9 +163,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_nil reimbursements_amount_value(nil)
   end
 
-  # What a BROWSER posts for an empty number input, handed back by a form
-  # re-rendering its own params: format("%.2f", "") raises, so every refusal on
-  # a form carrying an empty amount 500ed instead of stating its reason.
+  # A browser posts "" for an empty number input; format("%.2f", "") raised, so refusals 500ed.
   test "reimbursements_amount_value renders a browser's empty string as nil" do
     assert_nil reimbursements_amount_value("")
   end
@@ -190,8 +184,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
                                           record_label: "#123")
 
     assert_includes html, 'aria-label="Needs attention for #123"'
-    # The visible label text still just reads "Needs attention" (the scoping
-    # is for assistive tech, not a visible change).
+    # The visible text is unchanged: the scoping is for assistive tech.
     assert_match(%r{<button[^>]*>\s*Needs attention}, html)
   end
 
@@ -202,8 +195,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes html, 'aria-label="Needs attention"'
   end
 
-  # The panel is a plain disclosure region (static text), not a menu — claiming
-  # aria-haspopup="true" (equivalent to "menu") would be an ARIA role mismatch.
+  # A disclosure region, not a menu: aria-haspopup would be an ARIA role mismatch.
   test "reasons_popover trigger does not claim a menu popup type" do
     html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "x",
                                           label: "Needs attention", heading: "Needs attention:")
@@ -215,7 +207,6 @@ class ReimbursementsHelperTest < ActionView::TestCase
     html = reimbursements_producer_status_badge("Submitted")
     assert_includes html, "Sent to EUSA"
     assert_not_includes html, ">Submitted<"
-    # The apostrophe is HTML-escaped in the title attribute.
     assert_includes html, "title=\"Sent to the Students#{ERB::Util.html_escape("'")} Association (EUSA) for payment.\""
   end
 
@@ -230,9 +221,8 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   # --- Who a producer writes to ------------------------------------------
-  # CostCentre.default is order(:id).first, so it names an ARBITRARY pot the
-  # moment a second one exists — and a termtime producer sent to the Fringe
-  # mailbox writes to a team that has never seen their claim.
+  # CostCentre.default names an arbitrary pot once a second exists, so the wrong team
+  # would be written to.
 
   test "the contact link names the cost centre of the claim it is shown beside" do
     termtime = create_second_reimbursements_cost_centre
@@ -259,10 +249,8 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes links, ::Reimbursements::CostCentre.default.receive_mailbox
   end
 
-  # An income line's `remaining` is nil even when a figure IS set — its plan is
-  # money to raise, so "what is left" means nothing on that side. Printing the
-  # no-budget wording there contradicted the amount in the same row's Initial
-  # column.
+  # An income line's `remaining` is nil even with a figure set, so the no-budget wording
+  # would contradict the Initial column.
   test "an income line with a plan does not claim nobody set a budget" do
     income = create_reimbursements_budget(name: "Ticket income", budget_type: "Income",
                                           initial_budget: 800)

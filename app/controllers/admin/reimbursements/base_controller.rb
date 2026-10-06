@@ -1,50 +1,36 @@
 module Admin
   module Reimbursements
     ##
-    # Producer-facing reimbursements portal, part of the members' backend.
-    # Access needs the grid permission "Access the Reimbursements portal"
-    # (`:access, :reimbursements`) on top of backend access. Data is reached
-    # through the Store, never the AR models directly, and every action is
-    # scoped to the member's own linked People record.
+    # Base for the reimbursements portal: the `:access, :reimbursements` gate plus
+    # the store and notifier seams. Data goes through the store, never the AR models.
     class BaseController < AdminController
-      # Raised when the expense is the member's own but review has since picked
-      # it up, so it's no longer editable (a race against an Edit link on a
-      # stale list). Subclasses RecordNotFound so callers that don't
-      # distinguish (the receipts turbo actions) still degrade to a 404, while
-      # the producer expenses controller can rescue it for a friendly redirect.
+      # The expense is the member's own but review has since picked it up. Subclasses
+      # RecordNotFound so the receipts turbo actions still 404, while the producer
+      # expenses controller rescues it for a friendly redirect.
       ExpenseNoLongerEditable = Class.new(ActiveRecord::RecordNotFound)
 
       before_action :authorize_reimbursements!
 
-      # Injection seams for functional tests (this suite has no mocking library).
+      # Injection seams for functional tests (no mocking library).
       #
-      # A test must write each seam on ONE class and stick to it, and put the previous value
-      # back afterwards. class_attribute's writer defines a singleton reader on whatever
-      # receives it, so writing to a SUBCLASS shadows this default permanently for the rest
-      # of the process — a later `BaseController.<seam> = fake` is then invisible to that
-      # subclass and the real collaborator runs instead. Two suites writing the same seam on
-      # different classes therefore pass alone and fail whenever they share a process.
+      # Write each seam on ONE class and put the previous value back afterwards.
+      # class_attribute's writer defines a singleton reader on whatever receives it, so
+      # writing to a SUBCLASS shadows this default for the rest of the process: a later
+      # `BaseController.<seam> = fake` is invisible to that subclass. Two suites writing
+      # one seam on different classes pass alone and fail together.
       #
-      # The store seam takes the two axes the request is scoped to — the
-      # financial year and the cost centre (both nil here; see
-      # #selected_financial_year / #selected_cost_centre). A test fake that
-      # ignores scoping is written as `->(**) { fake }`.
-      #
-      # Named, because a test that has swapped the seam has to put THIS back:
-      # restoring it with a hand-written `-> { build_store }` drops both
-      # arguments, and class_attribute makes that replacement stick for the rest
-      # of the process — so every later scoped page in that worker quietly
-      # renders every year's and every cost centre's budgets at once.
+      # The store seam takes the request's scope (financial_year, cost_centre; nil here).
+      # A fake that ignores scoping is `->(**) { fake }`. Restore THIS constant, never a
+      # hand-written `-> { build_store }`: it drops both arguments, and the replacement
+      # sticks, so every later scoped page renders every year's and centre's budgets at once.
       DEFAULT_STORE_BUILDER =
         ->(financial_year: nil, cost_centre: nil) {
           ::Reimbursements.build_store(financial_year: financial_year, cost_centre: cost_centre)
         }
 
       class_attribute :store_builder, default: DEFAULT_STORE_BUILDER
-      # The Graph-backed email notifier (from the cost centre's send mailbox).
-      # Lives here, not just on FinanceController, because a budget owner
-      # rejecting a claim (MyBudgetsController) emails the payee the same way
-      # the finance Review queue does — see RejectsExpenses.
+      # Here, not on FinanceController, because a budget owner rejecting a claim
+      # (MyBudgetsController) emails the payee the same way (see RejectsExpenses).
       class_attribute :notifier_builder,
                       default: ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
 
@@ -52,16 +38,10 @@ module Admin
 
       private
 
-      # The notifier for the cost centre that owns +expense+ — its send mailbox
-      # is the address the producer's rejection email comes FROM and replies to.
-      # Built per cost centre, not once per request: a single memoized notifier
-      # on CostCentre.default sent every claim's mail out of centre #1's mailbox
-      # whoever it belonged to. Memoized by centre id so a run of rejections
-      # still builds one notifier per centre, not one per claim.
-      #
-      # An unplaced claim (no budget, or a budget with no centre) falls back to
-      # the default centre: an email from the wrong mailbox is visible and
-      # answerable, whereas raising here would block the rejection itself.
+      # The notifier for the centre that owns the claim: its send mailbox is where a
+      # rejection comes FROM. Per centre, not one on CostCentre.default, which sent every
+      # claim's mail from centre #1. An unplaced claim falls back to the default centre:
+      # a wrong mailbox is visible and answerable, raising would block the rejection.
       def notifier_for(cost_centre)
         centre = cost_centre || ::Reimbursements::CostCentre.default
         @notifiers ||= {}
@@ -77,19 +57,15 @@ module Admin
                                       cost_centre: selected_cost_centre)
       end
 
-      # The producer surfaces are never year-scoped. A submitter files against
-      # the active year, which DatabaseStore#active_budgets enforces on its own,
-      # and their own past claims must stay visible whatever year finance is
-      # looking at. FinanceController overrides this with the ?year= selector.
+      # Producer surfaces are never year-scoped: a submitter files against the active
+      # year (DatabaseStore#active_budgets enforces it) and their past claims stay
+      # visible. FinanceController overrides this with the ?year= selector.
       def selected_financial_year
         nil
       end
 
-      # Nor are they cost-centre scoped: a producer's own claims may be spread
-      # across as many centres as they have filed in, and the budget picker they
-      # file against is the ACTIVE year's list, which is centre-blind on
-      # purpose. FinanceController overrides this with the ?cost_centre=
-      # selector.
+      # Nor cost-centre scoped: a producer's claims span every centre they filed in, and
+      # the budget picker is centre-blind on purpose. FinanceController overrides this.
       def selected_cost_centre
         nil
       end
@@ -104,10 +80,7 @@ module Admin
         @current_person = person_link.person_for(current_user)
       end
 
-      # Submitters may only touch their own expenses, and only while they are
-      # a draft or pending (once review picks an expense up it's the finance
-      # team's). find_expense! survives a stale cached list, e.g. following
-      # an email-in link for an expense created by the poll job.
+      # A submitter may edit only their own Draft/Pending claims.
       def find_own_editable_expense!(record_id)
         expense = find_own_expense!(record_id)
         raise ExpenseNoLongerEditable unless expense.editable?
@@ -115,9 +88,7 @@ module Admin
         expense
       end
 
-      # The submitter's own expense at ANY status — for the read-only show page,
-      # so a producer can still view a claim (and its receipts) after it's left
-      # the editable window. Ownership is still enforced.
+      # The submitter's own expense at any status, for the read-only show page.
       def find_own_expense!(record_id)
         expense = store.find_expense!(record_id)
         unless expense && current_person && expense.person&.record_id == current_person.record_id

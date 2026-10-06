@@ -1,10 +1,8 @@
 module Admin
   module Reimbursements
     ##
-    # Base for the finance-team operator surfaces (People, Review, Batches,
-    # Reconcile, Settings). These are gated by the finance grid permission
-    # (`:manage, :reimbursements_finance`) instead of the producer portal's
-    # `:access, :reimbursements`, so a plain submitter can't reach them.
+    # Base for the finance operator surfaces, gated by `:manage, :reimbursements_finance`
+    # instead of the producer portal's `:access, :reimbursements`.
     class FinanceController < BaseController
       include ::ErrorReporting
 
@@ -13,23 +11,15 @@ module Admin
       before_action :resolve_financial_year!
       before_action :resolve_cost_centre!
 
-      # Injection seam for tests: the modulus checker (from the vendored Pay.UK
-      # rule files in production; a fake in functional tests). Shared by every
-      # subclass that shows/validates a bank-detail modulus badge.
+      # Test seam: the modulus checker (vendored Pay.UK rule files in production).
       class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
 
-      # Injection seam for tests: the app-only Graph client (SharePoint browse,
-      # deleting a stale EUSA draft). Shared by every subclass that talks to
-      # Graph directly from the request (not the jobs, which build their own
-      # per-run instance for OAuth-token-reuse reasons — see
-      # BuildBatchJob/NightlyBatchJob's own memoized +graph+).
+      # Test seam: the app-only Graph client (SharePoint browse, deleting a stale EUSA draft).
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
       helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years,
                     :selected_cost_centre, :selectable_cost_centres
 
-      # A page of records for an index view. One shared page size (50) across
-      # every finance list, so a future change to it is a single edit.
       PAGE_SIZE = 50
 
       private
@@ -39,10 +29,9 @@ module Admin
       end
 
       # --- Financial-year selector ------------------------------------------
-      # URL-as-state: ?year=fringe-2027 on any budget screen, defaulting to the
-      # active year. Resolved in a before_action rather than lazily, so the
-      # "no such year" alert is set before anything renders — and so the store
-      # is built with the year the operator actually asked for.
+      # ?year=fringe-2027 on any budget screen, defaulting to the active year. Resolved in
+      # a before_action so the "no such year" alert is set before anything renders and the
+      # store is built with the year asked for.
 
       def resolve_financial_year!
         requested = params[:year].presence
@@ -54,9 +43,7 @@ module Admin
           end
       end
 
-      # A year key that matches nothing must never quietly show a DIFFERENT
-      # year's money as though it were the requested one — say so, then fall
-      # back to the active year.
+      # An unknown key alerts and falls back: never quietly show another year's money.
       def fall_back_to_active_year(requested)
         flash.now[:alert] = "There's no financial year called #{requested.inspect}. " \
                             "Showing the active year instead."
@@ -67,28 +54,19 @@ module Admin
         @selected_financial_year
       end
 
-      # Every year, for the selector. Empty until the first year is created,
-      # which is the state a pre-financial-year database is in.
+      # Every year, for the selector.
       def selectable_financial_years
         @selectable_financial_years ||= ::Reimbursements::FinancialYear.recent_first.to_a
       end
 
       # --- Cost-centre selector ---------------------------------------------
-      # URL-as-state: ?cost_centre=termtime on the finance lists, exactly as
-      # ?year= works on the budget screens. CostCentre is `param: :key`, so the
-      # key is the readable coordinate.
+      # ?cost_centre=termtime on the finance lists (CostCentre is `param: :key`).
       #
-      # NO centre selected means EVERY centre, which is both what the portal did
-      # before this existed (so every bookmark and every link with no
-      # ?cost_centre= keeps its meaning) and the only default that cannot hide
-      # money: CostCentre.default is `order(:id).first`, so defaulting to it
-      # would silently empty the second centre's screens for the people who work
-      # in it.
+      # No centre selected means EVERY centre. CostCentre.default is `order(:id).first`, so
+      # defaulting to it would silently empty the second centre's screens.
       #
-      # ?cost_centre_id=<id> is the shape the budget-import wizard shipped with
-      # and is deep-linked from Settings and the budgets index; it is still
-      # honoured so those links and any bookmark of them keep working. The key
-      # wins when both are present.
+      # ?cost_centre_id=<id> is what the import wizards (their select and the preview's
+      # hidden field) and the budget form post; the key wins when both are present.
 
       def resolve_cost_centre!
         requested_key = params[:cost_centre].presence
@@ -101,10 +79,7 @@ module Admin
           end
       end
 
-      # An unknown key must never quietly show a DIFFERENT centre's money as
-      # though it were the requested one — say so, then fall back to all
-      # centres, which is the only fallback that adds nothing the operator
-      # didn't ask for.
+      # An unknown key alerts and falls back to every centre, never to another's money.
       def find_cost_centre_by_key(requested)
         centre = selectable_cost_centres.find { |c| c.key == requested }
         return centre if centre
@@ -118,9 +93,8 @@ module Admin
         @selected_cost_centre
       end
 
-      # Every configured cost centre, for the selector. Read straight off the
-      # model rather than the store, because this runs in a before_action that
-      # decides how the store is built.
+      # Read off the model, not the store: this runs in the before_action that decides
+      # how the store is built.
       def selectable_cost_centres
         @selectable_cost_centres ||= ::Reimbursements::CostCentre.order(:name).to_a
       end
@@ -133,9 +107,7 @@ module Admin
         @graph ||= graph_builder.call
       end
 
-      # Fetches via +store.public_send(finder, id)+, raising the standard 404
-      # the framework already renders when it's not found — the shared body of
-      # every "look up one record by params[:id], 404 if it's gone" action.
+      # +store.public_send(finder, id)+, or a 404.
       def find_or_404(finder, id = params[:id])
         store.public_send(finder, id) || raise(ActiveRecord::RecordNotFound)
       end
@@ -148,20 +120,15 @@ module Admin
         Kaminari.paginate_array(collection).page(params[:page]).per(PAGE_SIZE)
       end
 
-      # The one "Download CSV" response behind every finance list's
-      # +format.csv+. Callers pass the FULL filtered set — the on-screen
-      # filters carry through the query string, but pagination is display-only,
-      # so an export is never paged. The exporter owns the columns (and the
-      # filename), so the CSV and the combined workbook's matching sheet can
-      # never drift apart.
+      # The "Download CSV" response behind every finance list. Pass the FULL filtered
+      # set: an export is never paged. The exporter owns the columns and filename.
       def send_export(exporter_class, collection)
         exporter = exporter_class.new(store: store, checker: modulus_checker)
         send_data exporter.to_csv(collection), type: "text/csv", filename: exporter.filename
       end
 
-      # A submitted link id (budget_record_id, owner_ids) must resolve to a real
-      # record before the link is written: the FK would otherwise raise, giving
-      # the operator a 500 instead of a flash naming what to fix.
+      # A submitted link id (budget_record_id, owner_ids) must resolve first, or the FK
+      # raises a 500 instead of a flash naming what to fix.
       def budget_record_id_error(record_id)
         return nil if record_id.blank?
         return nil if store.find_budget(record_id)
