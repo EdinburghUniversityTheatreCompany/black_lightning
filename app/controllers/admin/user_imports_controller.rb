@@ -43,7 +43,7 @@ class Admin::UserImportsController < AdminController
     end
 
     actions = params[:actions] || {}
-    results = { created: 0, linked: 0, skipped: 0 }
+    results = { created: 0, linked: 0, skipped: 0, errors: [] }
 
     all_items = categorized.values.flatten
     all_items.each do |item|
@@ -53,17 +53,20 @@ class Admin::UserImportsController < AdminController
 
       case action
       when "create"
-        user = create_user_from_row(row)
-        user.send_welcome_email
+        create_user_from_row(row).send_welcome_email
         results[:created] += 1
       when "link", /\Alink_\d+\z/
         results[:linked] += 1
       when "skip", nil
         results[:skipped] += 1
       end
+    rescue ActiveRecord::RecordInvalid => e
+      results[:errors] << "#{row[:original_name]}: #{e.record.errors.full_messages.to_sentence}"
     end
 
-    helpers.append_to_flash(:success, "Import complete: #{results[:created]} created, #{results[:linked]} linked to existing, #{results[:skipped]} skipped")
+    message = "Import complete: #{results[:created]} created, #{results[:linked]} linked to existing, #{results[:skipped]} skipped"
+    message += ". Errors: #{results[:errors].join('; ')}" if results[:errors].any?
+    helpers.append_to_flash(:success, message)
     redirect_to admin_users_path
   end
 end

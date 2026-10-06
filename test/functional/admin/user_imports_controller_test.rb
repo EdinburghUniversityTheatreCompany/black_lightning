@@ -95,6 +95,25 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     assert_nil User.find_by(email: "skip@example.com")
   end
 
+  test "confirm reports a row that cannot be created and carries on" do
+    cache_key = "user_import_test_#{SecureRandom.uuid}"
+    write_import_cache(cache_key, user_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "First Twin", first_name: "First", last_name: "Twin", student_id: "s1111111", email: "twin@example.com"),
+        import_entry(index: 1, original_name: "Second Twin", first_name: "Second", last_name: "Twin", student_id: "s2222222", email: "twin@example.com"),
+        import_entry(index: 2, original_name: "Third Person", first_name: "Third", last_name: "Person", student_id: "s3333333", email: "third@example.com")
+      ]
+    ))
+
+    assert_difference "User.count", 2 do
+      post :confirm, params: { cache_key: cache_key, actions: { "0" => "create", "1" => "create", "2" => "create" } }
+    end
+
+    assert_redirected_to admin_users_path
+    assert_match(/2 created.*Errors: Second Twin/, flash[:success].first)
+    assert User.exists?(email: "third@example.com")
+  end
+
   test "confirm clears cache after processing" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
     write_import_cache(cache_key, user_import_buckets)
