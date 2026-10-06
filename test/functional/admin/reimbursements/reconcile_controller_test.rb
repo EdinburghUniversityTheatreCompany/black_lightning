@@ -161,6 +161,17 @@ module Admin
       assert_includes response.body, "Step 3"
     end
 
+    test "preview shows the gross amount of a claim matched on gross because its ex-VAT amount is 0" do
+      @expense.update!(amount_excl_vat: BigDecimal("0"))
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
+      assert_select "tbody tr td:last-child", text: "£123.45"
+      assert_select "tbody tr td:last-child", text: "£0.00", count: 0
+    end
+
     test "preview matches a credit row to an income budget" do
       sign_in @user
       post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }

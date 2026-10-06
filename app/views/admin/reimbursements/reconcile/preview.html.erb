@@ -103,7 +103,7 @@
                               data: { turbo_frame: "_top" } %>
                 </td>
                 <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
-                <td class="py-1 text-right"><%= reimbursements_money(expense.amount_excl_vat || expense.amount || 0) %></td>
+                <td class="py-1 text-right"><%= reimbursements_money(expense.amount_excl_vat&.nonzero? || expense.amount || 0) %></td>
               </tr>
             <% end %>
           </tbody>

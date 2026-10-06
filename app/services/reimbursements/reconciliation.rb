@@ -132,9 +132,8 @@ module Reimbursements
       candidates = expenses.filter_map do |expense|
         next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
 
-        # 0 ex-VAT means "not yet known" (0 is truthy, so || alone would not fall back to gross).
-        excl_vat = expense.amount_excl_vat
-        compare_amount = excl_vat.nil? || excl_vat.zero? ? expense.amount : excl_vat
+        # 0 ex-VAT means "not yet known".
+        compare_amount = expense.amount_excl_vat&.nonzero? || expense.amount
         next if compare_amount.nil? ||
                 (compare_amount - row.debit).abs > amount_tolerance_for(expense, compare_amount)
 
