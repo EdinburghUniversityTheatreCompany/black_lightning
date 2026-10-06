@@ -27,15 +27,9 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
   private
 
   def check_group(users)
-    all_user_ids = users.map(&:id)
-    years_active_cache = User.bulk_years_active_for(all_user_ids)
-
-    processed_pairs = Set.new
+    years_active_cache = User.bulk_years_active_for(users.map(&:id))
 
     users.combination(2).each do |user1, user2|
-      pair_id = [ user1.id, user2.id ].sort
-
-      next if processed_pairs.include?(pair_id)
       next if user1.marked_not_duplicate?(user2)
 
       # Exact last names belong in buckets 2/3 of User.find_potential_duplicates.
@@ -44,19 +38,9 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
       next unless StringSimilarity.fuzzy_name_match?(user1.last_name, user2.last_name)
       next unless StringSimilarity.fuzzy_name_match?(user1.first_name, user2.first_name)
 
-      bucket_type = if user1.years_overlap?(user2, years_active_cache: years_active_cache)
-        "overlapping"
-      else
-        "no_overlap"
-      end
-
-      CachedDuplicate.create!(
-        user1_id: [ user1.id, user2.id ].min,
-        user2_id: [ user1.id, user2.id ].max,
-        bucket_type: bucket_type
-      )
-
-      processed_pairs << pair_id
+      user1_id, user2_id = [ user1.id, user2.id ].minmax
+      bucket_type = user1.years_overlap?(user2, years_active_cache: years_active_cache) ? "overlapping" : "no_overlap"
+      CachedDuplicate.create!(user1_id: user1_id, user2_id: user2_id, bucket_type: bucket_type)
     end
   end
 end
