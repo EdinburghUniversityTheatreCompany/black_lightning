@@ -25,18 +25,17 @@ module Admin
         "Nothing was applied. Some rows have no cost centre of their own, so you have to say " \
         "which cost centre they belong to (or skip them) before this paste can be imported.".freeze
 
-      def show
-        @title = "Reconcile EUSA actuals"
-      end
+      before_action { @title = "Reconcile EUSA actuals" }
+
+      def show; end
 
       def preview
-        @title = "Reconcile EUSA actuals"
         # An upload beats the text box and is converted to text once: apply only ever sees the
         # hidden-field text, and an upload has no second file to re-send.
         @pasted_text = text_from_upload || params[:pasted_text].to_s
         return render :show if @upload_error
 
-        if @pasted_text.strip.empty?
+        if @pasted_text.blank?
           flash.now[:alert] = NOTHING_GIVEN_ALERT
           return render :show
         end
@@ -62,7 +61,7 @@ module Admin
       def apply
         @pasted_text = params[:pasted_text].to_s
 
-        unless @pasted_text.strip.present?
+        if @pasted_text.blank?
           redirect_to admin_reimbursements_reconciliation_path,
                       alert: "Nothing to apply. Start again from the paste step."
           return
@@ -84,7 +83,6 @@ module Admin
         # An unanswered blank-cost-centre question blocks the WHOLE paste, and the preview is re-rendered,
         # not redirected, so a large paste survives the refusal.
         if attribution.blank_choice_required?
-          @title = "Reconcile EUSA actuals"
           flash.now[:alert] = BLANK_CHOICE_ALERT
           build_preview(attribution)
           return render :preview
