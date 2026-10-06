@@ -35,10 +35,4 @@ class TableComponentTest < ViewComponent::TestCase
     assert_selector "table[style*='table-layout: fixed']"
     assert_selector "colgroup col", count: 2
   end
-
-  test "headers can be suppressed entirely" do
-    render_inline(TableComponent.new(headers: [ "One" ], field_sets: [], include_headers: false))
-
-    assert_no_selector "thead"
-  end
 end

@@ -28,12 +28,4 @@ class TableComponentPreview < ViewComponent::Preview
       col_widths: [ "70%", "30%" ]
     )
   end
-
-  def without_headers
-    render TableComponent.new(
-      headers: [ "Name" ],
-      field_sets: [ { fields: [ "Alice Jones" ] } ],
-      include_headers: false
-    )
-  end
 end

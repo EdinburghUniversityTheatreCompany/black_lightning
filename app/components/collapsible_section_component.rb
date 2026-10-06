@@ -1,10 +1,9 @@
 class CollapsibleSectionComponent < ViewComponent::Base
-  def initialize(title:, variant: :default, flush: false, start_open: false, title_right: nil, html_class: "")
+  def initialize(title:, variant: :default, flush: false, start_open: false, html_class: "")
     @title = title
     @variant = variant.to_sym
     @flush = flush
     @start_open = start_open
-    @title_right = title_right
     @html_class = html_class
   end
 

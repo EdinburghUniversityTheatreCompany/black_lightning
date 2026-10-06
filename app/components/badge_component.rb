@@ -10,17 +10,15 @@ class BadgeComponent < ViewComponent::Base
     light:     "bg-gray-100 text-gray-800"
   }.freeze
 
-  def initialize(type: :secondary, pill: false, pull_right: false, html_class: nil)
+  def initialize(type: :secondary, pill: false, html_class: nil)
     @type = type.to_sym
     @pill = pill
-    @pull_right = pull_right
     @html_class = html_class
   end
 
   def style_classes
     base = STYLES.fetch(@type, STYLES[:secondary])
     base += " rounded-full" if @pill
-    base += " float-right" if @pull_right
     base += " #{@html_class}" if @html_class
     base
   end
