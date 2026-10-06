@@ -1,9 +1,6 @@
 
 ##
 # A theatre company or society that posts opportunities.
-#
-# +internal+ marks EUTC/affiliated companies, which are surfaced first in listings.
-# The +slug+ (generated from the name) gives stable, shareable per-company filter URLs.
 ##
 # == Schema Information
 #
@@ -25,7 +22,6 @@
 #  index_companies_on_slug  (slug) UNIQUE
 #
 class Company < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :slug, length: { maximum: 255 }
   validates :website, length: { maximum: 255 }
@@ -43,8 +39,7 @@ class Company < ApplicationRecord
   scope :internal_first, -> { order(internal: :desc, name: :asc) }
   scope :unreviewed, -> { where(reviewed: false) }
 
-  # Find an existing company by name (case-insensitive) or build a new, unreviewed one.
-  # The new record is persisted via belongs_to autosave when the parent opportunity is saved.
+  # The new record is saved by belongs_to autosave when the parent opportunity is saved.
   def self.find_or_build_by_name(name)
     name = name.to_s.strip
     return if name.blank?
@@ -52,7 +47,6 @@ class Company < ApplicationRecord
     find_by("LOWER(name) = LOWER(?)", name) || new(name: name)
   end
 
-  # Full Instagram URL for the stored handle (accepts a bare handle or a full URL).
   def instagram_url
     return if instagram.blank?
     return instagram if instagram.start_with?("http")

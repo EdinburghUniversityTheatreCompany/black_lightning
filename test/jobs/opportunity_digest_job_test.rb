@@ -2,7 +2,6 @@ require "test_helper"
 
 class OpportunityDigestJobTest < ActiveJob::TestCase
   test "does not send any emails when there are no pending opportunities" do
-    # Ensure no unapproved non-expired opportunities exist
     Opportunity.where(approved: false).where("expiry_date > ?", Date.current).destroy_all
 
     assert_no_enqueued_jobs only: MailDeliveryJob do
@@ -11,11 +10,9 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
   end
 
   test "sends an email to each opportunity reviewer when pending opportunities exist" do
-    # unapproved_opportunity fixture is unapproved and expires in the future
     assert opportunities(:unapproved_opportunity).expiry_date > Date.current
     assert_not opportunities(:unapproved_opportunity).approved
 
-    # committee fixture has the opportunity_reviewer role via users_roles fixture
     reviewer = users(:committee)
     assert_includes Role.find_by(name: "Opportunity Reviewer")&.users, reviewer,
            "Expected committee user to have Opportunity Reviewer role"
@@ -26,7 +23,6 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
   end
 
   test "sends one email per reviewer" do
-    # Confirm there is exactly one reviewer
     reviewer_role = Role.find_by(name: "Opportunity Reviewer")
     reviewer_count = reviewer_role&.users&.count || 0
 
@@ -47,7 +43,6 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
       submitter_email: "casey@example.com"
     )
 
-    # perform_enqueued_jobs actually renders the digest, so a nil-creator row would raise here.
     perform_enqueued_jobs do
       OpportunityDigestJob.perform_now
     end

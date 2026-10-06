@@ -36,8 +36,7 @@ class OpportunityMailerTest < ActionMailer::TestCase
   end
 
   test "expiry_reminder names a title-less posting by its display title" do
-    # title is optional (Opportunity#has_display_title accepts a company + project instead), so a
-    # reminder reading the raw column addressed the producer about their opportunity "".
+    # title is optional, so reading the raw column addressed the producer about opportunity "".
     opportunity = opportunities(:internal_project_opportunity)
     assert_nil opportunity.title, "fixture must have no title for this to test anything"
 
@@ -58,8 +57,6 @@ class OpportunityMailerTest < ActionMailer::TestCase
     assert_includes html_body, "/admin/opportunities/#{opportunity.id}/edit"
   end
 
-  # --- approved -------------------------------------------------------------
-
   test "approved is sent to the creator with the display title in the subject" do
     opportunity = opportunities(:internal_project_opportunity)
 
@@ -79,10 +76,8 @@ class OpportunityMailerTest < ActionMailer::TestCase
   end
 
   test "approved goes to the account creator, not the external submitter, when both are present" do
-    # A posting with both an account creator and an external submitter was entered by the creator
-    # on the submitter's behalf (see Opportunity#on_behalf_of?). The creator is the one who
-    # actually submitted it, so the decision email goes to their account — addressed to them,
-    # not to the external person, otherwise we address the wrong person in their own inbox.
+    # Entered by the creator on the submitter's behalf, so the decision goes to the creator, not the
+    # external person.
     opportunity = opportunities(:internal_project_opportunity)
     opportunity.update_columns(submitter_name: "Jane Director", submitter_email: "jane@example.com")
 
@@ -109,8 +104,6 @@ class OpportunityMailerTest < ActionMailer::TestCase
 
     assert_not_includes email.html_part.body.to_s, "A note from the reviewer"
   end
-
-  # --- rejected -------------------------------------------------------------
 
   test "rejected is sent to the submitter with the display title in the subject" do
     opportunity = opportunities(:external_project_opportunity)

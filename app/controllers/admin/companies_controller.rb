@@ -1,16 +1,12 @@
 ##
 # Admin controller for Company management.
-#
-# Companies (theatre companies and societies) group opportunities and provide the
-# +internal+ flag used to surface EUTC opportunities first.
 ##
 class Admin::CompaniesController < AdminController
   include GenericController
 
   load_and_authorize_resource
 
-  # Editing a company through the admin counts as reviewing it, clearing the
-  # "needs review" prompt on opportunities that reference it.
+  # Saving through the admin counts as reviewing, which clears the "needs review" prompt.
   def create
     @company.reviewed = true
     super

@@ -1,10 +1,7 @@
 
 ##
-# A single role/position within an Opportunity (e.g. "Stage Manager").
-#
-# Each role belongs to a Department (the grouping used by the public listing's filter). The
-# department is usually auto-suggested from the position text; +department_name+ is a virtual
-# field so the form can submit (and, on the admin form, create) a department by name.
+# A position within an Opportunity (e.g. "Stage Manager"), grouped by Department for the public
+# listing's filter.
 ##
 # == Schema Information
 #
@@ -31,15 +28,13 @@
 #  fk_rails_...  (opportunity_id => opportunities.id)
 #
 class OpportunityRole < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :position, length: { maximum: 255 }
   validates :note, length: { maximum: 255 }
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
 
-  # +department_name+ resolves to a Department (created if needed) in a before_validation hook.
-  # Only the admin role form offers tagging, so in practice public submitters pick an existing
-  # department rather than creating one.
+  # Virtual field so either form can submit, and create, a department by name: resolved to a
+  # Department (built if new, saved by belongs_to autosave) before validation.
   attr_writer :department_name
 
   before_validation :assign_department_from_name
@@ -50,7 +45,7 @@ class OpportunityRole < ApplicationRecord
 
   default_scope { order(:ordering) }
 
-  # The typed department name, falling back to the associated department so the form pre-fills.
+  # Falls back to the department so the form pre-fills.
   def department_name
     return @department_name if defined?(@department_name)
 

@@ -9,8 +9,7 @@ class OpportunityMailer < ApplicationMailer
     )
   end
 
-  # Sent to the submitter when their opportunity is approved. +note+ is an optional message
-  # from the reviewer.
+  # +note+ is an optional message from the reviewer.
   def approved(opportunity, note = nil)
     @opportunity = opportunity
     @note = note.presence
@@ -22,7 +21,6 @@ class OpportunityMailer < ApplicationMailer
     )
   end
 
-  # Sent to the submitter when their opportunity is rejected. +note+ is an optional message.
   def rejected(opportunity, note = nil)
     @opportunity = opportunity
     @note = note.presence

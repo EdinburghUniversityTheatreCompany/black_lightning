@@ -1,15 +1,7 @@
 require "test_helper"
 
-##
-# Tests for the public opportunity submission actions (new/create)
-# added to GetInvolvedController.
-##
 class GetInvolvedOpportunitiesTest < ActionController::TestCase
   tests GetInvolvedController
-
-  # ---------------------------------------------------------------------------
-  # Routing
-  # ---------------------------------------------------------------------------
 
   test "new route resolves correctly" do
     assert_routing "get_involved/opportunities/new",
@@ -20,10 +12,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_routing({ method: "post", path: "get_involved/opportunities" },
                    controller: "get_involved", action: "create")
   end
-
-  # ---------------------------------------------------------------------------
-  # GET new
-  # ---------------------------------------------------------------------------
 
   test "new succeeds for a logged-out visitor" do
     get :new
@@ -37,10 +25,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     get :new
     assert_response :success
   end
-
-  # ---------------------------------------------------------------------------
-  # POST create
-  # ---------------------------------------------------------------------------
 
   test "create saves an unapproved opportunity for a signed-in member" do
     sign_in users(:member)
@@ -127,8 +111,7 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
   end
 
   test "create re-renders for a logged-out submission that fails reCAPTCHA" do
-    # Stop skipping reCAPTCHA in the test env; with no token in the request the gem
-    # returns false without calling out to Google.
+    # With no token and "test" not skipped, the gem returns false without calling Google.
     original = Recaptcha.configuration.skip_verify_env.dup
     Recaptcha.configuration.skip_verify_env.delete("test")
 
@@ -203,10 +186,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     refute Opportunity.last.approved
   end
 
-  # ---------------------------------------------------------------------------
-  # GET opportunities (public listing, filtering, sorting)
-  # ---------------------------------------------------------------------------
-
   test "opportunities lists only approved, unexpired opportunities" do
     get :opportunities
     assert_response :success
@@ -234,7 +213,6 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
   end
 
   test "opportunities does not duplicate a posting with several matching roles" do
-    # internal_project_opportunity has Stage, Set and Sound roles; filtering must not dup it.
     get :opportunities, params: { q: { roles_department_id_eq: departments(:stage_management).id } }
 
     matches = assigns(:opportunities).to_a.select { |o| o == opportunities(:internal_project_opportunity) }
@@ -264,10 +242,8 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
   end
 
-  # A Turbo form submission that redirects to this action (e.g. after #create) makes the browser
-  # follow the 302 while still sending Accept: text/vnd.turbo-stream.html, but with no q params.
-  # If we answered that with the #index-results fragment, the redirect would silently do nothing on
-  # the submission form page (which has no #index-results element) — so serve the full HTML page.
+  # A Turbo form redirect (after #create) follows with a turbo_stream Accept but no q, and a
+  # fragment would do nothing on the form page (no #index-results), so it must get full HTML.
   test "opportunities serves a full HTML page for a paramless turbo_stream request" do
     get :opportunities, format: :turbo_stream
 

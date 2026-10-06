@@ -112,10 +112,10 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_match companies(:eutc).name, response.body
-    assert_match "Eurydice", response.body                 # project
-    assert_match "Stage Manager", response.body            # a role position
-    assert_match "Stage Management", response.body          # the role's department
-    assert_match "Unpaid", response.body                   # compensation
+    assert_match "Eurydice", response.body
+    assert_match "Stage Manager", response.body
+    assert_match "Stage Management", response.body
+    assert_match "Unpaid", response.body
   end
 
   test "show warns when the opportunity's company is unreviewed" do
@@ -177,7 +177,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       roles_attributes: {
         "0" => { position: "Stage Manager", department_name: "Stage Management" },
-        "1" => { position: "", department_name: "Other" }  # accidental empty row
+        "1" => { position: "", department_name: "Other" }
       }
     )
 
@@ -199,9 +199,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  # The contact line names whoever posted the opportunity, and must pass the viewer to
-  # User#name like every other call site does: without it a nameless creator renders the
-  # "No Name Set" placeholder instead of the email an admin is allowed to see.
+  # The contact line must pass the viewer to User#name, or a nameless creator shows "No Name Set"
+  # instead of the email.
   test "show's contact line resolves the poster's name for the viewer" do
     creator = FactoryBot.create(:user, first_name: "", last_name: "")
     @opportunity.update!(creator: creator, email_visibility: :members_only, contact_email: nil)
@@ -236,8 +235,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match "on behalf of", response.body
     assert_match "Jane External", response.body
-    # creator.name is Faker-generated; the view HTML-escapes it (e.g. O'Reilly -> O&#39;Reilly),
-    # so match the escaped form or the assertion is flaky on names with ' & < >.
+    # Faker names are HTML-escaped by the view (O'Reilly -> O&#39;Reilly): match the escaped form.
     assert_match ERB::Util.html_escape(@opportunity.creator.name), response.body
   end
 

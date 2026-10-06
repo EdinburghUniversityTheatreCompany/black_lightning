@@ -134,13 +134,9 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunities(:active_opportunity).expired?
   end
 
-  # Regression: both expiry comparisons must be date-to-date. Against
-  # Time.current an expiry_date coerces to midnight UTC, which during British
-  # Summer Time is LATER than "now" between 00:00 and 01:00 local — so a posting
-  # that expires today (including one just closed) read as still active, and
-  # still listable, for that one hour a day. Travel into that window so the
-  # date-vs-time distinction is what the test turns on; it would pass for the
-  # other 23 hours either way.
+  # Regression: expiry must compare date-to-date. Against Time.current an expiry_date coerces to
+  # midnight UTC, which in BST is later than "now" from 00:00 to 01:00, so a posting expiring today
+  # read as active and listable. Travel into that window: the other 23 hours pass either way.
   test "a posting expiring today is expired inside the 00:00-01:00 BST window" do
     travel_to Time.zone.local(2026, 7, 25, 0, 30) do
       assert_equal 3600, Time.zone.now.utc_offset, "sanity: 00:30 on 25 July is BST (UTC+1)"
@@ -154,8 +150,7 @@ class Admin::OpportunityTest < ActionView::TestCase
     end
   end
 
-  # The other side of the same window: tomorrow's expiry is still live, so the
-  # fix didn't just expire everything an hour early.
+  # The other side of that window: tomorrow's expiry stays live.
   test "a posting expiring tomorrow is still live inside the 00:00-01:00 BST window" do
     travel_to Time.zone.local(2026, 7, 25, 0, 30) do
       opp = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.tomorrow)
@@ -212,19 +207,15 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "notification_email targets the submitter, ignoring the public contact_email" do
-    # External submission: notify the submitter, not the (possibly third-party) contact_email.
     external = opportunities(:external_project_opportunity)
     external.contact_email = "someone-else@example.com"
     assert_equal "jane@example.com", external.notification_email
 
-    # Member submission: notify the creator's account.
     internal = opportunities(:internal_project_opportunity)
     assert_equal internal.creator.email, internal.notification_email
   end
 
   test "notification_email and notification_name target the creator for on-behalf postings" do
-    # When a user posts on an external person's behalf, the creator is the one who actually
-    # submitted it, so approval/rejection decisions go to them — they can pass the news on.
     on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
                                 creator: users(:admin), submitter_name: "Jane Director",
                                 submitter_email: "jane@example.com")
@@ -233,16 +224,13 @@ class Admin::OpportunityTest < ActionView::TestCase
   end
 
   test "submitter_display_name prefers the external submitter over the account creator" do
-    # A posting can carry both an account creator and an external submitter (e.g. a manager
-    # attributes it to an account but records who actually submitted). The displayed contact name
-    # must match resolved_contact_email, which prefers the submitter — otherwise the show page
-    # pairs the creator's name with the submitter's email.
+    # Must match resolved_contact_email, which prefers the submitter, or the show page pairs the
+    # creator's name with the submitter's email.
     opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
                           creator_id: 1, submitter_name: "Jane Director",
                           submitter_email: "jane@example.com")
     assert_equal "Jane Director", opp.submitter_display_name
 
-    # With no external submitter, fall back to the account creator.
     member = opportunities(:internal_project_opportunity)
     assert_equal member.creator.name, member.submitter_display_name
   end

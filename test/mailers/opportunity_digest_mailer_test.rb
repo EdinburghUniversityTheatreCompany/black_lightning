@@ -1,8 +1,6 @@
 require "test_helper"
 
 class OpportunityDigestMailerTest < ActionMailer::TestCase
-  # Uses pending_digest_opportunity fixture which has creator_id: 1 (admin user with explicit id)
-
   test "digest has correct subject" do
     user = users(:committee)
     opportunity = opportunities(:pending_digest_opportunity)
@@ -90,7 +88,6 @@ class OpportunityDigestMailerTest < ActionMailer::TestCase
     user = users(:committee)
     opportunity = opportunities(:pending_digest_opportunity)
 
-    # Pass the same opportunity twice to verify the loop renders multiple rows
     email = OpportunityDigestMailer.digest(user, [ opportunity, opportunity ])
     html_body = email.html_part.body.to_s
 

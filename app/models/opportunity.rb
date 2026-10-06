@@ -37,7 +37,6 @@
 #  fk_rails_...  (company_id => companies.id)
 #
 class Opportunity < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :title, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }
   validates :contact_email, length: { maximum: 255 }
@@ -48,8 +47,8 @@ class Opportunity < ApplicationRecord
   validates :submitter_email, length: { maximum: 255 }
   validates :dates, length: { maximum: 255 }
   validates :location, length: { maximum: 255 }
-  # +website_url+ is a spam honeypot. +company_name+ is a virtual field on both the admin and public
-  # forms: it is resolved to a Company (created if it doesn't exist) by a before_validation hook.
+  # +website_url+ is the spam honeypot; +company_name+ is a virtual field resolved to a Company
+  # before validation.
   attr_accessor :website_url
   attr_writer :company_name
 
@@ -61,8 +60,7 @@ class Opportunity < ApplicationRecord
   after_destroy :cleanup_orphaned_company
 
   has_many :roles, class_name: "OpportunityRole", dependent: :destroy
-  # A role is only meaningful with a position, so silently drop rows left blank (e.g. an
-  # accidental "Add role" click).
+  # Blank-position rows (an accidental "Add role") are dropped silently.
   accepts_nested_attributes_for :roles, allow_destroy: true, reject_if: ->(attrs) { attrs["position"].blank? }
 
   enum :email_visibility, { no_one: 0, members_only: 1, everyone: 2 }, default: :no_one
@@ -92,14 +90,11 @@ class Opportunity < ApplicationRecord
 
   # If you update this, you must also update the active? method and the permission somewhere at the top of ability.rb.
   # You might also have to update the opportunities helper.
-  # +listable+ is the unordered "publicly visible" set, used as a base for filtering/sorting
-  # (e.g. the public listing applies Ransack on top). +active+ adds the internal-first ordering.
   scope :listable, -> { where("approved = true AND expiry_date > ?", Date.current) }
   scope :active, -> { listable.eutc_first }
 
-  # EUTC (internal) opportunities first, then by expiry. Orders by a CASE on the opportunities
-  # table only (no companies join), so it stays valid alongside SELECT DISTINCT — needed because
-  # filtering by role department joins the roles has-many.
+  # EUTC companies first, then by expiry. Orders on opportunities columns only, so it stays valid
+  # with SELECT DISTINCT (the department filter joins roles).
   scope :eutc_first, -> {
     ids = Company.where(internal: true).ids
     return reorder("expiry_date ASC") if ids.empty?
@@ -121,25 +116,20 @@ class Opportunity < ApplicationRecord
     approved && !expired?
   end
 
-  # The expiry date has passed: the posting no longer appears publicly, approved or not.
-  # Compare date-to-date: against Time.current the date coerces to midnight UTC, which in BST
-  # keeps a closed posting "active" between 00:00 and 01:00 local.
+  # Compares date-to-date: against Time.current an expiry_date coerces to midnight UTC, which in BST
+  # keeps a closed posting "active" from 00:00 to 01:00.
   def expired?
     expiry_date <= Date.current
   end
 
-  # An opportunity submitted by someone without a user account (a public/external submission).
   def external?
     creator_id.nil?
   end
 
-  # An opportunity entered by a user (the creator) on behalf of an external submitter, so the
-  # display can credit both instead of implying the external person created it themselves.
   def on_behalf_of?
     creator_id.present? && submitter_name.present?
   end
 
-  # Who to credit for the posting; on-behalf postings credit both parties.
   def attribution_label(viewer = nil, include_submitter_email: false)
     return submitter_name if external?
     return creator&.name(viewer) unless on_behalf_of?
@@ -148,50 +138,43 @@ class Opportunity < ApplicationRecord
     "#{creator&.name(viewer)}, on behalf of #{submitter_name}#{email}"
   end
 
-  # Immediately expire the posting so it drops out of the public listing: expired? and listable
-  # both treat an expiry_date of today as already past.
+  # An expiry_date of today already counts as past, so this drops it from the public listing.
   def close
     update(expiry_date: Date.current)
   end
 
-  # The typed company name, falling back to the associated company so the form pre-fills on edit.
+  # Falls back to the company so the form pre-fills on edit.
   def company_name
     return @company_name if defined?(@company_name)
 
     company&.name
   end
 
-  # Display heading for a posting: explicit title, else "Company: Project".
   def display_title
     title.presence || [ company&.name, project ].compact_blank.join(": ").presence
   end
 
-  # Used by get_object_name / SimpleForm so title-less postings still show a sensible label.
+  # The label get_object_name and SimpleForm show for a title-less posting.
   def to_label
     display_title.presence || "Untitled opportunity"
   end
 
-  # Best email to reach the poster on, preferring an explicit contact address.
   def resolved_contact_email
     contact_email.presence || submitter_email.presence || creator&.email
   end
 
-  # Where to send submission notifications (approval/rejection): whoever actually submitted the
-  # posting, not the public contact address, which may belong to someone else. On-behalf
-  # postings notify the account creator who entered them; only creator-less (truly external)
-  # submissions notify the external submitter.
+  # On-behalf postings notify the account creator who entered them, not the public contact_email
+  # or the external submitter.
   def notification_email
     creator&.email || submitter_email.presence
   end
 
-  # Name of the notification recipient, mirroring notification_email's creator-first precedence
-  # so the salutation always matches whoever the email is actually addressed to.
+  # Mirrors notification_email's precedence so the salutation names the recipient.
   def notification_name
     creator&.name || submitter_name
   end
 
-  # Human name of whoever posted this. Prefer the external submitter, mirroring
-  # resolved_contact_email, so the displayed name and email always describe the same person.
+  # Prefers the submitter, mirroring resolved_contact_email, so name and email describe one person.
   def submitter_display_name(viewer = nil)
     submitter_name.presence || creator&.name(viewer)
   end
@@ -208,8 +191,7 @@ class Opportunity < ApplicationRecord
 
   private
 
-  # Resolve the typed company name to a Company (creating an unreviewed one if it doesn't exist).
-  # Only runs when company_name was explicitly provided on this save (admin or public form).
+  # Creates an unreviewed company if none matches; only when company_name was given.
   def assign_company_from_name
     return unless defined?(@company_name)
 
@@ -217,14 +199,12 @@ class Opportunity < ApplicationRecord
     self.company = name.present? ? Company.find_or_build_by_name(name) : nil
   end
 
-  # When an opportunity is destroyed, remove its company if it was never reviewed and now has
-  # no other opportunities — prevents orphaned company records from spam/rejected submissions.
+  # Removes a never-reviewed company left behind by a spam or rejected submission.
   def cleanup_orphaned_company
     return unless company&.reviewed == false
     company.destroy if company.opportunities.none? && company.events.none?
   end
 
-  # A posting must be attributable to either a logged-in creator or a named external submitter.
   def creator_or_submitter
     return if creator_id.present?
     return if submitter_name.present? && submitter_email.present?
@@ -232,7 +212,6 @@ class Opportunity < ApplicationRecord
     errors.add(:base, "must have a creator or a submitter name and email")
   end
 
-  # Title is optional, but a posting must still produce a heading from a title or a company/project.
   def has_display_title
     return if display_title.present?
 

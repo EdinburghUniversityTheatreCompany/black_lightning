@@ -11,8 +11,7 @@
 </div>
 <% end %>
 
-<%# Filters via the shared (non-admin) search form. Submits as q[...] params, so the URLs stay
-    shareable (e.g. ?q[company_slug_eq]=… for the societies cheat sheet). %>
+<%# Filters submit as q[...], so URLs stay shareable (?q[company_slug_eq]=... for the societies cheat sheet). %>
 <% search_fields = {
      roles_department_id_eq: { type: :select, label: "Department",  collection: Department.order(:ordering).pluck(:name, :id) },
      company_slug_eq:      { type: :select, label: "Company",      collection: Company.where(reviewed: true).internal_first.pluck(:name, :slug) },

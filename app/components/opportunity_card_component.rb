@@ -1,13 +1,6 @@
 ##
-# Renders a single opportunity as a "project" with a sub-list of its roles.
-#
-# Used by the public opportunities listing and the home/dashboard widgets so the
-# heading ("COMPANY: 'Project' by Author") and role list stay consistent.
-#
-# - +detailed+: show description, compensation/experience badges, apply link and
-#   contact email (public listing). Widgets pass false for a compact view.
-# - +heading_url+: when given, the heading links there (used by the widgets).
-# - +backend_access+: whether the viewer may see members-only contact emails.
+# One opportunity with its roles, shared by the public listing and the home/dashboard widgets.
+# +backend_access+ lets the viewer see members-only contact emails.
 ##
 class OpportunityCardComponent < ViewComponent::Base
   def initialize(opportunity:, current_user: nil, backend_access: false, detailed: false, heading_url: nil)
@@ -22,7 +15,7 @@ class OpportunityCardComponent < ViewComponent::Base
 
   attr_reader :opportunity, :detailed, :heading_url
 
-  # "COMPANY: 'Project' by Author", falling back to the title / display_title.
+  # "COMPANY: 'Project' by Author" unless there is a title.
   def heading
     return opportunity.title if opportunity.title.present?
 
@@ -41,7 +34,6 @@ class OpportunityCardComponent < ViewComponent::Base
     opportunity.company&.internal
   end
 
-  # Project-level badges worth surfacing (skip the "no signal" defaults).
   def compensation_label
     opportunity.compensation_type.humanize unless opportunity.compensation_tbc?
   end

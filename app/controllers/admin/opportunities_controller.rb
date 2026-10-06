@@ -92,14 +92,11 @@ class Admin::OpportunitiesController < AdminController
     end
   end
 
-  ##
-  # PUT /admin/opportunity/1/close
-  ##
   def close
     if @opportunity.close
       flash[:success] = "#{@opportunity.display_title} has been closed and no longer appears in the public listing"
     else
-      # A valid record cannot fail to close, but legacy records may carry validation errors.
+      # Legacy records may carry validation errors.
       # simplecov:disable
       flash[:error] = "Could not close #{@opportunity.display_title}"
       # simplecov:enable
@@ -110,8 +107,7 @@ class Admin::OpportunitiesController < AdminController
 
   private
 
-  # Email the submitter about an approval/rejection decision, with the reviewer's optional note.
-  # Returns true when an email was enqueued; skipped when there is no address to notify.
+  # Returns true when an email was enqueued; skipped when nobody has an address.
   def notify_submitter(decision)
     return false if @opportunity.notification_email.blank?
 
@@ -119,8 +115,7 @@ class Admin::OpportunitiesController < AdminController
     true
   end
 
-  # A manager entering an external submitter is still recorded as the creator, so the posting
-  # shows as created on the submitter's behalf (see Opportunity#on_behalf_of?).
+  # A manager entering an external submitter is still the creator (see Opportunity#on_behalf_of?).
   def assign_default_creator
     return if can?(:manage, Opportunity) && @opportunity.creator_id.present?
 
@@ -128,12 +123,12 @@ class Admin::OpportunitiesController < AdminController
   end
 
   def permitted_params
-    # Do not include information about the approver. That should only be settable by the controller.
+    # The approver is set by the controller only.
     params = [ :description, :email_visibility, :contact_email, :title, :expiry_date,
                :company_name, :project, :author, :dates, :location, :apply_url, :compensation_type, :experience_level,
                roles_attributes: [ :id, :position, :department_name, :note, :ordering, :_destroy ] ]
 
-    # Only managers may attribute an opportunity to a different creator or an external submitter.
+    # Only managers may name another creator or an external submitter.
     params = [ :creator_id, :submitter_name, :submitter_email ] + params if can? :manage, Opportunity
 
     params
