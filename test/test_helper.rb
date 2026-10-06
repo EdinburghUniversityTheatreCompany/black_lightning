@@ -54,7 +54,7 @@ class ActiveSupport::TestCase
   parallelize_setup do |worker|
     # Otherwise every worker roots at the same tmp/storage, which the teardown wipes.
     service = ActiveStorage::Blob.service
-    service.root = "#{service.root}-#{worker}" if service.respond_to?(:root=)
+    service.root = "#{service.root}-#{worker}"
 
     # Generator tests all declare tmp/generators, and prepare_destination empties it.
     if defined?(Rails::Generators::TestCase)
@@ -70,7 +70,7 @@ class ActiveSupport::TestCase
 
   teardown do
     # Not tmp/storage: under parallelize that is another worker's data.
-    FileUtils.rm_rf(ActiveStorage::Blob.service.try(:root) || Rails.root.join("tmp", "storage"))
+    FileUtils.rm_rf(ActiveStorage::Blob.service.root)
     if ENV["VALIDATE"]
       validate_html
     end
