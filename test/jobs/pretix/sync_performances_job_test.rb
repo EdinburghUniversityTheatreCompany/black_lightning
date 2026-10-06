@@ -21,14 +21,15 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
   end
 
   setup do
+    @token = ENV["PRETIX_API_TOKEN"]
+    ENV["PRETIX_API_TOKEN"] = "test-token"
     @sync = FakeSync.new
     Pretix::SyncPerformancesJob.sync_builder = -> { @sync }
-    Pretix::SyncPerformancesJob.settings = Class.new { def self.configured? = true }
   end
 
   teardown do
-    Pretix::SyncPerformancesJob.sync_builder = Pretix::SyncPerformancesJob::DEFAULT_SYNC_BUILDER
-    Pretix::SyncPerformancesJob.settings = Pretix::Settings
+    ENV["PRETIX_API_TOKEN"] = @token
+    Pretix::SyncPerformancesJob.sync_builder = -> { Pretix::PerformanceSync.new }
   end
 
   def event(slug:, sync: true, start_date: Date.current, end_date: Date.current + 3)
@@ -73,7 +74,7 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
   end
 
   test "does nothing without pretix credentials" do
-    Pretix::SyncPerformancesJob.settings = Class.new { def self.configured? = false }
+    ENV["PRETIX_API_TOKEN"] = nil
     event(slug: "hamlet")
 
     Pretix::SyncPerformancesJob.perform_now

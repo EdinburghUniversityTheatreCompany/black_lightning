@@ -14,12 +14,10 @@ module Pretix
     queue_as :default
     limits_concurrency key: "pretix_reconcile_memberships", duration: 30.minutes
 
-    class_attribute :sync_builder, default: -> { MembershipSync.new }
-
     def perform
       return unless Settings.configured?
 
-      counts = sync_builder.call.reconcile_all
+      counts = MembershipSync.new.reconcile_all
       Rails.logger.info("Pretix membership reconcile: #{counts.inspect}")
 
       # Hitting the pass cap means the run never settled and rows may still be stale.

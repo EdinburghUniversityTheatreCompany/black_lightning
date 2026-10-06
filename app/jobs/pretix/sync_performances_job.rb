@@ -14,13 +14,10 @@ module Pretix
     queue_as :default
     limits_concurrency key: "pretix_sync_performances", duration: 15.minutes
 
-    DEFAULT_SYNC_BUILDER = -> { PerformanceSync.new }
-
-    class_attribute :sync_builder, default: DEFAULT_SYNC_BUILDER
-    class_attribute :settings, default: Settings
+    class_attribute :sync_builder, default: -> { PerformanceSync.new }
 
     def perform
-      return unless settings.configured?
+      return unless Settings.configured?
 
       sync = sync_builder.call
 
