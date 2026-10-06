@@ -1,9 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { AXIS_COLOR, GRID_COLOR, colorFor, loadChartJs, reducedMotion } from "../lib/climate_chart"
 
-// Hours at risk per day, one bar group per crypt sensor. Mould is a function
-// of how long the air sat near saturation, so a bad week has to be visible as
-// a cluster rather than buried in a single total.
+// Hours at risk per day, a bar group per crypt sensor. Mould follows how long
+// the air sat near saturation, so a bad week shows as a cluster, not one total.
 export default class extends Controller {
   static targets = ["canvas"]
   static values = { summaries: Array }
@@ -29,8 +28,7 @@ export default class extends Controller {
     delete this.element.dataset.climateRiskBarsReady
   }
 
-  // The union of every sensor's covered days, so a day one sensor missed
-  // still lines up under the others rather than shifting them along.
+  // The union of days, so a day one sensor missed does not shift the others.
   #labels() {
     const dates = new Set()
     this.summariesValue.forEach((summary) => summary.days.forEach((day) => dates.add(day.date)))
@@ -51,8 +49,7 @@ export default class extends Controller {
           const byDate = new Map(summary.days.map((day) => [day.date, day.at_risk_hours]))
           return {
             label: summary.name,
-            // A day the sensor did not cover is left null, not zero: zero
-            // would read as "measured, and fine".
+            // An uncovered day is null, not zero: zero reads as "measured, and fine".
             data: labels.map((date) => (byDate.has(date) ? byDate.get(date) : null)),
             backgroundColor: colorFor(summary.color_index ?? 0),
           }

@@ -1,8 +1,4 @@
-<%#
-  The current reading as real HTML rather than pixels on a canvas, so the one
-  question that actually matters ("is the crypt damp right now?") never depends
-  on the chart being readable, and screen readers get it directly.
-%>
+<%# The current reading as real HTML, so "is the crypt damp right now?" never depends on the chart. %>
 <%
   state = climate_tile_state(sensor)
   reading = sensor.latest_reading

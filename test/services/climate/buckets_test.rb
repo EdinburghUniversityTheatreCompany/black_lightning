@@ -26,9 +26,8 @@ class Climate::BucketsTest < ActiveSupport::TestCase
     assert_predicate buckets(from: "2026-07-25", to: "2026-08-06"), :aggregated?
   end
 
-  # The mysql2 adapter does not pin the session time_zone, so a UNIX_TIMESTAMP
-  # bucket would read the stored value in the SERVER's zone and shift every
-  # boundary by its offset. This is the guard against someone "simplifying" it.
+  # Guards against "simplifying" to UNIX_TIMESTAMP, which mysql2's unpinned
+  # session time_zone makes shift every boundary by the server's offset.
   test "every bucket expression is timezone-independent arithmetic" do
     Climate::Buckets::BUCKET_EXPRESSIONS.each_value do |expression|
       assert_no_match(/UNIX_TIMESTAMP/i, expression)
@@ -49,17 +48,11 @@ class Climate::BucketsTest < ActiveSupport::TestCase
     assert_equal Time.zone.parse("2026-08-05 13:00").iso8601, result[1][:t]
   end
 
-  # With only one delta to compare it has nothing else, so the estimate falls
-  # back to the chart's own bucket width rather than the lone observed gap —
-  # otherwise the gap and the "cadence" derived from it would be the same
-  # number and a real outage could never exceed its own threshold.
+  # A lone delta as the cadence would make a real outage never exceed its own threshold.
   test "with only two points, falls back to the bucket width rather than treating the lone gap as the cadence" do
     subject = buckets(from: "2026-08-05", to: "2026-08-06") # 600s bucket
     points = [
       { t: Time.zone.parse("2026-08-05 10:00"), margin: 1.0 },
-      # 5h33m later. A single-delta-as-cadence estimate would take this very
-      # gap as "normal," multiply it by GAP_BUCKETS, and never break — the
-      # bug this fallback exists to prevent.
       { t: Time.zone.parse("2026-08-05 15:33"), margin: 2.0 }
     ]
 
@@ -86,14 +79,9 @@ class Climate::BucketsTest < ActiveSupport::TestCase
     assert_kind_of String, subject.with_gaps(points, keys: [ :margin ]).first[:t]
   end
 
-  # --- gap threshold is per-series, not per-bucket ----------------------------
-  #
-  # Open-Meteo reports hourly. On the 24-hour view the chart buckets at ten
-  # minutes (600s), so a threshold built from the bucket width alone
-  # (600 * GAP_BUCKETS = 1800s) is narrower than the outdoor series' own
-  # 3600s cadence: every single outdoor point would be more than a threshold
-  # apart from its neighbour, and get an explicit gap inserted after it. With
-  # spanGaps: false and pointRadius: 0 that draws nothing at all — the bug.
+  # The gap threshold follows each series' own cadence: Open-Meteo is hourly but
+  # the 24-hour view buckets at 600s, so a bucket-width threshold would break
+  # the line after every outdoor point and draw nothing.
 
   test "keeps an hourly series unbroken over a one-day span" do
     subject = buckets(from: "2026-08-05", to: "2026-08-06") # 600s chart bucket
@@ -133,24 +121,14 @@ class Climate::BucketsTest < ActiveSupport::TestCase
     assert_includes result.map { |entry| entry[:margin] }, nil
   end
 
-  # --- the cadence estimate is capped, so a uniformly sparse view can't earn
-  # an unbounded outage tolerance --------------------------------------------
-  #
-  # A narrow ?from=/?to= can clip a hand-synced sensor's dense runs down to a
-  # couple of points ten-plus days apart, with nothing inside the window to
-  # contradict that spacing. Without a ceiling, that spacing itself becomes
-  # the "cadence," and the threshold (cadence * GAP_BUCKETS) grows just as
-  # unbounded — a real month-long outage would render as an unbroken line,
-  # the same failure mode the two-point fallback above exists to prevent, just
-  # reachable with three or more points instead of two.
+  # A narrow range can clip a sensor to points ten-plus days apart. Uncapped, that
+  # spacing becomes the cadence and a month-long outage draws as a line.
 
   test "caps the estimated cadence at a day, so a uniformly sparse series still breaks across a long outage" do
     subject = buckets(from: "2026-06-01", to: "2026-08-06") # 21_600s (6-hourly) bucket
     points = [
       { t: Time.zone.parse("2026-06-05 00:00"), margin: 1.0 },
-      # Ten days later: the only evidence of "normal" spacing in this window.
-      # Uncapped, this becomes the cadence, and 25 days would then sit well
-      # inside cadence * GAP_BUCKETS (30 days) and never break.
+      # Uncapped, these ten days become the cadence, so 25 days sits inside 3x.
       { t: Time.zone.parse("2026-06-15 00:00"), margin: 2.0 },
       { t: Time.zone.parse("2026-07-10 00:00"), margin: 3.0 }
     ]
@@ -161,9 +139,8 @@ class Climate::BucketsTest < ActiveSupport::TestCase
   end
 
   test "does not cap the cadence below the chart's own bucket width" do
-    # At the widest (yearly) tier the bucket width already equals the cap
-    # (both are a day), so clamping must never push the cadence BELOW
-    # seconds — it would fight the floor applied for the 0-or-1-delta case.
+    # At the daily tier the bucket width equals the cap, so the clamp must
+    # never push the cadence below the bucket width.
     subject = buckets(from: "2025-08-06", to: "2026-08-06") # 86_400s (daily) bucket
     points = [
       { t: Time.zone.parse("2026-08-01"), margin: 1.0 },

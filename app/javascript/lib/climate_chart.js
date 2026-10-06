@@ -1,12 +1,9 @@
-// Shared machinery for the climate dashboard's four chart controllers.
-//
-// Extracted because jscpd gates duplication at zero — but also because a
-// sensor has to be the same colour and the same shape on every chart, or they
-// cannot be read together.
+// Shared machinery for the climate dashboard's four chart controllers, so a
+// sensor is the same colour and shape on every chart.
 
-// Fixed order, never cycled. Validated for the light surface: worst adjacent
-// CVD ΔE 9.1, normal-vision ΔE 19.6. Three slots fall below 3:1 contrast,
-// which is why every series also carries an end-of-line direct label.
+// Fixed order, never cycled; colour-vision-deficiency validated on the light
+// surface (worst adjacent ΔE 9.1). Three slots fall below 3:1 contrast, which
+// is why every series also carries an end label.
 export const PALETTE = [
   "#2a78d6", // blue
   "#eb6834", // orange
@@ -34,10 +31,9 @@ export function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
-// pointRadius: 0 lets the connecting line carry the ink — but a point with no
-// line on either side (a genuine two-point series can be its own isolated
-// island around a real gap; see Buckets#gap_threshold's two-point fallback)
-// then draws as nothing at all. This gives just that point a visible dot.
+// pointRadius: 0 lets the line carry the ink, but a point with no line either
+// side (an island around a real gap, e.g. Buckets#gap_threshold's two-point
+// fallback) would draw as nothing. This gives just that point a dot.
 export function pointRadiusUnlessIsolated(radius = 3) {
   const hasY = (point) => point && point.y !== null && point.y !== undefined
 
@@ -50,8 +46,7 @@ export function pointRadiusUnlessIsolated(radius = 3) {
   }
 }
 
-// Chart.js is imported lazily, matching techie_graph_controller and
-// map_controller, so no other admin page pays for it.
+// Lazy import, so no other admin page pays for Chart.js.
 export async function loadChartJs({ bars = false } = {}) {
   const [chartjs] = await Promise.all([
     import("chart.js"),
@@ -85,13 +80,13 @@ export function timeScaleOptions({ title, unit }) {
   }
 }
 
-// The `options` object every line chart on this page shares.
 export function chartOptions({ title, unit, extra = {} }) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     animation: reducedMotion() ? false : undefined,
     interaction: { mode: "index", intersect: false },
+    // An object, not a number: endLabelPlugin assigns .right on it.
     layout: { padding: { right: 0 } },
     scales: timeScaleOptions({ title, unit }),
     plugins: legendAndTooltip({ unit }),
@@ -106,15 +101,12 @@ export function legendAndTooltip({ unit }) {
       labels: {
         usePointStyle: true,
         color: "#0b0b0b",
-        // Spread bands are scenery, not series. Listing them doubles the
-        // legend and offers the reader a toggle that half-erases a chart.
+        // Bands are scenery, not series: listing them doubles the legend.
         filter: (item, data) => !data.datasets[item.datasetIndex].band,
       },
-      // A band dataset shares its line's label but keeps its own
-      // datasetIndex, so Chart.js's default onClick (which toggles only the
-      // clicked datasetIndex) hides the line and leaves its shaded band
-      // floating with no line and no end label. Toggle every dataset that
-      // shares the clicked label instead.
+      // Chart.js's default toggles only the clicked datasetIndex, hiding the
+      // line and leaving its band floating with no line or label. Toggle every
+      // dataset sharing the label instead.
       onClick(_event, legendItem, legend) {
         const chart = legend.chart
         const label = chart.data.datasets[legendItem.datasetIndex].label
@@ -136,7 +128,7 @@ export function legendAndTooltip({ unit }) {
   }
 }
 
-// Required relief for the palette slots below 3:1 against the surface.
+// The relief for palette slots below 3:1 contrast against the surface.
 export function endLabelPlugin() {
   const FONT = "600 11px system-ui, sans-serif"
   const GAP = 6

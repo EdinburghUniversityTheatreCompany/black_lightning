@@ -4,9 +4,8 @@ import {
   pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
-// How close the crypt came to condensing: one line per crypt sensor, plotting
-// the WORST margin in each bucket rather than the average, with everything
-// under the threshold shaded.
+// One line per crypt sensor plotting the WORST margin in each bucket, not the
+// average, with everything under the threshold shaded.
 export default class extends Controller {
   static targets = ["canvas"]
   static values = { series: Array, threshold: Number }
@@ -53,7 +52,6 @@ export default class extends Controller {
           borderColor: colorFor(series.color_index),
           backgroundColor: colorFor(series.color_index),
           borderWidth: 2,
-          // See climate_charts_controller for why this isn't a plain 0.
           pointRadius: pointRadiusUnlessIsolated(),
           pointHoverRadius: 5,
           tension: 0.2,
@@ -70,11 +68,9 @@ export default class extends Controller {
           ...scales,
           y: {
             ...scales.y,
-            // Auto-scaled, a flat night gives the y-axis a few hundredths of a
-            // degree of range: the risk band falls off-screen and sensor noise
-            // reads as a cliff. suggestedMin only widens the range, so a
-            // genuinely large margin still fits — unlike the shared axis
-            // options, this chart has to show the threshold it's measured against.
+            // Auto-scaled, a flat night gives the axis a few hundredths of a
+            // degree and the risk band falls off-screen. suggestedMin only
+            // widens the range, so a large margin still fits.
             suggestedMin: 0,
           },
         },
@@ -83,8 +79,8 @@ export default class extends Controller {
     })
   }
 
-  // Drawn under the lines, so a night that dipped into the band is visible as
-  // a line entering shaded ground rather than as a number to compare against.
+  // Drawn under the lines, so a dip shows as a line entering shaded ground
+  // rather than a number to compare.
   #riskBandPlugin() {
     const threshold = this.thresholdValue
 

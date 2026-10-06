@@ -153,8 +153,6 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
   # --- gaps ------------------------------------------------------------------
 
   test "breaks the line with a null point across an outage" do
-    # Without this the chart draws a straight line through the missing hours,
-    # which reads as a measurement of the room that never happened.
     sensor = create_climate_sensor
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 10:00"))
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 18:00"))
@@ -166,13 +164,8 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
   end
 
   test "draws the outdoor line unbroken on the 24-hour view despite its hourly cadence" do
-    # The reported bug: Open-Meteo reports hourly, but the 24-hour view
-    # buckets at ten minutes (600s). A gap threshold built from the bucket
-    # width alone (600 * 3 = 1800s) is narrower than the 3600s gap between
-    # any two consecutive hourly readings, so a null was inserted after
-    # EVERY outdoor point — with spanGaps: false and pointRadius: 0 that
-    # drew nothing at all, even though the legend and end-of-line label
-    # still rendered from the (empty-looking) series.
+    # Open-Meteo is hourly but this view buckets at 600s: a bucket-width gap
+    # threshold would null after every point and draw nothing.
     sensor = outdoor_climate_sensor
     24.times { |hour| create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 00:00") + hour.hours) }
 

@@ -1,10 +1,6 @@
 module Climate
   ##
   # The chart payload: one series per sensor, bucketed to suit the span.
-  #
-  # A year of ten-minute readings is 52,560 points per sensor; bucketing takes
-  # that to 365, which is what keeps the payload small enough to embed in the
-  # HTML rather than fetch.
   class SeriesQuery
     MEASURES = { temperature: "temperature_c", humidity: "relative_humidity",
                  dew_point: "dew_point_c" }.freeze
@@ -37,12 +33,10 @@ module Climate
 
     private
 
-    # AVG for the line, MIN/MAX for the spread band. Once a bucket is wider
-    # than one reading the mean hides the extremes, and the extreme is what
-    # condenses on a wall.
+    # AVG for the line, MIN/MAX for the band: once a bucket is wider than one
+    # reading the mean hides the extremes, and the extreme is what condenses.
     #
-    # Written as literal Arel.sql calls, not built by interpolating
-    # MEASURES.values: Brakeman flags interpolation into Arel.sql as a
+    # Literal Arel.sql calls: Brakeman flags interpolation into Arel.sql as a
     # possible injection even from a frozen constant.
     def aggregates
       [ Arel.sql("AVG(temperature_c)"), Arel.sql("MIN(temperature_c)"), Arel.sql("MAX(temperature_c)"),

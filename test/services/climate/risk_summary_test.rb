@@ -18,8 +18,7 @@ class Climate::RiskSummaryTest < ActiveSupport::TestCase
     Climate::RiskSummary.new(sensors: [ sensor ], range: range).summaries.first
   end
 
-  # "41 of 720 hours" reads as 6% of a month when it may be 8% of the six days
-  # the hand-synced sensor actually covered.
+  # A range denominator would read three damp hours as a quiet week.
   test "counts hours that have readings, not hours in the range" do
     sensor = create_climate_sensor(in_crypt: true)
     base = Time.zone.parse("2026-08-05 00:00")
@@ -56,8 +55,7 @@ class Climate::RiskSummaryTest < ActiveSupport::TestCase
     assert_equal 0, summary_for(sensor, from: "2026-08-01", to: "2026-08-07")[:hours_at_risk]
   end
 
-  # Readings arrive by hand-synced CSV, so multi-day holes are normal. Joining
-  # across one would claim an unbroken damp spell that nothing measured.
+  # Joining across a coverage hole would claim a damp spell nothing measured.
   test "a gap in coverage breaks the longest spell" do
     sensor = create_climate_sensor(in_crypt: true)
     base = Time.zone.parse("2026-08-05 00:00")

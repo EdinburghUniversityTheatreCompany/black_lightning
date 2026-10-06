@@ -1,19 +1,16 @@
 module Climate
   ##
-  # "Should I open the doors?" — the crypt's temperature and dew point against
-  # the outside air's dew point, all in °C on one axis.
+  # "Should I open the doors?": the crypt's temperature and dew point against
+  # the outside dew point, all in °C on one axis.
   #
-  # Two readings from one chart. Outdoor dew point ABOVE the crypt's
-  # temperature means the incoming air condenses on the stone however dry it
-  # feels out there. Outdoor dew point BELOW the crypt's dew point means the
-  # air is drier in absolute terms, so opening up dries the place out.
-  # Relative humidity cannot be compared between two places at different
-  # temperatures; dew point can, which is why all three lines are °C.
+  # Outside dew point ABOVE the crypt's temperature means incoming air condenses
+  # on the stone however dry it feels. BELOW the crypt's dew point it is drier in
+  # absolute terms, so opening up dries the place out. Relative humidity cannot
+  # be compared across different temperatures; dew point can.
   #
-  # A projection over SeriesQuery rather than new SQL: these are the numbers
-  # the history charts already fetch, relabelled onto one axis. So the
-  # aggregate is AVG, deliberately — this chart is read for the present, where
-  # the buckets are raw anyway, and MarginSeries owns the historical worst case.
+  # A projection over SeriesQuery, not new SQL, so the aggregate is AVG
+  # deliberately: this chart is read for the present, and MarginSeries owns the
+  # historical worst case.
   class VentilationSeries
     WORST = "worst".freeze
     NOT_IN_CRYPT = "That sensor is not marked as being in the crypt, so the coldest one is shown instead.".freeze
@@ -34,7 +31,7 @@ module Climate
     def notice = resolved[:notice]
 
     # WORST is reported back as WORST, not as the sensor it resolved to, so the
-    # selection keeps meaning "whichever is coldest" as the range changes.
+    # selection keeps meaning "coldest" as the range changes.
     def selected_key = resolved[:key]
 
     # -> [{ key:, label:, style:, color_index:, points: [{ t:, value: }] }]
@@ -75,11 +72,10 @@ module Climate
       { sensor: coldest, notice: NOT_IN_CRYPT, key: WORST }
     end
 
-    # The coldest spot is where condensation happens. Resolved once from the
-    # LOWEST MEAN temperature over the whole range rather than point by point,
-    # so both crypt lines come from the same sensor: a chart whose temperature
-    # and dew point came from different sensors could not be read for the gap
-    # between them, and that gap is the first thing anyone reads.
+    # Condensation happens at the coldest spot. Resolved once from the LOWEST
+    # MEAN temperature over the range, so both crypt lines come from the same
+    # sensor: the gap between a temperature and a dew point from different
+    # sensors could not be read, and that gap is what anyone reads first.
     def coldest
       means = Reading
               .where(sensor_id: @crypt_sensors.map(&:id),

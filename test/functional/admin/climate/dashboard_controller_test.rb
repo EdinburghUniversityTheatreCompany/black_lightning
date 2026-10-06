@@ -65,13 +65,12 @@ module Admin
       end
 
       test "says so when a requested range had to be clamped" do
-        # Never silently render a different range as though it were the one
-        # asked for. That is how last week's damp gets read as this week's.
+        # Never render a different range as though it were the one asked for.
         get :show, params: { from: "2026-08-06", to: "2026-08-01" }
 
         assert_response :success
-        # The layout serialises flash into the SweetAlert payload and then
-        # discards it, so the rendered body is where the message actually is.
+        # The layout serialises flash into the SweetAlert payload and discards
+        # it, so assert on the body.
         assert_match(/wrong way round/i, response.body)
       end
 
@@ -134,8 +133,7 @@ module Admin
       end
 
       test "mentions the daily email only when a climate mailbox is configured" do
-        # The copy claims a report arrives automatically. That is a lie in an
-        # environment with no mailbox set, and it would render a blank address.
+        # With no mailbox set the copy would promise a report and print a blank address.
         original = ENV.fetch("CLIMATE_MAILBOX", nil)
         ENV["CLIMATE_MAILBOX"] = "climatesensors@example.com"
 
@@ -154,8 +152,7 @@ module Admin
       end
 
       test "explains that the margin is measured against the air, not the walls" do
-        # Every threshold in this copy is stated against a number we do not
-        # measure, so the caveat has to survive future edits.
+        # Every threshold is stated against the air, so the caveat must survive copy edits.
         get :show
 
         assert_match(/not the walls/i, response.body)
@@ -192,10 +189,6 @@ module Admin
         get :show, params: { crypt: "haddock" }
 
         assert_response :success
-        # As with the date-range clamp above: the layout serialises flash.now
-        # into the SweetAlert payload (merging :notice into :success) and
-        # discards it, so the rendered body is where the message survives,
-        # not a bare flash.now[:notice] read after the request completes.
         assert_match(/not marked as being in the crypt/i, response.body)
       end
 

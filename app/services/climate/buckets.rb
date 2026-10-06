@@ -1,12 +1,8 @@
 module Climate
   ##
-  # How wide a chart bucket is for a given span, the SQL that floors a
-  # timestamp into one, and where a series has to BREAK rather than be drawn
-  # across.
-  #
-  # Extracted from SeriesQuery so the four chart payloads share one rule: a
-  # margin line bucketed differently from the temperature line above it would
-  # be unreadable next to it.
+  # Bucket width for a span, the SQL that floors a timestamp into one, and where
+  # a series has to BREAK rather than be drawn across. Shared, so every chart
+  # payload buckets alike.
   class Buckets
     HOUR = 3_600
 
@@ -18,13 +14,11 @@ module Climate
       { max_days: nil, seconds: 24 * HOUR }
     ].freeze
 
-    # A frozen allow-list, so nothing user-supplied can reach the SQL string.
+    # A frozen allow-list, so nothing user-supplied reaches the SQL string.
     #
-    # NOT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(recorded_at)/n)*n): the mysql2
-    # adapter stores UTC but does not pin the session time_zone, so
-    # UNIX_TIMESTAMP() reads the stored value in the SERVER's zone and every
-    # bucket boundary silently shifts by its offset. The arithmetic below is
-    # timezone-independent for any bucket that divides a day.
+    # NOT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(recorded_at)/n)*n): mysql2 does not
+    # pin the session time_zone, so UNIX_TIMESTAMP() reads the stored UTC value
+    # in the SERVER's zone and shifts every bucket boundary by its offset.
     BUCKET_EXPRESSIONS = {
       600 => "DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 600) SECOND)",
       3_600 => "DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 3600) SECOND)",
@@ -35,18 +29,10 @@ module Climate
     # A break longer than this many buckets is drawn as a gap rather than a line.
     GAP_BUCKETS = 3
 
-    # Capped at a day so a narrow ?from=/?to= that clips a sensor's dense runs
-    # to a couple of far-apart points can't read that spacing as its normal
-    # cadence and stretch the outage tolerance arbitrarily far. A day is
-    # RESOLUTIONS' own widest bucket, not an arbitrary pick. Applied to the
-    # CADENCE (see #gap_threshold), not the final threshold, so GAP_BUCKETS
-    # still multiplies a bounded number.
-    #
-    # #max, not RESOLUTIONS.last: #initialize's `find` only works because
-    # RESOLUTIONS is ordered by max_days, and this cap must stay the widest
-    # bucket even if that ordering ever changes — .last would silently pick a
-    # smaller ceiling, and #gap_threshold's clamp would then raise once the
-    # max dipped below the min.
+    # The cadence is capped at the widest bucket (a day), so a narrow
+    # ?from=/?to= that clips a sensor to a couple of far-apart points cannot
+    # read that spacing as its normal cadence and stretch the outage tolerance
+    # without limit. #max, not .last, so it survives a reordering of RESOLUTIONS.
     MAX_CADENCE_SECONDS = RESOLUTIONS.map { |r| r[:seconds] }.max
 
     RAW_SECONDS = RESOLUTIONS.first[:seconds]
@@ -59,8 +45,7 @@ module Climate
 
     def expression = BUCKET_EXPRESSIONS.fetch(seconds)
 
-    # False when each bucket holds at most one reading, which is when a
-    # min-max band would be a zero-width artefact rather than a spread.
+    # False at raw resolution, where a min-max band would be a zero-width artefact.
     def aggregated? = seconds > RAW_SECONDS
 
     # DATE() buckets come back as a Date, the DATE_SUB ones as a Time.
@@ -69,8 +54,8 @@ module Climate
     end
 
     # An explicit null wherever the series skips, so the chart BREAKS the line
-    # rather than interpolating across an outage. A line drawn through missing
-    # data is not cosmetic. It is a reading of the room that never happened.
+    # instead of interpolating: a line through missing data is a reading that
+    # never happened.
     def with_gaps(points, keys:)
       threshold = gap_threshold(points)
       blank = keys.index_with(nil)
@@ -84,19 +69,14 @@ module Climate
 
     private
 
-    # Derived from how THIS series actually reports, not the chart's own
-    # bucket width: Open-Meteo reports hourly while the 24-hour chart buckets
-    # at ten minutes, so a bucket-width threshold would flag the gap after
-    # every single outdoor point as its own outage — pointRadius is 0, so an
-    # isolated point disappears too (see the JS side's pointRadiusUnlessIsolated).
+    # Derived from how THIS series reports, not the chart's bucket width:
+    # Open-Meteo is hourly while the 24-hour view buckets at 600s, so a
+    # bucket-width threshold would break the line after every outdoor point.
     #
-    # The estimate is the MINIMUM consecutive delta, but only with two or more
-    # to compare: an outage only ever widens a gap, so it can inflate the
-    # other deltas but never pull the minimum below the series' true cadence.
-    # With fewer than two deltas there's nothing to compare against — a lone
-    # 30-hour gap is indistinguishable from "reports every 30 hours," so
-    # treating it as the cadence would make the threshold 3x itself and never
-    # exceeded. The fallback there is the chart's own bucket width.
+    # The cadence is the MINIMUM delta, but only with two or more to compare (an
+    # outage widens gaps, it never pulls the minimum below the true cadence).
+    # With fewer, a lone 30-hour gap reads as "reports every 30 hours" and could
+    # never exceed 3x itself, so the fallback is the bucket width.
     def gap_threshold(points)
       deltas = points.each_cons(2).map { |(a, b)| b[:t] - a[:t] }
       cadence = deltas.size >= 2 ? deltas.min : seconds

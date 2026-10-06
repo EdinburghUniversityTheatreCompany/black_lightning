@@ -2,13 +2,9 @@ require "application_system_test_case"
 
 module Admin
   module Climate
-    # Browser tests for the three charts. The functional tests prove the ERB
-    # renders and the payload is right; only a real browser proves Chart.js
-    # actually draws, that it plots the values it was given, and that the
-    # charts are torn down on navigation.
-    #
-    # Chart.js is imported as an ES module, so there is no window.Chart to
-    # inspect — the controller exposes its instances on the element instead.
+    # Browser tests for the history charts: only a real browser proves Chart.js
+    # draws and plots the values it was given. There is no window.Chart, so the
+    # controller's instances are read off the element.
     class ChartsJsTest < ApplicationSystemTestCase
       include ClimateTestHelpers
 
@@ -24,8 +20,8 @@ module Admin
         seed_readings
       end
 
-      # Deliberately distinct values per sensor and per measure, so a chart
-      # plotting the wrong series or the wrong column cannot pass.
+      # Distinct values per sensor and measure, so a chart plotting the wrong
+      # series or column cannot pass.
       def seed_readings
         base = 6.hours.ago.change(min: 0)
         12.times do |index|
@@ -42,11 +38,8 @@ module Admin
         assert_selector "[data-climate-charts-ready='3']"
       end
 
-      # chart_index: 0 temperature, 1 humidity, 2 dew point.
-      #
-      # Excludes band datasets: once a range is banded, the min and max band
-      # datasets share the SAME label as the line they shade, so a bare label
-      # match can return the band's max line instead of the actual plotted line.
+      # chart_index: 0 temperature, 1 humidity, 2 dew point. Band datasets share
+      # their line's label, so they are excluded to return the plotted line.
       def plotted(chart_index, label)
         evaluate_script(<<~JS)
           (() => {
@@ -99,9 +92,7 @@ module Admin
         visit admin_climate_dashboard_path
         wait_for_charts
 
-        # Band datasets carry no borderDash at all (they are filled shading,
-        # not a stroke), so they have to be excluded here the same way
-        # #plotted excludes them by label.
+        # Bands carry no borderDash (shading, not a stroke), so exclude them.
         dashes = evaluate_script(<<~JS)
           document.querySelector("[data-controller='climate-charts']").climateCharts[0]
             .data.datasets.filter(d => !d.band).map(d => ({ label: d.label, dash: d.borderDash.length }))
@@ -112,10 +103,8 @@ module Admin
       end
 
       test "lines break across a gap rather than interpolating through it" do
-        # spanGaps false plus the server's explicit null points is what stops a
-        # two-day outage being drawn as a straight, entirely invented line.
-        # Band datasets carry the same (also-false) spanGaps for the same
-        # reason, so every dataset is asserted here, not just the two lines.
+        # spanGaps false plus the server's nulls stops an outage being drawn as
+        # an invented straight line. Bands carry it too, so assert every dataset.
         visit admin_climate_dashboard_path
         wait_for_charts
 
@@ -163,9 +152,8 @@ module Admin
         assert_no_selector "[data-climate-charts-ready]"
       end
 
-      # The dashboard's default range is 7 days, which is already banded (see
-      # Buckets::RESOLUTIONS), so every test above already exercises band
-      # datasets without setting banded up explicitly.
+      # The default 7-day range is already banded (Buckets::RESOLUTIONS), so
+      # every test here exercises band datasets.
       test "hiding a sensor via the legend also hides its shaded band" do
         visit admin_climate_dashboard_path
         wait_for_charts
@@ -186,9 +174,7 @@ module Admin
           })()
         JS
 
-        # Three datasets share the "Crypt north" label while banded: the line
-        # plus its max/min band. Before the fix only the line (one of the
-        # three) toggled, leaving the band shaded with no line and no label.
+        # Three datasets share the label while banded: the line plus its max/min band.
         assert_equal [ false, false, false ], hidden_before
         assert_equal [ true, true, true ], hidden_after
       end

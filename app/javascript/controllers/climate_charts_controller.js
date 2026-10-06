@@ -4,12 +4,10 @@ import {
   pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
-// Three stacked time-series charts (temperature, relative humidity, dew point)
-// over one shared x-axis, one line per sensor plus the outdoor comparison.
-//
-// Past two days the server widens the buckets and the mean starts hiding the
-// extremes, so each line then also carries a shaded min-max band. The extreme
-// is what condenses on a wall.
+// Three stacked charts (temperature, humidity, dew point) on one x-axis, a line
+// per sensor plus the outdoor comparison. Past two days the mean hides the
+// extremes, so each line also carries a shaded min-max band: the extreme is
+// what condenses.
 export default class extends Controller {
   static targets = ["temperature", "humidity", "dewPoint"]
   static values = { series: Array, banded: Boolean }
@@ -31,9 +29,8 @@ export default class extends Controller {
       this.#build(Chart, this.dewPointTarget, "dew_point", "Dew point (°C)", "°C"),
     ].filter(Boolean)
 
-    // Chart.js is an ES module, so there is no window.Chart. These are the
-    // handles for checking what was actually plotted, from the browser tests
-    // and from the console when a live page looks wrong.
+    // Chart.js is an ES module, so there is no window.Chart: these handles are
+    // what the browser tests (and a console) read.
     this.element.climateCharts = this.#charts
     this.element.dataset.climateChartsReady = String(this.#charts.length)
   }
@@ -51,17 +48,14 @@ export default class extends Controller {
       const color = colorFor(series.color_index)
       const line = {
         label: series.name,
-        // spanGaps stays false so the explicit null points the server inserts
-        // BREAK the line across an outage rather than interpolating through it.
+        // false, so the server's explicit nulls BREAK the line across an outage.
         spanGaps: false,
         data: series.points.map((point) => ({ x: point.t, y: point[measure] })),
         borderColor: color,
         backgroundColor: color,
-        // Second cue for the outdoor line, so it reads apart without relying on hue.
+        // Second cue for the outdoor line besides hue.
         borderDash: series.outdoor ? [6, 4] : [],
         borderWidth: 2,
-        // See pointRadiusUnlessIsolated: an isolated point needs a radius or
-        // it vanishes along with the (absent) line either side of it.
         pointRadius: pointRadiusUnlessIsolated(),
         pointHoverRadius: 5,
         tension: 0.2,
@@ -107,7 +101,6 @@ export default class extends Controller {
         maintainAspectRatio: false,
         animation: reducedMotion() ? false : undefined,
         interaction: { mode: "index", intersect: false },
-        // Right padding is measured by the end-label plugin.
         layout: { padding: { right: 0 } },
         scales: timeScaleOptions({ title, unit }),
         plugins: legendAndTooltip({ unit }),

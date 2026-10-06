@@ -1,16 +1,16 @@
 module Climate
   ##
-  # The condensation-risk line: how far the crypt's air sat from its own dew
-  # point, and how close that ever came to zero.
+  # The condensation-risk line: the worst margin of the crypt's air above its
+  # own dew point in each bucket.
   #
-  # The aggregate is MIN(temperature_c - dew_point_c) — the margin per row,
-  # then the worst of them. NOT MIN(temperature_c) - MAX(dew_point_c), which
-  # takes its two figures from different instants and invents a colder, wetter
-  # crypt than ever existed. And not AVG: condensation is a worst-case event,
-  # so a daily mean can sit comfortably at 5 °C while every night touched 1.
+  # MIN(temperature_c - dew_point_c): the margin per row, then the worst. NOT
+  # MIN(temperature_c) - MAX(dew_point_c), which takes its figures from
+  # different instants and invents a colder, wetter crypt than ever existed. Not
+  # AVG either: condensation is a worst-case event, and a daily mean can sit at
+  # 5 °C while every night touched 1.
   #
-  # Measured against the AIR, not the walls. The walls are underground and
-  # colder, so the real margin at the stone is smaller than this line.
+  # Measured against the AIR. The walls are colder, so the real margin at the
+  # stone is smaller than this line.
   class MarginSeries
     def initialize(sensors:, range:)
       @sensors = Array(sensors)
@@ -34,9 +34,6 @@ module Climate
 
     private
 
-    # Arel.sql arg is a literal, not interpolated: Brakeman flags interpolation
-    # as a possible injection even from a frozen constant (see
-    # Climate::SeriesQuery#aggregates).
     def bucketed_rows
       return {} if @sensors.empty?
 

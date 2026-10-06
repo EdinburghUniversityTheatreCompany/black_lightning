@@ -5,11 +5,11 @@ import {
 } from "../lib/climate_chart"
 
 // Crypt temperature, crypt dew point and outdoor dew point on one °C axis, so
-// the two ventilation questions can be read off a single picture.
+// both ventilation questions read off one picture.
 //
-// The styles are load-bearing: the two crypt lines share the sensor's hue so
-// they read as one place, the outdoor line is dashed so it reads apart
-// without relying on colour.
+// The styles are load-bearing: the crypt pair shares the sensor's hue so they
+// read as one place, and the outdoor line is dashed so it reads apart without
+// relying on colour.
 const STYLES = {
   solid: { borderDash: [], borderWidth: 2, alpha: 1 },
   muted: { borderDash: [2, 3], borderWidth: 2, alpha: 0.65 },
@@ -67,7 +67,6 @@ export default class extends Controller {
             backgroundColor: color,
             borderDash: style.borderDash,
             borderWidth: style.borderWidth,
-            // See climate_charts_controller for why this isn't a plain 0.
             pointRadius: pointRadiusUnlessIsolated(),
             pointHoverRadius: 5,
             tension: 0.2,

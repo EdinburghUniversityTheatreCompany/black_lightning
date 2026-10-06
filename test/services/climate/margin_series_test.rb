@@ -11,8 +11,8 @@ class Climate::MarginSeriesTest < ActiveSupport::TestCase
     Climate::MarginSeries.new(sensors: Array(sensors), range: range(from: from, to: to)).series
   end
 
-  # The whole reason this service exists. MIN(temp) - MAX(dew) takes its two
-  # figures from different instants and invents a crypt that never existed.
+  # MIN(temp) - MAX(dew) takes its figures from different instants and invents a
+  # crypt that never existed.
   test "takes the worst margin in a bucket, not the coldest temperature against the wettest dew point" do
     sensor = create_climate_sensor(in_crypt: true)
     create_climate_reading(sensor: sensor, recorded_at: Time.zone.parse("2026-08-05 12:00"),

@@ -1,16 +1,13 @@
 module Climate
   ##
-  # How much of the range the crypt spent close to condensing.
+  # How much of the range the crypt spent close to condensing. Mould follows how
+  # LONG the air sat near saturation, so the unit is the hour: hourly buckets
+  # taking the worst margin inside each, counted as hours at risk, the longest
+  # unbroken spell and a per-day tally for the bars.
   #
-  # Mould is a function of how LONG the air sat near saturation, not of how low
-  # the margin ever got, so the unit here is the hour: hourly buckets, each
-  # taking the worst margin inside it, counted three ways — total hours at
-  # risk, the longest unbroken spell, and a per-day tally for the bars.
-  #
-  # The denominator is hours that HAVE readings, never hours in the range. The
-  # sensors sync over an intermittent access point and routinely miss days, so
-  # "41 of 720 hours" reads as 6% of a month when it may be 8% of the six days
-  # actually covered.
+  # The denominator is hours WITH readings, never hours in the range: sensors
+  # miss days, so "41 of 720 hours" reads as 6% of a month when it may be 8% of
+  # the days covered.
   class RiskSummary
     HOUR = 3_600
 
@@ -32,12 +29,7 @@ module Climate
 
     private
 
-    # One query for every sensor and every figure below: the three counts and
-    # the bars all have to agree, so they all come off the same rows.
-    #
-    # Arel.sql args are literals, not interpolated: Brakeman flags
-    # interpolation as a possible injection even from a frozen constant (see
-    # Climate::SeriesQuery for the same pattern).
+    # One query feeds the three counts and the bars, so they cannot disagree.
     def hourly_margins
       return {} if @sensors.empty?
 
@@ -69,9 +61,8 @@ module Climate
 
     def at_risk?(margin) = margin < @threshold
 
-    # A missing hour BREAKS the run, the same way SeriesQuery refuses to draw a
-    # line across an outage. Claiming thirty unbroken damp hours across a
-    # twenty-hour hole is a measurement that never happened.
+    # A missing hour BREAKS the run: a damp spell across a coverage hole was
+    # never measured.
     def longest_spell(hours)
       best = { hours: 0, ended_at: nil }
       run = 0

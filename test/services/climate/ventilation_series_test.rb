@@ -34,8 +34,7 @@ class Climate::VentilationSeriesTest < ActiveSupport::TestCase
     assert_equal warm.id.to_s, subject.selected_key
   end
 
-  # DateRange clamps loudly rather than silently rendering something other
-  # than what was asked for; this follows it.
+  # Like DateRange's clamp, a fallback says so rather than silently showing something else.
   test "a sensor that is not in the crypt falls back and says so" do
     crypt = create_climate_sensor(display_name: "Crypt", in_crypt: true)
     elsewhere = create_climate_sensor(display_name: "Dressing room", in_crypt: false)

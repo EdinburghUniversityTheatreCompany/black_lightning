@@ -1,9 +1,7 @@
 module Admin
   module Climate
     ##
-    # Answer first, evidence second: the condensation-risk and ventilation
-    # views render above the raw history charts, which exist to check them
-    # against.
+    # Risk and ventilation answers sit above the raw history charts that check them.
     class DashboardController < BaseController
       def show
         @title = "Crypt Climate"
@@ -17,8 +15,7 @@ module Admin
 
         respond_to do |format|
           format.html
-          # Served for the same data the page draws, so the charts can be
-          # checked without reading pixels off a canvas.
+          # The page's own data, so the charts can be checked without reading pixels.
           format.json { render json: payload }
         end
       end
@@ -28,8 +25,7 @@ module Admin
       def build_series
         query = ::Climate::SeriesQuery.new(sensors: @sensors, range: @range)
         @series = query.series
-        # A min-max band means nothing until a bucket holds more than one
-        # reading, and would draw as a zero-width artefact at raw resolution.
+        # A min-max band is meaningless at raw resolution.
         @banded = query.aggregated?
 
         @margin_series = ::Climate::MarginSeries.new(sensors: @crypt_sensors, range: @range).series
