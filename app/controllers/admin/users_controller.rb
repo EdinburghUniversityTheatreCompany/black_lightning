@@ -38,10 +38,7 @@ class Admin::UsersController < AdminController
   def reset_password
     @user.send_reset_password_instructions
 
-    respond_to do |format|
-      flash[:succes] = "Password reset instructions sent."
-      format.html { redirect_back fallback_location: admin_user_url(@user) }
-    end
+    redirect_back fallback_location: admin_user_url(@user), flash: { success: "Password reset instructions sent." }
   end
 
   def merge

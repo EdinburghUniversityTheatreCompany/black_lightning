@@ -160,6 +160,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     post :reset_password, params: { id: @user }
 
     assert_redirected_to admin_user_url(@user)
+    assert_predicate flash[:success], :present?
   end
 
   test "should not update password when same as current password" do
