@@ -1,13 +1,8 @@
 module Reimbursements
   ##
-  # Resolves a Black Lightning user to their payee (People) record: stored
-  # link first, then email match (persisted for next time), and — on first
-  # submission — creates the People record.
-  #
-  # Which users column holds the stored link is the STORE's knowledge
-  # (stored_person_link / remember_person_link!), not a global setting: a
-  # PersonLink can then never pair a store with the wrong column, however it
-  # was built (the test seams inject stores directly).
+  # Resolves a user to their payee (People) record: stored link, then email match
+  # (remembered), else creates one. Which users column holds the link is the
+  # STORE's knowledge, so a PersonLink can never pair a store with the wrong one.
   class PersonLink
     def initialize(store:)
       @store = store

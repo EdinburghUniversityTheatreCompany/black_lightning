@@ -3,19 +3,12 @@ module Admin
     ##
     # A payee's sort code and account number, masked until an operator asks.
     #
-    # A DISCLOSURE control, not an access control: everyone reaching these
-    # screens is entitled to the numbers, and the full pair is in the markup
-    # behind the toggle. What it stops is incidental exposure — Build Batch
-    # printing every payee's account number on load, a screen shared in a
-    # meeting. Reading one becomes a deliberate act.
-    #
-    # The mask is ::Reimbursements::BankDetails.mask, the same last-four form
-    # the CSV exports and the notes trail use, so a row can be eyeball-matched
-    # across all three. It leaves four of a sort code's six digits showing,
-    # which is fine: a sort code names a bank branch and is published.
+    # A DISCLOSURE control, not an access control: the full pair is in the markup
+    # behind the toggle. It stops incidental exposure (a screen shared in a
+    # meeting), not anyone entitled to the numbers. The mask is the same last-four
+    # form as the CSV exports and the notes trail.
     class BankDetailsComponent < ViewComponent::Base
-      # +payee+ names the toggle, so a screen reader on a table of twenty claims
-      # hears which one each button belongs to.
+      # +payee+ names the toggle for screen readers.
       def initialize(sort_code:, account_number:, payee: nil, separator: " / ")
         @sort_code = sort_code.to_s
         @account_number = account_number.to_s

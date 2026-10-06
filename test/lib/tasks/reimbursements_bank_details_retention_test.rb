@@ -21,8 +21,7 @@ class ReimbursementsBankDetailsRetentionTaskTest < ActiveSupport::TestCase
     assert_equal "66374958", person.reload.account_number, "a preview must not clear anything"
   end
 
-  # A preview is for pasting into a chat with the committee, so it must not be
-  # the one place the full number turns up.
+  # Pasted into a chat with the committee.
   test "the preview never prints an account number" do
     dormant_payee
 

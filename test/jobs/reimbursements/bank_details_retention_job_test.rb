@@ -25,9 +25,7 @@ module Reimbursements
       assert_equal 0, BankDetailsRetentionJob.perform_now
     end
 
-    # A retention sweep that exists but is never scheduled does nothing at all,
-    # and nothing else would notice: the job is silent by design, so its absence
-    # from the schedule looks exactly like a quiet night.
+    # The job is silent by design, so a missing schedule entry looks like a quiet night.
     test "is scheduled to run nightly" do
       schedule = YAML.load_file(Rails.root.join("config/recurring.yml"))
       entry = schedule.fetch("reimbursements_bank_details_retention")

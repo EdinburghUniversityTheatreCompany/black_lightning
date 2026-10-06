@@ -2,10 +2,8 @@ require "test_helper"
 
 module Reimbursements
   class PaymentDetailsTest < ActiveSupport::TestCase
-    # PaymentDetails::FIELDS is the operator-writable vocabulary, and
-    # DatabaseStore#update_person! slices incoming attributes with it: a bank field missing
-    # from the list is silently dropped instead of saved. Pinning it to the actual columns
-    # means adding a column fails here until the vocabulary knows about it.
+    # DatabaseStore#update_person! slices attributes with FIELDS, so a column missing
+    # from it is silently dropped; this fails until the list knows about a new column.
     test "FIELDS covers every writable column of the table" do
       bookkeeping = %w[id person_id created_at updated_at]
       writable = PaymentDetails.column_names - bookkeeping

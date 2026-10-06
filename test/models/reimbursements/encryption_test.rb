@@ -1,16 +1,14 @@
 require "test_helper"
 
 module Reimbursements
-  # Bank details are encrypted at rest. These tests prove the model
-  # reads/writes plaintext transparently while the underlying DB column holds
-  # ciphertext, so a DB/backup/replica dump never exposes UK bank details.
+  # Bank details read as plaintext through the model while the DB column holds
+  # ciphertext, so a dump or replica never exposes them.
   class EncryptionTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
     include RakeTaskTestHelpers
 
-    # Overwrite an encrypted column with a raw PLAINTEXT value, the way every
-    # row in production looked the moment the `encrypts` declarations shipped.
-    # column/table are trusted literals from the test; the value is bound.
+    # Overwrites an encrypted column with raw PLAINTEXT, as every row looked when
+    # `encrypts` first shipped.
     def write_plaintext(model, id, values)
       assignments = values.keys.map { |c| "#{model.connection.quote_column_name(c)} = ?" }.join(", ")
       sql = model.sanitize_sql_array(
@@ -19,11 +17,8 @@ module Reimbursements
       model.connection.update(sql)
     end
 
-    # Read the actual bytes stored in the column, bypassing AR's decryption, so
-    # we assert on what a `mysqldump` / replica would actually reveal.
+    # The bytes stored in the column, bypassing decryption: what a dump would reveal.
     def raw_column(model, id, column)
-      # column/table are trusted literals from the test; only id is data, bound
-      # via sanitize_sql_array so this stays a parameterised query.
       quoted_column = model.connection.quote_column_name(column)
       sql = model.sanitize_sql_array(
         [ "SELECT #{quoted_column} FROM #{model.table_name} WHERE id = ?", id ]
@@ -39,12 +34,9 @@ module Reimbursements
       )
       details = person.payment_details
 
-      # The model reads plaintext transparently (BACS builder + modulus check
-      # rely on this — see #effective_* / ModulusCheck).
       assert_equal "08-99-99", details.sort_code
       assert_equal "66374958", details.account_number
 
-      # But the raw column no longer contains the plaintext digits.
       raw_account = raw_column(PaymentDetails, details.id, "account_number")
       raw_sort = raw_column(PaymentDetails, details.id, "sort_code")
       raw_notes = raw_column(PaymentDetails, details.id, "notes")
@@ -52,7 +44,6 @@ module Reimbursements
       assert_not_includes raw_sort.to_s, "08-99-99", "sort code must not be stored in plaintext"
       assert_not_includes raw_notes.to_s, "****4958", "notes must not be stored in plaintext"
 
-      # ciphertext_for confirms the stored value differs from the plaintext.
       assert_not_equal "66374958", details.ciphertext_for(:account_number)
       assert_not_equal "08-99-99", details.ciphertext_for(:sort_code)
     end
@@ -79,24 +70,14 @@ module Reimbursements
       assert_not_equal "50502366", expense.ciphertext_for(:account_number_override)
     end
 
-    # Encryption inflates the stored value (a JSON envelope of base64 IV +
-    # ciphertext + auth tag), so a plaintext that fits varchar(255) may not fit
-    # once encrypted. Measured against the real encryptor: any low-redundancy
-    # plaintext of ~124 characters or more already exceeds 255 bytes, and 255
-    # characters lands at ~394. Rails' own validate_column_size guard measures
-    # the DECRYPTED length, so it cannot catch this: under strict MySQL the save
-    # raises ValueTooLong, and under a non-strict server the ciphertext is
-    # silently truncated into unparseable JSON that support_unencrypted_data then
-    # hands back as "plaintext" — straight onto the BACS spreadsheet as a payee
-    # name.
-    #
-    # payee_name_override is the one member of the third-party override trio that
-    # carries free text (sort_code_override / account_number_override are format-
-    # validated to 6 and 8 digits on every write path), so a long value typed
-    # straight off a supplier invoice is reachable.
+    # Encryption inflates the value: any low-redundancy plaintext of ~124+ characters
+    # exceeds 255 bytes (255 characters lands at ~394). validate_column_size measures
+    # the DECRYPTED length so cannot catch it: strict MySQL raises ValueTooLong, a
+    # non-strict server truncates the ciphertext into garbage that would reach the
+    # BACS spreadsheet as a payee name. payee_name_override is the only free-text
+    # member of the override trio.
     test "Expense round-trips a payee name override whose ciphertext exceeds 255 bytes" do
-      # Low-redundancy so AR's built-in compression can't shrink it back under
-      # the old limit: a repetitive 255-character string compresses to ~95 bytes.
+      # Low-redundancy so compression can't shrink it back under 255 bytes.
       long_payee = SecureRandom.alphanumeric(200)
       assert_operator ciphertext_bytesize(long_payee), :>, 255,
                       "test premise: this plaintext must encrypt past varchar(255)"
@@ -112,10 +93,8 @@ module Reimbursements
                    "a long payee name override must survive the DB round trip intact"
     end
 
-    # Rails' auto-injected validate_column_size is off (it measures the decrypted
-    # value), so these explicit plaintext caps are the only thing keeping the
-    # ciphertext inside its column. A too-long value must be a validation error,
-    # never a ValueTooLong 500 or a silent truncation.
+    # validate_column_size is off, so these explicit plaintext caps are all that
+    # keeps the ciphertext in its column: too long must be a validation error.
     test "Expense caps the encrypted override plaintext instead of overflowing the column" do
       expense = create_reimbursements_expense(receipt: false)
 
@@ -137,10 +116,7 @@ module Reimbursements
       assert details.errors[:account_number].present?
     end
 
-    # The short members of the trio (and PaymentDetails' own pair) are format-
-    # validated to 6/8 digits, so their ciphertext is ~82 bytes — pinned here so
-    # the "verified to fit, deliberately left as string(255)" call is not an
-    # assumption anyone has to re-derive.
+    # Format-validated digits encrypt to ~82 bytes: pins that string(255) is ample.
     test "bank-detail digits encrypt well inside their string columns" do
       %w[802260 80-22-60 66374958].each do |value|
         bytes = ciphertext_bytesize(value)
@@ -149,12 +125,9 @@ module Reimbursements
       end
     end
 
-    # PaymentDetails#notes is the one encrypted column deliberately left uncapped:
-    # it is an append-only audit trail, so a cap would eventually make a payee's
-    # bank details un-editable, which is worse than the overflow it would prevent.
-    # That is only defensible because the trail is highly repetitive and AR
-    # Encryption compresses before encrypting, so it shrinks rather than inflates.
-    # Pinned here so "TEXT has ample room" stays a measurement, not an assumption.
+    # `notes` is deliberately uncapped (a cap would eventually make a payee's details
+    # un-editable). Safe only because the trail is repetitive and AR Encryption
+    # compresses before encrypting; this pins that as a measurement.
     test "the notes audit trail compresses far inside its TEXT column" do
       line = "[2026-07-25 14:00 UTC] Bank details updated: sort code ****2260, " \
              "account ****4958 by A Person (#1)"
@@ -165,11 +138,7 @@ module Reimbursements
                       "1000 audit lines must still encrypt inside the TEXT column"
     end
 
-    # #encrypt is NOT a no-op on an already-encrypted row: it calls
-    # update_columns with freshly built assignments unconditionally, and
-    # non-deterministic encryption picks a new IV every time, so every run
-    # rewrites every row. Safe to re-run, but "processed N/N" is a count of rows
-    # touched, not of rows newly encrypted.
+    # #encrypt is not a no-op on an encrypted row: it rewrites with a new IV every run.
     test "encrypt rewrites fresh ciphertext on every run rather than no-opping" do
       expense = create_reimbursements_expense(receipt: false, payee_name_override: "Third Party Ltd",
                                                               sort_code_override: "20-20-20",
@@ -186,13 +155,9 @@ module Reimbursements
                    "the plaintext still round-trips after repeated re-encryption"
     end
 
-    # --- Rollout paths (support_unencrypted_data + backfill) ---------------
-    # Reading plaintext is OFF in every environment now that production is
-    # backfilled, so a stray unencrypted value raises rather than being served.
-    # The rollout mechanism still has to work, though: encrypting a new column
-    # later means turning support_unencrypted_data on, deploying, backfilling
-    # and turning it off again. These tests therefore enable it for their own
-    # duration rather than relying on a global that no longer matches production.
+    # Reading plaintext is off everywhere now, but encrypting a new column later
+    # repeats the rollout (flag on, backfill, flag off), so these tests opt in for
+    # their own duration rather than relying on a global that no longer matches production.
     def with_unencrypted_data_support
       previous = ActiveRecord::Encryption.config.support_unencrypted_data
       ActiveRecord::Encryption.config.support_unencrypted_data = true
@@ -201,9 +166,7 @@ module Reimbursements
       ActiveRecord::Encryption.config.support_unencrypted_data = previous
     end
 
-    # The protection itself: without that opt-in, a row left plaintext is a hard
-    # error on the money path, not a silent read. This is what would fail if
-    # support_unencrypted_data were ever turned back on and forgotten.
+    # Without the opt-in, a plaintext row is a hard error on the money path, not a silent read.
     test "a plaintext row raises once support_unencrypted_data is off" do
       person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
                                            sort_code: "20-20-20", account_number: "50502366")
@@ -225,14 +188,12 @@ module Reimbursements
                         sort_code: "08-99-99", account_number: "66374958",
                         notes: "Bank details updated: account ****4958")
 
-        # Sanity: the row really is plaintext on disk now, as it was pre-rollout.
         assert_equal "66374958", raw_column(PaymentDetails, details.id, "account_number")
 
         reread = PaymentDetails.find(details.id)
         assert_equal "08-99-99", reread.sort_code
         assert_equal "66374958", reread.account_number
         assert_equal "Bank details updated: account ****4958", reread.notes
-        # The BACS spreadsheet and the modulus check read through these.
         assert_equal "66374958", reread.person.account_number
       end
     end
@@ -250,7 +211,6 @@ module Reimbursements
         assert_equal "Legacy Payee Ltd", reread.payee_name_override
         assert_equal "08-99-99", reread.sort_code_override
         assert_equal "66374958", reread.account_number_override
-        # effective_* is what the BACS builder actually pays against.
         assert_equal "66374958", reread.effective_account_number
       end
     end
@@ -268,7 +228,6 @@ module Reimbursements
         raw = raw_column(PaymentDetails, details.id, "account_number")
         assert_not_equal "66374958", raw, "the backfill must leave ciphertext behind"
         assert_not_includes raw.to_s, "66374958"
-        # And it is still the same value to the application.
         assert_equal "66374958", PaymentDetails.find(details.id).account_number
         assert_equal "08-99-99", PaymentDetails.find(details.id).sort_code
       end
@@ -290,8 +249,7 @@ module Reimbursements
       end
     end
 
-    # Re-running after a partial run must not fail (an operator WILL re-run it),
-    # and the values must survive the second pass intact.
+    # An operator WILL re-run it after a partial run.
     test "the backfill task is safe to run twice" do
       with_unencrypted_data_support do
         person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
@@ -309,11 +267,8 @@ module Reimbursements
       end
     end
 
-    # The rollout order is "flag on, deploy, backfill, flag off". Run out of order the task
-    # cannot read a plaintext row at all, so it refuses up front naming the flag rather than
-    # failing every row one by one. Note this test deliberately does NOT wrap itself in
-    # with_unencrypted_data_support: the flag being off is the condition under test, and it
-    # is the production state.
+    # Deliberately NOT wrapped in with_unencrypted_data_support: the flag being off
+    # (the production state) is the condition under test.
     test "the backfill task refuses to run while support_unencrypted_data is off" do
       assert_not ActiveRecord::Encryption.config.support_unencrypted_data,
                  "test premise: the flag is off by default now that the rollout is closed"
@@ -327,8 +282,7 @@ module Reimbursements
       assert_not_predicate error, :success?
       assert_match(/support_unencrypted_data/, error.message,
                    "the refusal has to name the flag that has to change")
-      # It bailed before touching a single row, rather than reporting the same thing once
-      # per row as a pile of decryption failures.
+      # Bailed before touching a row, rather than failing each one.
       assert_no_match(/Encrypting/, last_rake_output)
     end
 

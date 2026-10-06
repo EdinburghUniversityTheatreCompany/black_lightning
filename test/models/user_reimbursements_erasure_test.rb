@@ -1,10 +1,8 @@
 require "test_helper"
 
 ##
-# Deleting an account is how a GDPR erasure request is served here, so it has
-# to reach the bank details the account was linked to. Nothing else did: the
-# link is a nullifying belongs_to and PersonLink re-matches by email, so before
-# this the sort code and account number simply stayed.
+# Deleting an account serves a GDPR erasure request, so it must reach the bank
+# details the account was linked to.
 class UserReimbursementsErasureTest < ActiveSupport::TestCase
   include ReimbursementsTestHelpers
 
@@ -24,9 +22,7 @@ class UserReimbursementsErasureTest < ActiveSupport::TestCase
     assert_equal "", @person.account_number
   end
 
-  # The claims are the society's financial records and the payee row is what
-  # they hang off, so they outlive the account. Erasure takes the bank details,
-  # which have no such obligation behind them.
+  # Claims are financial records and hang off the payee row, so they outlive the account.
   test "the payee and their claims survive the account being deleted" do
     expense = create_reimbursements_expense(person: @person, status: Reimbursements::Status::PAID)
 
@@ -42,9 +38,7 @@ class UserReimbursementsErasureTest < ActiveSupport::TestCase
     assert_nothing_raised { plain.destroy! }
   end
 
-  # The link is by email as well as by the stored id, so a payee that was never
-  # id-linked must still be reached — otherwise erasure quietly misses the very
-  # people who have claimed least recently.
+  # The link is by email as well as stored id, or erasure would miss never-linked payees.
   test "an email-matched payee is erased even without a stored link" do
     user = FactoryBot.create(:user, email: "matched@example.com")
     person = create_reimbursements_person(name: "Matched May", email: user.email,

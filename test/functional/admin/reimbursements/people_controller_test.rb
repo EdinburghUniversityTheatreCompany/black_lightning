@@ -7,8 +7,7 @@ module Admin
 
     MC = ::Reimbursements::ModulusCheck
 
-    # A checker whose verdict is keyed by account number, so badge-state tests
-    # don't depend on the gitignored Pay.UK rule files being present.
+    # Verdict keyed by account number: independent of the gitignored Pay.UK rule files.
     class FakeChecker
       def initialize(by_account = {})
         @by_account = by_account
@@ -45,8 +44,6 @@ module Admin
       PeopleController.checker_builder = -> { MC.default_checker }
     end
 
-    # --- Auth gating -------------------------------------------------------
-
     test "requires sign-in" do
       get :index
       assert_redirected_to new_user_session_path
@@ -69,8 +66,6 @@ module Admin
 
       assert_response :forbidden
     end
-
-    # --- Index -------------------------------------------------------------
 
     test "lists everyone in the registry" do
       sign_in @user
@@ -99,13 +94,6 @@ module Admin
       get :index
 
       assert_response :success
-      # Assert on the BadgeComponent colour classes, not the labels: the labels
-      # (Valid/Invalid/Missing) collide with the fixture person names, so a broken
-      # mapping would still leave the words in the body. The colour classes can
-      # only come from the badge, so they genuinely pin the state mapping:
-      # VALID -> success (green), INVALID -> danger (red), OUTSIDE_SPEC -> warning
-      # (amber). None of the four fixture people are verified, so each colour
-      # comes from exactly one modulus badge.
       assert_includes response.body, "bg-success/15", "VALID should map to a green badge"
       assert_includes response.body, "bg-danger/15", "INVALID should map to a red badge"
       assert_includes response.body, "bg-warning/15", "OUTSIDE_SPEC should map to an amber badge"
@@ -113,16 +101,11 @@ module Admin
       assert_includes response.body, "Missing"
     end
 
-    # Every write on this page comes back with that person's row open and
-    # scrolled to. Saving bank details used to collapse the row and return to
-    # the top of the page, so "Mark as verified" — the obvious next click —
-    # meant finding and reopening them again.
+    # Every write comes back with that person's row open and scrolled to.
     def assert_redirected_to_person(person)
       assert_redirected_to admin_reimbursements_people_path(person: person.record_id,
                                                             anchor: "person-#{person.record_id}")
     end
-
-    # --- Findable: filter, order, claims link -----------------------------
 
     test "index filters by name" do
       sign_in @user
@@ -143,11 +126,8 @@ module Admin
     end
 
     test "index lists people alphabetically" do
-      # Accented, because the column collates utf8mb4_unicode_ci (which folds
-      # accents) while Ruby's String comparison is byte-wise: an in-memory sort
-      # would put Ábel after Valid Vic. The blanks-last half of the ORDER BY
-      # cannot be exercised here — Person validates name's presence — but it
-      # guards the legacy rows that predate that validation.
+      # Accented: the column collates utf8mb4_unicode_ci (folds accents) but Ruby sorts
+      # bytewise, so an in-memory sort would put Ábel after Valid Vic.
       create_reimbursements_person(name: "Ábel Aardvark", email: "abel@example.com")
       sign_in @user
 
@@ -168,7 +148,6 @@ module Admin
       assert_response :success
       assert_select "a[href=?]", admin_reimbursements_expense_edits_path(person: @valid_person.record_id),
                     text: "1 claim"
-      # Somebody who has never claimed says so rather than linking to nothing.
       assert_match(/No claims/, response.body)
     end
 
@@ -201,8 +180,6 @@ module Admin
       assert_not_includes response.body, "Valid Vic"
     end
 
-    # --- Update: bank details ---------------------------------------------
-
     test "saving bank details writes formatted values and an audit note" do
       sign_in @user
 
@@ -213,8 +190,7 @@ module Admin
       details = @missing_person.reload.payment_details
       assert_equal "08-99-99", details.sort_code
       assert_equal "66374958", details.account_number
-      # The audit line masks BOTH bank details to last-4 and records the actor; it
-      # must never carry either value in the clear.
+      # Both details masked to last four, never in the clear.
       assert_includes details.notes,
                       "Bank details updated: sort code ****9999, account ****4958"
       assert_not_includes details.notes, "66374958",
@@ -237,9 +213,6 @@ module Admin
       assert_includes notes, "sort code ****9999, account ****4958"
     end
 
-    # The audit line masks BOTH details, matching Exports::People. A sort code is
-    # not a secret on its own, but the line sits next to the masked account
-    # number on the People page, and the pair is what identifies an account.
     test "the audit line masks both bank details and names the acting user" do
       sign_in @user
 
@@ -247,14 +220,12 @@ module Admin
                                sort_code: "089999", account_number: "66374958" }
 
       notes = @missing_person.reload.payment_details.notes
-      # Masked account number and sort code, never the full digits.
       assert_includes notes, "account ****4958"
       assert_includes notes, "sort code ****9999"
       assert_not_includes notes, "66374958",
                           "the full account number must not appear in the audit trail"
       assert_not_includes notes, "08-99-99",
                           "the full sort code must not appear in the audit trail"
-      # Actor attribution: the signed-in operator's name + id.
       assert_includes notes, @user.name_or_email
       assert_includes notes, "(##{@user.id})"
     end
@@ -272,10 +243,8 @@ module Admin
     end
 
     test "a differently-formatted but identical sort code isn't treated as a change" do
-      # A record edited directly could store the sort code without dashes
-      # ("089999") — the same digits as the canonical "08-99-99" this form
-      # always submits. bank_details_changed? must normalise both sides the
-      # same way the account-number check right beside it already does.
+      # A directly edited record may store the sort code undashed; bank_details_changed?
+      # must normalise both sides.
       @valid_person.payment_details.update!(sort_code: "089999")
       sign_in @user
 
@@ -295,24 +264,17 @@ module Admin
 
       patch :update, params: { id: missing_id, sort_code: "08", account_number: "1" }
 
-      # Re-render (not redirect) so the operator's typed values and the open
-      # edit section survive the validation failure.
       assert_response :unprocessable_entity
       assert_nil @missing_person.reload.payment_details
       assert_match(/Sort code/, response.body)
-      # This person's edit section stays expanded with the typed values intact.
       assert_select "details[open] input#sort_code_#{missing_id}[value=?]", "08"
       assert_select "details[open] input#account_number_#{missing_id}[value=?]", "1"
-      # Other people's sections stay collapsed.
       assert_select "details[open] input#sort_code_#{valid_id}", false
-      # The error is a role="alert" region, wired to both fields via
-      # aria-describedby, and both fields are flagged aria-invalid.
+      # The error is a role="alert" region wired to both fields via aria-describedby.
       assert_select "p[role=alert]#bank_details_error_#{missing_id}"
       assert_select "input#sort_code_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
       assert_select "input#account_number_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
     end
-
-    # --- Update: mark verified --------------------------------------------
 
     test "marking verified writes the verified flag" do
       sign_in @user
@@ -374,8 +336,6 @@ module Admin
       assert_response :not_found
     end
 
-    # --- CSV export ----------------------------------------------------------
-
     test "index CSV export answers a text/csv download named for today" do
       sign_in @user
 
@@ -408,7 +368,7 @@ module Admin
       vic = CSV.parse(response.body).find { |r| r[0] == "Valid Vic" }
       assert_equal "****9999", vic[2], "the sort code must be masked"
       assert_equal "****4958", vic[3], "the account number must be masked"
-      # The export leaves the portal, so no complete bank detail may travel in it.
+      # The export leaves the portal: no full bank detail may travel in it.
       assert_not_includes response.body, "66374958"
       assert_not_includes response.body, "08-99-99"
       assert_not_includes response.body, "089999"

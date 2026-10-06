@@ -1,11 +1,8 @@
 require "test_helper"
 
 module Reimbursements
-  # Flags People records that share a name or email (case-insensitive) with
-  # another record.
+  # Flags People records sharing a name or email with another.
   class PeopleSupportTest < ActiveSupport::TestCase
-    # find_duplicate_people compares the AR models' name/email; built
-    # unpersisted with record_id pinned (it keys the returned identity).
     Person = Reimbursements::Person
 
     def person(record_id, name, email)
@@ -18,8 +15,6 @@ module Reimbursements
     def ids(people)
       people.map(&:record_id)
     end
-
-    # --- no duplicates -----------------------------------------------------
 
     test "empty list returns empty" do
       assert_empty PeopleSupport.find_duplicate_people([])
@@ -37,8 +32,6 @@ module Reimbursements
       ]
       assert_empty PeopleSupport.find_duplicate_people(people)
     end
-
-    # --- name duplicates ---------------------------------------------------
 
     test "duplicate name returns both" do
       result = PeopleSupport.find_duplicate_people([
@@ -73,8 +66,6 @@ module Reimbursements
       assert_equal 3, PeopleSupport.find_duplicate_people(people).length
     end
 
-    # --- email duplicates --------------------------------------------------
-
     test "duplicate email returns both" do
       result = PeopleSupport.find_duplicate_people([
         person("rec1", "Alice", "shared@example.com"),
@@ -91,8 +82,6 @@ module Reimbursements
       assert_equal %w[rec1 rec2], ids(result).sort
     end
 
-    # --- empty fields are never flagged ------------------------------------
-
     test "empty names are not flagged" do
       result = PeopleSupport.find_duplicate_people([
         person("rec1", "", "alice@example.com"),
@@ -108,8 +97,6 @@ module Reimbursements
       ])
       assert_empty result
     end
-
-    # --- mixed scenarios ---------------------------------------------------
 
     test "only the name-duplicate is flagged, not the unique one" do
       result = PeopleSupport.find_duplicate_people([

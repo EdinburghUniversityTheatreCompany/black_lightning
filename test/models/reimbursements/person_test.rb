@@ -1,8 +1,7 @@
 require "test_helper"
 
 module Reimbursements
-  # The AR Person must keep the Airtable-era PORO's flat bank-detail
-  # interface (delegated to the one-to-one PaymentDetails record).
+  # Person keeps a flat bank-detail interface delegated to PaymentDetails.
   class PersonTest < ActiveSupport::TestCase
     test "record_id is the string id" do
       person = Person.create!(name: "Pat", email: "pat@example.com")

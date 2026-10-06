@@ -1,8 +1,7 @@
 module Reimbursements
   ##
-  # Pure duplicate-detection for the People management page. A person is a
-  # duplicate when another record shares their non-empty name or email
-  # (case-insensitive, whitespace-trimmed).
+  # Duplicate detection for the People page: a person is a duplicate when another
+  # shares their non-empty name or email (case-insensitive, trimmed).
   module PeopleSupport
     module_function
 

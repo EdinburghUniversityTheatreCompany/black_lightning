@@ -1,7 +1,5 @@
-<%# Reuses the ?person=<id> this page already carries, rather than a second
-    parameter meaning the same thing — the row is opened server-side and this
-    scrolls to it. See scroll_to_controller for why a redirect's fragment is
-    not enough. %>
+<%# The row opens server-side from ?person=<id>; this scrolls to it (a
+    redirect's fragment is not enough, see scroll_to_controller). %>
 <div data-controller="scroll-to" data-scroll-to-param-value="person"
      data-scroll-to-prefix-value="person-"></div>
 <p class="mb-3 text-gray-600">
@@ -24,8 +22,6 @@
 <% end %>
 
 <%= render CardComponent.new(title: "Find a person") do %>
-  <%# A GET with the term in the URL, so a search is a link somebody can send
-      or bookmark (house rule: the URL is the state). %>
   <%= form_with url: admin_reimbursements_people_path, method: :get,
                 class: "flex flex-wrap items-end gap-3" do %>
     <div>
@@ -39,10 +35,6 @@
     <% end %>
   <% end %>
 
-  <%# What the six badges mean, once, where they are read. "Outside spec" in
-      particular says nothing about the details being wrong: Pay.UK publishes
-      no rule for that sort code (or the rule files are missing), so the check
-      could not run. %>
   <details class="mt-3 text-sm">
     <summary class="cursor-pointer text-gray-600 underline">What the badges mean</summary>
     <dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-gray-600">
@@ -83,15 +75,11 @@
       <% @people.each do |person| %>
         <% editing = @edit_person_id == person.record_id %>
         <% claims = @claim_counts[person.record_id].to_i %>
-        <%# id + scroll-mt: a save redirects back to ?person=<id>#person-<id>,
-            so the row reopens where the operator left it instead of collapsing
-            and throwing them to the top. The margin clears the sticky header. %>
+        <%# A save redirects to ?person=<id>#person-<id>; scroll-mt clears the sticky header. %>
         <%= tag.details id: "person-#{person.record_id}",
                         class: "group scroll-mt-20 rounded border border-gray-200",
                         open: editing || @open_person_id == person.record_id do %>
           <summary class="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 cursor-pointer">
-            <%# A visible affordance: nothing said these rows opened, so the
-                bank-details editor may as well not have been there. %>
             <i class="fas fa-chevron-right w-3 text-xs text-gray-400 transition-transform group-open:rotate-90"
                aria-hidden="true"></i>
             <span class="font-medium min-w-40"><%= person.name.presence || "-" %></span>
@@ -102,9 +90,6 @@
             <% else %>
               <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Unverified") %>
             <% end %>
-            <%# Their claims, filtered to them. A person had no link out to
-                anything, so "what has this payee actually claimed?" meant
-                searching the expenses index by hand. %>
             <% if claims.positive? %>
               <%= link_to pluralize(claims, "claim"),
                           admin_reimbursements_expense_edits_path(person: person.record_id),
@@ -116,9 +101,8 @@
 
           <div class="border-t border-gray-200 px-3 py-3">
             <% error_id = "bank_details_error_#{person.record_id}" if editing && @edit_error.present? %>
-            <%# The fields hold the REAL values — the operator is here to correct
-                a typo — so they are hidden as a password rather than masked,
-                which would invite saving "****4958" as an account number. %>
+            <%# The fields hold the REAL values, hidden as a password rather than
+                masked: masking would invite saving "****4958" as an account number. %>
             <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
                           class: "flex flex-wrap items-end gap-3",
                           data: { controller: "bank-details" } do %>

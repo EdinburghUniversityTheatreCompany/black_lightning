@@ -1,8 +1,7 @@
 <%= render "shared/back_link", text: "All people", path: admin_reimbursements_people_path %>
 
-<%# form_with OUTSIDE the CardComponent: the footer is a component SLOT, so a
-    form opened inside the card renders its submit button outside the <form>
-    and the button silently does nothing. %>
+<%# form_with OUTSIDE the card: the footer is a slot, so a form opened inside
+    renders its submit button outside the <form> and it does nothing. %>
 <%= form_with url: admin_reimbursements_people_path, method: :post do %>
   <%= render CardComponent.new(title: "Register a person") do |card| %>
     <% card.with_footer do %>
@@ -24,9 +23,8 @@
     <%= render "shared/form/field", label: "User account", name: :user_id,
           hint: "Start typing a name. Only existing Black Lightning accounts can be " \
                 "registered. If they haven't got one yet, they need to sign up first." do %>
-      <%# Only `simple-select2`: Tom Select copies the select's classes onto its
-          own wrapper, which already draws the box. Remote-sourced rather than a
-          full list of options, because there are thousands of accounts. %>
+      <%# Only `simple-select2` (Tom Select copies classes onto its own box).
+          Remote-sourced: there are thousands of accounts. %>
       <%= select_tag :user_id, options_for_select([]),
             class: "simple-select2",
             include_blank: true,

@@ -16,9 +16,7 @@ module Admin
         assert_no_text "66374958"
       end
 
-      # The real values ride along in data attributes: the operator is entitled
-      # to them, and the toggle must not need a round trip. What this component
-      # buys is that reading one is a deliberate act.
+      # The real values ride along so the toggle needs no round trip.
       test "carries the full pair for the toggle to swap in" do
         render_details
 
@@ -39,8 +37,7 @@ module Admin
         assert_selector "button[aria-label='Reveal bank details']"
       end
 
-      # Nothing to hide and nothing to reveal: a bare dash, no toggle inviting a
-      # click that would do nothing.
+      # Nothing to reveal: a bare dash, no toggle.
       test "renders a plain dash and no toggle when there are no details on file" do
         render_details(sort_code: "", account_number: "")
 

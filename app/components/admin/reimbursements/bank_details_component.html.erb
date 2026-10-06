@@ -4,9 +4,7 @@
   <span class="inline-flex items-baseline gap-2" data-controller="bank-details">
     <span class="font-mono" data-bank-details-target="value"
           data-masked="<%= masked %>" data-revealed="<%= revealed %>"><%= masked %></span>
-    <%# aria-pressed rather than changing the label: the button's accessible name
-        stays stable while its state changes, which is what a screen reader user
-        needs to follow a toggle. %>
+    <%# aria-pressed rather than a changing label keeps the accessible name stable. %>
     <button type="button"
             class="cursor-pointer text-xs text-primary underline"
             aria-pressed="false"

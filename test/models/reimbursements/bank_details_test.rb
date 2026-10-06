@@ -2,13 +2,9 @@ require "test_helper"
 
 module Reimbursements
   ##
-  # The international half of BankDetails. The UK sort-code/account-number
-  # helpers are exercised through the forms and ModulusCheck; these are the
-  # IBAN/BIC rules the international payment rail added, and they are pure
-  # functions so they get pinned directly.
+  # The IBAN/BIC half of BankDetails. The UK helpers are exercised through the
+  # forms and ModulusCheck.
   class BankDetailsTest < ActiveSupport::TestCase
-    # --- IBAN normalisation -------------------------------------------------
-
     test "normalize_iban strips spaces and uppercases" do
       assert_equal "DE89370400440532013000", BankDetails.normalize_iban("de89 3704 0044 0532 0130 00")
     end
@@ -22,17 +18,11 @@ module Reimbursements
       assert_equal "", BankDetails.normalize_iban("  ")
     end
 
-    # --- IBAN validation ----------------------------------------------------
-    #
-    # The mod-97 check is the whole point: it catches the realistic error, which
-    # is a transposed or dropped character in a 22-34 character string nobody
-    # reads back. A wrong IBAN that passes a shape check is money sent nowhere
-    # recoverable.
+    # The mod-97 check catches the realistic error, a transposed or dropped
+    # character; a shape check alone would let it through.
 
     test "valid_iban? accepts real IBANs from several countries" do
-      # Published documentation examples, never real accounts — the French one
-      # carries letters inside the body, which the numeric conversion has to
-      # handle.
+      # Documentation examples, never real accounts. FR has letters in the body.
       [
         "DE89 3704 0044 0532 0130 00",
         "GB29 NWBK 6016 1331 9268 19",
@@ -48,7 +38,7 @@ module Reimbursements
     end
 
     test "valid_iban? rejects wrong check digits" do
-      # DE89 -> DE88, the single-character error the check exists to catch.
+      # DE89 -> DE88.
       assert_not BankDetails.valid_iban?("DE88 3704 0044 0532 0130 00")
     end
 
@@ -68,8 +58,7 @@ module Reimbursements
     end
 
     test "valid_iban? rejects punctuation rather than stripping it" do
-      # Only spaces are noise a human adds; anything else means the value came
-      # from somewhere unexpected and should be looked at, not silently cleaned.
+      # Only spaces are noise; anything else should be looked at, not cleaned.
       assert_not BankDetails.valid_iban?("DE89-3704-0044-0532-0130-00")
     end
 
@@ -77,8 +66,6 @@ module Reimbursements
       assert_not BankDetails.valid_iban?(nil)
       assert_not BankDetails.valid_iban?("")
     end
-
-    # --- IBAN display -------------------------------------------------------
 
     test "format_iban groups in fours" do
       assert_equal "DE89 3704 0044 0532 0130 00",
@@ -90,14 +77,11 @@ module Reimbursements
     end
 
     test "mask_iban keeps the country and the last four characters" do
-      # The country prefix is not identifying and tells an operator reading an
-      # export which rail the payment took.
       assert_equal "DE****3000", BankDetails.mask_iban("DE89 3704 0044 0532 0130 00")
     end
 
     test "mask_iban takes the last four CHARACTERS, not the last four digits" do
-      # Some countries' IBANs end in letters (Seychelles ends with a currency
-      # code), so the digit-stripping BankDetails.mask would mask the wrong end.
+      # Seychelles IBANs end in a currency code, so the digit-stripping .mask would mask the wrong end.
       assert_equal "SC****7USD", BankDetails.mask_iban("SC18 SSCB 1101 0000 0000 0000 1497 USD")
     end
 
@@ -105,8 +89,6 @@ module Reimbursements
       assert_equal "", BankDetails.mask_iban(nil)
       assert_equal "", BankDetails.mask_iban("   ")
     end
-
-    # --- BIC / SWIFT --------------------------------------------------------
 
     test "valid_bic? accepts 8 and 11 character codes" do
       assert BankDetails.valid_bic?("DEUTDEFF500")   # 11, with a branch code

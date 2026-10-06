@@ -2,9 +2,6 @@ require "test_helper"
 
 module Reimbursements
   class PersonLinkTest < ActiveSupport::TestCase
-    # PersonLink runs against the DatabaseStore (the only backend): the stored
-    # link is the real reimbursements_person_id FK.
-
     test "database backend resolves and persists the FK link" do
       user = users(:user)
       person = Reimbursements::Person.create!(name: "Pat", email: user.email)
@@ -38,18 +35,11 @@ module Reimbursements
       assert_nil PersonLink.new(store: DatabaseStore.new).person_for(users(:user))
     end
 
-    # --- Stale stored link (recovery branch) -------------------------------
-    # The stored FK is a HINT, not a verdict: person_for looks the payee up and,
-    # when the row is gone, falls THROUGH to the email match and rewrites the FK.
-    # Without that fall-through the user resolves to no payee at all and their
-    # next submission mints a SECOND payee row for the same person — two payees,
-    # one of them with no bank details, and a producer who never gets paid.
-    #
-    # In-app this state is currently unreachable (a real FK on
-    # users.reimbursements_person_id plus `has_one :user, dependent: :nullify` on
-    # Person), so the branch defends against DB-level damage: a restore or a
-    # maintenance script run with FOREIGN_KEY_CHECKS off. Reproduce it the same
-    # way, with referential integrity disabled for the delete only.
+    # The stored FK is a HINT: when its row is gone, person_for falls through to the
+    # email match and rewrites it, or the next submission mints a SECOND payee with
+    # no bank details. Unreachable in-app (real FK plus dependent: :nullify), so it
+    # defends against a restore or script run with FOREIGN_KEY_CHECKS off; reproduce
+    # it with referential integrity disabled for the delete only.
     def orphan_the_stored_link!(user)
       person = Reimbursements::Person.create!(name: "Gone", email: "gone@example.com")
       user.update_column(:reimbursements_person_id, person.id)
