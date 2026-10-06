@@ -91,7 +91,7 @@ module Reimbursements
         return result
       end
 
-      flag_batch(result, batch, :producer_notifications_sent) if notifications_complete
+      mark_producers_notified(result, batch) if notifications_complete
 
       # Other post-draft failures are best-effort: reported in result.errors
       # without flipping success. A mark_submitted failure is the exception:
@@ -325,10 +325,10 @@ module Reimbursements
       end
     end
 
-    def flag_batch(result, batch, flag, extra = {})
-      @store.update_batch!(batch.record_id, { flag => true }.merge(extra))
+    def mark_producers_notified(result, batch)
+      @store.update_batch!(batch.record_id, producer_notifications_sent: true)
     rescue StandardError => e
-      result.errors << "Failed to flag batch #{flag}: #{e.message}"
+      result.errors << "Failed to flag batch producer_notifications_sent: #{e.message}"
     end
 
     # Retries with a 1s/2s back-off, yielding the 1-based attempt number
