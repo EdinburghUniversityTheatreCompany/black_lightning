@@ -46,10 +46,8 @@ module Reimbursements
       text = text.to_s.strip
       return [] if text.empty?
 
-      first_line = text.each_line.map(&:strip).find(&:present?).to_s
-      delimiter = first_line.include?("\t") ? "\t" : ","
+      delimiter = text.lines.first.strip.include?("\t") ? "\t" : ","
       table = CSV.parse(text, col_sep: delimiter)
-      return [] if table.empty?
 
       col_map = build_col_map(table.first)
       validate_col_map(col_map)
@@ -65,8 +63,7 @@ module Reimbursements
             "Row #{i + 1} has only #{row.length} columns (need at least #{min_required_col + 1})"
         end
 
-        cell = ->(key) { row[col_map[key]].to_s.strip }
-        cost_centre = col_map.key?(:cost_centre) ? cell.call(:cost_centre) : ""
+        cell = ->(key) { col_map.key?(key) ? row[col_map[key]].to_s.strip : "" }
         parsed_date = parse_british_date(cell.call(:date))
 
         if col_map.key?(:goods_value)
@@ -82,14 +79,14 @@ module Reimbursements
 
         rows << ActualsRow.new(
           nominal_code: cell.call(:nominal_code),
-          cost_centre: cost_centre,
-          ref: col_map.key?(:ref) ? cell.call(:ref) : "",
+          cost_centre: cell.call(:cost_centre),
+          ref: cell.call(:ref),
           date: parsed_date,
           # Normalised where a pasted sheet becomes rows, so dedup and the pair period score compare
           # the spelling the ledger stores.
           period: normalise_period(cell.call(:period)),
           narrative: cell.call(:narrative),
-          narrative_1: col_map.key?(:narrative_1) ? cell.call(:narrative_1) : "",
+          narrative_1: cell.call(:narrative_1),
           debit: debit,
           credit: credit,
           net: net
@@ -353,7 +350,7 @@ module Reimbursements
       case header
       when "nominal" then :nominal_code
       when ->(h) { h.end_with?("accountnumber") } then :nominal_code
-      when ->(h) { h.include?("costcentre") || (h.include?("cost") && h.include?("centre")) } then :cost_centre
+      when ->(h) { h.include?("cost") && h.include?("centre") } then :cost_centre
       when ->(h) { h.include?("goodsvalue") } then :goods_value
       when ->(h) { h.include?("transactiondate") }, "date" then :date
       when ->(h) { h.include?("period") } then :period
