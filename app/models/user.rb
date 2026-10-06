@@ -314,22 +314,9 @@ class User < ApplicationRecord
   end
 
   def self.in_debt(on_date = Date.current)
-    maintenance_debt_subquery = Admin::MaintenanceDebt
-      .where(state: :normal)
-      .where.missing(:maintenance_credit)
-      .where("due_by < ?", on_date)
-      .select(:user_id)
-
-    staffing_debt_subquery = Admin::StaffingDebt
-      .where(admin_staffing_job: nil, state: :normal)
-      .where("due_by < ?", on_date)
-      .select(:user_id)
-
-    where(
-      id: maintenance_debt_subquery
-    ).or(
-      where(id: staffing_debt_subquery)
-    ).distinct
+    where(id: Admin::MaintenanceDebt.unfulfilled_before_date(on_date).select(:user_id))
+      .or(where(id: Admin::StaffingDebt.unfulfilled_before_date(on_date).select(:user_id)))
+      .distinct
   end
 
   # returns users who have been sent a notification since the given date
