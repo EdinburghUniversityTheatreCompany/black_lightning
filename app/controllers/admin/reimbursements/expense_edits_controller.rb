@@ -150,14 +150,10 @@ module Admin
       # the supplier, and the producer chasing it searches by their own name.
       def matches_query?(expense, query)
         needle = query.downcase
-        return true if expense.description.to_s.downcase.include?(needle)
-        return true if expense.effective_payee_name.to_s.downcase.include?(needle)
-        return true if expense.person&.name.to_s.downcase.include?(needle)
-        return true if expense.person&.email.to_s.downcase.include?(needle)
-        return true if expense.payment_reference.to_s.downcase.include?(needle)
-        return true if expense.auto_number.to_s == query.sub(/\A#/, "")
-
-        amount_matches?(expense.amount, query)
+        [ expense.description, expense.effective_payee_name, expense.person&.name,
+          expense.person&.email, expense.payment_reference ].any? { |text| text.to_s.downcase.include?(needle) } ||
+          expense.auto_number.to_s == query.delete_prefix("#") ||
+          amount_matches?(expense.amount, query)
       end
 
       def amount_matches?(amount, query)
@@ -171,7 +167,7 @@ module Admin
       # Record id first, then the visible auto-number.
       def lookup_expense(query)
         store.find_expense(query) ||
-          store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
+          store.expenses.find { |e| e.auto_number.to_s == query.delete_prefix("#") }
       end
 
       # The rail is fixed once Submitted or Paid: the paperwork has gone out.
