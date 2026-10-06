@@ -251,6 +251,18 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_equal source_user, assigns(:source_user)
   end
 
+  test "merge page keeps the target's avatar by default when both users have one" do
+    source_user = FactoryBot.create(:member)
+    [ @user, source_user ].each do |user|
+      user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+    end
+
+    get :merge, params: { id: @user, source_user_id: source_user.id }
+
+    assert_select "input#keep_target_avatar[checked]"
+    assert_select "input#hidden_avatar", false
+  end
+
   test "should post merge_preview redirects to merge with source_user_id" do
     target_user = FactoryBot.create(:member)
     source_user = FactoryBot.create(:member)

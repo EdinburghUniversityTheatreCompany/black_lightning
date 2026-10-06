@@ -97,8 +97,8 @@
             </tr>
           <% end %>
 
-          <% avatar_select_source = default_selection(target.avatar.attached?, source.avatar.attached?) == :source %>
-          <% avatar_same = target.avatar.attached? == source.avatar.attached? && (!target.avatar.attached? || target.avatar.blob_id == source.avatar.blob_id) %>
+          <% avatar_select_source = default_selection(target.avatar.blob&.id, source.avatar.blob&.id) == :source %>
+          <% avatar_same = target.avatar.blob&.id == source.avatar.blob&.id %>
           <tr class="<%= 'table-secondary text-gray-500' if avatar_same %>">
             <td><strong>Avatar</strong></td>
             <td>
