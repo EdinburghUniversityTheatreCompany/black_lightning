@@ -63,9 +63,7 @@ class Role < ApplicationRecord
     # You cannot purge certain roles.
     return false if NON_PURGEABLE_ROLES.include?(name.downcase.strip)
 
-    ActiveRecord::Base.transaction do
-      self.users.clear
-    end
+    users.clear
   end
 
   # Moves all users on this role to a new role with the academic year shorthand as a suffix.
@@ -107,12 +105,6 @@ class Role < ApplicationRecord
 
   def trained_role?
     name&.include?("Trained")
-  end
-
-  def remove_user(user)
-    ActiveRecord::Base.transaction do
-      self.users.delete(user)
-    end
   end
 
   private

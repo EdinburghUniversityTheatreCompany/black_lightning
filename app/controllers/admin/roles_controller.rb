@@ -43,7 +43,7 @@ class Admin::RolesController < AdminController
 
     if user.present?
       if user.has_role? @role.name
-        @role.remove_user(user)
+        @role.users.delete(user)
         helpers.append_to_flash(:success, "#{user.name(current_user)} has been removed from the role of #{@role.name}")
       else
         helpers.append_to_flash(:warning, "#{user.name(current_user)} was not in the role of #{@role.name}")
