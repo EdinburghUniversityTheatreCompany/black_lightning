@@ -1,15 +1,13 @@
 require "test_helper"
-require "caxlsx" # the app requires it lazily at its call sites; these tests build Axlsx::Package directly
+require "caxlsx" # required lazily in app code
 
 module Reimbursements
   module Exports
     ##
-    # The shared plumbing every exporter inherits: one HEADERS + #row definition
-    # feeding both the CSV and the workbook sheet, with the formula-injection
-    # guard applied on the way out of either.
+    # Base itself: one HEADERS + #row feeding both the CSV and the sheet, with
+    # the formula guard applied on the way out of either.
     class BaseTest < ActiveSupport::TestCase
-      # A minimal exporter over plain hashes, so this test covers Base itself
-      # rather than any one resource's columns.
+      # A minimal exporter over plain hashes, so no real resource's columns are involved.
       class Fake < Base
         HEADERS = [ "Name", "Amount", "When" ].freeze
         SHEET_NAME = "Fakes".freeze
@@ -69,8 +67,7 @@ module Reimbursements
       end
 
       test "add_sheet keeps a numeric-looking identifier as literal text" do
-        # A nominal code or EUSA period must not be coerced to a number: 041000
-        # would arrive as 41000 and "03" as 3.
+        # 041000 must not arrive as 41000, nor "03" as 3.
         package = Axlsx::Package.new
         Fake.new(store: nil).add_sheet(package.workbook, [ { name: "041000", amount: 1, when: nil } ])
 
@@ -100,9 +97,7 @@ module Reimbursements
                      @exporter.filename(date: Date.new(2026, 5, 13))
       end
 
-      # People/Expenses read the checker for their bank-details verdict, and both
-      # are built generically by Workbook, whose checker keyword defaults to nil
-      # — a nil that reaches the first payee with bank details is a NoMethodError.
+      # A nil checker reaching the first payee with bank details would be a NoMethodError.
       test "an exporter built without a checker still has a usable one" do
         assert_same ModulusCheck.default_checker, Fake.new(store: nil).send(:checker)
       end

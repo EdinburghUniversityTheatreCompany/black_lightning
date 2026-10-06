@@ -4,9 +4,8 @@ require "roo"
 module Admin
   module Reimbursements
     ##
-    # The combined workbook: one xlsx with a sheet per resource, served inline
-    # from the Finance tooling. Parsed back with roo so the assertions are about
-    # what finance actually opens, not about the builder's internals.
+    # The combined workbook, parsed back with roo so the assertions are about
+    # what finance opens, not the builder's internals.
     class ExportsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
@@ -14,8 +13,7 @@ module Admin
 
       XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
 
-      # The bank details seeded below, in the form they are stored. NONE of these
-      # may appear anywhere in the workbook.
+      # The seeded bank details as stored. None may appear in any sheet.
       RAW_SORT_CODE = "08-99-99".freeze
       RAW_ACCOUNT_NUMBER = "66374958".freeze
 
@@ -48,7 +46,6 @@ module Admin
         ExportsController.checker_builder = -> { MC.default_checker }
       end
 
-      # The workbook as roo sees it, from the bytes the controller streamed.
       def workbook
         file = Tempfile.new([ "reimbursements-export", ".xlsx" ])
         file.binmode
@@ -60,8 +57,6 @@ module Admin
       def sheet_rows(book, name)
         book.sheet(name).to_a
       end
-
-      # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
         get :download
@@ -84,8 +79,6 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- The download ------------------------------------------------------
-
       test "answers an xlsx attachment named for today" do
         sign_in @user
 
@@ -98,9 +91,7 @@ module Admin
         assert_match(/reimbursements-\d{4}-\d{2}-\d{2}\.xlsx/, disposition)
       end
 
-      # The cover sheet comes FIRST: what a reader needs before any figure is
-      # what the figures cover. Scope used to be mixed inside the file and
-      # stated nowhere.
+      # The cover sheet comes first: a reader needs the scope before any figure.
       test "has one fixed-name sheet per resource, behind a cover sheet" do
         sign_in @user
 
@@ -158,8 +149,6 @@ module Admin
         assert_equal "Yes", batches[1][5]
       end
 
-      # --- Masking ------------------------------------------------------------
-
       test "the People sheet MASKS both bank details to their last four digits" do
         sign_in @user
 
@@ -189,10 +178,6 @@ module Admin
                               "the #{name} sheet leaked an undashed sort code"
         end
       end
-
-      # --- The page --------------------------------------------------------
-      # This was a sidebar link that silently downloaded a file: no sheet list,
-      # no scope, and no way to choose one.
 
       test "the page lists every sheet the workbook carries" do
         sign_in @user
@@ -243,8 +228,6 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- The cover sheet and the two new sheets ----------------------------
-
       test "the cover sheet states the scope the file was pulled under" do
         sign_in @user
         other = create_second_reimbursements_cost_centre
@@ -281,8 +264,7 @@ module Admin
         assert_equal "Pat Producer", row[6]
       end
 
-      # A plan of exactly £0 is a figure nobody filled in (PlannedAmount), and
-      # a zero here would read as a show that agreed to spend nothing.
+      # A £0 plan is unset (PlannedAmount); a zero here would read as an agreed spend of nothing.
       test "an area with no agreed total exports an empty cell, not a zero" do
         sign_in @user
         create_reimbursements_area(name: "Unset")
@@ -310,8 +292,6 @@ module Admin
         assert_equal "June meeting", row[4]
       end
 
-      # A forecast belongs to exactly one of a budget or an area, so the sheet
-      # says which rather than leaving a reader to infer it from a blank.
       test "an area's agreed-total revision is marked as one" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")

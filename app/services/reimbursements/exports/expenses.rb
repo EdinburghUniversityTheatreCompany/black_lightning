@@ -1,13 +1,12 @@
 module Reimbursements
   module Exports
     ##
-    # Expenses as finance sees them on the "Expenses" table (ExpenseEdits) and
-    # the Review queue: the EFFECTIVE payee (the money path, so an Invoice
-    # override shows the third party actually being paid), both amount figures,
-    # and the same needs-attention reasons the on-screen rows carry.
+    # Expenses as finance sees them on the Expenses table and Review queue: the
+    # EFFECTIVE payee (so an Invoice override shows the third party being paid),
+    # both amounts, and the on-screen needs-attention reasons.
     #
-    # Bank details are deliberately NOT here — the effective sort code and
-    # account number exist only on the BACS spreadsheet that goes to EUSA.
+    # Bank details are deliberately NOT here; they live only on the BACS
+    # spreadsheet that goes to EUSA.
     class Expenses < Base
       HEADERS = [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
                   "Description", "Payment reference", "Submitted", "Needs attention",
@@ -27,10 +26,7 @@ module Reimbursements
         ]
       end
 
-      # Both through budget_by_id (store.budgets, already preloading
-      # area: :owners), NOT expense.budget — which would lazy-load a second,
-      # unpreloaded Budget/Area pair per unique budget in the export. The BARE
-      # name, because the sheet carries its own Area column.
+      # Bare budget name: the sheet has its own Area column.
       def budget_name(expense)
         budget_by_id[expense.budget_record_id]&.name
       end
@@ -39,9 +35,7 @@ module Reimbursements
         budget_by_id[expense.budget_record_id]&.area&.name
       end
 
-      # Match the on-screen table: no attention reasons on non-actionable
-      # (Submitted/Paid/Rejected) rows, so the export and the table can't
-      # disagree about what still needs chasing.
+      # Actionable rows only, to match the on-screen table.
       def attention_reasons(expense)
         return [] unless ReviewSupport.attention_actionable?(expense)
 

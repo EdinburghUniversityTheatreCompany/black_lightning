@@ -3,10 +3,9 @@ require "test_helper"
 module Reimbursements
   module Exports
     ##
-    # Every export that can name an area carries the column, defined ONCE in
-    # its HEADERS/#row — Task 6 stripped the "Area: " prefix from budget
-    # names, so the area name is now the only place the grouping survives in
-    # an export; without this column that information is simply gone.
+    # Every export that can name an area carries the column. Budget names no
+    # longer carry an "Area: " prefix, so this column is the only place the
+    # grouping survives in an export.
     class AreaColumnTest < ActiveSupport::TestCase
       include ReimbursementsTestHelpers
 
@@ -36,9 +35,7 @@ module Reimbursements
         assert_equal "Ergo", cell(Expenses.new(store: @store), [ expense ], "Area")
       end
 
-      # The Budget column is read off the same preloaded map as the Area beside
-      # it, so the two cannot come from different Budget objects — and it stays
-      # the BARE name, because the sheet says the area in its own column.
+      # Bare name: the sheet says the area in its own column.
       test "Expenses names the budget from the same map, bare" do
         area = create_reimbursements_area(name: "Ergo")
         budget = create_reimbursements_budget(name: "Props", area: area)
@@ -132,9 +129,7 @@ module Reimbursements
         assert_equal "Cogito", sheet.rows[1].cells[headers.index("Area")].value
       end
 
-      # An area named like a plain number must survive as literal text in the
-      # xlsx sheet, the same guard Base#cell_types gives a nominal code — an
-      # unguarded numeric-looking string would arrive coerced to a number.
+      # A numeric-looking area name must not be coerced to a number (Base#cell_types).
       test "a numeric-looking area name stays literal text in the workbook" do
         require "caxlsx"
         area = create_reimbursements_area(name: "2026")

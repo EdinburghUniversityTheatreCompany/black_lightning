@@ -3,10 +3,8 @@ require "test_helper"
 module Reimbursements
   module Exports
     ##
-    # The Actuals export's Budget cell for a row split across several income
-    # budgets. A finance user reading the CSV and a finance user reading the
-    # ledger page must not be told two different things about where the money
-    # went, so both read one derivation.
+    # The Actuals export for a row split across several income budgets: it
+    # reads the same derivation as the ledger page, so the two cannot disagree.
     class ActualsTest < ActiveSupport::TestCase
       include ReimbursementsTestHelpers
 
@@ -48,8 +46,7 @@ module Reimbursements
         assert_equal "Show A", budget_cell(DatabaseStore.new)
       end
 
-      # Shares can sit in different areas, so one Area cell would be a lie
-      # rather than a blank — the reason Batches carries no Area column.
+      # Shares can sit in different areas, so one Area cell would be a lie.
       test "a split row's Area cell is blank rather than naming one of several" do
         area = create_reimbursements_area(name: "Cogito")
         @show_a.update!(area: area)
@@ -61,8 +58,7 @@ module Reimbursements
         assert_nil csv_rows(DatabaseStore.new).first["Area"]
       end
 
-      # Every cell goes through CellSanitizer, or a budget somebody named
-      # "=cmd|..." reaches Excel as a formula.
+      # A budget named "=cmd|..." must not reach Excel as a formula.
       test "the Budget cell is sanitized" do
         evil = create_reimbursements_budget(name: "=1+1", budget_type: "Income")
         DatabaseStore.new.apportion_actual!(

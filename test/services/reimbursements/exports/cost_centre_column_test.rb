@@ -3,11 +3,8 @@ require "test_helper"
 module Reimbursements
   module Exports
     ##
-    # Every exporter that can name a cost centre carries the column, defined
-    # ONCE in its HEADERS/#row — which is what makes the per-view "Download CSV"
-    # and the combined workbook's matching sheet agree. An export is where two
-    # centres' figures are most easily added together by hand, and a spreadsheet
-    # with no centre column cannot be pivoted by one.
+    # Every exporter that can name a cost centre carries the column: an export
+    # is where two centres' figures are most easily added together by hand.
     class CostCentreColumnTest < ActiveSupport::TestCase
       include ReimbursementsTestHelpers
 
@@ -63,10 +60,7 @@ module Reimbursements
         assert_nil cell(Batches.new(store: DatabaseStore.new), [ batch ], "Cost centre")
       end
 
-      # Under ?cost_centre= the Budgets sheet used to be the only scoped one, so
-      # the workbook carried claims, ledger rows and batches from other pots
-      # beside budgets that could not account for them — the sheets no longer
-      # added up to each other.
+      # Budgets used to be the only scoped sheet, so the sheets did not add up.
       test "every workbook sheet reads the same cost-centre scope" do
         scoped = DatabaseStore.new(cost_centre: @termtime)
         readers = Workbook::SHEETS.to_h { |exporter, method| [ exporter, method ] }

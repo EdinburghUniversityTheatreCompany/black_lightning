@@ -2,32 +2,29 @@ require "csv"
 
 module Reimbursements
   ##
-  # One exporter per resource (Expenses, Actuals, Budgets, People, Batches),
-  # each defining its column headers and its per-record row exactly once. That
-  # single definition drives BOTH the per-view "Download CSV" link and the
-  # matching sheet in the combined workbook (ExportsController), so a column
-  # can never say one thing in the CSV and another in the xlsx.
+  # One exporter per resource. Each defines its headers and per-record row once,
+  # and that one definition drives both the per-view "Download CSV" and the
+  # matching workbook sheet (ExportsController), so the two cannot disagree
+  # about a column.
   module Exports
     ##
-    # Shared plumbing: headers, row building, the formula-injection guard, the
-    # download filename, and the record lookups more than one exporter needs.
+    # Shared plumbing: row building, the formula-injection guard, the CSV
+    # filename and the record lookups more than one exporter needs.
     #
     # Subclasses define HEADERS, SHEET_NAME, SLUG and a private #row(record).
-    # Rows are built from whatever collection the caller passes in — a
-    # controller hands over its FULL filtered set (pagination is display-only),
-    # the workbook hands over everything the store has.
+    # Rows come from whatever collection the caller passes: a controller its
+    # full filtered set (pagination is display-only), the workbook the scoped
+    # readers in Workbook::SHEETS.
     #
-    # Conventions every exporter follows, so the output is spreadsheet-ready:
+    # Conventions every exporter follows:
     #
-    # * Amounts stay numeric (no "£" prefix, no thousands separators) so they
-    #   sum and sort in Excel.
-    # * Dates are ISO 8601 strings; a blank date is an EMPTY cell, not the "-"
-    #   placeholder the on-screen tables use.
-    # * Every text cell goes through CellSanitizer, closing the formula-
-    #   injection hole in submitter-controlled text (description, payee name).
+    # * Amounts stay numeric (no "£", no thousands separators) so they sum and
+    #   sort in Excel.
+    # * Dates are ISO 8601; a blank date is an EMPTY cell, not the on-screen "-".
+    # * Every text cell goes through CellSanitizer.
     class Base
-      # +checker+ is the modulus checker (a fake in tests); only the exporters
-      # that surface a bank-detail verdict need it.
+      # +checker+ is the modulus checker (a fake in tests), for the exporters
+      # that give a bank-details verdict.
       def initialize(store:, checker: nil)
         @store = store
         @checker = checker
@@ -37,8 +34,7 @@ module Reimbursements
 
       def sheet_name = self.class::SHEET_NAME
 
-      # "reimbursements-expenses-2026-05-13.csv" — the resource plus the day it
-      # was pulled, so a folder of exports stays self-describing.
+      # "reimbursements-expenses-2026-05-13.csv"
       def filename(date: Date.current)
         "reimbursements-#{self.class::SLUG}-#{date.iso8601}.csv"
       end
@@ -50,10 +46,8 @@ module Reimbursements
         end
       end
 
-      # Append this resource as one worksheet of +workbook+ (an Axlsx workbook).
-      # Sheet names are fixed (never templated with a date) so they stay inside
-      # Excel's 31-character cap and a saved formula referencing a sheet keeps
-      # working across exports.
+      # Sheet names are fixed, never date-templated: Excel caps them at 31
+      # characters and a saved formula referencing a sheet keeps working.
       def add_sheet(workbook, collection, name: sheet_name)
         workbook.add_worksheet(name: name) do |sheet|
           sheet.add_row(headers, types: cell_types(headers))
@@ -65,12 +59,7 @@ module Reimbursements
 
       attr_reader :store
 
-      # The modulus checker People/Expenses need for their bank-details verdict.
-      # Optional at construction (most exporters never touch it, and the finance
-      # controllers inject the real one or a fake) but never nil when READ,
-      # since Workbook.new(store:) legitimately passes none. Resolved lazily, so
-      # an exporter that doesn't need a verdict never loads the Pay.UK rule
-      # files.
+      # Defaults lazily, so an exporter that never asks does not load the Pay.UK rules.
       def checker
         @checker ||= ModulusCheck.default_checker
       end
@@ -83,28 +72,20 @@ module Reimbursements
         raise NotImplementedError, "#{self.class} must define a private #row(record)"
       end
 
-      # Force every String cell to stay literal text in the xlsx; let Axlsx
-      # infer the rest (nil means "infer").
-      #
-      # Axlsx types a cell from its value, and a numeric-LOOKING string becomes
-      # a number: nominal code "041000" would arrive as 41000 and EUSA period
-      # "03" as 3, silently corrupting the identifiers finance reconciles on.
-      # The exporters already draw the line for us — a quantity is a Numeric, a
-      # String is always an identifier or a label — so this needs no per-column
-      # configuration. It is the same reason BacsXlsx forces text format on the
-      # sort code, account number and nominal code.
+      # Keeps every String cell literal text (nil means "infer"). Axlsx would
+      # coerce a numeric-looking one: nominal code "041000" to 41000, EUSA
+      # period "03" to 3. A quantity is always a Numeric and a String an
+      # identifier or label, so no per-column configuration is needed.
       def cell_types(row)
         row.map { |value| value.is_a?(String) ? :string : nil }
       end
 
-      # ISO 8601, or nil so the cell comes out empty. Accepts a Date or a Time.
+      # ISO 8601, or nil so the cell comes out empty.
       def iso_date(value)
         value&.to_date&.iso8601
       end
 
-      # Shared {record_id => record} lookups. Memoized per exporter instance,
-      # over the store's already-loaded lists, so resolving a linked budget or
-      # expense costs no extra queries however many rows are exported.
+      # {record_id => record} lookups, memoized per exporter instance.
       def budget_by_id
         @budget_by_id ||= store.budgets.index_by(&:record_id)
       end
@@ -113,13 +94,9 @@ module Reimbursements
         @expense_by_id ||= store.expenses.index_by(&:record_id)
       end
 
-      # Which pot a row belongs to. Every exporter that can answer it carries
-      # the column, because an export is where two centres''' figures are most
-      # easily added together by hand: a spreadsheet with no centre column
-      # cannot be pivoted by one. Resolved through a memoized map rather than a
-      # per-row association read, so it costs one query for the whole file.
-      # Blank (not "-") when nothing places the row, matching how every other
-      # empty cell is written.
+      # Every exporter that can name a centre carries the column: an export is
+      # where two centres' figures are most easily added together by hand.
+      # Blank (not "-") when nothing places the row.
       def cost_centre_name(cost_centre_id)
         return nil if cost_centre_id.nil?
 
