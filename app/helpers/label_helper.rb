@@ -43,51 +43,12 @@ module LabelHelper
             output_labels << { label_class: label_class, text: role.name }
         end
 
-        if !deadline.present?
-            if user.in_debt
-                debt_message = user.debt_message_suffix.upcase_first
-                output_labels << { label_class: "bg-danger", text: link_to(debt_message, admin_debt_path(user)) }
-            end
-        else
-            in_maintenance_debt_now = user.debt_causing_maintenance_debts.any?
-            in_staffing_debt_now = user.debt_causing_staffing_debts.any?
+        now = debt_kinds(user, Date.current)
+        output_labels << debt_label(user, now, (" now" if deadline.present?)) if now.any?
 
-            if deadline.present?
-                in_maintenance_debt_then = user.debt_causing_maintenance_debts(deadline).any?
-                in_staffing_debt_then = user.debt_causing_staffing_debts(deadline).any?
-            else
-                in_maintenance_debt_then = in_staffing_debt_then = false
-            end
-
-            debt_message_now = if in_maintenance_debt_now && in_staffing_debt_now
-                in_maintenance_debt_then = false
-                in_staffing_debt_then = false
-                "In staffing and maintenance debt"
-            elsif in_maintenance_debt_now
-                in_maintenance_debt_then = false
-                "In maintenance debt"
-            elsif in_staffing_debt_now
-                in_staffing_debt_then = false
-                "In staffing debt"
-            end
-
-            debt_message_then = if in_maintenance_debt_then && in_staffing_debt_then
-                "In staffing and maintenance debt"
-            elsif in_maintenance_debt_then
-                "In maintenance debt"
-            elsif in_staffing_debt_then
-                "In staffing debt"
-            end
-
-            if debt_message_now.present?
-                debt_message_now = "#{debt_message_now} now" if deadline.present?
-                output_labels << { label_class: "bg-danger", text: link_to(debt_message_now, admin_debt_path(user)) }
-            end
-
-            if debt_message_then.present?
-                debt_message_then = "#{debt_message_then} on the editing deadline"
-                output_labels << { label_class: "bg-danger", text: link_to(debt_message_then, admin_debt_path(user)) }
-            end
+        if deadline.present?
+            later = debt_kinds(user, deadline) - now
+            output_labels << debt_label(user, later, " on the editing deadline") if later.any?
         end
 
         output_labels
@@ -125,5 +86,18 @@ module LabelHelper
         message = ActionController::Base.helpers.sanitize message
 
         "<span class=\"inline-flex items-center rounded px-2 py-0.5 text-xs font-medium #{mapped}\">#{message}</span>".html_safe
+    end
+
+    private
+
+    def debt_kinds(user, on_date)
+        kinds = []
+        kinds << "staffing" if user.debt_causing_staffing_debts(on_date).any?
+        kinds << "maintenance" if user.debt_causing_maintenance_debts(on_date).any?
+        kinds
+    end
+
+    def debt_label(user, kinds, suffix)
+        { label_class: "bg-danger", text: link_to("In #{kinds.join(' and ')} debt#{suffix}", admin_debt_path(user)) }
     end
 end
