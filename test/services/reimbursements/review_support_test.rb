@@ -296,7 +296,8 @@ module Reimbursements
         [ { payee: blank_iban }, "no bank details" ],
         [ { payee: valid_payee }, "no bank details" ], # a UK sort code does not satisfy it
         [ { foreign_amount: nil }, "no EUR amount" ],
-        [ { foreign_amount: BigDecimal("0") }, "no EUR amount" ]
+        [ { foreign_amount: BigDecimal("0") }, "no EUR amount" ],
+        [ { foreign_amount: nil, foreign_currency: "USD" }, "no USD amount" ]
       ].each do |attrs, reason|
         summary = ReviewSupport.attention_summary(international_expense(**attrs),
                                                   { "recBudget1" => budget }, valid_checker)

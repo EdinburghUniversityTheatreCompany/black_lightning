@@ -89,7 +89,7 @@ module Reimbursements
         return
       end
 
-      blocking << "no EUR amount" if missing_foreign_amount?(expense)
+      blocking << "no #{expense.foreign_currency.presence || 'foreign'} amount" if missing_foreign_amount?(expense)
       blocking << "no GBP amount" if missing_gbp_amount?(expense)
     end
     private_class_method :amount_reasons

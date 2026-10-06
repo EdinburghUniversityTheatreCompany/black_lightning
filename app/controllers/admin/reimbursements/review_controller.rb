@@ -235,7 +235,8 @@ module Admin
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
                                     "excluding VAT. It would never match on reconciliation.")
         when :skipped_no_foreign_amount
-          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without the amount in EUR. " \
+          currency = expense.foreign_currency.presence || "the invoice currency"
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without the amount in #{currency}. " \
                                     "That is the figure EUSA's international payment form asks for.")
         when :skipped_no_gbp_amount
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a GBP amount. " \

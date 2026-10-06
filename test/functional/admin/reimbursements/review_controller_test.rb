@@ -820,6 +820,7 @@ module Admin
           [ -> { international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person) },
             /without bank details/ ],
           [ -> { international_expense(foreign_amount: nil) }, /without the amount in EUR/ ],
+          [ -> { international_expense(foreign_amount: nil, foreign_currency: "USD") }, /without the amount in USD/ ],
           # Budget rollups are GBP, so approving without one books the claim at nothing.
           [ -> { international_expense(amount: nil) }, /without a GBP amount/ ],
           [ -> { pending_expense(budget: nil) }, /without a budget linked/ ],
