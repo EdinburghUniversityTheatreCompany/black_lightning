@@ -43,29 +43,19 @@ module DebtManagement
 
   # Creates each team member's missing debts. Returns the counts created, { maintenance:, staffing: }.
   def sync_debts_for_all_users
-    return { maintenance: 0, staffing: 0 } unless debt_configuration_active?
-    return { maintenance: 0, staffing: 0 } unless end_date && end_date > start_of_year
-
-    totals = { maintenance: 0, staffing: 0 }
+    totals = no_debts_created
+    return totals unless debts_syncable?
 
     team_members.includes(:user).find_each do |team_member|
-      result = sync_debts_for_team_member(team_member)
-      totals[:maintenance] += result[:maintenance]
-      totals[:staffing] += result[:staffing]
+      totals.merge!(sync_debts_for_team_member(team_member)) { |_, total, created| total + created }
     end
 
     totals
   end
 
   def sync_debts_for_user(user)
-    return { maintenance: 0, staffing: 0 } unless debt_configuration_active?
-    return { maintenance: 0, staffing: 0 } unless maintenance_debt_start.present? || staffing_debt_start.present?
-    return { maintenance: 0, staffing: 0 } unless end_date && end_date > start_of_year
-
-    team_member = team_members.find_by(user: user)
-    return { maintenance: 0, staffing: 0 } unless team_member
-
-    sync_debts_for_team_member(team_member)
+    team_member = team_members.find_by(user: user) if debts_syncable?
+    team_member ? sync_debts_for_team_member(team_member) : no_debts_created
   end
 
   private
@@ -76,44 +66,31 @@ module DebtManagement
     self.staffing_debt_amount = nil if staffing_debt_amount == 0
   end
 
+  def no_debts_created
+    { maintenance: 0, staffing: 0 }
+  end
+
+  def debts_syncable?
+    debt_configuration_active? && end_date && end_date > start_of_year
+  end
+
   def sync_debts_for_team_member(team_member)
     user = team_member.user
-    created = { maintenance: 0, staffing: 0 }
+    staffing_amount = staffing_debt_amount && staffing_debt_start && staffing_debt_amount_for_position(team_member.position, staffing_debt_amount)
 
-    if maintenance_debt_amount.present? && maintenance_debt_start.present?
-      existing = user.admin_maintenance_debts.where(show: self).count
-      needed = maintenance_debt_amount - existing
+    {
+      maintenance: create_missing_debts(Admin::MaintenanceDebt, user, maintenance_debt_amount, maintenance_debt_start),
+      staffing: create_missing_debts(Admin::StaffingDebt, user, staffing_amount, staffing_debt_start)
+    }
+  end
 
-      needed.times do
-        Admin::MaintenanceDebt.create!(
-          show: self,
-          user: user,
-          due_by: maintenance_debt_start,
-          state: :normal,
-          converted_from_staffing_debt: false
-        )
-        created[:maintenance] += 1
-      end
-    end
+  # Tops the user up to `amount` debts on this event. Returns how many it created.
+  def create_missing_debts(klass, user, amount, due_by)
+    return 0 unless amount && due_by
 
-    if staffing_debt_amount.present? && staffing_debt_start.present?
-      existing = user.admin_staffing_debts.where(show: self).count
-      amount = staffing_debt_amount_for_position(team_member.position, staffing_debt_amount)
-      needed = amount - existing
-
-      needed.times do
-        Admin::StaffingDebt.create!(
-          show: self,
-          user: user,
-          due_by: staffing_debt_start,
-          state: :normal,
-          converted_from_maintenance_debt: false
-        )
-        created[:staffing] += 1
-      end
-    end
-
-    created
+    needed = amount - klass.where(user: user, show: self).count
+    needed.times { klass.create!(show: self, user: user, due_by: due_by) }
+    [ needed, 0 ].max
   end
 
   # Welfare as someone's only role owes no staffing; assistant roles alone owe at most one.

@@ -141,7 +141,6 @@ module Admin::SharedDebtHelper
   end
 
   def show_debt_recommendation_details?(show)
-    show.tag_debt_recommendations.any? &&
-      [ :needs_config, :mismatch ].include?(show.debt_recommendation_status)
+    show.debt_recommendation_status.in?(%i[needs_config mismatch])
   end
 end
