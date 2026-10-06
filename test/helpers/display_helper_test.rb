@@ -53,7 +53,7 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
   test "display_when collapses a consecutive run into one range" do
-    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(run_of_five)
+    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(run_of_five, on: Date.new(2026, 10, 1))
   end
 
   test "display_when states the whole run even once it has started" do
@@ -70,7 +70,7 @@ class DisplayHelperTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 11))
     FactoryBot.create(:event_occurrence, event: event, starts_at: Time.zone.local(2026, 10, 11, 20, 0))
 
-    assert_equal "Sun 11 Oct, 8pm", display_when(event)
+    assert_equal "Sun 11 Oct, 8pm", display_when(event, on: Date.new(2026, 10, 11))
   end
 
   test "display_when names the weekday for a standing weekly fixture" do
