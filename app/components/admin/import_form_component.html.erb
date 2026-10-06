@@ -2,9 +2,7 @@
   <%= link_to @cancel_text, @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
 <% end %>
 
-<%# Both forms opt out of Turbo: every importer's preview answers the POST by RENDERING the review
-    page, and Turbo only accepts a redirect or a 4xx/5xx for a form submission — it drops a 200
-    silently, so the button did nothing. Only a browser test sees that. %>
+<%# Both forms opt out of Turbo: the preview answers the POST by rendering, and Turbo silently drops a 200. %>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
   <div>
     <%= render CardComponent.new(title: "Option 1: Paste Data") do %>

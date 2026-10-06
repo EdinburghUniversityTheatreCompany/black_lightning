@@ -1,7 +1,6 @@
 class AttachmentCardComponent < ViewComponent::Base
-  # Fallback icons for the attachments ActiveStorage cannot make a thumbnail of.
-  # Keyed by content type, so a type added to Attachment::ALLOWED_CONTENT_TYPES
-  # gets the generic file icon until it is named here.
+  # Fallback icons for files ActiveStorage cannot thumbnail. A type newly added to
+  # Attachment::ALLOWED_CONTENT_TYPES gets the generic icon until it is named here.
   CONTENT_TYPE_ICONS = {
     "application/pdf" => "fa-file-pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "fa-file-word",
@@ -36,8 +35,7 @@ class AttachmentCardComponent < ViewComponent::Base
     helpers.url_for(@attachment.file)
   end
 
-  # nil when ActiveStorage cannot render a preview at all, which is the signal
-  # to fall back to an icon.
+  # nil when no preview is possible: the view falls back to an icon.
   def thumbnail
     file = @attachment.file
     file.previewable? ? file.preview(helpers.thumb_variant) : file.variant(helpers.thumb_variant)

@@ -19,8 +19,6 @@ class GalleryComponentTest < ViewComponent::TestCase
     assert_selector "h4", text: "Gallery"
   end
 
-  # The two surfaces differ only here: admin screens list each picture's tags,
-  # the public show pages do not.
   test "omits picture tags by default" do
     render_inline(GalleryComponent.new(pictures: picture_with_tag))
 

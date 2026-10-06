@@ -1,7 +1,4 @@
 class Admin::ModalComponentPreview < Admin::ApplicationComponentPreview
-  # The native <dialog> element is hidden by default until showModal() is called.
-  # For previews, we force it open with the HTML `open` attribute so the content
-  # is visible without JavaScript.
   def default
     render Admin::ModalComponent.new(id: "preview_modal", title: "Example Modal") do |modal|
       modal.with_footer do

@@ -1,14 +1,11 @@
-# The label/value list a show page renders under its card. `fields` is an
-# ordered Hash (or pairs) of label => value, where a value is either something
-# printable — rendered inline beside its label — or a Hash naming a `:type`,
-# which gets a heading and a block of its own.
+# The label/value list under a show page's card. `fields` maps label => value:
+# a printable value renders inline, a Hash naming a `:type` gets a block of its own.
 class FieldListComponent < ViewComponent::Base
   MARKDOWN = "markdown".freeze
   IMAGE    = "image".freeze
   CONTENT  = "content".freeze
 
-  # admin_site only decides whether an image field offers its original for
-  # download; it was an @admin_site read from inside the markup.
+  # admin_site only controls whether an image field links its original for download.
   def initialize(fields:, admin_site: false)
     @fields = fields
     @admin_site = admin_site
@@ -16,8 +13,7 @@ class FieldListComponent < ViewComponent::Base
 
   private
 
-  # A nil value hides the field entirely. To show a placeholder instead, the
-  # caller substitutes one where it builds the spec.
+  # A nil value hides the field; a caller wanting a placeholder substitutes one.
   def visible_fields
     @fields.reject { |_label, value| value.nil? }
   end
@@ -30,8 +26,7 @@ class FieldListComponent < ViewComponent::Base
     value.is_a?(Hash)
   end
 
-  # A record with no image of its own carries a generated placeholder, which is
-  # not worth showing or offering for download.
+  # A generated placeholder is not a real image: not shown, not offered for download.
   def real_image?(value)
     image = value[:image]
     image.attached? && !image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX)
@@ -41,7 +36,6 @@ class FieldListComponent < ViewComponent::Base
     @admin_site
   end
 
-  # Booleans read better as words than as true/false.
   def inline_value(value)
     [ true, false ].include?(value) ? helpers.bool_text(value) : value
   end

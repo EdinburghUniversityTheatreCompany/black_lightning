@@ -1,11 +1,7 @@
-# A resource index's table: the first cell of each row is the record itself,
-# which this turns into a link to it and — where the viewer may edit it — hangs
-# an Edit button off the end of the row.
-#
-# Everything is computed into new arrays. The partial this replaced wrote into
-# the caller's own `headers` and `field_sets` (`headers << ''`,
-# `fields << get_link(...)`, `fields[0] = ...`), so rendering the same spec
-# twice appended a second Edit button and re-wrapped an already-linked cell.
+# A resource index's table: each row's first cell is the record, linked to it,
+# with an Edit button at the end of the row where the viewer may edit it.
+# Builds new arrays and never mutates the caller's `headers` or `field_sets`:
+# rendering one spec twice must not add a second Edit button.
 class IndexTableComponent < ViewComponent::Base
   def initialize(headers:, field_sets:, resource_class:, q: nil,
                  include_edit_button: true, include_link_to_item: true, col_widths: [])
@@ -20,7 +16,6 @@ class IndexTableComponent < ViewComponent::Base
 
   private
 
-  # The blank header sits above the Edit column.
   def headers
     edit_column? ? @headers + [ "" ] : @headers
   end
@@ -33,9 +28,8 @@ class IndexTableComponent < ViewComponent::Base
     @field_sets.map { |field_set| field_set.merge(fields: cells_for(field_set[:fields])) }
   end
 
-  # fields[0] is the record. It is either linked in place, or dropped — a caller
-  # that does not want the link still has to pass it, because it is what the
-  # edit permission is checked against.
+  # fields[0] is the record, linked or dropped. A caller wanting no link must still
+  # pass it: the edit permission is checked against it.
   def cells_for(fields)
     record = fields.first
     rest = fields.drop(1)

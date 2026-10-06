@@ -1,8 +1,7 @@
 require "test_helper"
 
 class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
-  # Builds a persisted File answer carrying +count+ attachments and returns it
-  # wrapped in a relation (the component calls #includes on its argument).
+  # A persisted File answer with +count+ attachments, as a relation (the component calls #includes).
   def answers_with_attachments(count)
     answer = FactoryBot.create(:answer, response_type: "File")
     count.times { FactoryBot.create(:attachment, item: answer, tag_count: 0) }

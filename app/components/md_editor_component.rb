@@ -3,10 +3,8 @@ class MdEditorComponent < ViewComponent::Base
 
   LAYOUTS = %i[horizontal vertical].freeze
 
-  # layout: :horizontal is the admin forms — a label column beside the editor,
-  # matching simple_form's tailwind_horizontal_form wrapper that every other
-  # field on those pages uses. :vertical is the public forms, whose other fields
-  # come from the vertical_form wrapper: label above, control full width.
+  # layout: :horizontal is the admin forms (label column beside the editor, like the
+  # other fields there); :vertical is the public forms (label above, full width).
   def initialize(f:, field:, rows: 10, input_field_args: {}, layout: :horizontal)
     raise ArgumentError, "layout must be one of #{LAYOUTS.inspect}" unless LAYOUTS.include?(layout)
 
@@ -48,9 +46,8 @@ class MdEditorComponent < ViewComponent::Base
     vertical? ? nil : "w-full md:w-9/12 px-2"
   end
 
-  # The horizontal label sits in a styled column, so the <label> carries nothing
-  # itself. Stacked, it is the field's own label and takes the same rules its
-  # siblings get from `col-form-label` in bootstrap_compat.css.
+  # Horizontal: the column div is already styled. Vertical: the label takes the
+  # rules its siblings get from `col-form-label` in bootstrap_compat.css.
   def label_class
     vertical? ? FormStyles::LABEL : nil
   end

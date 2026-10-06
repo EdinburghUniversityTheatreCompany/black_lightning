@@ -1,5 +1,4 @@
 class FieldListComponentPreview < ViewComponent::Preview
-  # The ordinary case: short values beside their labels.
   def inline_values
     render FieldListComponent.new(fields: {
       name: "Hamlet",
@@ -10,7 +9,6 @@ class FieldListComponentPreview < ViewComponent::Preview
     })
   end
 
-  # A value given as a Hash gets a heading and a block of its own.
   def block_fields
     render FieldListComponent.new(fields: {
       name: "Hamlet",

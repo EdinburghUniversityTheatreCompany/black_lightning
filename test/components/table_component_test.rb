@@ -12,7 +12,6 @@ class TableComponentTest < ViewComponent::TestCase
     assert_selector "thead th", count: 2
   end
 
-  # A Symbol header is a simple_form translation key; anything else is literal.
   test "symbol headers are translated, others left alone" do
     render_inline(TableComponent.new(headers: [ :name, "Literal" ], field_sets: []))
 

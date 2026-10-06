@@ -4,7 +4,6 @@
 
 <aside class="sidebar md:w-64 bg-sidebar-bg text-sidebar-text flex flex-col h-full shrink-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto"
        data-admin--sidebar-target="sidebar">
-  <%# Brand %>
   <div class="h-14 px-4 border-b border-white/10 flex items-center justify-between">
     <a href="/">
       <%= image_tag "bedlam-logo_single-line-white-for-red.png", alt: "Bedlam Theatre", class: "h-8 w-auto" %>
@@ -16,7 +15,6 @@
     </button>
   </div>
 
-  <%# User panel %>
   <a href="<%= helpers.admin_user_path(@current_user) %>"
      class="px-4 py-2 border-b border-white/10 flex items-center gap-3 hover:bg-white/10">
 
@@ -31,7 +29,6 @@
     <span class="text-white/80">Welcome, <%= user_display_name %></span>
   </a>
 
-  <%# Navigation %>
   <nav class="flex-1 overflow-y-auto py-2">
     <% home_class = "flex items-center gap-2 px-4 py-2 hover:bg-white/10" %>
     <% home_class += " bg-primary text-white" if @current_path == "/admin" || @current_path == "/admin/" %>
@@ -63,9 +60,7 @@
             <i class="fas fa-chevron-right text-xs transition-transform group-open:rotate-90" aria-hidden="true"></i>
           </summary>
           <div class="pl-4">
-            <%# A category whose items carry `group:` is broken up by a small
-                heading each time the group changes — one level of nesting, not
-                a second <details>, so every link stays one click away. %>
+            <%# Items carrying `group:` get a small heading each time it changes: one level, not a nested <details>, so every link stays one click away. %>
             <% previous_group = nil %>
             <% (category[:children] || []).each do |item| %>
               <% if item[:group].present? && item[:group] != previous_group %>
