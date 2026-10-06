@@ -44,7 +44,7 @@ class DebtTaskTest < ActiveSupport::TestCase
     end
 
     mail_sample = ActionMailer::Base.deliveries.last
-    assert "Reminder of Debt", mail_sample.subject
+    assert_equal "Reminder of Debt", mail_sample.subject
   end
 
   test "Should clear all maintenance debts, staffing debts and debt notifications" do
