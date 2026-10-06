@@ -324,15 +324,10 @@ module Reimbursements
 
     # --- private helpers ---------------------------------------------------
 
+    # BigDecimal not Float, so the key is exact at every magnitude. BigDecimal("-0.00") renders "-0.0",
+    # so zero in any sign (and nil) is normalised to one key.
     def norm_amount(value)
-      return "0.0" if value.nil? || value == ""
-
-      # BigDecimal not Float, so the key is exact at every magnitude. BigDecimal("-0.00") renders
-      # "-0.0", so a negative zero is normalised to the same key as an ordinary zero.
-      amount = BigDecimal(value.to_s)
-      amount.zero? ? "0.0" : amount.to_s("F")
-    rescue ArgumentError, TypeError
-      "0.0"
+      value.nil? || value.zero? ? "0.0" : value.to_s("F")
     end
     private_class_method :norm_amount
 
