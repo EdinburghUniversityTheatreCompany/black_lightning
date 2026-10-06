@@ -19,9 +19,9 @@ module Reimbursements
     # stamp) is attempted.
     WRITE_RETRY_ATTEMPTS = 3
 
-    Result = Struct.new(:success, :bacs_date, :batch_id, :expense_count, :total_amount,
+    Result = Struct.new(:success, :bacs_date, :batch_id, :total_amount,
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
-                        :producer_notifications_sent, :receipts_uploaded, :errors, keyword_init: true)
+                        :errors, keyword_init: true)
 
     def initialize(store:, graph:, cost_centre:, xlsx: nil, international_xlsx: nil,
                    composer: nil, notifier: nil, sleeper: nil)
@@ -107,10 +107,8 @@ module Reimbursements
     private
 
     def new_result(expenses, bacs_date)
-      Result.new(success: false, bacs_date: bacs_date, batch_id: nil,
-                 expense_count: expenses.size, total_amount: total(expenses),
-                 eusa_draft_web_link: "", eusa_draft_message_id: "", bacs_sharepoint_url: "",
-                 producer_notifications_sent: 0, receipts_uploaded: 0, errors: [])
+      Result.new(success: false, bacs_date: bacs_date, batch_id: nil, total_amount: total(expenses),
+                 eusa_draft_web_link: "", eusa_draft_message_id: "", bacs_sharepoint_url: "", errors: [])
     end
 
     def fail_with(result, message)
@@ -198,10 +196,8 @@ module Reimbursements
       folder = @cost_centre.receipts_folder
       renamed.transform_values do |attachments|
         attachments.filter_map do |attachment|
-          url = @graph.upload_to_folder(drive_id: folder.drive_id, folder_id: folder.folder_id,
-                                        filename: attachment.filename, content: attachment.content)
-          result.receipts_uploaded += 1
-          url
+          @graph.upload_to_folder(drive_id: folder.drive_id, folder_id: folder.folder_id,
+                                  filename: attachment.filename, content: attachment.content)
         rescue StandardError => e
           result.errors << "Receipt upload failed for #{attachment.filename}: #{e.message}"
           nil
@@ -313,7 +309,6 @@ module Reimbursements
         to: email, greeting_name: GreetingName.for(items.first.person),
         line_items: line_items, bacs_date: bacs_date, total: format("%.2f", total(items))
       )
-      result.producer_notifications_sent += 1
       true
     rescue StandardError => e
       result.errors << "Producer notification failed for #{email}: #{e.message}"

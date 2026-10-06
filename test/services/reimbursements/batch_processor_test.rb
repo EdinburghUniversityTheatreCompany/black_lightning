@@ -160,7 +160,6 @@ module Reimbursements
       end
 
       assert_equal 2, graph.send_mails.size
-      assert_equal 2, result.producer_notifications_sent
       graph.send_mails.each do |mail|
         assert_equal "send@bedlamfringe.co.uk", mail[:mailbox]
         assert_includes mail[:subject], "submitted for payment"
@@ -169,7 +168,6 @@ module Reimbursements
                    graph.send_mails.map { |mail| mail[:to] }.flatten.sort
       assert @expense_a.reload.producer_notified
       assert @expense_b.reload.producer_notified
-      assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 
     # Each surface reads Budget#display_name, so each names the show.
@@ -223,7 +221,6 @@ module Reimbursements
 
       # Producers are still notified: their money IS on its way.
       assert_equal 2, graph.send_mails.size
-      assert_equal 2, result.producer_notifications_sent
 
       # The guarantee against a duplicate payment: a rebuild makes no second draft.
       rebuild = processor.process(expenses: approved_now, bacs_date: Date.new(2026, 5, 13),
@@ -300,7 +297,6 @@ module Reimbursements
       assert_empty http.requests,
                    "no Graph request may leave a non-production environment, token exchange included"
       assert_equal "", result.bacs_sharepoint_url
-      assert_equal 0, result.receipts_uploaded
       assert(result.errors.any? { |e| e.include?("SharePoint upload failed for") },
              "the suppression is surfaced, not silent: #{result.errors.inspect}")
       store.expenses.each do |expense|
@@ -530,7 +526,6 @@ module Reimbursements
 
       assert result.success, result.errors.inspect
       assert_equal 2, graph.send_mails.size, "one email per payee, not per expense"
-      assert_equal 2, result.producer_notifications_sent, "counted per notification sent, not per expense"
 
       alice_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "alice@example.com" ] }
       assert_includes alice_mail[:subject], "2 expenses submitted for payment"
