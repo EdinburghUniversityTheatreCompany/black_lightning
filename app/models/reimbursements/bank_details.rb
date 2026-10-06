@@ -90,15 +90,6 @@ module Reimbursements
       normalize_iban(value).scan(/.{1,4}/).join(" ")
     end
 
-    # Country plus last four CHARACTERS. Not .mask: that strips non-digits, and
-    # some IBANs end in letters (Seychelles ends with a currency code).
-    def mask_iban(value)
-      iban = normalize_iban(value)
-      return "" if iban.empty?
-
-      "#{iban[0, 2]}****#{iban[-4..] || iban}"
-    end
-
     def normalize_bic(value)
       value.to_s.gsub(/\s/, "").upcase
     end

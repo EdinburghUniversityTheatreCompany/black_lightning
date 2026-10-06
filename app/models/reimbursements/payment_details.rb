@@ -53,16 +53,6 @@ module Reimbursements
     validates :iban, length: { maximum: BankDetails::IBAN_MAX_LENGTH }
     validates :bic, length: { maximum: BankDetails::BIC_MAX_LENGTH }
 
-    def bank_details?
-      sort_code.present? && account_number.present?
-    end
-
-    # Kept separate from bank_details?: that is the UK-rail "add your bank details"
-    # prompt, which an IBAN alone must not satisfy.
-    def international_bank_details?
-      iban.present? && bic.present?
-    end
-
     # Appends one timestamped line to a notes trail. One formatter for both
     # callers (the People page and BankDetailsRetention) keeps the trail uniform.
     def self.append_note(existing, line, at: Time.current)

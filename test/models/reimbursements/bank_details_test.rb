@@ -50,20 +50,6 @@ module Reimbursements
       assert_equal "not an iban", BankDetails.format_iban("not an iban")
     end
 
-    test "mask_iban keeps the country and the last four characters" do
-      assert_equal "DE****3000", BankDetails.mask_iban("DE89 3704 0044 0532 0130 00")
-    end
-
-    test "mask_iban takes the last four CHARACTERS, not the last four digits" do
-      # Seychelles IBANs end in a currency code, so the digit-stripping .mask would mask the wrong end.
-      assert_equal "SC****7USD", BankDetails.mask_iban("SC18 SSCB 1101 0000 0000 0000 1497 USD")
-    end
-
-    test "mask_iban is blank in, blank out" do
-      assert_equal "", BankDetails.mask_iban(nil)
-      assert_equal "", BankDetails.mask_iban("   ")
-    end
-
     test "valid_bic? accepts 8 and 11 character codes, ignoring case and surrounding space" do
       [ "DEUTDEFF500", "NWBKGB2L", "  deutdeff500  " ].each do |bic|
         assert BankDetails.valid_bic?(bic), "expected #{bic.inspect} to be valid"

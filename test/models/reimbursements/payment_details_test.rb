@@ -24,15 +24,5 @@ module Reimbursements
       assert_equal "checked", details.notes
       assert details.verified
     end
-
-    test "bank_details? needs both halves" do
-      person = Person.create!(name: "Pat", email: "pat-both@example.com")
-      details = person.create_payment_details!(sort_code: "80-22-60", account_number: "")
-
-      assert_not details.bank_details?
-
-      details.update!(account_number: "12345678")
-      assert details.bank_details?
-    end
   end
 end
