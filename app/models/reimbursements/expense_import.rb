@@ -148,9 +148,6 @@ module Reimbursements
     # form prints, so the copy cannot call one of these optional.
     REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference].freeze
 
-    # Matched case-insensitively, so "paid" lands where the operator meant it.
-    STATUSES = Status.all
-
     # Already paid, or never will be: what ExpenseForm#settled? reads. Stated as the
     # settled set, so a status added later counts as live and gets the stricter rule.
     SETTLED_STATUSES = [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].freeze
@@ -317,10 +314,11 @@ module Reimbursements
       :unreadable
     end
 
+    # Case-insensitive, so "paid" lands where the operator meant it.
     def normalize_status(raw)
       return nil if raw.blank?
 
-      STATUSES.find { |status| status.casecmp?(raw) } || raw
+      Status.all.find { |status| status.casecmp?(raw) } || raw
     end
 
     def normalize_type(raw)
@@ -415,10 +413,10 @@ module Reimbursements
     def status_error(row)
       if row[:status].blank?
         "This line has no status. Say what state the claim is in: " \
-          "#{STATUSES.to_sentence(last_word_connector: ' or ')}."
-      elsif STATUSES.exclude?(row[:status])
+          "#{Status.all.to_sentence(last_word_connector: ' or ')}."
+      elsif Status.all.exclude?(row[:status])
         "#{row[:status].inspect} isn't a status. Use " \
-          "#{STATUSES.to_sentence(last_word_connector: ' or ')}."
+          "#{Status.all.to_sentence(last_word_connector: ' or ')}."
       end
     end
 
@@ -510,9 +508,7 @@ module Reimbursements
       { references: references, numbers: numbers }
     end
 
-    def destination_label
-      [ financial_year&.label, cost_centre&.name ].compact_blank.join(" / ").presence || "this year"
-    end
+    def destination_label = "#{financial_year.label} / #{cost_centre.name}"
 
     # The form the submission and finance-edit screens use, so the importer enforces the
     # same rules, not a restatement that can drift. `internal` is set as
@@ -522,7 +518,6 @@ module Reimbursements
         expense_type: row[:expense_type],
         internal: true,
         settled: SETTLED_STATUSES.include?(row[:status]),
-        require_receipts: false,
         budget_record_id: budget.record_id,
         amount: row[:amount]&.to_s("F"),
         # A blank ex-VAT charges the whole amount, as ExpenseForm.from_actual does; nil

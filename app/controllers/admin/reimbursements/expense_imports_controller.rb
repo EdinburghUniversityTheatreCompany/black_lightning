@@ -101,9 +101,8 @@ module Admin
       end
 
       # Re-render the preview rather than redirecting: a forty-line paste must survive.
-      def render_blocked_preview(alert = nil)
-        flash.now[:alert] =
-          alert || "Nothing was imported. Fix the lines flagged below and try again."
+      def render_blocked_preview(alert = "Nothing was imported. Fix the lines flagged below and try again.")
+        flash.now[:alert] = alert
         render :preview, status: :unprocessable_entity
       end
 
