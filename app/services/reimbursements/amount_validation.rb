@@ -16,7 +16,7 @@ module Reimbursements
       return "Enter a valid amount greater than 0." unless payable?(gross)
 
       net = AmountParser.parse(amount_excl_vat)
-      unless blank_or_zero?(amount_excl_vat) || payable?(net)
+      if amount_excl_vat.present? && !net&.zero? && !payable?(net)
         return "Enter a valid amount excl. VAT greater than 0, or leave it blank."
       end
 
@@ -44,12 +44,5 @@ module Reimbursements
       !value.nil? && value.positive? && value <= MAX_AMOUNT
     end
     private_class_method :payable?
-
-    def blank_or_zero?(raw)
-      return true if raw.to_s.strip.blank?
-
-      AmountParser.parse(raw)&.zero? || false
-    end
-    private_class_method :blank_or_zero?
   end
 end
