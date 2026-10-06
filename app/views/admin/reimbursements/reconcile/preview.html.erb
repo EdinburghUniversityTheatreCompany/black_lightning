@@ -233,7 +233,7 @@
             <tbody>
               <% @offsetting_pairs.each do |pair| %>
                 <% checkbox_id = "offset-pair-#{pair.key}" %>
-                <% consequence = @offset_pair_consequences[pair.key] || {} %>
+                <% consequence = @offset_pair_consequences[pair.key] %>
                 <% untick_expense = consequence[:expense] %>
                 <% untick_budget = consequence[:budget] %>
                 <% spans = untick_expense || untick_budget ? 3 : 2 %>
