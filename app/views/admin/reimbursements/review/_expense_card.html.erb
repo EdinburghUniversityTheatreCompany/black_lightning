@@ -11,10 +11,12 @@
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
 <%# The owner gate stays out of ReviewSupport, which is AR-free. %>
-<% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
-<% endorsement = @endorsements_by_expense&.[](expense.record_id) %>
+<% owner_gate_unmet = @owner_gate_unmet_ids.include?(expense.record_id) %>
+<% endorsement = @endorsements_by_expense[expense.record_id] %>
 <% endorsement_covers = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
-<% owners = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id) }.presence %>
+<% owners = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id[id] }.presence %>
+<%# The payee's People row, where bank details are fixed. %>
+<% person_path = admin_reimbursements_people_path(person: expense.person.record_id, anchor: "person-#{expense.person.record_id}") if expense.person %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
 <%# The override is offered only when the owner gate is the ONLY blocker. %>
 <% override_offered = allow_approve && owner_gate_unmet && attention[:blocking].empty? %>
@@ -42,12 +44,8 @@
     <% end %>
     <span class="font-medium">
       #<%= expense.auto_number %>:
-      <%# The payee's People row, where bank details are fixed. %>
-      <% if expense.person %>
-        <%= link_to expense.person.name.presence || "(no name)",
-                    admin_reimbursements_people_path(person: expense.person.record_id,
-                                                     anchor: "person-#{expense.person.record_id}"),
-                    class: "text-primary underline" %>
+      <% if person_path %>
+        <%= link_to expense.person.name.presence || "(no name)", person_path, class: "text-primary underline" %>
       <% else %>
         (no payee)
       <% end %>
@@ -84,7 +82,7 @@
     <% end %>
     <% if endorsement_covers && endorsement.owner_endorsement? %>
       <%= render BadgeComponent.new(type: :success, pill: true)
-            .with_content("Endorsed by #{@people_by_id&.[](endorsement.endorsed_by_person_id)&.name || 'an owner'}") %>
+            .with_content("Endorsed by #{@people_by_id[endorsement.endorsed_by_person_id]&.name || 'an owner'}") %>
     <% elsif endorsement_covers && endorsement.finance_override? %>
       <%= render BadgeComponent.new(type: :info, pill: true).with_content("Owner sign-off overridden") %>
     <% end %>
@@ -152,10 +150,8 @@
   <% fix_links = capture do %>
     Fix the <%= link_to "payee override", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                         class: "underline" %>
-    <% if expense.person %>
-      or <%= link_to "#{expense.person.name.presence || 'their'} People record",
-                     admin_reimbursements_people_path(person: expense.person.record_id,
-                                                      anchor: "person-#{expense.person.record_id}"),
+    <% if person_path %>
+      or <%= link_to "#{expense.person.name.presence || 'their'} People record", person_path,
                      class: "underline" %>
     <% else %>
       (this claim names no payee, so there is no People record to fix)
@@ -327,7 +323,7 @@
                  label: "expense ##{expense.auto_number}",
                  group: "receipts-#{expense.record_id}" %>
     </div>
-    <% if expense.receipts.any? %>
+    <% if has_receipts %>
       <ul class="mt-2 flex flex-col gap-1">
         <% expense.receipts.each do |receipt| %>
           <li class="flex items-center gap-2 text-sm">
