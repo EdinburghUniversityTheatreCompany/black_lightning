@@ -23,18 +23,17 @@ module Reimbursements
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
                         :errors, keyword_init: true)
 
-    def initialize(store:, graph:, cost_centre:, xlsx: nil, international_xlsx: nil,
-                   composer: nil, notifier: nil, sleeper: nil)
+    def initialize(store:, graph:, cost_centre:, sleeper: ->(seconds) { sleep(seconds) })
       @store = store
       @graph = graph
       @cost_centre = cost_centre
-      @xlsx = xlsx || BacsXlsx.new
-      @international_xlsx = international_xlsx || InternationalXlsx.new
-      @composer = composer || EusaEmailComposer.new
+      @sleeper = sleeper
+      @xlsx = BacsXlsx.new
+      @international_xlsx = InternationalXlsx.new
+      @composer = EusaEmailComposer.new
       # Producer notifications send from the cost centre's send mailbox, so
       # they land in its Sent Items.
-      @notifier = notifier || Notifier.new(cost_centre: cost_centre, graph: graph)
-      @sleeper = sleeper || ->(seconds) { sleep(seconds) }
+      @notifier = Notifier.new(cost_centre: cost_centre, graph: graph)
     end
 
     def process(expenses:, bacs_date:, sender_name:, eusa_recipient:,
