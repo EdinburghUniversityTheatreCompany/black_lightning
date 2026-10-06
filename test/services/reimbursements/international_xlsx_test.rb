@@ -76,7 +76,9 @@ module Reimbursements
       # The template leaves a "£" format on C11 and sort-code/account-number formats on BIC and IBAN.
       %w[C11 C13 E13].each { |ref| assert_equal "@", cell(sheet, ref).number_format.format_code, ref }
       assert_equal "m/d/yyyy", cell(sheet, "E10").number_format.format_code
-      assert_equal Date.new(2026, 10, 1), cell(sheet, "E10").value.to_date
+      date = cell(sheet, "E10").value
+      assert_kind_of Date, date, "a real date, not the ISO string" # rubyXL may return a DateTime
+      assert_equal Date.new(2026, 10, 1), date.to_date
     end
 
     # The template caches the SAMPLE payment's formula answers, so without a
