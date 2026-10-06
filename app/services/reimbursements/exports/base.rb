@@ -32,8 +32,6 @@ module Reimbursements
 
       def headers = self.class::HEADERS
 
-      def sheet_name = self.class::SHEET_NAME
-
       # "reimbursements-expenses-2026-05-13.csv"
       def filename(date: Date.current)
         "reimbursements-#{self.class::SLUG}-#{date.iso8601}.csv"
@@ -48,8 +46,8 @@ module Reimbursements
 
       # Sheet names are fixed, never date-templated: Excel caps them at 31
       # characters and a saved formula referencing a sheet keeps working.
-      def add_sheet(workbook, collection, name: sheet_name)
-        workbook.add_worksheet(name: name) do |sheet|
+      def add_sheet(workbook, collection)
+        workbook.add_worksheet(name: self.class::SHEET_NAME) do |sheet|
           sheet.add_row(headers, types: cell_types(headers))
           rows(collection).each { |row| sheet.add_row(row, types: cell_types(row)) }
         end
@@ -66,10 +64,6 @@ module Reimbursements
 
       def rows(collection)
         collection.map { |record| row(record).map { |value| CellSanitizer.cell(value) } }
-      end
-
-      def row(_record)
-        raise NotImplementedError, "#{self.class} must define a private #row(record)"
       end
 
       # Keeps every String cell literal text (nil means "infer"). Axlsx would
@@ -97,11 +91,7 @@ module Reimbursements
       # Every exporter that can name a centre carries the column: an export is
       # where two centres' figures are most easily added together by hand.
       # Blank (not "-") when nothing places the row.
-      def cost_centre_name(cost_centre_id)
-        return nil if cost_centre_id.nil?
-
-        cost_centre_by_id[cost_centre_id]&.name
-      end
+      def cost_centre_name(cost_centre_id) = cost_centre_by_id[cost_centre_id]&.name
 
       def cost_centre_by_id
         @cost_centre_by_id ||= store.cost_centres.index_by(&:id)

@@ -58,22 +58,9 @@ module Reimbursements
         assert_equal :string, cell.type
       end
 
-      test "add_sheet accepts an explicit sheet name" do
-        package = Axlsx::Package.new
-        @exporter.add_sheet(package.workbook, @records, name: "Something else")
-
-        assert_equal "Something else", package.workbook.worksheets.first.name
-      end
-
       # A nil checker reaching the first payee with bank details would be a NoMethodError.
       test "an exporter built without a checker still has a usable one" do
         assert_same ModulusCheck.default_checker, Fake.new(store: nil).send(:checker)
-      end
-
-      test "a subclass that forgets #row says so" do
-        incomplete = Class.new(Base) { const_set(:HEADERS, [ "A" ]) }
-
-        assert_raises(NotImplementedError) { incomplete.new(store: nil).to_csv([ {} ]) }
       end
     end
   end
