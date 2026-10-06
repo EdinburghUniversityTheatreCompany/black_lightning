@@ -32,13 +32,13 @@ module Reimbursements
       end
 
       def mark_read(message_id)
-        raise MailboxClient::Error, "isRead patch failed" if fail_mark_read
+        raise GraphAuth::Error, "isRead patch failed" if fail_mark_read
 
         @reads << message_id
       end
 
       def move(message_id, folder)
-        raise MailboxClient::Error, "move failed" if fail_move
+        raise GraphAuth::Error, "move failed" if fail_move
 
         @moves << [ message_id, folder ]
       end
@@ -52,7 +52,7 @@ module Reimbursements
     PDF_ATTACHMENT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze
 
     def inbound_message(id: "msg1", from: "pat@example.com", subject: "Taxi receipt")
-      MailboxClient::Message.new(id: id, from_address: from, subject: subject,
+      Graph::MailboxClient::Message.new(id: id, from_address: from, subject: subject,
                                  body_text: "receipt attached")
     end
 
@@ -219,7 +219,7 @@ module Reimbursements
 
     test "a reply failure does not prevent the receipt attach or block the move" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      @mailbox.define_singleton_method(:reply) { |*| raise MailboxClient::Error, "reply failed" }
+      @mailbox.define_singleton_method(:reply) { |*| raise GraphAuth::Error, "reply failed" }
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
@@ -349,7 +349,7 @@ module Reimbursements
       setup_job(messages: [])
       broken_mailbox = Object.new.tap do |m|
         def m.unread_messages
-          raise Reimbursements::MailboxClient::Error, "Graph 503"
+          raise GraphAuth::Error, "Graph 503"
         end
       end
       termtime_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgTerm") ],
@@ -383,7 +383,7 @@ module Reimbursements
     test "auth failure alerts the IT subcommittee once per day" do
       setup_job(messages: [])
       @mailbox.define_singleton_method(:unread_messages) do
-        raise MailboxClient::AuthError, "AADSTS7000222: client secret expired"
+        raise GraphAuth::AuthError, "AADSTS7000222: client secret expired"
       end
 
       assert_emails 1 do
@@ -429,7 +429,7 @@ module Reimbursements
         [ 200, { id: "msgMovedNewId" }.to_json ]                                       # ...but it IS still there
       ])
       MailboxPollJob.mailbox_builder = lambda do |cost_centre|
-        MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
+        Graph::MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
                           clock: -> { Time.zone.local(2026, 7, 9, 12) })
       end
 

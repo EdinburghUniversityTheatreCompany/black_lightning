@@ -9,11 +9,6 @@ module Graph
     FOLDERS = { processed: "Processed", rejected: "Rejected" }.freeze
     PAGE_SIZE = 20
 
-    # Callers rescue these names; the classes live in GraphAuth.
-    Error = ::GraphAuth::Error
-    AuthError = ::GraphAuth::AuthError
-    NotFoundError = ::GraphAuth::NotFoundError
-
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
     def initialize(mailbox:, settings: Graph::Settings, http: nil, clock: nil, sleeper: nil)

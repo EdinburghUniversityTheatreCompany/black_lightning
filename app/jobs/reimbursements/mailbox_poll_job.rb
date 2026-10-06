@@ -20,7 +20,7 @@ module Reimbursements
 
     # Test seam. Takes the cost centre so each is polled on its own receive mailbox.
     class_attribute :mailbox_builder,
-                    default: ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
+                    default: ->(cost_centre) { ::Graph::MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
 
     # The People registry is shared, so sender lookups work whichever mailbox a receipt came to.
     def perform
@@ -34,7 +34,7 @@ module Reimbursements
       end
 
       CostCentre.all.each { |cost_centre| poll_cost_centre_safely(cost_centre) }
-    rescue MailboxClient::AuthError => e
+    rescue GraphAuth::AuthError => e
       alert_auth_failure(e)
     end
 
@@ -44,7 +44,7 @@ module Reimbursements
     # failure must not stop the other centres' polls.
     def poll_cost_centre_safely(cost_centre)
       poll_cost_centre(cost_centre)
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}", e,
@@ -72,7 +72,7 @@ module Reimbursements
       return handle_missing_receipt(message, person) if receipts.empty?
 
       create_expense(message, person, receipts)
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements poll failed for message #{message.id}: #{e.message}", e,
@@ -205,7 +205,7 @@ module Reimbursements
     def mark_read_or_flag_duplicate(message, expense)
       mailbox.mark_read(message.id)
       true
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify(
@@ -221,7 +221,7 @@ module Reimbursements
     def best_effort(message, expense, description)
       yield
       true
-    rescue MailboxClient::AuthError
+    rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements #{description} failed for #{message.id}: #{e.message}", e,

@@ -32,7 +32,7 @@ module Reimbursements
 
     def build_client(responses, clock: -> { Time.zone.local(2026, 7, 9, 12) }, sleeper: nil)
       http = FakeHttp.new(responses)
-      client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
+      client = Graph::MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
                                  http: http, clock: clock, sleeper: sleeper)
       [ client, http ]
     end
@@ -161,7 +161,7 @@ module Reimbursements
     test "raises AuthError when graph rejects the token" do
       client, = build_client([ token_response, [ 401, "expired" ] ])
 
-      assert_raises(MailboxClient::AuthError) { client.unread_messages }
+      assert_raises(GraphAuth::AuthError) { client.unread_messages }
     end
 
     # Graph's own gateway answers 502/503/504 for a moment now and then; one
@@ -182,7 +182,7 @@ module Reimbursements
       client, = build_client([ token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ],
                              sleeper: ->(seconds) { pauses << seconds })
 
-      error = assert_raises(MailboxClient::Error) { client.unread_messages }
+      error = assert_raises(GraphAuth::Error) { client.unread_messages }
       assert_includes error.message, "(503)"
       assert_equal 1, pauses.size
     end
@@ -191,7 +191,7 @@ module Reimbursements
       pauses = []
       client, = build_client([ token_response, [ 500, "boom" ] ], sleeper: ->(seconds) { pauses << seconds })
 
-      assert_raises(MailboxClient::Error) { client.unread_messages }
+      assert_raises(GraphAuth::Error) { client.unread_messages }
       assert_empty pauses
     end
 
@@ -199,7 +199,7 @@ module Reimbursements
       pauses = []
       client, = build_client([ token_response, [ 502, "UnknownError" ] ], sleeper: ->(seconds) { pauses << seconds })
 
-      assert_raises(MailboxClient::Error) { client.reply("msg1", html: "<p>Thanks</p>") }
+      assert_raises(GraphAuth::Error) { client.reply("msg1", html: "<p>Thanks</p>") }
       assert_empty pauses
     end
 
@@ -212,7 +212,7 @@ module Reimbursements
       client, = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
 
       error = assert_raises(GraphAuth::NotFoundError) { client.unread_messages }
-      assert_kind_of MailboxClient::Error, error, "NotFoundError must be a subclass of Error"
+      assert_kind_of GraphAuth::Error, error, "NotFoundError must be a subclass of Error"
       assert_match(/ErrorItemNotFound/, error.message)
     end
 
