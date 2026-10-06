@@ -50,28 +50,6 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert flash[:error].present?
   end
 
-  test "confirm merges when action is merge" do
-    user = FactoryBot.create(:user, first_name: "John", last_name: "Smith", email: "unknown_12345678@bedlamtheatre.co.uk")
-    assert_not user.has_role?(:member)
-    assert user.student_id.blank?
-
-    cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
-      propose_merge: [
-        import_entry(index: 0, existing_user_id: user.id, original_name: "Johnny Smith", first_name: "Johnny", last_name: "Smith", student_id: "s1234567", email: "johnny@example.com")
-      ]
-    ))
-
-    post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge" } }
-
-    assert_redirected_to new_admin_membership_import_path
-    user.reload
-    assert user.has_role?(:member)
-    assert_equal "s1234567", user.student_id
-    assert_equal "johnny@example.com", user.email # Unknown email should be replaced
-    assert flash[:success].any? { |msg| msg.include?("merged") }
-  end
-
   test "activation fills a placeholder email and a missing student_id" do
     user = FactoryBot.create(:user, associate_id: "ASSOC1", student_id: nil, email: "unknown_abcd1234@bedlamtheatre.co.uk")
 
@@ -153,7 +131,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
     write_import_cache(cache_key, membership_import_buckets(
       propose_merge: [
-        import_entry(index: 0, existing_user_ids: [ user1.id, user2.id ], original_name: "Alex Kerr", first_name: "Alex", last_name: "Kerr", student_id: nil, email: "alex@example.com")
+        import_entry(index: 0, existing_user_ids: [ user1.id, user2.id ], original_name: "Alex Kerr", first_name: "Alex", last_name: "Kerr", student_id: "s1234567", email: "alex@example.com")
       ]
     ))
 
@@ -163,6 +141,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user2.reload
     assert user2.has_role?(:member)
     assert_equal "alex@example.com", user2.email
+    assert_equal "s1234567", user2.student_id
     user1.reload
     assert_not user1.has_role?(:member)
   end

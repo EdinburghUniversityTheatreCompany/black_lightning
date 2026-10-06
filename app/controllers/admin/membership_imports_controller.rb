@@ -43,7 +43,7 @@ class Admin::MembershipImportsController < AdminController
     end
 
     actions = params[:actions] || {}
-    results = process_import(deserialize_import(categorized), actions)
+    results = process_import(categorized, actions)
 
     helpers.append_to_flash(:success, format_results(results))
     redirect_to new_admin_membership_import_path
@@ -51,32 +51,13 @@ class Admin::MembershipImportsController < AdminController
 
   private
 
-  def deserialize_import(serialized)
-    serialized.transform_values do |items|
-      items.map do |item|
-        deserialized = {
-          row: item["row"].symbolize_keys,
-          index: item["index"]
-        }
-
-        if item["existing_user_ids"]
-          deserialized[:existing_users] = User.where(id: item["existing_user_ids"]).to_a
-        else
-          deserialized[:existing_user] = item["existing_user_id"] ? User.find_by(id: item["existing_user_id"]) : nil
-        end
-
-        deserialized
-      end
-    end
-  end
-
   def process_import(categorized, actions)
     results = { activated: 0, created: 0, merged: 0, skipped: 0, errors: [] }
     @synced_user_ids = []
 
     categorized.each do |bucket, items|
       items.each do |item|
-        action = determine_action(bucket, item[:index], actions)
+        action = determine_action(bucket, item["index"], actions)
         process_item(item, action, results)
       end
     end
@@ -107,22 +88,20 @@ class Admin::MembershipImportsController < AdminController
   end
 
   def process_item(item, action, results)
+    row = item["row"].with_indifferent_access
     case action
     when "activate"
-      activate_user(item[:existing_user], item[:row], results)
+      activate_user(User.find_by(id: item["existing_user_id"]), row, results)
     when "create"
-      create_and_activate_user(item[:row], results)
-    when "merge"
-      merge_and_activate(item[:existing_user], item[:row], results)
+      create_and_activate_user(row, results)
     when /\Amerge_(\d+)\z/
       # a candidate picked from a multi-candidate fuzzy match
-      selected_user = User.find_by(id: $1.to_i)
-      merge_and_activate(selected_user, item[:row], results)
+      merge_and_activate(User.find_by(id: $1.to_i), row, results)
     when "skip"
       results[:skipped] += 1
     end
   rescue StandardError => e
-    results[:errors] << "Error processing #{item[:row][:original_name]}: #{e.message}"
+    results[:errors] << "Error processing #{row[:original_name]}: #{e.message}"
   end
 
   def activate_user(user, row, results)
