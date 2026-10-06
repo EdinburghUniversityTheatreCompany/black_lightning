@@ -10,11 +10,8 @@ module Reimbursements
     # Whether outbound Graph side effects (sending mail, replying to or moving
     # messages, creating EUSA drafts) happen: always in production, elsewhere
     # only with REIMBURSEMENTS_ENABLE_OUTBOUND. Read-only probes are not gated.
-    def self.outbound_enabled?
-      return true if Rails.env.production?
-
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"].present?
-    end
+    # (Graph::Settings holds the one implementation.)
+    def self.outbound_enabled? = ::Graph::Settings.outbound_enabled?
 
     # A Date or nil (never raises on a malformed value).
     def self.azure_secret_expires_on
