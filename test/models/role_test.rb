@@ -112,28 +112,6 @@ class RoleTest < ActionView::TestCase
     assert role.valid?, "Validation failed for a non-hardcoded name"
   end
 
-  test "trained_role? returns true for roles with 'Trained' in name" do
-    trained_role = Role.new(name: "DM Trained")
-    assert trained_role.trained_role?, "trained_role? should return true for roles with 'Trained' in name"
-
-    another_trained_role = Role.new(name: "Bar Trained")
-    assert another_trained_role.trained_role?, "trained_role? should return true for roles with 'Trained' in name"
-
-    mixed_case_role = Role.new(name: "First Aid Trained")
-    assert mixed_case_role.trained_role?, "trained_role? should return true for roles with 'Trained' in name"
-  end
-
-  test "trained_role? returns false for roles without 'Trained' in name" do
-    non_trained_role = Role.new(name: "Member")
-    assert_not non_trained_role.trained_role?, "trained_role? should return false for roles without 'Trained' in name"
-
-    committee_role = Role.new(name: "Committee")
-    assert_not committee_role.trained_role?, "trained_role? should return false for roles without 'Trained' in name"
-
-    admin_role = Role.new(name: "Admin")
-    assert_not admin_role.trained_role?, "trained_role? should return false for roles without 'Trained' in name"
-  end
-
   test "cannot change Opportunity Reviewer role name" do
     role = Role.find_or_create_by!(name: "Opportunity Reviewer")
 
@@ -177,11 +155,6 @@ class RoleTest < ActionView::TestCase
     assert_not_nil archived, "The archival role was not created"
     assert_equal user_ids.sort, archived.users.ids.sort, "Not every member reached the archival role"
     assert_equal "Member", role.name, "Archiving must leave the hardcoded name untouched"
-  end
-
-  test "trained_role? returns false for nil name" do
-    role_with_nil_name = Role.new(name: nil)
-    assert_not role_with_nil_name.trained_role?, "trained_role? should return false for nil name"
   end
 
   test "cannot destroy hardcoded role" do

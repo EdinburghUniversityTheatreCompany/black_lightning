@@ -103,10 +103,6 @@ class Role < ApplicationRecord
     errors.add(:name, "is hardcoded and cannot be altered") if Role.hardcoded_name?(name_was) && !name.to_s.casecmp?(name_was.to_s)
   end
 
-  def trained_role?
-    name&.include?("Trained")
-  end
-
   private
 
   # Only entitling roles are worth a pretix round trip.
