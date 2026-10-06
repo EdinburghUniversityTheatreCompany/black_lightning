@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Add Honeybadger context for ActiveStorage errors.
-# This helps debug issues with image processing by including blob details in error reports.
+# Adds blob details to Honeybadger reports of ActiveStorage errors, to debug image processing.
 ActiveSupport::Notifications.subscribe(/active_storage/) do |name, start, finish, id, payload|
   if payload[:exception]
     blob = payload[:blob]

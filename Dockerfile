@@ -1,20 +1,15 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
+# Production image, for Kamal or build'n'run by hand (the dev container is .devcontainer/):
 # docker build -t blacklightning .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name blacklightning blacklightning
 
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
-
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version.
 ARG RUBY_VERSION=4.0.2
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
-# Rails app lives here
 WORKDIR /rails
 
-# Set production environment
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
@@ -22,15 +17,11 @@ ENV RAILS_ENV="production" \
     RAILS_LOG_TO_STDOUT="1" \
     RAILS_SERVE_STATIC_FILES="true"
 
-# Install base packages and clean up in single layer.
-#
-# libheif-plugin-libde265 is what lets libvips DECODE the HEVC image data inside a
-# HEIC: iOS photographs default to HEIC, and reimbursements converts those receipts
-# to JPEG at intake (Reimbursements::ReceiptIntake). Debian's libvips pulls it in
-# today as a dependency of libvips42t64, but it is named explicitly here so a
-# packaging change can't silently turn every iPhone receipt into "we couldn't read
-# that photo". Keep it in step with .devcontainer/Dockerfile.dev and the CI workflow,
-# where it is NOT implied (Ubuntu ships libheif without a codec plugin).
+# libheif-plugin-libde265 lets libvips decode the HEVC inside a HEIC (iOS photos), which receipts
+# convert to JPEG (Reimbursements::ReceiptIntake). Debian's libvips pulls it in as a dependency,
+# but it is named explicitly so a packaging change can't turn every iPhone receipt into "we
+# couldn't read that photo". Keep in step with .devcontainer/Dockerfile.dev and CI, where it is
+# not implied (Ubuntu ships libheif without a codec plugin).
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y \
@@ -44,10 +35,8 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       cron && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
-# Throw-away build stage to reduce size of final image
 FROM base AS build
 
-# Install packages needed to build gems and node modules
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y \
@@ -59,15 +48,13 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       curl && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
-# Install Node.js for Vite asset bundling. The major version is read from
-# .node-version — the single source of truth shared with mise.toml and the dev
-# container — so production can't drift from the Node version developers and CI run.
+# The Node major comes from .node-version (shared with mise/config.toml and the dev container), so
+# production can't drift from what developers and CI run. Don't add an ARG NODE_VERSION.
 COPY .node-version ./
 RUN curl -fsSL "https://deb.nodesource.com/setup_$(cut -d. -f1 < .node-version).x" | bash - && \
     apt-get install -y nodejs
 
-# Install application gems (persist directly in image layer so runtime
-# containers have access without requiring cache mounts)
+# Gems persist in the image layer, so runtime containers need no cache mounts.
 COPY Gemfile Gemfile.lock .ruby-version ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
@@ -75,21 +62,17 @@ RUN bundle install && \
     find "${BUNDLE_PATH}" -name "*.c" -delete && \
     find "${BUNDLE_PATH}" -name "*.o" -delete
 
-# Install JavaScript dependencies
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
-# Copy application code
 COPY . .
 
-# Precompile bootsnap code for faster boot times if available. If the
-# executable isn't present we fall back gracefully so the build doesn't
-# abort (this can happen in some cross-platform scenarios).
+# Precompile bootsnap for faster boots; skipped if the executable is missing (some cross-platform builds).
 RUN (bundle info bootsnap >/dev/null 2>&1 && \
       bundle exec bootsnap precompile -j 0 app/ lib/) || \
     echo "[Dockerfile] Skipping bootsnap precompile – executable not available"
 
-# Adjust binfiles to be executable on Linux
+# Make binstubs run on Linux: exec bit, CRLF line endings, Windows `ruby.exe` shebangs.
 ENV PATH="/rails/bin:${PATH}"
 RUN chmod +x bin/* && \
     sed -i "s/\r$//g" bin/* && \
@@ -99,35 +82,31 @@ RUN chmod +x bin/* && \
  # DATABASE_URL="mysql2://user:pass@127.0.0.1:3306/dummy" 
 RUN ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 rails assets:precompile
 
-# Clean up build artifacts
 RUN rm -rf \
       node_modules \
       tmp/cache \
       /tmp/* \
       /var/tmp/*
 
-# Final stage for app image
 FROM base
 
-# Copy built artifacts: gems, application
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 ENV PATH="/rails/bin:${PATH}"
 
-# Run and own only the runtime files as a non-root user for security
+# Run as a non-root user that owns only the runtime directories.
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     mkdir -p /rails/tmp /rails/log && \
     chown -R rails:rails db log storage tmp
 USER 1000:1000
 
-# Add health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:80/up || exit 1
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
+# Thruster by default; overridable at runtime.
 EXPOSE 80
 CMD ["thrust", "rails", "server"]

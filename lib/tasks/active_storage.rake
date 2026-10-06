@@ -12,7 +12,7 @@ namespace :active_storage do
 
     puts "Checking image blobs..."
 
-    # Phase 1: Quick check for suspiciously small "images" (likely JSON/text errors)
+    # Suspiciously small "images" are likely JSON/text error bodies
     tiny_blobs = ActiveStorage::Blob
       .where(content_type: image_content_types)
       .where("byte_size < 500")
@@ -24,7 +24,6 @@ namespace :active_storage do
     end
     puts "Total: #{tiny_blobs.count}"
 
-    # Phase 2: Try processing each image blob with vips
     corrupted = []
     ActiveStorage::Blob.where(content_type: image_content_types).find_each do |blob|
       print "."
@@ -55,7 +54,6 @@ namespace :active_storage do
       exit 1
     end
 
-    # Map of model -> Paperclip attachment config
     attachment_config = {
       "Picture" => { attachment: "images", column: "image_file_name" },
       "Event" => { attachment: "images", column: "image_file_name" },
@@ -65,7 +63,7 @@ namespace :active_storage do
       "Attachment" => { attachment: "files", column: "file_file_name" }
     }
 
-    # Find corrupted blobs (small byte_size = likely JSON error responses)
+    # Small blobs are likely JSON error responses
     corrupted_blobs = ActiveStorage::Blob
       .joins("INNER JOIN active_storage_attachments ON active_storage_attachments.blob_id = active_storage_blobs.id")
       .where("active_storage_blobs.byte_size < 500")
@@ -86,7 +84,6 @@ namespace :active_storage do
         next
       end
 
-      # Get original filename from the model's Paperclip column
       record = record_type.constantize.find_by(id: record_id)
       unless record
         puts "SKIP: #{record_type} ##{record_id} not found"
@@ -120,7 +117,6 @@ namespace :active_storage do
         next
       end
 
-      # Re-upload the file
       blob.upload(File.open(paperclip_path))
       blob.update!(byte_size: File.size(paperclip_path))
       puts "RESTORED: Blob #{blob.id} from #{paperclip_path}"

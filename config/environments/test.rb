@@ -22,10 +22,9 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
 
-  # Unset, Rails falls back to a FileStore on tmp/cache -- shared by every
-  # parallel worker and never rolled back between tests, so cache-dependent
-  # tests (rate limits, the daily alert dedupe key) leak into each other.
-  # Not :null_store: ImportCacheTestHelpers genuinely round-trips the cache.
+  # Unset, Rails uses a FileStore on tmp/cache, shared by every parallel worker and never rolled
+  # back, so cache-dependent tests (rate limits, the daily alert dedupe key) leak into each other.
+  # Not :null_store: ImportCacheTestHelpers round-trips the cache.
   config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
@@ -71,11 +70,8 @@ Rails.application.configure do
   # Set job adapter for tests
   config.active_job.queue_adapter = :test
 
-  # ActiveRecord Encryption dummy keys for the test suite. These are
-  # throwaway, test-only key material — safe to commit — so the reimbursements
-  # bank-detail encryption roundtrip has deterministic keys without depending on
-  # ENV or credentials. Production/development source their keys elsewhere
-  # (see config/application.rb).
+  # Throwaway ActiveRecord Encryption keys, safe to commit, so the bank-detail encryption roundtrip
+  # needs no ENV or credentials. Production and development source theirs elsewhere (config/application.rb).
   config.active_record.encryption.primary_key = "test_ar_encryption_primary_key_000000000"
   config.active_record.encryption.deterministic_key = "test_ar_encryption_deterministic_key_0000"
   config.active_record.encryption.key_derivation_salt = "test_ar_encryption_key_derivation_salt_00"

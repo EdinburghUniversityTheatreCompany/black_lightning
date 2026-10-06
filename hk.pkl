@@ -1,4 +1,4 @@
-// dev-env standard (dev-hooks:dev-env-setup) — version tracked via DEV_ENV_VERSION in mise.toml.
+// dev-env standard (dev-hooks:dev-env-setup); version tracked via DEV_ENV_VERSION in mise/config.toml.
 amends "package://github.com/jdx/hk/releases/download/v1.46.0/hk@1.46.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v1.46.0/hk@1.46.0#/Builtins.pkl"
 
@@ -18,19 +18,13 @@ local linters = new Mapping<String, Step> {
         fix = "pnpm exec eslint --fix app/javascript/controllers app/javascript/lib"
     }
     // --- ERB linting (herb) -----------------------------------------------------
-    // HTML-aware ERB toolchain. `analyze` is pure libherb (parse errors, no network);
-    // `lint` runs @herb-tools/linter through npx at an EXPLICIT version (needs `node` — see
-    // mise.toml) and reads `.herb.yml`. `bundle exec herb lint` is NOT pinned: it runs a bare
-    // `npx @herb-tools/linter`, i.e. whatever npm published last, which is how 0.11.0's new
-    // html-no-duplicate-ids findings turned CI red on 2026-09-25. Bump it here and in ci.yml
-    // together. Glob-gated to ERB so a Ruby-only commit skips them.
-    // herb-lint is now GATING (the ERB backlog was cleared to 0 errors/warnings — see the
-    // ratchet-gates work + plans/off-topic-improvements.md). herb-analyze stays ADVISORY (`|| true`)
-    // only because app/views/shared/mail/_header.html.erb and _footer.html.erb are intentional
-    // HTML-email FRAGMENTS (header opens the tag structure, footer closes it) that no per-file
-    // parser can validate; they're excluded from herb-lint via .herb.yml, but `herb analyze` has no
-    // exclude flag. herb-lint's own `parser-no-errors` rule already gates parse errors for every
-    // other template, so nothing is lost.
+    // `analyze` is pure libherb (parse errors, no network); `lint` runs @herb-tools/linter through
+    // npx (needs `node`, see mise/config.toml) and reads `.herb.yml`. The version is pinned here and
+    // in ci.yml, so bump both together: `bundle exec herb lint` runs an unpinned npx, and 0.11.0's
+    // new html-no-duplicate-ids findings turned CI red on 2026-09-25.
+    // herb-analyze is advisory (`|| true`) only because shared/mail/_header and _footer are
+    // intentional HTML-email fragments no per-file parser can validate, and `herb analyze` has no
+    // exclude flag (.herb.yml excludes them from herb-lint, whose `parser-no-errors` rule gates the rest).
     ["herb-analyze"] {
         glob = "**/*.erb"
         check = "bundle exec herb analyze app/ || true"
@@ -43,86 +37,63 @@ local linters = new Mapping<String, Step> {
     // --- Schema annotations (annotaterb, auto-regenerate) -----------------------
     // Custom step: regenerate the `# == Schema Information` blocks on models when a model or
     // the schema is committed. annotaterb reads columns from the DB connection, so probe first
-    // and skip cleanly (exit 0) when no dev/test DB is reachable — a fresh/un-migrated worktree
-    // never blocks a commit (same pattern as database_consistency). `fix`-only (no `check`): it
-    // runs on pre-commit/`fix` but is a no-op under `hk run check`, so it is never a CI gate that
+    // and skip cleanly (exit 0) when no dev/test DB is reachable, so a fresh worktree never blocks
+    // a commit. `fix`-only (no `check`): it runs on pre-commit/`fix`, never as a CI gate that
     // would rewrite files in CI. annotaterb rewrites all models; with pre-commit's stash="git"
     // the staged model(s) get re-staged, and pre-existing drift elsewhere surfaces as unstaged
-    // changes. Keep loop-free — hk's internal `sh` aborts on `while read` inside `$(...)`.
+    // changes. Keep loop-free: hk's internal `sh` aborts on `while read` inside `$(...)`.
     ["annotate-models"] {
         glob = List("db/schema.rb", "app/models/**/*.rb")
         fix = "if rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec annotaterb models; else echo 'annotaterb: no DB reachable, skipping'; fi"
     }
-    // Toolchain + service versions are pinned in several files at once, because different
-    // consumers read different ones: mise.toml for local dev, .ruby-version/.node-version for
-    // CI's setup-* actions, the Dockerfile ARGs for the production image, and the `image:` tags
-    // in a compose/deploy manifest for what production runs versus what CI tests against.
-    // Nothing makes them agree, so a bump that misses one file is silent — the image builds on a
-    // different Ruby than the tests ran on, or the suite goes green against a database server
-    // nobody deploys. The script checks only the files that exist and prints what it skipped;
-    // CI's `versions` job runs the same script, so the two gates can't drift. Extend the glob if
-    // this repo pins a version somewhere else.
+    // Versions are pinned in several files (mise/config.toml for local dev, .ruby-version and
+    // .node-version for CI, Dockerfile ARGs for the image, `image:` tags for the services) and
+    // nothing makes them agree, so a bump that misses one file is silent. The script checks the
+    // files that exist and prints what it skipped; CI's `versions` job runs it too. Extend the
+    // glob if a version is pinned somewhere else.
     ["versions"] {
         glob = List("mise.toml", ".ruby-version", ".node-version", "Dockerfile", "package.json", "config/deploy.yml", ".devcontainer/compose.yaml", ".github/workflows/*.yml")
         check = "bash scripts/check_version_sync.sh"
     }
-    // Repo-local addition on top of the standard's `versions` gate. This Dockerfile derives
-    // the Node major at build time (`setup_$(cut -d. -f1 < .node-version)`), so there is no
-    // static Node pin for the standard's check to compare — the drift it would catch is
-    // designed out instead. That only holds while the Dockerfile keeps deriving it, so this
-    // locks the design in: no hardcoded major, no `ARG NODE_VERSION`. Deliberately not part of
-    // the standard, which verifies that whatever pins exist agree rather than mandating a
-    // Dockerfile style.
+    // The Dockerfile derives the Node major at build time (`setup_$(cut -d. -f1 < .node-version)`),
+    // so the `versions` gate has no static pin to compare. This keeps it that way: no hardcoded
+    // major, no `ARG NODE_VERSION`.
     ["dockerfile-node-style"] {
         glob = List("Dockerfile", ".node-version")
         check = "fail=0; grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo 'prod Dockerfile must derive the Node major from .node-version, not hardcode it'; fail=1; }; ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo 'remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version'; fail=1; }; exit $fail"
     }
-    // Shipped scripts (bin/*, script/*) must carry the executable bit IN THE GIT INDEX
-    // (mode 100755): with core.fileMode=false a local chmod +x never reaches git, so
-    // clones get binstubs that die with exit 126 "Permission denied". Detects scripts
-    // by shebang (line 1 only) among 100644-mode index entries. Single awk on purpose:
-    // hk's internal `sh` chokes on a while/read loop inside $() (kills the script at
-    // the assignment even when the substitution exits 0), so keep every intermediate
-    // command zero-exit. CI's lint job enforces the same rule (see ci.yml), so the
-    // gates can't drift.
+    // A shebang script must be mode 100755 in the git index: with core.fileMode=false a local
+    // chmod +x never reaches git, and clones get binstubs that die with exit 126. One awk on
+    // purpose: hk's internal `sh` dies on a while/read loop inside $(), even when it exits 0.
     ["exec-bit-scripts"] {
         check = "bad=$(git ls-files -s | awk -F'\\t' '$1 ~ /^100644/ { if ((getline line < $2) > 0 && line ~ /^#!/) print $2; close($2) }'); if [ -n \"$bad\" ]; then echo 'Shebang scripts missing the executable bit in the git index. Fix: git update-index --chmod=+x <file>'; echo \"$bad\"; exit 1; fi"
     }
     // --- Audits (dead-code + duplication) ---------------------------------------
-    // Run on pre-commit too (not just `check`/CI). Duplication uses two complementary tools:
-    // flay (Ruby AST/structural, advisory — exits 0, surfaces renamed clones) and jscpd
-    // (token-based, polyglot — the enforcing gate that also covers JS/CSS/SCSS/ERB). debride
-    // (dead methods) + flay are local `bundle exec` (fast, no network); jscpd runs via npx
-    // (needs `node`, see mise.toml) and reads `.jscpd.json`. Each carries a glob, so a docs-only
-    // commit skips them.
+    // flay (Ruby structural, advisory, finds renamed clones) and jscpd (token-based, polyglot, the
+    // enforcing gate) complement each other; debride finds dead methods. jscpd runs via npx (needs
+    // `node`, see mise/config.toml) and reads `.jscpd.json`.
     ["debride"] {
         glob = "**/*.rb"
-        // Exclude vendor (CI's bundler-cache lands gems in vendor/bundle) + other non-source dirs,
-        // else debride reports every gem's source as dead code. Mirrors the CI audit job.
+        // Exclude vendor (CI's bundler-cache lands gems in vendor/bundle), or debride reports every
+        // gem as dead code.
         check = "bundle exec debride --exclude vendor,node_modules,tmp,log ."
     }
     ["flay"] {
         glob = "**/*.rb"
         check = "bundle exec flay ."
     }
-    // `-f` scopes to code formats (no config equivalent) so docs/configs aren't flagged;
-    // `.jscpd.json` `ignore` globs exclude vendored/generated paths (vendor/, db/schema.rb etc.).
-    // The version-cooldown policy (latest on a 4-day cooldown, floored at v5) and the offline
-    // fallback live in scripts/run-jscpd.sh, shared with the CI audit job so the gates can't drift.
+    // `-f` scopes to code formats (no config equivalent) so docs/configs aren't flagged. The
+    // version-cooldown policy and offline fallback live in scripts/run-jscpd.sh, shared with CI.
     ["jscpd"] {
         glob = List("**/*.rb", "**/*.erb", "**/*.js", "**/*.css", "**/*.scss")
         check = "bash scripts/run-jscpd.sh ruby,erb,javascript,typescript,css,scss,sass,vue"
     }
     // --- Security + correctness -------------------------------------------------
-    // brakeman = Rails SAST (offline, gates). bundler-audit = gem CVE scan: best-effort
-    // `update` refreshes the advisory DB when online (swallowed offline), then `check` gates
-    // against the bundled-or-updated DB. importmap-audit scans pinned JS (importmap apps only,
-    // guarded — this Vite app has no bin/importmap, so it skips). fasterer = perf advisory
-    // (exits non-zero on offenses → `|| true`). database_consistency compares model
-    // validations/associations to the DB schema; it needs a reachable dev/test DB, so a cheap
-    // `rails runner` connection probe gates when one is up and skips (exit 0) otherwise —
-    // a fresh/un-migrated worktree won't block commits. Keep every command loop-free: hk's
-    // internal `sh` aborts on `while read` inside `$(...)`.
+    // bundler-audit: `update` refreshes the advisory DB when online (swallowed offline), then
+    // `check` gates. importmap-audit skips here (this Vite app has no bin/importmap). fasterer is
+    // advisory (exits non-zero on offenses, hence `|| true`). database_consistency needs a
+    // reachable DB, so a `rails runner` probe skips it (exit 0) when none is up. Keep every
+    // command loop-free: hk's internal `sh` aborts on `while read` inside `$(...)`.
     ["brakeman"] {
         glob = "**/*.rb"
         check = "bundle exec brakeman -q --no-pager --exit-on-warn"
@@ -139,32 +110,26 @@ local linters = new Mapping<String, Step> {
         glob = "**/*.rb"
         check = "bundle exec fasterer || true"
     }
-    // BASELINE (dev-env setup, 2026-06): ADVISORY (`|| true`) — ~380 pre-existing findings, mostly
-    // the documented legacy integer-PK schema (PrimaryKeyType, missing FKs, length constraints; see
-    // CLAUDE.md › Database). Reports without blocking; drop the `|| true` to re-gate once addressed.
+    // ADVISORY (|| true): ~330 schema findings (NOT NULL, length, unique-index, FK) that need
+    // data-aware migrations on the legacy DB; drop `|| true` to gate.
     ["database_consistency"] {
         glob = List("db/schema.rb", "db/structure.sql", "app/models/**/*.rb")
         check = "if bin/rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec database_consistency || true; else echo 'database_consistency: no DB reachable, skipping'; fi"
     }
-    // GitHub Actions correctness (schema/typo/expression errors). hk builtin, glob-gated to
-    // workflow files. -shellcheck= turns off actionlint's shellcheck-of-run: pass — the standard's
-    // run: blocks deliberately word-split ($files), and real *.sh files are covered elsewhere.
+    // -shellcheck= is deliberate: run: blocks word-split on purpose ($files), and real *.sh files
+    // are covered elsewhere.
     ["actionlint"] = (Builtins.actionlint) {
         check = "actionlint -shellcheck= {{ files }}"
     }
-    // GitHub Actions security (credential persistence, template injection, token scope). hk builtin.
+    // Workflow security: credential persistence, template injection, token scope.
     ["zizmor"] = Builtins.zizmor
-    // Secret scanning. hk builtin.
     ["gitleaks"] = Builtins.gitleaks
-    // Block accidentally-committed large files. hk builtin.
     ["check-added-large-files"] = Builtins.check_added_large_files
 }
 
-// `check` (what `hk run check` + CI run) = the linters PLUS the full test suite. The test step is
-// deliberately KEPT OUT of `linters` so it does NOT run on pre-commit: this repo's suite is ~1700
-// runs / several minutes, far too slow to gate every commit. CI's dedicated `test` job (ci.yml)
-// runs `bin/rails test test:system` anyway, so coverage isn't lost. Run it locally with
-// `hk run check` (or `bin/rails test`). See plans/off-topic-improvements.md.
+// `check` is the linters plus the full test suite. The test step stays out of `linters` so
+// pre-commit skips it: the suite takes several minutes, and CI's `test` job runs it anyway.
+// Run it locally with `hk run check` or `bin/rails test`.
 local checkSteps: Mapping<String, Step> = (linters) {
     ["test"] {
         glob = "**/*.rb"
@@ -173,7 +138,6 @@ local checkSteps: Mapping<String, Step> = (linters) {
 }
 
 hooks {
-    // pre-commit: linters + audits only (fast). NO full test suite — see note above.
     ["pre-commit"] {
         fix = true
         stash = "git"

@@ -6,8 +6,8 @@ services:
     volumes:
       - ..:/workspaces/BlackLightning:cached
       - bundle-cache:/bundle
-      # Persist the mise toolchain (Ruby/Node/hk/...) across rebuilds so the one-time
-      # Ruby compile in `mise install` is not repeated. Path matches MISE_DATA_DIR.
+      # Persist the mise toolchain across rebuilds so mise install does not re-download it.
+      # Path matches MISE_DATA_DIR.
       - mise-data:/home/vscode/.local/share/mise
     command: sleep infinity
     environment:
@@ -18,14 +18,13 @@ services:
     depends_on:
       - mysql
     ports:
-      # Host publish tracks $PORT so parallel per-worktree devcontainers don't clash on one host
-      # port (worktree-setup's isolate writes PORT into .devcontainer/.env). Falls back to 3000.
+      # Tracks $PORT (worktree-setup's isolate writes it to .devcontainer/.env) so parallel
+      # per-worktree devcontainers don't clash on one host port. Falls back to 3000.
       - "${PORT:-3000}:${PORT:-3000}"
 
   mysql:
-    # Pinned, not `mysql:8` -- a floating major silently tracked 8.0 -> 8.4 and
-    # left dev testing a different server than production. CI's `versions` job
-    # now enforces that this matches ci.yml and config/deploy.yml.
+    # Pinned, not `mysql:8`: a floating major drifted from 8.0 to 8.4 and left dev on a different
+    # server than production. CI's `versions` job checks it matches ci.yml and config/deploy.yml.
     image: mysql:8.4
     restart: unless-stopped
     environment:
@@ -33,9 +32,8 @@ services:
       MYSQL_ROOT_HOST: "%"
     volumes:
       - mysql-data:/var/lib/mysql
-    # No host port published: the app reaches MySQL over the compose network (DB_HOST: mysql), and
-    # not publishing keeps parallel per-worktree devcontainers from clashing on the DB host port.
-    # For a host-side DB GUI, forward on demand: `docker compose port mysql 3306`.
+    # No host port: the app reaches MySQL over the compose network, and publishing one would clash
+    # between parallel worktree devcontainers. For a host-side GUI: `docker compose port mysql 3306`.
 
 volumes:
   mysql-data:

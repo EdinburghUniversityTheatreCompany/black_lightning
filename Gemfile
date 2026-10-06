@@ -20,12 +20,9 @@ gem "recaptcha"
 gem "rolify"
 gem "simple_form"
 
-# Held at 2.x: json 3 made JSON.parse's options keyword-only, and Rails 8.1's
-# ActiveSupport::JSON.decode still passes them positionally
-# (`::JSON.parse(json, options)`), so every serialized/JSON column raises
-# "wrong number of arguments (given 2, expected 1)" — 866 errors across the
-# suite. Drop the constraint once Rails ships a release that calls it with
-# keywords. See plans/deferred-upgrades.md.
+# Held at 2.x: json 3 made JSON.parse's options keyword-only, but Rails 8.1's
+# ActiveSupport::JSON.decode passes them positionally, so every serialized/JSON column raises
+# "wrong number of arguments". Drop once Rails calls it with keywords (plans/deferred-upgrades.md).
 gem "json", "< 3"
 gem "kaminari"
 gem "commonmarker"
@@ -36,11 +33,9 @@ gem "solid_queue"
 gem "solid_cache"
 gem "mission_control-jobs"
 
-# Spreadsheet libraries — each pulls a sizeable Nokogiri-based class tree but is
-# only touched by occasional admin/finance actions (report downloads, the BACS
-# build, membership imports). require:false keeps them out of every process's
-# boot heap; each is `require`d at its call site (see bacs_xlsx.rb, workbook.rb,
-# lib/reports/*, import_parsing.rb).
+# Spreadsheet libraries: large Nokogiri-based class trees used only by occasional admin/finance
+# actions. require: false keeps them out of every process's boot heap; each is required at its
+# call site.
 gem "caxlsx", require: false
 gem "roo", require: false  # For reading xlsx files (membership imports)
 gem "rubyXL", require: false # Fill the EUSA BACS xlsx template in place, preserving styling (reimbursements Build Batch)
@@ -79,10 +74,9 @@ gem "bootsnap", require: false
 gem "vite_rails"
 gem "view_component"
 
-# Must NOT go in :test. They attach an unmarshalable Binding to exceptions, so
-# under `parallelize` every failure becomes a worker crash instead of a
-# readable failure -- and BetterErrors::Middleware joins the test middleware
-# stack, swallowing app-server errors the system tests are meant to catch.
+# Must NOT go in :test: they attach an unmarshalable Binding to exceptions, so under `parallelize`
+# every failure becomes a worker crash, and BetterErrors::Middleware swallows the app-server
+# errors the system tests should catch.
 group :development do
   gem "better_errors"
   gem "binding_of_caller"
@@ -99,7 +93,6 @@ group :development, :test do
   gem "rubocop-minitest", require: false
   gem "rubocop-mick", github: "mickzijdel/rubocop-mick", require: false
 
-  # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
 
   # dev-env standard audits (dev-hooks:dev-env-setup) — run via hk + CI.
@@ -142,19 +135,17 @@ group :test do
 end
 
 
-# Deploy with Kamal. Kamal is a local/CI deploy CLI — it never runs inside the
-# app process, so keeping it (and its net-ssh key deps bcrypt_pbkdf/ed25519) in
-# :development keeps sshkit/net-ssh/thor out of every Puma + job process's heap.
+# Kamal is a deploy CLI that never runs in the app process; keeping it and its net-ssh key deps
+# in :development keeps sshkit/net-ssh/thor out of every Puma and job process.
 gem "kamal", "~> 2.0", require: false, group: :development
 gem "bcrypt_pbkdf", require: false, group: :development
 gem "ed25519", require: false, group: :development
 
-# thruster is a runtime HTTP/2 proxy in front of Puma — it stays in the image.
+# Runtime HTTP/2 proxy in front of Puma; stays in the image.
 gem "thruster"
 
-# Guards against unsafe migrations (NOT NULL adds, column removes, in-transaction backfills).
-# Runtime gem (ungrouped, not require:false): its initializer references the StrongMigrations
-# constant in every environment, so a :development-only gem would crash the test/production boot.
+# Ungrouped and not require: false: its initializer references StrongMigrations in every
+# environment, so a :development-only gem would crash the test/production boot.
 gem "strong_migrations"
 
 gem "bundler-audit", "~> 0.9.3", group: :development

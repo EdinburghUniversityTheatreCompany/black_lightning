@@ -82,16 +82,12 @@ stats.html
 # Git worktrees for isolated feature work
 .worktrees/
 
-# Per-worktree mise overlay written by .worktree-isolate.conf's provisioning
-# script: it holds THIS checkout's dev-server port, Vite port and database-name
-# suffix. Committing it would hand one worktree's ports and database to every
-# other checkout.
+# Per-worktree mise overlay (dev-server port, Vite port, database suffix) written by
+# .worktree-isolate.conf. Committing it would hand one worktree's ports to every checkout.
 mise.local.toml
 
-# database_consistency writes its report to a timestamped file in the repo root
-# when run without --config-only style flags. Those reports carry absolute paths
-# from whoever ran it and are pure noise in a diff, so never commit one.
+# database_consistency writes timestamped reports to the repo root, carrying the runner's absolute paths.
 /database_consistency_*.txt
 
-# Local pretix API token (spike) — never commit
+# Local pretix API token, never commit
 PRETIX_API_TOKEN

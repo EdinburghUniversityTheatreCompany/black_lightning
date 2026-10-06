@@ -1,18 +1,13 @@
-# dev-env standard (dev-hooks:dev-env-setup) — gitleaks allowlist.
+# dev-env standard (dev-hooks:dev-env-setup): gitleaks allowlist.
 #
-# The hk `gitleaks` step (and any local `gitleaks dir`) scans the WHOLE working tree —
-# gitleaks `dir` has no respect-gitignore flag, so it walks gitignored files too.
-# Without this allowlist, any repo with a local `.env`, `log/`, `tmp/`, or a Rails
-# `config/credentials/*.key` produces findings on every commit and `hk run check` is permanently
-# red, even though none of those files are tracked or in history.
+# `gitleaks dir` has no respect-gitignore flag and scans gitignored files too, so without this a
+# local `.env`, `log/`, `tmp/` or `config/credentials/*.key` turns `hk run check` red on every commit.
 #
-# gitleaks auto-loads `.gitleaks.toml` from the scan root, so the hk builtin and CI's
-# `gitleaks git` job pick this up with no `--config` flag. `useDefault = true` keeps the full
-# default ruleset; the allowlist is
-# PATH-SCOPED to gitignored runtime/secret locations only — app/config SOURCE stays fully scanned,
-# so a real secret hardcoded in code is still caught. (Force-adding a secret into one of these
-# paths with `git add -f` would evade the scan; moving it into the
-# encrypted production credentials is the way to get it out of the repo entirely.)
+# gitleaks loads `.gitleaks.toml` from the scan root, so the hk builtin and CI's `gitleaks git` job
+# need no `--config`. `useDefault = true` keeps the full default ruleset; the allowlist is
+# path-scoped to gitignored runtime/secret locations, so app/config source is still scanned. A secret
+# force-added into one of these paths would evade the scan: move it into the encrypted production
+# credentials instead.
 [extend]
 useDefault = true
 

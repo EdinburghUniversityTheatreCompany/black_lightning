@@ -1,6 +1,4 @@
-# Pages to capture with bin/screenshots
-# Run `bin/screenshots` to capture all pages in parallel.
-# You can also pass paths directly: `bin/screenshots / /shows /news`
+# Pages bin/screenshots captures by default; paths given on the command line override this list.
 pages:
   # Core public pages
   - /

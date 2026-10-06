@@ -45,11 +45,9 @@ env:
     SOLID_QUEUE_IN_PUMA: true
     RACK_TIMEOUT_SERVICE_TIMEOUT: 30
     RACK_TIMEOUT_SERVICE_PAST_WAIT: true
-    # Honeybadger's ActiveJob plugin notifies from an around-perform callback that
-    # sits INSIDE ActiveJob's own rescue, so it reports before retry_on ever sees
-    # the error -- at the default threshold of 0, every transient blip pages even
-    # though ApplicationJob has four retries left. 2 stays quiet on the first
-    # attempt and reports from the second, with three retries still in hand.
+    # Honeybadger's ActiveJob plugin reports from inside ActiveJob's own rescue, before retry_on
+    # sees the error, so at the default threshold of 0 every transient blip pages despite
+    # ApplicationJob's four retries. 2 stays quiet on the first attempt.
     HONEYBADGER_ACTIVE_JOB_ATTEMPT_THRESHOLD: 2
   secret:
     - RAILS_MASTER_KEY
@@ -97,16 +95,16 @@ accessories:
   mysql:
     image: mysql:8.4
     host: bdlm-eusa-ed-ac-uk
-    # The host has 1.7GB of RAM shared with Puma (running Solid Queue in-process)
-    # and kamal-proxy, and has OOM-killed dockerd at MySQL's defaults.
+    # The host has 1.7GB of RAM shared with Puma (Solid Queue in-process) and kamal-proxy, and
+    # MySQL's defaults OOM-killed dockerd.
     #
-    # performance_schema off: instrumentation we never read, since query timings
-    # come from Skylight. Costs the sys views and lock forensics; the slow query
-    # log covers the rest. Drop the flag and reboot to get it back.
+    # performance_schema is off: nothing reads it (query timings come from Skylight). It costs the
+    # sys views and lock forensics; the slow query log covers the rest. Drop the flag and reboot to
+    # restore it.
     #
-    # Buffer pool stays at the 128M default -- MySQL rounds it UP to a multiple of
-    # innodb_buffer_pool_chunk_size (128M), so any value from 129M to 256M
-    # silently becomes 256M and costs more than performance_schema saves.
+    # The buffer pool stays at the 128M default: MySQL rounds it up to a multiple of
+    # innodb_buffer_pool_chunk_size (128M), so 129M to 256M silently becomes 256M and costs more
+    # than performance_schema saves.
     cmd: >-
       --performance-schema=OFF
       --innodb-buffer-pool-size=128M
@@ -119,9 +117,8 @@ accessories:
       secret:
         - MYSQL_ROOT_PASSWORD
     directories:
-      # Absolute on purpose: a relative source is expanded against the SSH
-      # session's working directory, which once landed the production database
-      # inside a Capistrano release directory.
+      # Absolute on purpose: a relative source is expanded against the SSH session's working
+      # directory, which once landed the production database in a Capistrano release directory.
       - /var/lib/blacklightning/mysql:/var/lib/mysql
 #   redis:
 #     image: valkey/valkey:8

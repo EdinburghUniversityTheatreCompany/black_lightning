@@ -5,14 +5,12 @@ set -e
 echo "=== Fixing cache permissions ==="
 sudo chown -R "$(whoami)" /bundle "$MISE_DATA_DIR"
 
-# mise (mise.toml + mise.lock) owns the toolchain. Trust the bind-mounted config,
-# then install the pinned Ruby, Node, and dev tools. Ruby is a precompiled portable
-# build (mise `compile = false`, jdx/ruby), so the first run downloads it in seconds
-# rather than compiling from source; it is cached on the mise-data volume regardless.
+# mise (mise/config.toml + mise/mise.lock) owns the toolchain. Trust the bind-mounted config,
+# then install the pinned Ruby, Node and dev tools. Ruby is a precompiled build (`compile = false`).
 echo "=== Installing toolchain via mise (Ruby, Node, hk, ...) ==="
 mise trust --yes
-# `mise install` also runs the corepack-enable postinstall hook (see mise.toml), which makes
-# the pnpm version pinned in package.json's `packageManager` field available via corepack.
+# `mise install` also runs the corepack-enable postinstall hook (mise/config.toml), which makes the
+# pnpm pinned in package.json's `packageManager` available.
 mise install
 
 echo "=== Installing git hooks (hk) ==="

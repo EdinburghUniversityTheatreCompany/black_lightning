@@ -59,27 +59,21 @@ jobs:
         run: chmod +x bin/*
 
       - name: Lint Ruby code for consistent style
-        # rubocop loads the rubocop-rails/-view_component/-minitest plugins via .rubocop.yml.
         run: bin/rubocop -f github
 
-      # herb-lint GATES (ERB backlog cleared to 0 — see plans/off-topic-improvements.md).
-      # herb-analyze stays advisory only because the two HTML-email fragment partials
-      # (shared/mail/_header|_footer) can't be parsed standalone and `herb analyze` has no exclude
-      # flag; herb-lint's parser-no-errors rule covers parse errors for every other template.
+      # herb-analyze is advisory only because the two HTML-email fragment partials
+      # (shared/mail/_header|_footer) can't be parsed standalone; herb-lint gates the rest.
       - name: Analyze ERB templates for parse errors (herb, advisory — email fragments only)
         run: bundle exec herb analyze app/ || true
 
       - name: Lint ERB templates (herb)
-        # Pinned to the version hk.pkl runs; bump the two together. `bundle exec herb lint` runs
-        # an UNPINNED npx, so a new linter release can fail a commit that touched no ERB. The
-        # runner ships Node. --github emits Actions annotations.
+        # Pinned to the version hk.pkl runs; bump both together. `bundle exec herb lint` runs an
+        # unpinned npx, so a new release can fail a commit that touched no ERB.
         run: npx --yes @herb-tools/linter@0.10.4 app/ --github
 
       - name: Executable bits on shipped scripts
-        # Any tracked file whose first line is a shebang must be mode 100755 in the index — with
-        # core.fileMode=false a local chmod never reaches git, and a 100644 script dies with exit
-        # 126 on every fresh clone. Checks the INDEX, so the `chmod +x bin/*` step doesn't mask it.
-        # Mirrors the hk `exec-bit-scripts` step so CI and pre-commit agree.
+        # A tracked shebang file must be mode 100755 in the index: with core.fileMode=false a local
+        # chmod never reaches git, and a 100644 script dies with exit 126 on every fresh clone.
         run: |
           bad=$(git ls-files -s | awk -F'\t' '$1 ~ /^100644/ { if ((getline line < $2) > 0 && line ~ /^#!/) print $2; close($2) }')
           if [ -n "$bad" ]; then
@@ -101,8 +95,7 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        # No version pin here: pnpm/action-setup reads it from package.json's `packageManager`
-        # field, keeping CI on the same pnpm as the dev container and host (both via corepack).
+        # No version: pnpm/action-setup reads package.json's `packageManager`, as corepack does.
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -116,12 +109,9 @@ jobs:
       - name: Lint JavaScript code for consistent style
         run: pnpm lint
 
-  # Toolchain + service versions are pinned in several files at once (mise.toml, the
-  # .<lang>-version files, the Dockerfile ARGs, and the config/deploy.yml + devcontainer
-  # `image:` tags) because different consumers read different ones, and nothing makes them
-  # agree — the bug that let the prod image ship Node 22 while everything else ran 24.
-  # Mirrors the hk `versions` + `dockerfile-node-style` steps so the gates can't drift.
-  # Reads files only, so it needs no toolchain: the cheapest job in this workflow.
+  # Versions are pinned in several files (mise/config.toml, the .<lang>-version files, Dockerfile
+  # ARGs, deploy.yml and devcontainer `image:` tags) and nothing else makes them agree; that let
+  # the prod image ship Node 22 while everything else ran 24. Reads files only, so needs no toolchain.
   versions:
     runs-on: ubuntu-latest
     permissions:
@@ -137,9 +127,8 @@ jobs:
         run: bash scripts/check_version_sync.sh
 
       - name: Prod Dockerfile still derives the Node major from .node-version
-        # Repo-local, on top of the shared gate: this Dockerfile has no static Node pin
-        # because it derives the major at build time, so the standard's check has nothing
-        # to compare. Keep it that way.
+        # The Dockerfile derives the Node major at build time, so the version gate has no static
+        # pin to compare. Keep it that way.
         run: |
           fail=0
           grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo "::error::prod Dockerfile must derive the Node major from .node-version, not hardcode it"; fail=1; }
@@ -159,9 +148,7 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
         ports:
           - 3306:3306
-        # Same 30s of patience at finer granularity, since Docker waits a full
-        # interval before the FIRST probe. Measured no net effect -- container
-        # init is dominated by the image pull, not the probe.
+        # 30s of patience at a finer interval: Docker waits a full interval before the first probe.
         options: --health-cmd="mysqladmin ping" --health-interval=3s
           --health-timeout=5s --health-retries=10
       # redis:
@@ -171,14 +158,10 @@ jobs:
       #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      # Keep in step with the production Dockerfile and .devcontainer/Dockerfile.dev.
-      # libheif-plugin-libde265 is NOT implied here the way it is on Debian: Ubuntu's
-      # libvips pulls in libheif but no codec plugin, so a HEIC fails to decode with
-      # "Unsupported codec" and the reimbursements HEIC-to-JPEG receipt tests fail on
-      # CI only. Verified on both ubuntu 24.04 and 26.04.
-      # Only what the runner image does NOT already ship. Chrome + ChromeDriver,
-      # git and pkg-config are preinstalled on ubuntu-24.04, and libpq-dev was
-      # vestigial -- this app is MySQL-only, there is no pg gem.
+      # Keep in step with the production Dockerfile and .devcontainer/Dockerfile.dev. Name
+      # libheif-plugin-libde265: Ubuntu's libvips pulls in libheif but no codec plugin, so HEIC
+      # receipts fail to decode ("Unsupported codec") on CI only. Chrome, ChromeDriver, git and
+      # pkg-config are preinstalled on the runner.
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
           build-essential libvips-dev poppler-utils libheif-plugin-libde265
@@ -196,8 +179,7 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        # No version pin here: pnpm/action-setup reads it from package.json's `packageManager`
-        # field, keeping CI on the same pnpm as the dev container and host (both via corepack).
+        # No version: pnpm/action-setup reads package.json's `packageManager`, as corepack does.
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -225,9 +207,8 @@ jobs:
         run: bin/rails db:test:prepare test test:system
 
       - name: Model/DB consistency (database_consistency, advisory)
-        # BASELINE (dev-env setup): ADVISORY (`|| true`) — ~380 pre-existing findings, mostly the
-        # documented legacy integer-PK schema (see CLAUDE.md › Database). Reports without failing
-        # CI; drop the `|| true` to re-gate once addressed (see plans/off-topic-improvements.md).
+        # ADVISORY (|| true): ~330 schema findings (NOT NULL, length, unique-index, FK) that need
+        # data-aware migrations on the legacy DB; drop `|| true` to gate (plans/off-topic-improvements.md).
         env:
           RAILS_ENV: test
           DB_USERNAME: root
@@ -242,9 +223,8 @@ jobs:
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
 
-  # Run the MIT-licensed gitleaks CLI (via mise, version-pinned in mise.lock) rather than
-  # gitleaks/gitleaks-action: the action requires a paid GITLEAKS_LICENSE on org-owned repos,
-  # while the CLI is free for all repos and is exactly what the local hk pre-commit hook runs.
+  # The MIT gitleaks CLI via mise (pinned in mise/mise.development.lock), not gitleaks-action,
+  # which needs a paid GITLEAKS_LICENSE on org-owned repos. It is what the hk pre-commit hook runs.
   gitleaks:
     runs-on: ubuntu-latest
     permissions:
@@ -265,9 +245,8 @@ jobs:
       - name: Scan git history for secrets
         run: mise exec -- gitleaks git --redact --no-banner .
 
-  # GitHub Actions static analysis: actionlint (correctness — schema/expressions) +
-  # zizmor (security — credential persistence, template injection, token scope). Mirrors the hk
-  # actionlint/zizmor steps. Both tools are mise-pinned (mise.lock).
+  # actionlint (correctness) + zizmor (security: credential persistence, template injection, token
+  # scope), both pinned in mise/mise.development.lock.
   actions-lint:
     runs-on: ubuntu-latest
     permissions:
@@ -285,14 +264,14 @@ jobs:
           install_args: "actionlint"
 
       - name: Lint workflows (actionlint)
-        # -shellcheck= disables actionlint's shellcheck-of-run: pass (run: blocks word-split
-        # deliberately; real *.sh files are covered by other checks).
+        # -shellcheck= is deliberate: run: blocks word-split on purpose, and real *.sh files are
+        # covered elsewhere.
         run: actionlint -shellcheck=
 
       - name: Scan workflows with zizmor
         run: zizmor --no-progress .github/workflows/
 
-  # Noisier audits — mirror the hk `check` hook (debride, flay, fasterer, jscpd, large files).
+  # Noisier audits: debride, flay, fasterer, jscpd, large files.
   audit:
     runs-on: ubuntu-latest
     permissions:
@@ -317,8 +296,8 @@ jobs:
           node-version-file: .node-version
 
       - name: Dead code (debride)
-        # bundler-cache installs gems into vendor/bundle inside the repo, so exclude it (plus other
-        # non-source dirs) or debride scans every gem's source as "dead code". Mirrors the hk step.
+        # bundler-cache installs gems into vendor/bundle inside the repo; exclude it or debride
+        # scans every gem as dead code.
         run: bundle exec debride --exclude vendor,node_modules,tmp,log .
 
       - name: Duplication (flay — Ruby structural, advisory)
@@ -328,9 +307,8 @@ jobs:
         run: bundle exec fasterer || true
 
       - name: Duplication (jscpd — polyglot gate)
-        # Runner + version policy (latest on a 4-day cooldown, floored at v5) are shared with the
-        # hk pre-commit gate via scripts/run-jscpd.sh; --require keeps CI strict (unrunnable jscpd
-        # fails the job). .jscpd.json carries minTokens/threshold/reporters/gitignore/ignore globs.
+        # Shared with the hk gate via scripts/run-jscpd.sh (latest on a 4-day cooldown, floored at
+        # v5); --require makes an unrunnable jscpd fail the job.
         run: bash scripts/run-jscpd.sh --require ruby,erb,javascript,typescript,css,scss,sass,vue
 
       - name: Large files

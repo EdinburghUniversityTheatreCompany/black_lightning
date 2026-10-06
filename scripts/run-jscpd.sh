@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
-# Shared jscpd runner — the single home of the version-cooldown policy, called by both
-# the hk pre-commit/`check` gate and the CI audit job so the two can't drift.
-# Part of the dev-env standard (dev-hooks:dev-env-setup, v14); don't edit the logic by
-# hand — the next policy change should be a plain re-copy of the template (a repo's own
-# formatter may re-indent this file to local style; that's fine).
+# Shared jscpd runner: the single home of the version-cooldown policy, called by the hk gate and
+# CI's audit job. Part of the dev-env standard (dev-hooks:dev-env-setup, v14); don't hand-edit the
+# logic, the next policy change should be a plain re-copy of the template (a repo's own formatter
+# may re-indent it).
 #
 # Usage: run-jscpd.sh [--require] <formats>
 #   <formats>   comma-separated jscpd format list for -f (e.g. "python,bash")
 #   --require   fail when jscpd can't run at all (CI passes this; pre-commit omits it so
 #               a commit is never blocked by an unreachable registry)
 #
-# Version policy: track latest with a 4-day cooldown (never run a release < 4 days old —
-# supply-chain seasoning), floored at v5 (the major .jscpd.json targets) so it can't
-# regress to v4 while v5 is still maturing. Online → resolve the newest version >= 4 days
-# old (`npx --before`), fall back to `latest` when that lands below the v5 floor, then run
-# it (the real gate — exit reflects duplication). Offline → run the cached jscpd. No cache
-# + offline → warn and pass (or fail under --require).
+# Version policy: track latest with a 4-day cooldown (never run a release under 4 days old, for
+# supply-chain seasoning), floored at v5 (the major .jscpd.json targets) so it can't regress to v4.
+# Online: resolve the newest version at least 4 days old (`npx --before`), fall back to `latest`
+# when that lands below the v5 floor, then run it (the real gate). Offline: run the cached jscpd.
+# No cache and offline: warn and pass (or fail under --require).
 set -u
 
 require=0

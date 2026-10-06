@@ -33,10 +33,9 @@ ChaosRails::Application.routes.draw do
     end
   end
 
-  # The box office display screen (Anthias). Public and unauthenticated: it
-  # shows only what is already public on the site. Anthias plays a fixed
-  # playlist of these URLs forever, so each one falls back through a chain of
-  # panels and can never render blank.
+  # The box office display screen (Anthias): public and unauthenticated, showing only what is
+  # already public. Anthias replays a fixed playlist of these URLs, so each falls back through a
+  # chain of panels and never renders blank.
   namespace :display do
     root to: "setup#show"
 
@@ -82,26 +81,21 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get "", to: "dashboard#index"
 
-    # Crypt climate monitor: temperature/humidity/dew point charts from the Govee
-    # sensors, against outdoor conditions. Gated by the :climate grid permission.
+    # Crypt climate monitor (Govee sensors against outdoor conditions), gated by the :climate permission.
     namespace :climate do
       root to: "dashboard#show", as: :dashboard
       resources :sensors, only: %i[index new create edit update destroy]
       resource :import, only: %i[new create], controller: "imports"
     end
 
-    # Producer-facing reimbursements portal (backed by the reimbursements_* MySQL tables).
+    # Producer-facing reimbursements portal.
     namespace :reimbursements do
-      # The portal's front door, answering each audience with its own landing:
-      # a finance user gets the dashboard, anybody else is redirected to their
-      # own claims — which is what this URL did for EVERYBODY, and why the
-      # business manager was greeted with "Submit your expenses here".
+      # The front door: a finance user gets the dashboard, anybody else is redirected to their claims.
       root to: "home#show"
       resources :expenses, only: %i[index new create edit update destroy show] do
         resources :receipts, only: %i[create destroy] do
-          # The receipt bytes themselves, served by the app rather than over
-          # ActiveStorage's own routes, so the permission that gates a claim
-          # gates its receipt. See ReceiptFilesController.
+          # Served by the app, not ActiveStorage's routes, so a claim's permission gates its
+          # receipt (ReceiptFilesController).
           member do
             get :inline, to: "receipt_files#inline", as: :inline
             get :download, to: "receipt_files#download", as: :download
@@ -112,27 +106,22 @@ ChaosRails::Application.routes.draw do
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index new create update]
 
-      # Budget-owner review (Phase E): budgets the signed-in owner is
-      # responsible for, with a blocking endorse action on pending expenses
-      # charged to them. Base access permission, not finance.
+      # Budget-owner review: the owner's budgets, with a blocking endorse action on pending
+      # expenses charged to them. Base access permission, not finance.
       get    "my_budgets", to: "my_budgets#index", as: :my_budgets
       post   "my_budgets/:expense_id/endorse", to: "my_budgets#endorse", as: :endorse_my_budget
       delete "my_budgets/:expense_id/withdraw", to: "my_budgets#withdraw", as: :withdraw_my_budget
       patch  "my_budgets/:expense_id/reject", to: "my_budgets#reject", as: :reject_my_budget
 
-      # Areas: the parent grouping a show/project's budget lines hang off, with
-      # its budgets edited inline here as nested fields (see Area's
-      # accepts_nested_attributes_for :budgets).
+      # Areas group a show's budget lines, edited inline as nested fields.
       resources :areas, only: %i[index new create edit update]
 
-      # The area PAGE is the one reimbursements screen finance and a budget
-      # OWNER share, so it cannot sit behind AreasController's finance gate —
-      # AreasController#show skips it and applies the union instead. Declared
-      # separately from the block above so that difference is visible here.
+      # The area page is shared by finance and a budget owner, so it can't sit behind
+      # AreasController's finance gate: #show skips it and applies the union. Declared separately
+      # so that difference is visible.
       resources :areas, only: %i[show]
 
-      # Finance-team budget management: financials overview + edit + a forecast
-      # (projected-spend) log appended per budget.
+      # Finance budget management: overview, edit, and a forecast log per budget.
       resources :budgets, only: %i[index new create edit update] do
         collection do
           get :overview
@@ -144,76 +133,61 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      # A loose line's own page — the same shape as an area's, for a budget that
-      # belongs to no area. Owner-visible, so it is not finance-gated.
-      #
-      # Declared AFTER the block above on purpose: a member :show route matches
-      # any single segment, so declared first it swallows /budgets/overview.
+      # A loose line's own page, for a budget in no area. Owner-visible, so not finance-gated.
+      # Declared AFTER the block above: a member :show route matches any single segment and would
+      # swallow /budgets/overview.
       resources :budgets, only: %i[show]
 
-      # Multi-budget forecast revisions: one shared date + note across several
-      # budgets (e.g. after a budget meeting).
-      # show + destroy: the log named the budgets a meeting revised and nothing
-      # else, and an update could not be opened at all — so undoing one meant
-      # deleting forecasts one at a time from each budget's own edit page.
+      # Multi-budget forecast revisions: one shared date and note across several budgets (e.g. after
+      # a budget meeting). show and destroy let an update be opened and undone as a unit.
       resources :budget_updates, only: %i[index new create show destroy]
 
-      # Financial years. A year is built as a draft (create -> edit -> import
-      # its budgets) and switched to with the separate `activate` action, so
-      # next year can be set up without disturbing the one being paid out of.
+      # A year is built as a draft (create, edit, import its budgets) and switched to with the
+      # separate `activate` action, so next year can be set up without disturbing the live one.
       resources :financial_years, only: %i[index new create edit update], param: :key do
         member { post :activate }
       end
 
-      # Import budgets from the committee's spreadsheet: paste/upload ->
-      # preview -> apply, the shape Reconcile already uses.
+      # Import budgets from the committee's spreadsheet: paste/upload, preview, apply.
       #
-      # TOP LEVEL, not nested under a year, because a budget line is identified
-      # by name within one (financial year, cost centre) and financial years are
-      # orthogonal to cost centres — so the wizard needs BOTH coordinates and
-      # neither owns it. Both ride the query string (`?year=` reusing
-      # FinanceController's selector, `?cost_centre_id=`), which lets every
-      # entry point prefill whichever side it knows: the year from a financial
-      # year or the budgets index, the cost centre from its settings page.
+      # TOP LEVEL, with both coordinates in the query string (`?year=` is FinanceController's
+      # selector, plus `?cost_centre_id=`): a line is identified by name within one (financial
+      # year, cost centre) and the two are orthogonal, so neither owns the wizard and every entry
+      # point can prefill the side it knows.
       resource :budget_import, only: %i[show], controller: "budget_imports" do
         post :preview
         post :apply
         get  :template
       end
 
-      # Import claims that were settled outside the portal: paste/upload ->
-      # preview -> apply, the same shape and the same two query-string
-      # coordinates as the budget import above. A claim is charged to a budget
-      # matched by name within one (financial year, cost centre), so it needs
-      # exactly the pair that wizard needs, for exactly the same reason.
+      # Import claims settled outside the portal: the same wizard and query-string coordinates as
+      # the budget import, since a claim is charged to a budget matched by name within one
+      # (financial year, cost centre).
       resource :expense_import, only: %i[show], controller: "expense_imports" do
         post :preview
         post :apply
         get  :template
       end
 
-      # Bookmarks of the old year-nested wizard. Only the GET is worth keeping:
-      # the POST steps are reached from the form, never typed.
+      # Bookmarks of the old year-nested wizard; only the GET is worth keeping.
       get "financial_years/:financial_year_key/budget_import",
           to: redirect { |path_params, _request|
             "/admin/reimbursements/budget_import?year=#{CGI.escape(path_params[:financial_year_key])}"
           }
 
-      # What the words mean. On the BASE portal permission, not the finance
-      # one: a budget owner reads "committed" and "endorse" on their area page,
-      # and a producer reads "Submitted" on a claim they sent weeks ago.
+      # On the base portal permission, not finance: an owner reads "committed" and "endorse" on
+      # their area page, and a producer reads "Submitted" on a claim.
       get "glossary", to: "glossary#show", as: :glossary
 
-      # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
+      # Finance review queue: Awaiting owner / To approve / Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
-      # Bulk actions over the ticked Pending expenses (static paths, declared
-      # before the :id member routes so they never get swallowed by them).
+      # Bulk actions over the ticked Pending expenses: static paths, declared before the :id member
+      # routes so those don't swallow them.
       patch  "review/bulk_approve", to: "review#bulk_approve", as: :bulk_approve_review
       patch  "review/bulk_reject",  to: "review#bulk_reject",  as: :bulk_reject_review
-      # Bulk OVERRIDE, and deliberately not bulk approve, on the Awaiting-owner
-      # tab: bulk approve skips every gated claim there, so it could only ever
-      # report "0 approved". One owner who never opens the portal gates every
-      # claim on their show.
+      # Bulk OVERRIDE, not bulk approve, on the Awaiting-owner tab: bulk approve skips every gated
+      # claim there and could only report "0 approved". One owner who never opens the portal gates
+      # every claim on their show.
       patch  "review/bulk_override_approve", to: "review#bulk_override_approve",
              as: :bulk_override_approve_review
       patch  "review/:id/save",    to: "review#save",    as: :save_review
@@ -223,113 +197,88 @@ ChaosRails::Application.routes.draw do
       post   "review/:id/receipts",                to: "review#add_receipts",   as: :review_receipts
       delete "review/:id/receipts/:attachment_id", to: "review#remove_receipt", as: :review_receipt
 
-      # Finance edit-any-status: an index of ALL expenses (filter + search) plus
-      # view + edit an expense at ANY status (incl. Submitted/Paid), reachable
-      # from the Review cards and a lookup by auto-number/record id. Distinct
-      # from the Pending-only producer path.
+      # Finance edit-any-status: an index of ALL expenses (filter + search) and edit at ANY status
+      # (incl. Submitted/Paid), reached from the Review cards or by auto-number/record id.
       resources :expense_edits, only: %i[index edit update] do
         get :find, on: :collection
       end
-      # Put a rejected claim back in the queue. A rejection was terminal:
-      # nothing in the portal wrote a status back to Pending, so a mistaken one
-      # could only be undone from a console.
+      # Put a rejected claim back in the queue.
       post   "expense_edits/:id/reopen", to: "expense_edits#reopen", as: :reopen_expense_edit
       post   "expense_edits/:id/receipts",                to: "expense_edits#add_receipts",   as: :expense_edit_receipts
       delete "expense_edits/:id/receipts/:attachment_id", to: "expense_edits#remove_receipt", as: :expense_edit_receipt
 
-      # Reconcile EUSA actuals (Phase D): paste -> preview -> apply.
+      # Reconcile EUSA actuals: paste, preview, apply.
       resource :reconciliation, only: %i[show], controller: "reconcile" do
         post :preview
         post :apply
       end
 
-      # Browser over the imported EUSA Actuals ledger, plus turning an unlinked
-      # debit row into a From-EUSA expense.
+      # The imported EUSA Actuals ledger, and turning an unlinked debit row into a From-EUSA expense.
       resources :actuals, only: %i[index] do
         member do
           get :new_expense
           post :create_expense
-          # Undo a mis-detected offsetting pair: the pairing heuristic can stamp
-          # real spend as noise, and that must not need a console to reverse.
+          # Undo a mis-detected offsetting pair (the heuristic can stamp real spend as noise).
           post :unoffset
-          # Detach a row from the claim or income line it was matched to. A
-          # wrong match had no way back short of a console, and it also kept
-          # "Split across budgets" off the very row that control exists for.
+          # Detach a row from the claim or income line it was matched to.
           post :unlink
-          # Pair two rows as an accrual and its reversal by hand. "Not
-          # offsetting" was one-way, so an operator who undid a pair to look at
-          # it had no way to put it back.
+          # Pair two rows as an accrual and its reversal by hand.
           get  :offset_pair
           post :confirm_offset
-          # Attach a row to a claim the automatic matcher missed. An
-          # international claim's amount is only an estimate until the payment
-          # clears, so its row can land outside even the widened window.
+          # Attach a row to a claim the matcher missed: an international claim's amount is only an
+          # estimate until the payment clears, so its row can land outside even the widened window.
           get :link_expense
           post :confirm_link
-          # Split one credit row across several income budgets: a Stripe
-          # payout covering five shows lands on five lines rather than one.
+          # Split one credit across several income budgets (a Stripe payout covering five shows).
           get :apportion
           post :create_apportionment
           post :remove_apportionment
         end
       end
 
-      # One xlsx containing every resource, a sheet each. (Each list also
-      # downloads on its own as CSV, via ?format=csv on its index.)
-      # #show is the PAGE (sheet list, scope selectors); #download is the file.
-      # It was a sidebar link that silently downloaded a workbook of mixed and
-      # unstated scope.
+      # One xlsx with every resource, a sheet each (each list also downloads as CSV via
+      # ?format=csv). #show is the page (sheet list, scope selectors); #download is the file.
       resource :export, only: :show, controller: "exports" do
         get :download
       end
 
-      # Integration health dashboard: a page (#show) with an on-demand "Run
-      # checks" POST (#run) that probes Graph.
+      # Integration health dashboard; #run is the on-demand "Run checks" POST that probes Graph.
       get  "status",     to: "status#show", as: :status
       post "status/run", to: "status#run",  as: :run_status_checks
 
-      # Finance-team Build Batch (new/create) + History (index/show/reopen).
-      # Clearing a build-attempt banner from History once it has been handled.
+      # Build Batch (new/create) and History (index/show/reopen). batch_attempts#dismiss clears a
+      # handled build-attempt banner from History.
       resources :batch_attempts, only: [] do
         member { post :dismiss }
       end
       resources :batches, only: %i[index show new create] do
-        # check_draft surfaces the same Graph probe reopen already makes, on
-        # demand: sending the EUSA draft is the one manual step left in paying
-        # people and nothing in the portal records that it happened, so the
-        # operator's only way to know was to attempt a reopen. A POST, not a
-        # GET, because it calls a live external service.
+        # check_draft runs the Graph probe reopen already makes, on demand: sending the EUSA draft
+        # is the one manual step left and nothing records it. A POST because it calls a live
+        # external service.
         member do
           post :reopen
           post :check_draft
         end
       end
 
-      # Per-cost-centre operational settings (Phase F): picker -> edit/update.
-      # (The Azure/mailbox/SharePoint manual-setup runbook lives inline on the
-      # per-cost-centre Settings edit page, filled with that cost centre's values.)
+      # Per-cost-centre operational settings: picker -> edit/update.
       resources :settings, only: %i[index new create edit update], param: :key do
         member do
           post :test_access
-          # The manual Microsoft 365 steps, on their own page: needed once per
-          # cost centre, by somebody with Exchange or SharePoint admin rights
-          # who is usually not the person editing these settings.
+          # The manual Microsoft 365 steps, on their own page: done once per cost centre by an
+          # Exchange or SharePoint admin, usually not the person editing these settings.
           get :microsoft_setup
         end
       end
 
-      # A cost centre's own chart of accounts, maintained ON its settings page
-      # (the spec: "maintained on the cost centre edit page") — so these are
-      # writes only, with no index of their own. Scoped under that page's path
-      # and its `:key` param rather than nested under `resources :settings`
-      # (which would rename the param to `setting_key`), so the centre is found
-      # here exactly as SettingsController finds it.
+      # A cost centre's chart of accounts, maintained on its settings page, so writes only. Scoped
+      # under that page's path and `:key` rather than nested under `resources :settings`, which
+      # would rename the param to `setting_key`.
       scope "settings/:key" do
         resources :nominal_codes, only: %i[create update destroy]
       end
     end
 
-    # Mount MissionControl Jobs
     mount MissionControl::Jobs::Engine, at: "/jobs"
 
     # The resources pages:_inde

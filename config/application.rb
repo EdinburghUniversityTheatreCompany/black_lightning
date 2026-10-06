@@ -45,10 +45,8 @@ module ChaosRails
     # Strip spoofed HTTP_CLIENT_IP headers from Cloudflare requests
     config.middleware.insert_before ActionDispatch::RemoteIp, CloudflareIpSanitizer
 
-    # Return 400 (instead of an uncaught 500) for malformed requests that Rack
-    # cannot parse — e.g. bots POSTing gzip-encoded multipart bodies with a
-    # missing boundary. Rack::MethodOverride raises these outside
-    # ActionDispatch::ShowExceptions, so they must be caught here.
+    # Rack::MethodOverride raises on unparseable requests (bots POSTing gzip-encoded multipart
+    # bodies with no boundary) outside ShowExceptions, so catch them here: 400, not 500.
     config.middleware.insert_before Rack::MethodOverride, MalformedRequestHandler
 
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
@@ -69,8 +67,7 @@ module ChaosRails
 
     config.action_mailer.default_url_options = { host: "www.bedlamtheatre.co.uk" }
 
-    # Use custom delivery job that inherits from ApplicationJob
-    # This gives all emails (including Devise) SMTP retry logic with exponential backoff
+    # Gives every email, Devise's included, SMTP retries with exponential backoff.
     config.action_mailer.delivery_job = "MailDeliveryJob"
 
     config.active_storage.variant_processor = :vips
@@ -84,48 +81,29 @@ module ChaosRails
     config.start_year = 1871
 
     # --- Reimbursements bank-details encryption at rest ---------------------
-    # ActiveRecord Encryption protects the payee bank details
-    # (Reimbursements::PaymentDetails + the Expense third-party override trio).
-    # Key material by environment:
-    #   production  -> config/credentials/production.yml.enc under
-    #                  `active_record_encryption:` (Rails' active_record railtie
-    #                  reads those automatically; nothing is wired here).
-    #   development -> REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY /
-    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV if set,
-    #                  falling back to the throwaway literals below. Dev
-    #                  credentials are PUBLIC, so real key material must never
-    #                  live in development.yml.enc.
-    #   test        -> literal dummy keys in config/environments/test.rb.
+    # ActiveRecord Encryption protects payee bank details (Reimbursements::PaymentDetails and the
+    # Expense override trio). Keys: production reads `active_record_encryption:` from its
+    # credentials (nothing wired here); development takes REIMBURSEMENTS_AR_ENCRYPTION_* from ENV,
+    # else the throwaway literals below (the development credentials are public, so never put real
+    # keys there); test uses literals in config/environments/test.rb.
     #
-    # The rollout is finished: production was backfilled on 2026-07-26 (48 rows
-    # across six columns, all verified as ciphertext), so reading plaintext is
-    # no longer tolerated and a stray unencrypted value now raises instead of
-    # being served. Turning this back on would silently reopen the cleartext
-    # read path, so only do it deliberately and temporarily — encrypting a NEW
-    # column means setting it true, deploying, backfilling, and turning it off
-    # again. docs/reimbursements/encryption-rollout.md has the sequence, and
-    # reimbursements:encrypt_backfill cannot run at all while this is false,
-    # since it has to read the plaintext to rewrite it.
+    # The rollout is finished (production backfilled 2026-07-26), so a stray plaintext value now
+    # raises instead of being served. Turning this back on reopens the cleartext read path: do it
+    # only deliberately and temporarily. Encrypting a NEW column means true, deploy, backfill, false
+    # again (docs/reimbursements/encryption-rollout.md), and reimbursements:encrypt_backfill cannot
+    # run while this is false because it must read the plaintext.
     config.active_record.encryption.support_unencrypted_data = false
 
-    # Rails auto-injects a `validate_column_size` length validation on every
-    # encrypted attribute, but it measures the DECRYPTED value against the
-    # column limit — the wrong value, since it is the much longer ciphertext
-    # that has to fit, so it cannot catch an overflow. It also breaks
-    # `database_consistency`, which walks the validators and hits Rails'
-    # lazily-registered length validation mid-iteration ("can't add a new key
-    # into hash during iteration"), silently dropping both encrypted models from
-    # that step's coverage. Column fit is handled instead by wide enough columns
-    # plus explicit plaintext length validations on the models.
+    # Rails' auto-injected `validate_column_size` measures the decrypted value, but the longer
+    # ciphertext is what has to fit, so it catches nothing. It also crashes `database_consistency`
+    # ("can't add a new key into hash during iteration"). Wide columns plus explicit plaintext
+    # length validations on the models do the job.
     config.active_record.encryption.validate_column_size = false
 
     if Rails.env.development?
-      # Throwaway fallbacks so a dev shell without those ENV vars can still
-      # write an expense: an encrypted attribute needs a key on write even when
-      # it is blank, so with none configured every Expense.create! raises
-      # "Missing Active Record encryption credential". These protect nothing —
-      # they are published in the repo and the dev database holds no real bank
-      # details. Never reuse them anywhere data matters.
+      # Throwaway fallbacks: an encrypted attribute needs a key on write even when blank, so
+      # without them every Expense.create! raises. Published in the repo, they protect nothing;
+      # never reuse them.
       config.active_record.encryption.primary_key =
         ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"].presence || "dev-only-insecure-primary-key"
       config.active_record.encryption.deterministic_key =
@@ -139,10 +117,8 @@ module ChaosRails
     # Set image loading to lazy.
     config.action_view.image_loading = "lazy"
 
-  # Use AdminController as base controller
   config.mission_control.jobs.base_controller_class = "Admin::JobsController"
 
-  # Disable HTTP Basic Auth for MissionControl
   config.mission_control.jobs.http_basic_auth_enabled = false
   end
 end

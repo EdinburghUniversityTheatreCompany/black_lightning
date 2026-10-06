@@ -4,25 +4,19 @@
 default: &default
   adapter: mysql2
   encoding: utf8mb4
-  # Without this, a freshly created database (a new worktree, a rebuilt CI
-  # runner) takes the MySQL server's own default collation instead — on this
-  # server that's utf8mb4_0900_ai_ci, not the utf8mb4_unicode_ci every table
-  # in db/schema.rb carries. That's not cosmetic: a column-to-column
-  # comparison across the two collations raises "Illegal mix of collations"
-  # (found via reimbursements_nominal_codes, freshly migrated here while
-  # reimbursements_budgets.nominal_code stayed on the historical collation).
+  # Without this a new database (worktree, CI runner) takes the server's default collation
+  # (utf8mb4_0900_ai_ci here), not the utf8mb4_unicode_ci every table in db/schema.rb carries, and
+  # comparing columns across the two raises "Illegal mix of collations".
   collation: utf8mb4_unicode_ci
-  # For details on connection pooling, see Rails configuration guide
-  # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: "<%= ENV.fetch('DB_USERNAME') { Rails.application.credentials.dig(:database, :username) } %>"
   password: "<%= ENV.fetch('DB_PASSWORD') { Rails.application.credentials.dig(:database, :password) } %>"
   host: "<%= ENV.fetch('DB_HOST') { '127.0.0.1' } %>"
   port: 3306
 
-# WORKTREE_DB_SUFFIX (see .worktree-isolate.conf) gives a git worktree its own dev stack, so
-# two dev servers don't share one development database. Empty by default -> the plain names,
-# which is what the main checkout uses. A worktree creates its own with `bin/rails db:prepare`.
+# WORKTREE_DB_SUFFIX (.worktree-isolate.conf) gives a worktree its own development databases.
+# Empty means the plain names the main checkout uses; a worktree creates its own with
+# `bin/rails db:prepare`.
 development:
   primary:
     <<: *default
@@ -42,9 +36,8 @@ development:
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 #
-# WORKTREE_DB_SUFFIX lets parallel git worktrees each run tests against their own
-# database (e.g. "_phaseb"), so concurrent `bin/rails test` runs don't truncate
-# each other's fixtures. Empty by default -> the normal shared test DB.
+# WORKTREE_DB_SUFFIX lets parallel worktrees test against their own database (e.g. "_phaseb"), so
+# concurrent `bin/rails test` runs don't truncate each other's fixtures. Empty means the shared DB.
 test:
   <<: *default
   database: bedlam_blacklightning_test<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>
@@ -69,8 +62,6 @@ production:
     <<: *primary_production
     database: bedlam_blacklightning_production_cache
     migrations_paths: db/cache_migrate
-    # The Solid Cache pool only needs one connection per request/job thread
-    # (RAILS_MAX_THREADS, default 3), not the primary's 5 — each idle mysql2
-    # connection holds a buffer. Overridable via CACHE_DB_POOL if cache traffic
-    # ever needs more headroom.
+    # One connection per request/job thread (RAILS_MAX_THREADS, default 3), not the primary's 5:
+    # each idle mysql2 connection holds a buffer. CACHE_DB_POOL overrides.
     pool: <%= ENV.fetch("CACHE_DB_POOL", ENV.fetch("RAILS_MAX_THREADS", 3)) %>
