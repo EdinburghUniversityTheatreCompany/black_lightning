@@ -52,11 +52,9 @@ class Event::TicketPrice
   end
 
   def self.from_h(hash)
-    hash = hash.respond_to?(:to_h) ? hash.to_h : {}
+    hash = hash.to_h.stringify_keys
 
-    new(category: hash["category"] || hash[:category],
-        label: hash["label"] || hash[:label],
-        amount: hash["amount"] || hash[:amount])
+    new(category: hash["category"], label: hash["label"], amount: hash["amount"])
   end
 
   private

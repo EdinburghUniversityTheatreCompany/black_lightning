@@ -370,7 +370,8 @@ class Event < ApplicationRecord
   def ticket_prices_attributes=(attributes)
     rows = attributes.respond_to?(:values) ? attributes.values : Array(attributes)
 
-    self.ticket_prices = rows.reject { |row| destroy_flagged?(row) || row_amount(row).blank? }
+    self.ticket_prices = rows.map { |row| row.to_h.with_indifferent_access }
+                             .reject { |row| ActiveModel::Type::Boolean.new.cast(row[:_destroy]) || row[:amount].blank? }
   end
 
   # "2 hours 15 minutes"; distance_of_time_in_words would round off the quarter hour.
@@ -509,14 +510,6 @@ class Event < ApplicationRecord
     invalid.flat_map { |price| price.errors.full_messages }.uniq.each do |message|
       errors.add(:ticket_prices, message.downcase_first)
     end
-  end
-
-  def destroy_flagged?(row)
-    ActiveModel::Type::Boolean.new.cast(row["_destroy"] || row[:_destroy])
-  end
-
-  def row_amount(row)
-    row["amount"] || row[:amount]
   end
 
   # price stays the display string every view renders, regenerated whenever the
