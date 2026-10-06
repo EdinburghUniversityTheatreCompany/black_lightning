@@ -120,6 +120,31 @@ module Admin
         assert_response :unprocessable_entity
       end
 
+      # Both posts resolve to the default centre and year, unlike a fixture-built
+      # area, which has no centre and so would not collide.
+      test "creating an area under a name already used in its year and centre is refused" do
+        post :create, params: { reimbursements_area: { name: "Tech" } }
+
+        assert_no_difference -> { ::Reimbursements::Area.count } do
+          post :create, params: { reimbursements_area: { name: "Tech" } }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/is already taken/, response.body)
+      end
+
+      test "renaming an area to a name already used in its year and centre is refused" do
+        post :create, params: { reimbursements_area: { name: "Tech" } }
+        post :create, params: { reimbursements_area: { name: "Other" } }
+        other = ::Reimbursements::Area.find_by!(name: "Other")
+
+        patch_area other, name: "Tech"
+
+        assert_response :unprocessable_entity
+        assert_match(/is already taken/, response.body)
+        assert_equal "Other", other.reload.name
+      end
+
       # An area with no owners switches its budgets' sign-off gate off
       # (OwnerReview.gate_applies? is false), so the form says so.
       test "the area form warns when the area has no owners" do

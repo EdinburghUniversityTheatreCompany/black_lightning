@@ -52,6 +52,9 @@ module Admin
                                               cost_centre: chosen_cost_centre))
         store.sync_area_owners!(area.record_id, posted_owner_ids)
         redirect_to edit_admin_reimbursements_area_path(area.record_id), notice: "Area created."
+      rescue ActiveRecord::RecordInvalid => e
+        @area = ::Reimbursements::Area.new(attrs)
+        render_form(:new, posted_owner_ids, error: e.record.errors.full_messages.to_sentence)
       end
 
       def edit = render_form(:edit, @area.owner_ids)
@@ -67,6 +70,8 @@ module Admin
         @area.save!
         store.sync_area_owners!(@area.record_id, posted_owner_ids)
         redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
+      rescue ActiveRecord::RecordInvalid => e
+        render_form(:edit, posted_owner_ids, error: e.record.errors.full_messages.to_sentence)
       end
 
       private
