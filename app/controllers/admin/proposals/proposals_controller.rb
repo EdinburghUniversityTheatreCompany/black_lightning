@@ -94,105 +94,21 @@ class Admin::Proposals::ProposalsController < AdminController
     super
   end
 
-  ##
-  # PUT /admin/proposals/proposals/1/approve
-  #
-  # PUT /admin/proposals/proposals/1/approve.json
-  ##
-  def approve
-    if @proposal.awaiting_approval?
-      @proposal.update!(status: :approved)
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as approved.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
-    end
+  def approve = change_proposal(@proposal.awaiting_approval?, { status: :approved }, "has been marked as approved", "is not currently awaiting approval")
 
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-      # format.json { head :no_content }
-    end
-  end
+  def reject = change_proposal(@proposal.awaiting_approval?, { status: :rejected }, "has been marked as rejected", "is not currently awaiting approval")
 
-  ##
-  # PUT /admin/proposals/proposals/1/reject
-  ##
-  def reject
-    if @proposal.awaiting_approval?
-      @proposal.update!(status: :rejected)
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as rejected.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
-    end
+  def mark_successful = change_proposal(@proposal.approved?, { status: :successful }, "has been marked as successful", "is not currently approved")
 
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-      # format.json { head :no_content }
-    end
-  end
+  def mark_unsuccessful = change_proposal(@proposal.approved?, { status: :unsuccessful }, "has been marked as unsuccessful", "is not currently approved")
 
-  def mark_successful
-    if @proposal.approved?
-      @proposal.update!(status: :successful)
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as successful.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently approved.")
-    end
+  def withdraw = change_proposal(!@proposal.withdrawn?, { withdrawn: true }, "has been withdrawn", "is already withdrawn")
 
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-    end
-  end
-
-  def mark_unsuccessful
-    if @proposal.approved?
-      @proposal.update!(status: :unsuccessful)
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as unsuccessful.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently approved.")
-    end
-
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-    end
-  end
+  def unwithdraw = change_proposal(@proposal.withdrawn?, { withdrawn: false }, "is no longer withdrawn", "is not withdrawn")
 
   def revert_status
-    unless @proposal.withdrawn? || @proposal.status == :awaiting_approval
-      @proposal.update!(status: @proposal.reverted_status)
-      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is now #{@proposal.status.to_s.titleize.downcase}.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is already awaiting approval.")
-    end
-
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-    end
-  end
-
-  def withdraw
-    unless @proposal.withdrawn?
-      @proposal.update!(withdrawn: true)
-        helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been withdrawn.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is already withdrawn.")
-    end
-
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-    end
-  end
-
-  def unwithdraw
-    if @proposal.withdrawn?
-      @proposal.update!(withdrawn: false)
-        helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is no longer withdrawn.")
-    else
-      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not withdrawn.")
-    end
-
-    respond_to do |format|
-      format.html { redirect_to post_action_redirect_path }
-    end
+    target = @proposal.reverted_status
+    change_proposal(!@proposal.withdrawn? && target, { status: target }, "is now #{target.to_s.humanize(capitalize: false)}", "is already awaiting approval")
   end
 
   ##
@@ -222,6 +138,18 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   private
+
+  def change_proposal(allowed, attributes, done, refused)
+    name = helpers.get_object_name(@proposal, include_class_name: true)
+    if allowed
+      @proposal.update!(attributes)
+      helpers.append_to_flash(:success, "The #{name} #{done}.")
+    else
+      helpers.append_to_flash(:error, "The #{name} #{refused}.")
+    end
+
+    redirect_to post_action_redirect_path
+  end
 
   # Actions taken from the calls dashboard or a call's proposal list return there.
   def post_action_redirect_path
