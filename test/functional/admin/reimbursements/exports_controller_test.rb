@@ -126,8 +126,8 @@ module Admin
 
         get :show
 
-        assert_equal 1, assigns(:counts)["Expenses"]
-        assert_equal 1, assigns(:counts)["Batches"]
+        assert_equal 1, assigns(:counts)[::Reimbursements::Exports::Expenses]
+        assert_equal 1, assigns(:counts)[::Reimbursements::Exports::Batches]
       end
 
       test "the download link carries the page's own scope" do

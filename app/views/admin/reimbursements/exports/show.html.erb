@@ -30,12 +30,10 @@
         </tr>
       </thead>
       <tbody>
-        <% @sheets.each do |(exporter_class, _)| %>
-          <% name = exporter_class::SHEET_NAME %>
+        <% @counts.each do |exporter_class, count| %>
           <tr class="border-b border-gray-200">
-            <td class="px-3 py-2 font-medium"><%= name %></td>
+            <td class="px-3 py-2 font-medium"><%= exporter_class::SHEET_NAME %></td>
             <td class="px-3 py-2 text-right tabular-nums">
-              <% count = @counts[name].to_i %>
               <%# An empty sheet is stated here rather than discovered in Excel. %>
               <%= count.zero? ? content_tag(:span, "none", class: "text-gray-500") : count %>
             </td>
