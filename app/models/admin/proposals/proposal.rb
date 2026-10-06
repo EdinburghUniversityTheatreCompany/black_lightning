@@ -38,7 +38,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
       :rejected,
       :successful,
       :unsuccessful ],
-    instance_methods: false, unscoped: true, default: :awaiting_approval
+    instance_methods: false, default: :awaiting_approval
+
+  statuses.each_key { |s| define_method(:"#{s}?") { !withdrawn? && status == s.to_sym } }
 
   belongs_to :call, class_name: "Admin::Proposals::Call"
 
@@ -71,30 +73,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   def status
     super.to_sym
-  end
-
-  def withdrawn?
-    withdrawn
-  end
-
-  def awaiting_approval?
-    !withdrawn? && status == :awaiting_approval
-  end
-
-  def approved?
-    !withdrawn? && status == :approved
-  end
-
-  def rejected?
-    !withdrawn? && status == :rejected
-  end
-
-  def successful?
-    !withdrawn? && status == :successful
-  end
-
-  def unsuccessful?
-    !withdrawn? && status == :unsuccessful
   end
 
   # Creates an instance of Admin::Answer for every question in the call.
