@@ -1,5 +1,7 @@
 <%# Nil unless the check applies: ReviewSupport.modulus_result owns that rule. %>
 <% modulus = ::Reimbursements::ReviewSupport.modulus_result(@expense, modulus_checker) %>
+<%# Approval advice and the rail only while the claim can still be approved or paid. %>
+<% actionable = ::Reimbursements::ReviewSupport.attention_actionable?(@expense) %>
 
 <p class="mb-3 text-gray-600">
   Finance edit for a single expense at any status, including Submitted and Paid.
@@ -28,9 +30,7 @@
     <% end %>
   </div>
 
-  <%# Approval advice only while the claim can still be approved or paid. %>
-  <% advice = ::Reimbursements::ReviewSupport.attention_actionable?(@expense) %>
-  <% if advice && @attention[:blocking].any? %>
+  <% if actionable && @attention[:blocking].any? %>
     <div class="mt-3"><%= render AlertComponent.new(type: :danger) do %>
         <p class="font-medium">This can't be approved until these are fixed:</p>
         <ul class="mt-1 list-disc pl-5">
@@ -40,7 +40,7 @@
         </ul>
       <% end %></div>
   <% end %>
-  <% if advice && @attention[:advisory].any? %>
+  <% if actionable && @attention[:advisory].any? %>
     <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
         <p class="font-medium">Worth checking before approving (approval still goes through):</p>
         <ul class="mt-1 list-disc pl-5">
@@ -182,7 +182,7 @@
                            class: "simple-select2" %>
           <% end %>
 
-          <% if rail_editable?(@expense) %>
+          <% if actionable %>
             <%= render "shared/form/field", label: "How is this paid?", name: :payment_method,
                   hint: "International pays a bank outside the UK: EUSA fills in a separate payment " \
                         "form for those and needs an IBAN and BIC instead of a sort code. Switching " \

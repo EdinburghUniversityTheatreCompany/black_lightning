@@ -174,16 +174,20 @@ module Admin
           store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
       end
 
+      # The rail is fixed once Submitted or Paid: the paperwork has gone out.
+      def posted_rail(expense)
+        rail = params[:payment_method].to_s
+        return expense.payment_method unless ::Reimbursements::ReviewSupport.attention_actionable?(expense) &&
+                                             ::Reimbursements::Expense::PAYMENT_METHODS.include?(rail)
+
+        rail
+      end
+
       # Every rail-aware rule reads the rail being POSTED, not the stored one,
       # or it would check the overrides being left behind instead of the ones
       # just typed.
       def posted_rail_international?(expense)
-        return expense.international? unless rail_editable?(expense)
-
-        rail = params[:payment_method].to_s
-        return expense.international? unless ::Reimbursements::Expense::PAYMENT_METHODS.include?(rail)
-
-        rail == ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
+        posted_rail(expense) == ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL
       end
 
       # The posted payee must be one the page rendered, or the foreign key 500s.
@@ -195,12 +199,6 @@ module Admin
 
         "That person is no longer in the registry. Reload the page and pick again."
       end
-
-      # The rail is fixed once Submitted or Paid: the paperwork has gone out.
-      def rail_editable?(expense)
-        ::Reimbursements::ReviewSupport.attention_actionable?(expense)
-      end
-      helper_method :rail_editable?
 
       # A blank GBP amount is legitimate on the international rail (finance types
       # it at review). Blank means leave it alone: update_expense! compacts nil.
@@ -227,20 +225,11 @@ module Admin
         "Invoice amount: enter a number greater than 0, or leave it blank."
       end
 
-      # A rail switch changes payment_method only. The other rail's encrypted
-      # overrides are inert and kept, since wiping them is unrecoverable; ex-VAT
-      # is mirrored by the model.
-      def rail_attrs(expense)
-        return {} unless rail_editable?(expense)
-
-        rail = params[:payment_method].to_s
-        return {} unless ::Reimbursements::Expense::PAYMENT_METHODS.include?(rail)
-
-        { payment_method: rail }
-      end
-
       def update_attrs(expense)
         attrs = {
+          # A rail switch changes only this: the other rail's encrypted overrides
+          # are inert and kept, since wiping them is unrecoverable.
+          payment_method: posted_rail(expense),
           # The parsed BigDecimal, never the raw field: AR casts "£1,200" to 0.
           amount: ::Reimbursements::AmountValidation.amount(params[:amount]),
           description: params[:description],
@@ -263,9 +252,6 @@ module Admin
         # gets back if switched again.
         if posted_rail_international?(expense)
           attrs[:foreign_currency] = params[:foreign_currency].to_s.strip.upcase
-        end
-        attrs.merge!(rail_attrs(expense))
-        if posted_rail_international?(expense)
           attrs[:foreign_amount] = ::Reimbursements::AmountValidation.amount(params[:foreign_amount])
         end
         # Blank or 0 means "not yet known": leave the stored value alone.
