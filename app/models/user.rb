@@ -347,97 +347,23 @@ class User < ApplicationRecord
   def reallocate_maintenance_debts
     return if self.class.suppress_maintenance_reallocation
 
-    debts = admin_maintenance_debts
-      .includes(:maintenance_credit)
-      .where("due_by >= ? ", Date.current)
-      .or(admin_maintenance_debts.includes(:maintenance_credit).where(maintenance_credit: nil))
-      .where(state: :normal)
-      .order(due_by: :asc)
-      .to_a
-
+    debts = reallocatable(admin_maintenance_debts, :maintenance_credit)
     credits = maintenance_credits
-      .includes(:maintenance_debt)
-      .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
-      .to_a
-
-    amount_of_pairs = [ debts.size, credits.size ].min
-
-    ActiveRecord::Base.transaction do
-      updates_to_link = []
-      updates_to_unlink = []
-
-      (0...amount_of_pairs).each do |i|
-        if debts[i].maintenance_credit != credits[i]
-          updates_to_link << { id: debts[i].id, maintenance_credit_id: credits[i].id }
-        end
-      end
-
-      (amount_of_pairs...debts.size).each do |i|
-        if debts[i].maintenance_credit.present?
-          updates_to_unlink << { id: debts[i].id, maintenance_credit_id: nil }
-        end
-      end
-
-      if updates_to_link.any?
-        updates_to_link.each do |update|
-          Admin::MaintenanceDebt.where(id: update[:id]).update_all(maintenance_credit_id: update[:maintenance_credit_id])
-        end
-      end
-
-      if updates_to_unlink.any?
-        debt_ids = updates_to_unlink.map { |u| u[:id] }
-        Admin::MaintenanceDebt.where(id: debt_ids).update_all(maintenance_credit_id: nil)
-      end
-    end
+              .includes(:maintenance_debt)
+              .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
+              .to_a
+    pair_debts(debts, credits, :maintenance_credit)
   end
 
   # Pairs the soonest reallocatable debts with staffing jobs and unlinks the rest.
   def reallocate_staffing_debts
-    debts = admin_staffing_debts
-      .includes(:admin_staffing_job)
-      .where("due_by >= ? ", Date.current)
-      .or(admin_staffing_debts.includes(:admin_staffing_job).where(admin_staffing_job: nil))
-      .where(state: :normal)
-      .order(due_by: :asc)
-      .to_a
-
+    debts = reallocatable(admin_staffing_debts, :admin_staffing_job)
     jobs = staffing_jobs
-      .includes(:staffing_debt)
-      .where(admin_staffing_debts: { id: [ nil ] + debts.map(&:id) })
-      .to_a
-
-    # counts_towards_debt? cannot be eager loaded (polymorphic staffable), so this runs per job.
-    valid_jobs = jobs.select(&:counts_towards_debt?)
-
-    amount_of_pairs = [ debts.size, valid_jobs.size ].min
-
-    ActiveRecord::Base.transaction do
-      updates_to_link = []
-      updates_to_unlink = []
-
-      (0...amount_of_pairs).each do |i|
-        if debts[i].admin_staffing_job != valid_jobs[i]
-          updates_to_link << { id: debts[i].id, admin_staffing_job_id: valid_jobs[i].id }
-        end
-      end
-
-      (amount_of_pairs...debts.size).each do |i|
-        if debts[i].admin_staffing_job.present?
-          updates_to_unlink << { id: debts[i].id, admin_staffing_job_id: nil }
-        end
-      end
-
-      if updates_to_link.any?
-        updates_to_link.each do |update|
-          Admin::StaffingDebt.where(id: update[:id]).update_all(admin_staffing_job_id: update[:admin_staffing_job_id])
-        end
-      end
-
-      if updates_to_unlink.any?
-        debt_ids = updates_to_unlink.map { |u| u[:id] }
-        Admin::StaffingDebt.where(id: debt_ids).update_all(admin_staffing_job_id: nil)
-      end
-    end
+           .includes(:staffing_debt)
+           .where(admin_staffing_debts: { id: [ nil ] + debts.map(&:id) })
+           # counts_towards_debt? cannot be eager loaded (polymorphic staffable), so this runs per job.
+           .select(&:counts_towards_debt?)
+    pair_debts(debts, jobs, :admin_staffing_job)
   end
 
   ##
@@ -853,6 +779,24 @@ class User < ApplicationRecord
   end
 
   private
+
+  # Future debts, plus past ones still unfulfilled, soonest first.
+  def reallocatable(debts, link)
+    debts.includes(link).where("due_by >= ?", Date.current)
+         .or(debts.includes(link).where(link => nil))
+         .where(state: :normal).order(due_by: :asc).to_a
+  end
+
+  # The i-th debt takes the i-th fulfilment; debts past the last one are unlinked.
+  def pair_debts(debts, fulfilments, link)
+    ActiveRecord::Base.transaction do
+      debts.each_with_index do |debt, i|
+        next if debt.public_send(link) == fulfilments[i]
+
+        debt.class.where(id: debt.id).update_all("#{link}_id" => fulfilments[i]&.id)
+      end
+    end
+  end
 
   # PersonLink resolves a payee by the stored link, then by email, so erasure must follow both.
   def erase_reimbursements_bank_details
