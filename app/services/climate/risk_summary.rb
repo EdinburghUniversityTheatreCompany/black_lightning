@@ -9,8 +9,6 @@ module Climate
   # miss days, so "41 of 720 hours" reads as 6% of a month when it may be 8% of
   # the days covered.
   class RiskSummary
-    HOUR = 3_600
-
     def initialize(sensors:, range:)
       @sensors = Array(sensors)
       @range = range
@@ -21,30 +19,14 @@ module Climate
     #       longest_spell_hours:, longest_spell_ended_at:,
     #       days: [{ date:, hours_with_readings:, at_risk_hours: }] }]
     def summaries
-      grouped = hourly_margins
+      # One query feeds the three counts and the bars, so they cannot disagree.
+      hourly = Buckets.new(@range, seconds: Buckets::HOUR)
+      grouped = MarginSeries.new(sensors: @sensors, range: @range, buckets: hourly).margins
 
       @sensors.map { |sensor| summarise(sensor, grouped.fetch(sensor.id, [])) }
     end
 
     private
-
-    # One query feeds the three counts and the bars, so they cannot disagree.
-    def hourly_margins
-      return {} if @sensors.empty?
-
-      Reading
-        .where(sensor_id: @sensors.map(&:id), recorded_at: @range.starts_at..@range.ends_at)
-        .where.not(temperature_c: nil).where.not(dew_point_c: nil)
-        .group(:sensor_id, Arel.sql("DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 3600) SECOND)"))
-        .order(Arel.sql("1 ASC, 2 ASC"))
-        .pluck(:sensor_id,
-               Arel.sql("DATE_SUB(recorded_at, INTERVAL (TIME_TO_SEC(TIME(recorded_at)) % 3600) SECOND)"),
-               Arel.sql("MIN(temperature_c - dew_point_c)"))
-        .group_by(&:first)
-        .transform_values do |rows|
-          rows.map { |(_sensor_id, hour, margin)| [ hour.in_time_zone, margin.to_f ] }
-        end
-    end
 
     def summarise(sensor, hours)
       spell = longest_spell(hours)
@@ -70,12 +52,12 @@ module Climate
       hours.each do |(hour, margin)|
         run = if !at_risk?(margin)
                 0
-        elsif previous && (hour - previous) == HOUR && run.positive?
+        elsif previous && (hour - previous) == Buckets::HOUR && run.positive?
                 run + 1
         else
                 1
         end
-        best = { hours: run, ended_at: hour + HOUR } if run > best[:hours]
+        best = { hours: run, ended_at: hour + Buckets::HOUR } if run > best[:hours]
         previous = hour
       end
 

@@ -12,43 +12,41 @@ module Climate
   # Measured against the AIR. The walls are colder, so the real margin at the
   # stone is smaller than this line.
   class MarginSeries
-    def initialize(sensors:, range:)
+    def initialize(sensors:, range:, buckets: Buckets.new(range))
       @sensors = Array(sensors)
       @range = range
-      @buckets = Buckets.new(range)
+      @buckets = buckets
       @colors = SeriesColors.new
     end
 
     # -> [{ id:, name:, color_index:, points: [{ t: iso8601, margin: }] }]
     def series
-      grouped = bucketed_rows
+      grouped = margins
 
       @sensors.map do |sensor|
+        points = grouped.fetch(sensor.id, []).map { |time, margin| { t: time, margin: margin.round(2) } }
+
         { id: sensor.id, name: sensor.display_name,
           color_index: @colors.index_for(sensor),
-          points: @buckets.with_gaps(grouped.fetch(sensor.id, []), keys: [ :margin ]) }
+          points: @buckets.with_gaps(points, keys: [ :margin ]) }
       end
     end
 
-    private
-
-    def bucketed_rows
+    # -> { sensor_id => [[Time, Float]] }, oldest first. RiskSummary counts the
+    # same rows hourly.
+    def margins
       return {} if @sensors.empty?
 
       expression = @buckets.expression
 
-      rows = Reading
-             .where(sensor_id: @sensors.map(&:id), recorded_at: @range.starts_at..@range.ends_at)
-             .where.not(temperature_c: nil).where.not(dew_point_c: nil)
-             .group(:sensor_id, Arel.sql(expression))
-             .order(Arel.sql("1 ASC, 2 ASC"))
-             .pluck(:sensor_id, Arel.sql(expression), Arel.sql("MIN(temperature_c - dew_point_c)"))
-
-      rows.group_by(&:first).transform_values do |sensor_rows|
-        sensor_rows.map do |(_sensor_id, bucket, margin)|
-          { t: bucket.in_time_zone, margin: margin&.to_f&.round(2) }
-        end
-      end
+      Reading
+        .where(sensor_id: @sensors.map(&:id), recorded_at: @range.starts_at..@range.ends_at)
+        .where.not(temperature_c: nil).where.not(dew_point_c: nil)
+        .group(:sensor_id, Arel.sql(expression))
+        .order(Arel.sql("1 ASC, 2 ASC"))
+        .pluck(:sensor_id, Arel.sql(expression), Arel.sql("MIN(temperature_c - dew_point_c)"))
+        .group_by(&:first)
+        .transform_values { |rows| rows.map { |(_sensor_id, bucket, margin)| [ bucket.in_time_zone, margin.to_f ] } }
     end
   end
 end

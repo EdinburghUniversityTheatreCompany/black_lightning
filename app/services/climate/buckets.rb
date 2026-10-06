@@ -39,8 +39,8 @@ module Climate
 
     attr_reader :seconds
 
-    def initialize(range)
-      @seconds = RESOLUTIONS.find { |r| r[:max_days].nil? || range.days <= r[:max_days] }[:seconds]
+    def initialize(range, seconds: nil)
+      @seconds = seconds || RESOLUTIONS.find { |r| r[:max_days].nil? || range.days <= r[:max_days] }[:seconds]
     end
 
     def expression = BUCKET_EXPRESSIONS.fetch(seconds)
