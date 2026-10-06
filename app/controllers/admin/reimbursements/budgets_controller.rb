@@ -302,14 +302,10 @@ module Admin
         params[:area_id].presence
       end
 
-      # Optional: with one cost centre configured there is nothing to choose,
-      # and a budget with no centre still works (the reconcile matcher treats it
-      # as belonging to the only one there is). The form's own field wins; the
-      # page's ?cost_centre= selector is the fallback, so a budget added while
-      # looking at termtime lands in termtime rather than in centre #1.
+      # With several centres the form posts cost_centre_id (resolve_cost_centre!
+      # reads it); with one there is nothing to choose.
       def chosen_cost_centre
-        ::Reimbursements::CostCentre.find_by(id: params[:cost_centre_id]) ||
-          selected_cost_centre || ::Reimbursements::CostCentre.default
+        selected_cost_centre || ::Reimbursements::CostCentre.default
       end
 
       # The same lenient reading as the submitter form: "£1,200" and "12,50" are
