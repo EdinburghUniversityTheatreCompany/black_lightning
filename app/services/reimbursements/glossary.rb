@@ -27,7 +27,7 @@ module Reimbursements
       Term.new(key: :remaining, term: "Remaining",
                definition: "The plan less what is Committed. It deliberately IGNORES the " \
                            "pipeline, because this is the figure finance reads when deciding " \
-                           "whether a line is overspent. Blank, never £0, when nobody set a " \
+                           "whether a line is overspent. \"No budget set\", never £0, when nobody set a " \
                            "plan: a zero there would read as \"fully spent\"."),
       Term.new(key: :left, term: "Left",
                definition: "The plan less what is Committed AND what is waiting for approval. " \
