@@ -23,10 +23,7 @@ module Admin
       # A fake that ignores scoping is `->(**) { fake }`. Restore THIS constant, never a
       # hand-written `-> { build_store }`: it drops both arguments, and the replacement
       # sticks, so every later scoped page renders every year's and centre's budgets at once.
-      DEFAULT_STORE_BUILDER =
-        ->(financial_year: nil, cost_centre: nil) {
-          ::Reimbursements.build_store(financial_year: financial_year, cost_centre: cost_centre)
-        }
+      DEFAULT_STORE_BUILDER = ::Reimbursements.method(:build_store)
 
       class_attribute :store_builder, default: DEFAULT_STORE_BUILDER
       # Here, not on FinanceController, because a budget owner rejecting a claim
