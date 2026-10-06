@@ -12,22 +12,15 @@
            summary: "What the words on these cards mean",
            terms: ::Reimbursements::Glossary.terms(:statuses, :endorse, :committed, :batch) %>
 
-<% awaiting_owner_total = @awaiting_owner.sum { |e| e.amount || 0 } %>
-<% to_approve_total = @to_approve.sum { |e| e.amount || 0 } %>
-<% approved_total = @approved.sum { |e| e.amount || 0 } %>
-
 <%# Plain navigation links, so aria-current, not role="tab", which promises
-    arrow-key widget behaviour. %>
+    arrow-key widget behaviour. Awaiting owner sits first as the earlier step
+    in a claim's life; To approve is the default. %>
 <nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
-  <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
-  <%# Awaiting owner sits first as the earlier step in a claim's life; To
-      approve is the default. %>
-  <%= link_to "Awaiting owner (#{@awaiting_owner.size})", admin_reimbursements_review_path(tab: "awaiting_owner"),
-              "aria-current": (@tab == "awaiting_owner" ? "page" : nil), class: tab_class.call(@tab == "awaiting_owner") %>
-  <%= link_to "To approve (#{@to_approve.size})", admin_reimbursements_review_path(tab: "to_approve"),
-              "aria-current": (@tab == "to_approve" ? "page" : nil), class: tab_class.call(@tab == "to_approve") %>
-  <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
-              "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
+  <% { "awaiting_owner" => @awaiting_owner, "to_approve" => @to_approve, "approved" => @approved }.each do |tab, list| %>
+    <%= link_to "#{tab.humanize} (#{list.size})", admin_reimbursements_review_path(tab: tab),
+                "aria-current": ("page" if @tab == tab),
+                class: (@tab == tab ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600") %>
+  <% end %>
   <span class="ml-auto self-center pb-1">
     <%# The query carries ?tab=, so the download follows the tab. %>
     <%= link_to "Download CSV",
@@ -44,7 +37,7 @@
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
-      <%= @approved.size %> approved, total <%= reimbursements_money(approved_total) %>.
+      <%= @approved.size %> approved, total <%= reimbursements_money(@approved.sum { |e| e.amount || 0 }) %>.
       <%# Carries the selected cost centre: a batch is built for one pot. %>
       Ready to submit on
       <%= link_to "the Build Batch page",
@@ -64,7 +57,7 @@
   <% else %>
     <p class="mb-3 text-gray-600">
       <%= @awaiting_owner.size %> awaiting a budget owner's sign-off,
-      total <%= reimbursements_money(awaiting_owner_total) %>.
+      total <%= reimbursements_money(@awaiting_owner.sum { |e| e.amount || 0 }) %>.
     </p>
     <%= render AlertComponent.new(type: :info) do %>
       These are with their budget owners, who endorse them from My Budgets. Where no owner can
@@ -119,7 +112,7 @@
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
-      <%= @to_approve.size %> to approve, total <%= reimbursements_money(to_approve_total) %>.
+      <%= @to_approve.size %> to approve, total <%= reimbursements_money(@to_approve.sum { |e| e.amount || 0 }) %>.
     </p>
 
     <div data-controller="bulk-review">
@@ -140,7 +133,6 @@
                              data: { bulk_review_target: "reason", action: "bulk-review#refresh" },
                              class: input_classes(width: nil) %>
           <%= submit_tag "Approve selected",
-                         formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab),
                          data: { bulk_review_target: "approveButton" }, disabled: true,
                          class: btn_classes(:success, :sm) %>
           <%= submit_tag "Reject selected",
