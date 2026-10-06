@@ -12,17 +12,13 @@ module Admin
       # Every action that can render :edit needs the nominal-codes list.
       before_action :set_nominal_codes, only: %i[edit update test_access]
 
-      # Which CostCentre columns each SharePoint destination writes.
-      FOLDER_COLUMNS = {
-        "receipts" => { drive: :sharepoint_receipts_drive_id, folder: :sharepoint_receipts_folder_id },
-        "bacs" => { drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
-      }.freeze
-
-      # Human labels for each destination — matches the folder-picker headings
-      # on the edit page. `humanize` would render "bacs" as "Bacs", not "BACS".
-      FOLDER_LABELS = {
-        "receipts" => "Receipts folder",
-        "bacs" => "BACS request folder"
+      # Each SharePoint destination: its label (as on the folder-picker headings)
+      # and the CostCentre columns it writes.
+      FOLDERS = {
+        "receipts" => { label: "Receipts folder",
+                        drive: :sharepoint_receipts_drive_id, folder: :sharepoint_receipts_folder_id },
+        "bacs" => { label: "BACS request folder",
+                    drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
       }.freeze
 
       # One row of the "Run access check" results.
@@ -131,7 +127,7 @@ module Admin
       # --- Save a SharePoint folder selection -------------------------------
 
       def save_folder
-        columns = FOLDER_COLUMNS[params[:folder_purpose]]
+        columns = FOLDERS[params[:folder_purpose]]
         if columns.nil? || params[:drive_id].blank? || params[:folder_id].blank?
           return redirect_to(edit_path, alert: "Pick a folder before saving.")
         end
@@ -142,7 +138,7 @@ module Admin
         end
 
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
-        redirect_to edit_path, notice: "#{folder_label(params[:folder_purpose])} saved."
+        redirect_to edit_path, notice: "#{columns[:label]} saved."
       end
 
       # The ids arrive in hidden fields, which a client can tamper with, and the
@@ -193,15 +189,9 @@ module Admin
                   detail: "#{e.message}. Grant the app write on this site (Sites.Selected, command below).")
       end
 
-      # Human label for a folder purpose, degrading to a humanized key rather
-      # than raising if a future FOLDER_COLUMNS entry lacks a FOLDER_LABELS one.
-      def folder_label(purpose)
-        FOLDER_LABELS.fetch(purpose) { "#{purpose.to_s.humanize} folder" }
-      end
-
       def folder_checks
-        FOLDER_COLUMNS.map do |purpose, columns|
-          label = folder_label(purpose)
+        FOLDERS.each_value.map do |columns|
+          label = columns[:label]
           drive = @cost_centre.public_send(columns[:drive])
           folder = @cost_centre.public_send(columns[:folder])
           next Check.new(label: label, status: :skip, detail: "Not chosen yet.") if
