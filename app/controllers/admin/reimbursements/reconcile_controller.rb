@@ -214,8 +214,7 @@ module Admin
 
       # Matches debits to Submitted/Paid expenses (each claimed at most once) and credits to income
       # budgets. Returns [matched_debits, matched_credits, unmatched]; a match is [entry, expense|budget].
-      # Both are scoped to the row's cost centre (a termtime debit must not mark a Fringe claim Paid), and
-      # already-reconciled expenses are excluded because dedup only catches an identical row.
+      # Both are scoped to the row's cost centre: a termtime debit must not mark a Fringe claim Paid.
       def build_matches(entries)
         remaining = matchable_expenses
         income_budgets = income_budgets_pool
@@ -249,17 +248,16 @@ module Admin
         [ matched_debits, matched_credits, unmatched ]
       end
 
-      def matchable_statuses
-        [ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]
-      end
-
-      # Every expense a debit may match, as a fresh array the caller consumes from. Cost centre scoping
-      # is per row (expenses_in) from this one pool, so an expense claimed by any row is out of reach of
-      # every other row.
+      # Every expense a debit may match, as a fresh array the caller consumes from (a matched expense is
+      # deleted). Cost centre scoping is per row (expenses_in) from this one pool, so an expense claimed
+      # by any row is out of reach of every other row. Submitted or Paid, and neither linked to an
+      # imported actual nor payment-confirmed: dedup only catches an identical row, so a near-duplicate
+      # would otherwise pay a claim twice.
       def matchable_expenses
-        reconciled_ids = reconciled_expense_ids
+        reconciled = store.eusa_actuals.flat_map(&:linked_expense_ids).to_set
         store.expenses.select do |e|
-          matchable_statuses.include?(e.status) && !already_reconciled?(e, reconciled_ids)
+          e.status.in?([ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]) &&
+            e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)
         end
       end
 
@@ -306,16 +304,6 @@ module Admin
           )
           [ pair.key, { expense: expense, budget: budget } ]
         end
-      end
-
-      # Record ids of every expense linked to an imported actual.
-      def reconciled_expense_ids
-        store.eusa_actuals.flat_map(&:linked_expense_ids).to_set
-      end
-
-      # Linked to an actual or payment-confirmed both mean already paid: never match it a second time.
-      def already_reconciled?(expense, reconciled_ids)
-        reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
       # Both legs are imported and cross-linked in one store call; see
