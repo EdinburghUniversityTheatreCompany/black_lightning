@@ -36,6 +36,19 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert Rails.cache.read(assigns(:cache_key)).present?
   end
 
+  test "preview does not promise to add an ID the matched user already has" do
+    FactoryBot.create(:user, student_id: "s1111111", email: "has.id@example.com")
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s2222222\tHas Id\t07/09/2025\tStudent\thas.id@example.com
+    TSV
+
+    post :preview, params: { paste_data: tsv }
+
+    assert_response :success
+    assert_select "small", text: /will be added/, count: 0
+  end
+
   test "preview with empty data redirects back with error" do
     post :preview, params: { paste_data: "" }
 
