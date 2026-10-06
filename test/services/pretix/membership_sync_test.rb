@@ -318,47 +318,23 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal "cust-#{member.email}", other.reload.pretix_customer_identifier
   end
 
-  test "the reconcile matches on the stored link before the email" do
-    member.update_column(:pretix_customer_identifier, "cust-old")
-    client = FakeClient.new(customers: [ customer_hash("old@example.com", identifier: "cust-old") ])
+  test "the stored link beats the email when they name different users" do
+    member.update_column(:pretix_customer_identifier, "cust-x")
+    client = FakeClient.new(customers: [ customer_hash(non_member.email, identifier: "cust-x") ])
 
     counts = Pretix::MembershipSync.new(client: client).reconcile_all
 
-    assert_equal 1, counts[:created], "the member must be recognised despite the email not matching"
-    assert_equal 0, counts[:no_user]
+    assert_equal 1, counts[:created], "the linked member is the one resolved, not the emailed non-member"
   end
 
-  test "user_for prefers the stored link over the email" do
-    linked = FactoryBot.create(:user, email: "linked@example.com")
-    emailed = FactoryBot.create(:user, email: "shared@example.com")
-    customer = customer_hash("shared@example.com", identifier: "cust-x")
+  test "an anonymized customer is still resolved through its stored link" do
+    # It keeps neither email nor external_identifier, so the link is the only handle left.
+    member.update_column(:pretix_customer_identifier, "cust-x")
+    client = FakeClient.new(customers: [ { "identifier" => "cust-x", "email" => nil, "external_identifier" => nil } ])
 
-    resolved = Pretix::MembershipSync.user_for(customer,
-                                               by_email: { "shared@example.com" => emailed },
-                                               by_link: { "cust-x" => linked })
+    counts = Pretix::MembershipSync.new(client: client).reconcile_all
 
-    assert_equal linked, resolved
-  end
-
-  test "user_for falls back to the email when nothing is linked" do
-    emailed = FactoryBot.create(:user, email: "shared@example.com")
-    customer = customer_hash("shared@example.com", identifier: "cust-x")
-
-    resolved = Pretix::MembershipSync.user_for(customer,
-                                               by_email: { "shared@example.com" => emailed },
-                                               by_link: {})
-
-    assert_equal emailed, resolved
-  end
-
-  test "user_for resolves a customer with no email at all, through its link" do
-    # An anonymized customer keeps neither email nor external_identifier, so the
-    # link is the only handle left.
-    linked = FactoryBot.create(:user, email: "linked@example.com")
-    customer = { "identifier" => "cust-x", "email" => nil, "external_identifier" => nil }
-
-    assert_equal linked, Pretix::MembershipSync.user_for(customer, by_email: {}, by_link: { "cust-x" => linked })
-    assert_nil Pretix::MembershipSync.user_for(customer, by_email: {}, by_link: {})
+    assert_equal 1, counts[:created]
   end
 
   # --- reconcile_all ---------------------------------------------------------

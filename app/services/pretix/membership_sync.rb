@@ -50,6 +50,15 @@ module Pretix
 
     Result = Data.define(:outcome, :duplicates_expired)
 
+    # End of the NEXT academic year plus GRACE, end of day. pretix validates a
+    # membership against the SHOW's date, not the purchase date, so this must
+    # reach every show on sale; it still expires by itself within two years if
+    # the sync dies. From Aug 2026 that is 2027-09-21T23:59:59+01:00.
+    def self.membership_end(now = Time.zone.now)
+      start_year = ApplicationController.helpers.date_to_academic_year(now.to_date)
+      (Date.new(start_year + 2, 8, 31) + GRACE).end_of_day.change(usec: 0)
+    end
+
     def initialize(client: Pretix::Client.new)
       @client = client
     end
@@ -96,172 +105,6 @@ module Pretix
 
       totals.merge(passes: passes)
     end
-
-    private
-
-    # Only called for an email match, so the stored link was blank or stale:
-    # re-point it rather than costing that person two lookups forever. A link that
-    # still resolves is never touched, which stops the people holding two pretix
-    # accounts (an @sms.ed.ac.uk one and its rewritten @ed.ac.uk twin)
-    # flip-flopping between them every run.
-    def remember_link(user, identifier)
-      return if identifier.blank? || user.pretix_customer_identifier == identifier
-
-      user.update_column(:pretix_customer_identifier, identifier)
-    rescue ActiveRecord::RecordNotUnique
-      # Another user already claims this customer. Staying unlinked is the safe
-      # direction: this one keeps matching by email, as before the column existed.
-      nil
-    end
-
-    public
-
-    class << self
-      # An SSO account's email claim (external_identifier) wins where both exist:
-      # it is the account the website drives. A native account has no
-      # external_identifier, so its own email is the handle.
-      def external_email(customer)
-        normalize(customer["external_identifier"]).presence || normalize(customer["email"])
-      end
-
-      # True for a customer pretix created from an SSO login.
-      def sso?(customer) = normalize(customer["external_identifier"]).present?
-
-      # The entitlement rule for both paths. Reads the loaded roles rather than
-      # querying, so the reconcile can preload them for every customer at once.
-      def entitled?(user)
-        return false if user.blank?
-
-        user.roles.any? { |role| ENTITLING_ROLES.include?(role.name.to_s.downcase.strip) }
-      end
-
-      # The stored link wins over the email, so a member who changed address
-      # since their first login is still recognised.
-      def user_for(customer, by_email:, by_link:)
-        by_link[customer["identifier"]] || by_email[external_email(customer)]
-      end
-
-      # One query each, not one per customer.
-      def users_by_email(customers)
-        emails = customers.filter_map { |customer| external_email(customer) }.uniq
-        return {} if emails.empty?
-
-        # users.email is uniquely indexed, so one email resolves to one User.
-        User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
-      end
-
-      def users_by_link(customers)
-        identifiers = customers.filter_map { |customer| customer["identifier"].presence }
-        return {} if identifiers.empty?
-
-        User.includes(:roles)
-            .where(pretix_customer_identifier: identifiers)
-            .index_by(&:pretix_customer_identifier)
-      end
-
-      # Pure: facts in, plan out. No API, no ActiveRecord.
-      def plan_for(entitled:, memberships:, now: Time.zone.now)
-        dated, undated = memberships.partition { |membership| parse_time(membership["date_start"]) }
-        # Undated rows are left alone: we cannot tell which window is widest, and
-        # expiring the wrong one is the expensive mistake.
-        return Plan.none(:ambiguous) if dated.empty? && undated.any?
-
-        canonical = dated.min_by { |membership| [ parse_time(membership["date_start"]), membership["id"].to_i ] }
-        duplicates = dated.reject { |membership| membership.equal?(canonical) }
-
-        build_plan(entitled: entitled, canonical: canonical, duplicates: duplicates, now: now)
-      end
-
-      # End of the NEXT academic year plus GRACE, end of day. pretix validates a
-      # membership against the SHOW's date, not the purchase date, so this must
-      # reach every show on sale; it still expires by itself within two years if
-      # the sync dies. From Aug 2026 that is 2027-09-21T23:59:59+01:00.
-      def membership_end(now = Time.zone.now)
-        start_year = ApplicationController.helpers.date_to_academic_year(now.to_date)
-        (Date.new(start_year + 2, 8, 31) + GRACE).end_of_day.change(usec: 0)
-      end
-
-      # A new record starts today and never moves: everything bookable is in the
-      # future, so a window that opened during a lapsed year grants nothing.
-      def membership_start(now = Time.zone.now) = now.beginning_of_day
-
-      def parse_time(value)
-        return value if value.is_a?(Time) || value.is_a?(ActiveSupport::TimeWithZone)
-        return value.beginning_of_day if value.is_a?(Date)
-
-        Time.zone.parse(value.to_s) if value.present?
-      rescue ArgumentError, TypeError
-        nil
-      end
-
-      # Delegates to User's +normalizes :email+, which rewrites
-      # sNNNNNNN@sms.ed.ac.uk to @ed.ac.uk. pretix keeps the email claim from FIRST
-      # login and 30 live customers still carry the @sms form: downcasing alone
-      # looked up an address no User has, so each was silently denied member
-      # pricing (:no_user writes nothing, so it never complains).
-      def normalize(email) = User.normalize_value_for(:email, email).presence
-
-      private
-
-      def build_plan(entitled:, canonical:, duplicates:, now:)
-        duplicate_patches = duplicates.filter_map { |membership| expiry_patch(membership, now) }
-
-        if entitled
-          entitled_plan(canonical, duplicate_patches, now)
-        else
-          not_entitled_plan(canonical, duplicate_patches, now)
-        end
-      end
-
-      def entitled_plan(canonical, duplicate_patches, now)
-        target = membership_end(now)
-
-        if canonical.nil?
-          return Plan.new(outcome: :created, creation: Creation.new(date_start: membership_start(now), date_end: target),
-                          canonical_patch: nil, duplicate_patches: duplicate_patches)
-        end
-
-        patch = extension_patch(canonical, target, now)
-        Plan.new(outcome: outcome_for(patch, duplicate_patches, on_patch: :extended, on_duplicates: :deduplicated),
-                 creation: nil, canonical_patch: patch, duplicate_patches: duplicate_patches)
-      end
-
-      def not_entitled_plan(canonical, duplicate_patches, now)
-        patch = canonical && expiry_patch(canonical, now)
-        # A duplicate expired here is still a revocation, not housekeeping.
-        Plan.new(outcome: outcome_for(patch, duplicate_patches, on_patch: :expired, on_duplicates: :expired),
-                 creation: nil, canonical_patch: patch, duplicate_patches: duplicate_patches)
-      end
-
-      def outcome_for(patch, duplicate_patches, on_patch:, on_duplicates:)
-        return on_patch if patch
-        return on_duplicates if duplicate_patches.any?
-
-        :unchanged
-      end
-
-      # Nil unless date_end is nearer than REFRESH_WINDOW and differs from the
-      # target. An unreadable date_end gets the refresh: writing the right date
-      # can only widen an entitled member's window.
-      def extension_patch(membership, target, now)
-        current = parse_time(membership["date_end"])
-        return if current && (current == target || current >= now + REFRESH_WINDOW)
-
-        Patch.new(membership_id: membership["id"], date_end: target)
-      end
-
-      # Nil if it has already lapsed. pretix cannot delete a membership, so
-      # revoking is a date change.
-      def expiry_patch(membership, now)
-        current = parse_time(membership["date_end"])
-        return if current && current <= now
-
-        Patch.new(membership_id: membership["id"], date_end: now)
-      end
-    end
-
-    delegate :entitled?, :plan_for, :external_email, :normalize,
-             :user_for, :users_by_email, :users_by_link, to: :class
 
     private
 
@@ -362,5 +205,146 @@ module Pretix
         [ key, CUMULATIVE_COUNTS.include?(key) ? totals.fetch(key, 0) + value : value ]
       end
     end
+
+    # Only called for an email match, so the stored link was blank or stale:
+    # re-point it rather than costing that person two lookups forever. A link that
+    # still resolves is never touched, which stops the people holding two pretix
+    # accounts (an @sms.ed.ac.uk one and its rewritten @ed.ac.uk twin)
+    # flip-flopping between them every run.
+    def remember_link(user, identifier)
+      return if identifier.blank? || user.pretix_customer_identifier == identifier
+
+      user.update_column(:pretix_customer_identifier, identifier)
+    rescue ActiveRecord::RecordNotUnique
+      # Another user already claims this customer. Staying unlinked is the safe
+      # direction: this one keeps matching by email, as before the column existed.
+      nil
+    end
+
+    # An SSO account's email claim (external_identifier) wins where both exist:
+    # it is the account the website drives. A native account has no
+    # external_identifier, so its own email is the handle.
+    def external_email(customer)
+      normalize(customer["external_identifier"]).presence || normalize(customer["email"])
+    end
+
+    # The entitlement rule for both paths. Reads the loaded roles rather than
+    # querying, so the reconcile can preload them for every customer at once.
+    def entitled?(user)
+      user.roles.any? { |role| ENTITLING_ROLES.include?(role.name.to_s.downcase.strip) }
+    end
+
+    # The stored link wins over the email, so a member who changed address
+    # since their first login is still recognised.
+    def user_for(customer, by_email:, by_link:)
+      by_link[customer["identifier"]] || by_email[external_email(customer)]
+    end
+
+    # One query each, not one per customer.
+    def users_by_email(customers)
+      emails = customers.filter_map { |customer| external_email(customer) }.uniq
+      return {} if emails.empty?
+
+      # users.email is uniquely indexed, so one email resolves to one User.
+      User.includes(:roles).where(email: emails).index_by { |user| normalize(user.email) }
+    end
+
+    def users_by_link(customers)
+      identifiers = customers.filter_map { |customer| customer["identifier"].presence }
+      return {} if identifiers.empty?
+
+      User.includes(:roles)
+          .where(pretix_customer_identifier: identifiers)
+          .index_by(&:pretix_customer_identifier)
+    end
+
+    # Pure: facts in, plan out. No API, no ActiveRecord.
+    def plan_for(entitled:, memberships:, now: Time.zone.now)
+      dated, undated = memberships.partition { |membership| parse_time(membership["date_start"]) }
+      # Undated rows are left alone: we cannot tell which window is widest, and
+      # expiring the wrong one is the expensive mistake.
+      return Plan.none(:ambiguous) if dated.empty? && undated.any?
+
+      canonical = dated.min_by { |membership| [ parse_time(membership["date_start"]), membership["id"].to_i ] }
+      duplicates = dated.reject { |membership| membership.equal?(canonical) }
+
+      build_plan(entitled: entitled, canonical: canonical, duplicates: duplicates, now: now)
+    end
+
+    def build_plan(entitled:, canonical:, duplicates:, now:)
+      duplicate_patches = duplicates.filter_map { |membership| expiry_patch(membership, now) }
+
+      if entitled
+        entitled_plan(canonical, duplicate_patches, now)
+      else
+        not_entitled_plan(canonical, duplicate_patches, now)
+      end
+    end
+
+    def entitled_plan(canonical, duplicate_patches, now)
+      target = self.class.membership_end(now)
+
+      if canonical.nil?
+        return Plan.new(outcome: :created, creation: Creation.new(date_start: membership_start(now), date_end: target),
+                        canonical_patch: nil, duplicate_patches: duplicate_patches)
+      end
+
+      patch = extension_patch(canonical, target, now)
+      Plan.new(outcome: outcome_for(patch, duplicate_patches, on_patch: :extended, on_duplicates: :deduplicated),
+               creation: nil, canonical_patch: patch, duplicate_patches: duplicate_patches)
+    end
+
+    def not_entitled_plan(canonical, duplicate_patches, now)
+      patch = canonical && expiry_patch(canonical, now)
+      # A duplicate expired here is still a revocation, not housekeeping.
+      Plan.new(outcome: outcome_for(patch, duplicate_patches, on_patch: :expired, on_duplicates: :expired),
+               creation: nil, canonical_patch: patch, duplicate_patches: duplicate_patches)
+    end
+
+    def outcome_for(patch, duplicate_patches, on_patch:, on_duplicates:)
+      return on_patch if patch
+      return on_duplicates if duplicate_patches.any?
+
+      :unchanged
+    end
+
+    # Nil unless date_end is nearer than REFRESH_WINDOW and differs from the
+    # target. An unreadable date_end gets the refresh: writing the right date
+    # can only widen an entitled member's window.
+    def extension_patch(membership, target, now)
+      current = parse_time(membership["date_end"])
+      return if current && (current == target || current >= now + REFRESH_WINDOW)
+
+      Patch.new(membership_id: membership["id"], date_end: target)
+    end
+
+    # Nil if it has already lapsed. pretix cannot delete a membership, so
+    # revoking is a date change.
+    def expiry_patch(membership, now)
+      current = parse_time(membership["date_end"])
+      return if current && current <= now
+
+      Patch.new(membership_id: membership["id"], date_end: now)
+    end
+
+    # A new record starts today and never moves: everything bookable is in the
+    # future, so a window that opened during a lapsed year grants nothing.
+    def membership_start(now = Time.zone.now) = now.beginning_of_day
+
+    def parse_time(value)
+      return value if value.is_a?(Time) || value.is_a?(ActiveSupport::TimeWithZone)
+      return value.beginning_of_day if value.is_a?(Date)
+
+      Time.zone.parse(value.to_s) if value.present?
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    # Delegates to User's +normalizes :email+, which rewrites
+    # sNNNNNNN@sms.ed.ac.uk to @ed.ac.uk. pretix keeps the email claim from FIRST
+    # login and 30 live customers still carry the @sms form: downcasing alone
+    # looked up an address no User has, so each was silently denied member
+    # pricing (:no_user writes nothing, so it never complains).
+    def normalize(email) = User.normalize_value_for(:email, email).presence
   end
 end
