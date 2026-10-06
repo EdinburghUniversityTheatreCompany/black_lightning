@@ -17,7 +17,6 @@
 #  index_mass_mails_on_sender_id  (sender_id)
 #
 class MassMail < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :subject, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
   validate :send_date_is_not_in_the_past
@@ -65,7 +64,6 @@ class MassMail < ApplicationRecord
   end
 
   def send!
-    # Schedule the mass mail job for the specified send_date
     MassMailJob.set(wait_until: send_date).perform_later(id)
   end
 end

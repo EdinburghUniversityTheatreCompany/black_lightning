@@ -1,9 +1,8 @@
 require "test_helper"
 
 class MassMailerTest < ActionMailer::TestCase
-  # An email has no base URL, so a relative href is dead on arrival: the recipient's mail client
-  # either ignores it or resolves it against its own domain. The markdown renderer rewrites links
-  # to our own host into paths, which is right on the web and wrong here.
+  # An email has no base URL, so a relative href is dead on arrival. Links to our own host
+  # become paths on the web, which is wrong here.
   test "a link to our own site stays absolute in a mass mail" do
     mail = deliver("Tickets are on sale [now](https://www.bedlamtheatre.co.uk/shows).")
 
@@ -17,8 +16,7 @@ class MassMailerTest < ActionMailer::TestCase
     assert_includes mail.html_part.decoded, 'href="https://bedlamtheatre.co.uk/events"'
   end
 
-  # The other half of the normalisation is still right in an email: a target typed without a
-  # scheme is broken everywhere, not just on the web.
+  # A target typed without a scheme is still made absolute: it is broken everywhere.
   test "a schemeless link is still made absolute in a mass mail" do
     mail = deliver("Our friends at [the Improverts](theimproverts.co.uk) are on tonight.")
 

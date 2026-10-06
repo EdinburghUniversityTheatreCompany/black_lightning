@@ -11,13 +11,8 @@ class Admin::Proposals::CallsController < AdminController
   ##
   # GET /admin/proposals/calls
   #
-  # Cross-call dashboard of proposals still needing a decision. Shows:
-  # - awaiting_approval proposals (with inline approve/reject for approvers)
-  # - approved proposals (with inline mark_successful/mark_unsuccessful for approvers)
-  #
-  # Any logged-in user may open the page; per-proposal visibility is enforced by the existing
-  # :read rules in ability.rb (team members see their own pre-deadline proposals; everyone sees
-  # approved/successful/unsuccessful ones; proposal checkers see everything post-submission deadline).
+  # Dashboard of proposals awaiting approval or a GM outcome, across calls. Which proposals a
+  # user sees is enforced by the :read rules in ability.rb.
   ##
   def index
     authorize! :index, Admin::Proposals::Proposal
@@ -32,7 +27,7 @@ class Admin::Proposals::CallsController < AdminController
     @awaiting_approval = scoped.awaiting_approval
     @approved = scoped.approved
 
-    # Surface every open call so the view can show a "New Proposal" CTA even for calls with no proposals yet.
+    # Open calls with no proposals still get a New Proposal button.
     @open_calls = Admin::Proposals::Call.open.order(:editing_deadline)
 
     @title = "Proposals"

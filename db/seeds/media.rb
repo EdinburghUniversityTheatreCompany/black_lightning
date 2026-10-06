@@ -6,7 +6,7 @@ header_path      = Rails.root.join("app/assets/images/Header.jpg")
 background_path  = Rails.root.join("app/assets/images/card_background.jpg")
 logo_path        = Rails.root.join("app/assets/images/BedlamLogoBW.png")
 
-# ── Picture Tags ───────────────────────────────────────────────────────────────
+# Picture Tags
 production_tag = PictureTag.find_or_create_by(name: "Production Photos") do |t|
   t.description = "Photos taken during the run of a show."
 end
@@ -15,7 +15,7 @@ rehearsal_tag = PictureTag.find_or_create_by(name: "Rehearsal Photos") do |t|
   t.description = "Photos taken during rehearsals."
 end
 
-# ── Attachment Tags ────────────────────────────────────────────────────────────
+# Attachment Tags
 script_tag = AttachmentTag.find_or_create_by(name: "Script") do |t|
   t.description = "Show scripts and texts."
 end
@@ -24,7 +24,7 @@ schedule_tag = AttachmentTag.find_or_create_by(name: "Schedule") do |t|
   t.description = "Rehearsal and production schedules."
 end
 
-# ── Pictures on shows ─────────────────────────────────────────────────────────
+# Pictures on shows
 [
   [ hamlet,  "Hamlet production photo", header_path,     "header.jpg",      [ production_tag ] ],
   [ hamlet,  "Hamlet rehearsal photo",  background_path, "rehearsal.jpg",   [ rehearsal_tag ] ],
@@ -45,8 +45,7 @@ end
   picture.picture_tags = tags
 end
 
-# ── Attachments on shows ───────────────────────────────────────────────────────
-# Create a small text file to use as a seed attachment
+# Attachments on shows
 schedule_file = Tempfile.new([ "schedule", ".txt" ])
 schedule_file.write("Week 1: Blocking\nWeek 2: Off-book\nWeek 3: Tech\nWeek 4: Run")
 schedule_file.rewind
@@ -67,7 +66,7 @@ end
 schedule_file.close
 schedule_file.unlink
 
-# ── Attachments on editable blocks (logo on About page) ───────────────────────
+# Attachments on editable blocks (logo on About page)
 about_block = Admin::EditableBlock.find_by(url: "about")
 if about_block && Attachment.where(name: "Bedlam Theatre Logo").none?
   attachment = Attachment.new(name: "Bedlam Theatre Logo", item: about_block, access_level: 2)  # Everyone
@@ -75,7 +74,7 @@ if about_block && Attachment.where(name: "Bedlam Theatre Logo").none?
   attachment.save!
 end
 
-# ── Video links on shows ───────────────────────────────────────────────────────
+# Video links on shows
 [
   [ hamlet,  "Hamlet Trailer",  "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 1 ],
   [ cabaret, "Cabaret Trailer", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 1 ],

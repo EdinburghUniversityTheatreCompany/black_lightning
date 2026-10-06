@@ -25,7 +25,6 @@
 class Admin::Proposals::Proposal < ApplicationRecord
   include TeamMemberOrdering
 
-  # Length validations enforcing database column limits
   validates :show_title, length: { maximum: 255 }
   validates :publicity_text, length: { maximum: 16777215 }
   validates :proposal_text, length: { maximum: 16777215 }
@@ -216,7 +215,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     Rails.logger.info "Created Show: #{@show.name} (#{@show.slug})"
   end
-  # Convert to show asynchronously using ActiveJob
+
   def convert_to_show_async
     ProposalConversionJob.perform_later(id)
   end

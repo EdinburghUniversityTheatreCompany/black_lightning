@@ -27,7 +27,6 @@
 #  index_admin_proposals_answers_on_question_id              (question_id)
 #
 class Admin::Answer < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :answer, length: { maximum: 16777215 }
   validates :answerable_type, length: { maximum: 255 }
   validates :file_file_name, length: { maximum: 255 }

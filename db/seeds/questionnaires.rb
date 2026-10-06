@@ -1,4 +1,4 @@
-# ── Questionnaire Templates ────────────────────────────────────────────────────
+# Questionnaire Templates
 post_show_template = Admin::Questionnaires::QuestionnaireTemplate.find_or_initialize_by(name: "Post-Show Debrief")
 if post_show_template.new_record?
   post_show_template.save!
@@ -44,7 +44,7 @@ if crew_application_template.new_record?
   )
 end
 
-# ── Questionnaires attached to shows ──────────────────────────────────────────
+# Questionnaires attached to shows
 hamlet = Show.find_by(slug: "hamlet")
 rent   = Show.find_by(slug: "rent")
 

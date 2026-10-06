@@ -24,7 +24,6 @@
 #  updated_at         :datetime         not null
 #
 class Venue < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :tagline, length: { maximum: 255 }
   validates :description, length: { maximum: 16777215 }

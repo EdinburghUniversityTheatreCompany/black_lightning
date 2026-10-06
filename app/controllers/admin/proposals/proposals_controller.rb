@@ -130,11 +130,6 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
-  ##
-  # PUT /admin/proposals/proposals/1/mark_successful
-  #
-  # PUT /admin/proposals/proposals/1/mark_successful.json
-  ##
   def mark_successful
     if @proposal.approved?
       @proposal.update!(status: :successful)
@@ -148,11 +143,6 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
-  ##
-  # PUT /admin/proposals/proposals/1/mark_unsuccessful
-  #
-  # PUT /admin/proposals/proposals/1/mark_unsuccessful.json
-  ##
   def mark_unsuccessful
     if @proposal.approved?
       @proposal.update!(status: :unsuccessful)
@@ -233,8 +223,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   private
 
-  # Allow approve/reject/mark_* actions triggered from the pending dashboard to return there
-  # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
+  # Actions taken from the calls dashboard or a call's proposal list return there.
   def post_action_redirect_path
     def rec(p)
       Rails.application.routes.recognize_path p

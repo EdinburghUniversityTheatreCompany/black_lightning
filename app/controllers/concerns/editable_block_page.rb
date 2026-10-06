@@ -1,10 +1,5 @@
-##
-# For the controllers whose whole page is one Admin::EditableBlock -- /about/*,
-# /get_involved/* and /archives/*.
-#
-# The block already knows what the page is called and what it says, so neither the title nor the
-# description has any reason to fall back to the site-wide default.
-##
+# For controllers whose whole page is one Admin::EditableBlock (/about, /get_involved, /archives):
+# the block supplies the title and meta description.
 module EditableBlockPage
   extend ActiveSupport::Concern
 
@@ -16,8 +11,7 @@ module EditableBlockPage
     @title = @editable_block.name.presence || @title
 
     description = helpers.render_plain(@editable_block.content).squish
-    # A block whose body is only a nav redirect has no prose to describe the page with, and
-    # "EXTERNAL_URL https://..." describes it worse than the site description does.
+    # A nav-redirect block has no prose, and "EXTERNAL_URL https://..." is a worse description than the site's.
     @meta[:description] = description if description.present? && !description.start_with?(SubpageHelper::EXTERNAL_URL_PREFIX)
   end
 end

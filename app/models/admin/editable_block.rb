@@ -25,7 +25,6 @@
 #  index_admin_editable_blocks_on_ordering  (ordering)
 #
 class Admin::EditableBlock < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :content, length: { maximum: 16777215 }
   validates :group, length: { maximum: 255 }
@@ -67,8 +66,8 @@ class Admin::EditableBlock < ApplicationRecord
   def clear_navbar_cache
     return if url.blank?
 
-    # Clear cache for each URL prefix, since get_subpage_editable_blocks caches
-    # by the full subpage_type path (e.g. "admin/resources"), not just the first segment.
+    # Every prefix: get_subpage_editable_blocks caches by the full subpage_type path
+    # (e.g. "admin/resources"), not the first segment.
     parts = url.split("/")
     parts.length.times do |i|
       Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}")

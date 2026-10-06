@@ -9,9 +9,7 @@ class Admin::CarouselItemsControllerTest < ActionController::TestCase
                                           image: Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png"))
   end
 
-  # This page had no test at all, and every label on it was missing its
-  # simple_form.labels.defaults translation (plus one misspelt slug), so the table headers
-  # and the search form rendered "Translation missing" in production.
+  # Every label needs a simple_form.labels.defaults translation, or the page renders "Translation missing".
   test "should get index" do
     get :index
 
@@ -26,9 +24,7 @@ class Admin::CarouselItemsControllerTest < ActionController::TestCase
     assert_no_match(/Translation missing/, response.body)
   end
 
-  # The carousel outputs the tagline raw, so the field has to be a plain input: authored
-  # through the Markdown editor, a tagline like **bold** showed up literally on the public
-  # page. The event and venue taglines rendered by the same component are plain too.
+  # The carousel prints the tagline raw, so Markdown typed there (**bold**) would show literally.
   test "the tagline is a plain field, not the Markdown editor" do
     get :edit, params: { id: @carousel_item }
 

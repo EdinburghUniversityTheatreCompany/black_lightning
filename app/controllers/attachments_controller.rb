@@ -33,8 +33,7 @@ class AttachmentsController < ApplicationController
         response.stream.write(chunk)
       end
     end
-    # Reported as well as 404ed: a blob that has gone missing from storage is data loss, not a
-    # visitor asking for something that was never there.
+    # Reported as well as 404ed: a blob missing from storage is data loss, not a bad link.
   rescue ActiveStorage::FileNotFoundError => e
     Honeybadger.notify(e, context: {
       attachment_id: @attachment.id,

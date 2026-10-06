@@ -18,7 +18,6 @@
 #  index_video_links_on_item_type_and_item_id  (item_type,item_id)
 #
 class VideoLink < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :link, length: { maximum: 255 }
   validates :item_type, length: { maximum: 255 }

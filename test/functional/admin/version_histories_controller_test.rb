@@ -5,7 +5,6 @@ class Admin::VersionHistoriesControllerTest < ApplicationIntegrationTest
   setup do
     @editable_block = admin_editable_blocks(:public)
 
-    # Create versions by updating the editable block with PaperTrail enabled
     PaperTrail.request(enabled: true) do
       PaperTrail.request.whodunnit = users(:admin).id
 

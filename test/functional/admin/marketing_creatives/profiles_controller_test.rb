@@ -164,8 +164,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     get :edit, params: { id: @profile }
     assert_response :success
 
-    # The old layout ran one category's fields straight into the next, so the
-    # "Remove Category" button between them read as belonging to the wrong one.
+    # Own card per category, so "Remove Category" visibly belongs to its own fields.
     assert_select ".categories .card-title", text: category_info.category.name, count: 1
     assert_select ".categories button[data-action='nested-form#remove']", text: /Remove Category/, minimum: 1
   end

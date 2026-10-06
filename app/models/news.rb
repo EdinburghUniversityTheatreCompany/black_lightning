@@ -27,7 +27,6 @@
 #  index_news_on_slug                          (slug)
 #
 class News < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :title, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
   validates :slug, length: { maximum: 255 }
@@ -52,7 +51,6 @@ class News < ApplicationRecord
   # News should always be ordered by publish_date DESC
   default_scope -> { order("publish_date DESC") }
 
-  # Callbacks
   before_validation :generate_slug_from_title
 
   scope :current, -> { where([ "publish_date <= ?", Time.current ]) }
@@ -88,24 +86,20 @@ class News < ApplicationRecord
   def generate_slug_from_title
     return unless title.present?
 
-    # If we have an existing slug and the title didn't change, don't modify
     return if slug.present? && !title_changed?
 
     base_slug = title.to_url
 
-    # If title changed, only update if current slug looks auto-generated from old title
     if title_changed? && slug.present?
       old_title = title_was&.to_url
       # For new records title_was is nil, so treat any pre-set slug as manually set
       return if old_title.nil?
-      # Only update if the current slug matches what would have been auto-generated from the old title
-      # This indicates it was auto-generated, not manually set
+      # A slug that doesn't derive from the old title was set by hand: keep it.
       unless slug == old_title || slug.start_with?("#{old_title}-")
-        return # Slug was manually set, don't change it
+        return
       end
     end
 
-    # Find a unique slug by appending numbers if needed
     candidate_slug = base_slug
     counter = 1
 

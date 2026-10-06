@@ -158,9 +158,8 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_match "There is no file attached.", response.body
   end
 
-  # The response has already been given the file's Content-Type (and the headers that go with
-  # serving a file) by the time the download fails, so rendering the error page into it used to
-  # raise RespondToMismatchError on top of the original error.
+  # The file's headers are already set when the download fails; the error page must not be
+  # rendered into them (it raised RespondToMismatchError).
   test "renders the 404 page when the file is missing from storage" do
     attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
     attachment.file.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
@@ -189,9 +188,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
   private
 
-  # Makes the storage service fail part-way through a streamed download for the duration of the
-  # block, the way S3 does when the connection drops between two of the ranged GETs it reads a
-  # blob with.
+  # Fails the streamed download part-way through, as S3 does when the connection drops between ranged GETs.
   def with_truncated_download(service)
     service.define_singleton_method(:download) do |key, &block|
       next super(key, &block) if block.nil?

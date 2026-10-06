@@ -1,14 +1,4 @@
-##
-# Controller for viewing PaperTrail version history and diffs.
-#
-# Designed to be reusable across any PaperTrail-enabled model by
-# nesting under the parent resource's routes.
-#
-# Example routes:
-#   resources :editable_blocks do
-#     resources :version_histories, only: [:index, :show]
-#   end
-##
+# PaperTrail history and diffs for an editable block.
 class Admin::VersionHistoriesController < AdminController
   before_action :load_parent_record
   before_action :load_version, only: :show
@@ -33,8 +23,6 @@ class Admin::VersionHistoriesController < AdminController
 
     raise ActionController::RoutingError.new("Not found") unless ALLOWED_PARENT_MODELS.include?(parent_class_name)
 
-    # Try Admin-namespaced model first (since this controller is in the admin namespace),
-    # then fall back to non-namespaced model.
     parent_class = begin
       "Admin::#{parent_class_name}".constantize
     rescue NameError

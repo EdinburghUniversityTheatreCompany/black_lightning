@@ -25,7 +25,6 @@
 #  index_pictures_on_gallery_type_and_gallery_id  (gallery_type,gallery_id)
 #
 class Picture < ApplicationRecord
-  # Length validations enforcing database column limits
   validates :description, length: { maximum: 16777215 }
   validates :gallery_type, length: { maximum: 255 }
   validates :image_file_name, length: { maximum: 255 }

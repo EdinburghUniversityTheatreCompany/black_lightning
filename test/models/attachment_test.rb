@@ -110,8 +110,7 @@ class AttachmentTest < ActionView::TestCase
     assert attachment.valid?
   end
 
-  # filename + the content type a browser realistically declares on upload
-  # (zip/xml/octet-stream for the container-based and unknown formats).
+  # Filename plus the content type a browser declares on upload (zip/xml/octet-stream for container formats).
   SHEET_MUSIC_UPLOADS = [
     [ "score.mscz",      "application/zip" ],
     [ "score.mscx",      "application/xml" ],
@@ -149,9 +148,8 @@ class AttachmentTest < ActionView::TestCase
     assert_not attachment.errors[:file].empty?
   end
 
-  # Catches an upgrade re-enabling active_storage_validations' derived `accept`
-  # (see its initializer): nothing else here renders a file field and looks at
-  # it, and the symptom is a file picker silently greying out a valid file.
+  # Catches an upgrade re-enabling active_storage_validations' derived `accept`, which greys
+  # out valid files in the picker (see its initializer).
   test "a file field carries no accept attribute" do
     builder = ActionView::Helpers::FormBuilder.new(
       :attachment, Attachment.new, ApplicationController.new.view_context, {}

@@ -1,14 +1,11 @@
-##
-# Controller for viewing and managing potential duplicate users.
-##
+# Lists potential duplicate users and records pairs marked as not duplicates.
 class Admin::DuplicatesController < AdminController
   authorize_resource class: false
 
   def index
-    # Buckets 1-3: Real-time (fast, already optimized)
     @duplicates = User.find_potential_duplicates
 
-    # Buckets 4-5: From cache (background job computed)
+    # The fuzzy-both buckets come from the cache the background job fills.
     @duplicates[:fuzzy_both_overlapping] = load_cached_duplicates("overlapping")
     @duplicates[:fuzzy_both_no_overlap] = load_cached_duplicates("no_overlap")
 
@@ -37,7 +34,7 @@ class Admin::DuplicatesController < AdminController
       {
         users: [ cached.user1, cached.user2 ],
         years_overlap: (bucket_type == "overlapping"),
-        years_active_cache: {} # View falls back to user.years_active if not present
+        years_active_cache: {}
       }
     end
   end
