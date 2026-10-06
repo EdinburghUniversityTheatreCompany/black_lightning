@@ -16,7 +16,7 @@
       <% end %>
     </p>
 
-    <%= render "fields", form: form, people: @people, cost_centres: @cost_centres,
+    <%= render "fields", form: form, people: @people, cost_centres: selectable_cost_centres,
           name: params[:name], nominal_code: params[:nominal_code], budget_type: params[:budget_type],
           initial_budget: params[:initial_budget], notes: params[:notes],
           active: params[:active].present? || params[:name].blank?,

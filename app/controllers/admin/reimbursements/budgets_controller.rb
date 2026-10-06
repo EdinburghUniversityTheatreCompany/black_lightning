@@ -58,18 +58,17 @@ module Admin
       def new
         @title = "New budget"
         @people = store.people
-        @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-        @areas = new_budget_areas
+        # Every centre's areas for the year: the browser narrows the list to the
+        # centre picked (reimbursements-budget-area#costCentreChanged) and
+        # area_scope_error refuses a mismatch that gets past it.
+        @areas = assignable_areas(year: selected_financial_year)
       end
 
       def create
         new_budget = ::Reimbursements::Budget.new(budget_type: "Expense")
         attrs = budget_params(new_budget)
         if (error = budget_validation_error(attrs, new_budget))
-          @title = "New budget"
-          @people = store.people
-          @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-          @areas = new_budget_areas
+          new
           flash.now[:alert] = error
           return render(:new, status: :unprocessable_entity)
         end
@@ -228,14 +227,6 @@ module Admin
 
         mismatch_error("cost centre", area.cost_centre&.name, centre&.name) ||
           mismatch_error("financial year", area.financial_year&.label, year&.label)
-      end
-
-      # Every centre's areas for the year: the line's centre is still being
-      # chosen on this form, so the browser narrows the list to the one picked
-      # (reimbursements-budget-area#costCentreChanged) and area_scope_error
-      # refuses a mismatch that gets past it.
-      def new_budget_areas
-        assignable_areas(year: selected_financial_year)
       end
 
       # Lenient like mismatch_error (an unset side matches anything), so the
