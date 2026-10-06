@@ -13,22 +13,16 @@ module Reimbursements
     INVALID = :invalid
     OUTSIDE_SPEC = :outside_spec
 
-    # 14 is recognised but always OUTSIDE_SPEC (see #check).
-    SUPPORTED_EXCEPTIONS = [ 0, 1, 3, 4, 5, 6, 7, 14 ].freeze
+    SUPPORTED_EXCEPTIONS = [ 0, 1, 3, 4, 5, 6, 7 ].freeze
 
-    VALACDOS_PATH = -> { Rails.root.join("vendor/pay_uk/valacdos.txt") }
-    SCSUBTAB_PATH = -> { Rails.root.join("vendor/pay_uk/scsubtab.txt") }
+    VALACDOS_PATH = Rails.root.join("vendor/pay_uk/valacdos.txt").freeze
+    SCSUBTAB_PATH = Rails.root.join("vendor/pay_uk/scsubtab.txt").freeze
 
     module_function
 
     # Built once from the vendored rule files.
     def default_checker
-      @default_checker ||= Checker.from_files(VALACDOS_PATH.call, SCSUBTAB_PATH.call)
-    end
-
-    # Test seam; not used in production.
-    def reset_default_checker!
-      @default_checker = nil
+      @default_checker ||= Checker.from_files(VALACDOS_PATH, SCSUBTAB_PATH)
     end
 
     ##
@@ -65,8 +59,6 @@ module Reimbursements
         applicable = @rules.select { |rule| rule.applies_to?(sort_int) }
         return OUTSIDE_SPEC if applicable.empty?
         return OUTSIDE_SPEC if applicable.any? { |rule| !SUPPORTED_EXCEPTIONS.include?(rule.exception) }
-        # Exception 14 checks a digit subset: outside spec rather than risk a false negative.
-        return OUTSIDE_SPEC if applicable.any? { |rule| rule.exception == 14 }
 
         results = applicable.map { |rule| apply_rule(rule, sort_clean, account_clean) }
 
@@ -190,51 +182,35 @@ module Reimbursements
       module_function
 
       def parse_valacdos(path)
-        rules = []
-        return rules unless File.exist?(path)
-
-        File.foreach(path) do |line|
-          line = line.strip
-          next if line.empty? || line.start_with?("#")
-
-          parts = line.split
-          next if parts.length < 17
-
-          begin
-            rules << Rule.new(
-              sort_from: Integer(parts[0], 10),
-              sort_to: Integer(parts[1], 10),
-              algorithm: parts[2],
-              weights: parts[3, 14].map { |part| Integer(part, 10) },
-              exception: parts.length >= 18 ? Integer(parts[17], 10) : 0
-            )
-          rescue ArgumentError
-            next # skip malformed lines
-          end
+        records(path, 17).filter_map do |parts|
+          Rule.new(
+            sort_from: Integer(parts[0], 10),
+            sort_to: Integer(parts[1], 10),
+            algorithm: parts[2],
+            weights: parts[3, 14].map { |part| Integer(part, 10) },
+            exception: parts.length >= 18 ? Integer(parts[17], 10) : 0
+          )
+        rescue ArgumentError
+          nil # skip malformed lines
         end
-
-        rules
       end
 
       def parse_scsubtab(path)
-        subs = {}
-        return subs unless File.exist?(path)
-
-        File.foreach(path) do |line|
-          line = line.strip
-          next if line.empty? || line.start_with?("#")
-
-          parts = line.split
-          next if parts.length < 2
-
-          begin
-            subs[Integer(parts[0], 10)] = Integer(parts[1], 10)
-          rescue ArgumentError
-            next
-          end
+        records(path, 2).each_with_object({}) do |parts, subs|
+          subs[Integer(parts[0], 10)] = Integer(parts[1], 10)
+        rescue ArgumentError
+          next
         end
+      end
 
-        subs
+      # The whitespace-split fields of every non-comment line with at least +min_fields+.
+      def records(path, min_fields)
+        return [] unless File.exist?(path)
+
+        File.foreach(path).filter_map do |line|
+          parts = line.split
+          parts if parts.length >= min_fields && !parts.first.start_with?("#")
+        end
       end
     end
   end
