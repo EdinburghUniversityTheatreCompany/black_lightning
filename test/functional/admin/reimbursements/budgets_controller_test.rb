@@ -1209,6 +1209,21 @@ module Admin
         assert_equal [ "Next year props" ], names
       end
 
+      test "the links between the index and the overview keep the selected year and centre" do
+        this_year, = seed_two_years
+        other = create_second_reimbursements_cost_centre
+        sign_in @user
+        scope = { year: this_year.key, cost_centre: other.key }
+
+        get :index, params: scope
+
+        assert_select "a[href=?]", overview_admin_reimbursements_budgets_path(scope), text: "Budget overview"
+
+        get :overview, params: scope
+
+        assert_select "a[href=?]", admin_reimbursements_budgets_path(scope), text: /All budgets/
+      end
+
       test "the selector is hidden while only one year exists" do
         ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
         sign_in @user
