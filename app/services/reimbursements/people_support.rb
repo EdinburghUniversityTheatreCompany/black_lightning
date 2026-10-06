@@ -8,19 +8,13 @@ module Reimbursements
     # Returns the subset of +people+ involved in at least one name/email clash,
     # in original order, each person at most once.
     def find_duplicate_people(people)
-      name_counts = Hash.new(0)
-      email_counts = Hash.new(0)
+      counts = people.flat_map { |person| duplicate_keys(person) }.tally
+      people.select { |person| duplicate_keys(person).any? { |key| counts[key] > 1 } }
+    end
 
-      people.each do |person|
-        name_counts[person.name.strip.downcase] += 1 if person.name.present?
-        email_counts[person.email.strip.downcase] += 1 if person.email.present?
-      end
-
-      people.select do |person|
-        name_dup = person.name.present? && name_counts[person.name.strip.downcase] > 1
-        email_dup = person.email.present? && email_counts[person.email.strip.downcase] > 1
-        name_dup || email_dup
-      end
+    def duplicate_keys(person)
+      { name: person.name, email: person.email }
+        .filter_map { |field, value| [ field, value.strip.downcase ] if value.present? }
     end
   end
 end
