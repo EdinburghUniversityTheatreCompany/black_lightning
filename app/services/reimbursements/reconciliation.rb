@@ -275,13 +275,10 @@ module Reimbursements
 
     # Evidence that two rows are one transaction booked both ways; see the OFFSET_SCORE_* constants.
     def offset_pair_score(row_a, row_b)
-      score = 0
+      score = OFFSET_SCORE_SAME_NOMINAL # offset_candidates only passes same-nominal rows
       score += OFFSET_SCORE_SAME_REF if same_field?(row_a.ref, row_b.ref)
-      score += OFFSET_SCORE_SAME_NOMINAL if same_field?(row_a.nominal_code, row_b.nominal_code)
       score += OFFSET_SCORE_SAME_PERIOD if same_field?(row_a.period, row_b.period)
-      if narrative_prefix_similar?(row_a.narrative, row_b.narrative)
-        score += OFFSET_SCORE_NARRATIVE_PREFIX
-      end
+      score += OFFSET_SCORE_NARRATIVE_PREFIX if narrative_prefix_similar?(row_a.narrative, row_b.narrative)
       score - offset_date_penalty(row_a.date, row_b.date)
     end
     private_class_method :offset_pair_score
@@ -315,12 +312,8 @@ module Reimbursements
     # An accrual and its reversal share a narrative with one word swapped part-way ("PO 40000123
     # accrual" / "PO 40000123 reversal"), so the shared LEADING run is the signal, not equality.
     def narrative_prefix_similar?(left, right)
-      left = normalise_narrative(left)
-      right = normalise_narrative(right)
-      return false if left.length < OFFSET_NARRATIVE_PREFIX_CHARS ||
-        right.length < OFFSET_NARRATIVE_PREFIX_CHARS
-
-      common_prefix_length(left, right) >= OFFSET_NARRATIVE_PREFIX_CHARS
+      prefix = normalise_narrative(left)[0, OFFSET_NARRATIVE_PREFIX_CHARS]
+      prefix.length == OFFSET_NARRATIVE_PREFIX_CHARS && normalise_narrative(right).start_with?(prefix)
     end
     private_class_method :narrative_prefix_similar?
 
@@ -328,13 +321,6 @@ module Reimbursements
       value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
     end
     private_class_method :normalise_narrative
-
-    def common_prefix_length(left, right)
-      length = 0
-      length += 1 while length < [ left.length, right.length ].min && left[length] == right[length]
-      length
-    end
-    private_class_method :common_prefix_length
 
     # --- private helpers ---------------------------------------------------
 
