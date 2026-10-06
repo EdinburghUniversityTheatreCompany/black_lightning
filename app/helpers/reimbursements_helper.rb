@@ -9,46 +9,27 @@ module ReimbursementsHelper
   # Modulus badge for a person's bank details. Pass the checker so requests share one
   # loaded rule set (and tests can inject a fake).
   def reimbursements_modulus_badge(person, checker: Reimbursements::ModulusCheck.default_checker)
-    unless person.bank_details?
-      # Missing blocks approval as INVALID does, so it gets warning weight, not grey.
-      return render(BadgeComponent.new(type: :warning, pill: true).with_content("Missing"))
-    end
+    # Missing blocks approval as INVALID does, so it gets warning weight, not grey.
+    return reimbursements_pill(:warning, "Missing") unless person.bank_details?
 
-    result = checker.check(person.sort_code, person.account_number)
-    spec = MODULUS_BADGE.fetch(result, MODULUS_BADGE[Reimbursements::ModulusCheck::OUTSIDE_SPEC])
-    render(BadgeComponent.new(type: spec[:type], pill: true).with_content(spec[:label]))
+    modulus_pill(checker.check(person.sort_code, person.account_number))
   end
 
-  # An expense's EFFECTIVE bank details (payee override, else the linked person's).
-  EffectivePayee = Struct.new(:sort_code, :account_number) do
-    def bank_details?
-      sort_code.present? && account_number.present?
-    end
-  end
-
+  # The badge for an expense's EFFECTIVE bank details (payee override, else the linked
+  # person's). No modulus check on the international rail (it is a UK sort-code
+  # algorithm); a stored IBAN has already passed mod-97, so its presence is the verdict.
   def reimbursements_effective_modulus_badge(expense, checker: Reimbursements::ModulusCheck.default_checker)
-    return reimbursements_iban_badge(expense) if expense.international?
+    return reimbursements_pill(:warning, "Missing") unless expense.effective_has_bank_details?
+    return reimbursements_pill(:success, "IBAN") if expense.international?
 
-    payee = EffectivePayee.new(expense.effective_sort_code, expense.effective_account_number)
-    reimbursements_modulus_badge(payee, checker: checker)
-  end
-
-  # No modulus check on the international rail (it is a UK sort-code algorithm); a stored
-  # IBAN has already passed mod-97, so its presence is the verdict.
-  def reimbursements_iban_badge(expense)
-    unless expense.effective_iban.present? && expense.effective_bic.present?
-      return render(BadgeComponent.new(type: :warning, pill: true).with_content("Missing"))
-    end
-
-    render(BadgeComponent.new(type: :success, pill: true).with_content("IBAN"))
+    modulus_pill(Reimbursements::ReviewSupport.modulus_result(expense, checker))
   end
 
   # One Settings access-check row; SKIP means not configured.
   ACCESS_CHECK_BADGE = { ok: :success, fail: :danger, skip: :secondary }.freeze
 
   def reimbursements_access_check_badge(status)
-    type = ACCESS_CHECK_BADGE.fetch(status, :secondary)
-    render(BadgeComponent.new(type: type, pill: true).with_content(status.to_s.upcase))
+    reimbursements_pill(ACCESS_CHECK_BADGE.fetch(status, :secondary), status.to_s.upcase)
   end
 
   # How long a claim has been with its owner, in days: "waiting 6 days" is what is judged.
@@ -211,9 +192,9 @@ module ReimbursementsHelper
   # disagree; BudgetHealth owns the rules.
   def reimbursements_budget_health_badge(budget)
     if budget.over_budget?
-      render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
+      reimbursements_pill(:danger, "Over budget")
     elsif budget.over_initial_budget?
-      render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
+      reimbursements_pill(:warning, "Over original budget")
     end
   end
 
@@ -324,6 +305,15 @@ module ReimbursementsHelper
   end
 
   private
+
+  def reimbursements_pill(type, label)
+    render(BadgeComponent.new(type: type, pill: true).with_content(label))
+  end
+
+  def modulus_pill(result)
+    spec = MODULUS_BADGE.fetch(result, MODULUS_BADGE[Reimbursements::ModulusCheck::OUTSIDE_SPEC])
+    reimbursements_pill(spec[:type], spec[:label])
+  end
 
   def variance_colour(variance)
     return nil if variance.zero?
