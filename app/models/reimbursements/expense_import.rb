@@ -148,10 +148,6 @@ module Reimbursements
     # form prints, so the copy cannot call one of these optional.
     REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference].freeze
 
-    # Fields whose cells may hold a tab or a newline, so are unescaped on #to_tsv input.
-    TEXT_FIELDS = %i[reference submitter_name budget description payment_reference
-                     payee_name_override].freeze
-
     # Matched case-insensitively, so "paid" lands where the operator meant it.
     STATUSES = Status.all
 
@@ -280,7 +276,7 @@ module Reimbursements
     # Escape sequences are undone only for #to_tsv output, never the operator's paste.
     def text(raw, field)
       value = raw[header_for[field]].to_s.strip
-      @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value
+      @escaped ? unescape_cell(value) : value
     end
 
     def read_amount(row, field)

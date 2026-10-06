@@ -414,10 +414,13 @@ module Reimbursements
       assert again.valid?
     end
 
-    test "an unreadable amount is carried on verbatim so the operator can see it" do
-      import = build_import(tsv(row(amount: "twelve pounds")))
+    test "an unreadable amount is carried on verbatim, through the round trip too" do
+      first = build_import(tsv(row(amount: "12\\ quid")))
 
-      assert_match(/twelve pounds/, import.to_tsv)
+      again = build_import(first.to_tsv, input_type: :canonical_tsv)
+
+      assert_equal "12\\ quid", again.entries.sole.row[:raw_amount]
+      assert_equal first.to_tsv, again.to_tsv
     end
 
     test "a wholly blank line is ignored rather than reported as a nameless claim" do
