@@ -30,13 +30,14 @@
   }
 </style>
 
-<% if cast.any? %>
-  <h3>Cast</h3>
+<% [ [ "Cast", cast, :cast_display_name, nil ], [ "Production Team", crew, :position, "mt-3" ] ].each do |heading, members, role, heading_class| %>
+  <% next if members.empty? %>
+  <%= tag.h3 heading, class: heading_class %>
 
   <div class="team-grid">
-    <% cast.each do |team_member| %>
+    <% members.each do |team_member| %>
       <div class="team-role">
-        <%= team_member.cast_display_name %>
+        <%= team_member.public_send(role) %>
       </div>
 
       <div class="team-user">
@@ -52,26 +53,6 @@
   </div>
 <% end %>
 
-<% if crew.any? %>
-  <h3 class="mt-3">Production Team</h3>
-
-  <div class="team-grid">
-    <% crew.each do |team_member| %>
-      <div class="team-role">
-        <%= team_member.position %>
-      </div>
-
-      <div class="team-user">
-        <%= helpers.user_link(team_member.user, true) %>
-
-        <% if show_badges_for?(team_member) %>
-          <% badges_for(team_member).each do |label| %>
-            <%= helpers.generate_label(label[:label_class], label[:text]) %>
-          <% end %>
-        <% end %>
-      </div>
-    <% end %>
-  </div>
-<% elsif cast.empty? %>
+<% if cast.empty? && crew.empty? %>
   <p class="text-gray-500">No team members yet.</p>
 <% end %>
