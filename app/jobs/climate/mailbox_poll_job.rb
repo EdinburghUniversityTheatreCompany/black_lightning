@@ -58,9 +58,12 @@ module Climate
       attachments = csv_attachments(mailbox, message)
       return skip(message, "no CSV attachment") if attachments.empty?
 
+      sensor = sensor_for
+      return skip(message, "could not tell which sensor it is from") if sensor.nil?
+
       # Collected, not summed inline: #import returns nil for a skipped
       # attachment, and summing nil would raise a second, misleading failure.
-      results = attachments.map { |attachment| import(message, attachment) }
+      results = attachments.map { |attachment| import(message, sensor, attachment) }
       return if results.any?(&:nil?)
 
       imported = results.sum
@@ -87,10 +90,7 @@ module Climate
     end
 
     # Returns the readings written, or nil to leave the message unread.
-    def import(message, attachment)
-      sensor = sensor_for(message, attachment)
-      return skip(message, "could not tell which sensor it is from") if sensor.nil?
-
+    def import(message, sensor, attachment)
       parsed = CsvImport.new(attachment[:bytes])
       return skip(message, parsed.errors.to_sentence) unless parsed.valid?
 
@@ -107,9 +107,9 @@ module Climate
     # silent, plausible nonsense.
     #
     # THE EXTENSION POINT: give each sensor its own mailbox (or plus address) and
-    # resolve on the recipient, or match a per-sensor string if Govee ever names
-    # the device. Only this method changes.
-    def sensor_for(_message, _attachment)
+    # resolve on the recipient (pass the message in), or match a per-sensor string
+    # if Govee ever names the device.
+    def sensor_for
       candidates = Sensor.govee.to_a
       return candidates.first if candidates.one?
 
