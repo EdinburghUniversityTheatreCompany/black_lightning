@@ -13,7 +13,8 @@
   # unfiltered first page. Built once here, since four controls need it.
   filters = { period: @period.presence, search: @search.presence, state: @state,
               include_offsets: (@include_offsets ? "1" : nil) }.compact
-  needs_attention = @state == ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+  attention_state = ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
+  needs_attention = @state == attention_state
   all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
 %>
 
@@ -22,7 +23,7 @@
     <div>
       <%= label_tag :state, "Show", class: FormStyles::LABEL %>
       <%= select_tag :state,
-                     options_for_select([ [ "Rows needing attention", ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION ],
+                     options_for_select([ [ "Rows needing attention", attention_state ],
                                           [ "All rows", all_state ] ], @state),
                      class: input_classes(width: "w-56") %>
     </div>
@@ -73,8 +74,7 @@
                   class: btn_classes(:secondary, :sm) %>
     <% else %>
       <%= link_to "Show only rows needing attention",
-                  admin_reimbursements_actuals_path(filters.except(:include_offsets)
-                                                      .merge(state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION)),
+                  admin_reimbursements_actuals_path(filters.except(:include_offsets).merge(state: attention_state)),
                   class: btn_classes(:secondary, :sm) %>
     <% end %>
     <%= link_to "Download CSV",
