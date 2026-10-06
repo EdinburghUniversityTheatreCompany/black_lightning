@@ -1,17 +1,12 @@
 <%# locals: (form:, people:, owner_ids:, cost_centres: [], cost_centre_id: nil) %>
-<%# The area's own fields via simple_form — Area is genuinely model-backed
-    (the controller assigns straight onto @area and saves), so this follows
-    CLAUDE.md's "model-backed forms use simple_form" rule rather than the
-    flat form_with convention the store-mediated Budget form uses. Shared by
-    new and edit; the cost centre picker only exists on new and only when
+<%# Shared by new and edit; the cost centre picker is new-only, and only when
     there is a choice to make. %>
 <%= form.input :name, label: "Name" %>
 <%= form.input :initial_budget, label: "Agreed total (£)",
       input_html: { step: "0.01", value: reimbursements_amount_value(form.object.initial_budget) } %>
 
-<%# A radio pair rather than a checkbox: two named states read better than one
-    negated one, and these are the words the card then prints beside the
-    figure (Area::BASIS_LABELS), so a finance user picks what they read back. %>
+<%# These are the words the card prints beside the figure (Area::BASIS_LABELS),
+    so a finance user picks what they read back. %>
 <%= form.input :budget_basis, as: :radio_buttons,
       collection: ::Reimbursements::Area::BASIS_OPTIONS,
       label: "What that total covers",
@@ -26,10 +21,8 @@
 
 <%= form.input :active, as: :boolean, label: "Active" %>
 
-<%# Area has no owner_ids= writer — the controller syncs through
-    store.sync_area_owners! — so `selected:` is passed rather than read off the
-    object. Rails emits the empty hidden field for a multiple select, which is
-    what makes clearing everyone actually clear the owners. %>
+<%# Area has no owner_ids= writer, so selected: is passed. Rails' empty hidden
+    field for a multiple select is what makes clearing everyone clear the owners. %>
 <%= form.input :owner_ids, label: "Owners", collection: people,
       value_method: :record_id,
       label_method: ->(person) { person.name.presence || person.email },
@@ -37,11 +30,8 @@
       hint: "Everyone who owns this area.",
       input_html: { multiple: true, data: { placeholder: "Search people…" } } %>
 <% if form.object.persisted? && owner_ids.empty? %>
-  <%# An area with no owners reports none for every budget under it, and
-      OwnerReview.gate_applies? is false with no owners — so its claims skip
-      owner endorsement, the nightly job never names them and Review's
-      Awaiting-owner tab never shows them. Warned in the spirit of the
-      budgets index's "No owner" badge. %>
+  <%# OwnerReview.gate_applies? is false with no owners, so every claim under
+      this area skips owner endorsement. %>
   <p class="-mt-2 mb-4 text-sm text-warning">
     Nobody is named, so claims on this area's budget lines
     skip budget-owner sign-off entirely.

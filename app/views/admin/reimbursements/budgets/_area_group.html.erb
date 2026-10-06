@@ -1,24 +1,19 @@
 <%# locals: (rollup:, label:) %>
-<%# One area's block on the overview: its agreed figures, its lines, then a
-    subtotal per budget type. The unassigned block is this partial with an
-    area-less rollup, which answers nil to every area figure. %>
+<%# One area's block: agreed figures, lines, then a subtotal per type. The
+    unassigned block is this partial with an area-less rollup, which answers nil
+    to every area figure. %>
 <tbody>
   <tr class="bg-gray-50">
     <th scope="rowgroup" colspan="11" class="text-left py-2">
       <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <%# The heading is the way to the area's own form — where its agreed
-            total, its basis and its owners are edited. It was plain text, so
-            the overview named the show and offered no route to it. The
-            unassigned group has no area and stays plain. %>
         <% if rollup.area %>
           <%= link_to label, admin_reimbursements_area_path(rollup.area.record_id),
                       class: "font-semibold text-base text-primary underline" %>
         <% else %>
           <span class="font-semibold text-base"><%= label %></span>
         <% end %>
-        <%# Nil means nobody agreed a total — every backfilled area starts
-            there — and "£0.00" would read as fully overspent, so the figure is
-            left out entirely rather than shown as a zero. %>
+        <%# Nobody agreed a total (every backfilled area starts there), and
+            "£0.00" would read as fully overspent, so the figure is left out. %>
         <% unless rollup.no_budget_set? %>
           <span class="text-sm text-gray-600">
             <%= rollup.total_label %> <%= reimbursements_money(rollup.agreed) %>
@@ -29,12 +24,10 @@
             <%= reimbursements_money(rollup.unallocated) %> not yet allocated
           </span>
         <% end %>
-        <%# The second sentence names no DIRECTION, and that is the only
-            wording true in all four cases: an out-of-scope expense line always
-            reduces the not-yet-allocated figure, an out-of-scope income line
-            raises it on a net basis and moves it not at all on a spend cap.
-            Neither clause names the agreed total: that is the area's own
-            forecast and counts no lines at all. %>
+        <%# Names no DIRECTION, the only wording true in all four cases: an
+            out-of-scope expense line reduces the not-yet-allocated figure, an
+            income line raises it on a net basis and does nothing on a spend cap.
+            It never names the agreed total, which counts no lines. %>
         <% if rollup.lines_out_of_scope.positive? %>
           <span class="text-sm text-warning">
             <%= rollup.lines_shown %> of <%= pluralize(rollup.lines_total, "line") %> shown.
@@ -47,8 +40,7 @@
   </tr>
   <%= render partial: "admin/reimbursements/budgets/overview_budget_row",
         collection: rollup.rows, as: :budget, locals: { name_area: false } %>
-  <%# One per budget type: an area holding both has no single meaningful
-      subtotal. %>
+  <%# One per type: an area holding both has no single meaningful subtotal. %>
   <% rollup.by_type.each do |subtotal| %>
     <%= render "rollup_row", rollup: subtotal,
           label: "Subtotal #{label} (#{subtotal.budget_type})" %>

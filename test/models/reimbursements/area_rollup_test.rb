@@ -1,8 +1,8 @@
 require "test_helper"
 
 module Reimbursements
-  # The presenter behind the budget overview's area card: one area and the
-  # budgets filed under it that the SCREEN is scoped to, subtotalled per type.
+  # The budget overview's area card: one area and the budgets the screen is
+  # scoped to, subtotalled per type.
   class AreaRollupTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -18,11 +18,9 @@ module Reimbursements
       AreaRollup.new(area: @area, budgets: budgets)
     end
 
-    # A #by_type child describes ONE TYPE's slice, so it must not answer the
-    # area's own figures: it would report a lines_total the rows beneath it do
-    # not add up to, and an agreed total for the whole show against a subtotal
-    # of half of it. The view reads neither today; a nil degrades safely where
-    # a wrong integer reads as a fact.
+    # A #by_type child is one TYPE's slice, so it must not answer the area's
+    # figures (a lines_total its rows do not add up to, a whole-show total beside
+    # half of it). A nil degrades safely where a wrong integer reads as a fact.
     test "a per-type subtotal answers no area figure of its own" do
       line(name: "Marketing", initial_budget: 400)
       line(name: "Ticket income", budget_type: "Income", initial_budget: 800)
@@ -52,9 +50,8 @@ module Reimbursements
       # 1,200 is neither total spend nor net, so no rollup reports it.
       assert_empty rollup.by_type.select { |r| r.initial == BigDecimal("1200") }
 
-      # The basis governs the AREA's agreed-total arithmetic and nothing else.
-      # "What did this area spend" and "how much room has it left" are
-      # different questions, and only the second one nets.
+      # The basis governs the area's agreed-total arithmetic only: "what did it
+      # spend" and "how much room is left" differ, and only the second nets.
       before = rollup.by_type.map { |r| [ r.budget_type, r.initial, r.projected, r.committed ] }
       area.update!(budget_basis: "net")
       after = Reimbursements::AreaRollup.new(area: area.reload, budgets: area.budgets).by_type
@@ -129,14 +126,11 @@ module Reimbursements
       # A spend cap: the £800 raised buys the show no more room.
       assert_equal BigDecimal("600"), rollup.unallocated
 
-      # A fresh read, not @area: the figures are memoized per instance, which
-      # is what makes store.areas one query instead of one per card.
+      # A fresh read: the figures are memoized per instance.
       @area.update!(budget_basis: "net")
       netted = AreaRollup.new(area: Area.find(@area.id), budgets: [ marketing ])
 
-      # Read off every line the area holds, not the ones on screen: the figure
-      # is summed over all of them, which is what the card's out-of-scope row
-      # exists to say.
+      # Summed over every line the area holds, not the ones on screen.
       assert_equal BigDecimal("1400"), netted.unallocated
       assert_equal "Agreed total (net)", netted.total_label
     end

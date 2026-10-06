@@ -2,9 +2,7 @@ require "test_helper"
 require Rails.root.join("db/migrate/20260911100300_backfill_reimbursements_areas")
 
 module Reimbursements
-  # Exercises BackfillReimbursementsAreas#down directly — it's plain Ruby
-  # (no DDL), so instantiating the migration class and calling #down works
-  # fine against the already-migrated schema-loaded test database.
+  # Calls BackfillReimbursementsAreas#down directly: it is plain Ruby, no DDL.
   class AreaBackfillMigrationTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -16,7 +14,7 @@ module Reimbursements
       error = assert_raises(ActiveRecord::IrreversibleMigration) { BackfillReimbursementsAreas.new.down }
       assert_match(/hand-set initial_budget/, error.message)
 
-      # Refusing means refusing — nothing was touched.
+      # Refusing means refusing: nothing was touched.
       assert_equal 1, Area.count
       assert_not_nil budget.reload.area_id
     end
@@ -35,10 +33,8 @@ module Reimbursements
       assert_equal area.id, budget.reload.area_id
     end
 
-    # Area.delete_all bypasses has_many :forecasts, dependent: :destroy, so an
-    # area whose agreed total was revised (a forecast, not initial_budget) got
-    # past both other guards and died on a raw Mysql2 FK violation instead of
-    # the friendly refusal.
+    # Area.delete_all bypasses dependent: :destroy on forecasts, so a revised area
+    # got past both other guards and died on a raw FK violation, not the refusal.
     test "down refuses when an area carries a forecast of its own" do
       budget = create_reimbursements_budget(name: "Cogito: Marketing")
       AreaBackfill.run!
@@ -65,7 +61,7 @@ module Reimbursements
       assert_nil b.reload.area_id
       assert_equal 0, Area.count
       assert_equal 0, AreaOwner.count
-      # The budget's own owner row survives — that's what makes this reversal exact.
+      # The budget's own owner row survives, which is what makes this reversal exact.
       assert_equal [ alice.record_id ], a.own_owners.map(&:record_id)
     end
   end

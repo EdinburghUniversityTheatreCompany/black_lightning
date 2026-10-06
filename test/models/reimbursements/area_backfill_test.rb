@@ -76,11 +76,9 @@ module Reimbursements
       assert_equal [ bob.record_id ], first_area.reload.owner_ids
     end
 
-    # MySQL gives a migration no automatic DDL transaction, so run! must supply
-    # its own. Proved with a REAL failure, not a mock: a budget name whose area
-    # segment strips to blank makes Area's presence validation raise partway
-    # through find_each, with no mocking library available to inject a failure
-    # more surgically.
+    # MySQL gives a migration no DDL transaction, so run! supplies its own. Proved
+    # with a real failure (no mocking library): an area segment that strips to
+    # blank makes Area's validation raise partway through find_each.
     test "a mid-run failure rolls back every change — no budget is left homed" do
       a = create_reimbursements_budget(name: "Cogito: Marketing")
       create_reimbursements_budget(name: " : Something") # area segment strips to "" -> Area validation raises
@@ -95,9 +93,8 @@ module Reimbursements
       alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
       other_cc = create_second_reimbursements_cost_centre
 
-      # An area outside the scope below, already homing a budget with owners
-      # but never seeded (as if an earlier, narrower run left it alone).
-      # seed_owners! must not reach across scope to seed it.
+      # An area outside the scope that homes a budget with owners but was never
+      # seeded: seed_owners! must not reach across scope to seed it.
       outside_budget = create_reimbursements_budget(name: "Venue: Hire", cost_centre: other_cc)
       outside_budget.sync_owner_ids!([ alice.id ])
       outside_area = create_reimbursements_area(name: "Venue", cost_centre: other_cc)

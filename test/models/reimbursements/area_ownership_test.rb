@@ -45,12 +45,10 @@ module Reimbursements
       assert OwnerReview.owned_by?(expense, @alice)
     end
 
-    # The worst way to get ownership wrong, pinned: attaching a budget that has
-    # its OWN owner to an area with none reports no owners at all, so the gate
-    # stops applying — every claim on the line skips owner endorsement, the
-    # nightly job never names it, and Review's Awaiting-owner tab never shows
-    # it. Asserted through OwnerReview rather than the model, because the gate
-    # is what the outcome actually is. Both forms now warn about it on screen.
+    # The worst way to get ownership wrong: a budget with its OWN owner attached
+    # to an area with none reports no owners, so the gate stops applying and
+    # every claim on the line skips owner endorsement. Asserted through
+    # OwnerReview because the gate is the outcome.
     test "a budget in an area with NO owners has no owner gate at all" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,

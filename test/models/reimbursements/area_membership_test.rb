@@ -2,11 +2,9 @@ require "test_helper"
 require Rails.root.join("db/migrate/20260911100300_backfill_reimbursements_areas")
 
 module Reimbursements
-  # The rollback gap Phase 1 shipped and two Phase 2a reviewers reproduced: a
-  # budget in an area whose NAME does not reproduce it came back from
-  # BackfillReimbursementsAreas#down with its name intact and its area gone, and
-  # re-migrating did not put it back. The migration is plain Ruby (no DDL), so
-  # #down and #up run directly against the schema-loaded test database.
+  # BackfillReimbursementsAreas#down used to lose the area of any line whose NAME
+  # does not reproduce it, and re-migrating did not put it back. The migration is
+  # plain Ruby, so #down and #up run directly against the test database.
   class AreaMembershipTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -28,10 +26,9 @@ module Reimbursements
                  "the record is spent once it has been restored"
     end
 
-    # The area's owner gate rode on the same loss: seed_owners! seeds an area
-    # from its children's OWN owner rows, so an area whose only owner-carrying
-    # line was the unprefixed one came back naming nobody — and an area naming
-    # nobody switches sign-off off for every OTHER line under it too.
+    # seed_owners! seeds from the children's OWN owner rows, so an area whose only
+    # owner-carrying line was unprefixed came back naming nobody, switching
+    # sign-off off for every other line under it too.
     test "the restored line brings the area's owner gate back with it" do
       alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
       prefixed = create_reimbursements_budget(name: "Cogito: Marketing")
@@ -47,14 +44,11 @@ module Reimbursements
                    "the prefixed line reads its owners through the area, which must name Alice again"
     end
 
-    # An area that deliberately names nobody is a real state, and the record is
-    # what says so: seeding it from a restored line's own owner rows would
-    # switch a gate ON that finance had turned off.
+    # An area that names nobody is a real state, and the record says so: without
+    # it, Bob's row on the LINE (what seed_owners! reads) would switch a gate ON
+    # that finance had turned off.
     test "an area that named nobody still names nobody after a round trip" do
       bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
-      # Bob's row on the LINE is what AreaBackfill#seed_owners! reads, so
-      # without the recorded list the area comes back named by him — a gate
-      # switched ON that finance had turned off.
       prefixed = create_reimbursements_budget(name: "Cogito: Marketing", owners: [ bob ])
       AreaBackfill.run!
       area = prefixed.reload.area
@@ -79,18 +73,15 @@ module Reimbursements
       assert_equal "Cogito", prefixed.reload.area&.name
     end
 
-    # The record decides, never the area the line currently holds. The backfill
-    # re-homes by NAME, so a line hand-moved into another show is re-homed back
-    # to the show its name reads as — and the recorded OWNER list then lands on
-    # that area. own_owners are cleared here so seed_owners! can contribute
-    # nothing: without the fix Alice's sign-off over one show comes back as
-    # Bob's, the owner of a different one.
+    # The record decides, never the line's current area: the backfill re-homes by
+    # NAME, so a hand-moved line would land its recorded owners on the show its
+    # name reads as. Own owners are cleared so seed_owners! contributes nothing.
     test "the recorded area wins over the name the backfill would re-home by" do
       alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
       bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
       moved = create_reimbursements_budget(name: "ZZProbe Show: Sound")
-      # Each area keeps a line whose own name reproduces it, or #down refuses
-      # over the move rather than reaching the restore this test is about.
+      # Each area keeps a line whose name reproduces it, or #down refuses before
+      # reaching the restore.
       create_reimbursements_budget(name: "ZZProbe Show: Marketing")
       create_reimbursements_budget(name: "ZZOther Show: Marketing")
       AreaBackfill.run!
@@ -98,7 +89,6 @@ module Reimbursements
       other = Area.find_by!(name: "ZZOther Show")
       probe.sync_owner_ids!([ alice.id ])
       other.sync_owner_ids!([ bob.id ])
-      # The hand-move the budget form makes: the name still reads "ZZProbe Show".
       moved.update_columns(area_id: other.id)
       Budget.find_each { |budget| budget.sync_owner_ids!([]) }
 
@@ -112,11 +102,10 @@ module Reimbursements
       assert_equal [ alice.record_id ], Area.find_by!(name: "ZZProbe Show").owner_ids
     end
 
-    # The backfill keys on the BUDGET's year and centre; the record keys on the
-    # AREA's. A budget holding an area from another year is a documented state,
-    # so the backfill mints an area of its own for that line and the restore
-    # then moves the line out — leaving an ownerless phantom in that year's
-    # pickers, which #down would afterwards refuse over as hand-editing.
+    # The backfill keys on the BUDGET's year and centre, the record on the AREA's,
+    # so a cross-year line makes the backfill mint an area the restore then
+    # empties: an ownerless phantom in that year's pickers, which #down would
+    # refuse over as hand-editing.
     test "a cross-year line leaves no phantom area behind, and rolls back again" do
       alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
       this_year = FinancialYear.create!(label: "Fringe 2026", active: true)
@@ -137,10 +126,9 @@ module Reimbursements
       assert_nothing_raised { BackfillReimbursementsAreas.new.down }
     end
 
-    # The other half of "only the ones it CREATED": an area a PERSON made between
-    # the rollback and the re-migrate is one the backfill merely finds, and the
-    # area form has shipped, so an empty one is something they can mean to have.
-    # Deleting it would be this migration tidying away somebody else's work.
+    # An area a PERSON made between rollback and re-migrate is one the backfill
+    # merely finds, and an empty one can be intended: deleting it would tidy away
+    # somebody else's work.
     test "an area a person made in the meantime survives being emptied" do
       this_year = FinancialYear.create!(label: "Fringe 2026", active: true)
       next_year = FinancialYear.create!(label: "Fringe 2027")
@@ -149,8 +137,8 @@ module Reimbursements
                                             financial_year: this_year)
 
       BackfillReimbursementsAreas.new.down
-      # Setting this year up by hand, under the name the stranded line reads as:
-      # the backfill FINDS this one rather than making it.
+      # By hand, under the name the stranded line reads as: the backfill finds
+      # it rather than making it.
       by_hand = create_reimbursements_area(name: "ZZCogito", financial_year: this_year)
       BackfillReimbursementsAreas.new.up
 
@@ -203,23 +191,18 @@ module Reimbursements
       assert_equal 0, Area.count
     end
 
-    # Recording where the lines were is the whole reversibility claim, so a
-    # rollback that cannot write it must say so rather than detach silently.
-    #
-    # The REAL condition, reached the way it is reached in life: the column is
-    # dropped, and the service asks the LIVE schema rather than its memoized
-    # column list. DDL auto-commits on MySQL and the suite runs several workers
-    # against one server, so the column goes back in an ensure — a test that
-    # reached the guard through a wrong-model scope instead would pass over a
-    # service that had stopped asking the schema at all.
+    # A rollback that cannot record where the lines were must say so rather than
+    # detach silently. The REAL condition: the column is dropped and the service
+    # must ask the LIVE schema, not its memoized column list (a wrong-model scope
+    # would pass over a service that had stopped asking). DDL auto-commits on
+    # MySQL and workers share a server, so the column goes back in an ensure.
     test "record! refuses when the recording column is gone" do
       error = without_recording_column do
         assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record! }
       end
       assert_match(/area_before_rollback/, error.message)
-      # The TABLE is the scope's, not a hardcoded one: a guard naming
-      # reimbursements_budgets outright answers "present" for every other model
-      # and only fails later, somewhere less legible.
+      # The table is the scope's: a hardcoded one would answer "present" for every
+      # other model.
       assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record!(scope: Area.all) }
     end
 
@@ -231,16 +214,13 @@ module Reimbursements
 
     private
 
-    # CREATE NOTHING IN A TEST THAT CALLS THIS. MySQL auto-commits DDL, so the
-    # drop ends the test's own transaction: nothing written before it is rolled
-    # back, and the first write after it raises "SAVEPOINT active_record_1 does
-    # not exist". The two tests below write nothing, which is what makes them
-    # safe.
+    # CREATE NOTHING IN A TEST THAT CALLS THIS: MySQL auto-commits DDL, so the drop
+    # ends the test's transaction and the next write raises "SAVEPOINT
+    # active_record_1 does not exist".
     #
-    # The column cache is WARMED before the drop and reset only afterwards, so
-    # the memoized list and the live schema genuinely disagree inside the block.
-    # Resetting first made them agree again, and a guard reading the cache
-    # instead of the schema passed the test it is supposed to fail.
+    # The column cache is warmed before the drop and reset only afterwards, so the
+    # memoized list and the live schema disagree inside the block; resetting first
+    # would let a guard reading the cache pass the test it should fail.
     def without_recording_column
       connection = Budget.connection
       Budget.column_names
@@ -248,18 +228,10 @@ module Reimbursements
                                if_exists: true)
       yield
     ensure
-      # if_exists/if_not_exists on both halves, and the position this database
-      # actually holds it in: a run killed between them would otherwise leave
-      # the column dropped (one failing run, healed forever after by this
-      # ensure) or drifting down the table's column order in that worker's
-      # database, run after run.
-      #
-      # after: :airtable_record_id is the SCHEMA-LOADED order, not the migrated
-      # one — the two differ and this is the test database. db/schema.rb lists
-      # a table's columns alphabetically, so a loaded reimbursements_budgets
-      # has area_before_rollback 4th, right here; the migration adds it with no
-      # after:, so a migrated database has it second from last. Verified in
-      # both.
+      # Re-added at the SCHEMA-LOADED position (db/schema.rb lists columns
+      # alphabetically; a migrated database has it second from last), with
+      # if_exists/if_not_exists so a run killed halfway neither leaves the column
+      # dropped nor drifts its order in that worker's database.
       connection.add_column(:reimbursements_budgets, AreaMembership::RECORDED_COLUMN, :json,
                             if_not_exists: true, after: :airtable_record_id)
       Budget.reset_column_information

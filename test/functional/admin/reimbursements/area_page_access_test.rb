@@ -3,11 +3,8 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # Who may open an area's page. It is the one reimbursements screen two
-    # different audiences share, so the gate is a union — finance, or a person
-    # this area's owner set names — and a refusal is a 404 rather than a 403,
-    # following ReceiptFilesController: a 403 confirms the area exists to
-    # someone who has no business knowing which shows the society is running.
+    # Who may open an area's page: finance, or a person the area's owners name. A
+    # refusal is a 404, not a 403, which would confirm the area exists.
     class AreaPageAccessTest < ActionController::TestCase
       tests Admin::Reimbursements::AreasController
       include ReimbursementsTestHelpers
@@ -40,8 +37,7 @@ module Admin
         assert_response :success
       end
 
-      # The gate reads the area's owner set, so a producer who owns a DIFFERENT
-      # show is as much a stranger to this one as somebody who owns nothing.
+      # Owning a different area makes you a stranger to this one.
       test "an owner of another area gets a 404, not a 403" do
         sign_in users(:member)
 
@@ -73,9 +69,8 @@ module Admin
         assert_includes loose.own_owners, @owner, "the loose line's owner row was not written"
       end
 
-      # The claims table renders Kaminari's pager, and a ViewComponent gets no
-      # helpers of its own — so an area WITH claims 500ed while every test that
-      # only ever built an empty one passed. Renders the real page with claims.
+      # The claims table renders Kaminari's pager and a ViewComponent gets no
+      # helpers, so an area WITH claims 500ed while every empty-area test passed.
       test "an area with claims renders its claims table and its pager" do
         grant_finance_permission(users(:admin))
         sign_in users(:admin)
@@ -113,8 +108,6 @@ module Admin
         assert_not_includes response.body, "A waiting one"
       end
 
-      # An owner reads a show's claims; nothing here may turn that into a
-      # directory of its members' bank details.
       test "an owner sees the claims but no bank details" do
         line = create_reimbursements_budget(name: "Marketing", initial_budget: 1_100, area: @area)
         payee = create_reimbursements_person(email: "payee@example.com", name: "Nadia Ferreira",

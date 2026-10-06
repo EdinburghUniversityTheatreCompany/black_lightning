@@ -49,9 +49,8 @@ module Reimbursements
       assert_equal "Cogito: Marketing", budget.reload.name
     end
 
-    # The prefix is matched the way every other name in this importer is
-    # matched — through BudgetImport.match_key — so the casing the committee
-    # typed doesn't decide whether a line keeps its prefix for ever.
+    # Matched through BudgetImport.match_key, so the casing the committee typed
+    # does not decide whether a line keeps its prefix.
     test "strips a prefix that differs from its area only in case and spacing" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "cogito :  Marketing", area: area)
@@ -64,8 +63,7 @@ module Reimbursements
                    "restore! puts back what was recorded, not what the rule would rebuild"
     end
 
-    # A rename finance made after the strip is theirs, and a rollback must not
-    # quietly take it back: nothing records that "Publicity" ever existed.
+    # A rename after the strip is finance's own; a rollback must not take it back.
     test "restore! leaves a line finance has renamed since" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
@@ -77,10 +75,8 @@ module Reimbursements
       assert_equal "Publicity", budget.reload.name
     end
 
-    # RENAMING THE AREA does not rename the line, so the record is still good
-    # and restoring it disarms nothing. The old clause read the area's CURRENT
-    # name and skipped, destroying the record one statement before the column is
-    # dropped.
+    # RENAMING THE AREA does not rename the line, so the record is still good and
+    # restore! must still put the name back.
     test "restore! puts the name back after its area is renamed" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
@@ -103,9 +99,8 @@ module Reimbursements
       assert_equal "Cogito: Marketing", budget.reload.name
     end
 
-    # A line MOVED to another area restores, where it used to skip: its prefix
-    # names neither that area nor any other, so the backfill's verdict on the
-    # area it landed in is identical either way.
+    # A line moved to another area still restores: the backfill's verdict on the
+    # area it landed in is the same either way.
     test "a line moved to another area restores without making that area reproducible" do
       budget = create_reimbursements_budget(name: "Cogito: Marketing")
       AreaBackfill.run!
@@ -132,9 +127,8 @@ module Reimbursements
       assert_equal "Marketing", budget.reload.name
     end
 
-    # Phase 2b drops the column once the rollback window closes. Skipping then
-    # would turn a rollback that CANNOT restore the names into one that silently
-    # doesn't.
+    # Phase 2b drops the column; skipping then would make a rollback that cannot
+    # restore the names look like one that did.
     test "restore! refuses when the recording column is gone" do
       error = assert_raises(Reimbursements::AreaRename::MissingRecordError) do
         Reimbursements::AreaRename.restore!(scope: Area.all)
@@ -142,9 +136,9 @@ module Reimbursements
       assert_match(/name_before_area_rename/, error.message)
     end
 
-    # THE ROW strip! REFUSED TO TOUCH. Restoring by rule re-prefixed it, which
-    # made its area reproducible from its budgets and disarmed the backfill's
-    # refusal — a guard turned into a silent delete.
+    # The row strip! refused to touch: restoring it by rule would make its area
+    # reproducible and disarm the backfill's refusal, turning a guard into a
+    # silent delete.
     test "restore! leaves a line it never stripped alone" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Rehearsal room hire", area: area)
@@ -156,8 +150,7 @@ module Reimbursements
       assert_nil budget.name_before_area_rename
     end
 
-    # Two lines in one area that would land on one name. A merge nobody asked
-    # for, and afterwards one line to every reader and to the matcher.
+    # Two lines in one area would land on one name: a merge nobody asked for.
     test "strip! refuses to collide two lines in one area" do
       area = create_reimbursements_area(name: "Cogito")
       bare = create_reimbursements_budget(name: "Marketing", area: area)
@@ -172,8 +165,8 @@ module Reimbursements
       assert_equal "Cogito: Marketing", prefixed.reload.name, "nothing was written"
     end
 
-    # A collision that was already there is not this migration's doing, and
-    # refusing over it would block the rename on data it cannot fix.
+    # A collision already there is not this rename's doing; refusing over it would
+    # block it on data it cannot fix.
     test "strip! tolerates a collision it did not create" do
       area = create_reimbursements_area(name: "Cogito")
       one = create_reimbursements_budget(name: "Marketing", area: area)
@@ -187,9 +180,7 @@ module Reimbursements
       assert_equal "marketing", two.reload.name
     end
 
-    # Re-running either direction has to be safe: a migration that half-ran is
-    # re-run whole, and "Marketing" must not become ": Marketing" or the area's
-    # name twice over.
+    # A half-run migration is re-run whole, so neither direction may double-apply.
     test "both directions are idempotent" do
       area = create_reimbursements_area(name: "Cogito")
       budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
@@ -201,10 +192,8 @@ module Reimbursements
       assert_equal "Cogito: Marketing", budget.reload.name
     end
 
-    # update_column, not update! — a bookkeeping rename must not be vetoed by an
-    # unrelated validation, and must not fire Budget#inherit_area_scoping on rows
-    # it is not there to stamp. An unstamped legacy line is exactly the row that
-    # callback would silently claim.
+    # update_columns, not update!: a bookkeeping rename must not fire
+    # Budget#inherit_area_scoping.
     test "neither direction stamps the budget's year or cost centre" do
       centre = CostCentre.default ||
                create_reimbursements_cost_centre(key: "fringe", name: "Bedlam Fringe",
@@ -233,12 +222,10 @@ module Reimbursements
       assert_equal "Cogito: Set", theirs.reload.name
     end
 
-    # --- The two migrations reverse together ---------------------------------
-    # Phase 1's backfill refuses to unwind an area whose name does not reproduce from
-    # any of its budgets, and stripping the prefix is exactly that state — which
-    # is correct, because once stripped the area's name is the only place the
-    # grouping lives. The chain still reverses because the rename's own down
-    # runs first and reconstructs every name.
+    # --- The two migrations reverse together ---
+    # The backfill's down refuses an area whose name no budget reproduces, which
+    # stripping makes true by design: the rename's own down runs first and
+    # rebuilds every name.
 
     test "stripping alone would leave the backfill unable to unwind" do
       create_reimbursements_budget(name: "Cogito: Marketing")
@@ -250,10 +237,9 @@ module Reimbursements
       assert_match(/nothing in the backfill would have created/, error.message)
     end
 
-    # THE TEST THAT MATTERS. An area nothing in the backfill would have created
-    # — finance made it, or the importer did — must still make the backfill's
-    # down refuse after a round trip. Restoring by rule re-prefixed its bare
-    # lines, fabricated the reproducibility and deleted the area.
+    # An area the backfill would not have created (finance or the importer made
+    # it) must still make its down refuse after a round trip; restoring by rule
+    # would fabricate the reproducibility and delete the area.
     test "a round trip leaves a hand-made area still unreproducible" do
       derived = create_reimbursements_budget(name: "Cogito: Marketing")
       AreaBackfill.run!

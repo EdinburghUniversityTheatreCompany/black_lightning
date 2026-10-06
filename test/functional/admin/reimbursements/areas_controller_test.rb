@@ -18,9 +18,8 @@ module Admin
         assert_response :forbidden
       end
 
-      # The one screen that lists areas side by side, under a bare "Agreed
-      # total" header: two rows both reading £5,000.00 mean different things
-      # unless the row says which.
+      # Two rows both reading £5,000.00 under a bare "Agreed total" header mean
+      # different things unless the row says which.
       test "the areas index states what each agreed total is a total of" do
         create_reimbursements_area(name: "Cogito show", initial_budget: 5_000)
         create_reimbursements_area(name: "Committee", initial_budget: 5_000,
@@ -35,15 +34,13 @@ module Admin
                "the spend cap's row does not say so: #{rows.inspect}")
         assert(rows.any? { |row| row.include?("Committee") && row.include?("£5,000.00 (net)") },
                "the net allowance's row does not say so: #{rows.inspect}")
-        # "- (expenses)" would read as a claim about expenses rather than as a
-        # plan nobody has set yet.
+        # "- (expenses)" would read as a claim about expenses, not an unset plan.
         assert(rows.any? { |row| row.include?("Unbudgeted") && !row.include?("(expenses)") },
                "an area with no agreed total was qualified anyway: #{rows.inspect}")
       end
 
-      # The empty hidden field Rails emits beside a multiple select is what
-      # clears the list: without it, taking the last owner off posts no
-      # owner_ids key and #sync_area_owners! is never told to replace anything.
+      # The empty hidden field beside a multiple select is what clears the list:
+      # without it, removing the last owner posts no owner_ids key at all.
       test "the area form offers its owners as one searchable multi-select" do
         alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
@@ -75,12 +72,9 @@ module Admin
         assert_equal [ person.record_id ], area.owner_ids
       end
 
-      # THE form's write is REPLACE, and this is the only thing enforcing it.
-      # DatabaseStore carries two owner writes with the identical
-      # (record_id, person_ids) signature — #sync_area_owners! replaces,
-      # #add_area_owners! unions — so reaching for the wrong one here is silent:
-      # removal just stops working, and removal is the only way to take a show's
-      # sign-off authority off an area.
+      # The form's write is REPLACE, and only this test enforces it: DatabaseStore's
+      # #sync_area_owners! replaces and #add_area_owners! unions, with identical
+      # signatures, so the wrong one fails silently and removal stops working.
       test "removing an owner on the area form actually removes them" do
         alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob", email: "bob@example.com")
@@ -93,10 +87,8 @@ module Admin
         assert_equal [ alice.record_id ], area.reload.owner_ids
       end
 
-      # The store's own column allow-list, not the controller's: a field the
-      # controller reads and DatabaseStore::AREA_FIELDS does not list is
-      # dropped in silence, so a committee area created as a net allowance
-      # would come back a spend cap with nothing on screen saying so.
+      # DatabaseStore::AREA_FIELDS drops an unlisted column silently, so a net
+      # area would come back a spend cap with nothing on screen saying so.
       test "an area created as a net allowance is not silently a spend cap" do
         post :create, params: { name: "Committee", initial_budget: "1000",
                                 budget_basis: "net" }
@@ -114,8 +106,7 @@ module Admin
       end
 
       test "a basis the radio pair cannot offer is ignored, not saved" do
-        # save! would raise on Area's inclusion validation and 500 the form,
-        # losing everything else typed on it.
+        # save! would raise on the inclusion validation and 500 the form.
         area = create_reimbursements_area(name: "Committee", budget_basis: "net")
 
         patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "gross" }
@@ -159,9 +150,8 @@ module Admin
         assert_nil budget.reload.area
       end
 
-      # An area with no owners switches its budgets' sign-off gate OFF entirely
-      # (OwnerReview.gate_applies? is false with no owners), so say so where it
-      # is set — the spirit of the budgets index's "No owner" badge.
+      # An area with no owners switches its budgets' sign-off gate off
+      # (OwnerReview.gate_applies? is false), so the form says so.
       test "the area form warns when the area has no owners" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -182,12 +172,9 @@ module Admin
         assert_no_match(/skip budget-owner sign-off/, response.body)
       end
 
-      # --- Nested budget rows -------------------------------------------------
-      # DatabaseStore#in_year and #in_cost_centre are deliberately lenient, so a
-      # line stamped with neither shows up in EVERY year's and EVERY centre's
-      # list — and, being active by default, in every producer's budget picker
-      # in both cost centres. That is the exact state BudgetImport#adoptions
-      # exists to prevent, and the area's own coordinates are knowable here.
+      # A line with neither year nor centre is lenient-scoped into every year's and
+      # centre's list and every producer's picker (the state BudgetImport#adoptions
+      # prevents), so it takes the area's own.
       test "a budget line added through the area inherits its year and cost centre" do
         year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027", active: true)
         centre = ::Reimbursements::CostCentre.default
@@ -203,13 +190,9 @@ module Admin
         assert_equal centre.id, budget.cost_centre_id
       end
 
-      # This form posts EVERY child row, not just the one being edited, so a
-      # rule requiring a nominal code of all of them locks an area holding one
-      # code-less line out of its own form: its name, agreed total, owners and
-      # notes, AND the "Detach from this area" control that would remove the
-      # offending line. A blank code is supported state — the importer allows
-      # it and the overview has a "(none)" bucket for it — so this is reachable
-      # with ordinary data, the backfill's included.
+      # The form posts EVERY child row, so requiring a nominal code of all of them
+      # would lock an area holding one code-less line (supported state) out of its
+      # own form, Detach included.
       test "an area holding a code-less line can still be saved" do
         area = create_reimbursements_area(name: "Cogito")
         line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
@@ -224,12 +207,9 @@ module Admin
         assert_equal "Cogito Autumn", area.reload.name
       end
 
-      # The "Add budget line" row's Type select has no blank option, so every
-      # such row posts budget_type whether or not the operator touched it, and
-      # :all_blank stopped seeing it as blank. It was then built with no name
-      # and reached save!, which raises: click Add, change your mind, Save, and
-      # the whole form is lost to a 500. What counts as untouched has to be the
-      # fields the operator actually fills.
+      # The Add row's Type select has no blank option, so an untouched row still
+      # posts budget_type; :all_blank would build it with no name and 500 in
+      # save!. Untouched has to mean the fields the operator fills.
       test "an untouched Add budget line row is dropped rather than 500ing the form" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -243,11 +223,9 @@ module Admin
         assert_empty area.reload.budgets
       end
 
-      # #budget_row_error's key guard listed only name and nominal_code, so a
-      # row carrying neither KEY read as absent while the lambda read it as
-      # touched: built with no name, and the save raises. Unreachable from the
-      # rendered form, which always posts both inputs, but it is the same 500
-      # the lambda exists to close and a truncated POST reaches it.
+      # A truncated POST with neither name nor code key: the key guard must read
+      # the lambda's fields, or the row is absent there, touched in the lambda
+      # and raises in save!.
       test "a row posting only a figure, with no name or code key at all, is reported" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -260,9 +238,8 @@ module Admin
         assert_empty area.reload.budgets
       end
 
-      # A figure typed with no name is a half-filled row, not an untouched one,
-      # so it must be REPORTED. Dropping it silently would lose a line the
-      # operator believes they added.
+      # A figure with no name is half-filled, not untouched: report it rather than
+      # drop a line the operator thinks they added.
       test "a new budget row carrying only a figure is reported, not dropped" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -291,9 +268,7 @@ module Admin
         assert_nil line.reload.area_id
       end
 
-      # An existing row's NAME is a different matter from its code: Budget
-      # validates the name, so a blank one is never supported state and reaches
-      # save!, which raises and 500s the form.
+      # Unlike its code, an existing row's name is required: blank would raise in save!.
       test "blanking an existing line's name is rejected rather than raising" do
         area = create_reimbursements_area(name: "Cogito")
         line = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
@@ -320,8 +295,6 @@ module Admin
         assert_response :unprocessable_entity
       end
 
-      # Budget validates its name, so a blank one reached save! and 500'd the
-      # form rather than reporting anything the operator could act on.
       test "a budget line with a blank name is rejected rather than raising" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -349,10 +322,6 @@ module Admin
         refute_equal 999, budget.cost_centre_id
       end
 
-      # --- Type and figure on a nested row ------------------------------------
-      # Without them a line typed on the area form landed as an Expense with no
-      # plan at all, and an unbudgeted line reports "no budget set" everywhere.
-
       test "a new nested row takes its type and initial budget" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -367,8 +336,7 @@ module Admin
         assert_equal BigDecimal("5000"), budget.initial_budget
       end
 
-      # AR casts a raw String to a decimal column with to_d, so a figure handed
-      # through unparsed would store "£1,200" as 0 — money nobody typed.
+      # A raw "£1,200" would store as 0 through AR's to_d.
       test "a typed amount goes through the parser" do
         area = create_reimbursements_area(name: "Cogito")
 
@@ -396,9 +364,8 @@ module Admin
         assert_match(/isn't an amount/, response.body)
       end
 
-      # A plan of exactly £0 is a figure nobody filled in (PlannedAmount), so a
-      # blank must not be written as one — and on an EXISTING row it must leave
-      # the figure alone rather than wiping it.
+      # A blank must not become a £0 plan (PlannedAmount), and on an existing row
+      # must leave the figure alone.
       test "a blank amount leaves an existing line's figure where it is" do
         area = create_reimbursements_area(name: "Cogito")
         budget = create_reimbursements_budget(name: "Marketing", area: area,

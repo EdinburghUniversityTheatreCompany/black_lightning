@@ -2,29 +2,24 @@ module Reimbursements
   ##
   # One-off: give the budgets whose names already read "Area: Category" a real
   # area. Fringe wrote the grouping into 17 of its 31 budget names; the other 14
-  # are genuine standalone overheads and are left alone.
+  # are standalone overheads and are left alone.
   #
-  # A SERVICE rather than migration code, because test and CI databases are
-  # schema-loaded, so a data migration never runs there and could never be
-  # tested.
+  # A service, not migration code: test databases are schema-loaded, so a data
+  # migration never runs there.
   module AreaBackfill
     NAME_PATTERN = /\A(?<area>[^:]+):\s*(?<category>.+)\z/
 
-    # Idempotent: a second run touches only budgets still without an area (the
-    # scope excludes anything already homed, this run or an earlier one) and
-    # only seeds owners for an area that has none yet.
+    # Idempotent: only budgets still without an area are touched, and owners are
+    # seeded only for an area that has none yet.
     #
-    # One transaction: MySQL gives migrations no automatic DDL transaction, so
-    # without it a mid-run exception could leave budgets homed to an area whose
-    # owners were never seeded — silently breaking that area's owner gate with
-    # nothing on screen to explain it.
+    # One transaction: MySQL gives migrations no DDL transaction, so a mid-run
+    # failure could leave budgets homed to an area whose owners were never seeded,
+    # silently switching its owner gate off.
     #
-    # Returns the ids of the areas it CREATED, never the ones it merely found:
-    # a caller re-homing lines afterwards has to tell one this run minted from
-    # one that was already there. AreaMembership's restore is such a caller —
-    # this keys on the BUDGET's year and centre while the record keys on the
-    # AREA's, so a line restored to its recorded area can leave the one created
-    # here holding nothing at all.
+    # Returns the ids of the areas it CREATED, not ones it found: AreaMembership's
+    # restore must tell a minted area from an existing one, because this keys on
+    # the BUDGET's year and centre while the record keys on the AREA's, so a
+    # restored line can leave the minted area empty.
     def self.run!(scope: Budget.all)
       created_ids = []
       ActiveRecord::Base.transaction do
@@ -52,13 +47,10 @@ module Reimbursements
     end
     private_class_method :find_or_create_area
 
-    # An area with no owners means its budgets' claims silently stop hitting the
-    # owner gate — the worst way to get this wrong. Seed from the union of the
-    # children's, and KEEP their rows so the backfill has a true reverse.
-    #
-    # Scoped to the areas THIS run actually touched — run!(scope:) exists so a
-    # cost-centre-only backfill is possible, and seeding every area regardless
-    # would reach outside that caller's intent.
+    # An area with no owners silently drops its budgets' claims out of the owner
+    # gate, the worst way to get this wrong. Seeds from the union of the children's
+    # owners and KEEPS their rows so the backfill has a true reverse. Only the areas
+    # THIS run touched: an area finance left ownerless elsewhere must stay that way.
     def self.seed_owners!(area_ids)
       return if area_ids.empty?
 

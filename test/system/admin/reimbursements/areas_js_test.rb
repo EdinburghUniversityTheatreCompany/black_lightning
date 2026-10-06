@@ -2,11 +2,9 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # The one browser-driven check on the areas admin screen: clicking the
-    # real "Add budget line" / Save buttons. A request-level test POSTs
-    # straight to the action and can't see a form_with opened INSIDE a
-    # CardComponent (its submit renders outside the <form> and silently does
-    # nothing) — only a system test clicking the real button catches that.
+    # Browser checks for the areas form: a request test POSTs straight to the
+    # action and cannot see a form_with opened INSIDE a CardComponent, whose
+    # submit renders outside the <form> and silently does nothing.
     class AreasJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -23,9 +21,8 @@ module Admin
 
         visit edit_admin_reimbursements_area_path(area.record_id)
         click_on "Add budget line"
-        # stimulus-rails-nested-form's own wrapperSelector default — each row
-        # (new or existing) is a ".nested-form-wrapper" div; the gem exposes
-        # no "item" Stimulus target to select by.
+        # Each nested row is a .nested-form-wrapper div (the gem's default
+        # wrapperSelector); it exposes no target to select by.
         within all(".nested-form-wrapper").last do
           fill_in "Name", with: "Cogito: Marketing"
           fill_in "Nominal code", with: "432320"
@@ -43,11 +40,8 @@ module Admin
         assert_equal centre.id, budget.cost_centre_id
       end
 
-      # The basis is the one control on this form that changes a figure printed
-      # beside it, and a request test POSTing straight to #update sees neither
-      # the radio pair nor the card. Both live inside the same CardComponent
-      # trap the test above exists for: a control whose submit renders outside
-      # the <form> silently does nothing.
+      # The basis radios change a figure printed beside them, and a request test
+      # sees neither the radios nor the card.
       test "switching an area to a net allowance changes the figure on its card" do
         area = create_reimbursements_area(name: "Committee", initial_budget: 1_000)
         create_reimbursements_budget(name: "Socials", nominal_code: "432320", area: area,
@@ -73,11 +67,8 @@ module Admin
           assert_text "Agreed total (net)"
           assert_text "£1,400.00"
           assert_no_text "Agreed total (expenses)"
-          # The allocation is -£400 here, and this card prints it as its two
-          # halves like the grouped index does: "Allocated to lines -£400.00"
-          # reads as bad news in a portal where every other negative money
-          # figure is, and 1,000 - (-400) = 1,400 reconciles with the
-          # Unallocated cell beside it only by subtracting a negative.
+          # Printed as its two halves, not -£400, which reads as bad news (see
+          # ReimbursementsHelper#reimbursements_area_allocation).
           assert_text "£400.00 of spend less £800.00 of income"
           assert_no_text "-£400.00"
         end

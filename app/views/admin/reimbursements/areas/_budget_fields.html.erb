@@ -1,5 +1,4 @@
 <%# locals: (f:) %>
-<%# One budget line row inside an area's edit form (simple_form_for; see areas/_fields.html.erb). %>
 <div class="flex flex-wrap items-end gap-3 border-b border-gray-100 py-3 last:border-b-0">
   <div class="w-56">
     <%= f.input :name, label: "Name", wrapper_html: { class: "mb-0" } %>
@@ -7,17 +6,11 @@
   <div class="w-40">
     <%= f.input :nominal_code, label: "Nominal code", wrapper_html: { class: "mb-0" } %>
   </div>
-  <%# Type and figure, because without them a line typed here landed as an
-      Expense with no plan at all — and an unbudgeted line reports "no budget
-      set" everywhere, which is right about the data and useless to the
-      committee that just agreed a number for it. Both optional: an area whose
-      split is not decided yet is a real state, and an EXISTING row that posts
-      a blank keeps the figure it has. %>
+  <%# Type and figure are optional: an area whose split is not decided yet is a
+      real state, and an EXISTING row that posts a blank keeps its figure. %>
   <div class="w-40">
-    <%# NOT simple-select2: Tom Select sizes its own wrapper to its content,
-        which in this fixed-width row rendered a 64px box with no chevron
-        beside three full-width inputs. A two-option field in a compact row
-        wants the plain styled select. %>
+    <%# NOT simple-select2: Tom Select sizes to its content, which in this
+        fixed-width row drew a 64px box with no chevron. %>
     <%= f.input :budget_type, label: "Type", collection: ::Reimbursements::Budget::TYPES,
                 include_blank: false, wrapper_html: { class: "mb-0" } %>
   </div>
@@ -28,10 +21,9 @@
                 wrapper_html: { class: "mb-0" } %>
   </div>
   <% unless f.object.new_record? %>
-    <%# Sets area_id to "" on submit — the same unchecked-value trick
-        Rails' own check_box uses, repurposed to blank a foreign key instead
-        of toggling a boolean. Detaching nils the budget's area_id rather
-        than deleting it: its claims and history hang off it. %>
+    <%# The unchecked value blanks area_id on submit (Rails' check_box trick,
+        repurposed for a foreign key). Detaching nils area_id and never
+        deletes: the budget's claims and history hang off it. %>
     <label class="mb-2 inline-flex items-center gap-2 text-sm text-gray-700">
       <%= f.check_box :area_id, {}, "", f.object.area_id.to_s %>
       Detach from this area

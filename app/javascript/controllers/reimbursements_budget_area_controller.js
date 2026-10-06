@@ -1,17 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 
 // The budget form's area picker against its owners list. The area owns and its
-// budgets inherit, so owners chosen while an area is chosen would be written to
-// a table Budget#owners never reads — the server refuses that post outright.
-// This is what stops the operator reaching the refusal: choosing an area
-// disables the whole fieldset, which also stops the browser posting owner_ids
-// at all (a disabled fieldset submits none of its controls, the empty hidden
-// field included, so the budget's own owner rows are left alone rather than
-// synced to nothing).
+// budgets inherit, so owners chosen alongside an area would go to a table
+// Budget#owners never reads, and the server refuses that post. Choosing an area
+// disables the whole fieldset, so the browser posts no owner_ids at all (empty
+// hidden field included) and the budget's own owner rows are left alone rather
+// than synced to nothing.
 //
 // On the new-budget form it also narrows the area picker to the chosen cost
-// centre: the server renders every centre's areas, each option tagged with its
-// own, and refuses an area from another centre.
+// centre: the server renders every centre's areas and refuses one from another.
 export default class extends Controller {
   static targets = ["area", "costCentre", "owners", "notice"]
 
@@ -23,9 +20,9 @@ export default class extends Controller {
     this.costCentreChanged()
   }
 
-  // An option with no centre is an unplaced area, offered under every centre
-  // as the server's own check allows. A choice the new centre does not hold
-  // falls back to "No area" rather than being posted to be refused.
+  // An unplaced area (no centre) is offered under every centre, as the server
+  // allows. A choice the new centre lacks falls back to "No area" instead of
+  // being posted to be refused.
   costCentreChanged() {
     if (this.hasCostCentreTarget) {
       const centre = this.costCentreTarget.value
@@ -46,9 +43,8 @@ export default class extends Controller {
 
     const inArea = this.areaTarget.value !== ""
     this.ownersTarget.disabled = inArea
-    // A disabled fieldset stops the browser SUBMITTING the select, but Tom
-    // Select's own control is divs and goes on looking live inside one — so an
-    // operator would pick owners that are then silently dropped.
+    // Tom Select's control is divs and looks live inside a disabled fieldset, so
+    // owners picked there would be silently dropped.
     const ts = this.ownersTarget.querySelector("select.simple-select2")?.tomselect
     if (ts) { inArea ? ts.disable() : ts.enable() }
     if (this.hasNoticeTarget) this.noticeTarget.hidden = !inArea

@@ -27,11 +27,9 @@
 #
 module Reimbursements
   ##
-  # A show, project or heading that several budget lines belong to.
-  #
-  # The area holds the AGREED TOTAL and the owners; its budgets hold the
-  # nominal code (EUSA's axis) and an optional allocation. See
-  # docs/superpowers/specs/2026-09-10-area-grouping-design.md.
+  # A show, project or heading that several budget lines belong to. It holds the
+  # AGREED TOTAL and the owners; its budgets hold the nominal code and an
+  # optional allocation. See docs/superpowers/specs/2026-09-10-area-grouping-design.md.
   class Area < ApplicationRecord
     include RecordId
     include PlannedAmount
@@ -46,59 +44,40 @@ module Reimbursements
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast", dependent: :destroy,
                          inverse_of: :area
 
-    # What the agreed total is a total OF. A show's total is a SPEND CAP: the
-    # £800 it raises buys it no more room. A committee's is a NET allowance:
-    # money it raises genuinely raises what it may spend. The area declares
-    # which, because it is genuinely both (Mick, 2026-09-11) and neither
-    # reading can be derived from the lines.
+    # What the agreed total is a total OF. A show's is a SPEND CAP (income it
+    # raises buys no more room); a committee's is a NET allowance (income raises
+    # what it may spend). The lines cannot say which, so the area declares it.
     BASIS_EXPENSES = "expenses".freeze
     BASIS_NET = "net".freeze
 
-    # The basis is a QUALIFIER on "Agreed total", the noun the form field, the
-    # areas index and the overview card already use — not a second name for one
-    # stored number. "Total expenses" alone reads as money already spent, and on
-    # the overview card it sits directly above "Subtotal Cogito (Expense)".
-    #
-    # ONE source for the words, written here: every card's label, the two radios
-    # (through BASIS_OPTIONS) and the areas index's per-cell qualifier, so a
-    # finance user reads back the words they picked and no two screens name one
-    # basis differently.
+    # The basis qualifies "Agreed total" ("Total expenses" alone reads as money
+    # already spent). Every card label, both radios and the areas index's
+    # qualifier come from here, so a finance user reads back the words they
+    # picked and no two screens name a basis differently.
     BASIS_QUALIFIERS = { BASIS_EXPENSES => "expenses", BASIS_NET => "net" }.freeze
     BASIS_LABELS = BASIS_QUALIFIERS.transform_values { |word| "Agreed total (#{word})" }.freeze
     BASES = BASIS_LABELS.keys.freeze
-    # simple_form wants [text, value] pairs; BASIS_LABELS is value => text.
-    # Derived here rather than inverted in the view, which put the vocabulary
-    # in two places.
+    # simple_form wants [text, value] pairs.
     BASIS_OPTIONS = BASIS_LABELS.map { |value, text| [ text, value ] }.freeze
 
     validates :name, presence: true
-    # has_attribute?, not a bare inclusion: BackfillReimbursementsAreas creates
-    # areas through this model, and on a re-migrate after a rollback it runs
-    # BEFORE the migration adding this column — where reading the attribute
-    # raises NoMethodError and stops the whole chain, so the areas can be
-    # unwound but never put back.
+    # has_attribute?, because on a re-migrate after a rollback the backfill
+    # creates areas through this model BEFORE the migration adding the column,
+    # and a bare inclusion would raise NoMethodError and stop the chain.
     validates :budget_basis, inclusion: { in: BASES }, if: -> { has_attribute?(:budget_basis) }
-    # Areas are matched by name within one (financial year, cost centre) —
-    # the backfill and the (future) importer both bind a budget to its parent
-    # this way. The composite index on the same three columns is deliberately
-    # NOT unique: MySQL allows several NULLs through a unique index, and an
-    # area created before a year or centre is assigned has NULLs in exactly
-    # those two columns, so only this model validation catches a same-name
-    # collision there.
+    # Areas are matched by name within one (year, centre), as the backfill and
+    # the importer do. The composite index is deliberately NOT unique: MySQL lets
+    # several NULLs through, and an area with no year or centre yet has NULLs in both.
     validates :name, uniqueness: { scope: [ :financial_year_id, :cost_centre_id ] }
 
-    # The fields the operator FILLS IN, as opposed to the wider permitted list
-    # in AreasController::BUDGET_ROW_FIELDS.
+    # The fields the operator fills in, as opposed to AreasController::BUDGET_ROW_FIELDS.
     TYPED_BUDGET_ROW_FIELDS = %w[name nominal_code initial_budget].freeze
 
-    # NOT :all_blank: the row's Type select has no blank option, so an
-    # untouched "Add budget line" row still posts budget_type, was never blank,
-    # and reached save! with no name.
-    #
-    # AreasController#budget_row_error judges a row by the same list, and the
-    # two must agree: a row one calls untouched and the other calls incomplete
-    # is either a silent 500 or a line silently dropped. A figure typed with no
-    # name is touched, so it is kept and reported rather than discarded.
+    # NOT :all_blank: the Type select has no blank option, so an untouched "Add
+    # budget line" row still posts budget_type and would reach save! with no name.
+    # AreasController#budget_row_error must judge by the same list: a row one calls
+    # untouched and the other incomplete is a silent 500 or a silently dropped line.
+    # A figure typed with no name counts as touched, so it is reported.
     UNTOUCHED_BUDGET_ROW = lambda do |attrs|
       attrs["id"].blank? && TYPED_BUDGET_ROW_FIELDS.all? { |key| attrs[key].blank? }
     end
@@ -106,14 +85,13 @@ module Reimbursements
     accepts_nested_attributes_for :budgets, allow_destroy: false,
                                             reject_if: UNTOUCHED_BUDGET_ROW
 
-    # Owner links are People record id STRINGS, mirroring Budget#owner_ids —
-    # OwnerReview and the budgets UI compare them against person.record_id.
+    # People record id STRINGS, as Budget#owner_ids: OwnerReview compares them
+    # against person.record_id.
     def owner_ids
       owners.map(&:record_id)
     end
 
-    # Diff-syncs the owners join table to exactly +person_ids+ (numeric ids) —
-    # the sync path for the area edit form and the importer.
+    # Diff-syncs the join table to exactly +person_ids+ (numeric ids).
     def sync_owner_ids!(person_ids)
       person_ids = person_ids.map(&:to_i)
       area_ownerships.where.not(person_id: person_ids).destroy_all
@@ -122,73 +100,54 @@ module Reimbursements
       end
     end
 
-    # Latest wins, by date then id — the same rule Budget#current_forecast uses
-    # (app/models/reimbursements/budget.rb). Plain `||=` is fine on a nil result
-    # here: calling #max_by on the forecasts association loads and caches it
-    # regardless, so a re-run only repeats the in-memory sort. Budget's sibling
-    # needs `return @x if defined?(@x)` because its unpreloaded branch issues a
-    # fresh query each time instead of going through the cached association —
-    # don't "fix" this one to match without checking that first.
+    # Latest by date then id, as Budget#current_forecast. Plain ||= is fine on a
+    # nil result here, unlike Budget's defined? sibling: #max_by loads and caches
+    # the association whatever it returns. Don't "fix" it to match.
     def current_forecast
       @current_forecast ||= forecasts.max_by { |f| [ f.date || Date.new(0), f.id ] }&.amount
     end
 
     def projected_amount = current_forecast || initial_budget
 
-    # The spend its budgets have committed — Approved, Submitted and Paid, ex-VAT,
-    # exactly as Budget#committed_amount counts it.
+    # Approved, Submitted and Paid spend, ex-VAT, as Budget#committed_amount counts it.
     def committed_amount
       @committed_amount ||= budgets.sum(&:committed_amount)
     end
 
-    # What is left of the AGREED total. Nil when nobody agreed one, rather than
-    # reading as the whole spend being over budget.
+    # What is left of the agreed total; nil when nobody agreed one, not "overspent".
     #
-    # The one figure on a basis-labelled card that does NOT read the basis, by
-    # decision. #committed_amount counts CLAIMS, and a claim filed against an
-    # income line is spend recorded on it rather than income received, so
-    # netting it would raise the room left by money somebody spent. Income that
-    # landed is Budget#eusa_actual_amount, an EUSA ledger figure weeks later,
-    # and nothing in this portal mixes a committed figure with an actual one.
-    #
-    # The consequence, which is what makes it safe rather than merely
-    # defensible: on a NET area whose income HAS landed this reads LOWER than
-    # the room really left. Understating is the direction this portal errs in,
-    # so it stands until a basis-aware figure earns its own name and its own
-    # decision about whether an EUSA credit may raise it.
+    # Deliberately does not read the basis: committed_amount counts CLAIMS, and a
+    # claim on an income line is spend recorded there, not income received, so
+    # netting it would raise the room left by money somebody spent. On a net area
+    # whose income has landed this therefore reads lower than the room really
+    # left, which is the direction this portal errs in.
     def remaining
       return nil if no_budget_set?
 
       projected_amount - committed_amount
     end
 
-    # An agreed total of exactly £0 counts as unset only while nothing has been
-    # allocated under it. Production carries many termtime areas in exactly
-    # that state with real spend against them, and reading the 0 as a cap
-    # painted every one of them red for ever. An area that HAS allocated lines
-    # under a £0 total is a different thing — the lines contradict the total,
-    # and that disagreement is worth showing.
+    # A £0 total counts as unset only while nothing is allocated under it
+    # (production has many termtime areas like that, with real spend). Lines
+    # under a £0 total contradict it, and that is worth showing.
     def nothing_allocated?
       allocated.zero?
     end
 
-    # How much of the total has been split out into category lines. Lines with no
-    # agreed figure are skipped, not counted as zero.
-    #
-    # Read on the area's own basis, which is the ONLY arithmetic the basis
-    # governs: an income line is left out of a spend cap entirely and
-    # subtracted from a net allowance. It must not reach AreaRollup#by_type,
-    # whose two subtotals never net the types together.
+    # How much of the total is split out into lines; lines with no figure are
+    # skipped, not counted as zero. On the area's own basis, the only arithmetic
+    # the basis governs: it must not reach AreaRollup#by_type, whose subtotals
+    # never net the types.
     def allocated
       @allocated ||= net_basis? ? allocated_spend - allocated_income : allocated_spend
     end
 
-    # The two halves every screen prints instead of a bare negative — see
-    # ReimbursementsHelper#reimbursements_area_allocation, which owns that rule.
+    # The two halves screens print instead of a bare negative (see
+    # ReimbursementsHelper#reimbursements_area_allocation).
     def allocated_spend = @allocated_spend ||= projections_of { |budget| !budget.income? }
     def allocated_income = @allocated_income ||= projections_of(&:income?)
 
-    # The part of the agreed total not yet assigned to a category — NOT spare money.
+    # The part of the agreed total not yet assigned to a line, NOT spare money.
     def unallocated
       return nil if no_budget_set?
 
@@ -205,7 +164,6 @@ module Reimbursements
 
     private
 
-    # A line nobody has given a figure is skipped, not counted as zero.
     def projections_of(&matcher)
       budgets.select(&matcher).filter_map(&:projected_amount).sum
     end

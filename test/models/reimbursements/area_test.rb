@@ -26,9 +26,7 @@ module Reimbursements
     end
 
     test "an area is a spend cap unless somebody says otherwise" do
-      # Every area that exists came from the Phase 1 backfill of show-shaped
-      # lines, and a spend cap never reports more room than there is. A
-      # committee's net allowance is one deliberate choice by a human.
+      # The safe default: a spend cap never reports more room than there is.
       assert_equal "expenses", create_reimbursements_area(name: "Cogito").budget_basis
     end
 
@@ -40,11 +38,8 @@ module Reimbursements
       assert area.errors[:budget_basis].present?
     end
 
-    # Standing in for the case a test cannot reach without DDL: the backfill
-    # creates areas through this model, and on a re-migrate after a rollback it
-    # runs BEFORE the migration that adds budget_basis — where a bare inclusion
-    # raises on an attribute that is not there and stops the whole chain, so
-    # the areas could be unwound but never put back.
+    # Stands in for the re-migrate case (the backfill creates areas before the
+    # column exists), which a test cannot reach without DDL.
     test "an area whose basis attribute is not loaded still validates" do
       area = create_reimbursements_area(name: "Cogito")
 

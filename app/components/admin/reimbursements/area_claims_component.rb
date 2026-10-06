@@ -1,21 +1,18 @@
 module Admin
   module Reimbursements
     ##
-    # Every claim charged to an area, under status tabs, newest first.
+    # Every claim charged to an area, or to one loose budget line, under status
+    # tabs, newest first.
     #
-    # This is the half of the page that answers "where has my money got to",
-    # which today has no answer anywhere in the portal for anyone but finance.
-    # So the status is written as a PLACE the claim has reached rather than as
-    # the stored word (see ::Reimbursements::ClaimTabs): "With EUSA" beats
-    # "Submitted", which a producer reads as "I submitted it".
+    # It answers "where has my money got to", so the status is a PLACE the claim
+    # has reached rather than the stored word (see ::Reimbursements::ClaimTabs):
+    # "With EUSA" beats "Submitted", which a producer reads as "I submitted it".
     #
-    # An owner sees the claims but never bank details: the row carries the
-    # payee's NAME, the amount and what it was for, which is what sign-off and
-    # "has mine been paid" need, and nothing that would turn a show's page into
-    # a directory of its members' account numbers.
+    # An owner sees the claims but never bank details: a row carries the payee's
+    # name, the amount and what it was for, nothing that would turn a show's page
+    # into a directory of its members' account numbers.
     class AreaClaimsComponent < ViewComponent::Base
-      # A component gets no helpers of its own, and these two are how every
-      # money figure and date in this portal is written.
+      # A component gets no helpers of its own (paginate included).
       delegate :reimbursements_money, :reimbursements_date, :paginate, to: :helpers
 
       def initialize(claims:, counts:, tab:, finance:, area: nil, budget: nil, current_person: nil)
@@ -42,9 +39,8 @@ module Admin
 
       def count_for(key) = counts[key].to_i
 
-      # Tabs are links, not JavaScript: the tab is URL state like every other
-      # filter in this portal, so a producer can bookmark "my show's unpaid
-      # claims" and finance can send one.
+      # Tabs are links so the tab is URL state: "my show's unpaid claims" can be
+      # bookmarked and sent.
       def tab_path(key)
         params = key == ::Reimbursements::ClaimTabs::ALL ? {} : { status: key }
         if area
@@ -55,9 +51,8 @@ module Admin
       end
 
       # Finance can open any claim on the finance edit form. A producer gets a
-      # link only to a claim they submitted themselves — their own claim's page
-      # is theirs to see — and otherwise reads the row without a link, which is
-      # the same rule the receipt viewer already applies.
+      # link only to a claim they submitted, and reads other rows without one, as
+      # the receipt viewer does.
       def claim_path(claim)
         return helpers.edit_admin_reimbursements_expense_edit_path(claim.record_id) if finance?
         return nil if current_person.nil? || claim.person&.record_id != current_person.record_id

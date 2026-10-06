@@ -7,16 +7,14 @@
 <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
   <div>
     <p class="text-gray-600">
-      <%# Two production areas are both called "Tech", in different centres and
-          years, so the heading always says which one this is. %>
+      <%# Two production areas are both called "Tech", so the heading always
+          says which centre and year this is. %>
       <%= @area.cost_centre&.name || "No cost centre" %>
       <% if @area.financial_year && @area.cost_centre&.name != @area.financial_year.label %>
         · <%= @area.financial_year.label %>
       <% end %>
-      <%# BASIS_LABELS is the FORM's field label ("Agreed total (expenses)"),
-          which reads as a stray caption in a subtitle. The basis itself is
-          what belongs here: a show gets a spend cap, a committee a net
-          allowance. %>
+      <%# Not BASIS_LABELS: that is the form's field label and reads as a stray
+          caption in a subtitle. %>
       <% if finance %>· <%= @area.net_basis? ? "net allowance" : "spend cap" %><% end %>
     </p>
     <p class="text-gray-600">
