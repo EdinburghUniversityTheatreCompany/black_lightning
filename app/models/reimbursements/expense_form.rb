@@ -57,11 +57,11 @@ module Reimbursements
     end
 
     def foreign_amount_decimal
-      parse_decimal(foreign_amount)
+      AmountParser.parse(foreign_amount)
     end
 
     def draft?
-      ActiveModel::Type::Boolean.new.cast(save_as_draft)
+      truthy?(save_as_draft)
     end
 
     # The budget ids the controller rendered into the picker, as strings. nil
@@ -88,14 +88,14 @@ module Reimbursements
     # Set only by from_actual, never a permitted param, so a submitter can't
     # pick From EUSA to dodge the receipt, VAT and large-amount rules.
     def internal?
-      ActiveModel::Type::Boolean.new.cast(@internal)
+      truthy?(@internal)
     end
 
     # Set only by ExpenseImport, for money that has already moved. Suppresses
     # the two payee blocks and nothing else: Build Batch reads Approved claims
     # alone, so a settled claim never reaches the money path they protect.
     def settled?
-      ActiveModel::Type::Boolean.new.cast(@settled)
+      truthy?(@settled)
     end
 
     # Drops anything that is not an uploaded file (a bare String answers #size
@@ -116,15 +116,15 @@ module Reimbursements
 
     # Edit doesn't force a re-upload; create requires at least one receipt.
     def require_receipts?
-      @require_receipts.nil? || ActiveModel::Type::Boolean.new.cast(@require_receipts)
+      @require_receipts.nil? || truthy?(@require_receipts)
     end
 
     def amount_decimal
-      parse_decimal(amount)
+      AmountParser.parse(amount)
     end
 
     def amount_excl_vat_decimal
-      parse_decimal(amount_excl_vat)
+      AmountParser.parse(amount_excl_vat)
     end
 
     # The ex-VAT amount isn't below the total.
@@ -213,8 +213,8 @@ module Reimbursements
       draft? || internal?
     end
 
-    def parse_decimal(value)
-      AmountParser.parse(value)
+    def truthy?(value)
+      ActiveModel::Type::Boolean.new.cast(value)
     end
 
     def amounts_valid
@@ -333,7 +333,7 @@ module Reimbursements
 
     def vat_soft_block
       return unless vat_missing?
-      return if ActiveModel::Type::Boolean.new.cast(vat_acknowledged)
+      return if truthy?(vat_acknowledged)
 
       errors.add(:vat_acknowledged, "is required here: this receipt doesn't seem to itemise VAT, " \
                                     "so we have to deduct the FULL amount from your budget (with " \
@@ -344,7 +344,7 @@ module Reimbursements
 
     def large_amount_soft_block
       return unless large_amount?
-      return if ActiveModel::Type::Boolean.new.cast(large_amount_acknowledged)
+      return if truthy?(large_amount_acknowledged)
 
       errors.add(:large_amount_acknowledged, "is required for a claim this large. Double-check the " \
                                              "amount is right (a common slip is typing pence as " \
