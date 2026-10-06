@@ -137,52 +137,28 @@ module Reimbursements
       mailbox.mark_read_and_move(message.id, :rejected)
     end
 
+    # A previous cycle may have created the expense (found by source_message_id) and died before
+    # marking read: finish that message rather than mint a duplicate.
+    #
+    # Mark read FIRST (the idempotency commit point; a failure there is the duplicate-risk case).
+    # Attach and reply are separate best-effort steps so an attach failure cannot skip the reply.
+    # The move to Processed is gated on attach, so a partly attached draft stays visible in the
+    # Inbox. On a retry, reply only if something was attached now: otherwise the earlier cycle
+    # most likely replied already.
     def create_expense(message, person, receipts)
-      # A previous cycle may have created the expense and died before marking read: finish
-      # that message rather than mint a duplicate.
-      if (existing = store.expense_for_source_message(message.id))
-        handle_already_processed(message, existing, receipts)
-        return
+      existing = store.expense_for_source_message(message.id)
+      if existing
+        Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
+                          "#{existing.record_id}; finishing without a duplicate")
       end
-
-      expense = store.create_expense!(expense_attrs(message, person))
-      finalise_created(message, expense, receipts)
-    end
-
-    # Mark read FIRST (the idempotency commit point; a failure there is the duplicate-risk
-    # case). Attach and reply are separate best-effort steps so an attach failure cannot skip
-    # the reply. The move to Processed is gated on attach, so a partly attached draft stays
-    # visible in the Inbox.
-    def finalise_created(message, expense, receipts)
+      expense = existing || store.create_expense!(expense_attrs(message, person))
       mark_read_or_flag_duplicate(message, expense) or return
 
-      attached = best_effort(message, expense, "receipt attach") do
-        receipts.each do |receipt|
-          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
-                                                   content_type: receipt[:content_type],
-                                                   bytes: receipt[:bytes])
-        end
+      receipts = missing_receipts(expense, receipts) if existing
+      attached = receipts.empty? || best_effort(message, expense, "receipt attach") do
+        receipts.each { |receipt| store.attach_receipt!(expense.record_id, **receipt) }
       end
-      best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
-      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
-    end
-
-    # The expense exists from an earlier cycle that may have died after the create. Reply only
-    # if something was attached now: otherwise that cycle most likely replied already.
-    def handle_already_processed(message, expense, receipts)
-      Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
-                        "#{expense.record_id}; finishing without a duplicate")
-      mark_read_or_flag_duplicate(message, expense) or return
-
-      missing = missing_receipts(expense, receipts)
-      attached = missing.empty? || best_effort(message, expense, "receipt attach") do
-        missing.each do |receipt|
-          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
-                                                   content_type: receipt[:content_type],
-                                                   bytes: receipt[:bytes])
-        end
-      end
-      if missing.any? && attached
+      if existing.nil? || (receipts.any? && attached)
         best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
       end
       best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
