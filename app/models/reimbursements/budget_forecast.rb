@@ -48,11 +48,6 @@ module Reimbursements
     # @budgets_by_id).
     def budget_id = self[:budget_id]&.to_s
 
-    # Display label: "<budget or area> - YYYY-MM-DD".
-    def name
-      [ (budget || area)&.name, date&.strftime("%Y-%m-%d") ].compact.join(" - ")
-    end
-
     private
 
     # Belt and braces over the CHECK constraint, for a readable message.
