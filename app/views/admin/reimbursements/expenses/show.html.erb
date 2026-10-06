@@ -36,8 +36,13 @@
       <p class="font-medium">Paid to a third party</p>
       <p class="text-gray-600">
         <%= @expense.effective_payee_name %>,
-        <%= reimbursements_value(@expense.effective_sort_code) %> /
-        <%= reimbursements_value(@expense.effective_account_number) %>
+        <% if @expense.international? %>
+          <%= reimbursements_value(Reimbursements::BankDetails.format_iban(@expense.effective_iban)) %> /
+          <%= reimbursements_value(@expense.effective_bic) %>
+        <% else %>
+          <%= reimbursements_value(@expense.effective_sort_code) %> /
+          <%= reimbursements_value(@expense.effective_account_number) %>
+        <% end %>
       </p>
     </div>
   <% end %>

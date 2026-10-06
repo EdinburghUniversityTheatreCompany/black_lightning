@@ -305,6 +305,30 @@ module Admin
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 
+    # An international claim has no UK overrides, so reading the sort code and
+    # account number would print the submitter's own account as the payee's.
+    test "show prints a third-party payee's own rail's details, not the submitter's account" do
+      @person.create_payment_details!(sort_code: "11-22-33", account_number: "87654321")
+      international = create_reimbursements_expense(
+        person: @person, budget: @budget, payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+        payee_name_override: "Ausland GmbH", iban_override: "DE89370400440532013000",
+        bic_override: "DEUTDEFF500"
+      )
+      uk = create_reimbursements_expense(person: @person, budget: @budget, payee_name_override: "Venue Ltd",
+                                         sort_code_override: "20-00-00", account_number_override: "12345678")
+      sign_in @user
+
+      get :show, params: { id: international.record_id }
+      assert_includes response.body, "Ausland GmbH"
+      assert_includes response.body, "DE89 3704 0044 0532 0130 00"
+      assert_includes response.body, "DEUTDEFF500"
+      assert_not_includes response.body, "87654321"
+
+      get :show, params: { id: uk.record_id }
+      assert_includes response.body, "20-00-00"
+      assert_includes response.body, "12345678"
+    end
+
     # before_create stamps submitted_at on a draft too, so it is when it started.
     test "show labels the claim's date Submitted, and Started while it is a draft" do
       submitted = create_reimbursements_expense(person: @person, budget: @budget,
