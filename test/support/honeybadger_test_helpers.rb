@@ -1,22 +1,17 @@
 # Captures Honeybadger calls so a test can assert a failure was REPORTED, not just swallowed.
 module HoneybadgerTestHelpers
-  def capture_honeybadger_notices
-    notices = []
-    original = Honeybadger.method(:notify)
-    Honeybadger.define_singleton_method(:notify) { |error, **opts| notices << [ error, opts ] }
-    yield
-    notices
-  ensure
-    Honeybadger.define_singleton_method(:notify, original)
-  end
+  def capture_honeybadger_notices(&) = capture_honeybadger(:notify, &)
+  def capture_honeybadger_events(&) = capture_honeybadger(:event, &)
 
-  def capture_honeybadger_events
-    events = []
-    original = Honeybadger.method(:event)
-    Honeybadger.define_singleton_method(:event) { |name, **payload| events << [ name, payload ] }
+  private
+
+  def capture_honeybadger(method_name)
+    original = Honeybadger.method(method_name)
+    calls = []
+    Honeybadger.define_singleton_method(method_name) { |subject, **opts| calls << [ subject, opts ] }
     yield
-    events
+    calls
   ensure
-    Honeybadger.define_singleton_method(:event, original)
+    Honeybadger.define_singleton_method(method_name, original)
   end
 end
