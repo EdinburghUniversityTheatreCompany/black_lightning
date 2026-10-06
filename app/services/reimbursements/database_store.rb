@@ -566,7 +566,7 @@ module Reimbursements
     def remove_receipt!(expense_record_id, attachment_id)
       expense = Expense.find(expense_record_id)
       target = expense.receipt_files.find { |file| file.blob_id.to_s == attachment_id.to_s }
-      return bust_expenses! if target.nil?
+      return if target.nil?
 
       raise LastReceiptError if !expense.draft? && expense.receipt_files.one?
 
@@ -807,7 +807,6 @@ module Reimbursements
       end
       bust_eusa_actuals!
       bust_budgets!
-      EusaActual.find(actual_id)
     end
 
     # The way back out of a split: the shares go and the row is an ordinary unlinked credit
@@ -823,7 +822,6 @@ module Reimbursements
       end
       bust_eusa_actuals!
       bust_budgets!
-      EusaActual.find(actual_id)
     end
 
     # The way back out of a wrong match to an income line: the row loses its budget. This makes
