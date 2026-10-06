@@ -27,8 +27,6 @@ module Reimbursements
   # to Graph: a bounce afterwards is invisible here, so a reminder to a dead address looks like
   # one that arrived.
   class NotificationLog < ApplicationRecord
-    include RecordId
-
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
     validates :kind, :recipient, :sent_at, presence: true
