@@ -2,19 +2,17 @@ class EventsGridComponent < ViewComponent::Base
   # The grid of event cards on the home page, a venue and a member's profile.
   # Posters are cropped to one ratio so a row lines up; srcset still spares a
   # phone the 960px poster.
-  POSTER_ASPECT = "aspect-[576/300]".freeze
-
   def initialize(items:, col_size:, link_to_admin_events: false)
     @items = items
     @col_size = col_size
     @link_to_admin_events = link_to_admin_events
   end
 
-  private
-
-  def any_items?
-    @items.size.positive?
+  def render?
+    @items.any?
   end
+
+  private
 
   def grid_classes
     @col_size == 8 ? wide_column_classes : full_width_classes
