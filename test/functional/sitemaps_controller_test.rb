@@ -11,13 +11,13 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
     locs = doc.css("sitemapindex > sitemap > loc").map(&:text)
 
     assert_equal SitemapsController::SECTIONS.length, locs.length
-    SitemapsController::SECTIONS.each do |section|
+    SitemapsController::SECTIONS.each_key do |section|
       assert(locs.any? { |loc| loc.end_with?("/sitemaps/#{section}.xml") }, "#{section} missing")
     end
   end
 
   test "every section renders a valid urlset" do
-    SitemapsController::SECTIONS.each do |section|
+    SitemapsController::SECTIONS.each_key do |section|
       get section_sitemap_path(section)
 
       assert_response :success, "#{section} did not render"

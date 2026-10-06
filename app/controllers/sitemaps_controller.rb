@@ -5,34 +5,27 @@ class SitemapsController < ApplicationController
   # sitemaps.org caps a file at 50,000 URLs.
   MAX_URLS_PER_SECTION = 50_000
 
-  # A literal map, not an interpolated send: Brakeman flags that however well it is guarded.
-  SECTION_BUILDERS = {
-    "pages" => :pages_entries, "events" => :events_entries, "news" => :news_entries,
-    "venues" => :venues_entries, "members" => :members_entries
-  }.freeze
-
-  SECTIONS = SECTION_BUILDERS.keys.freeze
-
-  # Advisory: Google largely ignores changefreq, Bing and others still read it.
-  CHANGE_FREQUENCIES = {
-    "pages" => "monthly", "events" => "daily", "news" => "weekly",
-    "venues" => "monthly", "members" => "monthly"
+  # Section => [entries method, changefreq]. A literal map, not an interpolated send: Brakeman
+  # flags that however well it is guarded. changefreq is advisory: Google largely ignores it,
+  # Bing and others still read it.
+  SECTIONS = {
+    "pages" => [ :pages_entries, "monthly" ], "events" => [ :events_entries, "daily" ],
+    "news" => [ :news_entries, "weekly" ], "venues" => [ :venues_entries, "monthly" ],
+    "members" => [ :members_entries, "monthly" ]
   }.freeze
 
   def index
-    @sections = SECTIONS
+    @sections = SECTIONS.keys
 
     render formats: :xml
   end
 
   def section
-    @section = params[:section]
-    builder = SECTION_BUILDERS[@section]
+    builder, @change_frequency = SECTIONS[params[:section]]
 
     head :not_found and return if builder.nil?
 
     @entries = method(builder).call
-    @change_frequency = CHANGE_FREQUENCIES.fetch(@section)
 
     render :section, formats: :xml
   end
