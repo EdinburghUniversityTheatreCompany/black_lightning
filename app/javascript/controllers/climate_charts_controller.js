@@ -1,6 +1,6 @@
 import {
-  ClimateChartController, colorFor, withAlpha, endLabelPlugin, legendAndTooltip,
-  lineDataset, reducedMotion, seriesAriaLabel, timeScaleOptions,
+  ClimateChartController, chartOptions, colorFor, withAlpha, endLabelPlugin,
+  lineDataset, seriesAriaLabel,
 } from "../lib/climate_chart"
 
 // Three stacked charts (temperature, humidity, dew point) on one x-axis, a line
@@ -63,16 +63,10 @@ export default class extends ClimateChartController {
       type: "line",
       data: { datasets: this.#datasets(measure) },
       plugins: [endLabelPlugin()],
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: reducedMotion() ? false : undefined,
-        interaction: { mode: "index", intersect: false },
-        layout: { padding: { right: 0 } },
-        scales: timeScaleOptions({ title, unit }),
-        plugins: legendAndTooltip({ unit }),
-        onHover: (_event, elements, chart) => this.#syncHover(chart, elements),
-      },
+      options: chartOptions({
+        title, unit,
+        extra: { onHover: (_event, elements, chart) => this.#syncHover(chart, elements) },
+      }),
     })
   }
 

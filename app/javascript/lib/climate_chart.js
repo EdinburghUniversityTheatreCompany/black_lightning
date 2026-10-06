@@ -111,7 +111,7 @@ export class ClimateChartController extends Controller {
   }
 }
 
-export function timeScaleOptions({ title, unit }) {
+function timeScaleOptions({ title, unit }) {
   return {
     x: {
       type: "time",
@@ -141,7 +141,7 @@ export function chartOptions({ title, unit, extra = {} }) {
   }
 }
 
-export function legendAndTooltip({ unit }) {
+function legendAndTooltip({ unit }) {
   return {
     legend: {
       position: "bottom",

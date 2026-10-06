@@ -1,6 +1,5 @@
 import {
-  ClimateChartController, colorFor, endLabelPlugin, legendAndTooltip,
-  lineDataset, reducedMotion, seriesAriaLabel, timeScaleOptions,
+  ClimateChartController, chartOptions, colorFor, endLabelPlugin, lineDataset, seriesAriaLabel,
 } from "../lib/climate_chart"
 
 // One line per crypt sensor plotting the WORST margin in each bucket, not the
@@ -12,7 +11,12 @@ export default class extends ClimateChartController {
   build(Chart) {
     const canvas = this.canvasTarget
     const title = "Margin above dew point (°C)"
-    const scales = timeScaleOptions({ title, unit: "°C" })
+    const options = chartOptions({ title, unit: "°C" })
+
+    // Auto-scaled, a flat night gives the axis a few hundredths of a degree and
+    // the risk band falls off-screen. suggestedMin only widens the range, so a
+    // large margin still fits.
+    options.scales.y.suggestedMin = 0
 
     canvas.setAttribute("role", "img")
     canvas.setAttribute("aria-label", seriesAriaLabel({
@@ -29,24 +33,7 @@ export default class extends ClimateChartController {
         })),
       },
       plugins: [this.#riskBandPlugin(), endLabelPlugin()],
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: reducedMotion() ? false : undefined,
-        interaction: { mode: "index", intersect: false },
-        layout: { padding: { right: 0 } },
-        scales: {
-          ...scales,
-          y: {
-            ...scales.y,
-            // Auto-scaled, a flat night gives the axis a few hundredths of a
-            // degree and the risk band falls off-screen. suggestedMin only
-            // widens the range, so a large margin still fits.
-            suggestedMin: 0,
-          },
-        },
-        plugins: legendAndTooltip({ unit: "°C" }),
-      },
+      options,
     })]
   }
 
