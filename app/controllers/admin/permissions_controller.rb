@@ -2,45 +2,25 @@
 # The controller for setting permissions.
 ##
 class Admin::PermissionsController < AdminController
+  ACTIONS = %w[read create update delete manage].freeze
+
   authorize_resource
   before_action :set_models_and_roles
+  before_action :load_managed_role, only: %i[role_grid update_role_grid]
   ##
   # Shows a grid for selecting permissions for each role.
   ##
   def grid
     @title = "Permissions"
-    @models.sort_by!(&:name)
-
-    @actions = %w[read create update delete manage]
   end
 
   def role_grid
-    @role = Role.includes(:permissions).find(params[:id])
-    if Admin::Permission::EXCLUDED_ROLES.include?(@role.name)
-      redirect_to admin_role_path(@role), alert: "Permissions for #{@role.name} are not managed here."
-      return
-    end
     @roles = [ @role ]
-    @actions = %w[read create update delete manage]
     @title = "Permissions: #{@role.name}"
-    @models.sort_by!(&:name)
   end
 
   def update_role_grid
-    @role = Role.includes(:permissions).find(params[:id])
-    if Admin::Permission::EXCLUDED_ROLES.include?(@role.name)
-      redirect_to admin_role_path(@role), alert: "Permissions for #{@role.name} are not managed here."
-      return
-    end
-    @roles = [ @role ]
-
-    models = params["[#{@role.name}]"]
-    if models
-      (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
-        actions = models[model_name]&.keys || []
-        Admin::Permission.update_permission(@role, model_name, actions)
-      end
-    end
+    save_grid(@role)
 
     redirect_to permissions_admin_role_url(@role)
   end
@@ -49,26 +29,33 @@ class Admin::PermissionsController < AdminController
   # Takes the data posted from the grid and sets the permissions.
   ##
   def update_grid
-    @roles.includes(:permissions).each do |role|
-      models = params["[#{role.name}]"]
-
-      # Skip roles absent from the post: unchecked boxes submit nothing, so a partial
-      # load would wipe the role.
-      next unless models
-
-      (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
-        actions = models[model_name]&.keys || []
-
-        Admin::Permission.update_permission(role, model_name, actions)
-      end
-    end
+    @roles.each { |role| save_grid(role) }
 
     redirect_to admin_permissions_url
   end
 
   private
 
+  def load_managed_role
+    @role = Role.includes(:permissions).find(params[:id])
+    return unless Admin::Permission::EXCLUDED_ROLES.include?(@role.name)
+
+    redirect_to admin_role_path(@role), alert: "Permissions for #{@role.name} are not managed here."
+  end
+
+  def save_grid(role)
+    models = params["[#{role.name}]"]
+    # Skip roles absent from the post: unchecked boxes submit nothing, so a partial
+    # load would wipe the role.
+    return unless models
+
+    (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
+      Admin::Permission.update_permission(role, model_name, models[model_name]&.keys || [])
+    end
+  end
+
   def set_models_and_roles
+    @actions = ACTIONS
     @miscellaneous_permission_subject_classes = {
       "Admin::StaffingJob" => { "sign_up_for" => "Sign Up For Staffing" },
       "MarketingCreative::Profile" => { "approve" => "Approve or Reject Marketing Creative Profiles" },
@@ -96,9 +83,9 @@ class Admin::PermissionsController < AdminController
                   Reimbursements::Area, Reimbursements::AreaOwner,
                   Reimbursements::Expense, Reimbursements::Batch, Reimbursements::EusaActual,
                   Reimbursements::FinancialYear, Reimbursements::CostCentre, Reimbursements::NominalCode,
-                  Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq
+                  Climate::Sensor, Climate::Reading, EventOccurrence ]).uniq.sort_by(&:name)
 
     role_exclude = Admin::Permission::EXCLUDED_ROLES
-    @roles = Role.includes(:permissions).where.not(name: role_exclude).all.left_joins(:permissions).group(:id).order("COUNT(admin_permissions.id) DESC")
+    @roles = Role.includes(:permissions).where.not(name: role_exclude).left_joins(:permissions).group(:id).order("COUNT(admin_permissions.id) DESC")
   end
 end
