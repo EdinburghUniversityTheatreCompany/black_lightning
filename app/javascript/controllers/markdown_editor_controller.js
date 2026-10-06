@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { getMetaValue } from "../helpers"
 
 const DIALOG_WIDTH = 340
 
@@ -394,10 +395,9 @@ export default class extends Controller {
 
   async #loadPreview() {
     this.#previewEl.innerHTML = '<p class="text-gray-600">Loading preview…</p>'
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     const response = await fetch("/markdown/preview", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": getMetaValue("csrf-token") },
       body: JSON.stringify({ input_html: this.#textarea.value })
     })
     if (response.ok) {
@@ -669,14 +669,7 @@ export default class extends Controller {
     const files = this.#fileInput.files
     if (!files?.length || !this.#editor) return
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const results = await Promise.all(
-      Array.from(files)
-        .filter(f => f.type.startsWith("image/"))
-        .map(f => this.#uploadOneFile(f, csrfToken))
-    )
-
-    for (const { url, alt } of results.filter(Boolean)) {
+    for (const { url, alt } of await this.#uploadImages(files)) {
       this.#editor.action(this.#insert(`![${alt || "image"}](${url})`))
     }
     this.#fileInput.value = ""
@@ -684,26 +677,24 @@ export default class extends Controller {
 
   // For plugin-upload (drag, drop, paste): returns ProseMirror nodes.
   async #uploadFiles(files, schema) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const results = await Promise.all(
-      Array.from(files)
-        .filter(f => f.type.startsWith("image/"))
-        .map(f => this.#uploadOneFile(f, csrfToken))
-    )
-    return results
-      .filter(Boolean)
+    return (await this.#uploadImages(files))
       .map(({ url, alt }) => schema.nodes.image?.createAndFill({ src: url, alt }))
       .filter(Boolean)
   }
 
-  async #uploadOneFile(file, csrfToken) {
+  async #uploadImages(files) {
+    const uploads = Array.from(files).filter(f => f.type.startsWith("image/")).map(f => this.#uploadOneFile(f))
+    return (await Promise.all(uploads)).filter(Boolean)
+  }
+
+  async #uploadOneFile(file) {
     const formData = new FormData()
     formData.append("image", file, file.name || "upload.png")
     if (this.itemTypeValue) formData.append("item_type", this.itemTypeValue)
     if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
     const response = await fetch(this.uploadUrlValue, {
       method: "POST",
-      headers: { "X-CSRF-Token": csrfToken },
+      headers: { "X-CSRF-Token": getMetaValue("csrf-token") },
       body: formData
     })
     if (!response.ok) return null
