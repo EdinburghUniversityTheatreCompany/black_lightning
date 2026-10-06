@@ -18,11 +18,7 @@ module Reimbursements
     UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
 
     # An outgoing email attachment (the BACS xlsx or a renamed receipt).
-    Attachment = Struct.new(:filename, :content, :content_type, keyword_init: true) do
-      def initialize(filename:, content:, content_type: "application/octet-stream")
-        super
-      end
-    end
+    Attachment = Struct.new(:filename, :content, :content_type, keyword_init: true)
 
     Site = Struct.new(:id, :name, :web_url, keyword_init: true)
     Drive = Struct.new(:id, :name, keyword_init: true)
