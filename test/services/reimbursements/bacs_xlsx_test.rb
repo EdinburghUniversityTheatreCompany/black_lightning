@@ -46,6 +46,16 @@ module Reimbursements
       assert_equal "@", first[4].number_format.format_code, "nominal must be text-formatted"
     end
 
+    # add_cell would replace the template's styled amount cell with a General one.
+    test "the amount keeps the template's own currency format" do
+      template_format = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["BREAKDOWN"][2][1]
+                                      .number_format.format_code
+      written = parsed(BacsXlsx.new.generate(rows))[2][1]
+
+      assert_includes template_format, "£"
+      assert_equal template_format, written.number_format&.format_code
+    end
+
     test "leaves the header and example rows untouched" do
       sheet = parsed(BacsXlsx.new.generate(rows))
 

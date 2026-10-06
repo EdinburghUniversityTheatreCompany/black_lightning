@@ -4,11 +4,9 @@ module Reimbursements
   # the payment cells are ours; the cashflow, authorisation and bank blocks are
   # EUSA's, signed by hand.
   #
-  # * The authorisation formulas (C19/C20/E19) pick the signatory from the
-  #   amount in C10, so it must be written as a NUMBER: a string breaks all
-  #   three and hands EUSA a form naming no authoriser.
-  # * Cells are written with change_contents, never add_cell, which drops the
-  #   template's style. (BacsXlsx still has this bug on its amount column.)
+  # The authorisation formulas (C19/C20/E19) pick the signatory from the amount
+  # in C10, so it must be written as a NUMBER: a string breaks all three and
+  # hands EUSA a form naming no authoriser.
   #
   # The formulas compare against GBP thresholds whatever the currency. That is
   # EUSA's rule, and left alone.
