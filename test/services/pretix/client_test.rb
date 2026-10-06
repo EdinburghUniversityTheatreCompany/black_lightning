@@ -127,23 +127,6 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     assert_includes uri, "membership_type=225"
   end
 
-  test "memberships omits an unset filter rather than sending it blank" do
-    client, http = build_client([ page([ membership ]) ])
-
-    client.memberships(membership_type: 225)
-
-    assert_equal "https://pretix.eu/api/v1/organizers/eutc/memberships/?membership_type=225",
-                 http.requests.sole.uri
-  end
-
-  test "memberships with no filters at all sends no query string" do
-    client, http = build_client([ page([ membership ]) ])
-
-    client.memberships
-
-    assert_equal "https://pretix.eu/api/v1/organizers/eutc/memberships/", http.requests.sole.uri
-  end
-
   test "create_membership posts the payload and returns the created membership" do
     client, http = build_client([ [ 201, membership(id: 77).to_json ] ], writes: true)
 

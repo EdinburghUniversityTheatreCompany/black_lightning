@@ -81,7 +81,7 @@ module Pretix
 
         identifier = customer["identifier"]
         remember_link(user, identifier) if linked.blank?
-        apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
+        apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(identifier)),
               customer: identifier)
       end.outcome
     end
@@ -152,13 +152,13 @@ module Pretix
       # ids, a customer's live membership among the missing). A member whose row
       # vanishes looks like one with none, and the reconcile would mint another
       # every night.
-      apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(customer: identifier)),
+      apply(plan_for(entitled: entitled?(user), memberships: fetch_memberships(identifier)),
             customer: identifier)
     end
 
     def skipped(outcome) = Result.new(outcome: outcome, duplicates_expired: 0)
 
-    def fetch_memberships(customer: nil)
+    def fetch_memberships(customer)
       @client.memberships(customer: customer, membership_type: Settings::MEMBERSHIP_TYPE_ID)
              .select { |membership| membership_type_id(membership) == Settings::MEMBERSHIP_TYPE_ID }
     end

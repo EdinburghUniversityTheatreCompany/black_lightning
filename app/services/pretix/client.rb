@@ -120,8 +120,9 @@ module Pretix
       paginated("events/#{slug}/subevents/", with_availability_for: availability_channel)
     end
 
-    # Memberships for the organizer. Both filters are optional; +customer+ takes a
-    # customer *identifier*.
+    # Memberships of one type for one customer (+customer+ is a customer
+    # *identifier*). Both filters are required: the whole-shop list must never be
+    # read (see MembershipSync#reconcile_customer).
     #
     # Both filter names were verified against the live organizer (Aug 2026): a
     # filter pretix does not recognise is silently ignored and returns the WHOLE
@@ -130,9 +131,8 @@ module Pretix
     # ?membership_type=225 returned 837 of type 225, and a bogus customer returned
     # 0 rather than everything, which rules the silent ignore out.
     # => Array<Hash> with "id", "customer", "membership_type", "date_start", "date_end".
-    def memberships(customer: nil, membership_type: nil)
-      filters = { customer: customer, membership_type: membership_type }.compact
-      paginated("memberships/", **filters)
+    def memberships(customer:, membership_type:)
+      paginated("memberships/", customer: customer, membership_type: membership_type)
     end
 
     # => Hash of the created membership.
