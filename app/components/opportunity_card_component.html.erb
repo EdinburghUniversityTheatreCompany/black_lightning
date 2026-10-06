@@ -23,9 +23,9 @@
     <p class="mb-2 text-xs text-gray-500"><%= opportunity.dates %></p>
   <% end %>
 
-  <% if roles.any? %>
+  <% if opportunity.roles.any? %>
     <ul class="flex flex-col gap-1 mb-2">
-      <% roles.each do |role| %>
+      <% opportunity.roles.each do |role| %>
         <li class="flex items-center gap-2 text-sm">
           <span class="font-medium"><%= role.position %></span>
           <% if role.department %>

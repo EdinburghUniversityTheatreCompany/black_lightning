@@ -23,11 +23,7 @@ class OpportunityCardComponent < ViewComponent::Base
     project = "'#{project}'" if project
     project = "#{project} by #{opportunity.author}" if project && opportunity.author.present?
 
-    [ opportunity.company&.name, project ].compact_blank.join(": ").presence || opportunity.display_title
-  end
-
-  def roles
-    opportunity.roles
+    [ opportunity.company&.name, project ].compact_blank.join(": ").presence
   end
 
   def internal?
