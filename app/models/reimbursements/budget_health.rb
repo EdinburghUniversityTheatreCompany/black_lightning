@@ -2,7 +2,7 @@ module Reimbursements
   ##
   # Budget health flags, in one place because the badge was once got wrong (red
   # beside a positive Remaining). Includers provide budget_type, remaining,
-  # initial_budget, committed_amount and total_paid.
+  # initial_budget, committed_amount and paid_portal_amount.
   module BudgetHealth
     def income? = budget_type == "Income"
 
@@ -19,7 +19,7 @@ module Reimbursements
     def over_initial_budget?
       return false if income? || over_budget?
       return true if initial_budget && committed_amount && committed_amount > initial_budget
-      return true if initial_budget && total_paid && total_paid > initial_budget
+      return true if initial_budget && paid_portal_amount && paid_portal_amount > initial_budget
 
       false
     end

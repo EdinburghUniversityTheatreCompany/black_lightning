@@ -38,12 +38,12 @@ module Reimbursements
   # A budget line. Its rollups are computed, never stored, all excl-VAT like the
   # BACS spreadsheet:
   #
-  #   committed_amount = Σ amount_excl_vat, status ∈ {Approved, Submitted, Paid}
-  #   total_paid       = Σ amount_excl_vat, status = Paid
-  #   current_forecast = latest forecast's amount (nil when none logged)
-  #   projected_amount = current_forecast, else initial_budget (the PLAN)
-  #   remaining        = projected_amount − committed_amount (nil with no plan)
-  #   variance         = projected_amount − initial_budget (nil without initial)
+  #   committed_amount   = Σ amount_excl_vat, status ∈ {Approved, Submitted, Paid}
+  #   paid_portal_amount = Σ amount_excl_vat, status = Paid
+  #   current_forecast   = latest forecast's amount (nil when none logged)
+  #   projected_amount   = current_forecast, else initial_budget (the PLAN)
+  #   remaining          = projected_amount − committed_amount (nil with no plan)
+  #   variance           = projected_amount − initial_budget (nil without initial)
   #
   # Each is memoized per instance; one store lives per request.
   class Budget < ApplicationRecord
@@ -120,24 +120,8 @@ module Reimbursements
       end
     end
 
-    # The rollups read the store's preload when it is loaded (the index would
-    # otherwise pay ~3 queries per line) and SQL otherwise.
     def committed_amount
-      @committed_amount ||=
-        if expenses.loaded?
-          expenses.select { |e| COMMITTED_STATUSES.include?(e.status) }.sum { |e| e.amount_excl_vat || 0 }
-        else
-          expenses.where(status: COMMITTED_STATUSES).sum(:amount_excl_vat)
-        end
-    end
-
-    def total_paid
-      @total_paid ||=
-        if expenses.loaded?
-          expenses.select { |e| e.status == Status::PAID }.sum { |e| e.amount_excl_vat || 0 }
-        else
-          expenses.where(status: Status::PAID).sum(:amount_excl_vat)
-        end
+      @committed_amount ||= expense_total(COMMITTED_STATUSES)
     end
 
     def current_forecast
@@ -157,9 +141,8 @@ module Reimbursements
     # initial figure would mean nothing.
     def remaining
       plan = income? ? current_forecast : projected_amount
-      return nil if plan.nil?
       # A £0 plan is unset, not a cap (PlannedAmount).
-      return nil if no_budget_set?
+      return nil if plan.nil? || no_budget_set?
 
       plan - committed_amount
     end
@@ -180,7 +163,7 @@ module Reimbursements
     # Paid in the portal. Beside eusa_actual_amount, a gap between the two is a
     # reconciliation signal.
     def paid_portal_amount
-      total_paid
+      @paid_portal_amount ||= expense_total([ Status::PAID ])
     end
 
     # What the EUSA ledger says landed on this line, NET: an expense line's
@@ -192,12 +175,7 @@ module Reimbursements
 
     # Pending claims, kept apart from committed_amount.
     def pipeline_amount
-      @pipeline_amount ||=
-        if expenses.loaded?
-          expenses.select { |e| e.status == Status::PENDING }.sum { |e| e.amount_excl_vat || 0 }
-        else
-          expenses.where(status: Status::PENDING).sum(:amount_excl_vat)
-        end
+      @pipeline_amount ||= expense_total([ Status::PENDING ])
     end
 
     # The most the line could end up costing, never below what is already
@@ -211,8 +189,18 @@ module Reimbursements
 
     private
 
+    # Excl-VAT sum over +statuses+. Reads the store's preload when it is loaded
+    # (the index would otherwise pay ~3 queries per line) and SQL otherwise.
+    def expense_total(statuses)
+      if expenses.loaded?
+        expenses.select { |e| statuses.include?(e.status) }.sum { |e| e.amount_excl_vat || 0 }
+      else
+        expenses.where(status: statuses).sum(:amount_excl_vat)
+      end
+    end
+
     def inherit_area_scoping
-      return if area_id.nil? || area.nil?
+      return unless area
 
       self.cost_centre_id ||= area.cost_centre_id
       self.financial_year_id ||= area.financial_year_id

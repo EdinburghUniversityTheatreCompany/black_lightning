@@ -24,7 +24,7 @@ module Reimbursements
       add_expense(budget, status: Status::REJECTED, excl_vat: 100)
 
       assert_equal BigDecimal("35"), budget.committed_amount
-      assert_equal BigDecimal("5"), budget.total_paid
+      assert_equal BigDecimal("5"), budget.paid_portal_amount
     end
 
     test "current_forecast is the latest forecast amount, nil when none" do
