@@ -275,24 +275,22 @@ module SchemaHelper
   # not legacy cruft: the parser refused ~38% of the archive and those rows have nothing else. A
   # wrong price is a promise the box office must honour, so it only fires when a number is readable.
   def event_offers(event, availability: IN_STOCK)
-    structured = event.ticket_prices
+    prices = event.ticket_prices
+    amounts = prices.map(&:amount)
+    amounts = event.price.to_s.scan(PRICE_PATTERN).flatten.map(&:to_f) if amounts.empty?
 
-    return structured_offers(event, structured, availability) if structured.any?
+    return nil if amounts.empty?
 
-    scraped_offers(event, availability)
-  end
-
-  def structured_offers(event, prices, availability = IN_STOCK)
-    amounts = prices.map(&:amount).sort
+    url = event_offer_url(event)
 
     {
       "@type" => "AggregateOffer",
       "priceCurrency" => "GBP",
-      "lowPrice" => format("%.2f", amounts.first),
-      "highPrice" => format("%.2f", amounts.last),
-      "offerCount" => prices.length,
+      "lowPrice" => format("%.2f", amounts.min),
+      "highPrice" => format("%.2f", amounts.max),
+      "offerCount" => prices.length.nonzero?,
       "availability" => availability,
-      "url" => event_offer_url(event),
+      "url" => url,
       "offers" => prices.map do |price|
         {
           "@type" => "Offer",
@@ -300,25 +298,10 @@ module SchemaHelper
           "price" => format("%.2f", price.amount),
           "priceCurrency" => "GBP",
           "availability" => availability,
-          "url" => event_offer_url(event)
+          "url" => url
         }
-      end
-    }
-  end
-
-  def scraped_offers(event, availability = IN_STOCK)
-    amounts = event.price.to_s.scan(PRICE_PATTERN).flatten.map(&:to_f).sort
-
-    return nil if amounts.empty?
-
-    {
-      "@type" => "AggregateOffer",
-      "priceCurrency" => "GBP",
-      "lowPrice" => format("%.2f", amounts.first),
-      "highPrice" => format("%.2f", amounts.last),
-      "availability" => availability,
-      "url" => event_offer_url(event)
-    }
+      end.presence
+    }.compact
   end
 
   # Where someone actually buys it.
