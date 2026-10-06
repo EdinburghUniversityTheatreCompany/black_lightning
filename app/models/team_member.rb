@@ -69,16 +69,6 @@ class TeamMember < ActiveRecord::Base
   end
   private_class_method :sort_name
 
-  # nil for an unnumbered teamwork. Not max + 1 regardless: on an all-nil teamwork
-  # that is 0, and as NULLs sort last the new row would jump ABOVE every existing
-  # row. A teamwork is wholly numbered or wholly not.
-  def self.next_display_order_for(teamwork)
-    return 0 if teamwork.nil?
-    return nil if teamwork.team_members.exists?(display_order: nil)
-
-    (teamwork.team_members.maximum(:display_order) || -1) + 1
-  end
-
   after_create :sync_debts_if_show
 
   ACTOR_PATTERN = /\A(actor|cast)\s*\((.+)\)\s*\z/i
@@ -111,8 +101,11 @@ class TeamMember < ActiveRecord::Base
   # there are no siblings to count, and archive rows sort by name anyway.
   def default_display_order
     return if display_order || teamwork.nil? || !teamwork.persisted?
+    # A teamwork is wholly numbered or wholly not. On an all-nil one max + 1 is 0,
+    # and as NULLs sort last the new row would jump ABOVE every existing row.
+    return if teamwork.team_members.exists?(display_order: nil)
 
-    self.display_order = self.class.next_display_order_for(teamwork)
+    self.display_order = (teamwork.team_members.maximum(:display_order) || -1) + 1
   end
 
   def sync_debts_if_show
