@@ -580,26 +580,20 @@ module Admin
         assert_match(/Showing only the claims submitted by/, response.body)
       end
 
-      test "edit gives no approval advice on a settled claim" do
-        # Approval advice about a decision nobody will take again.
-        expense = expense_at("Paid", receipt: false, budget: nil)
+      test "edit gives approval advice on an Approved claim, and none on a settled one" do
+        approved = expense_at("Approved", receipt: false, budget: nil)
+        paid = expense_at("Paid", receipt: false, budget: nil)
         sign_in @user
 
-        get :edit, params: { id: expense.record_id }
+        get :edit, params: { id: approved.record_id }
+        assert_match(/can't be approved until these are fixed/i, response.body)
 
+        # On a Paid claim it is advice about a decision nobody will take again.
+        get :edit, params: { id: paid.record_id }
         assert_response :success
         assert_no_match(/can't be approved until these are fixed/i, response.body)
         assert_no_match(/worth checking before approving/i, response.body)
         assert_match(/already paid/i, response.body)
-      end
-
-      test "edit still gives approval advice on an Approved claim" do
-        expense = expense_at("Approved", receipt: false, budget: nil)
-        sign_in @user
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_match(/can't be approved until these are fixed/i, response.body)
       end
 
       # --- Update at every status ------------------------------------------
