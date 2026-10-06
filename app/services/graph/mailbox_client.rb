@@ -110,7 +110,7 @@ module Graph
       raise error if message_present?(message_id)
 
       Rails.logger.info(
-        "Reimbursements mailbox: message #{message_id} confirmed gone (404) on #{action}; nothing to do"
+        "Graph mailbox #{@mailbox}: message #{message_id} confirmed gone (404) on #{action}; nothing to do"
       )
       nil
     end
