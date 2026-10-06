@@ -134,7 +134,10 @@ module Admin
                                                "Please pick it again.")
         end
 
-        @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
+        unless @cost_centre.update(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
+          return redirect_to(edit_path, alert: @cost_centre.errors.full_messages.to_sentence)
+        end
+
         redirect_to edit_path, notice: "#{columns[:label]} saved."
       end
 

@@ -284,6 +284,19 @@ module Admin
         assert_equal "folder-A", @cost_centre.sharepoint_receipts_folder_id
       end
 
+      test "using a folder on a centre with no notification email says why instead of 500ing" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @cost_centre.update_column(:notification_email, nil)
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
+                                 drive_id: "drive-site-1", folder_id: "folder-A" }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_match(/Notification email/, flash[:alert])
+        assert_nil @cost_centre.reload.sharepoint_receipts_drive_id
+      end
+
       test "saving a folder with a blank id is refused" do
         sign_in @user
 
