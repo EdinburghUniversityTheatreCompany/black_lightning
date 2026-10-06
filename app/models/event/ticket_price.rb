@@ -57,17 +57,6 @@ class Event::TicketPrice
     new(category: hash["category"], label: hash["label"], amount: hash["amount"])
   end
 
-  private
-
-  def amount_was_readable
-    return unless @raw_amount.is_a?(String)
-    return if @raw_amount.blank? || @raw_amount.match?(READABLE_AMOUNT)
-
-    errors.add(:amount, "is not a price")
-  end
-
-  public
-
   def display_label
     return label.presence || CATEGORY_LABELS.fetch("other") if category == "other"
 
@@ -112,5 +101,14 @@ class Event::TicketPrice
 
   def hash
     to_h.hash
+  end
+
+  private
+
+  def amount_was_readable
+    return unless @raw_amount.is_a?(String)
+    return if @raw_amount.blank? || @raw_amount.match?(READABLE_AMOUNT)
+
+    errors.add(:amount, "is not a price")
   end
 end
