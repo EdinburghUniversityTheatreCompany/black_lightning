@@ -141,7 +141,6 @@ module Reimbursements
       summary = SpendSummary.for_budget(budget)
 
       assert summary.bar?
-      assert_equal 300, summary.bar_scale
       assert_equal 100.0, summary.spent_percentage
       assert_equal 0.0, summary.waiting_percentage
     end

@@ -25,10 +25,11 @@ module Reimbursements
     def self.for_area(area)
       lines = area.budgets.reject(&:income?)
       agreed = area.no_budget_set? ? nil : area.projected_amount
-      new(budget_amount: agreed || line_total(lines),
-          spent: lines.sum { |line| line.committed_amount || 0 },
-          waiting: lines.sum { |line| line.pipeline_amount || 0 },
-          from_lines: agreed.nil? && !line_total(lines).nil?,
+      total = line_total(lines)
+      new(budget_amount: agreed || total,
+          spent: lines.sum(&:committed_amount),
+          waiting: lines.sum(&:pipeline_amount),
+          from_lines: agreed.nil? && !total.nil?,
           unallocated: area.unallocated)
     end
 
@@ -42,8 +43,8 @@ module Reimbursements
 
     def initialize(budget_amount:, spent:, waiting:, from_lines: false, unallocated: nil)
       @budget_amount = budget_amount
-      @spent = spent || 0
-      @waiting = waiting || 0
+      @spent = spent
+      @waiting = waiting
       @from_lines = from_lines
       @unallocated = unallocated
     end
@@ -69,23 +70,18 @@ module Reimbursements
       !budget_amount.nil? && budget_amount.positive?
     end
 
-    # The larger of the budget and what is spent and claimed, so an overspent bar fills
-    # rather than overflowing its track.
-    def bar_scale = [ budget_amount, spent + waiting ].max
-
     def spent_percentage = percentage(spent)
 
     def waiting_percentage = percentage(waiting)
 
     private
 
+    # Scaled to the larger of the budget and spent + waiting, so an overspent bar fills rather
+    # than overflowing its track.
     def percentage(part)
       return 0 unless bar?
 
-      scale = bar_scale
-      return 0 if scale.zero?
-
-      ((part / scale.to_d) * 100).to_f.round(1)
+      ((part / [ budget_amount, spent + waiting ].max.to_d) * 100).to_f.round(1)
     end
   end
 end
