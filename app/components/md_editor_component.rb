@@ -45,10 +45,4 @@ class MdEditorComponent < ViewComponent::Base
   def control_wrapper_class
     vertical? ? nil : "w-full md:w-9/12 px-2"
   end
-
-  # Horizontal: the column div is already styled. Vertical: the label takes the
-  # rules its siblings get from `col-form-label` in bootstrap_compat.css.
-  def label_class
-    vertical? ? FormStyles::LABEL : nil
-  end
 end

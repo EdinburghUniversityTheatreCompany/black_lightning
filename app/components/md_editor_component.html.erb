@@ -1,6 +1,7 @@
 <%= content_tag :div, class: wrapper_class do %>
   <% if vertical? %>
-    <%= @f.label @field, class: label_class, **@input_field_args %>
+    <%# Takes the rules its siblings get from `col-form-label` in bootstrap_compat.css. %>
+    <%= @f.label @field, class: FormStyles::LABEL, **@input_field_args %>
   <% else %>
     <div class="w-full md:w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700">
       <%= @f.label @field, **@input_field_args %>
