@@ -6,7 +6,7 @@ module Admin
     # plain word to the column they know.
     class SpendFiguresComponent < ViewComponent::Base
       # Components get no helpers of their own.
-      delegate :reimbursements_money, :reimbursements_date, to: :helpers
+      delegate :reimbursements_money, to: :helpers
 
       FINANCE_TERMS = {
         spent: "committed: approved, with EUSA or paid",
@@ -36,10 +36,7 @@ module Admin
 
       def term(key) = finance? ? FINANCE_TERMS[key] : nil
 
-      # Read off the area so this cannot disagree with the area edit card.
-      def unallocated = summary.unallocated
-
-      def show_unallocated? = area.present? && !unallocated.nil?
+      def show_unallocated? = area.present? && !summary.unallocated.nil?
     end
   end
 end
