@@ -131,6 +131,19 @@ module Admin
         assert_includes response.body, "not in this sheet"
       end
 
+      test "preview offers to register a submitter nobody has, never one two people share" do
+        2.times { |i| create_reimbursements_person(name: "Sam Jones", email: "sam#{i}@example.com") }
+        sign_in @user
+
+        post :preview, params: import_params(tsv(row(payee_email: "nobody@example.com")))
+        assert_select "a[href=?]", new_admin_reimbursements_person_path,
+                      text: "Register them on the People screen"
+
+        post :preview, params: import_params(tsv(row(payee_email: "", submitter_name: "Sam Jones")))
+        assert_includes response.body, "more than one person"
+        assert_select "a", text: "Register them on the People screen", count: 0
+      end
+
       test "preview names the only cost centre in its heading when none was picked" do
         sign_in @user
 

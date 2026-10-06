@@ -339,6 +339,7 @@ module Reimbursements
       assert_not import.valid?
       assert_nil import.entries.sole.person
       assert_match(/names no submitter/, import.entries.sole.error)
+      assert_not import.entries.sole.unknown_submitter
     end
 
     test "with no email, the submitter is found by name, ignoring case and accents" do
@@ -363,6 +364,13 @@ module Reimbursements
 
       assert_not import.valid?
       assert_match(/more than one person/, import.entries.sole.error)
+      assert_not import.entries.sole.unknown_submitter
+    end
+
+    test "a submitter the People screen lacks is flagged, so the preview can offer to register them" do
+      import = build_import(tsv(row(payee_email: "nobody@example.com")))
+
+      assert import.entries.sole.unknown_submitter
     end
 
     test "the old Reference and Payee email headings still read" do

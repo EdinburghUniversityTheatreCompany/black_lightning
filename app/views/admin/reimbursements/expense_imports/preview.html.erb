@@ -23,7 +23,7 @@
           <li>
             <strong><%= entry.row[:reference].presence || "(no ID)" %></strong>:
             <%= entry.error %>
-            <% if entry.person.nil? && (entry.row[:payee_email].present? || entry.row[:submitter_name].present?) %>
+            <% if entry.unknown_submitter %>
               <%# Nothing is auto-created from a bare email, so registering them is the operator's job. %>
               <%= link_to "Register them on the People screen",
                           new_admin_reimbursements_person_path, class: "underline font-medium",

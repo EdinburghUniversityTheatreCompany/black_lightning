@@ -21,7 +21,8 @@ module Reimbursements
     include StrictColumnMatching
 
     # What a row became, plus everything the preview needs to explain it.
-    Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
+    Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, :unknown_submitter,
+                       keyword_init: true)
 
     # One entry per column, in #to_tsv order: +label+ is the canonical heading, +hint+
     # the template's explanation row, +exact+ matches a header whole, +contains+ a
@@ -368,7 +369,8 @@ module Reimbursements
       person = people.first if people.one?
       candidates = budgets_named(row[:budget])
       budget = candidates.first if candidates.one?
-      base = { row: row, person: person, budget: budget }
+      unknown_submitter = people.empty? && (row[:payee_email].present? || row[:submitter_name].present?)
+      base = { row: row, person: person, budget: budget, unknown_submitter: unknown_submitter }
 
       error = reference_error(row, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
