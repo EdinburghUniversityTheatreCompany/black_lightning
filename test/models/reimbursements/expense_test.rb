@@ -75,7 +75,7 @@ module Reimbursements
       assert_nil receipt.preview_url
     end
 
-    test "missing_completion_fields mirrors the PORO, including offloaded receipts" do
+    test "missing_completion_fields counts offloaded receipts as receipts" do
       expense = create_expense
       missing = expense.missing_completion_fields
       assert_includes missing, "a budget"

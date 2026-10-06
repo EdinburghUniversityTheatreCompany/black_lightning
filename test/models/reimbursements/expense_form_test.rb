@@ -207,7 +207,7 @@ module Reimbursements
       assert_equal "recPer1", attrs[:person_record_id]
       assert_equal Status::PENDING, attrs[:status]
       assert_equal BigDecimal("12.50"), attrs[:amount]
-      assert_equal "", attrs[:payee_name_override], "blank overrides write empty strings so clearing them clears Airtable"
+      assert_equal "", attrs[:payee_name_override], "blank overrides write empty strings so clearing them clears the stored value"
     end
 
     test "save_as_draft relaxes presence rules and writes Draft status" do
