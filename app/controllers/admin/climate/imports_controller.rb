@@ -7,15 +7,12 @@ module Admin
     # sensor, is made before the upload.
     class ImportsController < BaseController
       before_action :authorize_climate_manage!
+      before_action :load_sensors
 
-      def new
-        @title = "Import readings"
-        @sensors = ::Climate::Sensor.govee.in_display_order.to_a
-      end
+      def new; end
 
       def create
-        @sensors = ::Climate::Sensor.govee.in_display_order.to_a
-        @sensor = ::Climate::Sensor.govee.find_by(id: params[:sensor_id])
+        @sensor = @sensors.find { |sensor| sensor.id.to_s == params[:sensor_id].to_s }
         return reject("Pick which sensor this file came from.") if @sensor.nil?
 
         text = import_text
@@ -26,13 +23,16 @@ module Admin
 
         @result = ::Climate::ReadingIngest.upsert_series!(sensor: @sensor, rows: @import.rows)
         @title = "Imported"
-        render :create
       end
 
       private
 
-      def reject(message)
+      def load_sensors
         @title = "Import readings"
+        @sensors = ::Climate::Sensor.govee.in_display_order.to_a
+      end
+
+      def reject(message)
         flash.now[:alert] = message
         render :new, status: :unprocessable_content
       end
