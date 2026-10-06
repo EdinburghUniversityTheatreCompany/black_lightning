@@ -1,12 +1,6 @@
 require "application_system_test_case"
 
-##
-# System test for the Stimulus-driven select controller.
-#
-# Verifies Tom Select initialisation, AJAX remote source loading, caching, and
-# tags support introduced when porting app/javascript/src/shared/select2.js
-# to app/javascript/controllers/select_controller.js.
-##
+# Tom Select initialisation and remote loading in the Stimulus select controller.
 class SelectTest < ApplicationSystemTestCase
   setup do
     login_as users(:admin)
@@ -69,16 +63,12 @@ class SelectTest < ApplicationSystemTestCase
       "Expected items-placeholder input to have placeholder 'Search by name...'"
   end
 
-  # ── User merge page (another AJAX select) ───────────────────────────────────
-
   test "merge page initialises tom-select for source user field" do
     @user = users(:admin)
     visit merge_admin_user_path(@user)
 
     assert_selector ".ts-wrapper", wait: 3
   end
-
-  # ── SimpleForm collection selects (via CollectionSelectInput) ────────────────
 
   test "simpleform association selects are wrapped by tom-select" do
     # The fault_reports form has f.association calls that produce

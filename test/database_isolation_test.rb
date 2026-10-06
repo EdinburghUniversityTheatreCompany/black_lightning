@@ -1,10 +1,7 @@
 require "test_helper"
 
-# WORKTREE_DB_SUFFIX is what lets two git worktrees (or two background agents) run against
-# their own databases instead of truncating each other's fixtures. The test database honoured
-# it; the three development databases did not, so every worktree shared one dev DB. These
-# assertions pin all four, because the failure mode is silent — you get someone else's data,
-# not an error.
+# WORKTREE_DB_SUFFIX gives each git worktree or background agent its own databases. These
+# pin all four, because the failure is silent: you get someone else's data, not an error.
 class DatabaseIsolationTest < ActiveSupport::TestCase
   ISOLATED_KEYS = [
     %w[development primary],

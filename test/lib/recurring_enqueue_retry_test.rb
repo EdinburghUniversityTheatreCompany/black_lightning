@@ -6,8 +6,8 @@ class RecurringEnqueueRetryTest < ActiveSupport::TestCase
   def deadlock_error
     raise ActiveRecord::Deadlocked, "Mysql2::Error: Deadlock found when trying to get lock"
   rescue ActiveRecord::Deadlocked => inner
-    # Solid Queue re-raises database errors as EnqueueError; raising inside the rescue is what
-    # makes the original the Ruby `cause`, exactly as the gem does it.
+    # Solid Queue re-raises database errors as EnqueueError; raising inside the rescue makes
+    # the original the Ruby `cause`, as the gem does.
     begin
       raise SolidQueue::Job::EnqueueError, "ActiveRecord::Deadlocked: #{inner.message}"
     rescue SolidQueue::Job::EnqueueError => wrapped

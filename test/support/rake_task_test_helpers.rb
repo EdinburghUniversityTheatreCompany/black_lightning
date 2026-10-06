@@ -1,10 +1,6 @@
-# Runs a real rake task from a test, so one-off maintenance tasks (backfills,
-# rollout steps) can be covered like any other code instead of being trusted.
-#
-# Rake task definitions aren't loaded in the test environment, and loading them
-# twice re-appends every task's actions, so the load is memoized here. Each
-# invoke re-enables the task first: Rake remembers that a task already ran, so
-# without this a second test would silently invoke nothing.
+# Runs a real rake task from a test, so maintenance tasks (backfills, rollout steps) get covered.
+# Loading the tasks twice re-appends every action, so they load once. Rake remembers that a
+# task already ran, so each invoke re-enables it, or a second test would silently invoke nothing.
 require "rake"
 
 module RakeTaskTestHelpers
@@ -19,14 +15,9 @@ module RakeTaskTestHelpers
     end
   end
 
-  # Returns whatever the task wrote to stdout, so a test can assert on the
-  # progress/summary output without it polluting the suite's own.
-  #
-  # Swaps $stdout rather than using Minitest's capture_io, which synchronizes on
-  # a shared mutex under `parallelize`: nesting it (the only way to read the
-  # output of a task that aborts, since capture_io drops its buffer when the
-  # block raises) deadlocks with "recursive locking". Keeping the buffer here
-  # exposes that output via #last_rake_output, so no caller has to nest.
+  # Returns the task's stdout. Swaps $stdout instead of using capture_io: its shared mutex
+  # deadlocks ("recursive locking") when nested under `parallelize`, and it drops its buffer
+  # when the block raises. Keeping the buffer for #last_rake_output means no caller nests.
   def run_rake_task(name, *args)
     RakeTaskTestHelpers.load_tasks_once
     task = Rake::Task[name]
