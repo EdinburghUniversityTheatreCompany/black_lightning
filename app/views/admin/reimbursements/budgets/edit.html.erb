@@ -1,6 +1,6 @@
 <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
 
-<%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch do |form| %>
+<%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch do %>
   <%= render CardComponent.new(title: "Edit #{@budget.display_name.presence || 'budget'}") do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
@@ -8,7 +8,7 @@
 
     <%# owner_ids are the budget's OWN rows, which this form writes, never
         @budget.owner_ids (resolved through the area). %>
-    <%= render "fields", form: form, people: @people,
+    <%= render "fields", people: @people,
           name: @budget.name, nominal_code: @budget.nominal_code, budget_type: @budget.budget_type,
           initial_budget: @budget.initial_budget, notes: @budget.notes,
           active: @budget.active, owner_ids: @budget.own_owners.map(&:record_id),
