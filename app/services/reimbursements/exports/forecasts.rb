@@ -21,14 +21,14 @@ module Reimbursements
           iso_date(forecast.date),
           forecast.budget_id ? "Budget line" : "Area total",
           # display_name for a line (it names its area too), plain name for an area.
-          forecast.budget ? forecast.budget.display_name : forecast.area&.name,
+          forecast.budget ? owner.display_name : owner.name,
           forecast.amount,
           forecast.reason,
           # A standalone forecast has no batched revision: empty, not "-".
           forecast.budget_update && update_label(forecast.budget_update),
           forecast.budget_update&.created_by&.full_name,
-          owner&.financial_year&.label,
-          cost_centre_name(owner&.cost_centre_id)
+          owner.financial_year&.label,
+          cost_centre_name(owner.cost_centre_id)
         ]
       end
 
