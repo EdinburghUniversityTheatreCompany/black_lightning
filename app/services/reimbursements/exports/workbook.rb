@@ -31,9 +31,7 @@ module Reimbursements
         @checker = checker
       end
 
-      def filename(date: Date.current)
-        "reimbursements-#{date.iso8601}.xlsx"
-      end
+      def filename = "reimbursements-#{Date.current.iso8601}.xlsx"
 
       def to_bytes
         require "caxlsx" # lazy: the Gemfile has require: false

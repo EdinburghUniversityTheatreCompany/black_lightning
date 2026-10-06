@@ -33,9 +33,7 @@ module Reimbursements
       def headers = self.class::HEADERS
 
       # "reimbursements-expenses-2026-05-13.csv"
-      def filename(date: Date.current)
-        "reimbursements-#{self.class::SLUG}-#{date.iso8601}.csv"
-      end
+      def filename = "reimbursements-#{self.class::SLUG}-#{Date.current.iso8601}.csv"
 
       def to_csv(collection)
         CSV.generate do |csv|
