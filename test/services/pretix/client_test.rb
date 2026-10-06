@@ -46,10 +46,10 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   def empty_page = [ 200, { "count" => 0, "next" => nil, "results" => [] }.to_json ]
 
   # Returns the client, the fake transport and the seconds the client was asked to sleep.
-  def build_client(responses, organizer: "eutc", token: TOKEN, writes: false)
+  def build_client(responses, token: TOKEN, writes: false)
     http = FakeHttp.new(responses)
     waits = []
-    client = Pretix::Client.new(organizer: organizer, token: token, http: http,
+    client = Pretix::Client.new(token: token, http: http,
                                 settings: FakeSettings.new(writes), sleeper: ->(seconds) { waits << seconds })
     [ client, http, waits ]
   end

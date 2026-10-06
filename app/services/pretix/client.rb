@@ -46,14 +46,10 @@ module Pretix
     # Used when a 429 arrives without a parseable Retry-After.
     DEFAULT_RETRY_AFTER = 30
 
-    # The website is the only sales channel this organizer sells through.
-    WEB_SALES_CHANNEL = "web".freeze
-
     # All defaulted, so the sync builds a bare Pretix::Client.new. +sleeper+ lets
     # tests exercise the pacing and throttle retry without waiting.
-    def initialize(organizer: Settings::ORGANIZER, token: Settings.api_token,
-                   http: HttpTransport, settings: Settings, sleeper: ->(seconds) { sleep(seconds) })
-      @organizer = organizer
+    def initialize(token: Settings.api_token, http: HttpTransport, settings: Settings,
+                   sleeper: ->(seconds) { sleep(seconds) })
       @token = token
       @http = http
       @settings = settings
@@ -116,8 +112,9 @@ module Pretix
     # membership list: one series is a handful of rows.
     # => Array<Hash> with "id", "date_from", "date_to", "date_admission",
     #    "active", "is_public" and "best_availability_state".
-    def subevents(slug, availability_channel: WEB_SALES_CHANNEL)
-      paginated("events/#{slug}/subevents/", with_availability_for: availability_channel)
+    def subevents(slug)
+      # The website is the only sales channel this organizer sells through.
+      paginated("events/#{slug}/subevents/", with_availability_for: "web")
     end
 
     # Memberships of one type for one customer (+customer+ is a customer
@@ -252,7 +249,7 @@ module Pretix
     end
 
     def organizer_path(path)
-      "organizers/#{@organizer}/#{path}"
+      "organizers/#{Settings::ORGANIZER}/#{path}"
     end
 
     def headers
