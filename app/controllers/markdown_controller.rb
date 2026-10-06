@@ -1,8 +1,7 @@
 ##
 # Controller to render a markdown preview.
 #
-# Use POST /markdown/preview with the post body set to the content
-# to be rendered.
+# Use POST /markdown/preview with a JSON body { input_html: <markdown> }.
 ##
 
 class MarkdownController < ApplicationController
@@ -13,12 +12,7 @@ class MarkdownController < ApplicationController
   ALLOWED_IMAGE_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
 
   def preview
-    body = ActiveSupport::JSON.decode(request.body.read)
-    input_html = CGI.unescape(body["input_html"])
-
-    response = { rendered_md: render_markdown(input_html) }
-
-    render json: response
+    render json: { rendered_md: render_markdown(params[:input_html]) }
   end
 
   def upload

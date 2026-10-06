@@ -7,12 +7,21 @@ class MarkdownControllerTest < ActionController::TestCase
 
     assert_not_nil markdown
 
-    post :preview, body: { input_html: CGI.escape(markdown) }.to_json
+    post :preview, params: { input_html: markdown }, as: :json
     assert_response :success
 
     response_html = ActiveSupport::JSON.decode(response.body)["rendered_md"]
 
     assert_equal response_html.strip, html.strip
+  end
+
+  test "preview renders the text as typed, with no URL decoding" do
+    post :preview, params: { input_html: "+ one\n+ two\n\n1+1 is 100%20" }, as: :json
+
+    html = JSON.parse(response.body)["rendered_md"]
+
+    assert_equal 2, Nokogiri::HTML5.fragment(html).css("li").size
+    assert_includes html, "1+1 is 100%20"
   end
 
   test "upload creates attachment and returns url for valid image" do
