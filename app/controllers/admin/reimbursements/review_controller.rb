@@ -283,7 +283,7 @@ module Admin
         # message names a field the rail lacks.
         return :skipped_no_foreign_amount if ::Reimbursements::ReviewSupport.missing_foreign_amount?(expense)
         return :skipped_no_gbp_amount if ::Reimbursements::ReviewSupport.missing_gbp_amount?(expense)
-        return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+        return :skipped_no_amount if ::Reimbursements::ReviewSupport.blank_amount?(expense.amount_excl_vat)
         return :skipped_awaiting_endorsement unless ::Reimbursements::OwnerReview.gate_satisfied?(expense)
 
         nil

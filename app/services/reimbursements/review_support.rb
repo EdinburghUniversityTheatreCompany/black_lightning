@@ -65,9 +65,7 @@ module Reimbursements
       amount_reasons(expense, blocking, advisory)
       # Not asked of an international claim: ex-VAT mirrors the gross there, so
       # a blank one is already "no GBP amount".
-      unless expense.international?
-        blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
-      end
+      blocking << "no ex-VAT amount" if !expense.international? && blank_amount?(expense.amount_excl_vat)
       blocking << "no budget" if expense.budget.nil?
       advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 
@@ -125,11 +123,9 @@ module Reimbursements
     # Ex-VAT can never legitimately exceed the gross, yet a real imported claim
     # did and flipped its budget over. A 0 sentinel means "not yet known".
     def excl_vat_over_gross?(expense)
-      excl = expense.amount_excl_vat
-      gross = expense.amount
-      return false if excl.nil? || excl.zero? || gross.nil? || gross.zero?
+      return false if blank_amount?(expense.amount_excl_vat) || blank_amount?(expense.amount)
 
-      excl > gross
+      expense.amount_excl_vat > expense.amount
     end
     private_class_method :excl_vat_over_gross?
 
