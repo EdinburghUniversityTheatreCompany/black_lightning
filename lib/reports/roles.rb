@@ -11,21 +11,11 @@ class Reports::Roles
     wb = package.workbook
     datetime = wb.styles.add_style format_code: "dd/mm/yyyy hh:mm"
 
-    # pluck, so the whole users table is never instantiated as AR objects.
-    wb.add_worksheet(name: "All Users") do |sheet|
-      sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-      User.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |first_name, last_name, email, last_login|
-        sheet.add_row([ first_name, last_name, email, last_login ], style: [ nil, nil, nil, datetime ])
-      end
-    end
+    wb.add_worksheet(name: "All Users") { |sheet| add_users(sheet, User, datetime) }
 
-    # Plucking per role keeps one role's users resident at a time.
     Role.order(:name).each do |role|
       wb.add_worksheet(name: role.name.gsub(/\//, " - ")) do |sheet|
-        sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-        role.users.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |first_name, last_name, email, last_login|
-          sheet.add_row([ first_name, last_name, email, last_login ])
-        end
+        add_users(sheet, role.users, datetime)
 
         sheet.sheet_view.pane do |pane|
           pane.top_left_cell = "B2"
@@ -36,5 +26,16 @@ class Reports::Roles
     end
 
     package
+  end
+
+  private
+
+  # pluck, so the whole users table is never instantiated as AR objects, and a role's users are
+  # resident one role at a time.
+  def add_users(sheet, users, datetime)
+    sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
+    users.order(:last_name, :first_name).pluck(:first_name, :last_name, :email, :last_sign_in_at).each do |row|
+      sheet.add_row(row, style: [ nil, nil, nil, datetime ])
+    end
   end
 end
