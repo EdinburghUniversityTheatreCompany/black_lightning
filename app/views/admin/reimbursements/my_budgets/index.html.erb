@@ -20,7 +20,7 @@
     <div class="flex flex-col gap-3">
       <% @pending.each do |expense| %>
         <% endorsement = @endorsements_by_expense[expense.record_id] %>
-        <% covered = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+        <% covered = ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
         <% auto_bypassed = ::Reimbursements::OwnerReview.submitter_owns_budget?(expense) %>
         <div class="rounded border border-gray-200 p-3">
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">

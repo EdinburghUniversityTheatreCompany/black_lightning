@@ -11,13 +11,12 @@ module Admin
         @title = "My Budgets"
         # Own from the FULL budget list, not just active ones: a deactivated budget can still
         # hold a Pending claim that blocks finance.
-        all_owned = owned_budgets
+        all_owned = ::Reimbursements::OwnerReview.owned_budgets(store.budgets, current_person)
         owned_ids = all_owned.map(&:record_id).to_set
         @pending = store.expenses.select do |expense|
           expense.status == ::Reimbursements::Status::PENDING &&
             owned_ids.include?(expense.budget&.record_id)
         end.sort_by { |expense| expense.submitted_at || Time.zone.now }
-        @pending_count = @pending.size
         @rows = owned_rows(all_owned)
         @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
           .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
@@ -100,8 +99,7 @@ module Admin
       end
 
       def area_row(area)
-        { kind: :area, record: area, name: area.name,
-          scope: [ area.cost_centre&.name, area.financial_year&.label ].compact.uniq.join(" · "),
+        { name: area.name, scope: scope_label(area),
           detail: "#{area.budgets.size} #{'line'.pluralize(area.budgets.size)}",
           summary: ::Reimbursements::SpendSummary.for_area(area),
           waiting_count: area.budgets.count { |line| waiting_on?(line) },
@@ -109,8 +107,7 @@ module Admin
       end
 
       def loose_row(budget)
-        { kind: :budget, record: budget, name: budget.name,
-          scope: [ budget.cost_centre&.name, budget.financial_year&.label ].compact.uniq.join(" · "),
+        { name: budget.name, scope: scope_label(budget),
           detail: "a single budget, in no area",
           summary: ::Reimbursements::SpendSummary.for_budget(budget),
           waiting_count: waiting_count(budget),
@@ -123,10 +120,8 @@ module Admin
 
       def waiting_on?(budget) = waiting_count(budget).positive?
 
-      def owned_budgets
-        return [] if current_person.nil?
-
-        ::Reimbursements::OwnerReview.owned_budgets(store.budgets, current_person)
+      def scope_label(record)
+        [ record.cost_centre&.name, record.financial_year&.label ].compact.uniq.join(" · ")
       end
 
       def redirect_to_my_budgets(flash)
