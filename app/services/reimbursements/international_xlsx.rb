@@ -13,12 +13,15 @@ module Reimbursements
   # The formulas compare against GBP thresholds whatever the currency. That is
   # EUSA's rule, and left alone.
   class InternationalXlsx
+    include XlsxTemplate
+
     # +amount+ is in +currency+ (what EUSA's bank pays), NOT the GBP the budget counts.
     Payment = Struct.new(:payee_name, :amount, :currency, :description, :date_required,
                          :nominal_code, :cost_centre, :bic, :iban,
                          keyword_init: true)
 
     SHEET_NAME = "FORM".freeze
+    TEMPLATE_LABEL = "international payment template".freeze
 
     # 0-based [row, column]. EUSA's 2026-09 revision moved every field below the
     # amount down a row: check these against the A1 references after any
@@ -33,8 +36,6 @@ module Reimbursements
     CELL_BIC = [ 12, 2 ].freeze           # C13
     CELL_IBAN = [ 12, 4 ].freeze          # E13
 
-    # Excel's builtin text number format.
-    TEXT_FORMAT = "@".freeze
     # For a non-sterling amount: the template's amount cell has a hardcoded "£",
     # which printed a EUR payment as "£266.69" above a cell saying EUR.
     PLAIN_AMOUNT_FORMAT = "#,##0.00".freeze
@@ -43,30 +44,11 @@ module Reimbursements
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_international_payment_template.xlsx").freeze
 
-    class TemplateError < StandardError; end
-
-    def initialize(template_path: DEFAULT_TEMPLATE_PATH)
-      @template_path = Pathname(template_path)
-      return if @template_path.exist?
-
-      raise TemplateError, "international payment template not found at #{@template_path}"
-    end
-
     # Re-reads the template on every call, so one instance builds many forms.
     def generate(payment)
-      # Not at file scope: eager loading would pull rubyXL into every process.
-      require "rubyXL"
-      require "rubyXL/convenience_methods"
-
       validate!(payment)
 
-      workbook = RubyXL::Parser.parse(@template_path.to_s)
-      sheet = workbook[SHEET_NAME]
-      unless sheet
-        raise TemplateError,
-              "template has no '#{SHEET_NAME}' sheet (found: #{workbook.worksheets.map(&:sheet_name).inspect})"
-      end
-
+      workbook, sheet = open_workbook
       write_form(sheet, payment)
       force_recalculation(workbook)
       workbook.stream.string
@@ -116,46 +98,22 @@ module Reimbursements
 
     def write_form(sheet, payment)
       # Submitter free text is formula-sanitised, as in the BACS spreadsheet.
-      write(sheet, CELL_PAYEE, CellSanitizer.sanitize(payment.payee_name))
-      write(sheet, CELL_DESCRIPTION, CellSanitizer.sanitize(payment.description))
+      write(sheet, *CELL_PAYEE, CellSanitizer.sanitize(payment.payee_name))
+      write(sheet, *CELL_DESCRIPTION, CellSanitizer.sanitize(payment.description))
       currency = payment.currency.to_s.strip.upcase
       # Numeric, so the three authorisation formulas can compare against it.
-      write(sheet, CELL_AMOUNT, payment.amount.to_f)
-      apply_amount_format(sheet, currency)
-      text(sheet, CELL_CURRENCY, currency)
-      write(sheet, CELL_DATE_REQUIRED, payment.date_required)
-      write(sheet, CELL_NOMINAL_CODE, CellSanitizer.sanitize(payment.nominal_code))
-      write(sheet, CELL_COST_CENTRE, CellSanitizer.sanitize(payment.cost_centre))
+      amount = write(sheet, *CELL_AMOUNT, payment.amount.to_f)
+      # Sterling keeps the template's "£" format, which is then right (a
+      # supplier can invoice in GBP).
+      amount.set_number_format(PLAIN_AMOUNT_FORMAT) unless currency == STERLING
+      write_text(sheet, *CELL_CURRENCY, currency)
+      write(sheet, *CELL_DATE_REQUIRED, payment.date_required)
+      write(sheet, *CELL_NOMINAL_CODE, CellSanitizer.sanitize(payment.nominal_code))
+      write(sheet, *CELL_COST_CENTRE, CellSanitizer.sanitize(payment.cost_centre))
 
-      text(sheet, CELL_BIC, BankDetails.normalize_bic(payment.bic))
+      write_text(sheet, *CELL_BIC, BankDetails.normalize_bic(payment.bic))
       # Grouped in fours, as a human checks it against an invoice.
-      text(sheet, CELL_IBAN, BankDetails.format_iban(BankDetails.normalize_iban(payment.iban)))
-    end
-
-    # change_contents keeps the template's style; add_cell would drop it. The
-    # fallback only guards against a re-vendored template missing a cell.
-    def write(sheet, (row, column), value)
-      cell = sheet[row] && sheet[row][column]
-      return cell.change_contents(value) if cell
-
-      sheet.add_cell(row, column, value)
-    end
-
-    # Sterling keeps the template's "£" format, which is then right (a supplier
-    # can invoice in GBP).
-    def apply_amount_format(sheet, currency)
-      return if currency == STERLING
-
-      sheet[CELL_AMOUNT.first][CELL_AMOUNT.last].set_number_format(PLAIN_AMOUNT_FORMAT)
-    end
-
-    # Pinned to text: the BIC and IBAN cells carry leftover sort-code and
-    # account-number number formats.
-    def text(sheet, coordinates, value)
-      write(sheet, coordinates, value)
-      cell = sheet[coordinates.first][coordinates.last]
-      cell.set_number_format(TEXT_FORMAT)
-      cell
+      write_text(sheet, *CELL_IBAN, BankDetails.format_iban(BankDetails.normalize_iban(payment.iban)))
     end
   end
 end

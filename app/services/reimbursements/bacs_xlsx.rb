@@ -4,12 +4,15 @@ module Reimbursements
   # expense and returns the workbook bytes. Sort code, account number and
   # nominal code are forced to TEXT so leading zeros and dashes survive.
   class BacsXlsx
+    include XlsxTemplate
+
     # Bank-detail fields stay strings to keep leading zeros; +amount+ is numeric.
     BacsRow = Struct.new(:payee_name, :amount, :sort_code, :account_number,
                          :nominal_code, :description, :payment_reference, :cost_centre,
                          keyword_init: true)
 
     SHEET_NAME = "BREAKDOWN".freeze
+    TEMPLATE_LABEL = "BACS template".freeze
     # 0-based, below the template's header and example rows.
     DATA_START_ROW = 2
     # The GRAND TOTAL row's SUM (and the Authorisation Form's total) covers
@@ -25,27 +28,12 @@ module Reimbursements
     COL_COST_CENTRE = 5
     COL_PAYMENT_REFERENCE = 6
     COL_DESCRIPTION = 7
-    # Excel's builtin text number format.
-    TEXT_FORMAT = "@".freeze
 
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
 
-    class TemplateError < StandardError; end
-
-    def initialize(template_path: DEFAULT_TEMPLATE_PATH)
-      @template_path = Pathname(template_path)
-      return if @template_path.exist?
-
-      raise TemplateError, "BACS template not found at #{@template_path}"
-    end
-
     # Re-reads the template on every call, so one instance builds many workbooks.
     def generate(rows)
-      # Not at file scope: eager loading would pull rubyXL into every process.
-      require "rubyXL"
-      require "rubyXL/convenience_methods"
-
       if rows.size > MAX_ROWS
         raise TemplateError,
               "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity. " \
@@ -58,13 +46,7 @@ module Reimbursements
         raise TemplateError, "every BACS row needs a cost-centre code before the spreadsheet can be built."
       end
 
-      workbook = RubyXL::Parser.parse(@template_path.to_s)
-      sheet = workbook[SHEET_NAME]
-      unless sheet
-        raise TemplateError,
-              "template has no '#{SHEET_NAME}' sheet (found: #{workbook.worksheets.map(&:sheet_name).inspect})"
-      end
-
+      workbook, sheet = open_workbook
       rows.each_with_index do |row, index|
         write_row(sheet, DATA_START_ROW + index, row)
       end
