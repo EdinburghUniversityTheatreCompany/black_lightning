@@ -549,36 +549,22 @@ class User < ApplicationRecord
   # Duplicate Detection
   ##
 
-  # Starting years of the academic years (September to August) in which the user had an event,
-  # e.g. [2022, 2023] for 22/23 and 23/24.
-  def years_active
-    event_dates = team_membership.where(teamwork_type: "Event")
-                                 .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
-                                 .pluck("events.start_date", "events.end_date")
-    return [] if event_dates.empty?
+  def years_active = self.class.bulk_years_active_for([ id ]).fetch(id, [])
 
-    academic_years = Set.new
-    event_dates.each do |start_date, end_date|
-      next unless start_date && end_date
-      academic_years << ApplicationController.helpers.date_to_academic_year(start_date)
-      academic_years << ApplicationController.helpers.date_to_academic_year(end_date)
-    end
-    academic_years.to_a.sort
-  end
-
-  # True when a year of ours is within `threshold` years of one of theirs.
-  # years_active_cache avoids repeated queries.
-  def years_overlap?(other_user, threshold: 4, years_active_cache: nil)
+  # True when a year of ours is within 4 years of one of theirs. years_active_cache avoids
+  # repeated queries.
+  def years_overlap?(other_user, years_active_cache: nil)
     my_years = years_active_cache ? years_active_cache[id] : years_active
     their_years = years_active_cache ? years_active_cache[other_user.id] : other_user.years_active
     my_years ||= []
     their_years ||= []
     return true if my_years.empty? || their_years.empty? # No data = assume possible match
 
-    my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= threshold } }
+    my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= 4 } }
   end
 
-  # years_active for many users in one query: { user_id => [year, ...] }.
+  # Starting years of the academic years (September to August) in which each user had an event,
+  # e.g. [2022, 2023] for 22/23 and 23/24: { user_id => [year, ...] }, in one query.
   def self.bulk_years_active_for(user_ids)
     return {} if user_ids.empty?
 
