@@ -75,6 +75,7 @@
       <% @people.each do |person| %>
         <% editing = @edit_person_id == person.record_id %>
         <% claims = @claim_counts[person.record_id].to_i %>
+        <% who = person.name.presence || "this person" %>
         <%# A save redirects to ?person=<id>#person-<id>; scroll-mt clears the sticky header. %>
         <%= tag.details id: "person-#{person.record_id}",
                         class: "group scroll-mt-20 rounded border border-gray-200",
@@ -126,10 +127,10 @@
               </div>
               <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
                       aria-pressed="false"
-                      aria-label="Reveal bank details for <%= person.name.presence || "this person" %>"
+                      aria-label="Reveal bank details for <%= who %>"
                       data-bank-details-target="toggle"
                       data-action="bank-details#toggle">Reveal</button>
-              <%= submit_tag "Save bank details", "aria-label": "Save bank details for #{person.name.presence || 'this person'}",
+              <%= submit_tag "Save bank details", "aria-label": "Save bank details for #{who}",
                              class: btn_classes(:primary, :sm) %>
             <% end %>
 
@@ -144,7 +145,7 @@
               <%= submit_tag "Mark as verified",
                              disabled: !person.bank_details?,
                              "aria-describedby": verify_hint_id,
-                             "aria-label": "Mark #{person.name.presence || 'this person'} as verified",
+                             "aria-label": "Mark #{who} as verified",
                              class: "#{btn_classes(:secondary, :sm)} disabled:opacity-50 disabled:cursor-not-allowed" %>
               <% if verify_hint_id %>
                 <span id="<%= verify_hint_id %>" class="text-xs text-gray-500 ml-1">
