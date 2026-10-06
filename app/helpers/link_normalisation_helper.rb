@@ -4,7 +4,7 @@
 module LinkNormalisationHelper
   CANONICAL_HOST = "bedlamtheatre.co.uk".freeze
 
-  ABSOLUTE_PREFIXES = %w[/ # ? mailto: tel: http:// https:// //].freeze
+  ABSOLUTE_PREFIXES = %w[/ # ? mailto: tel:].freeze
 
   # A dotted host with no scheme. Deliberately narrow: "about/committee" must stay relative.
   SCHEMELESS_HOST = %r{\A(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/?#].*)?\z}i
@@ -55,11 +55,5 @@ module LinkNormalisationHelper
     FILE_EXTENSIONS.include?(href.split(".").last.to_s.downcase)
   end
 
-  def own_host?(host)
-    return false if host.blank?
-
-    host = host.downcase.delete_prefix("www.")
-
-    host == CANONICAL_HOST
-  end
+  def own_host?(host) = host.to_s.downcase.delete_prefix("www.") == CANONICAL_HOST
 end
