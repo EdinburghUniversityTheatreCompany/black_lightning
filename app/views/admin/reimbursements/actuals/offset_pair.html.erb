@@ -6,22 +6,9 @@
   income. Nobody is emailed.
 </p>
 
-<%= render CardComponent.new(title: "The row you are pairing") do %>
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
-    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
-    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
-    <span>
-      Amount:
-      <strong>
-        <%= reimbursements_money(@actual.debit&.positive? ? @actual.debit : @actual.credit) %>
-        <%= @actual.debit&.positive? ? "debit" : "credit" %>
-      </strong>
-    </span>
-    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
-  </div>
-  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
-<% end %>
+<% is_debit = @actual.debit&.positive? %>
+<%= render "row_summary", actual: @actual, title: "The row you are pairing", amount_label: "Amount",
+                          amount: "#{reimbursements_money(is_debit ? @actual.debit : @actual.credit)} #{is_debit ? 'debit' : 'credit'}" %>
 
 <% if @candidates.empty? %>
   <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do %>
@@ -71,14 +58,9 @@
       </div>
 
       <% card.with_footer do %>
-        <div class="form-actions flex flex-wrap items-center gap-2">
-          <%= f.submit "Mark these two as offsetting", class: btn_classes(:primary) %>
-          <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
-        </div>
-        <p class="mt-2 mb-0 text-sm text-gray-500">
-          Both rows stay on the ledger and stop counting as spend or income. "Not offsetting" on
-          either one undoes it.
-        </p>
+        <%= render "shared/form/actions", submit: "Mark these two as offsetting",
+                                          cancel_path: admin_reimbursements_actuals_path,
+                                          note: 'Both rows stay on the ledger and stop counting as spend or income. "Not offsetting" on either one undoes it.' %>
       <% end %>
     <% end %>
   <% end %>
