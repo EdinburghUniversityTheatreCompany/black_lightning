@@ -51,7 +51,7 @@ class Admin::SidebarComponent < ViewComponent::Base
   def category_open?(category)
     return true if orphan_page?(category)
 
-    category[:children]&.any? { |item| active_item?(item) }
+    category[:children].any? { |item| active_item?(item) }
   end
 
   def orphan_page?(category)

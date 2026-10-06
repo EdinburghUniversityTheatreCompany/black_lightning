@@ -45,13 +45,6 @@
           <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
           <span><%= category[:title] %></span>
         <% end %>
-      <% elsif category[:children].blank? && category[:path].present? %>
-        <% cat_class = "flex items-center gap-2 px-4 py-2 hover:bg-white/10" %>
-        <% cat_class += " bg-primary text-white" if @current_path.start_with?(category[:path]) %>
-        <a href="<%= category[:path] %>" class="<%= cat_class %>">
-          <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
-          <span><%= category[:title] %></span>
-        </a>
       <% else %>
         <%= tag.details(class: "group", open: category_open?(category)) do %>
           <summary class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-white/10 list-none">
@@ -62,7 +55,7 @@
           <div class="pl-4">
             <%# Items carrying `group:` get a small heading each time it changes: one level, not a nested <details>, so every link stays one click away. %>
             <% previous_group = nil %>
-            <% (category[:children] || []).each do |item| %>
+            <% category[:children].each do |item| %>
               <% if item[:group].present? && item[:group] != previous_group %>
                 <p class="px-4 pt-3 pb-1 text-xs uppercase tracking-wide text-white/50"><%= item[:group] %></p>
               <% end %>
