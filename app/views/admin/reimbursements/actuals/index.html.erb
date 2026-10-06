@@ -121,9 +121,7 @@
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
          elsif actual.apportioned?
-           # Name the lines and their shares: "Split" on its own is the state
-           # this row is in, not what it means, and the shares are the whole
-           # point of having split it.
+           # Name the lines and shares: "Split" alone is only the state the row is in.
            safe_join([
              render(BadgeComponent.new(type: :info, pill: true).with_content("Split")),
              content_tag(:span, actual.allocation_summary,
@@ -139,18 +137,13 @@
            actual,
            content_tag(:span, actual.nominal_code.presence || "-", class: "font-mono"),
            content_tag(:span, actual.period.presence || "-", class: "font-mono"),
-           # nowrap: the actions cell grew when Unlink joined it, and an ISO
-           # date is the column that gives way first — "2026-09-21" wrapping
-           # after the month reads as two dates.
+           # nowrap: an ISO date wrapping after the month reads as two dates.
            content_tag(:span, reimbursements_date(actual.date), class: "whitespace-nowrap"),
            actual.narrative.presence || "-",
            (reimbursements_money(actual.debit) if actual.debit&.positive?),
            (reimbursements_money(actual.credit) if actual.credit&.positive?),
            linked,
            safe_join([ (if actual.convertible_to_expense?
-              # Two ways a stray debit row gets resolved: it paid a claim
-              # somebody filed (link it), or it is a cost EUSA levied directly
-              # and nobody claimed (convert it).
               safe_join([
                 link_to("Link to claim",
                         link_expense_admin_reimbursements_actual_path(actual.record_id),
@@ -160,15 +153,10 @@
                         class: btn_classes(:secondary, :sm))
               ], " ")
             elsif actual.apportionable?
-              # A credit covering several shows: split it rather than letting
-              # the whole payout land on one income line.
               link_to("Split across budgets",
                       apportion_admin_reimbursements_actual_path(actual.record_id),
                       class: btn_classes(:secondary, :sm))
             elsif actual.apportioned?
-              # The way back out, finance-gated as "Not offsetting" is. The row
-              # returns to the unattributed card, so income nobody has placed
-              # is visible again rather than silently gone.
               button_to("Remove split",
                         remove_apportionment_admin_reimbursements_actual_path(
                           actual.record_id, **filters
@@ -177,8 +165,7 @@
                         data: { turbo_confirm: "Undo this split? The row goes back to being an " \
                                                "unplaced credit and each budget loses its share." })
             elsif actual.offset?
-              # The pairing heuristic can be wrong, and a wrong pair hides real
-              # spend from every rollup, so the operator can always undo one.
+              # A wrong pair hides real spend from every rollup, so it must stay undoable.
               button_to("Not offsetting",
                         unoffset_admin_reimbursements_actual_path(
                           actual.record_id, **filters
@@ -187,27 +174,14 @@
                         data: { turbo_confirm: "Treat these two rows as real spend or income " \
                                                "again? Both stay on the ledger." })
             end),
-           # Unlink sits in the SAME cell and is ADDITIVE, not another branch in
-           # the chain above: a row can carry a link AND still be offered
-           # something else. A budget-linked DEBIT is convertible
-           # (convertible_to_expense? reads expense_id, not budget_id), and an
-           # offsetting leg that carries a link must keep "Not offsetting" —
-           # the only control that un-hides it from every rollup. Written as an
-           # elsif, Unlink was unreachable on both.
-           #
-           # A wrong match had no way back short of a console, and a whole
-           # settlement attached to one income line could never be split,
-           # because apportionable? refuses a row that carries a budget.
-           # Also additive: a row needing attention is offered its main action
-           # (link, convert or split) AND this. "Not offsetting" was one-way,
-           # so an operator who undid a pair to look at it could not put it
-           # back, and a pair the detector's score missed could not be recorded
-           # at all.
+           # Additive: a row needing attention gets its main action AND this.
            (if actual.pairable?
               link_to("Mark as offsetting",
                       offset_pair_admin_reimbursements_actual_path(actual.record_id),
                       class: btn_classes(:secondary, :sm))
             end),
+           # Additive, not an elsif: a budget-linked debit is still convertible, and a linked
+           # offset leg must keep "Not offsetting".
            (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
               button_to("Unlink",
                         unlink_admin_reimbursements_actual_path(actual.record_id, **filters),
