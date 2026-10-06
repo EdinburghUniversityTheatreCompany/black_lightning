@@ -6,12 +6,8 @@ class Admin::GenericEventsController < AdminController
   load_and_authorize_resource find_by: :slug
   skip_authorize_resource only: %i[update_debt_settings]
 
-  # Injection seam for tests, as Pretix::SyncPerformancesJob's is. A named
-  # constant so a teardown can put the real one back: class_attribute makes a
-  # wrong replacement stick for the rest of the process.
-  DEFAULT_PERFORMANCE_SYNC_BUILDER = -> { Pretix::PerformanceSync.new }
-
-  class_attribute :performance_sync_builder, default: DEFAULT_PERFORMANCE_SYNC_BUILDER
+  # Test seam, as Pretix::SyncPerformancesJob's is.
+  class_attribute :performance_sync_builder, default: -> { Pretix::PerformanceSync.new }
 
   def update
     # Set the previous user ids to see who the NEW debtors are.
