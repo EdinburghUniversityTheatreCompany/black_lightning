@@ -135,7 +135,6 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
     <%= link_to "#{@cost_centre.name}'s settings",
                 edit_admin_reimbursements_setting_path(@cost_centre.key), class: "underline" %>,
     <strong>Run access check</strong> probes this cost centre's mailboxes and site with the app's
-    own credentials. Allow 30 minutes to 2 hours after the mailbox grant before it goes green:
-    a red row inside that window is not a second problem.
+    own credentials.
   </p>
 <% end %>
