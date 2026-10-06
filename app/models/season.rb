@@ -71,10 +71,6 @@ class Season < Event
   # staged theatre, and Google's event rich results are built around that type.
   # Don't "correct" it to Festival.
 
-  # Validate uniqueness on Event Subtype basis instead of on the event.
-  # Otherwise, you cannot have two different types with the same slug.
-  validates :slug, uniqueness: { case_sensitive: false }
-
   has_many :events
 
   def self.ransackable_associations(auth_object = nil)
