@@ -308,12 +308,13 @@ module Pretix
       :unchanged
     end
 
-    # Nil unless date_end is nearer than REFRESH_WINDOW and differs from the
-    # target. An unreadable date_end gets the refresh: writing the right date
-    # can only widen an entitled member's window.
+    # Nil when date_end already reaches the target (never shortened: pulling it
+    # back is the revoking direction) or sits beyond REFRESH_WINDOW. An unreadable
+    # date_end gets the refresh: writing the right date can only widen an entitled
+    # member's window.
     def extension_patch(membership, target, now)
       current = parse_time(membership["date_end"])
-      return if current && (current == target || current >= now + REFRESH_WINDOW)
+      return if current && current >= [ target, now + REFRESH_WINDOW ].min
 
       Patch.new(membership_id: membership["id"], date_end: target)
     end

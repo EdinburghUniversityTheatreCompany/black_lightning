@@ -138,7 +138,8 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   end
 
   test "leaves a membership that already reaches the target alone, and never moves date_start" do
-    [ HORIZON, "2028-06-01T23:59:59+01:00" ].each do |date_end|
+    # The middle row is later than the target but inside the refresh window: it is never shortened.
+    [ HORIZON, "2027-12-01T23:59:59+00:00", "2028-06-01T23:59:59+01:00" ].each do |date_end|
       client = FakeClient.new(
         customers: [ customer_hash(member.email) ],
         memberships: [ membership_hash(id: 1, customer: "cust-#{member.email}",
