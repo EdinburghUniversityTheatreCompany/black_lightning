@@ -1,13 +1,7 @@
 require "test_helper"
 
-##
-# Turning the sync on across a season's worth of shows.
-#
-# It deliberately does NOT ask pretix first: an event with no ticket shop yet
-# waits and says so on its admin page, and a producer's hand-typed dates are
-# adopted by the matching subevents rather than duplicated. See
-# Pretix::PerformanceSyncTest for both.
-##
+# Turning the sync on across a season's shows. It does not ask pretix first (waiting
+# and adoption are covered in Pretix::PerformanceSyncTest).
 class Pretix::PerformanceSyncEnablementTest < ActiveSupport::TestCase
   def future_show(slug:, **attributes)
     FactoryBot.create(:show, slug: slug, start_date: Date.current + 10, end_date: Date.current + 14,
@@ -28,8 +22,7 @@ class Pretix::PerformanceSyncEnablementTest < ActiveSupport::TestCase
   end
 
   test "an event with no ticket shop yet is still switched on, and waits" do
-    # The whole point of dropping the probe: the producer ticks it now and builds
-    # the shop later, and the sync picks it up the moment the series appears.
+    # The producer ticks it now and builds the shop later.
     show = future_show(slug: "not-in-pretix-yet")
 
     assert_equal [ "not-in-pretix-yet" ], enable.enabled.map(&:slug)
@@ -44,8 +37,7 @@ class Pretix::PerformanceSyncEnablementTest < ActiveSupport::TestCase
     assert_not_predicate show.reload, :pretix_sync_performances?
   end
 
-  # A Season's occurrences are opening times, not performances -- filling them
-  # from ticketed dates would claim a show for every day the box office is open.
+  # A Season's occurrences are opening times, not performances.
   test "a season is skipped" do
     season = FactoryBot.create(:season, slug: "fringe-2026", start_date: Date.current + 10,
                                         end_date: Date.current + 14)

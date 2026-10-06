@@ -2,11 +2,9 @@
 
 require "test_helper"
 
-##
-# Role#archive is the annual de-membering of the whole society, and it removes
-# people with users.clear — delete_all, which fires NO association callbacks. So
-# nothing observes it the way add_role is observed, and it needs the explicit
-# enqueue these tests pin. See docs/pretix/membership-sync.md.
+# Role#archive is the annual de-membering and removes people with users.clear
+# (delete_all), which fires NO association callbacks, so it needs the explicit enqueue
+# these tests pin. See docs/pretix/membership-sync.md.
 class RolePretixSyncTest < ActiveSupport::TestCase
   setup do
     @token = ENV["PRETIX_API_TOKEN"]

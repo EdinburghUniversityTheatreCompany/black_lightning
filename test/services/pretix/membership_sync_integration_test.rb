@@ -2,18 +2,13 @@
 
 require "test_helper"
 
-##
-# MembershipSync and Client are unit-tested apart, each against a fake of the
-# other. That leaves exactly one thing unproven: that they agree. These tests
-# wire the REAL sync to the REAL client and fake only the HTTP transport, so a
-# renamed keyword, a changed arity or a misread response shape fails here rather
-# than against live pretix on the first member the reconcile touches.
-#
-# They assert on the requests that reach the wire, because that — not a return
-# value — is what pretix will actually receive.
+# MembershipSync and Client are unit-tested apart, each against a fake of the other,
+# so only these prove they agree. They wire the REAL sync to the REAL client and fake
+# only the HTTP transport, so a renamed keyword, changed arity or misread response
+# shape fails here rather than against live pretix. They assert on the requests that
+# reach the wire, which is what pretix receives.
 class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
-  # Writes are gated to production, so every test here injects a settings double
-  # with the gate open. See Pretix::Settings.writes_enabled?.
+  # Writes are gated to production, so every test injects settings with the gate open.
   WritingSettings = Struct.new(:writes_enabled) do
     def writes_enabled? = writes_enabled
   end
@@ -41,8 +36,7 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     body = JSON.parse(create.body)
     assert_equal CUSTOMER, body["customer"]
     assert_equal Pretix::Settings::MEMBERSHIP_TYPE_ID, body["membership_type"]
-    # End of the next academic year plus three weeks. Asserted as a date rather
-    # than a literal so this does not have to be rewritten every September.
+    # A date, not a literal, so this needs no rewrite every September.
     assert_equal expected_horizon, Time.zone.parse(body["date_end"]).to_date
     assert_operator Time.zone.parse(body["date_start"]), :<=, Time.zone.now
   end
@@ -99,9 +93,8 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
   end
 
   test "matches a customer whose claim predates the sms.ed.ac.uk email rewrite" do
-    # pretix stores the email claim from the member's FIRST login, and 30 live
-    # customers still carry the @sms form that User.normalizes rewrites. Merely
-    # downcasing here found no User and silently denied them member pricing.
+    # pretix keeps the email claim from the FIRST login, and 30 live customers still
+    # carry the @sms form that User.normalizes rewrites; downcasing alone found no User.
     student = FactoryBot.create(:user, email: "s1234567@sms.ed.ac.uk")
     student.add_role :member
     assert_equal "s1234567@ed.ac.uk", student.reload.email, "the model rewrites the domain on save"
@@ -117,11 +110,10 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
   end
 
   test "an anonymized customer, with no identity of any kind, is left alone" do
-    # pretix's anonymize action clears email and external_identifier both; 189
-    # such records exist in the live shop, all inactive and unverified.
-    # The fake hands the record back regardless of the query, so this exercises
-    # the guard rather than the lookup: a record with no identity of any kind
-    # cannot be confirmed as this person's, so it is left alone.
+    # pretix's anonymize action clears email and external_identifier (189 such live
+    # records). The fake hands the record back regardless of the query, so this
+    # exercises the guard, not the lookup: with no identity it cannot be confirmed
+    # as this person's.
     blank = customer_row.merge("external_identifier" => nil, "email" => nil)
     http = FakeHttp.new([ page([ blank ]) ])
 
@@ -138,8 +130,8 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     )
   end
 
-  # An academic year starting in Y ends 31 Aug of Y+1, so the NEXT one ends in
-  # Y+2 — then three weeks of slack for the manual September rollover.
+  # An academic year starting in Y ends 31 Aug of Y+1, so the NEXT one ends in Y+2,
+  # plus three weeks of slack.
   def expected_horizon
     start_year = ApplicationController.helpers.date_to_academic_year(Date.current)
     Date.new(start_year + 2, 8, 31) + 3.weeks
@@ -153,10 +145,9 @@ class Pretix::MembershipSyncIntegrationTest < ActiveSupport::TestCase
     { "identifier" => CUSTOMER, "email" => @user.email, "external_identifier" => @user.email }
   end
 
-  # date_end is RELATIVE, never a literal. A hardcoded one silently becomes
-  # "already expired" on the day it passes, and the sync then correctly reports
-  # :unchanged while the test still expects :expired. The old literal was
-  # 2026-08-31, and that is exactly what happened on 2026-08-31.
+  # date_end is RELATIVE: a literal silently becomes "already expired" on the day it
+  # passes (2026-08-31 did exactly that), so the sync reports :unchanged while the
+  # test expects :expired.
   def membership_row(id:, date_start: "2025-09-15T00:00:00+01:00", date_end: 1.year.from_now.iso8601)
     { "id" => id, "customer" => CUSTOMER, "membership_type" => Pretix::Settings::MEMBERSHIP_TYPE_ID,
       "date_start" => date_start, "date_end" => date_end, "testmode" => false }

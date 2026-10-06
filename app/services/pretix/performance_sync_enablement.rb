@@ -1,16 +1,11 @@
 # frozen_string_literal: true
 
 module Pretix
-  ##
   # Switches performance sync on across every future event that can take it.
-  #
-  # No probe: an event whose ticket shop does not exist yet simply waits, showing
-  # a warning on its admin page (see PerformanceSync's NotFoundError handling),
-  # and an event whose producer already typed the dates has those rows ADOPTED by
-  # the matching subevents rather than duplicated. Both of the reasons this used
-  # to ask pretix first are now handled by the sync itself.
-  #
   # Dry by default, following Event::TicketPriceBackfill.
+  #
+  # No probe of pretix: an event with no shop yet waits with a warning on its
+  # admin page, and dates already typed are ADOPTED by the matching subevents.
   class PerformanceSyncEnablement
     Summary = Data.define(:enabled, :already_on, :not_performances) do
       def considered
@@ -29,16 +24,14 @@ module Pretix
 
     private
 
-    # Bounded by the run's end, as the job itself is: a finished run has nothing
-    # left to sell.
+    # Bounded by the run's end, as the job is.
     def candidates
       Event.where(end_date: Date.current..).order(:start_date)
     end
 
     def classify(event, apply:)
-      # A Season's occurrences are opening times, not performances. Filling them
-      # from ticketed dates would claim the theatre is staging a show on every
-      # day the box office happens to be open.
+      # A Season's occurrences are opening times, not performances: filling them
+      # from ticketed dates would claim a show on every day the box office is open.
       return :not_performances unless event.occurrences_are_performances?
       return :already_on if event.pretix_sync_performances?
 

@@ -3,9 +3,8 @@ import { buildWidget } from "../lib/pretix"
 
 // Opens the pretix ticket widget in a dialog, loading pretix's assets on first use.
 //
-// The base URL defaults to the shop's own domain and must stay in step with
-// PretixHelper::SHOP_URL — pretix.eu serves no widget stylesheet (v1.en.css there redirects to
-// a 404), so both the script and the CSS come from the shop itself.
+// The base URL must stay in step with PretixHelper::SHOP_URL: pretix.eu serves no widget
+// stylesheet, so script and CSS both come from the shop.
 export default class extends Controller {
   static targets = ["dialog", "widgetContainer", "title"]
   static values = {
@@ -22,8 +21,8 @@ export default class extends Controller {
     if (eventUrl === this.#eventUrl) {
       this.widgetContainerTarget.scrollTop = 0
     } else {
-      // The show is only remembered once its widget is actually up: a build that failed has to
-      // be retried on the next open, not answered with the empty dialog it left behind.
+      // Remembered only once its widget is up: a failed build must be retried on the next
+      // open, not answered with the empty dialog it left behind.
       this.#eventUrl = null
       buildWidget(this.widgetContainerTarget, {
         baseUrl: this.baseUrlValue,

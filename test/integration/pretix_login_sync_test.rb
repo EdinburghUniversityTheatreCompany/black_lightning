@@ -2,13 +2,10 @@
 
 require "application_integration_test"
 
-##
-# Signing in to the pretix shop runs through Doorkeeper's authorization
-# endpoint, and that is the ONLY moment we learn a member has a pretix customer
-# account at all — pretix creates one on first login and offers no webhook to
-# say so. Without this hook a new member waits for the nightly reconcile, so
-# these tests pin that the enqueue actually happens through the real endpoint
-# rather than through my reading of Doorkeeper's API.
+# Signing in to the pretix shop goes through Doorkeeper's authorization endpoint, the
+# only moment we learn a member has a pretix customer. Without this hook a new member
+# waits for the nightly reconcile, so these pin that the enqueue happens through the
+# real endpoint.
 class PretixLoginSyncTest < ApplicationIntegrationTest
   setup do
     @user = FactoryBot.create(:user)
@@ -42,8 +39,7 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
   end
 
   test "signing in to a DIFFERENT oauth client enqueues nothing" do
-    # after_successful_authorization fires for every client the society runs, and
-    # a sync for someone signing in elsewhere is two pointless pretix API reads.
+    # The hook fires for every client the society runs; a sync here is two pointless reads.
     other = FactoryBot.create(:doorkeeper_application, redirect_uri: "https://example.com/callback")
     login_as @user
 
@@ -70,9 +66,8 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
       response_type: "code",
       scope: "openid profile email"
     }
-    # Doorkeeper either auto-approves (302 with a code) or renders consent.
-    # Only the approving path fires after_successful_authorization, so post the
-    # consent when it asks for one.
+    # Doorkeeper either auto-approves (302 with a code) or renders consent; only
+    # approval fires the hook, so post the consent when asked.
     return unless response.status == 200
 
     post "/oauth/authorize", params: {

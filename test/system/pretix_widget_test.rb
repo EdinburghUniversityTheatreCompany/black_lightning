@@ -1,16 +1,15 @@
 require "application_system_test_case"
 
-# The widget embedded in a show page, driven without ever contacting the real ticket shop.
+# The widget embedded in a show page, driven without contacting the real ticket shop.
 #
-# Every one of these arrives at the show page the way a visitor does — through Turbo, without a
-# full page load — because that is the case the widget kept failing. pretix's script builds every
-# <pretix-widget> on the page once, when it runs; Turbo appends that script to the head *before*
-# it swaps the body in, and never re-runs it on a later visit because the tag is already there.
+# Every test arrives through Turbo, without a full page load, because that is the case
+# that kept failing: pretix builds once when its script runs, and Turbo appends that
+# script *before* swapping the body in and never re-runs it (see lib/pretix.js).
 class PretixWidgetTest < ApplicationSystemTestCase
-  # Stands in for pretix's script, reproducing the one behaviour the controller has to work
-  # around: building a widget *replaces* the <pretix-widget> element with rendered markup that
-  # carries its attributes. Without that, a test cannot tell a controller that builds a widget
-  # from one that leaves the element sitting there untouched.
+  # Stands in for pretix's script, reproducing the behaviour the controller works around:
+  # building *replaces* the <pretix-widget> element with markup carrying its attributes.
+  # Without that, a test cannot tell a controller that builds from one that leaves the
+  # element untouched.
   FAKE_PRETIX = <<~JS.freeze
     window.pretixBuilds = 0
     window.PretixWidget = {
@@ -68,9 +67,9 @@ class PretixWidgetTest < ApplicationSystemTestCase
     turbo_visit show_path(@cabaret)
     assert_selector "[data-build='2']"
 
-    # Turbo caches the body it is leaving, which by then holds pretix's rendered markup rather
-    # than the element it was built from — a widget that looks right and does nothing. Asserting
-    # on the text alone would pass off that restored copy, so the build number is the assertion.
+    # Turbo caches the body it leaves, by then holding pretix's rendered markup (a widget
+    # that looks right and does nothing). Text alone would pass on that restored copy, so
+    # the build number is the assertion.
     page.go_back
 
     assert_selector "[data-build='3']", text: "tickets for #{shop_url_for(@rocky)}"
@@ -88,8 +87,7 @@ class PretixWidgetTest < ApplicationSystemTestCase
     assert_no_selector ".pretix-widget-wrapper"
   end
 
-  # Selenium hands every test in the suite the same browser, so the interception this test turns
-  # on would stay on for everything that runs after it.
+  # Selenium shares one browser across the suite, so the interception would leak into later tests.
   teardown do
     browser = page.driver.browser
     browser.execute_cdp("Network.setBlockedURLs", urls: [])
@@ -98,19 +96,19 @@ class PretixWidgetTest < ApplicationSystemTestCase
 
   private
 
-  # Nothing here may reach the real ticket shop. The stand-in already keeps the 191 KB script
-  # from being fetched, but the show page links the shop's stylesheet server-side, and an
-  # implementation that stopped deferring to the stand-in would silently go to the internet.
+  # Nothing here may reach the real ticket shop. The stand-in keeps the script from being
+  # fetched, but the show page links the shop's stylesheet server-side, and an
+  # implementation that stopped deferring to the stand-in would silently go online.
   #
-  # The sibling modal test repoints the shop URL instead; that will not work here, because the
-  # show page renders its URL server-side and the widget is built the moment the page arrives.
+  # The modal test repoints the shop URL instead; that cannot work here, because the show
+  # page renders its URL server-side and builds the widget the moment it arrives.
   def block_the_ticket_shop
     browser = page.driver.browser
     browser.execute_cdp("Network.enable")
     browser.execute_cdp("Network.setBlockedURLs", urls: [ "*tickets.bedlamtheatre.co.uk*" ])
   end
 
-  # Start on a page carrying no widget — where a visitor is before following a link to a show.
+  # Start on a page with no widget, as a visitor is before following a link to a show.
   def arrive_with_fake_pretix
     visit root_path
     block_the_ticket_shop

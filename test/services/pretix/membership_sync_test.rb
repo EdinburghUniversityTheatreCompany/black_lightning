@@ -3,9 +3,8 @@ require "test_helper"
 class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   include HoneybadgerTestHelpers
 
-  # The suite has no mocking library, so the client seam takes a hand-written
-  # fake. It MUTATES its own store on every write, which is what lets a test
-  # assert that a second reconcile pass finds nothing left to do.
+  # It MUTATES its own store on every write, so a test can assert that a second
+  # reconcile pass finds nothing left to do.
   class FakeClient
     WRITE_CALLS = %i[create_membership update_membership].freeze
 
@@ -220,11 +219,9 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_empty client.writes
   end
 
-  # A native pretix account — someone who signed up in the shop with a password
-  # rather than through SSO — has no external_identifier, and its own email is
-  # then the only handle there is. Matching on it is safe because BOTH paths
-  # resolve a customer the same way, so the reconcile can find this account again.
-  # Members should not have to have used SSO to be recognised.
+  # A native pretix account (password, not SSO) has no external_identifier, so its
+  # own email is the only handle. Safe because both paths resolve a customer the
+  # same way.
   test "a native account with no SSO identity is matched on its own email" do
     client = FakeClient.new(customers: [ customer_hash(member.email, external_identifier: nil) ])
 
@@ -253,8 +250,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_empty client.writes
   end
 
-  # Without this guard the unreadable row is invisible and the member gets a
-  # SECOND membership, which is what "one membership, forever" exists to prevent.
+  # An invisible row would mint a second membership.
   test "an unreadable date_start creates nothing either" do
     client = FakeClient.new(
       customers: [ customer_hash(member.email) ],
@@ -294,11 +290,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   end
 
   # --- the stored customer link ----------------------------------------------
-  #
-  # pretix keys an SSO account on a hash of the email claim, and refuses to let
-  # either identifier field be rewritten afterwards, so matching by email is the
-  # only way in. The link records what that match found, and everything below is
-  # about surviving the email changing later.
+  # The link records what the email match found, so a later email change still resolves.
 
   test "the link is recorded the first time a customer is matched by email" do
     client = FakeClient.new(customers: [ customer_hash(member.email) ])
@@ -310,8 +302,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
   test "a member who changed their email is still found, through the stored link" do
     member.update_column(:pretix_customer_identifier, "cust-old")
-    # The customer still carries the address they first signed in with; the user
-    # no longer does. Matching by email would find nobody.
+    # The customer carries the address they first signed in with; the user no longer does.
     client = FakeClient.new(customers: [ customer_hash("old@example.com", identifier: "cust-old") ])
 
     assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
@@ -326,14 +317,10 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   end
 
   test "a link that still resolves is left alone, even beside a second account" do
-    # Someone holding two pretix accounts — an @sms.ed.ac.uk one and its
-    # rewritten @ed.ac.uk twin. Both resolve to this user, so whichever the loop
-    # reaches second would re-point the link if nothing stopped it.
-    #
-    # Both accounts are given a membership that already needs no change, so the
-    # run SETTLES IN ONE PASS. That matters: with two passes the re-pointing
-    # happens and is then undone by the next pass, leaving the stored value
-    # looking untouched and hiding the churn completely.
+    # Two pretix accounts for one person (an @sms.ed.ac.uk one and its rewritten
+    # @ed.ac.uk twin): whichever the loop reaches second would re-point the link if
+    # nothing stopped it. Both get a membership needing no change so the run settles
+    # in ONE pass; with two, the next pass undoes the re-pointing and hides the churn.
     member.update_column(:pretix_customer_identifier, "cust-linked")
     client = FakeClient.new(
       customers: [
@@ -383,10 +370,6 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 0, counts[:no_user]
   end
 
-  # user_for is THE resolution, as plan_for is THE decision: the nightly
-  # reconcile and the dry-run preview both go through it, so a preview cannot
-  # predict a different run from the one that happens.
-
   test "user_for prefers the stored link over the email" do
     linked = FactoryBot.create(:user, email: "linked@example.com")
     emailed = FactoryBot.create(:user, email: "shared@example.com")
@@ -412,7 +395,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
   test "user_for resolves a customer with no email at all, through its link" do
     # An anonymized customer keeps neither email nor external_identifier, so the
-    # link is the only handle left. The preview classifies on the same order.
+    # link is the only handle left.
     linked = FactoryBot.create(:user, email: "linked@example.com")
     customer = { "identifier" => "cust-x", "email" => nil, "external_identifier" => nil }
 
@@ -437,10 +420,8 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 2, counts[:passes]
 
     # One customer list per pass, then one membership read per customer that
-    # RESOLVES TO A USER — the ghost costs no membership call. Slicing a single
-    # whole-shop membership list would be cheaper and is exactly what this test
-    # forbids: pretix pages that list with no unique tiebreaker and silently
-    # drops rows, which made a member with a membership look like one with none.
+    # RESOLVES TO A USER (the ghost costs none). Slicing one whole-shop list is what
+    # this forbids: pretix pages it with no unique tiebreaker and drops rows.
     reads = client.reads.map(&:first)
     assert_equal 2, reads.count(:customers), "one customer list per pass"
     assert_equal 4, reads.count(:memberships), "two resolvable customers, two passes"

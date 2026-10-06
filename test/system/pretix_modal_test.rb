@@ -1,13 +1,12 @@
 require "application_system_test_case"
 
-# The Buy Tickets modal, driven without ever contacting the real ticket shop.
+# The Buy Tickets modal, driven without contacting the real ticket shop.
 #
-# The controller's base URL is repointed at the test app first, so pretix's own script 404s and
-# never loads; a stand-in stub takes its place. The stub reproduces the one pretix behaviour the
-# controller has to work around: building a widget *replaces* the <pretix-widget> element with a
-# rendered wrapper that carries its attributes. Without that, a test cannot tell a controller
-# that rebuilds the element from one that re-labels markup pretix has already consumed — both
-# look identical while the element is still sitting there untouched.
+# The controller's base URL is repointed at the test app, so pretix's own script 404s and
+# a stub takes its place. The stub reproduces the behaviour the controller works around:
+# building *replaces* the <pretix-widget> element with a wrapper carrying its attributes.
+# Without that, a test cannot tell a controller that rebuilds the element from one that
+# re-labels markup pretix already consumed.
 class PretixModalTest < ApplicationSystemTestCase
   FAKE_PRETIX = <<~JS.freeze
     window.PretixWidget = {
@@ -63,9 +62,9 @@ class PretixModalTest < ApplicationSystemTestCase
     visit_home_with_fake_pretix
     buy_tickets_for(@rocky)
 
-    # The widget swapping its event list for a product list makes the body several screens tall,
-    # and pretix scrolls its own widget into view — which used to carry the Close button off the
-    # top of the viewport with it, leaving no visible way out of the modal.
+    # A widget swapping its event list for a product list makes the body several screens
+    # tall, and pretix scrolls itself into view, which carried the Close button off the top
+    # of the viewport and left no visible way out.
     page.execute_script(<<~JS)
       const body = document.querySelector('.pretix-modal-body')
       body.insertAdjacentHTML('beforeend', '<div id="tall" style="height: 5000px">tall</div>')
@@ -79,8 +78,7 @@ class PretixModalTest < ApplicationSystemTestCase
 
   test "reopening a show whose widget could not be built retries rather than reshowing an empty dialog" do
     visit_home_with_fake_pretix
-    # The shop is unreachable: with no stand-in the controller goes looking for the real script,
-    # and the URL it was pointed at 404s.
+    # Shop unreachable: with no stand-in the controller fetches the real script, which 404s.
     page.execute_script("delete window.PretixWidget")
 
     buy_tickets_for(@rocky)
@@ -95,8 +93,7 @@ class PretixModalTest < ApplicationSystemTestCase
 
   private
 
-  # Any origin that will not actually serve a pretix widget does; the app's own host is
-  # convenient because it is definitely reachable and definitely 404s these paths.
+  # Any origin that will not serve a widget does; the app's own host is reachable and 404s these paths.
   def fake_shop_url
     "http://#{page.server.host}:#{page.server.port}/not-a-real-shop/"
   end

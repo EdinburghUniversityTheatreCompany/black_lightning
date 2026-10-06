@@ -1,9 +1,7 @@
 require "test_helper"
 
-# Both places the pretix widget appears used to point at their own copy of its stylesheet: the
-# show page at a vendored snapshot of a CDN that has since been retired, the Buy Tickets modal at
-# a pretix.eu URL that 404s. Whether the modal looked right came down to whether Turbo happened
-# to have carried the show page's stylesheet over — so both are pinned here.
+# Both widget surfaces must take the stylesheet from the shop's own domain (pretix.eu
+# 404s), or the modal's styling depends on Turbo carrying the show page's over.
 class PretixWidgetRenderingTest < ActionController::TestCase
   tests ShowsController
 
@@ -33,9 +31,9 @@ class PretixWidgetRenderingTest < ActionController::TestCase
 
     get :show, params: { id: show }
 
-    # A <script> here is loaded by Turbo on the way in — before the body it is meant to build a
-    # widget in exists, and never again on a later visit, because Turbo keeps the identical tag.
-    # The controller loads it instead, so that only our code decides when a widget gets built.
+    # A <script> here is loaded by Turbo before the body it should build in exists, and
+    # never again on a later visit (Turbo keeps the identical tag). The controller loads
+    # it instead, so only our code decides when a widget is built.
     assert_no_match(/widget\/v1\.en\.js/, response.body)
     assert_select "pretix-widget", false
   end
@@ -59,9 +57,9 @@ class PretixModalRenderingTest < ActionController::TestCase
     get :home
 
     assert_response :success
-    # pretix swaps the <pretix-widget> element out for its own markup the moment it builds one,
-    # so a widget rendered here could only ever be configured for the first show clicked. The
-    # controller creates a fresh element per open inside this container instead.
+    # pretix swaps the <pretix-widget> element for its own markup when it builds, so one
+    # rendered here could only serve the first show clicked; the controller creates a
+    # fresh element per open inside this container.
     assert_select "#pretix-modal pretix-widget", false
     assert_select "#pretix-modal [data-pretix-modal-target=?]", "widgetContainer"
   end
@@ -74,9 +72,8 @@ class PretixModalRenderingTest < ActionController::TestCase
     assert_select "button[data-pretix-modal-slug-param=?]", show.pretix_slug
   end
 
-  # A <button> with no type defaults to type="submit". Nothing sits inside a
-  # <form> on either surface today, so the day one does, Buy Tickets would open
-  # the modal AND submit the form out from under it.
+  # A <button> with no type submits; if one ever sits inside a <form>, Buy Tickets
+  # would open the modal AND submit the form.
   test "the Buy Tickets button is type=button, not a submit" do
     show = upcoming_show
 

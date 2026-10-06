@@ -1,13 +1,8 @@
 require "test_helper"
 
-##
-# Pretix::PerformanceSync brings one event's performances in line with its pretix
-# series. The ownership model is the whole design: pretix owns only the rows it
-# created, and the producer's own columns are never written.
-##
+# Pretix::PerformanceSync: pretix owns only the rows it created, and the
+# producer's own columns are never written.
 class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
-  # Stands in for Pretix::Client. This suite has no mocking library, so an
-  # outbound client is faked and injected, as the membership sync's tests do.
   class FakeClient
     attr_reader :slugs
 
@@ -222,14 +217,9 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 3, 7), @event.end_date
   end
 
-  # --- failure ---------------------------------------------------------------
-
   # --- a series that does not exist yet --------------------------------------
-  #
-  # Ticking the box before building the shop is the natural order to work in, so
-  # "pretix has never heard of this slug" is a waiting state, not a failure. It
-  # is recorded and shown in the admin; nothing is raised and nothing reported,
-  # or every such event would alert every fifteen minutes for its whole run.
+  # A waiting state, not a failure: recorded for the admin, nothing raised or
+  # reported, or every such event would alert every fifteen minutes.
 
   test "a series pretix does not know is recorded as waiting, not raised" do
     occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
@@ -284,10 +274,8 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
   end
 
   # --- adopting a hand-typed row ---------------------------------------------
-  #
-  # A producer who typed their dates in before the box was ticked would otherwise
-  # get every night twice: theirs and pretix's. An exact match is the same
-  # performance, so the sync takes the existing row over rather than adding one.
+  # Dates typed before the box was ticked would otherwise appear twice: an exact
+  # match is the same performance, so the sync takes the row over.
 
   test "a hand-typed performance at the same time is adopted, not duplicated" do
     typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30))
@@ -342,10 +330,9 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     assert_equal 2, @event.event_occurrences.reload.count
   end
 
-  # pretix answers 403, NOT 404, for an event slug it will not show you -- it
-  # declines to leak whether the event exists. So "the shop is not built yet"
-  # and "the token has lost its access" arrive as the same status, and the only
-  # thing that separates them is whether the token still works at all.
+  # pretix answers 403, NOT 404, for a slug it will not show you, so "shop not built
+  # yet" and "token lost its access" look alike; only whether the token still
+  # works separates them.
 
   test "a 403 on a working token is the shop not existing yet, not a failure" do
     result = nil
@@ -358,8 +345,7 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
   end
 
   test "a 403 from a token that can read nothing is a real auth failure" do
-    # The token has been revoked or its team stripped. That must stay loud: it
-    # takes the whole integration down, not one unbuilt shop.
+    # Revoked or stripped: must stay loud, it takes the whole integration down.
     assert_raises(Pretix::Client::AuthError) do
       sync(error: Pretix::Client::AuthError.new("HTTP 403"), events_readable: false)
     end

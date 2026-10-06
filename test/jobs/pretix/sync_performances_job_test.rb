@@ -1,8 +1,7 @@
 require "test_helper"
 
 class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
-  # Records which events it was asked about, and can be told to fail for one of
-  # them. This suite has no mocking library.
+  # Records which events it was asked about, and can be told to fail for one of them.
   class FakeSync
     attr_reader :events
 

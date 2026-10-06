@@ -3,10 +3,7 @@ require "test_helper"
 class Pretix::ClientTest < ActiveSupport::TestCase
   TOKEN = "s3cr3t-pretix-token".freeze
 
-  # Stands in for Pretix::Settings so the writes gate is decided per client
-  # instance. The real one reads ENV outside production, and this suite
-  # parallelises — a test that toggled ENV would be reaching for process-global
-  # state a sibling test in the same worker also reads.
+  # Decides the writes gate per client; the real Settings reads ENV outside production.
   FakeSettings = Struct.new(:writes_enabled) do
     def writes_enabled?
       writes_enabled
@@ -14,12 +11,8 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   # --- rate limiting ---------------------------------------------------------
-  #
-  # pretix Hosted allows 360 requests/minute per organizer and answers a 429 with
-  # Retry-After. Their docs say a client that keeps bursting after one may have
-  # its API access disabled, so honouring this is a requirement. It only shows up
-  # in production: from a developer machine the round trip to pretix.eu is slow
-  # enough to stay under the limit by accident.
+  # pretix answers 429 with Retry-After and may disable API access for a client that
+  # keeps bursting, so honouring it is a requirement.
 
   test "a throttled request is retried after the Retry-After the server asked for" do
     client, waits, http = recording_client([
@@ -76,8 +69,7 @@ class Pretix::ClientTest < ActiveSupport::TestCase
 
   def build_client(responses, organizer: "eutc", token: TOKEN, writes: false)
     http = FakeHttp.new(responses)
-    # No-op sleeper: the pacing and throttle-retry waits are real seconds, and
-    # this suite must not spend them.
+    # No-op sleeper: pacing and throttle waits are real seconds.
     client = Pretix::Client.new(organizer: organizer, token: token, http: http,
                                 settings: FakeSettings.new(writes), sleeper: ->(_seconds) { })
     [ client, http ]
@@ -97,8 +89,7 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "every argument is defaulted, so the sync can build a bare client" do
-    # Pretix::MembershipSync constructs Pretix::Client.new with no arguments,
-    # and the real transport must stay the default rather than a test fake.
+    # MembershipSync builds Pretix::Client.new bare; the real transport must stay the default.
     client = Pretix::Client.new
 
     assert_kind_of Pretix::Client, client
@@ -322,10 +313,8 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   # --- subevents -------------------------------------------------------------
-  #
-  # A Bedlam show is a pretix event SERIES, so its performances are subevents of
-  # the series named by Event#pretix_slug. This is the read Pretix::PerformanceSync
-  # is built on.
+  # A show is a pretix event SERIES; its performances are subevents of the series
+  # named by Event#pretix_slug.
 
   test "subevents are read from the series named by the event slug" do
     client, http = build_client([ page([ subevent ]) ])
@@ -353,8 +342,7 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "a series pretix does not know raises NotFoundError, not a bare Error" do
-    # The sync distinguishes these: a wrong slug is a fact about our data and
-    # must leave the event's existing performances standing, untouched.
+    # A wrong slug is a fact about our data: the sync must leave existing performances standing.
     client, = build_client([ [ 404, { detail: "Not found." }.to_json ] ])
 
     assert_raises(Pretix::Client::NotFoundError) { client.subevents("nope") }
@@ -378,8 +366,7 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   end
 
   test "events_readable? is false when the token is refused" do
-    # This is what separates a shop that does not exist yet from a dead token:
-    # pretix answers 403 for both on the per-event endpoint.
+    # Separates an unbuilt shop from a dead token: pretix answers 403 for both per event.
     client, = build_client([ [ 403, { detail: "Permission denied." }.to_json ] ])
 
     assert_not client.events_readable?
