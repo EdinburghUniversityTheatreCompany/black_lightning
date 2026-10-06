@@ -15,7 +15,7 @@
                count: @home.to_approve.size,
                amount: @home.to_approve_total,
                detail: "Yours to decide.",
-               tone: :warning,
+               warning: true,
                link_text: "Review claims",
                path: admin_reimbursements_review_path(tab: "to_approve",
                                                       cost_centre: selected_cost_centre&.key) %>
