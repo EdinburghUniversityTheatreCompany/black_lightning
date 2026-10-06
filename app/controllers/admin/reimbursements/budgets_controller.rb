@@ -11,6 +11,7 @@ module Admin
       skip_before_action :authorize_finance!, only: %i[show]
       before_action :authorize_budget_page!, only: %i[show]
       before_action :set_budget, only: %i[edit update forecast update_forecast delete_forecast]
+      before_action :set_forecast, only: %i[update_forecast delete_forecast]
 
       def show
         @title = @budget.name
@@ -105,38 +106,22 @@ module Admin
       # Appends a projected-spend update (amount + date + reason) to this budget;
       # the newest one becomes its current forecast.
       def forecast
-        amount = parse_decimal(params[:amount])
-        date = parse_date(params[:date])
-        if amount.nil? || date.nil?
-          return redirect_to(edit_path, alert: "Enter a valid amount and date for the forecast.")
-        end
+        return unless (attrs = forecast_attrs)
 
-        store.create_forecast!(budget_id: @budget.record_id, amount: amount, date: date,
-                               reason: params[:reason].to_s)
+        store.create_forecast!(budget_id: @budget.record_id, **attrs)
         redirect_to edit_path, notice: "Forecast added."
       end
 
-      # Correct a forecast logged in error. Guarded so only a forecast belonging
-      # to this budget can be edited through this budget's URL.
+      # Correct a forecast logged in error.
       def update_forecast
-        return unless forecast_belongs_to_budget?(params[:forecast_id])
+        return unless (attrs = forecast_attrs)
 
-        amount = parse_decimal(params[:amount])
-        date = parse_date(params[:date])
-        if amount.nil? || date.nil?
-          return redirect_to(edit_path, alert: "Enter a valid amount and date for the forecast.")
-        end
-
-        store.update_forecast!(params[:forecast_id], amount: amount, date: date,
-                                                     reason: params[:reason].to_s)
+        store.update_forecast!(@forecast.record_id, **attrs)
         redirect_to edit_path, notice: "Forecast updated."
       end
 
-      # Remove a forecast logged in error, same ownership guard.
       def delete_forecast
-        return unless forecast_belongs_to_budget?(params[:forecast_id])
-
-        store.delete_forecast!(params[:forecast_id])
+        store.delete_forecast!(@forecast.record_id)
         redirect_to edit_path, notice: "Forecast removed."
       end
 
@@ -170,13 +155,22 @@ module Admin
         @unassigned_rollup = unassigned && ::Reimbursements::AreaRollup.new(area: nil, budgets: unassigned)
       end
 
-      # A forecast id arriving in the URL must actually belong to this budget —
-      # never let one budget's page mutate another budget's forecast log.
-      def forecast_belongs_to_budget?(forecast_id)
-        return true if store.budget_forecasts(@budget.record_id).any? { |f| f.record_id == forecast_id }
+      # A forecast id arriving in the URL must actually belong to this budget,
+      # or one budget's page could mutate another's forecast log.
+      def set_forecast
+        @forecast = store.budget_forecasts(@budget.record_id).find { |f| f.record_id == params[:forecast_id] }
+        redirect_to edit_path, alert: "That forecast isn't part of this budget." unless @forecast
+      end
 
-        redirect_to edit_path, alert: "That forecast isn't part of this budget."
-        false
+      # The forecast form's fields, or nil after redirecting when the amount or
+      # date is unreadable.
+      def forecast_attrs
+        amount = ::Reimbursements::AmountParser.parse(params[:amount])
+        date = parse_date(params[:date])
+        return { amount: amount, date: date, reason: params[:reason].to_s } if amount && date
+
+        redirect_to edit_path, alert: "Enter a valid amount and date for the forecast."
+        nil
       end
 
       # Finance, or one of the line's owners; anyone else gets a 404.
@@ -284,7 +278,8 @@ module Admin
         unless budget.area_id || posted_area_id.present?
           attrs[:owner_ids] = Array(params[:owner_ids]).reject(&:blank?)
         end
-        initial = parse_decimal(params[:initial_budget])
+        # Lenient like the submitter form: "£1,200" and "12,50" are amounts.
+        initial = ::Reimbursements::AmountParser.parse(params[:initial_budget])
         attrs[:initial_budget] = initial unless initial.nil?
         attrs
       end
@@ -297,12 +292,6 @@ module Admin
       # reads it); with one there is nothing to choose.
       def chosen_cost_centre
         selected_cost_centre || ::Reimbursements::CostCentre.default
-      end
-
-      # The same lenient reading as the submitter form: "£1,200" and "12,50" are
-      # amounts, not rubbish. A bare BigDecimal() raises on both.
-      def parse_decimal(value)
-        ::Reimbursements::AmountParser.parse(value)
       end
 
       def parse_date(value)
