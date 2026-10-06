@@ -58,9 +58,7 @@ module Admin
       end
 
       def new_expense
-        @title = "Create expense from EUSA actual"
-        @budgets = offerable_budgets
-        @budget_groups = budget_groups_for(@actual)
+        prepare_expense_page
         @form = ::Reimbursements::ExpenseForm.from_actual(@actual)
         @form.budget_record_id = budget_for_nominal_code(@actual.nominal_code)
       end
@@ -70,15 +68,13 @@ module Admin
         # The ledger row owns the amount and type. The budget is checked against the picker's own
         # list, so a line deleted or deactivated since the page loaded is a form error, not an FK
         # 500 or a charge to a retired budget.
-        @form.offerable_budget_ids = offerable_budget_ids
+        @form.offerable_budget_ids = offerable_budgets.map(&:record_id)
         @form.budget_record_id = conversion_params[:budget_record_id]
         @form.description = conversion_params[:description]
         @form.payment_reference = conversion_params[:payment_reference]
 
         unless @form.valid?
-          @title = "Create expense from EUSA actual"
-          @budgets = offerable_budgets
-          @budget_groups = budget_groups_for(@actual)
+          prepare_expense_page
           render :new_expense, status: :unprocessable_entity
           return
         end
@@ -334,10 +330,6 @@ module Admin
                                      .sort_by(&:display_name)
       end
 
-      def splittable_budget_ids
-        splittable_budgets.map(&:record_id)
-      end
-
       def blank_shares
         Array.new(DEFAULT_SHARE_ROWS) { { budget_id: nil, amount: nil, amount_typed: "" } }
       end
@@ -371,7 +363,7 @@ module Admin
         # The write goes straight to budget_id, so an id the page never offered (deleted, retired,
         # typed by hand) has to be refused here.
         return "One of those budgets is no longer available. Reload the page and pick again." if
-          (ids - splittable_budget_ids).any?
+          (ids - splittable_budgets.map(&:record_id)).any?
 
         "A budget can only take one share of a row. Add its shares together instead." if
           ids.uniq.length != ids.length
@@ -436,11 +428,12 @@ module Admin
 
       # Memoized so the list the form is validated against is the list it displays.
       def offerable_budgets
-        @budgets ||= store.active_budgets
+        @offerable_budgets ||= store.active_budgets
       end
 
-      def offerable_budget_ids
-        offerable_budgets.map(&:record_id)
+      def prepare_expense_page
+        @title = "Create expense from EUSA actual"
+        @budget_groups = budget_groups_for(@actual)
       end
 
       # Two labelled groups: the lines on the row's nominal code first, then the rest. An ORDER, not
@@ -450,13 +443,10 @@ module Admin
         matching, others = offerable_budgets.partition do |budget|
           actual.nominal_code.present? && budget.nominal_code == actual.nominal_code
         end
-        groups = []
-        if matching.any?
-          groups << [ "Matches this row's nominal code (#{actual.nominal_code})",
-                      budget_options(matching) ]
-        end
-        groups << [ matching.any? ? "Every other budget" : "Budgets", budget_options(others) ]
-        groups
+        return [ [ "Budgets", budget_options(others) ] ] if matching.empty?
+
+        [ [ "Matches this row's nominal code (#{actual.nominal_code})", budget_options(matching) ],
+          [ "Every other budget", budget_options(others) ] ]
       end
 
       def budget_options(budgets)
