@@ -97,9 +97,4 @@ class ActionController::TestCase
   include Devise::Test::ControllerHelpers
   include ActionMailer::TestHelper
   include ImportCacheTestHelpers
-
-  teardown do
-    # See the note on the ActiveSupport::TestCase teardown above.
-    FileUtils.rm_rf(ActiveStorage::Blob.service.try(:root) || Rails.root.join("tmp", "storage"))
-  end
 end
