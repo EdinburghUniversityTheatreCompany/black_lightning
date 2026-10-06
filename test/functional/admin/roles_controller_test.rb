@@ -134,12 +134,14 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
-  test "add_user answers a turbo stream that replaces the users table" do
-    user = FactoryBot.create(:user, first_name: "Finbar", last_name: "the Viking")
+  test "add_user answers a turbo stream that replaces the users table and toasts the name as written" do
+    user = FactoryBot.create(:user, first_name: "Finbar", last_name: "O'Brien")
 
     post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }, format: :turbo_stream
 
-    assert_select "turbo-stream[action=replace][target=users_role_#{@role.id}] a", text: "Finbar the Viking"
+    assert_select "turbo-stream[action=replace][target=users_role_#{@role.id}] a", text: "Finbar O'Brien"
+    toast = response.body[/<turbo-stream action="toast"[^>]*>/]
+    assert_equal '<turbo-stream action="toast" type="success" message="Finbar O&#39;Brien has been added to the role of Member">', toast
   end
 
   test "should not add user who already has the role" do
