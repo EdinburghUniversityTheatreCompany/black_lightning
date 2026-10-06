@@ -122,17 +122,13 @@ module Admin
         formatted_sort = ::Reimbursements::BankDetails.format_sort_code(sort_code)
         normalized_account = ::Reimbursements::BankDetails.normalize_account_number(account_number)
 
-        unless bank_details_changed?(formatted_sort, normalized_account)
+        change = @person.bank_details_change(formatted_sort, normalized_account, actor: current_user)
+        if change.nil?
           redirect_to_person(@person, notice: "No changes to save.")
           return
         end
 
-        store.update_person!(@person.record_id,
-                             sort_code: formatted_sort,
-                             account_number: normalized_account,
-                             # Verified only means something for the details that were checked.
-                             verified: false,
-                             notes: appended_notes(formatted_sort, normalized_account))
+        store.update_person!(@person.record_id, **change)
         redirect_to_person(@person, notice: "Bank details saved for #{@person.name}.")
       end
 
@@ -149,24 +145,6 @@ module Admin
       def valid_bank_details?(sort_code, account_number)
         ::Reimbursements::BankDetails.valid_sort_code?(sort_code) &&
           ::Reimbursements::BankDetails.valid_account_number?(account_number)
-      end
-
-      def bank_details_changed?(formatted_sort, normalized_account)
-        ::Reimbursements::BankDetails.normalize_sort_code(formatted_sort) !=
-          ::Reimbursements::BankDetails.normalize_sort_code(@person.sort_code) ||
-          normalized_account != ::Reimbursements::BankDetails.normalize_account_number(@person.account_number)
-      end
-
-      # Audit line for the notes, one per change. BOTH sort code and account are
-      # masked (as in Exports::People): notes are encrypted at rest, but the
-      # visible copy must stay masked too.
-      def appended_notes(sort_code, account_number)
-        actor = "#{current_user.name_or_email} (##{current_user.id})"
-        ::Reimbursements::PaymentDetails.append_note(
-          @person.notes,
-          "Bank details updated: sort code #{::Reimbursements::BankDetails.mask(sort_code)}, " \
-          "account #{::Reimbursements::BankDetails.mask(account_number)} by #{actor}"
-        )
       end
     end
   end

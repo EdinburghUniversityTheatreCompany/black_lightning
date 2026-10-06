@@ -32,6 +32,36 @@ module Admin
       assert_equal "12345678", details.account_number
     end
 
+    test "changing the bank details resets Verified and records a masked audit line" do
+      @person.create_payment_details!(sort_code: "08-99-99", account_number: "66374958", verified: true)
+
+      patch :update, params: {
+        reimbursements_payment_details_form: {
+          name: "Pat Producer", sort_code: "20-20-20", account_number: "50502366"
+        }
+      }
+
+      details = @person.reload.payment_details
+      assert_not details.verified
+      assert_includes details.notes, "Bank details updated: sort code ****2020, account ****2366 " \
+                                     "by #{@user.name_or_email} (##{@user.id})"
+      assert_not_includes details.notes, "50502366"
+    end
+
+    test "resubmitting the same bank details leaves Verified and the notes alone" do
+      @person.create_payment_details!(sort_code: "08-99-99", account_number: "66374958", verified: true)
+
+      patch :update, params: {
+        reimbursements_payment_details_form: {
+          name: "Pat Producer", sort_code: "089999", account_number: "6637 4958"
+        }
+      }
+
+      details = @person.reload.payment_details
+      assert details.verified
+      assert_nil details.notes
+    end
+
     test "update creates the people record for unmatched users" do
       other = users(:member_with_phone_number)
       grant_producer_permission(other)

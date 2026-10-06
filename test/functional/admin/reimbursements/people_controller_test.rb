@@ -147,7 +147,7 @@ module Admin
     end
 
     test "a differently-formatted but identical sort code isn't treated as a change" do
-      # A directly edited record may store the sort code undashed; bank_details_changed?
+      # A directly edited record may store the sort code undashed; Person#bank_details_change
       # must normalise both sides.
       @valid_person.payment_details.update!(sort_code: "089999")
       sign_in @user

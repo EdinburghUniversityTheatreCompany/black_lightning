@@ -53,5 +53,22 @@ module Reimbursements
     def bank_details?
       sort_code.present? && account_number.present?
     end
+
+    # What to write when +actor+ saves this pair, or nil if it is the one already
+    # stored. A change resets Verified (it only means something for the details
+    # that were checked) and appends an audit line with BOTH values masked (as in
+    # Exports::People): notes are encrypted at rest, but the visible copy must
+    # stay masked too.
+    def bank_details_change(new_sort_code, new_account_number, actor:)
+      return if BankDetails.normalize_sort_code(new_sort_code) == BankDetails.normalize_sort_code(sort_code) &&
+                BankDetails.normalize_account_number(new_account_number) == BankDetails.normalize_account_number(account_number)
+
+      { sort_code: new_sort_code, account_number: new_account_number, verified: false,
+        notes: PaymentDetails.append_note(
+          notes,
+          "Bank details updated: sort code #{BankDetails.mask(new_sort_code)}, " \
+          "account #{BankDetails.mask(new_account_number)} by #{actor.name_or_email} (##{actor.id})"
+        ) }
+    end
   end
 end

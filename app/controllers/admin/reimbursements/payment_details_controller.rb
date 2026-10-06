@@ -21,10 +21,9 @@ module Admin
         end
 
         person = person_link.ensure_person!(current_user)
-        store.update_person!(person.record_id,
-                             name: @form.name,
-                             sort_code: @form.formatted_sort_code,
-                             account_number: @form.normalized_account_number)
+        change = person.bank_details_change(@form.formatted_sort_code, @form.normalized_account_number,
+                                            actor: current_user)
+        store.update_person!(person.record_id, name: @form.name, **change.to_h)
         redirect_to admin_reimbursements_expenses_path, notice: "Payment details saved."
       end
 
