@@ -134,6 +134,7 @@ module DisplayHelper
   CREDITS_HEADING_HEIGHT = 56
   CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
   CREDITS_QR_HEIGHT = 160
+  CREDITS_FLOW_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_QR_HEIGHT
   # Air above a heading that follows another section (flowed layout only). Modest on
   # purpose: it competes with name size, and at 40px an 18-cast, 2-crew show missed
   # text-5xl by one pixel.
@@ -149,9 +150,10 @@ module DisplayHelper
   # to side by side: flow only wins where a column was going to waste.
   def display_credits_layout(cast_count, crew_count)
     side = credits_first_fit { |stride| side_by_side_height(cast_count, crew_count, stride) <= CREDITS_LIST_HEIGHT }
-    flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= credits_flow_height }
+    flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= CREDITS_FLOW_HEIGHT }
 
-    if prefer_flowed?(cast_count, crew_count, side, flowed)
+    # A tie, or neither layout fitting, goes to side by side.
+    if flowed && (side.nil? || flowed < side)
       flowed_layout(flowed)
     else
       side_by_side_layout(cast_count, crew_count, side)
@@ -162,10 +164,6 @@ module DisplayHelper
 
   def credits_first_fit
     CREDITS_ROW_STRIDES.values.index { |stride| yield(stride) }
-  end
-
-  def credits_flow_height
-    CREDITS_COLUMN_HEIGHT - CREDITS_QR_HEIGHT
   end
 
   def side_by_side_height(cast_count, crew_count, stride)
@@ -184,17 +182,6 @@ module DisplayHelper
     ((headings + (cast_count + crew_count) * stride) / 2.0).ceil
   end
 
-  # A tie goes to side by side, and so does neither layout fitting.
-  def prefer_flowed?(cast_count, crew_count, side, flowed)
-    return false if flowed.nil?
-    return true if side.nil? && flowed
-
-    smallest = CREDITS_ROW_STRIDES.values.last
-    return flowed_height(cast_count, crew_count, smallest) < side_by_side_height(cast_count, crew_count, smallest) if side.nil?
-
-    flowed < side
-  end
-
   # nil = nothing fitted (a company past what the screen holds): shrink fully and let the caps clip.
   def credits_size_at(index)
     (index && CREDITS_ROW_STRIDES.keys[index]) || CREDITS_ROW_STRIDES.keys.last
@@ -205,7 +192,7 @@ module DisplayHelper
       name_size: credits_size_at(flowed),
       # The QR is a footer under both columns: the flow balances, so its height
       # comes off the flow before it runs.
-      flow_height: credits_flow_height }
+      flow_height: CREDITS_FLOW_HEIGHT }
   end
 
   def side_by_side_layout(cast_count, crew_count, side)
@@ -227,7 +214,7 @@ module DisplayHelper
   end
 
   def credits_column_list_height(carries_qr)
-    CREDITS_COLUMN_HEIGHT - (carries_qr ? CREDITS_QR_HEIGHT : 0)
+    carries_qr ? CREDITS_FLOW_HEIGHT : CREDITS_COLUMN_HEIGHT
   end
 
   public
