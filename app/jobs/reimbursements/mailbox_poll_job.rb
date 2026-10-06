@@ -33,32 +33,26 @@ module Reimbursements
         return
       end
 
-      CostCentre.all.each { |cost_centre| poll_cost_centre_safely(cost_centre) }
+      CostCentre.all.each { |cost_centre| poll_cost_centre(cost_centre) }
     rescue GraphAuth::AuthError => e
-      alert_auth_failure(e)
+      GraphAuthAlert.notify(e, source: "reimbursements_mailbox_poll")
     end
 
     private
 
+    attr_reader :mailbox
+
     # Only AuthError re-raises: it is global (one Entra credential for every mailbox). Any other
     # failure must not stop the other centres' polls.
-    def poll_cost_centre_safely(cost_centre)
-      poll_cost_centre(cost_centre)
+    def poll_cost_centre(cost_centre)
+      @current_cost_centre = cost_centre
+      @mailbox = mailbox_builder.call(cost_centre)
+      @mailbox.unread_messages.each { |message| process(message) }
     rescue GraphAuth::AuthError
       raise
     rescue => e
       log_and_notify("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}", e,
                      context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
-    end
-
-    def poll_cost_centre(cost_centre)
-      @current_cost_centre = cost_centre
-      @mailbox = mailbox_builder.call(cost_centre)
-      @mailbox.unread_messages.each { |message| process(message) }
-    end
-
-    def mailbox
-      @mailbox
     end
 
     def process(message)
@@ -95,7 +89,7 @@ module Reimbursements
     def automated_sender?(message)
       message.from_address.blank? ||
         message.from_address.match?(AUTOMATED_SENDER) ||
-        message.from_address.casecmp?(@current_cost_centre&.receive_mailbox)
+        message.from_address.casecmp?(@current_cost_centre.receive_mailbox)
     end
 
     def usable_receipts(message)
@@ -239,10 +233,6 @@ module Reimbursements
         status: Status::DRAFT,
         description: message.subject.presence
       }.compact
-    end
-
-    def alert_auth_failure(error)
-      GraphAuthAlert.notify(error, source: "reimbursements_mailbox_poll")
     end
 
     def portal_url
