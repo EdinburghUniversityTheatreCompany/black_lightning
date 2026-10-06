@@ -118,18 +118,7 @@ class Ability
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 
-    can :show, Attachment, "access_level = 2" do |attachment|
-      attachment.access_level == 2 &&
-        ((item = attachment.authorizable_item).nil? || can?(:show, item))
-    end
-    can :show, VideoLink, "access_level = 2" do |video_link|
-      video_link.access_level == 2 &&
-        ((item = video_link.authorizable_item).nil? || can?(:show, item))
-    end
-    can :show, Picture, "access_level = 2" do |picture|
-      picture.access_level == 2 &&
-        ((item = picture.authorizable_item).nil? || can?(:show, item))
-    end
+    can_show_files_at 2
 
     can :read, Review, event: { is_public: true }
 
@@ -188,9 +177,7 @@ class Ability
     end
 
     # Users who can absorb users can also view and manage duplicates and imports
-    can :manage, :duplicate if can? :absorb, User
-    can :manage, :membership_import if can? :absorb, User
-    can :manage, :user_import if can? :absorb, User
+    can :manage, %i[duplicate membership_import user_import] if can? :absorb, User
 
     can :check_debt, Admin::Debt if can?(:index, Admin::Debt)
 
@@ -208,24 +195,9 @@ class Ability
     can [ :read ], Role, id: Role.trained.pluck(:id)
 
 
-    can :show, Admin::EditableBlock if can? :access, :backend
-
     if can?(:access, :backend)
-      can :show, Attachment, "access_level = 1" do |attachment|
-        attachment.access_level == 1 &&
-          ((item = attachment.authorizable_item).nil? || can?(:show, item))
-      end
-    end
-
-    if can?(:access, :backend)
-      can :show, VideoLink, "access_level = 1" do |video_link|
-        video_link.access_level == 1 &&
-          ((item = video_link.authorizable_item).nil? || can?(:show, item))
-      end
-      can :show, Picture, "access_level = 1" do |picture|
-        picture.access_level == 1 &&
-          ((item = picture.authorizable_item).nil? || can?(:show, item))
-      end
+      can :show, Admin::EditableBlock
+      can_show_files_at 1
     end
   end
 
@@ -272,6 +244,18 @@ class Ability
     # submission deadline. Contentious, but company consensus is positive.
     if can?(:advance_review, :proposals)
       can :read, Admin::Proposals::Proposal
+    end
+  end
+
+  private
+
+  # Attachments, videos and pictures at this access level, wherever the item they belong to
+  # (if any) can be shown.
+  def can_show_files_at(level)
+    [ Attachment, VideoLink, Picture ].each do |file_class|
+      can :show, file_class, "access_level = #{level}" do |file|
+        file.access_level == level && ((item = file.authorizable_item).nil? || can?(:show, item))
+      end
     end
   end
 end
