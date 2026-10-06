@@ -115,6 +115,7 @@ class User < ApplicationRecord
   # bank details (the association above only nullifies). The payee and its claims stay as
   # financial records.
   before_destroy :erase_reimbursements_bank_details
+  before_destroy { CachedDuplicate.where(user1_id: id).or(CachedDuplicate.where(user2_id: id)).delete_all }
 
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
@@ -513,8 +514,6 @@ class User < ApplicationRecord
 
       reallocate_maintenance_debts
       reallocate_staffing_debts
-
-      CachedDuplicate.where(user1_id: source_user.id).or(CachedDuplicate.where(user2_id: source_user.id)).destroy_all
 
       # Reload to drop the associations that were just moved.
       source_user.reload.destroy!

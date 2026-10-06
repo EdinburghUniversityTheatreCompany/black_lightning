@@ -440,6 +440,19 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal "other@example.com", @user.calendar_email_for_invites
   end
 
+  test "destroying a user removes the cached duplicates naming them" do
+    earlier = FactoryBot.create(:user)
+    user = FactoryBot.create(:user)
+    later = FactoryBot.create(:user)
+    CachedDuplicate.create!(user1: earlier, user2: user, bucket_type: "overlapping")
+    CachedDuplicate.create!(user1: user, user2: later, bucket_type: "no_overlap")
+    unrelated = CachedDuplicate.create!(user1: earlier, user2: later, bucket_type: "overlapping")
+
+    user.destroy!
+
+    assert_equal [ unrelated ], CachedDuplicate.all.to_a
+  end
+
   test "a new user gets a calendar_token" do
     assert FactoryBot.create(:user).calendar_token.present?
   end
