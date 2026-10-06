@@ -332,11 +332,8 @@ module Pretix
     def membership_start(now = Time.zone.now) = now.beginning_of_day
 
     def parse_time(value)
-      return value if value.is_a?(Time) || value.is_a?(ActiveSupport::TimeWithZone)
-      return value.beginning_of_day if value.is_a?(Date)
-
       Time.zone.parse(value.to_s) if value.present?
-    rescue ArgumentError, TypeError
+    rescue ArgumentError
       nil
     end
 
