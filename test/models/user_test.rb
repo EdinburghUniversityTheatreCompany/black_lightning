@@ -55,12 +55,6 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal ordered, ordered.sort
   end
 
-  test "sort by first name" do
-    FactoryBot.create :user
-
-    assert_equal User.reorder("first_name ASC"), User.by_first_name
-  end
-
   test "get ability" do
     assert @user.ability.is_a? Ability
   end
@@ -412,32 +406,6 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user.update_column(:profile_completion_salt, SecureRandom.hex(8))
 
     assert_nil User.find_by_profile_completion_token(token)
-  end
-
-  test "profile_incomplete scope returns users without profile_completed_at" do
-    incomplete_user = FactoryBot.create(:user)
-    incomplete_user.update_column(:profile_completed_at, nil)
-
-    complete_user = FactoryBot.create(:user)
-    complete_user.update!(profile_completed_at: Time.current)
-
-    incomplete_users = User.profile_incomplete
-
-    assert_includes incomplete_users, incomplete_user
-    assert_not_includes incomplete_users, complete_user
-  end
-
-  test "profile_complete scope returns users with profile_completed_at" do
-    incomplete_user = FactoryBot.create(:user)
-    incomplete_user.update_column(:profile_completed_at, nil)
-
-    complete_user = FactoryBot.create(:user)
-    complete_user.update!(profile_completed_at: Time.current)
-
-    complete_users = User.profile_complete
-
-    assert_includes complete_users, complete_user
-    assert_not_includes complete_users, incomplete_user
   end
 
   # Ransack tests

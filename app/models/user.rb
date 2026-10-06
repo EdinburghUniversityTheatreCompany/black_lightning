@@ -160,18 +160,12 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
   normalizes :associate_id, with: ->(id) { id&.strip&.upcase }
 
-  scope :profile_incomplete, -> { where(profile_completed_at: nil) }
-  scope :profile_complete, -> { where.not(profile_completed_at: nil) }
   scope :order_by_last_name_first, -> { order(:last_name, :first_name) }
   scope :search_by_name, ->(q) { where("CONCAT(first_name, ' ', last_name) LIKE ?", "%#{q}%") }
 
   # Also change the method 'consented'
   def self.not_consented
     where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
-  end
-
-  def self.by_first_name
-    reorder("first_name ASC")
   end
 
   def self.find_by_profile_completion_token(token)
