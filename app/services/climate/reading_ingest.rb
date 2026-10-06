@@ -8,12 +8,7 @@ module Climate
     PLAUSIBLE_CELSIUS = (-20.0..50.0)
     PLAUSIBLE_HUMIDITY = (0.0..100.0)
 
-    class Error < StandardError; end
-    class ImplausibleReading < Error; end
-
-    Result = Struct.new(:written, :skipped, :future, :range, keyword_init: true) do
-      def total = written + skipped + future
-    end
+    Result = Struct.new(:written, :skipped, :future, :range, keyword_init: true)
 
     # +rows+: [{ recorded_at:, temperature_c:, relative_humidity:, dew_point_c:,
     #            raw_temperature:, raw_temperature_unit: }]
@@ -24,7 +19,6 @@ module Climate
       now = Time.current
       skipped = 0
       future = 0
-      stamps = []
 
       records = Array(rows).filter_map do |row|
         recorded_at = row[:recorded_at]
@@ -41,37 +35,32 @@ module Climate
           next
         end
 
-        begin
-          validate!(sensor, row[:temperature_c], row[:relative_humidity])
-        rescue ImplausibleReading => e
-          Rails.logger.warn("[climate] skipping implausible row: #{e.message}")
+        if (problem = implausibility(row[:temperature_c], row[:relative_humidity]))
+          Rails.logger.warn("[climate] skipping implausible row: #{sensor.display_name}: #{problem}")
           skipped += 1
           next
         end
 
-        stamps << recorded_at
-        row_for(sensor: sensor, row: row)
+        row_for(sensor: sensor, row: row, now: now)
       end
 
+      earliest, latest = records.map { |record| record[:recorded_at] }.minmax
       Result.new(written: write(records), skipped: skipped, future: future,
-                 range: (stamps.min..stamps.max if stamps.any?))
+                 range: (earliest..latest if records.any?))
     end
 
-    def self.validate!(sensor, celsius, humidity)
-      if celsius.nil? || !PLAUSIBLE_CELSIUS.cover?(celsius)
-        raise ImplausibleReading,
-              "#{sensor.display_name}: temperature #{celsius.inspect} °C outside #{PLAUSIBLE_CELSIUS}"
+    # The reason a row is implausible, or nil.
+    def self.implausibility(celsius, humidity)
+      unless celsius && PLAUSIBLE_CELSIUS.cover?(celsius)
+        return "temperature #{celsius.inspect} °C outside #{PLAUSIBLE_CELSIUS}"
       end
-
       return if humidity.present? && PLAUSIBLE_HUMIDITY.cover?(humidity.to_f)
 
-      raise ImplausibleReading,
-            "#{sensor.display_name}: humidity #{humidity.inspect} % outside #{PLAUSIBLE_HUMIDITY}"
+      "humidity #{humidity.inspect} % outside #{PLAUSIBLE_HUMIDITY}"
     end
-    private_class_method :validate!
+    private_class_method :implausibility
 
-    def self.row_for(sensor:, row:)
-      now = Time.current
+    def self.row_for(sensor:, row:, now:)
       celsius = row[:temperature_c]
       humidity = row[:relative_humidity]
 
