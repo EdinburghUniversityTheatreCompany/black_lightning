@@ -25,8 +25,6 @@ module Reimbursements
       assert_not dupe.valid?
     end
 
-    # --- key (URL slug) ------------------------------------------------------
-
     test "key is derived from the label when blank" do
       year = FinancialYear.create!(label: "Fringe 2026")
 
@@ -52,8 +50,6 @@ module Reimbursements
       assert unsafe.errors[:key].present?
     end
 
-    # --- activate! -----------------------------------------------------------
-
     test "activate! moves the active flag off the incumbent year" do
       incumbent = FinancialYear.create!(label: "Fringe 2026", active: true)
       successor = FinancialYear.create!(label: "Fringe 2027")
@@ -77,9 +73,8 @@ module Reimbursements
     test "activate! leaves the incumbent active when the target cannot be saved" do
       incumbent = FinancialYear.create!(label: "Fringe 2026", active: true)
       successor = FinancialYear.create!(label: "Fringe 2027")
-      # A year that has become invalid since it was created (label blanked by
-      # another session) must not take the active flag off the live year on its
-      # way to failing — that would leave the portal with NO active year at all.
+      # A year invalid since creation (label blanked elsewhere) must not take the flag off the
+      # live year on its way to failing, or the portal has no active year.
       successor.update_column(:label, "")
 
       assert_raises(ActiveRecord::RecordInvalid) { successor.activate! }
@@ -88,12 +83,9 @@ module Reimbursements
       assert_equal incumbent, FinancialYear.current
     end
 
-    # --- status --------------------------------------------------------------
-
     test "a year that is not active is past once it has started, draft before" do
       active = FinancialYear.create!(label: "Fringe 2027", active: true)
-      # Last year has been paid out of all season — badging it "Draft" would
-      # read as though it were still being set up.
+      # Last year is still being paid out, so it must not read as a draft.
       past = FinancialYear.create!(label: "Fringe 2026", starts_on: 1.year.ago.to_date)
       upcoming = FinancialYear.create!(label: "Fringe 2028", starts_on: 1.year.from_now.to_date)
       undated = FinancialYear.create!(label: "Fringe 2099")
@@ -104,15 +96,12 @@ module Reimbursements
       assert_equal :draft, undated.status
     end
 
-    # --- ordering ------------------------------------------------------------
-
     test "recent_first puts the newest year at the top" do
       old = FinancialYear.create!(label: "Fringe 2025", starts_on: Date.new(2025, 8, 1))
       new = FinancialYear.create!(label: "Fringe 2026", starts_on: Date.new(2026, 8, 1))
       undated = FinancialYear.create!(label: "Fringe 2099")
 
-      # A year with no start date yet sorts to the top: it is the one being set
-      # up, so it is the one the operator is looking for.
+      # A year with no start date sorts first: it is the one being set up.
       assert_equal [ undated, new, old ], FinancialYear.recent_first.to_a
     end
   end

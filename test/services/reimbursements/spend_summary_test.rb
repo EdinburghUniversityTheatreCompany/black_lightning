@@ -8,8 +8,6 @@ module Reimbursements
       @person = create_reimbursements_person(name: "Pat", email: "pat@example.com")
     end
 
-    # --- Left, the figure this class exists for ------------------------------
-
     test "left subtracts BOTH committed spend and claims still waiting" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 1_000)
       spend(budget, 200, Status::PAID)
@@ -23,9 +21,7 @@ module Reimbursements
       assert_equal 500, summary.left
     end
 
-    # The whole reason Left is a new figure rather than a change to the
-    # existing one: remaining ignores the pipeline, and both readings are
-    # wanted, by different people, on different screens.
+    # Left is not Budget#remaining, which ignores the pipeline; both are wanted.
     test "left is not Budget#remaining, which ignores the pipeline" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 1_000)
       spend(budget, 300, Status::PENDING)
@@ -57,17 +53,13 @@ module Reimbursements
       assert_not summary.bar?
     end
 
-    # PlannedAmount's rule, reached through the summary: production carries
-    # many £0 plans with real spend, and reading the 0 as a cap paints them all
-    # over budget for ever.
+    # PlannedAmount: a £0 plan is unset, not a cap all spend is over.
     test "a plan of exactly zero counts as unset" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 0)
       spend(budget, 50, Status::PAID)
 
       assert SpendSummary.for_budget(budget).no_budget_set?
     end
-
-    # --- Areas ---------------------------------------------------------------
 
     test "an area with an agreed total compares against it" do
       area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
@@ -121,8 +113,7 @@ module Reimbursements
       assert_equal 120, summary.unallocated
     end
 
-    # The standing rule: expense and income are never totalled together, so an
-    # area's headline figures cover its expense lines only.
+    # Expense and income are never totalled together.
     test "income lines are left out of budget, spent, waiting and left" do
       area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
       expense_line = create_reimbursements_budget(name: "Marketing", area: area,
@@ -140,8 +131,7 @@ module Reimbursements
       assert_equal 900, summary.left
     end
 
-    # Reuses Area#unallocated rather than restating it, so the page and the
-    # area edit card cannot disagree for one area.
+    # Area#unallocated is reused, so the page and the area edit card cannot disagree.
     test "unallocated follows the area's own basis" do
       area = create_reimbursements_area(name: "Committee", initial_budget: 1_000,
                                         budget_basis: Area::BASIS_NET)
@@ -164,8 +154,6 @@ module Reimbursements
       assert summary.no_budget_set?
       assert_equal 2_526.13, summary.spent
     end
-
-    # --- The bar -------------------------------------------------------------
 
     test "the bar scales to the overspend so it fills rather than overflows" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 100)

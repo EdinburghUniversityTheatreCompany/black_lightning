@@ -24,7 +24,6 @@
         <%= link_to "Edit", edit_admin_reimbursements_financial_year_path(year.key),
                     "aria-label": "Edit #{year.label}", class: btn_classes(:primary, :sm) %>
         <% unless year.active? %>
-          <%# Activating changes the budget picker for every submitter, so it asks first. %>
           <%= button_to "Make active", activate_admin_reimbursements_financial_year_path(year.key),
                         class: btn_classes(:warning, :sm),
                         form: { class: "inline-block",

@@ -1,53 +1,32 @@
 module Admin
   module Reimbursements
     ##
-    # Multi-budget forecast revisions. One "budget update" captures a shared
-    # effective date + note (e.g. the outcome of a budget meeting) and logs a
-    # new forecast for each budget whose amount the operator filled in — blanks
-    # are skipped. Each created forecast links back to the update, and the
-    # per-budget forecast log surfaces the shared note.
+    # Multi-budget forecast revisions: one shared effective date and note (e.g. a budget
+    # meeting's outcome) logs a new forecast for each budget whose amount was filled in.
     #
-    # A BLANK amount means "leave this budget alone"; an amount that can't be
-    # read fails the WHOLE update with a per-field error naming the budget.
-    # Treating the two alike is how a budget silently keeps a superseded
-    # forecast while the flash reports the other five as logged. Amounts are
-    # read by Reimbursements::AmountParser, the parser the submitter form uses.
+    # A BLANK amount leaves that budget alone; an unreadable one fails the WHOLE update, since
+    # treating them alike silently keeps a superseded forecast. Every failure re-renders the
+    # form with the operator's numbers intact, never a redirect.
     #
-    # Every failure re-renders the form with the operator's numbers intact
-    # (never a redirect): 40 amounts typed after a budget meeting must not
-    # evaporate because of one bad date.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Gated by `:manage, :reimbursements_finance` via FinanceController.
     class BudgetUpdatesController < FinanceController
       def index
         @title = "Budget updates"
         @budget_updates = store.budget_updates
         @budgets_by_id = store.budgets.index_by(&:record_id)
-        # Names only — this page prints them and computes nothing, so it must
-        # not pay store.areas' expense/forecast preloads. Unscoped, like
-        # #budgets: an update logged against last year's line or area must
-        # still be named rather than blanked.
+        # Names only, so skip store.areas' preloads. Unscoped, so last year's line or area is
+        # still named.
         @area_names_by_id = store.area_names_by_id
       end
 
-      # One revision, with the AMOUNTS it set and what each one replaced.
-      #
-      # The log named the budgets a meeting revised and nothing else, so the
-      # one thing an operator wants from it — "what did we actually change it
-      # to, and from what" — was the one thing it did not say, and there was no
-      # page to open at all (routes gave index/new/create only). Undoing a
-      # meeting's worth of revisions meant deleting forecasts one at a time
-      # from each budget's own edit page.
       def show
         @budget_update = find_or_404(:find_budget_update)
         @title = "Budget update: #{helpers.reimbursements_date(@budget_update.effective_date)}"
         @rows = revision_rows(@budget_update)
       end
 
-      # Undo the whole revision. See DatabaseStore#delete_budget_update!: the
-      # forecasts it logged are destroyed rather than detached, so each line
-      # falls back to the forecast that preceded this one.
+      # The forecasts are destroyed rather than detached (DatabaseStore#delete_budget_update!),
+      # so each line falls back to the forecast before this one.
       def destroy
         budget_update = find_or_404(:find_budget_update)
         count = budget_update.forecasts.size
@@ -78,18 +57,10 @@ module Admin
 
       private
 
-      # One row per forecast this update logged: what it names, what it set the
-      # figure to, what that replaced, and what the line's plan is NOW.
-      #
-      # "Replaced" is the newest forecast for the same line dated BEFORE this
-      # one, which is exactly the rule current_forecast reads — so it is what
-      # removing this update would fall back to, not a guess. Nil where this
-      # was the line's first forecast; the line then falls back to its initial
-      # budget, which the row says instead.
-      #
-      # "Now" is read separately because a LATER revision may already have
-      # superseded this one, in which case removing it changes nothing on
-      # screen — and the page has to be able to say so.
+      # "Replaced" is the line's newest forecast ordered before this one, the order
+      # current_forecast reads, so it is what removing this update falls back to. Nil for a
+      # first forecast, which falls back to the initial budget. "Now" is read separately
+      # because a later revision may already have superseded this one.
       def revision_rows(budget_update)
         budget_update.forecasts.sort_by { |f| label_for(f).to_s.downcase }.map do |forecast|
           owner = forecast.budget || forecast.area
@@ -107,8 +78,6 @@ module Admin
         "an unknown line"
       end
 
-      # The forecast this one replaced: the same line's newest entry ordered
-      # BEFORE it by (date, id) — the ordering current_forecast itself uses.
       def previous_forecast(forecast)
         # Array has <=> but not <, so the comparison has to be spelled out.
         siblings_of(forecast)
@@ -145,11 +114,9 @@ module Admin
         render :new, status: :unprocessable_entity
       end
 
-      # Why this update can't be written, as a flash-ready sentence, or nil when
-      # it's good to go. Per-field problems are already in @field_errors for the
-      # form to render beside the offending input; this is the summary line.
-      # Nothing is written unless every entry is good — a partial write is how a
-      # budget silently keeps a superseded forecast.
+      # The flash summary line, or nil when the update is good to go. Per-field problems are
+      # already in @field_errors. Nothing is written unless every entry is good: a partial
+      # write silently leaves a budget on a superseded forecast.
       def blocking_alert(entries)
         @effective_date = parse_date(params[:effective_date])
 
@@ -165,21 +132,15 @@ module Admin
         nil
       end
 
-      # Names of the budgets whose amount fields are flagged, so the summary line
-      # says which ROW to look at — which on a form of three identically-named
-      # lines it can only do through Budget#display_name. The sort matches the
-      # form's own order, which is by the same label.
+      # display_name, so identically-named lines on the form can be told apart.
       def flagged_budget_names
         by_id = store.budgets.index_by(&:record_id)
         @field_errors.keys.map { |id| by_id[id]&.display_name.presence || "an unknown budget" }.sort
       end
 
-      # A budget deleted by someone else while this form was open would otherwise
-      # reach BudgetForecast's required belongs_to and 500, losing the whole
-      # update. Its row is gone from the re-rendered form too, so this reports at
-      # page level rather than per field; FinanceController#budget_record_id_error
-      # owns the wording. Checked against the already-loaded budget list, so the
-      # happy path costs no extra query however many budgets were filled in.
+      # A budget deleted while the form was open would hit BudgetForecast's required
+      # belongs_to and 500, losing the whole update. Checked against the already-loaded list,
+      # so the happy path costs no extra query.
       def stale_budget_alert(entries)
         known = store.budgets.map(&:record_id).to_set
         stale = entries.reject { |entry| known.include?(entry[:budget_id]) }
@@ -189,20 +150,14 @@ module Admin
           "Reload the form to pick up the change."
       end
 
-      # The selected year's active budgets (income included — they carry
-      # forecasts too), ordered by the label the form prints (see
-      # Budget#display_name). Scoped to the year: a revision agreed at this
-      # year's budget meeting has no business re-forecasting last year's
-      # closed lines.
+      # Income lines included (they carry forecasts too). Scoped to the selected year so a
+      # meeting can't re-forecast last year's closed lines.
       def active_budgets_for_update
         store.budgets_for_year.select(&:active).sort_by { |b| b.display_name.to_s.downcase }
       end
 
-      # One {budget_id:, amount:} per budget whose amount field holds a readable
-      # number, plus @field_errors for the ones that don't and @amounts so the
-      # re-rendered form keeps what was typed. The keys are dynamic budget ids,
-      # so read the nested hash directly rather than strong-param whitelisting
-      # each id.
+      # The keys are dynamic budget ids, so the nested hash is read directly rather than
+      # strong-param whitelisted. @amounts keeps what was typed for the re-render.
       def forecast_entries
         @amounts = params[:amounts].presence&.to_unsafe_h || {}
         @field_errors = {}
@@ -215,8 +170,7 @@ module Admin
         end
       end
 
-      # nil for a blank field (leave that budget alone) or for an unreadable one
-      # (recorded in @field_errors, which blocks the whole update).
+      # nil for a blank field (leave alone) or an unreadable one (recorded in @field_errors).
       def parse_amount(budget_id, raw)
         ::Reimbursements::AmountParser.parse!(raw)
       rescue ::Reimbursements::AmountParser::Error

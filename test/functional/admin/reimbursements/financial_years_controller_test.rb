@@ -14,8 +14,6 @@ module Admin
                               starts_on: Date.new(2026, 8, 1), ends_on: Date.new(2027, 7, 31))
       end
 
-      # --- Auth gating -------------------------------------------------------
-
       test "requires sign-in" do
         get :index
         assert_redirected_to new_user_session_path
@@ -27,8 +25,6 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- Index -------------------------------------------------------------
-
       test "index lists every year, newest first" do
         FY.create!(label: "Fringe 2025", starts_on: Date.new(2025, 8, 1))
         sign_in @user
@@ -39,8 +35,6 @@ module Admin
         assert_equal [ "Fringe 2026", "Fringe 2025" ], assigns(:financial_years).map(&:label)
         assert_includes response.body, "Fringe 2025"
       end
-
-      # --- Create ------------------------------------------------------------
 
       test "create makes a DRAFT year and leaves the live year active" do
         sign_in @user
@@ -55,8 +49,6 @@ module Admin
         assert_not_predicate created, :active?
         assert_equal "fringe-2027", created.key
         assert_equal Date.new(2027, 8, 1), created.starts_on
-        # The whole point of a draft: the portal keeps filing against 2026 until
-        # someone deliberately switches over.
         assert_equal @current, FY.current
       end
 
@@ -81,8 +73,6 @@ module Admin
         assert_response :unprocessable_entity
       end
 
-      # --- Update ------------------------------------------------------------
-
       test "update saves the label and dates" do
         sign_in @user
 
@@ -101,8 +91,7 @@ module Admin
 
         patch :update, params: { key: draft.key, financial_year: { label: "Fringe 2027", active: "1" } }
 
-        # Switching the live year is its own confirmed action; a stray param on
-        # the edit form must never move the money.
+        # A stray param on the edit form must never move the money (switching year is its own action).
         assert_not_predicate draft.reload, :active?
         assert_equal @current, FY.current
       end
@@ -114,8 +103,6 @@ module Admin
 
         assert_equal "fringe-2026", @current.reload.key
       end
-
-      # --- Activate ----------------------------------------------------------
 
       test "activate switches the live year" do
         draft = FY.create!(label: "Fringe 2027")

@@ -11,9 +11,7 @@ module Reimbursements
       create_reimbursements_nominal_code(code: "432320", cost_centre: @centre, label: "Marketing")
     end
 
-    # Named for what it buys rather than for the code, so only the CODE pass can
-    # find it: a line called "Marketing" is found by the label pass too, and a
-    # test seeded that way passes with the code lookup gone.
+    # Not named for the code's label, so only the CODE pass can find it.
     test "an existing line under the same area and code is found, not duplicated" do
       existing = line(name: "Correx boards", nominal_code: "432320")
 
@@ -73,9 +71,8 @@ module Reimbursements
       assert_equal 2, @area.budgets.count
     end
 
-    # An unsaved area has a nil id, so the lookup reads `area_id IS NULL` and
-    # answers a new show's Marketing line with the portal's own standalone
-    # overheads — Contingency among them.
+    # An unsaved area's nil id would read `area_id IS NULL` and answer with the standalone
+    # overheads (Contingency).
     test "an unsaved area is refused rather than matching every arealess line" do
       create_reimbursements_budget(name: "Contingency", nominal_code: "432320",
                                    financial_year: @year, cost_centre: @centre)
@@ -86,8 +83,7 @@ module Reimbursements
       end
     end
 
-    # An area with no centre is a real state (Area#cost_centre is optional), and
-    # it has a different fix from an unlisted code, by a different person.
+    # Area#cost_centre is optional, and the fix (place the area) differs from an unlisted code's.
     test "an area in no cost centre names that rather than reading a nil list" do
       unplaced = create_reimbursements_area(name: "Unplaced show", financial_year: @year)
 
@@ -141,11 +137,7 @@ module Reimbursements
       assert_equal @year.id, created.financial_year_id
     end
 
-    # The double-submitted form, at the level the guard lives: both requests
-    # pass their own read (nothing exists) and both call the store. The second
-    # call must find what the first created rather than create a second line —
-    # the property the re-taken lookup inside the transaction exists for, which
-    # a single call cannot demonstrate.
+    # A double-submitted form: the second store call must find the first's line.
     test "a second store call for the same (area, code) finds the first one's line" do
       store = Reimbursements.build_store
       first = store.find_or_create_budget_for_area!(**store_args)

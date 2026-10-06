@@ -1,7 +1,6 @@
 module Admin
   module Reimbursements
-    # The four states the headline figures have to survive, taken from the shapes
-    # production actually holds (see plans/area-pages-design.md).
+    # The states the headline figures have to survive, from the shapes production holds.
     class SpendFiguresComponentPreview < ViewComponent::Preview
       # A show with an agreed total and room left.
       def default
@@ -25,8 +24,7 @@ module Admin
         render SpendFiguresComponent.new(summary: summary(100, 2_526.13, 0), finance: false)
       end
 
-      # The commonest termtime shape — a £0 agreed total with real spend against
-      # it, which reads as nobody having set one rather than as an overspend.
+      # The commonest termtime shape: a £0 total with real spend, read as unset, not overspent.
       def no_budget_set
         render SpendFiguresComponent.new(summary: summary(nil, 3_273.20, 0), finance: false)
       end

@@ -1,9 +1,5 @@
 <%# locals: (financial_year:, url:, title:, submit_label:, show_key:, intro:) %>
-<%# The whole card, form included, so the buttons sit in the card footer like
-    every other admin form. `intro` is the caller's captured block above the
-    fields (the status badge on edit, the draft explanation on new). `show_key`
-    is true only on new: the key is the URL slug, so it is settable at creation
-    and fixed afterwards. %>
+<%# `show_key` is true only on new: the key is the URL slug, fixed after creation. %>
 <%= simple_form_for financial_year, as: :financial_year, url: url do |f| %>
   <%= render CardComponent.new(title: title) do |card| %>
     <% card.with_footer do %>
@@ -28,8 +24,7 @@
 
     <% if show_key %>
       <%= render CollapsibleSectionComponent.new(title: "Advanced") do %>
-        <%# required: false — see settings/new: derived when blank, and a required
-            control in a collapsed section blocks the submit. %>
+        <%# required: false: a required control in a collapsed section blocks the submit. %>
         <%= f.input :key, label: "URL key (slug)", placeholder: "auto-generated from the label",
               required: false, wrapper_html: { class: "mb-0" },
               hint: "Leave blank to derive it from the label. If you set it, use lowercase letters, " \

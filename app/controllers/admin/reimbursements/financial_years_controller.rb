@@ -1,22 +1,14 @@
 module Admin
   module Reimbursements
     ##
-    # Financial years — the pot-per-year the budget screens scope to. Each
-    # Fringe recurs with its own budgets, expenses and actuals, so setting the
-    # next one up is: create the year, import its budgets, check them, then
-    # switch to it.
+    # Financial years, the pot-per-year the budget screens scope to: create the next year,
+    # import its budgets, check them, then switch to it.
     #
-    # The switch is #activate, deliberately its own action rather than a
-    # checkbox on the edit form. Activating changes what every submitter sees in
-    # their budget picker, so it must be a decision someone takes on purpose —
-    # which is also why +active+ is not a permitted parameter here.
+    # Activation is its own action, so +active+ is not a permitted param: it changes every
+    # submitter's budget picker and must be a deliberate decision. +key+ is settable only at
+    # creation, because links and bookmarks carry it.
     #
-    # The +key+ is the URL slug and is settable only at creation, mirroring
-    # SettingsController's handling of a cost centre's key: it appears in links
-    # and bookmarks, so quietly changing it on an edit would break them.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController.
+    # Gated by `:manage, :reimbursements_finance` via FinanceController.
     class FinancialYearsController < FinanceController
       before_action :set_financial_year, only: %i[edit update activate]
 
@@ -57,8 +49,6 @@ module Admin
         end
       end
 
-      # Make this the year submitters file against. FinancialYear#activate!
-      # moves the flag off the incumbent in one transaction.
       def activate
         @financial_year.activate!
         redirect_to admin_reimbursements_financial_years_path,
@@ -78,8 +68,6 @@ module Admin
         edit_admin_reimbursements_financial_year_path(year.key)
       end
 
-      # +key+ is accepted at creation (the collapsed Advanced field) and derived
-      # from the label when left blank.
       def create_params
         params.require(:financial_year).permit(:label, :key, :starts_on, :ends_on)
       end

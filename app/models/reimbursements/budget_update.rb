@@ -24,14 +24,8 @@
 module Reimbursements
   ##
   # A single annotated revision covering several budgets' forecasts at once —
-  # e.g. the outcome of a production budget meeting. It groups the
-  # BudgetForecast rows it created (one per changed budget) under one shared
-  # effective date, note and author.
-  #
-  # The link is backward-compatible: a forecast's budget_update_id is nullable,
-  # so standalone per-budget forecasts stay unlinked and "latest forecast wins"
-  # in Budget#current_forecast is untouched — a batched forecast is still just a
-  # BudgetForecast row, editable through the existing per-budget log.
+  # e.g. a budget meeting's outcome, under a shared date, note and author.
+  # Standalone forecasts have no update.
   class BudgetUpdate < ApplicationRecord
     include RecordId
 

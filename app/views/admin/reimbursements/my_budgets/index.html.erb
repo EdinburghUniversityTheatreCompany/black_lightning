@@ -1,15 +1,12 @@
 <p class="mb-4 text-gray-600">
   The shows and budgets you are responsible for.
-  <%# The owner meets "Left", "waiting" and "endorse" here and nowhere else,
-      so the glossary has to be reachable from this page rather than only from
-      the finance sidebar. %>
+  <%# The owner meets "Left", "waiting" and "endorse" only here, so the glossary must be reachable from this page. %>
   <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
 
 <%= render CardComponent.new(title: "Waiting for your sign-off") do %>
   <% if @pending.empty? %>
-    <%# Designed as the MAIN state, not an edge case: no claim has ever waited
-        on an owner in production, so this is what this card normally says. %>
+    <%# The usual state, not an edge case. %>
     <p class="text-gray-600">
       Nothing is waiting on you. When somebody claims against one of your budgets it appears
       here, and you'll be emailed a reminder until you endorse or reject it.
@@ -41,8 +38,6 @@
 
           <div class="mt-2">
             <p class="text-xs font-medium text-gray-500">Receipt</p>
-            <%# Opened per claim, so a long list of claims to endorse stays
-                scannable and loads no receipts until one is asked for. %>
             <%= render "admin/reimbursements/shared/receipt_viewer",
                        receipts: expense.receipts, key: "my-budgets-#{expense.record_id}",
                        label: "expense ##{expense.auto_number}",
@@ -98,9 +93,7 @@
 <%= render CardComponent.new(title: "Your shows and budgets", html_class: "mt-4") do %>
   <% if @rows.empty? %>
     <p class="text-gray-600">
-      <%# An owner signs off claims and watches a show's spending, so the empty state says what
-          owning one means as well as who sets it. The Budgets page is finance-gated, so naming
-          it to anybody else — as text or as a link — points at a 403. %>
+      <%# The Budgets page is finance-gated, so naming it to anyone else, as text or link, points at a 403. %>
       You don't own any budgets yet. An owner signs off claims against their show before finance
       pays them, and can see what it has spent.
       <% if can?(:manage, :reimbursements_finance) %>
@@ -135,8 +128,7 @@
                     <%= row[:waiting_count] %> waiting
                   </span>
                 <% end %>
-                <%# Two production areas are both called "Tech", so every row
-                    says which pot and which year it belongs to. %>
+                <%# Two production areas are both called "Tech", so every row says which pot and year. %>
                 <div class="text-xs text-gray-500">
                   <%= [ row[:scope], row[:detail] ].reject(&:blank?).join(" · ") %>
                 </div>

@@ -20,23 +20,17 @@
 #
 module Reimbursements
   ##
-  # A financial year ("Fringe 2026") — orthogonal to cost centre: each year has
-  # its own budgets, expenses and actuals. One year is active at a time; past
-  # years stay viewable through the budget screens' year selector.
+  # A financial year ("Fringe 2026"), orthogonal to cost centre. One year is active at a time.
   #
-  # A year is built as a DRAFT: created, its budgets imported and checked, and
-  # only then made active with #activate!. Until that moment the outgoing year
-  # keeps the flag, so the submitter budget picker (which always follows
-  # .current) never changes under an operator who is still setting next year up.
+  # A year is built as a DRAFT and only then made active with #activate!, so the submitter
+  # budget picker (which follows .current) never changes under an operator still setting up.
   class FinancialYear < ApplicationRecord
     include RecordId
     has_many :budgets, class_name: "Reimbursements::Budget", dependent: :restrict_with_error
     has_many :expenses, class_name: "Reimbursements::Expense", dependent: :restrict_with_error
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual", dependent: :restrict_with_error
 
-    # The +key+ is the URL slug (`?year=fringe-2027`, `find_by(key:)`), so it
-    # must be URL-safe. Derived from the label by default, exactly as
-    # CostCentre#key is derived from its name.
+    # +key+ is the URL slug (`?year=fringe-2027`), so it must be URL-safe.
     before_validation :derive_key_from_label
 
     validates :label, presence: true, uniqueness: true
@@ -47,9 +41,7 @@ module Reimbursements
     validate :only_one_active
 
     scope :active, -> { where(active: true) }
-    # Newest first for the year list and the selector. A year with no start date
-    # sorts to the top: it is the one still being set up, so it is the one the
-    # operator has come to find.
+    # A year with no start date sorts first: it is the one still being set up.
     scope :recent_first, -> { order(Arel.sql("starts_on IS NULL DESC"), starts_on: :desc, id: :desc) }
 
     def self.current
@@ -58,13 +50,8 @@ module Reimbursements
 
     def to_param = key
 
-    # :active, :past or :draft — what the year list badges each row with.
-    #
-    # A year that isn't active is NOT automatically a draft: last year has been
-    # paid out of all season, and badging it "Draft" would read as though it
-    # were still being set up. It's told apart by its start date having arrived.
-    # A year with no dates at all can only be a draft — a real past year has
-    # them.
+    # :active, :past or :draft. A non-active year is not automatically a draft: it is past once
+    # its start date has arrived, and one with no dates can only be a draft.
     def status
       return :active if active?
       return :past if starts_on.present? && starts_on <= Date.current
@@ -72,12 +59,8 @@ module Reimbursements
       :draft
     end
 
-    # Make this the year submitters file against, moving the flag off whichever
-    # year holds it. The incumbent has to be stood down FIRST — #only_one_active
-    # would reject this record while another year still holds the flag — which
-    # is precisely why both statements share one transaction: if this record
-    # then fails to save, the incumbent gets its flag back rather than leaving
-    # the portal with no active year at all.
+    # The incumbent is stood down first (#only_one_active), inside one transaction, so a failed
+    # save never leaves the portal with no active year.
     def activate!
       return self if active?
 

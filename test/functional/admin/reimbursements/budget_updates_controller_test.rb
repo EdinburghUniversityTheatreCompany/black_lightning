@@ -13,15 +13,11 @@ module Admin
         @hidden = create_reimbursements_budget(name: "Payroll", nominal_code: "7000", active: false)
       end
 
-      # --- Auth gating -------------------------------------------------------
-
       test "requires the finance permission" do
         sign_in users(:committee)
         get :index
         assert_response :forbidden
       end
-
-      # --- Index -------------------------------------------------------------
 
       test "index lists logged budget updates newest first" do
         sign_in @user
@@ -37,16 +33,12 @@ module Admin
 
         assert_response :success
         assert_equal 2, assigns(:budget_updates).size
-        # Newest (June) first.
         assert_equal Date.new(2026, 6, 1), assigns(:budget_updates).first.effective_date
         assert_includes response.body, "June meeting"
         assert_includes response.body, "May meeting"
       end
 
-      # An update groups both levels — a budget import revises a show's agreed
-      # total alongside its lines — so an AREA forecast carries no budget_id and
-      # was filtered out silently: an area-only update read "1 budget" naming
-      # nothing at all.
+      # An update groups both levels, so an area forecast (no budget_id) must be named too.
       test "index names an area total revision as well as a line's, qualified" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
@@ -64,8 +56,6 @@ module Admin
         assert_equal "Cogito (area total), Cogito: Props", revised
       end
 
-      # --- New ---------------------------------------------------------------
-
       test "new renders an amount field for each active budget, hidden budgets excluded" do
         sign_in @user
         get :new
@@ -75,8 +65,6 @@ module Admin
         assert_select "input[name=?]", "amounts[#{@travel.record_id}]"
         assert_select "input[name=?]", "amounts[#{@hidden.record_id}]", false
       end
-
-      # --- Create ------------------------------------------------------------
 
       test "create logs one forecast per filled-in budget and skips blanks" do
         sign_in @user
@@ -97,7 +85,6 @@ module Admin
         assert_equal "June meeting", update.note
         assert_equal @user.id, update.created_by_id
         assert_equal 2, update.forecasts.count
-        # Each budget's current forecast is now the new amount.
         assert_equal BigDecimal("500"), ::Reimbursements::Budget.find(@props.id).current_forecast
         assert_equal BigDecimal("250"), ::Reimbursements::Budget.find(@travel.id).current_forecast
       end
@@ -123,8 +110,7 @@ module Admin
                                              @travel.record_id => "250" } }
         end
 
-        # Re-rendered, not redirected: 40 amounts typed after a budget meeting
-        # must not evaporate because of one bad date.
+        # Re-rendered, not redirected, so the typed numbers survive.
         assert_response :unprocessable_entity
         assert_match(/valid effective date/i, response.body)
         assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
@@ -144,17 +130,14 @@ module Admin
         end
 
         assert_response :unprocessable_entity
-        # The good budget's forecast is NOT logged: the whole update fails, so
-        # the flash can never claim "1 forecast logged" while a budget silently
-        # kept its superseded figure.
+        # The whole update fails: the good budget's forecast is not logged either.
         assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
         assert_match(/Check the amount for .*Travel/, response.body)
         assert_includes response.body, "twelve pounds"
         assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
       end
 
-      # The rows and their aria-labels name the show; the sentence saying which
-      # row to look at has to as well, or it names all three at once.
+      # The summary must name the show, or it points at identically-named rows all at once.
       test "the error summary names the show, so it says which ROW to look at" do
         sign_in @user
         cogito = create_reimbursements_area(name: "Cogito")
@@ -169,9 +152,7 @@ module Admin
         }
 
         assert_response :unprocessable_entity
-        # The whole sentence, off the flash rather than the body: the alert
-        # reaches the page as JSON for the SweetAlert pipeline, and a body
-        # match would pass on a sentence naming both shows' rows at once.
+        # Assert off the flash, not the body: the alert reaches the page as JSON for SweetAlert.
         assert_equal "Nothing was saved. Check the amount for Cogito: Marketing.",
                      Array(flash[:error]).sole
       end
@@ -190,8 +171,7 @@ module Admin
         assert_redirected_to admin_reimbursements_budget_updates_path
         assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find(@props.id).current_forecast
         assert_equal BigDecimal("1200"), ::Reimbursements::Budget.find(@travel.id).current_forecast
-        # "12,50" is a comma decimal (12.50), not 1250 — same reading as the
-        # submitter-facing ExpenseForm.
+        # "12,50" is a comma decimal, not 1250.
         assert_equal BigDecimal("12.5"), ::Reimbursements::Budget.find(@hidden.id).current_forecast
       end
 
@@ -211,11 +191,6 @@ module Admin
         assert_match(/no longer exists/i, response.body)
         assert_nil ::Reimbursements::Budget.find(@props.id).current_forecast
       end
-
-      # --- Show and undo -------------------------------------------------------
-      # The log named the budgets a meeting revised and nothing else, and an
-      # update could not be opened at all: routes gave index/new/create only,
-      # so undoing one meant deleting forecasts from each budget's edit page.
 
       def store_for_test
         ::Reimbursements::DatabaseStore.new
@@ -253,8 +228,7 @@ module Admin
         assert_equal BigDecimal("250"), row[:amount]
       end
 
-      # A line's FIRST forecast replaced the committee's initial figure, not an
-      # earlier revision — and that is what removing this update falls back to.
+      # A first forecast replaced the committee's initial figure, which is what removal falls back to.
       test "a line's first forecast reports the initial budget as what it replaced" do
         @props.update!(initial_budget: 400)
         update = logged_update
@@ -273,9 +247,8 @@ module Admin
                                date: Date.new(2026, 5, 1), reason: "May meeting")
         update = logged_update
         sign_in @user
-        # Re-found, never reloaded: Budget#current_forecast memoizes into an
-        # ivar that `reload` does not clear, so a second read through the same
-        # object hands back the figure from before the delete.
+        # Re-found, never reloaded: Budget#current_forecast memoizes into an ivar that reload
+        # does not clear.
         assert_equal BigDecimal("250"), ::Reimbursements::Budget.find(@props.id).current_forecast
 
         delete :destroy, params: { id: update.record_id }
@@ -283,9 +256,7 @@ module Admin
         assert_equal BigDecimal("100"), ::Reimbursements::Budget.find(@props.id).current_forecast
       end
 
-      # dependent: :nullify would leave every revision in place and merely
-      # unlabelled — the opposite of an undo, and a state nothing on screen
-      # could explain.
+      # Destroyed, not nullified: nullify would leave every revision in place, merely unlabelled.
       test "removing an update destroys its forecasts rather than orphaning them" do
         update = logged_update
         sign_in @user
@@ -308,8 +279,7 @@ module Admin
         assert ::Reimbursements::Expense.exists?(expense.id)
       end
 
-      # A later revision already won, so removing this one moves no figure —
-      # the page has to say so rather than offering a click that does nothing.
+      # A later revision already won, so removing this one moves no figure; the page must say so.
       test "a superseded revision is marked as such" do
         update = logged_update
         store_for_test.create_forecast!(budget_id: @props.record_id, amount: 900,
