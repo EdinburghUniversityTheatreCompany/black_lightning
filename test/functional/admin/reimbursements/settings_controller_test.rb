@@ -201,7 +201,7 @@ module Admin
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, cost_centre: {
-          receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
+          short_code: "BF", receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
           eusa_recipient: "eusa@ed.ac.uk", eusa_contact_name: "Craig",
           eusa_signature_name: "Fringe Finance",
           sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
@@ -211,6 +211,7 @@ module Admin
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         @cost_centre.reload
+        assert_equal "BF", @cost_centre.short_code
         assert_equal "in@fringe.co", @cost_centre.receive_mailbox
         assert_equal "out@fringe.co", @cost_centre.send_mailbox
         assert_equal "eusa@ed.ac.uk", @cost_centre.eusa_recipient

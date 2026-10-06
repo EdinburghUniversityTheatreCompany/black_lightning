@@ -97,17 +97,16 @@ module Admin
         end
       end
 
-      # The new form collects only the required fields. +key+ may be blank: the
-      # model derives it from the name.
+      # +key+ may be blank: the model derives it from the name.
       def create_params
         params.require(:cost_centre).permit(
-          :key, :name, :eusa_code, :short_code, :receive_mailbox, :send_mailbox, :notification_email
+          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox, :notification_email
         )
       end
 
       def settings_params
         permitted = params.require(:cost_centre).permit(
-          :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_contact_name, :eusa_signature_name,
+          :short_code, :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_contact_name, :eusa_signature_name,
           :sharepoint_site_url, :notification_email
         )
         permitted[:nightly_run_days] = normalized_run_days
