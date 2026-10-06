@@ -31,15 +31,7 @@
   <% fields[:add_user] = { type: 'content', header: 'Add User', content: yield(:add_user) } %>
 <% end %>
 
-<% show_remove = current_user.can?(:remove_user, @role) %>
-<% remove_url_lambda = lambda { |user_id| remove_user_admin_role_path(@role, user_id) } %>
-<% users_table_html = capture do %>
-  <div id="<%= dom_id(@role, :users) %>">
-    <%= render(UsersTableComponent.new(users: @users, url: admin_role_url(@role), q: @q,
-      show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda)) %>
-  </div>
-<% end %>
-<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: users_table_html } %>
+<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render("users_table") } %>
 
 <% content_for :extra_show_actions do %>
   <% if can?(:manage, Admin::Permission) && !Admin::Permission::EXCLUDED_ROLES.include?(@role.name) %>

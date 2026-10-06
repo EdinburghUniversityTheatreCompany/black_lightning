@@ -1,0 +1,6 @@
+<%# locals: () %>
+<div id="<%= dom_id(@role, :users) %>">
+  <%= render(UsersTableComponent.new(users: @users, url: admin_role_url(@role), q: @q,
+    show_remove_buttons: current_user.can?(:remove_user, @role),
+    remove_url_helper: ->(user_id) { remove_user_admin_role_path(@role, user_id) })) %>
+</div>
