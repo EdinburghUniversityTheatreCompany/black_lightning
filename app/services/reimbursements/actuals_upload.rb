@@ -7,12 +7,6 @@ module Reimbursements
   class ActualsUpload
     ACCEPT = ".xlsx,.csv,.txt,.tsv".freeze
 
-    SPREADSHEET_EXTENSIONS = %w[.xlsx].freeze
-
-    # roo 3 dropped .xls and we do not carry roo-xls, so one reaching Roo surfaces its internals to
-    # the operator. EUSA's exports are .xlsx; add roo-xls if that stops being true.
-    LEGACY_SPREADSHEET_EXTENSIONS = %w[.xls].freeze
-
     # The OLE2 signature of a legacy .xls. Checked as well as the extension, because a renamed .xls
     # reaches rubyzip instead.
     LEGACY_SPREADSHEET_MAGIC = "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b.freeze
@@ -37,7 +31,7 @@ module Reimbursements
         extension = File.extname(name).downcase
         raise UnreadableError, LEGACY_SPREADSHEET_ADVICE if legacy_spreadsheet?(file, extension)
 
-        if SPREADSHEET_EXTENSIONS.include?(extension)
+        if extension == ".xlsx"
           spreadsheet_to_tsv(file)
         else
           # parse_actuals_rows detects the separator itself.
@@ -52,7 +46,9 @@ module Reimbursements
       private
 
       def legacy_spreadsheet?(file, extension)
-        return true if LEGACY_SPREADSHEET_EXTENSIONS.include?(extension)
+        # roo 3 dropped .xls and we do not carry roo-xls, so one reaching Roo surfaces its internals
+        # to the operator. EUSA's exports are .xlsx; add roo-xls if that stops being true.
+        return true if extension == ".xls"
 
         head = file.read(LEGACY_SPREADSHEET_MAGIC.bytesize)
         file.rewind
@@ -61,8 +57,7 @@ module Reimbursements
 
       def spreadsheet_to_tsv(file)
         require "roo" # lazy: kept out of the boot heap (Gemfile require: false)
-        sheet = Roo::Spreadsheet.open(file.path, extension: File.extname(file.original_filename.to_s).delete("."))
-                                .sheet(0)
+        sheet = Roo::Spreadsheet.open(file.path, extension: :xlsx).sheet(0)
         raise UnreadableError, EMPTY_SHEET_ADVICE if sheet.last_row.nil?
 
         (1..sheet.last_row).filter_map { |i| tsv_line(sheet.row(i)) }.join("\n")
