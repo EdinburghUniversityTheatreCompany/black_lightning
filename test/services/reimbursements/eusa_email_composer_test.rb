@@ -27,8 +27,8 @@ module Reimbursements
       ]
 
       email = EusaEmailComposer.new.compose(expenses: expenses, bacs_date: Date.new(2026, 5, 13),
-                                            sender_name: "Fringe Finance", cost_centre: cost_centre,
-                                            eusa_contact_name: "Sam")
+                                            sender_name: "Fringe Finance",
+                                            cost_centre: cost_centre(eusa_contact_name: "Sam"))
 
       assert_equal "Bedlam Fringe 2026 BACS Request - 2026-05-13 - F40", email.subject
       assert_includes email.body_html, "Hi Sam,"
@@ -54,16 +54,6 @@ module Reimbursements
         cost_centre: cost_centre(eusa_contact_name: "Craig")
       )
       assert_includes email.body_html, "Hi Craig,"
-    end
-
-    test "an explicit contact name overrides the cost centre's" do
-      email = EusaEmailComposer.new.compose(
-        expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
-        bacs_date: Date.new(2026, 5, 13), sender_name: "F",
-        cost_centre: cost_centre(eusa_contact_name: "Craig"), eusa_contact_name: "Sam"
-      )
-      assert_includes email.body_html, "Hi Sam,"
-      assert_not_includes email.body_html, "Craig"
     end
 
     # The test env renders no annotations, so the pattern is checked directly.

@@ -11,9 +11,8 @@ module Reimbursements
     ANNOTATION_COMMENT = /<!--\s*(?:BEGIN|END)\s+\S+\.erb\s*-->\n?/
 
     # +cost_centre+ supplies the subject's EUSA code, the name in the body and
-    # sign-off, and the default greeting.
-    def compose(expenses:, bacs_date:, sender_name:, cost_centre:, eusa_contact_name: "")
-      contact_name = eusa_contact_name.presence || cost_centre.eusa_contact_name
+    # sign-off, and the greeting.
+    def compose(expenses:, bacs_date:, sender_name:, cost_centre:)
       # Deliberately GBP across every claim: what the batch costs the budgets.
       # Each table row is in its own payment's currency.
       total = expenses.sum { |expense| expense.amount || 0 }
@@ -26,7 +25,7 @@ module Reimbursements
           locals: { expenses: expenses, bacs_date: bacs_date, total: total,
                     expense_count: expenses.size, international_count: international_count,
                     sender_name: sender_name,
-                    cost_centre_name: cost_centre.name, eusa_contact_name: contact_name }
+                    cost_centre_name: cost_centre.name, eusa_contact_name: cost_centre.eusa_contact_name }
         ).gsub(ANNOTATION_COMMENT, "")
       )
     end

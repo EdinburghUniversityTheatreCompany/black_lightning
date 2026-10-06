@@ -37,7 +37,7 @@ module Reimbursements
     end
 
     def process(expenses:, bacs_date:, sender_name:, eusa_recipient:,
-                eusa_subject: nil, eusa_body_html: nil, eusa_contact_name: "")
+                eusa_subject: nil, eusa_body_html: nil)
       result = new_result(expenses, bacs_date)
       return fail_with(result, "No expenses in batch.") if expenses.empty?
       unless @cost_centre.sharepoint_configured?
@@ -64,8 +64,7 @@ module Reimbursements
       upload_payment_documents(result, documents)
       urls_by_expense = upload_receipts(result, renamed)
 
-      subject, body_html = eusa_email(expenses, bacs_date, sender_name, eusa_subject,
-                                      eusa_body_html, eusa_contact_name)
+      subject, body_html = eusa_email(expenses, bacs_date, sender_name, eusa_subject, eusa_body_html)
       attachments = documents + renamed.values.flatten
 
       # CARDINAL RULE: a failed draft leaves every expense Approved.
@@ -204,11 +203,11 @@ module Reimbursements
       end
     end
 
-    def eusa_email(expenses, bacs_date, sender_name, subject_override, body_override, contact)
+    def eusa_email(expenses, bacs_date, sender_name, subject_override, body_override)
       return [ subject_override, body_override ] if subject_override.present? && body_override.present?
 
       email = @composer.compose(expenses: expenses, bacs_date: bacs_date, sender_name: sender_name,
-                                cost_centre: @cost_centre, eusa_contact_name: contact)
+                                cost_centre: @cost_centre)
       [ subject_override.presence || email.subject, body_override.presence || email.body_html ]
     end
 
