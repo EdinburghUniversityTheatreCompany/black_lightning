@@ -16,14 +16,13 @@ class Event::Schedule
   WEEKLY_MINIMUM = 3
   WEEKLY_MINIMUM_SPAN = 14
 
-  attr_reader :event, :occurrences
+  attr_reader :occurrences
 
   def self.for(event)
     new(event)
   end
 
   def initialize(event)
-    @event = event
     @occurrences = event.event_occurrences.select { |occurrence| occurrence.starts_at.present? }
                         .sort_by(&:starts_at)
   end
@@ -41,29 +40,23 @@ class Event::Schedule
     @blocks ||= build_blocks
   end
 
+  # A representative start, for formatting the shared time.
+  def starts_at
+    occurrences.first&.starts_at
+  end
+
+  def weekday_name
+    Date::DAYNAMES[occurrences.first.on_date.wday] if weekly?
+  end
+
+  private
+
   # The hours every performance shares; nil when they differ.
   def time_of_day
     times = occurrences.map { |occurrence| time_key(occurrence) }.uniq
 
     times.one? ? times.first : nil
   end
-
-  # A representative start, for formatting the shared time.
-  def starts_at
-    occurrences.first&.starts_at
-  end
-
-  def weekday
-    return nil unless weekly?
-
-    occurrences.first.on_date.wday
-  end
-
-  def weekday_name
-    weekday && Date::DAYNAMES[weekday]
-  end
-
-  private
 
   # Grouped by curtain time first, then folded by consecutive date: a Saturday
   # matinee sorts between the evenings and would otherwise cut the run in three.

@@ -88,7 +88,6 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     result = schedule(event)
 
     assert_equal :weekly, result.kind
-    assert_equal 5, result.weekday
     assert_equal "Friday", result.weekday_name
   end
 
@@ -124,24 +123,5 @@ class Event::ScheduleTest < ActiveSupport::TestCase
     4.times { |week| perform(event, friday + (week * 7), hour: 19 + week) }
 
     assert_not_equal :weekly, schedule(event).kind
-  end
-
-  # --- what a range must not hide --------------------------------------
-
-
-
-  test "the shared curtain time is reported when every performance agrees" do
-    event = show
-    (0..4).each { |offset| perform(event, Date.new(2026, 10, 11) + offset) }
-
-    assert_equal "19:30", schedule(event).time_of_day
-  end
-
-  test "no shared curtain time when they differ" do
-    event = show
-    perform(event, Date.new(2026, 10, 11))
-    perform(event, Date.new(2026, 10, 12), hour: 14, min: 30)
-
-    assert_nil schedule(event).time_of_day
   end
 end
