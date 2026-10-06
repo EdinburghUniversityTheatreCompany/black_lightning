@@ -1,20 +1,15 @@
 class Admin::QuestionsAndAnswersComponentPreview < Admin::ApplicationComponentPreview
   def unanswered
-    answers = Questionnaire.joins(:answers).first&.answers || Answer.none
+    answers = Admin::Questionnaires::Questionnaire.joins(:answers).first&.answers || Admin::Answer.none
     render Admin::QuestionsAndAnswersComponent.new(answers: answers)
   end
 
   def answered
-    answers = Answer.where.not(answer: [ nil, "" ]).includes(:question).limit(5)
-    render Admin::QuestionsAndAnswersComponent.new(answers: answers)
+    render Admin::QuestionsAndAnswersComponent.new(answers: Admin::Answer.where.not(answer: [ nil, "" ]).limit(5))
   end
 
   def multiple_attachments
-    answer_ids = Attachment.where(item_type: "Admin::Answer")
-                           .group(:item_id)
-                           .having("COUNT(*) > 1")
-                           .pluck(:item_id)
-    answers = Answer.where(id: answer_ids).includes(:question).limit(5)
-    render Admin::QuestionsAndAnswersComponent.new(answers: answers)
+    answer_ids = Attachment.where(item_type: "Admin::Answer").reorder(nil).group(:item_id).having("COUNT(*) > 1").select(:item_id)
+    render Admin::QuestionsAndAnswersComponent.new(answers: Admin::Answer.where(id: answer_ids).limit(5))
   end
 end
