@@ -45,7 +45,6 @@ class Admin::SidebarComponent < ViewComponent::Base
     "Finance" => %w[
       /admin/reimbursements/budget_import
       /admin/reimbursements/expense_import
-      /admin/reimbursements/export
     ]
   }.freeze
 
