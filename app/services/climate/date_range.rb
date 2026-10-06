@@ -37,7 +37,6 @@ module Climate
     def starts_at = from.beginning_of_day.in_time_zone
     def ends_at = to.end_of_day.in_time_zone
     def days = (to - from).to_i + 1
-    def duration = ends_at - starts_at
 
     def to_param = { from: from.iso8601, to: to.iso8601 }
     def as_json(*) = { from: from.iso8601, to: to.iso8601 }

@@ -91,13 +91,6 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
     assert_equal 1, import(text).rows.size
   end
 
-  test "reports the covered range and sample count for the summary" do
-    result = import(REAL_EXPORT)
-
-    assert_equal Time.zone.parse("2026-08-06 09:22:00"), result.range.begin
-    assert_equal Time.zone.parse("2026-08-06 09:52:00"), result.range.end
-  end
-
   test "is not confused by a duplicated timestamp" do
     # A daily export overlaps the previous one; dedup is the unique index's job,
     # not the parser's.

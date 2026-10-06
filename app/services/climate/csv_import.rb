@@ -35,12 +35,6 @@ module Climate
 
     def valid? = @errors.empty? && @rows.any?
 
-    def range
-      return nil if @rows.empty?
-
-      @rows.first[:recorded_at]..@rows.last[:recorded_at]
-    end
-
     private
 
     def parse(text)
