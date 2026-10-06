@@ -472,7 +472,7 @@ module Reimbursements
     # nothing when two areas are both called Cogito, and a fix that reproduces the same
     # block is worse than none. A budget with no area has no spelling of its own.
     def ambiguous_budget_fix(candidates)
-      spelling = candidates.filter_map { |budget| "#{budget.area.name}: #{budget.name}" if budget.area }
+      spelling = candidates.filter_map { |budget| budget.display_name if budget.area }
                            .find { |candidate| budgets_named(candidate).one? }
       return "Rename one of them, so this sheet can tell them apart." if spelling.nil?
 
