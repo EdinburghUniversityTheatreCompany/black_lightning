@@ -82,12 +82,14 @@ module Reimbursements
 
         type = ReceiptContentType.sniff(bytes: bytes, filename: filename, declared_type: declared_type)
         if STRIPPED_SAVERS.key?(type)
-          strip_metadata(bytes: bytes, filename: filename, type: type)
+          attempts = type == "image/png" ? LOSSLESS_STRIP_ATTEMPTS : LOSSY_STRIP_ATTEMPTS
+          reencode(bytes, filename, name: filename.to_s, type: type, attempts: attempts)
         elsif ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(type)
           # PDFs only, byte-for-byte, so EUSA holds the invoice exactly as issued.
           Receipt.new(filename: filename.to_s, content_type: type, bytes: bytes, error: nil)
         elsif ExpenseForm::CONVERTED_RECEIPT_TYPES.include?(type)
-          to_jpeg(bytes: bytes, filename: filename)
+          reencode(bytes, filename, name: jpeg_filename(filename), type: JPEG_CONTENT_TYPE,
+                                    attempts: JPEG_ATTEMPTS, converted: true)
         else
           rejected(filename, "#{display_name(filename)} must be a PDF or a photo (JPEG, PNG, WEBP or HEIC).")
         end
@@ -100,31 +102,14 @@ module Reimbursements
       # Re-encoded rather than having its EXIF segment excised: GPS also hides in
       # XMP, MakerNote and the embedded thumbnail, so only a re-encode is
       # provably complete.
-      def strip_metadata(bytes:, filename:, type:)
-        name = filename.to_s
+      def reencode(bytes, filename, name:, type:, attempts:, converted: false)
         image = prepare(Vips::Image.new_from_buffer(bytes.to_s, ""))
         image = flatten_for_jpeg(image) if type == JPEG_CONTENT_TYPE
 
-        data = encode_within_cap(image, saver: STRIPPED_SAVERS.fetch(type), attempts: strip_attempts(type))
-        return rejected(name, over_cap_message(filename)) if data.nil?
+        data = encode_within_cap(image, saver: STRIPPED_SAVERS.fetch(type), attempts: attempts)
+        return rejected(name, over_cap_message(filename, from_heic: converted)) if data.nil?
 
         Receipt.new(filename: name, content_type: type, bytes: data, error: nil)
-      rescue StandardError => e
-        unreadable(name, filename, e)
-      end
-
-      def strip_attempts(type)
-        type == "image/png" ? LOSSLESS_STRIP_ATTEMPTS : LOSSY_STRIP_ATTEMPTS
-      end
-
-      def to_jpeg(bytes:, filename:)
-        name = jpeg_filename(filename)
-        image = flatten_for_jpeg(prepare(Vips::Image.new_from_buffer(bytes.to_s, "")))
-
-        data = encode_within_cap(image, saver: :jpegsave_buffer, attempts: JPEG_ATTEMPTS)
-        return rejected(name, over_cap_message(filename, from_heic: true)) if data.nil?
-
-        Receipt.new(filename: name, content_type: JPEG_CONTENT_TYPE, bytes: data, error: nil)
       rescue StandardError => e
         unreadable(name, filename, e)
       end
