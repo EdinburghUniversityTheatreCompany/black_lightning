@@ -17,22 +17,15 @@ module Reimbursements
       private
 
       def row(expense)
+        budget = budget_by_id[expense.budget_record_id]
         [
           expense.auto_number, expense.status, expense.effective_payee_name,
-          budget_name(expense), expense.amount, expense.amount_excl_vat,
+          # Bare budget name: the sheet has its own Area column.
+          budget&.name, expense.amount, expense.amount_excl_vat,
           expense.description, expense.payment_reference,
           iso_date(expense.submitted_at), attention_reasons(expense).join("; "),
-          cost_centre_name(expense.cost_centre_id), area_name(expense)
+          cost_centre_name(expense.cost_centre_id), budget&.area&.name
         ]
-      end
-
-      # Bare budget name: the sheet has its own Area column.
-      def budget_name(expense)
-        budget_by_id[expense.budget_record_id]&.name
-      end
-
-      def area_name(expense)
-        budget_by_id[expense.budget_record_id]&.area&.name
       end
 
       # Actionable rows only, to match the on-screen table.
