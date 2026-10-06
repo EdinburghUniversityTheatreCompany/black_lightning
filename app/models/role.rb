@@ -33,7 +33,7 @@ class Role < ApplicationRecord
   validates :name, presence: true
   validate :name_not_hardcoded
 
-  before_destroy :prevent_hardcoded_or_non_purgeable_destruction
+  before_destroy :prevent_hardcoded_destruction
 
   has_and_belongs_to_many :parents, class_name: "Role", join_table: :roles_parents, foreign_key: :role_id, association_foreign_key: :parent_id
   has_and_belongs_to_many :children, class_name: "Role", join_table: :roles_parents, foreign_key: :parent_id, association_foreign_key: :role_id
@@ -124,14 +124,11 @@ class Role < ApplicationRecord
     Pretix::SyncMembershipJob.enqueue_for(user_ids)
   end
 
-  def prevent_hardcoded_or_non_purgeable_destruction
-    if NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
-      errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
-      throw(:abort)
-    elsif Role.hardcoded_name?(name)
-      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
-      throw(:abort)
-    end
+  def prevent_hardcoded_destruction
+    return unless Role.hardcoded_name?(name)
+
+    errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
+    throw(:abort)
   end
 
   def cycle_through_attributes(attributes, collection)

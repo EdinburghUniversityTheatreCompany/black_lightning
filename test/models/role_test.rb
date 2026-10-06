@@ -196,7 +196,7 @@ class RoleTest < ActionView::TestCase
     role = roles(:member)  # member is in NON_PURGEABLE_ROLES
 
     assert_not role.destroy, "Non-purgeable role should not be destroyable"
-    assert_includes role.errors.full_messages, "Cannot delete role 'Member' as it is protected from deletion"
+    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Member' as it is referenced in code"
     assert role.persisted?, "Non-purgeable role should still exist in database"
   end
 end
