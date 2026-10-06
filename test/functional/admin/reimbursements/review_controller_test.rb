@@ -606,6 +606,19 @@ module Admin
         assert_match(/overridden/i, flash[:notice])
       end
 
+      test "override_approve keeps an owner's endorsement that landed after the page loaded" do
+        endorse_gated_expense!
+        sign_in @user
+
+        patch :override_approve, params: { id: gated_expense.record_id, override_note: "Stale page" }
+
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert_equal owner_person.record_id, endorsement.endorsed_by_person_id
+        assert_nil endorsement.overridden_by_id
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
+        assert_no_match(/overridden/i, flash[:notice])
+      end
+
       def second_gated_expense
         @second_gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED 2")
       end
