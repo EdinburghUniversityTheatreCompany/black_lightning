@@ -95,6 +95,7 @@ module Admin
 
         assert_match "No readings in this range yet", response.body
         assert_select "canvas[data-climate-charts-target]", 0
+        assert_select "[data-controller='climate-charts']", 0
       end
 
       test "serves the page's series, margin, risk and ventilation as json" do

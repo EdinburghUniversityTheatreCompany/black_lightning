@@ -58,20 +58,20 @@
     </div>
   <% end %>
 
-  <div data-controller="climate-charts"
-       data-climate-charts-series-value="<%= @series.to_json %>"
-       data-climate-charts-banded-value="<%= @banded %>">
-    <% if @series.none? { |series| series[:points].any? } %>
-      <p class="text-gray-600">
-        No readings in this range yet. Outside conditions are fetched hourly; sensor readings
-        appear once a CSV export covering this period has been imported<%= ", either by you or by the daily email" if Climate::Settings.mailbox.present? %>.
-      </p>
-    <% else %>
+  <% if @series.none? { |series| series[:points].any? } %>
+    <p class="text-gray-600">
+      No readings in this range yet. Outside conditions are fetched hourly; sensor readings
+      appear once a CSV export covering this period has been imported<%= ", either by you or by the daily email" if Climate::Settings.mailbox.present? %>.
+    </p>
+  <% else %>
+    <div data-controller="climate-charts"
+         data-climate-charts-series-value="<%= @series.to_json %>"
+         data-climate-charts-banded-value="<%= @banded %>">
       <div class="relative h-64 mb-6"><canvas data-climate-charts-target="temperature"></canvas></div>
       <div class="relative h-64 mb-6"><canvas data-climate-charts-target="humidity"></canvas></div>
       <div class="relative h-64"><canvas data-climate-charts-target="dewPoint"></canvas></div>
-    <% end %>
-  </div>
+    </div>
+  <% end %>
 <% end %>
 
 <%= render CollapsibleSectionComponent.new(title: "How this works", html_class: "mt-4") do %>
