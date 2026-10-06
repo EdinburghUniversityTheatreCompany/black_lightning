@@ -1,11 +1,9 @@
 module Reimbursements
   ##
-  # A file attached to an expense: a view-friendly wrapper over the receipt's
-  # ActiveStorage blob. Every URL it exposes is HOST-RELATIVE (built with
-  # only_path) AND permission-checked, pointing at
-  # Admin::Reimbursements::ReceiptFilesController — anything that needs the
-  # content itself (BatchProcessor's SharePoint offload) must call +bytes+
-  # rather than hand a URL to a remote fetcher, which has no session.
+  # View-friendly wrapper over a receipt's ActiveStorage blob. Every URL is
+  # host-relative and permission-checked (ReceiptFilesController), so anything
+  # needing the content (the SharePoint offload) must call +bytes+: a remote
+  # fetcher has no session.
   class Attachment
     attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
 
@@ -33,31 +31,25 @@ module Reimbursements
       content_type.to_s == "application/pdf"
     end
 
-    # Falls back to the full image when no representation is available, so a
-    # receipt still previews rather than showing nothing.
+    # Falls back to the full image when there is no thumbnail.
     def preview_url
       thumbnail_url.presence || (url if image?)
     end
 
-    # Whether there is a thumbnail image to draw for this file. ActiveStorage
-    # populates thumbnail_url for anything +representable?+, which covers PDFs
-    # (first page, via poppler/mupdf) as well as images — so ask about the
-    # capability, not the content type: +image?+ would skip PDF thumbnails.
+    # Expense.wrap_receipt sets thumbnail_url for anything representable?, PDFs
+    # (first page) included, so ask about the capability, not the content type.
     def previewable?
       preview_url.present?
     end
 
-    # Whether the browser can render the file itself inside the page: images
-    # directly, PDFs through the native viewer. Everything else
-    # Attachment::ALLOWED_CONTENT_TYPES admits (Office documents, MuseScore /
-    # MusicXML sheet music, MIDI) has to be downloaded instead.
+    # Images directly, PDFs through the native viewer. Anything else, which only a
+    # receipt predating ReceiptIntake can be, has to be downloaded.
     def inline_viewable?
       image? || pdf?
     end
 
-    # The URL that always saves the file rather than displaying it, as opposed
-    # to +url+, which displays it in place. The HTML download attribute would
-    # not do the job on its own: browsers ignore it cross-origin.
+    # Always saves rather than displays; the HTML download attribute is ignored
+    # cross-origin.
     def download_url
       @download_url.presence || url
     end

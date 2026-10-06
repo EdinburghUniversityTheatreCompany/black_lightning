@@ -1,11 +1,7 @@
 require "test_helper"
 
 module Reimbursements
-  # Builds the receipt filenames EUSA sees:
-  # "<YYYY-MM-DD> <budget> - <description>[ (n)].<ext>".
   class FilenameSanitizerTest < ActiveSupport::TestCase
-    # --- sanitize_component -----------------------------------------------
-
     test "passes safe text unchanged" do
       assert_equal "New XLR cables", FilenameSanitizer.sanitize_component("New XLR cables")
     end
@@ -27,8 +23,6 @@ module Reimbursements
       assert_equal "text with nulls", FilenameSanitizer.sanitize_component("text\x00with\x1fnulls")
     end
 
-    # --- truncate_description ---------------------------------------------
-
     test "short descriptions unchanged" do
       assert_equal "Short text", FilenameSanitizer.truncate_description("Short text")
     end
@@ -45,8 +39,6 @@ module Reimbursements
       result = FilenameSanitizer.truncate_description("a" * 100, max_length: 30)
       assert_equal 30, result.length
     end
-
-    # --- build_receipt_filename -------------------------------------------
 
     test "basic construction" do
       result = FilenameSanitizer.build_receipt_filename(

@@ -3,16 +3,9 @@ require "test_helper"
 module Admin
   module Reimbursements
     ##
-    # Receipts are served BY THE APP, so the permission that gates a claim gates
-    # its receipt too. Before this, they went out over ActiveStorage's own
-    # routes, which Rails documents as "publicly accessible by default... the
-    # generated URLs are hard to guess, but permanent by design" — so a receipt
-    # link, which is a document carrying someone's home address, worked forever
-    # for anyone who came by it, signed in or not.
-    #
-    # An integration test rather than a functional one: the streaming these
-    # actions do is real middleware work, and the point is what actually comes
-    # back over the wire.
+    # Receipts are served by the app, so the permission gating a claim gates its
+    # receipt too. Integration rather than functional: the streaming is real
+    # middleware work.
     class ReceiptFilesTest < ActionDispatch::IntegrationTest
       include ReimbursementsTestHelpers
       include Devise::Test::IntegrationHelpers
@@ -57,8 +50,6 @@ module Admin
       def download_path = @receipt.download_url
       def inline_path = @receipt.url
 
-      # --- The hole this closes ------------------------------------------------
-
       test "a receipt is not served to anyone who is not signed in" do
         get inline_path
 
@@ -77,8 +68,6 @@ module Admin
                  "#{accessor} should be an app route that checks permissions, got #{value}"
         end
       end
-
-      # --- Who may read one ----------------------------------------------------
 
       test "the submitter can read their own receipt" do
         sign_in @submitter
@@ -107,9 +96,7 @@ module Admin
         assert_equal RECEIPT_BYTES, response.body
       end
 
-      # A budget owner has to check the receipt to endorse the claim against
-      # their budget, and the My Budgets page shows it — so the same rule has to
-      # let them fetch it.
+      # Owners must check the receipt to endorse the claim.
       test "a budget owner can read a receipt charged to their budget" do
         sign_in @owner
 
@@ -131,8 +118,7 @@ module Admin
         assert_response :not_found
       end
 
-      # 404 rather than 403 throughout: "no such receipt" doesn't confirm which
-      # claims exist to someone probing for them.
+      # 404 rather than 403, so a probe doesn't learn which claims exist.
       test "backend access alone is not enough" do
         sign_in @backend_only_user
 
@@ -142,10 +128,6 @@ module Admin
         assert_not response.body.include?("Acacia Avenue")
       end
 
-      # --- Scoping -------------------------------------------------------------
-
-      # The receipt id is only ever resolved WITHIN the claim in the URL, so
-      # pairing your own claim's id with someone else's receipt finds nothing.
       test "a receipt id is not honoured against a different claim" do
         mine = create_reimbursements_expense(person: @submitter_person, budget: @budget, receipt: false)
         attach_test_receipt(mine, filename: "mine.pdf", bytes: "%PDF-1.4 mine")
@@ -155,8 +137,6 @@ module Admin
 
         assert_response :not_found
       end
-
-      # --- How it is served ----------------------------------------------------
 
       test "the download URL sends the file as an attachment, the inline one for viewing" do
         sign_in @submitter
@@ -171,8 +151,6 @@ module Admin
         assert_equal "application/pdf", response.media_type
       end
 
-      # A receipt is private to the people checked above, so no shared cache
-      # anywhere between here and them may keep a copy.
       test "a served receipt is never marked publicly cacheable" do
         sign_in @submitter
 
@@ -182,8 +160,6 @@ module Admin
         assert_match(/private/, response.headers["Cache-Control"].to_s)
       end
 
-      # Chrome's built-in PDF viewer asks for byte ranges; the iframe in the
-      # receipt viewer is that viewer.
       test "byte-range requests are honoured for the in-page PDF viewer" do
         sign_in @submitter
 

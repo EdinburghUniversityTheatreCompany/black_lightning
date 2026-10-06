@@ -1,9 +1,8 @@
 module Admin
   module Reimbursements
     ##
-    # Receipts on an editable expense: immediate uploads from the gallery's
-    # drop target and per-receipt removal. Both respond with a turbo stream
-    # replacing #receipts-gallery (HTML fallback: redirect to edit).
+    # Immediate uploads and per-receipt removal on an editable expense. Both answer
+    # a turbo stream replacing #receipts-gallery (HTML: redirect to edit).
     class ReceiptsController < BaseController
       include AttachesReceipts
 
@@ -31,8 +30,6 @@ module Admin
         attached, upload_errors = attach_posted_receipts(expense)
         return upload_errors if attached.positive? || upload_errors.any?
 
-        # Nothing usable and nothing to report on: the drop target posted no
-        # files at all (or only things that were never uploads).
         [ "No files received." ]
       end
 

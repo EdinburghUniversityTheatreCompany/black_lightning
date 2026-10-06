@@ -1,16 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
-// A file input can't be re-populated from markup after a failed submit, so a
-// server 422 re-render would lose the receipt the user picked. Hold it in JS
-// instead — module scope survives Turbo's body swap on a 422 render — and
-// restore it via DataTransfer (the one browser-sanctioned way to set
-// input.files). Cleared on a successful submit or a fresh (non-resubmit) form.
+// A file input can't be re-populated from markup, so a 422 re-render would lose
+// the picked receipt. Module scope survives Turbo's body swap, and DataTransfer
+// is the only way to set input.files. Cleared on a successful submit or a fresh
+// form.
 let stashedFiles = null
 
-// Receipt-first expense form. Everything here is a progressive enhancement over
-// a form that already works with JavaScript off: it keeps the picked receipt
-// across a failed submit, and surfaces the payee and large-amount rules inline
-// rather than only at submit time. The server validates all of it regardless.
+// Receipt-first expense form. A progressive enhancement over a form that works
+// without JavaScript; the server validates everything regardless.
 export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "reference",
     "referenceCounter", "reattachNotice", "largeAmountWarning", "vatWarning",
@@ -31,10 +28,8 @@ export default class extends Controller {
     this.paymentMethodChanged()
   }
 
-  // Swap the bank fields and the amount field for the rail's own. Both sets are
-  // in the markup and the server renders the right one visible, so this is a
-  // convenience: with JavaScript off the form still shows everything and the
-  // server enforces which fields the chosen rail actually needs.
+  // Swaps the bank and amount fields for the rail's own. With JavaScript off the
+  // form still shows everything and the server enforces the rail's fields.
   paymentMethodChanged() {
     if (!this.hasPaymentMethodTarget || !this.hasUkFieldsTarget) return
     const international = this.#isInternational()
@@ -47,15 +42,10 @@ export default class extends Controller {
     }
   }
 
-  // Show or hide a section AND move the `required` attribute with it. A hidden
-  // input carrying `required` makes the browser refuse to submit the whole
-  // form — silently, because the control it wants to report cannot be scrolled
-  // to — so the Submit button just stops working.
-  //
-  // Which fields their rail requires is declared in the markup
-  // (data-rail-required) rather than snapshotted on the way out: the server
-  // renders the INACTIVE rail's fields as not-required, so remembering what
-  // they were when first hidden would record "false" and never restore it.
+  // `required` moves with visibility: a hidden input carrying it silently blocks
+  // the whole submit. It comes from data-rail-required, never a snapshot: the
+  // server renders the inactive rail's fields as not-required, so a snapshot
+  // would record false and never restore it.
   #showSection(section, visible) {
     section.classList.toggle("hidden", !visible)
     section.querySelectorAll("input, select, textarea").forEach((field) => {
@@ -63,17 +53,15 @@ export default class extends Controller {
     })
   }
 
-  // Says the payee trio is required before the submit does; the server both
-  // enforces the rule and renders the labels for the no-JS case.
+  // Says the payee trio is required before the submit does.
   typeChanged() {
     this.#updatePayeeLabels()
   }
 
-  // The payee section is optional on a UK reimbursement, required on a UK
-  // invoice, and ALWAYS required on the international rail — nobody has an IBAN
-  // on file, so there is nothing to fall back to. Both the type and the rail
-  // change the answer, so both call one method rather than each toggling a
-  // subset and leaving the heading contradicting the fields under it.
+  // The payee is optional on a UK reimbursement, required on a UK invoice and
+  // ALWAYS required on the international rail (no IBAN is on file to fall back
+  // to). Type and rail both change the answer, so one method sets the labels
+  // rather than each toggling a subset.
   #updatePayeeLabels() {
     if (!this.hasExpenseTypeTarget || !this.hasPayeeOptionalTarget) return
     const international = this.#isInternational()
@@ -95,7 +83,6 @@ export default class extends Controller {
       this.paymentMethodTarget.value === this.internationalMethodValue
   }
 
-  // Keep a reference to the picked files so a failed submit doesn't lose them.
   stash() {
     if (this.hasFilesTarget && this.filesTarget.files.length) {
       stashedFiles = this.filesTarget.files
@@ -108,8 +95,7 @@ export default class extends Controller {
 
   #restoreOrClearStash() {
     if (!this.hasFilesTarget) return
-    // A fresh form (not a re-render after a validation error) should start
-    // clean — don't resurrect a file from an abandoned earlier attempt.
+    // A fresh form must not resurrect a file from an abandoned earlier attempt.
     if (!this.resubmitValue) {
       stashedFiles = null
       return
@@ -119,13 +105,10 @@ export default class extends Controller {
     const data = new DataTransfer()
     for (const file of stashedFiles) data.items.add(file)
     this.filesTarget.files = data.files
-    // The file survived, so the "please re-attach" fallback no longer applies.
     if (this.hasReattachNoticeTarget) this.reattachNoticeTarget.classList.add("hidden")
     this.#setStatus("Kept the receipt you attached. Check the errors above and submit again.")
   }
 
-  // Reveal the large-amount confirmation as soon as the amount crosses the
-  // threshold, so the producer isn't surprised by it only at submit time.
   checkAmount() {
     if (!this.hasLargeAmountWarningTarget || !this.hasAmountTarget) return
     const value = this.#parseAmount(this.amountTarget.value)
@@ -133,12 +116,8 @@ export default class extends Controller {
     this.largeAmountWarningTarget.classList.toggle("hidden", !large)
   }
 
-  // Reveal the missing-VAT confirmation as soon as the two amounts say the
-  // receipt doesn't itemise VAT. Mirrors ExpenseForm#vat_missing?: both amounts
-  // present, and the ex-VAT one not below the total. The large-amount block has
-  // revealed itself live since it was written; this one was server-rendered
-  // only, so a producer entering 12.50/12.50 first heard about it from a failed
-  // submit.
+  // Mirrors ExpenseForm#vat_missing?: both amounts present, and the ex-VAT one
+  // not below the total.
   checkVat() {
     if (!this.hasVatWarningTarget || !this.hasAmountTarget || !this.hasAmountExclVatTarget) return
     const total = this.#parseAmount(this.amountTarget.value)
@@ -147,10 +126,9 @@ export default class extends Controller {
     this.vatWarningTarget.classList.toggle("hidden", !missing)
   }
 
-  // Mirror the server's ExpenseForm#parse_decimal: a trailing "," with 1-2
-  // digits and no "." is a decimal comma ("999,99" -> 999.99), otherwise
-  // commas are thousands separators. Without this "999,99" parsed as 99999
-  // and falsely tripped the large-amount warning the server wouldn't require.
+  // Mirrors ExpenseForm#parse_decimal: a trailing "," with 1-2 digits and no "."
+  // is a decimal comma ("999,99" -> 999.99), otherwise commas are thousands
+  // separators. Else 999,99 falsely trips the large-amount warning.
   #parseAmount(raw) {
     const cleaned = raw.replace(/[£\s]/g, "")
     const normalised = /,\d{1,2}$/.test(cleaned) && !cleaned.includes(".")

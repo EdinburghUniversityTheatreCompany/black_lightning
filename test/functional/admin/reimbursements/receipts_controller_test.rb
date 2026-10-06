@@ -25,10 +25,8 @@ module Admin
         expense
       end
 
-      # The route/param identifier of an attached receipt: the blob id the
-      # Attachment wrapper exposes as attachment_id. NOT the signed id — that is
-      # a bearer token for ActiveStorage's unauthenticated routes and is
-      # deliberately never put in front of a browser.
+      # The blob id (Attachment#attachment_id), NOT the signed id, which is a bearer
+      # token for ActiveStorage's unauthenticated routes.
       def receipt_id(expense, filename)
         expense.receipt_files.reload.find { |file| file.filename.to_s == filename }.blob_id.to_s
       end
@@ -87,10 +85,8 @@ module Admin
       end
 
       test "create rejects unusable files with an inline error" do
-        # An executable disguised with a .pdf filename and declared content_type:
-        # content-type filtering is based on the actual bytes (Marcel), not the
-        # declared/filename-implied type, so a mismatched-but-real PDF won't do
-        # here to prove rejection.
+        # An executable named .pdf and declared as one: rejection must be proved by
+        # the real bytes, not the declared type.
         disguised = fixture_file_upload("disguised_executable.pdf", "application/pdf")
 
         assert_no_difference -> { @expense.receipt_files.count } do
@@ -102,8 +98,7 @@ module Admin
         assert_includes response.body, "must be a PDF or a photo"
       end
 
-      # The gallery is the second intake path, so it converts too: a producer
-      # adding an iPhone photo to an existing claim gets a JPEG on the expense.
+      # The gallery converts too: an iPhone photo added to a claim lands as a JPEG.
       test "create converts a HEIC photo to JPEG on the way in" do
         post :create, params: { expense_id: @expense.record_id,
                                 receipts: [ fixture_file_upload("reimbursements_receipt.heic", "image/heic") ] },

@@ -1,67 +1,46 @@
 module Reimbursements
   ##
-  # The single gate every receipt passes through, whatever brought it in: the
-  # producer's submission form, the finance/review receipt uploads, and the
-  # mailbox poll's decoded Graph attachments. It checks the size, verifies the
-  # ACTUAL bytes against the allow-list (never the declared content type alone,
-  # see ReceiptContentType), and normalises anything we accept but don't want to
-  # store as it arrived.
+  # The one gate every receipt passes through (producer form, finance and review
+  # uploads, mailbox poll). Checks the size, verifies the ACTUAL bytes against the
+  # allow-list (see ReceiptContentType), converts HEIC to JPEG and strips the
+  # metadata from every raster image. Done here so the viewer, the SharePoint
+  # offload and the EUSA email never see HEIC, or the GPS position a phone photo
+  # carries (usually the producer's home).
   #
-  # Normalising means two things, both done HERE because this is the one gate
-  # every intake path passes through (the submission form, the finance/review
-  # uploads, the mailbox poll):
-  #
-  # * HEIC/HEIF, which iOS photographs default to, is converted to JPEG before
-  #   anything is attached, so no downstream consumer needs special-casing — the
-  #   viewer, the SharePoint offload, the receipts on the EUSA BACS email.
-  #   Converting on read would need the same fix in each, and would still hand
-  #   HEIC to EUSA.
-  #
-  # * EVERY raster receipt has its metadata stripped. A phone photograph carries
-  #   the coordinates it was taken at — for a producer, usually their home — and
-  #   those exact bytes go on to SharePoint and out to EUSA.
-  #
-  # Nothing here ever raises at a caller: an unreadable photo comes back as a
-  # Receipt carrying a friendly #error, which each intake path reports through
-  # its own normal validation/flash path.
+  # Never raises at a caller: an unreadable photo comes back as a Receipt with a
+  # friendly #error.
   module ReceiptIntake
     JPEG_CONTENT_TYPE = "image/jpeg".freeze
 
-    # One vetted receipt, ready to attach (or to send to the extractor), or a
-    # rejection carrying the message to show whoever sent it.
+    # One vetted receipt, ready to attach, or a rejection carrying the message to
+    # show whoever sent it.
     Receipt = Data.define(:filename, :content_type, :bytes, :error) do
       def ok? = error.nil?
 
-      # The keyword arguments Store#attach_receipt! and the extractor both take.
+      # The keyword arguments Store#attach_receipt! takes.
       def to_attachment = { filename: filename, content_type: content_type, bytes: bytes }
     end
 
-    # Conversion targets, tried in order until one fits under MAX_RECEIPT_BYTES.
-    # HEIC is roughly half the size of the equivalent JPEG, so a *compliant*
-    # HEIC can convert into a JPEG over the cap, and that cap is not cosmetic:
-    # a batch mails every receipt in it as an attachment. Rather than reject a
-    # photo the producer did nothing wrong with, step the quality (and then the
-    # longest edge) down until it fits. Even the last rung leaves a till receipt
-    # comfortably legible for finance; a typical phone photo never gets past
-    # the first.
+    # HEIC is about half the size of the JPEG, so a compliant HEIC can convert to
+    # over the cap, and a batch mails every receipt. Step the quality, then the
+    # longest edge, down until it fits rather than reject a photo the producer did
+    # nothing wrong with. Even the last rung leaves a till receipt legible.
     JPEG_ATTEMPTS = [
       { quality: 80, limit: nil },
       { quality: 70, limit: 2400 },
       { quality: 60, limit: 1600 }
     ].freeze
 
-    # Stripped in place, KEEPING the format: a PNG screenshot of an invoice is
-    # lossless text, and pushing it through JPEG would be a visible loss.
+    # Keeps the format: a PNG screenshot of an invoice is lossless text.
     STRIPPED_SAVERS = {
       "image/jpeg" => :jpegsave_buffer,
       "image/png" => :pngsave_buffer,
       "image/webp" => :webpsave_buffer
     }.freeze
 
-    # Re-encoding to drop metadata can GROW a file (a phone's Q60 JPEG saved
-    # back at Q90 does), so the cap ladder applies here too. Starts HIGHER than
-    # JPEG_ATTEMPTS: that path encodes a fresh capture, this one re-encodes what
-    # the producer already compressed, so rung one has to be indistinguishable.
+    # Re-encoding can GROW a file (a phone's Q60 JPEG saved at Q90 does), so the
+    # cap ladder applies here too. Rung one starts higher than JPEG_ATTEMPTS
+    # because the input is already compressed.
     LOSSY_STRIP_ATTEMPTS = [
       { quality: 90, limit: nil },
       { quality: 80, limit: nil },
@@ -69,34 +48,27 @@ module Reimbursements
       { quality: 70, limit: 1600 }
     ].freeze
 
-    # PNG is lossless, so the only lever is the longest edge. Repeating the
-    # quality rungs would re-encode identical bytes before the one that helps.
+    # PNG is lossless, so the only lever is the longest edge.
     LOSSLESS_STRIP_ATTEMPTS = [
       { limit: nil },
       { limit: 2400 },
       { limit: 1600 }
     ].freeze
 
-    # Decompression guard: HEIC packs so well that a file inside the 5 MB cap
-    # can still decode to an absurd number of pixels. No real receipt photo is
-    # anywhere near this, so refuse rather than hand libvips the allocation.
+    # Decompression guard: HEIC inside the 5 MB cap can decode to an absurd pixel
+    # count.
     MAX_PIXELS = 100_000_000
 
-    # Raised internally when the photo can't be turned into a JPEG; never
-    # escapes this module.
+    # Never escapes this module.
     ConversionError = Class.new(StandardError)
 
     class << self
-      # The uploads in a `receipts[]` param, each vetted. Anything that isn't
-      # actually an uploaded file is dropped first (see uploads_from), so the
-      # result is one Receipt per real file, in order.
       def from_params(value)
         ReceiptContentType.uploads_from(value).map { |file| from_upload(file) }
       end
 
-      # For an ActionDispatch::Http::UploadedFile-like object. The size is
-      # checked from the upload's own #size before anything is read, so an
-      # oversized file is never pulled into memory just to be rejected for size.
+      # Size is checked from #size before anything is read, so an oversized file
+      # is never pulled into memory.
       def from_upload(file)
         return rejected(file.original_filename, too_large_message(file.original_filename)) if file.size > max_bytes
 
@@ -105,8 +77,6 @@ module Reimbursements
         file.rewind if file.respond_to?(:rewind)
       end
 
-      # For an already-in-memory receipt (the mailbox poll's decoded Graph
-      # attachment bytes).
       def from_bytes(bytes:, filename:, declared_type:)
         return rejected(filename, too_large_message(filename)) if bytes.to_s.bytesize > max_bytes
 
@@ -114,8 +84,7 @@ module Reimbursements
         if STRIPPED_SAVERS.key?(type)
           strip_metadata(bytes: bytes, filename: filename, type: type)
         elsif ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(type)
-          # PDFs only, byte-for-byte: EUSA should hold the supplier's invoice
-          # exactly as issued, and a document carries no location tag.
+          # PDFs only, byte-for-byte, so EUSA holds the invoice exactly as issued.
           Receipt.new(filename: filename.to_s, content_type: type, bytes: bytes, error: nil)
         elsif ExpenseForm::CONVERTED_RECEIPT_TYPES.include?(type)
           to_jpeg(bytes: bytes, filename: filename)
@@ -128,14 +97,9 @@ module Reimbursements
 
       def max_bytes = ExpenseForm::MAX_RECEIPT_BYTES
 
-      # Orientation is baked into the pixels first: the tag describing it is
-      # about to be dropped with everything else, and the receipt would then
-      # come out sideways for whoever reviews it.
-      #
-      # Re-encoded rather than having its EXIF segment excised, because only a
-      # re-encode is provably complete: coordinates sit in EXIF GPS tags, in
-      # XMP, in a vendor MakerNote, or in the embedded EXIF thumbnail (itself a
-      # small copy of the photo). Excising named segments leaves the rest.
+      # Re-encoded rather than having its EXIF segment excised: GPS also hides in
+      # XMP, MakerNote and the embedded thumbnail, so only a re-encode is
+      # provably complete.
       def strip_metadata(bytes:, filename:, type:)
         name = filename.to_s
         image = prepare(Vips::Image.new_from_buffer(bytes.to_s, ""))
@@ -153,9 +117,6 @@ module Reimbursements
         type == "image/png" ? LOSSLESS_STRIP_ATTEMPTS : LOSSY_STRIP_ATTEMPTS
       end
 
-      # Convert a HEIC/HEIF photo to JPEG, renaming it to match: the filename
-      # ends up in the BACS email and in SharePoint, so it must not claim to be
-      # something the bytes aren't.
       def to_jpeg(bytes:, filename:)
         name = jpeg_filename(filename)
         image = flatten_for_jpeg(prepare(Vips::Image.new_from_buffer(bytes.to_s, "")))
@@ -168,10 +129,8 @@ module Reimbursements
         unreadable(name, filename, e)
       end
 
-      # Every way libvips can fail to produce an image: a truncated upload, and
-      # also a libvips built WITHOUT HEIF support ("class heifload not found").
-      # Logged so that environment problem stays diagnosable rather than looking
-      # like a stream of damaged uploads.
+      # Also covers a libvips built without HEIF support; logged so that stays
+      # diagnosable.
       def unreadable(name, filename, error)
         Rails.logger.error("Reimbursements receipt processing failed for " \
                            "#{filename.inspect}: #{error.class}: #{error.message}")
@@ -186,7 +145,6 @@ module Reimbursements
           "JPEG or PDF and try again."
       end
 
-      # Walk the ladder until an encoding fits under the cap; nil when none does.
       def encode_within_cap(image, saver:, attempts:)
         attempts.each do |attempt|
           data = encode(image, saver: saver, **attempt)
@@ -195,8 +153,8 @@ module Reimbursements
         nil
       end
 
-      # Applies EXIF orientation, for every format: the tag is about to be
-      # stripped along with the rest, and a sideways receipt is needless work.
+      # Bakes the EXIF orientation into the pixels before the tag is stripped, or
+      # the receipt comes out sideways.
       def prepare(image)
         raise ConversionError, "#{image.width}x#{image.height} is too many pixels" if
           image.width * image.height > MAX_PIXELS
@@ -204,19 +162,16 @@ module Reimbursements
         image.autorot
       end
 
-      # JPEG targets only: it carries neither an alpha channel nor CMYK
-      # sensibly. Flattening a transparent PNG/WEBP screenshot onto white would
-      # be a visible change to a receipt, made for no reason.
+      # JPEG targets only: flattening a transparent PNG/WEBP onto white would
+      # visibly change a receipt.
       def flatten_for_jpeg(image)
         image = image.flatten(background: 255) if image.has_alpha?
         image.colourspace(:srgb)
       end
 
-      # strip: true drops the metadata, including the orientation tag just baked
-      # into the pixels — leaving it makes every viewer rotate the receipt
-      # twice. +quality+ is absent for PNG: Q: reaches pngsave only when it is
-      # also quantising to a palette, which would be real loss smuggled in
-      # under a metadata strip.
+      # strip: true also drops the orientation tag just baked in, which viewers
+      # would otherwise apply twice. No quality for PNG: Q reaches pngsave only
+      # when quantising to a palette, which is real loss smuggled in.
       def encode(image, saver:, limit:, quality: nil)
         candidate = limit ? image.thumbnail_image(limit, height: limit, size: :down) : image
         options = { strip: true }
@@ -225,8 +180,8 @@ module Reimbursements
         candidate.public_send(saver, **options)
       end
 
-      # IMG_1234.HEIC -> IMG_1234.jpg. Any other image extension is replaced too
-      # (a HEIC named .jpg by some gallery app shouldn't become "photo.jpg.jpg").
+      # The name must match the bytes: it ends up in the BACS email and SharePoint.
+      # A HEIC already named .jpg must not become .jpg.jpg.
       def jpeg_filename(filename)
         base = File.basename(filename.to_s.strip).sub(/\.(heic|heif|jpe?g|png|webp)\z/i, "")
         base = "receipt" if base.blank?

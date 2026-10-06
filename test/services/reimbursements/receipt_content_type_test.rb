@@ -21,11 +21,8 @@ module Reimbursements
                                             declared_type: "application/pdf")
     end
 
-    # A hand-crafted "receipts[]=something" post sends a String, which has #size
-    # (so it sails past the byte check the intake paths do first) but no #read —
-    # an unrescued NoMethodError once something tries to read it, i.e. a 500 any
-    # authenticated producer could trigger. Same for a nested hash or array,
-    # which Rails also happily parses out of a multipart body.
+    # A hand-crafted "receipts[]=x" post sends a String: it has #size but no #read,
+    # so it passes the size check and 500s on read. Same for a nested hash or array.
     test "uploads_from drops receipts params that are not uploaded files" do
       real = ActionDispatch::Http::UploadedFile.new(tempfile: StringIO.new(PDF_MAGIC),
                                                     filename: "receipt.pdf",

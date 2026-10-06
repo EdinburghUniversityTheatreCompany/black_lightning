@@ -1,39 +1,24 @@
 <%# locals: (receipts:, key:, label:, group: nil, empty_message: "No receipts attached.", remove_url: nil) %>
 <%#
-  The one in-page receipt viewer. Shared by the Review queue, the finance
-  expense edit/show pages and the producer's own claim pages, so all three read
-  a receipt the same way.
+  The one in-page receipt viewer, for every screen that shows a receipt: a strip
+  of thumbnail buttons plus one large pane opened on demand.
 
-  A thumbnail strip of real buttons (one per receipt) plus a single large pane
-  that opens on demand. Nothing large is fetched until an operator asks for a
-  receipt: every <img>/<iframe> in the pane ships with data-src and no src, and
-  receipt_viewer_controller copies the source across the first time that receipt
-  is shown. A twenty-claim review queue therefore downloads no receipt documents
-  on page load, which is the whole point of opening per claim.
+  Nothing large is fetched until asked: every <img>/<iframe> in the pane ships
+  data-src and no src, and receipt_viewer_controller copies it across when that
+  receipt is first shown, so a twenty-claim review queue downloads no documents
+  on load.
 
-  What renders where:
-  - the strip draws a real thumbnail whenever the file is previewable? — every
-    image AND every PDF, since ActiveStorage renders a PDF's first page (see
-    Reimbursements::Attachment). A file with no thumbnail, and one whose
-    thumbnail fails to generate (a malformed PDF only raises when the preview is
-    requested, long after a successful upload), falls back to a document icon.
-  - the pane renders images itself and PDFs through the browser's native viewer.
-    Anything else Attachment::ALLOWED_CONTENT_TYPES admits (Office documents,
-    MuseScore/MusicXML sheet music, MIDI) cannot be displayed by a browser, so
-    it degrades to a download link rather than an empty frame.
+  A file with no thumbnail, or whose thumbnail fails (a malformed PDF only
+  raises when previewed), falls back to a document icon. Anything the pane
+  cannot display (only receipts predating ReceiptIntake) degrades to a download
+  link.
 
-  Elements are shown and hidden through the `hidden` ATTRIBUTE, never a `hidden`
-  class, and nothing that starts hidden carries a display utility of its own —
-  an author `display:` declaration outranks the UA's `[hidden] { display: none }`
-  and would leave a "hidden" element on screen.
+  Show and hide through the `hidden` ATTRIBUTE, never a class, and nothing that
+  starts hidden carries a display utility: an author `display:` outranks the UA's
+  `[hidden] { display: none }` and leaves it on screen.
 
-  Locals:
-  - receipts: array of Reimbursements::Attachment
-  - key: unique-per-page string (an expense record id) for the DOM ids
-  - label: names the claim in accessible names, e.g. "expense #41"
-  - group: fancybox group, so a page of claims pages within one claim only
-  - empty_message: what to say when there are no receipts
-  - remove_url: ->(receipt) { … } to draw a per-thumbnail remove button
+  key must be unique per page (it namespaces DOM ids); label names the claim in
+  accessible names.
 %>
 <% group ||= "receipts-#{key}" %>
 <% pane_id = "receipt-pane-#{key}" %>
@@ -45,9 +30,7 @@
       <% receipts.each_with_index do |receipt, index| %>
         <% position = "receipt #{index + 1} of #{receipts.size}, #{receipt.filename.presence || 'receipt'}" %>
         <li class="relative w-40">
-          <%# The strip is a set of controls, not decoration: real buttons with
-              their own accessible names, and aria-expanded says whether the pane
-              below is currently showing this receipt. %>
+          <%# aria-expanded says whether the pane is showing this receipt. %>
           <button type="button"
                   class="block w-full cursor-pointer rounded border border-gray-200 p-2 text-center hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aria-expanded:border-primary aria-expanded:ring-1 aria-expanded:ring-primary"
                   aria-label="View <%= position %>"
@@ -106,7 +89,7 @@
         <div class="p-3" hidden data-receipt-viewer-target="frame">
           <div data-receipt-slot="true">
             <% if receipt.image? %>
-              <%# Still fancybox-bound, so the image can also be opened full screen. %>
+              <%# Fancybox-bound, so the image also opens full screen. %>
               <%= link_to receipt.url, class: "block",
                           data: { fancybox: group, caption: receipt.filename } do %>
                 <img data-src="<%= receipt.url %>" alt="Receipt: <%= receipt.filename %>"
@@ -114,8 +97,7 @@
                      data-action="error->receipt-viewer#imageFailed">
               <% end %>
             <% elsif receipt.pdf? %>
-              <%# The browser's own PDF viewer, pointed at a same-origin inline
-                  URL. No pdf.js: a large dependency for no gain here. %>
+              <%# The browser's own PDF viewer; no pdf.js. %>
               <iframe data-src="<%= receipt.url %>" class="h-[70vh] w-full rounded bg-gray-50"
                       title="Receipt: <%= receipt.filename %>"></iframe>
             <% else %>
