@@ -16,7 +16,7 @@ module Admin
       # The list is sorted by closeness, so a claim past this was never the answer.
       LINK_CANDIDATE_LIMIT = 50
 
-      # Statuses a manual "Link to claim" must never offer; see #link_candidates.
+      # Statuses a manual "Link to claim" must never offer or settle; see #link_candidates.
       EXCLUDED_LINK_STATUSES = [
         ::Reimbursements::Status::PAID,
         ::Reimbursements::Status::DRAFT,
@@ -116,6 +116,12 @@ module Admin
         expense = store.find_expense(params[:expense_id])
         if expense.nil?
           redirect_to actuals_path_with_filters, alert: "That claim no longer exists."
+          return
+        end
+        # Re-checked on the write: #link_candidates was a stale read.
+        if EXCLUDED_LINK_STATUSES.include?(expense.status)
+          redirect_to actuals_path_with_filters,
+                      alert: "That claim is #{expense.status} now, so this row can't settle it."
           return
         end
 

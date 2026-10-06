@@ -625,6 +625,22 @@ module Admin
       assert_nil @unlinked.reload[:expense_id]
     end
 
+    test "confirm_link refuses a claim the picker never offers, even if it changed since the page loaded" do
+      sign_in @user
+
+      ::Admin::Reimbursements::ActualsController::EXCLUDED_LINK_STATUSES.each_with_index do |status, index|
+        claim = create_reimbursements_expense(auto_number: 80 + index, budget: @budget, status: status,
+                                              amount: BigDecimal("42.00"),
+                                              amount_excl_vat: BigDecimal("42.00"))
+
+        post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
+
+        assert_match(/can't settle it/, flash[:alert], status)
+        assert_nil @unlinked.reload[:expense_id], status
+        assert_equal status, claim.reload.status
+      end
+    end
+
     test "confirm_link refuses a row that is already linked" do
       claim = international_claim
       sign_in @user
