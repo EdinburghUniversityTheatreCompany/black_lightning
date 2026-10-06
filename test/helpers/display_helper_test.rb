@@ -4,7 +4,6 @@ class DisplayHelperTest < ActionView::TestCase
   include DisplayHelper
   include TimeHelper
   include PretixHelper
-  include MdHelper
 
   # The fits are written out independently of the helper, so the sweeps compare
   # the layout it chose against an independent reading.
@@ -243,28 +242,6 @@ class DisplayHelperTest < ActionView::TestCase
     event = Event.new(id: 1, slug: "mystery")
 
     assert_equal events_path, event_page_path(event)
-  end
-
-  test "display_plain_text renders the markdown away instead of printing its source" do
-    body = "## A heading\n\nSome **bold** text with a [link](https://example.com).\n"
-
-    text = display_plain_text(body, length: 320)
-
-    assert_equal "A heading Some bold text with a link.", text
-    assert_no_match(/[#*\[\]]|https:/, text)
-  end
-
-  test "display_plain_text escapes exactly once" do
-    text = display_plain_text("Gilbert & Sullivan", length: 320)
-
-    assert_equal "Gilbert &amp; Sullivan", text
-  end
-
-  test "display_plain_text truncates" do
-    text = display_plain_text(("word " * 200), length: 60)
-
-    assert_operator text.length, :<=, 60
-    assert_match(/\.\.\.\z/, text)
   end
 
   test "display_title_size steps down as the title gets longer" do

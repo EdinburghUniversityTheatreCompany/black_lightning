@@ -245,12 +245,6 @@ module DisplayHelper
     SMALLEST_TITLE_SIZE
   end
 
-  def display_plain_text(markdown, length:)
-    text = CGI.unescapeHTML(strip_tags(render_markdown(markdown)).to_s).squish
-
-    truncate(text, length: length, separator: " ")
-  end
-
   # The 1920x1200 variant: slideshow_image_url's 960x500 visibly upscales on a 1080p
   # screen. fetch_image attaches a placeholder when nothing is uploaded (an
   # idempotent write, as on the public pages).
