@@ -1,5 +1,5 @@
 <%# locals: (home_opportunities:) %>
-<% cache [home_opportunities, Company.maximum(:updated_at)] do %>
+<% cache [home_opportunities, Company.maximum(:updated_at), Department.maximum(:updated_at)] do %>
   <%= render CardComponent.new(title: link_to("Opportunities", get_involved_opportunities_path, class: "hover:underline"), flush: true) do |c| %>
     <% c.with_footer do %>
       <div class="flex justify-between items-center">
