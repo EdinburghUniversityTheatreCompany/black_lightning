@@ -14,8 +14,8 @@ module Climate
     LICENCE = "CC BY 4.0".freeze
 
     HOURLY_VARIABLES = %w[temperature_2m relative_humidity_2m dew_point_2m].freeze
-    DEFAULT_PAST_DAYS = 2
-    DEFAULT_FORECAST_DAYS = 1
+    PAST_DAYS = 2
+    FORECAST_DAYS = 1
 
     class Error < StandardError; end
 
@@ -25,10 +25,8 @@ module Climate
 
     # -> [{ recorded_at: Time, temperature_c: Float, relative_humidity: Float,
     #       dew_point_c: Float or nil }]
-    def hourly_series(latitude:, longitude:, past_days: DEFAULT_PAST_DAYS,
-                      forecast_days: DEFAULT_FORECAST_DAYS)
-      body = request(latitude: latitude, longitude: longitude,
-                     past_days: past_days, forecast_days: forecast_days)
+    def hourly_series(latitude:, longitude:)
+      body = request(latitude: latitude, longitude: longitude)
       hourly = body["hourly"]
       return [] if hourly.blank?
 
@@ -37,12 +35,12 @@ module Climate
 
     private
 
-    def request(latitude:, longitude:, past_days:, forecast_days:)
+    def request(latitude:, longitude:)
       uri = URI.parse(BASE_URL)
       uri.query = URI.encode_www_form(
         latitude: latitude, longitude: longitude,
         hourly: HOURLY_VARIABLES.join(","),
-        past_days: past_days, forecast_days: forecast_days,
+        past_days: PAST_DAYS, forecast_days: FORECAST_DAYS,
         # Our own zone, so timestamps line up with the Govee readings.
         timezone: Time.zone.tzinfo.name
       )

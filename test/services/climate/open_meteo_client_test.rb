@@ -61,14 +61,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_includes uri, "past_days=2"
   end
 
-  test "past_days is what makes an outage self-heal" do
-    client, http = build_client([ [ 200, series_body ] ])
-
-    client.hourly_series(latitude: 55.9467, longitude: -3.1903, past_days: 7)
-
-    assert_includes CGI.unescape(http.requests.first.uri), "past_days=7"
-  end
-
   test "drops an hour whose temperature is null rather than storing a blank" do
     # The forecast tail can carry nulls; a row of nils is worse than no row.
     client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00", "2026-08-05T13:00" ],
