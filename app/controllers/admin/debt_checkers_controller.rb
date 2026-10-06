@@ -5,21 +5,20 @@
 class Admin::DebtCheckersController < AdminController
   include Importable
 
+  MATCH_TYPE_LABELS = { user_id: "User ID", student_id: "Student ID", associate_id: "Associate ID" }.freeze
+
+  before_action { authorize! :check_debt, Admin::Debt }
+
   def new
-    authorize! :check_debt, Admin::Debt
     @title = "Debt Checker"
   end
 
   def show
-    authorize! :check_debt, Admin::Debt
-
     @user = User.find(params[:id])
     @title = "Debt Check: #{@user.name_or_email}"
   end
 
   def lookup
-    authorize! :check_debt, Admin::Debt
-
     user_id = params.dig(:debt_checker, :user_id) || params[:user_id]
     if user_id.present?
       redirect_to admin_debt_checker_path(user_id)
@@ -29,8 +28,6 @@ class Admin::DebtCheckersController < AdminController
   end
 
   def preview
-    authorize! :check_debt, Admin::Debt
-
     data, input_type = parse_import_params
 
     if data.blank?
@@ -55,63 +52,18 @@ class Admin::DebtCheckersController < AdminController
   private
 
   def build_results(import)
-    @exact_matches = []
-    @fuzzy_matches = []
-    @unmatched = []
+    categorized = import.categorized
+    @exact_matches = categorized[:exact_match_id].map { |item| exact_match(item, MATCH_TYPE_LABELS.fetch(item[:match_type])) } +
+                     categorized[:exact_match_email].map { |item| exact_match(item, "Email") }
+    @fuzzy_matches = categorized[:fuzzy_match]
+    @unmatched = categorized[:create_new].pluck(:row)
 
-    import.categorized[:exact_match_id].each do |item|
-      @exact_matches << {
-        row: item[:row],
-        user: item[:existing_user],
-        match_type: match_type_label(item[:match_type])
-      }
-    end
-
-    import.categorized[:exact_match_email].each do |item|
-      @exact_matches << {
-        row: item[:row],
-        user: item[:existing_user],
-        match_type: "Email"
-      }
-    end
-
-    import.categorized[:fuzzy_match].each do |item|
-      @fuzzy_matches << {
-        row: item[:row],
-        candidates: item[:existing_users],
-        years_active_cache: import.years_active_cache
-      }
-    end
-
-    import.categorized[:create_new].each do |item|
-      @unmatched << item[:row]
-    end
-
-    all_user_ids = @exact_matches.map { |m| m[:user].id } +
-                   @fuzzy_matches.flat_map { |m| m[:candidates].map(&:id) }
-
-    @in_debt_ids = if all_user_ids.any?
-      User.where(id: all_user_ids).in_debt.pluck(:id).to_set
-    else
-      Set.new
-    end
-
-    @member_ids = if all_user_ids.any?
-      User.where(id: all_user_ids).with_role(:member).pluck(:id).to_set
-    else
-      Set.new
-    end
-
-    @total_rows = import.rows.size
-    @in_debt_count = @exact_matches.count { |m| @in_debt_ids.include?(m[:user].id) }
+    users = User.where(id: @exact_matches.map { |m| m[:user].id } + @fuzzy_matches.flat_map { |m| m[:existing_users].map(&:id) })
+    @in_debt_ids = users.in_debt.pluck(:id).to_set
+    @member_ids = users.with_role(:member).pluck(:id).to_set
   end
 
-  def match_type_label(match_type)
-    case match_type
-    when :user_id then "User ID"
-    when :student_id then "Student ID"
-    when :associate_id then "Associate ID"
-    else match_type.to_s.titleize
-    end
+  def exact_match(item, match_type)
+    { row: item[:row], user: item[:existing_user], match_type: match_type }
   end
 end

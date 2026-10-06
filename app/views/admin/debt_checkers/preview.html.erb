@@ -6,11 +6,12 @@
 <% end %>
 
 <% matched_count = @exact_matches.size + @fuzzy_matches.size %>
-<% fuzzy_in_debt = @fuzzy_matches.sum { |m| m[:candidates].any? { |c| @in_debt_ids.include?(c.id) } ? 1 : 0 } %>
-<% total_in_debt = @in_debt_count + fuzzy_in_debt %>
+<% exact_in_debt = @exact_matches.count { |m| @in_debt_ids.include?(m[:user].id) } %>
+<% fuzzy_in_debt = @fuzzy_matches.count { |m| m[:existing_users].any? { |u| @in_debt_ids.include?(u.id) } } %>
+<% total_in_debt = exact_in_debt + fuzzy_in_debt %>
 
 <%= render AlertComponent.new(type: total_in_debt > 0 ? :danger : :success) do %>
-  <strong>Checked <%= @total_rows %> row(s):</strong>
+  <strong>Checked <%= @import.rows.size %> row(s):</strong>
   <%= matched_count %> matched,
   <%= @unmatched.size %> not found.
   <% if total_in_debt > 0 %>
@@ -40,20 +41,7 @@
             <td><%= match[:row][:original_name] %></td>
             <td><%= link_to user.name_or_email, admin_user_path(user) %></td>
             <td><%= match[:match_type] %></td>
-            <td>
-              <% if @member_ids.include?(user.id) %>
-                <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
-              <% else %>
-                <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
-              <% end %>
-            </td>
-            <td>
-              <% if in_debt %>
-                <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
-              <% else %>
-                <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
-              <% end %>
-            </td>
+            <%= render "status_cells", user: user, in_debt: in_debt %>
           </tr>
         <% end %>
       </tbody>
@@ -77,12 +65,12 @@
       </thead>
       <tbody>
         <% @fuzzy_matches.each do |match| %>
-          <% match[:candidates].each_with_index do |user, i| %>
+          <% match[:existing_users].each_with_index do |user, i| %>
             <% in_debt = @in_debt_ids.include?(user.id) %>
-            <% years = match[:years_active_cache][user.id] %>
+            <% years = @import.years_active_cache[user.id] %>
             <tr class="<%= in_debt ? 'table-danger' : '' %>">
               <% if i == 0 %>
-                <td rowspan="<%= match[:candidates].size %>">
+                <td rowspan="<%= match[:existing_users].size %>">
                   <strong><%= match[:row][:original_name] %></strong>
                   <% if match[:row][:email].present? %>
                     <br><small class="text-gray-500"><%= match[:row][:email] %></small>
@@ -94,20 +82,7 @@
                 <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small>
                 <br><small class="text-gray-500"><%= user.email %></small>
               </td>
-              <td>
-                <% if @member_ids.include?(user.id) %>
-                  <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
-                <% else %>
-                  <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
-                <% end %>
-              </td>
-              <td>
-                <% if in_debt %>
-                  <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
-                <% else %>
-                  <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
-                <% end %>
-              </td>
+              <%= render "status_cells", user: user, in_debt: in_debt %>
             </tr>
           <% end %>
         <% end %>
