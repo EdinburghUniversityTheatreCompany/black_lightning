@@ -1,10 +1,7 @@
 class Admin::RolesController < AdminController
   include GenericController
 
-  load_resource
-  authorize_resource except: [ :add_user, :remove_user ]
-  before_action :authorize_add_user, only: [ :add_user ]
-  before_action :authorize_remove_user, only: [ :remove_user ]
+  load_and_authorize_resource
 
   def show
     @q = @role.users.ransack(params[:q], auth_object: current_ability)
@@ -92,16 +89,6 @@ class Admin::RolesController < AdminController
   end
 
   private
-
-  def authorize_add_user
-    @role ||= Role.find(params[:id])
-    authorize! :add_user, @role
-  end
-
-  def authorize_remove_user
-    @role ||= Role.find(params[:id])
-    authorize! :remove_user, @role
-  end
 
   def permitted_params
     [ :name, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]
