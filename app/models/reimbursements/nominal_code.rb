@@ -41,7 +41,7 @@ module Reimbursements
     # Active [code, label] pairs to suggest: the centre's own, or with none
     # every centre's deduped by code (the first label wins; it is only a hint).
     def self.suggestions_for(cost_centre)
-      scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
+      scope = cost_centre ? where(cost_centre: cost_centre) : all
       scope.where(active: true).order(:code, :id)
            .pluck(:code, :label)
            .uniq { |code, _| code.to_s.downcase }
@@ -50,7 +50,7 @@ module Reimbursements
     # code => label for printing stored codes, keyed downcased as the
     # utf8mb4_unicode_ci columns compare. Retired codes still label old rows.
     def self.labels_for(cost_centre)
-      scope = cost_centre ? where(cost_centre_id: [ cost_centre.id, nil ]) : all
+      scope = cost_centre ? where(cost_centre: cost_centre) : all
       scope.order(:code, :id).pluck(:code, :label)
            .to_h { |code, label| [ code.to_s.downcase, label ] }
     end
@@ -58,11 +58,11 @@ module Reimbursements
     # The rows carrying a code as a string: this centre's plus the unplaced
     # (NULL centre) ones, which are lenient-scoped into every centre.
     def self.budgets_for(cost_centre)
-      Budget.where(cost_centre_id: [ cost_centre&.id, nil ])
+      Budget.where(cost_centre_id: [ cost_centre.id, nil ])
     end
 
     def self.actuals_for(cost_centre)
-      EusaActual.where(cost_centre_id: [ cost_centre&.id, nil ])
+      EusaActual.where(cost_centre_id: [ cost_centre.id, nil ])
     end
 
     # { "432320" => { budgets: 2, actuals: 9 } }, keyed downcased, so the screen
