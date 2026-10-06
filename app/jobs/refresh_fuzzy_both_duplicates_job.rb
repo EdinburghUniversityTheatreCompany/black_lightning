@@ -12,8 +12,9 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
 
     # Narrow select: every user is resident for the O(n²) scan, and a full row carries ~40
     # columns, so this keeps peak RSS proportional to the work.
-    users_by_letter = User.select(:id, :first_name, :last_name, :not_duplicate_user_ids)
-                          .to_a.group_by { |u| u.last_name&.first&.upcase || "Z" }
+    users_by_letter = User.where.not(last_name: [ nil, "" ])
+                          .select(:id, :first_name, :last_name, :not_duplicate_user_ids)
+                          .to_a.group_by { |u| u.last_name.first.upcase }
 
     users_by_letter.each do |letter, users|
       Rails.logger.info "Processing #{users.size} users with last name starting with '#{letter}'"
@@ -38,10 +39,10 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
       next if user1.marked_not_duplicate?(user2)
 
       # Exact last names belong in buckets 2/3 of User.find_potential_duplicates.
-      next if user1.last_name && user2.last_name && user1.last_name.casecmp?(user2.last_name)
+      next if user1.last_name.casecmp?(user2.last_name)
 
-      next unless User.fuzzy_last_name_match?(user1.last_name, user2.last_name)
-      next unless User.fuzzy_first_name_match?(user1.first_name, user2.first_name)
+      next unless StringSimilarity.fuzzy_name_match?(user1.last_name, user2.last_name)
+      next unless StringSimilarity.fuzzy_name_match?(user1.first_name, user2.first_name)
 
       bucket_type = if user1.years_overlap?(user2, years_active_cache: years_active_cache)
         "overlapping"

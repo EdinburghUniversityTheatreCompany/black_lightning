@@ -598,11 +598,6 @@ class User < ApplicationRecord
     StringSimilarity.fuzzy_name_match?(name1, name2, threshold: threshold)
   end
 
-  def self.fuzzy_last_name_match?(last_name1, last_name2, threshold: 0.6)
-    return false if last_name1.blank? || last_name2.blank?
-    StringSimilarity.fuzzy_name_match?(last_name1, last_name2, threshold: threshold)
-  end
-
   # Potential duplicate pairs, in five buckets:
   #   same_id: same student_id, associate_id or equivalent sms email (definite duplicates)
   #   fuzzy_name_overlapping / fuzzy_name_non_overlapping: same last name, fuzzy first name,

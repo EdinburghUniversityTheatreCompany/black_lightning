@@ -76,13 +76,6 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert user2.marked_not_duplicate?(user1), "Should work in reverse direction too"
   end
 
-  # fuzzy_last_name_match? tests
-  test "fuzzy_last_name_match returns false for blank names" do
-    assert_not User.fuzzy_last_name_match?("", "Smith")
-    assert_not User.fuzzy_last_name_match?("Smith", "")
-    assert_not User.fuzzy_last_name_match?(nil, "Smith")
-  end
-
   # find_potential_duplicates tests
   test "find_potential_duplicates finds users sharing a student_id or associate_id" do
     { student_id: "s1234567", associate_id: "ASSOC123456" }.each do |column, value|

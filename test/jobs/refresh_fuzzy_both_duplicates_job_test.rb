@@ -66,8 +66,8 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
     assert_equal 0, CachedDuplicate.count, "Should clear old cached results"
   end
 
-  test "handles multiple users with nil last names in same group" do
-    # Both users have nil last names, will be grouped together in "Z" bucket
+  test "ignores users with nil last names" do
+    # Nil last names are left out of the query, so nothing reaches the matcher.
     user1 = FactoryBot.create(:user, first_name: "Alice", last_name: nil)
     user2 = FactoryBot.create(:user, first_name: "Bob", last_name: nil)
 
@@ -75,7 +75,6 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
       RefreshFuzzyBothDuplicatesJob.perform_now
     end
 
-    # Should not find any duplicates (nil last names are skipped by fuzzy_last_name_match?)
     assert_equal 0, CachedDuplicate.count
   end
 

@@ -54,14 +54,7 @@ module StringSimilarity
     levenshtein_similarity(n1, n2)
   end
 
-  # True when the names are equal once normalised, abbreviate one another, or reach `threshold` similarity.
   def fuzzy_name_match?(name1, name2, threshold: 0.6)
-    n1 = normalize_name(name1)
-    n2 = normalize_name(name2)
-
-    return true if n1 == n2
-    return true if abbreviation?(n1, n2) || abbreviation?(n2, n1)
-
-    levenshtein_similarity(n1, n2) >= threshold
+    match_confidence(name1, name2) >= threshold
   end
 end
