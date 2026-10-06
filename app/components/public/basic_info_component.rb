@@ -1,6 +1,4 @@
 class Public::BasicInfoComponent < ViewComponent::Base
-  renders_one :extra_content
-
   def initialize(header:, image:, details: [], tagline: nil, admin_site: false)
     @header = header
     @image = image
