@@ -5,11 +5,9 @@
 ###########
 # WARNING #
 ###########
-# Prefer hash conditions over block. Hash conditions work with load_and_authorize_resource
-# and accessible_by (SQL generation) automatically. Blocks alone break SQL generation,
-# which means you need to pass a raw SQL string as the conditions argument instead of
-# a hash: can :action, Model, "sql_condition" do |record| ... end
-# Combining a hash with a block raises CanCan::BlockAndConditionsError.
+# Prefer hash conditions to blocks: a block alone breaks accessible_by unless you also pass a raw
+# SQL string (can :action, Model, "sql_condition" do |record| ... end). A hash plus a block raises
+# CanCan::BlockAndConditionsError.
 # See: https://github.com/CanCanCommunity/cancancan/wiki/Defining-Abilities and the separate pages for the different kinds of definitions.
 #
 # When you add a permission, please add a test for it, even if it is obvious what it does.
@@ -66,10 +64,10 @@ class Ability
       # Can view the error details on the error page.
       can :view_details, :errors
 
-      # If not set in grid, even admins cannot advance-review the proposals.
+      # Even admins cannot advance-review unless the grid grants it.
       cannot :advance_review, :proposals
 
-      # Apply role-based grid permissions before proposal restrictions so the proposal rules always take precedence.
+      # The grid goes first so the proposal rules take precedence.
       set_permissions_based_on_grid user
 
       proposal_permissions user
@@ -77,9 +75,8 @@ class Ability
       return
     end
 
-    # If you can approve something, you can also reject it, and mark proposals successful/unsuccessful.
     alias_action :reject, :mark_successful, :mark_unsuccessful, :reset_status, to: :approve
-    # Closing an opportunity (expiring it immediately) is just an edit of its expiry date.
+    # Closing an opportunity just edits its expiry date.
     alias_action :close, to: :update
     # Alias grid to read
     alias_action :grid, to: :read
@@ -101,7 +98,6 @@ class Ability
     # Guests can see all Event Tags.
     can :read, EventTag
 
-    # Guests can see all Companies (used for filtering opportunities by company/society).
     can :read, Company
 
     # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
@@ -116,8 +112,7 @@ class Ability
     # Everyone can create a complaint.
     can [ :create ], Complaint
 
-    # Anyone (including logged-out external submitters) can submit an opportunity.
-    # Submissions are unapproved until reviewed, and the public form is reCAPTCHA/honeypot protected.
+    # Logged-out external submitters too; submissions stay unapproved until reviewed.
     can :create, Opportunity
 
     can :show, Admin::EditableBlock, admin_page: false
@@ -164,7 +159,6 @@ class Ability
     can :read, Admin::StaffingDebt, user_id: user.id
     # Only grant the :show action for Admin::Debt so that normal users do not have access to the index page which is useless for them.
     can :show, Admin::Debt, id: user.id
-    # Users can see their own maintenance credit, but not edit them.
     can :read, MaintenanceCredit, user_id: user.id
 
     can %I[read update], Opportunity, creator_id: user.id
@@ -198,17 +192,13 @@ class Ability
     can :manage, :membership_import if can? :absorb, User
     can :manage, :user_import if can? :absorb, User
 
-    # Anyone who can index debts via the grid can also use the debt checker
     can :check_debt, Admin::Debt if can?(:index, Admin::Debt)
 
-    # Grant debt_overview access if user can create either type of debt
     can :debt_overview, Event if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
-    # Explicitly exclude add_user and remove_user from :manage on Role
-    # This prevents users with "can :manage, Role" from automatically being able to add/remove users
+    # Stops `can :manage, Role` from covering add_user and remove_user.
     cannot [ :add_user, :remove_user ], Role
 
-    # Re-allow for admins (they should be able to add/remove users from any role)
     if user&.admin?
       can [ :add_user, :remove_user ], Role
     end
@@ -243,36 +233,29 @@ class Ability
     end
   end
 
-  # Permissions for proposals (common between admin and regular user).
-  #
-  # These must come after set_permissions_based_on_grid so the grid cannot override them.
+  # Proposal rules for admins and users alike. They come after set_permissions_based_on_grid so
+  # the grid cannot override them and can?(:review, :proposals) is already true.
   def proposal_permissions(user)
     # No one (even admins) should be able to read proposals before the submission deadline has passed.
     cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
-    # Everyone can read the about page.
     can :about, Admin::Proposals::Proposal
 
-    # All users can make proposals for submission deadlines in the future.
     can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
-    # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
+    # Users always see the proposals they are on.
     can :read, Admin::Proposals::Proposal, users: { id: user.id }
-    # Users can see all approved proposals, whether current or archived.
+    # Approved proposals, current or archived, are visible to all.
     can :read, Admin::Proposals::Proposal,
       status: [ :approved, :successful, :unsuccessful ].map { |s| Admin::Proposals::Proposal.statuses[s] }
 
-    # You can update and unwithdraw a proposal at any time before the editing dealine.
     can [ :update, :unwithdraw ], Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
 
-    # But you can withdraw a proposal at any time before it reaches a "terminal stage" (see below).
+    # Withdrawing stays open until a terminal status (see below).
     can :withdraw, Admin::Proposals::Proposal, users: { id: user.id }
 
-    # The `review proposals` grid permission (Committee and Proposal Checker) opens
-    # every proposal once its call's submission deadline has passed — approved, rejected or
-    # awaiting — and the index of all of them. Proposal is deliberately NOT a model row in the
-    # grid because its rules are time-based, so this is a miscellaneous permission and has to sit
-    # after set_permissions_based_on_grid, which is what makes can?(:review) true.
+    # `review proposals` (Committee, Proposal Checker): every proposal past its submission
+    # deadline. Proposal is not a grid model row because its rules are time-based.
     if can?(:review, :proposals)
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
       can :index, Admin::Proposals::Proposal
@@ -283,18 +266,14 @@ class Ability
       can :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
     end
 
-    # Withdrawn propoals and proposals before the submission deadline cannot have their status adjusted.
     cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, withdrawn: true
     cannot [ :approve, :reject, :mark_successful, :mark_unsuccessful ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
-    # Rejected, unsuccessful, or successful proposals, have already completed the proposal lifecycle and so
-    # cannot be withdrawn.
     cannot :withdraw, Admin::Proposals::Proposal,
       status: [ :rejected, :unsuccessful, :successful ].map { |s| Admin::Proposals::Proposal.statuses[s] }
 
-    # We also have an `advance review` grid permission (generally Bus Man, Set Man, Prod Man, and Secretary)
-    # for proposals before the Submission Deadline.
-    # This permission is a little contentious, but company consensus is positive.
+    # `advance review` (generally Bus Man, Set Man, Prod Man, Secretary): proposals before the
+    # submission deadline. Contentious, but company consensus is positive.
     if can?(:advance_review, :proposals)
       can :read, Admin::Proposals::Proposal
     end

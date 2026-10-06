@@ -1,8 +1,6 @@
 require "test_helper"
 
 class UserImportTest < ActiveSupport::TestCase
-  # Parsing tests
-
   test "parses TSV data correctly" do
     tsv = <<~TSV
       Name\tStudent ID\tEmail
@@ -108,8 +106,6 @@ class UserImportTest < ActiveSupport::TestCase
     assert_empty import.rows
   end
 
-  # Categorization tests
-
   test "categorizes exact match by student_id" do
     user = FactoryBot.create(:user, student_id: "s1234567")
 
@@ -153,12 +149,10 @@ class UserImportTest < ActiveSupport::TestCase
   end
 
   test "categorizes fuzzy name match for active users only" do
-    # Create an active user (with team membership on recent event)
     active_user = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
     recent_show = FactoryBot.create(:show, start_date: Date.current - 1.month, end_date: Date.current - 1.month + 3.days)
     recent_show.team_members.create!(user: active_user, position: "Director")
 
-    # Create an inactive user with same last name
     inactive_user = FactoryBot.create(:user, first_name: "Johnny", last_name: "Smith")
 
     tsv = <<~TSV
@@ -168,7 +162,6 @@ class UserImportTest < ActiveSupport::TestCase
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
-    # Should fuzzy match the active user, not the inactive one
     assert_equal 1, import.categorized[:fuzzy_match].size
     assert_includes import.categorized[:fuzzy_match].first[:existing_users], active_user
     assert_not_includes import.categorized[:fuzzy_match].first[:existing_users], inactive_user
@@ -197,7 +190,6 @@ class UserImportTest < ActiveSupport::TestCase
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
-    # Should match by student_id, not email
     assert_equal 1, import.categorized[:exact_match_id].size
     assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
     assert_empty import.categorized[:exact_match_email]
@@ -220,8 +212,6 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:exact_match_email].size
     assert_equal 1, import.categorized[:create_new].size
   end
-
-  # User ID Column Tests
 
   test "parses user_id column formatted as 'User ID'" do
     user = FactoryBot.create(:user)
@@ -333,13 +323,11 @@ class UserImportTest < ActiveSupport::TestCase
     TSV
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    # user_id 999999999 does not exist; falls through to student_id match
     assert_equal 1, import.categorized[:exact_match_id].size
     assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
   end
 
   test "returns multiple fuzzy match candidates sorted by confidence" do
-    # Create two active users with same last name and similar first names
     alex_exact = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
     alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
 
@@ -357,12 +345,9 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:fuzzy_match].size
     candidates = import.categorized[:fuzzy_match].first[:existing_users]
     assert_equal 2, candidates.size
-    # Exact match should come first (higher confidence)
     assert_equal alex_exact, candidates.first
     assert_equal alexander, candidates.second
   end
-
-  # Generic ID Column Tests
 
   test "generic ID column with student ID value populates student_id" do
     tsv = <<~TSV

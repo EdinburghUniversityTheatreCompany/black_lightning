@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk importing users (without activating membership).
-# Creates user accounts from spreadsheet/paste data with smart matching.
-##
+# Bulk-creates user accounts from pasted or uploaded data, without activating membership.
 class Admin::UserImportsController < AdminController
   include Importable
 
@@ -48,7 +45,6 @@ class Admin::UserImportsController < AdminController
     actions = params[:actions] || {}
     results = { created: 0, linked: 0, skipped: 0 }
 
-    # Process all buckets
     all_items = categorized.values.flatten
     all_items.each do |item|
       index = item["index"].to_s
@@ -61,7 +57,6 @@ class Admin::UserImportsController < AdminController
         user.send_welcome_email
         results[:created] += 1
       when "link", /\Alink_\d+\z/
-        # User already exists, no action needed (just acknowledging the link)
         results[:linked] += 1
       when "skip", nil
         results[:skipped] += 1

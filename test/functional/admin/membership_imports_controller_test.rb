@@ -5,8 +5,6 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  # Authorization tests
-
   test "should get new" do
     get :new
     assert_response :success
@@ -19,8 +17,6 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     get :new
     assert_response :forbidden
   end
-
-  # Preview tests
 
   test "preview with valid paste data shows categorized results" do
     user = FactoryBot.create(:user, student_id: "s1234567")
@@ -56,8 +52,6 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert assigns(:cache_key).present?
     assert Rails.cache.read(assigns(:cache_key)).present?
   end
-
-  # Confirm tests
 
   test "confirm without cache data redirects with error" do
     post :confirm, params: { cache_key: "nonexistent_key" }
@@ -237,14 +231,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
       ]
     ))
 
-    # Select user2 specifically
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge_#{user2.id}" } }
 
     assert_redirected_to new_admin_membership_import_path
     user2.reload
     assert user2.has_role?(:member)
     assert_equal "alex@example.com", user2.email
-    # user1 should NOT have been merged
     user1.reload
     assert_not user1.has_role?(:member)
   end

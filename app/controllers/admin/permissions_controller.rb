@@ -52,10 +52,8 @@ class Admin::PermissionsController < AdminController
     @roles.includes(:permissions).each do |role|
       models = params["[#{role.name}]"]
 
-      # Skip roles that have no data in the submission. This prevents wiping
-      # all permissions when the form is submitted before fully loading, or
-      # when a role's checkboxes are all unchecked (HTML checkboxes only
-      # submit values when checked).
+      # Skip roles absent from the post: unchecked boxes submit nothing, so a partial
+      # load would wipe the role.
       next unless models
 
       (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
@@ -76,18 +74,16 @@ class Admin::PermissionsController < AdminController
       "MarketingCreative::Profile" => { "approve" => "Approve or Reject Marketing Creative Profiles" },
       "backend" => { "access" => "Access Backend" },
       "committee" => { "access" => "Access the committee resources page" },
-      # A symbol subject on purpose, not "Admin::Proposals::Proposal": that class is excluded from
-      # the model rows (its read rules are time-based, see Ability), and a miscellaneous-only entry
-      # named after a class makes every save call update_permission for it with just the actions
-      # offered here — deleting the read/update/manage rows stored before 2026-05-08, which is how
-      # non-admins approve proposals. Any misc-only subject must be a symbol for the same reason.
+      # Misc-only subjects must be symbols, never a class name: a grid save calls update_permission
+      # with only the actions listed here, which deleted the stored manage rows for
+      # Admin::Proposals::Proposal on 2026-05-08.
       "proposals" => { "manage_after_submission" => "Manage Proposals (after the submission deadline)",
                        "review" => "Review proposals (after the submission deadline)",
                        "advance_review" => "Review proposals (advance of the submission deadline, temporary)" },
       "reimbursements" => { "access" => "Access the Reimbursements portal (submit and track expenses)" },
       "reimbursements_finance" => { "manage" => "Manage reimbursements finance (People, Review, Batches, Reconcile)" },
       "reports" => { "read" => "Read Reports" },
-      # :manage matches any action in CanCan, so granting manage implies read.
+      # :manage matches any action, so granting manage implies read.
       "climate" => { "read" => "View the climate monitor (crypt temperature / humidity charts)",
                      "manage" => "Configure climate sensors and import readings" },
       "User" => { "view_shows_and_bio" => "View the public part of the user profile (Bio, avatar, and shows)" },

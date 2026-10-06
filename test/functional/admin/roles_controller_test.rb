@@ -142,7 +142,6 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test "should destroy role" do
-    # Create a test role that can be destroyed (not hardcoded or non-purgeable)
     test_role = FactoryBot.create(:role, name: "Test Destroyable Role")
 
     assert_difference("Role.count", -1) do
@@ -242,13 +241,11 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should remove user from role if has parent role" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
     user_with_permission = users(:committee)
     sign_in user_with_permission
 
     assert user_with_permission.can?(:remove_user, Role), "User should be able to remove users from trained role"
 
-    # Create a trained role and add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
     trained_role.parents << roles(:committee)
     user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
@@ -266,13 +263,11 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should not remove user from arbitrary role without admin permission" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
     user_with_permission = FactoryBot.create(:user)
     role = FactoryBot.create(:role, name: "Test Manager")
     user_with_permission.add_role(role.name)
     sign_in user_with_permission
 
-    # Try to remove from a non-trained role
     user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
     user_to_remove.add_role(@role.name)
 
@@ -305,14 +300,12 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test "should add user to role if has parent role" do
     sign_out @admin
 
-    # Create a user with manage_trained_roles permission
     user_with_permission = users(:committee)
 
     sign_in user_with_permission
 
     assert user_with_permission.can?(:add_user, Role), "User should be able to add users to trained role"
 
-    # Create a trained role and try to add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
     trained_role.parents << roles(:committee)
     user_to_add = FactoryBot.create(:user, first_name: "Test", last_name: "User")

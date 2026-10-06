@@ -2,15 +2,12 @@ require "test_helper"
 
 class MembershipImportTest < ActiveSupport::TestCase
   setup do
-    # Create some test users
     @member_with_student_id = FactoryBot.create(:member, student_id: "s1234567", email: "member@example.com")
     @non_member_with_student_id = FactoryBot.create(:user, student_id: "s7654321", email: "nonmember@example.com")
     @member_with_email = FactoryBot.create(:member, email: "existing@example.com")
     @non_member_with_email = FactoryBot.create(:user, email: "inactive@example.com")
     @user_with_similar_name = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
   end
-
-  # TSV Parsing Tests
 
   test "parses valid TSV data" do
     tsv = <<~TSV
@@ -71,8 +68,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_not import.valid?
     assert_equal 0, import.rows.size
   end
-
-  # Categorization Tests
 
   test "categorizes already active member by student_id as already_active" do
     tsv = <<~TSV
@@ -135,7 +130,6 @@ class MembershipImportTest < ActiveSupport::TestCase
   end
 
   test "student_id match takes priority over email match" do
-    # Create a user with both student_id and email matching different import rows
     user = FactoryBot.create(:user, student_id: "s8888888", email: "priority@example.com")
 
     tsv = <<~TSV
@@ -145,13 +139,11 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     import = MembershipImport.new(tsv, input_type: :paste)
 
-    # Should match by student_id, not create new despite different email
     assert_equal 1, import.categorized[:activate_by_id].size
     assert_equal user, import.categorized[:activate_by_id].first[:existing_user]
   end
 
   test "email match takes priority over name match" do
-    # User with email that would match, and a name that could also fuzzy match
     user = FactoryBot.create(:user, first_name: "Bob", last_name: "Jones", email: "bob.jones@example.com")
     FactoryBot.create(:user, first_name: "Bobby", last_name: "Jones") # Similar name
 
@@ -162,12 +154,9 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     import = MembershipImport.new(tsv, input_type: :paste)
 
-    # Should match by email, not propose merge for name
     assert_equal 1, import.categorized[:activate_by_email].size
     assert_equal user, import.categorized[:activate_by_email].first[:existing_user]
   end
-
-  # Edge Cases
 
   test "handles name with single word" do
     tsv = <<~TSV
@@ -256,8 +245,6 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     assert_equal "ASSOC123", import.rows.first[:associate_id]
   end
-
-  # User ID Column Tests
 
   test "parses user_id column formatted as 'User ID'" do
     user = FactoryBot.create(:user)
@@ -393,15 +380,12 @@ class MembershipImportTest < ActiveSupport::TestCase
     TSV
 
     import = MembershipImport.new(tsv, input_type: :paste)
-    # user_id 999999999 does not exist; falls through to student_id match
     assert_equal 1, import.categorized[:activate_by_id].size
     assert_equal @non_member_with_student_id, import.categorized[:activate_by_id].first[:existing_user]
   end
 
   test "returns multiple fuzzy match candidates sorted by confidence" do
-    # User with exact name match (no activity = eligible)
     alex_exact = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
-    # User with abbreviation match (no activity = eligible)
     alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
 
     tsv = <<~TSV
@@ -414,13 +398,11 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:propose_merge].size
     candidates = import.categorized[:propose_merge].first[:existing_users]
     assert_equal 2, candidates.size
-    # Exact match should come first
     assert_equal alex_exact, candidates.first
     assert_equal alexander, candidates.second
   end
 
   test "excludes users inactive for more than 5 years from fuzzy matching" do
-    # User with old activity only
     old_user = FactoryBot.create(:user, first_name: "John", last_name: "Ancient")
     old_show = FactoryBot.create(:show, start_date: Date.new(2015, 10, 1), end_date: Date.new(2015, 10, 5))
     old_show.team_members.create!(user: old_user, position: "Actor")
@@ -432,13 +414,11 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     import = MembershipImport.new(tsv, input_type: :paste)
 
-    # Should not fuzzy match old inactive user
     assert_equal 0, import.categorized[:propose_merge].size
     assert_equal 1, import.categorized[:create_new].size
   end
 
   test "includes users with no activity in fuzzy matching" do
-    # User with no team memberships at all (brand new account)
     new_user = FactoryBot.create(:user, first_name: "John", last_name: "Newaccount")
 
     tsv = <<~TSV
@@ -451,8 +431,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:propose_merge].size
     assert_includes import.categorized[:propose_merge].first[:existing_users], new_user
   end
-
-  # Generic ID Column Tests
 
   test "generic ID column works instead of Student ID header" do
     tsv = <<~TSV

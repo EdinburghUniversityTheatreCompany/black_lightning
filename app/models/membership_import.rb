@@ -1,12 +1,7 @@
 # frozen_string_literal: true
 
-##
-# Service-like model for parsing membership import data and categorizing rows.
-# Not backed by a database table.
-#
-# Accepts either pasted TSV data or an uploaded xlsx file.
-# Categorizes each row into one of five buckets based on matching rules.
-##
+# Parses pasted TSV or an uploaded xlsx and sorts each row into a BUCKETS entry by how it matches
+# existing users.
 class MembershipImport
   include ImportParsing
 
@@ -53,7 +48,7 @@ class MembershipImport
   end
 
   def determine_bucket(row)
-    # 0. Match by database primary key (highest priority)
+    # Priority: database id, student id, associate id, email, then fuzzy name.
     if row[:user_id].present?
       user = User.find_by(id: row[:user_id])
       if user
@@ -62,7 +57,6 @@ class MembershipImport
       end
     end
 
-    # 1. Match by student_id
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])
       if user
@@ -71,7 +65,6 @@ class MembershipImport
       end
     end
 
-    # 2. Match by associate_id
     if row[:associate_id].present?
       user = User.find_by(associate_id: row[:associate_id])
       if user
@@ -80,7 +73,6 @@ class MembershipImport
       end
     end
 
-    # 3. Match by email
     if row[:email].present?
       user = User.find_by(email: row[:email])
       if user
@@ -89,8 +81,7 @@ class MembershipImport
       end
     end
 
-    # 4. Fuzzy name match (last name exact, first name fuzzy)
-    # Only consider users active in last 5 years or with no activity on record
+    # Last name exact, first name fuzzy, among users eligible for fuzzy matching.
     if row[:last_name].present?
       candidates = User.where(last_name: row[:last_name]).where(id: @eligible_user_ids)
       matches = candidates
@@ -99,11 +90,10 @@ class MembershipImport
       return [ :propose_merge, matches, nil ] if matches.any?
     end
 
-    # 5. No match found - create new
     [ :create_new, nil, nil ]
   end
 
-  # Bulk-load years_active for all users in the propose_merge bucket to avoid N+1 queries.
+  # One query for every candidate's years_active, to avoid N+1 in the preview.
   def load_years_active_cache
     fuzzy_user_ids = @categorized[:propose_merge].flat_map { |item| item[:existing_users].map(&:id) }
     return {} if fuzzy_user_ids.empty?
@@ -111,15 +101,13 @@ class MembershipImport
     User.bulk_years_active_for(fuzzy_user_ids)
   end
 
-  # Get IDs of users eligible for fuzzy matching:
-  # - Users active in the last 5 years (have team memberships on recent events), OR
-  # - Users with no team memberships at all (e.g., newly created accounts)
+  # Fuzzy-match candidates: on an event team in the last 5 academic years, or on no team at all
+  # (e.g. a new account).
   def eligible_user_ids_for_matching
     current_academic_year = ApplicationController.helpers.date_to_academic_year(Date.current)
     threshold_year = current_academic_year - 5
     threshold_date = Date.new(threshold_year, 9, 1)
 
-    # Users with recent activity
     active_ids = TeamMember.unscoped
                            .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
                            .where(teamwork_type: "Event")
@@ -127,7 +115,6 @@ class MembershipImport
                            .distinct
                            .pluck(:user_id)
 
-    # Users with no team memberships at all
     users_with_memberships = TeamMember.unscoped.distinct.pluck(:user_id)
     no_activity_ids = User.where.not(id: users_with_memberships).pluck(:id)
 

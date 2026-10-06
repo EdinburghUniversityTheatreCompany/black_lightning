@@ -39,7 +39,6 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
 
     assert permissions_before > 0, "Committee should have permissions to start with"
 
-    # Simulate submitting the form with no checkbox data (e.g. page not fully loaded)
     post :update_grid
 
     role.reload
@@ -51,10 +50,8 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
   test "submitting permissions for a role should save them" do
     role = roles(:welfare)
 
-    # Welfare starts with read+update on Complaint (from fixtures)
     assert role.permissions.where(subject_class: "Complaint").exists?
 
-    # Submit with Complaint manage permission added
     post :update_grid, params: {
       "[#{role.name}]" => {
         "Complaint" => { "read" => "read", "update" => "update", "manage" => "manage" }
@@ -83,10 +80,9 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
   end
 
   test "saving the grid leaves stored permissions on subject classes the grid does not render alone" do
-    # Admin::Proposals::Proposal is excluded from the model rows, so the grid offers no checkbox
-    # for it — but rows from before it was excluded (2026-05-08) still exist in production, and
-    # `manage` there is how a non-admin approves proposals. update_permission deletes every action
-    # not submitted, so the class must never be in the list of subject classes the save walks.
+    # The grid offers no checkbox for Proposal, and update_permission deletes every action not
+    # submitted, so the class must never be in the subject list a save walks (stored `manage` rows
+    # are how non-admins approve proposals).
     role = roles(:welfare)
     legacy = Admin::Permission.create!(action: "manage", subject_class: "Admin::Proposals::Proposal")
     role.permissions << legacy

@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-##
-# Controller for bulk membership imports from xlsx or pasted TSV data.
-# Allows secretary to import membership purchases and activate users in bulk.
-##
+# Bulk membership import from xlsx or pasted TSV: matches rows to users and activates them.
 class Admin::MembershipImportsController < AdminController
   include Importable
 
@@ -55,7 +52,6 @@ class Admin::MembershipImportsController < AdminController
   private
 
   def deserialize_import(serialized)
-    # Convert back from session format
     serialized.transform_values do |items|
       items.map do |item|
         deserialized = {
@@ -78,7 +74,6 @@ class Admin::MembershipImportsController < AdminController
     results = { activated: 0, created: 0, merged: 0, skipped: 0, errors: [] }
     @synced_user_ids = []
 
-    # Process each bucket
     categorized.each do |bucket, items|
       items.each do |item|
         action = determine_action(bucket, item[:index], actions)
@@ -86,31 +81,26 @@ class Admin::MembershipImportsController < AdminController
       end
     end
 
-    # One enqueue for the whole import rather than one per row: this loop runs
-    # over hundreds of rows, and a row can activate a user AND rewrite their
-    # placeholder email, which is two membership events for one person. The
-    # nightly reconcile would pick all of this up anyway — this only spares a
-    # newly activated member from waiting until tomorrow to buy at member price.
+    # One enqueue for the whole import: a row can activate a user AND rewrite their
+    # placeholder email. The nightly reconcile is the backstop.
     Pretix::SyncMembershipJob.enqueue_for(@synced_user_ids)
 
     results
   end
 
   def determine_action(bucket, index, actions)
-    # Check if there's an explicit action for this item
     explicit_action = actions[index.to_s]
     return explicit_action if explicit_action.present?
 
-    # Default actions for each bucket
     case bucket.to_sym
     when :already_active
-      "skip" # Already active, nothing to do
+      "skip"
     when :activate_by_id, :activate_by_email
-      "activate" # Auto-activate these
+      "activate"
     when :propose_merge
-      "skip" # Require explicit decision
+      "skip" # needs an explicit decision
     when :create_new
-      "create" # Default to create
+      "create"
     else
       "skip"
     end
@@ -125,7 +115,7 @@ class Admin::MembershipImportsController < AdminController
     when "merge"
       merge_and_activate(item[:existing_user], item[:row], results)
     when /\Amerge_(\d+)\z/
-      # Selected user from multi-candidate fuzzy match
+      # a candidate picked from a multi-candidate fuzzy match
       selected_user = User.find_by(id: $1.to_i)
       merge_and_activate(selected_user, item[:row], results)
     when "skip"
@@ -170,11 +160,9 @@ class Admin::MembershipImportsController < AdminController
   def merge_and_activate(existing_user, row, results)
     return results[:errors] << "User not found for merge" unless existing_user
 
-    # Update existing user with any new info from the import row
     update_email_if_unknown(existing_user, row[:email])
     update_ids_if_missing(existing_user, row)
 
-    # Update name if existing user has no name
     if existing_user.first_name.blank? && row[:first_name].present?
       existing_user.update(first_name: row[:first_name])
     end
@@ -187,8 +175,8 @@ class Admin::MembershipImportsController < AdminController
       existing_user.send_welcome_email
     end
 
-    # Collected even when the role was already held: this branch also rewrites a
-    # placeholder email, and the pretix customer is matched on email.
+    # Collected even when the role was already held: the placeholder email may have
+    # been rewritten, and pretix matches on email.
     @synced_user_ids << existing_user.id
     results[:merged] += 1
   end

@@ -12,8 +12,6 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     Rails.cache.clear
   end
 
-  # Authorization tests
-
   test "should get new" do
     get :new
     assert_response :success
@@ -26,8 +24,6 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     get :new
     assert_response :forbidden
   end
-
-  # Preview tests
 
   test "preview with valid paste data shows categorized results" do
     user = FactoryBot.create(:user, student_id: "s1234567")
@@ -63,8 +59,6 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     assert assigns(:cache_key).present?
     assert Rails.cache.read(assigns(:cache_key)).present?
   end
-
-  # Confirm tests
 
   test "confirm without cache data redirects with error" do
     post :confirm, params: { cache_key: "nonexistent_key" }

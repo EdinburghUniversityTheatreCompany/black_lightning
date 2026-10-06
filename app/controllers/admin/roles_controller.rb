@@ -94,13 +94,11 @@ class Admin::RolesController < AdminController
   private
 
   def authorize_add_user
-    # Load the role manually since load_resource might not work for custom actions
     @role ||= Role.find(params[:id])
     authorize! :add_user, @role
   end
 
   def authorize_remove_user
-    # Load the role manually since load_resource might not work for custom actions
     @role ||= Role.find(params[:id])
     authorize! :remove_user, @role
   end

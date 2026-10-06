@@ -11,7 +11,6 @@
 <%= form_with url: confirm_admin_membership_imports_path, method: :post, local: true do |f| %>
   <%= hidden_field_tag :cache_key, @cache_key %>
 
-  <%# Bucket 3: Activate by Email %>
   <% if @import.categorized[:activate_by_email].any? %>
     <%= render CardComponent.new(variant: :info, flush: true) do |c| %>
       <% c.with_tools do %>
@@ -55,7 +54,6 @@
     <% end %>
   <% end %>
 
-  <%# Bucket 4: Propose Merge - secretary decides %>
   <% if @import.categorized[:propose_merge].any? %>
     <%= render CardComponent.new(variant: :warning, flush: true) do |c| %>
       <% c.with_tools do %>
@@ -119,7 +117,6 @@
     <% end %>
   <% end %>
 
-  <%# Bucket 5: Create New %>
   <% if @import.categorized[:create_new].any? %>
     <%= render CardComponent.new(variant: :primary, flush: true) do |c| %>
       <% c.with_tools do %>
@@ -171,7 +168,6 @@
     <% end %>
   <% end %>
 
-  <%# Bucket 1: Already Active - just show, no action needed %>
   <% if @import.categorized[:already_active].any? %>
     <%= render CardComponent.new(variant: :secondary, flush: true) do |c| %>
       <% c.with_tools do %>
@@ -215,7 +211,6 @@
     <% end %>
   <% end %>
 
-  <%# Bucket 2: Activate by ID - auto-activate %>
   <% if @import.categorized[:activate_by_id].any? %>
     <%= render CardComponent.new(variant: :info, flush: true) do |c| %>
       <% c.with_tools do %>

@@ -165,14 +165,12 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_set_up_proposal
     @proposal.status = :awaiting_approval
 
-    # The role NAME alone grants nothing any more. (@checker_ability was built by
-    # helper_set_up_proposal before this delete and holds its own rule set, so it is unaffected.)
+    # The role name alone grants nothing. (@checker_ability predates this delete and keeps its own rules.)
     named_only = FactoryBot.create(:user)
     named_only.add_role "Proposal Checker"
     Role.find_by(name: "Proposal Checker").permissions.delete(admin_permissions(:review_proposals))
     assert_not Ability.new(named_only).can?(:read, @proposal), "Holding a role called Proposal Checker without the permission must not grant review"
 
-    # Any role holding the permission does.
     other_role_user = FactoryBot.create(:user)
     Role.create!(name: "Artistic Panel").tap do |role|
       role.permissions << admin_permissions(:review_proposals)
@@ -180,7 +178,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
     assert Ability.new(other_role_user).can?(:read, @proposal), "A role holding the review permission must be able to read an awaiting proposal after the deadline"
 
-    # Committee reviews through the same permission (fixture), and loses it when it is unticked.
     assert Ability.new(users(:committee)).can?(:read, @proposal)
     roles(:committee).permissions.delete(admin_permissions(:review_proposals))
     assert_not Ability.new(users(:committee).reload).can?(:read, @proposal), "Committee without the permission must not review; the role name is not the gate"
@@ -207,16 +204,12 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     # 4B: ...and can no longer update proposals.
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
-    # Same for successful...
-
     situation = "after the editing deadline, but that is successful"
 
     @proposal.status = :successful
 
     helper_test_proposal(:read, @proposal, true, true, true, situation)
     helper_test_proposal(:update, @proposal, false, false, false, situation)
-
-    # Same for unsuccessful...
 
     situation = "after the editing deadline, but that is unsuccessful"
 
@@ -226,8 +219,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_proposal(:update, @proposal, false, false, false, situation)
 
     situation = "after the editing deadline, but that is withdrawn"
-
-    # Same for withdrawn...
 
     @proposal.withdrawn = true
 
@@ -698,8 +689,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
       assert @ability.can?(permission.action.to_sym, subject), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
 
-      # For Role :read, :edit,
-      # check a non-trained role instance since all logged-in users can read trained roles and edit child roles.
+      # Role :read and :update need a non-trained instance: everyone can read trained roles, and edit child roles.
       check_subject = subject == Role && (permission.action.to_sym == :read || permission.action.to_sym == :update) ? other_role.first : subject
       assert other_ability.cannot?(permission.action.to_sym, check_subject), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
     end
@@ -753,10 +743,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     @random_ability = Ability.new(FactoryBot.create(:user))
 
-    # Create proposals if the call doesn't have any
     if @call.proposals.empty?
       FactoryBot.create_list(:proposal, 2, :with_team_members, call: @call)
-      @call.reload  # Reload to get the newly created proposals
+      @call.reload
     end
     @proposal = @call.proposals.sample
     @proposal.status = :rejected

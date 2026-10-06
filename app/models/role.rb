@@ -24,11 +24,9 @@ class Role < ApplicationRecord
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :resource_type, length: { maximum: 255 }
-  # The roles that are referenced directly in the code (`has_role?` / `with_role`).
-  # Renaming one would silently break every such check, so these names cannot be changed.
-  # Matched case-insensitively (`hardcoded_name?`): the code asks for :member and "Member" alike,
-  # which MySQL's collation happily equates, so the guard must not be the one place casing matters.
-  # Archiving is unaffected — it creates a suffixed sibling role and never renames this one.
+  # Roles the code names directly (`has_role?` / `with_role`), so they cannot be renamed.
+  # Matched case-insensitively: the code asks for :member and "Member" alike. Archiving is
+  # unaffected, as it creates a suffixed sibling.
   HARDCODED_NAMES = [ "Admin", "Committee", "Member", "Life Member", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer", "Advance Proposal Checker" ].freeze
   NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
@@ -78,12 +76,8 @@ class Role < ApplicationRecord
       return false
     end
 
-    # Captured BEFORE the clear, and synced only after the transaction commits.
-    # `users.clear` is delete_all, which fires no association callbacks at all,
-    # so nothing downstream can observe this the way it observes add_role — and
-    # archiving `member` is precisely the moment the whole society stops being
-    # members. Enqueuing inside the transaction would tell pretix about a
-    # revocation that a rollback then undid.
+    # Captured BEFORE the clear (`users.clear` is delete_all and fires no callbacks), and
+    # synced only after the commit so a rollback is never announced to pretix.
     archived_user_ids = users.ids
 
     ActiveRecord::Base.transaction do
@@ -123,9 +117,7 @@ class Role < ApplicationRecord
 
   private
 
-  # Only the two roles that actually entitle someone to member pricing are worth
-  # a pretix round trip; archiving "DM Trained" would otherwise enqueue a job per
-  # holder to discover each is a no-op.
+  # Only entitling roles are worth a pretix round trip.
   def sync_pretix_memberships(user_ids)
     return unless Pretix::MembershipSync::ENTITLING_ROLES.include?(name.to_s.downcase.strip)
 
