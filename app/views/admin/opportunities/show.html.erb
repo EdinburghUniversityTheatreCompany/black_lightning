@@ -1,10 +1,9 @@
 <% roles_content = nil %>
 <% if @opportunity.roles.any? %>
   <% roles_html = @opportunity.roles.map do |role|
-       label = content_tag(:strong, role.position)
-       label += ": #{role.department.name}".html_safe if role.department
-       label += " (#{role.note})".html_safe if role.note.present?
-       content_tag(:li, label)
+       content_tag(:li, safe_join([ content_tag(:strong, role.position),
+                                    (": #{role.department.name}" if role.department),
+                                    (" (#{role.note})" if role.note.present?) ]))
      end %>
   <% roles_content = { type: 'content', header: 'Roles', content: content_tag(:ul, safe_join(roles_html), class: 'list-disc pl-5') } %>
 <% end %>
@@ -28,10 +27,10 @@
     description: { type: 'markdown', markdown: @opportunity.description },
 } %>
 
-<% if @opportunity.members_only? || @opportunity.everyone? %>
+<% unless @opportunity.no_one? %>
   <% display_email = @opportunity.resolved_contact_email %>
   <% if display_email.present? %>
-    <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.submitter_display_name(@current_user)} by emailing them at #{mail_to display_email}.".html_safe } %>
+    <% fields[:contact] = { type: 'content', content: safe_join([ "You can contact #{@opportunity.submitter_display_name(@current_user)} by emailing them at ", mail_to(display_email), "." ]) } %>
   <% end %>
 <% end %>
 

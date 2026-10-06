@@ -199,6 +199,22 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_no_match(/You can contact No Name Set/, response.body)
   end
 
+  # Role notes, department names and the submitter name come from the public form.
+  test "show escapes role notes, department names and the submitter name" do
+    @opportunity.update!(email_visibility: :members_only, contact_email: "contact@example.com",
+                         submitter_name: "<i>poster</i>")
+    role = @opportunity.roles.create!(position: "Lead", note: "<b>note</b>", department: departments(:lighting))
+    role.department.update_column(:name, "<u>dept</u>")
+
+    get :show, params: { id: @opportunity }
+
+    assert_response :success
+    %w[b u i].zip(%w[note dept poster]).each do |tag, text|
+      assert_includes response.body, "&lt;#{tag}&gt;#{text}&lt;/#{tag}&gt;"
+      assert_not_includes response.body, "<#{tag}>#{text}</#{tag}>"
+    end
+  end
+
   test "manager submitting for an external person is recorded as creating it on their behalf" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       submitter_name: "Jane External",
