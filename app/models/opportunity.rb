@@ -95,13 +95,11 @@ class Opportunity < ApplicationRecord
   }
 
   def self.ransackable_attributes(auth_object = nil)
-    [ "approved", "contact_email", "description", "email_visibility", "expiry_date", "title",
-      "project", "author", "apply_url", "compensation_type", "experience_level", "company_id",
-      "dates", "location" ]
+    %w[approved description expiry_date title compensation_type experience_level company_id]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    [ "approver", "creator", "company", "roles" ]
+    %w[creator company roles]
   end
 
   def active?

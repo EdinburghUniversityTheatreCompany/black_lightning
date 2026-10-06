@@ -149,6 +149,19 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
   end
 
+  test "opportunities ignores a filter on a column the form does not offer" do
+    get :opportunities, params: { q: { contact_email_start: "zzz" } }
+
+    assert_response :success
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+  end
+
+  test "opportunities does not error on a filter through the creator" do
+    get :opportunities, params: { q: { creator_first_name_eq: "a" } }
+
+    assert_response :success
+  end
+
   test "opportunities responds to a turbo_stream request (live search)" do
     get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }, format: :turbo_stream
 

@@ -50,10 +50,10 @@ class Company < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[name slug internal website instagram reviewed]
+    %w[name slug internal website]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    %w[opportunities events]
+    []
   end
 end

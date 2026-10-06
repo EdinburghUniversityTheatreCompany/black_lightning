@@ -9,7 +9,7 @@ class GetInvolvedController < ApplicationController
   skip_authorization_check only: [ :opportunities, :page ]
 
   def opportunities
-    @q = Opportunity.listable.ransack(params[:q])
+    @q = Opportunity.listable.ransack(params[:q], auth_object: current_ability)
     # distinct: true dedups the department filter's roles join; eutc_first stays valid with it.
     @opportunities = @q.result(distinct: true).eutc_first.includes(:company, :roles, :creator)
 
