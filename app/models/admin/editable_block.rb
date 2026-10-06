@@ -63,14 +63,12 @@ class Admin::EditableBlock < ApplicationRecord
 
   private
 
+  # Old and new url, every prefix of each: get_subpage_editable_blocks caches by the full
+  # subpage_type path (e.g. "admin/resources"), not the first segment.
   def clear_navbar_cache
-    return if url.blank?
-
-    # Every prefix: get_subpage_editable_blocks caches by the full subpage_type path
-    # (e.g. "admin/resources"), not the first segment.
-    parts = url.split("/")
-    parts.length.times do |i|
-      Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}")
+    [ url, url_previously_was ].compact_blank.uniq.each do |u|
+      parts = u.split("/")
+      parts.length.times { |i| Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}") }
     end
   end
 end
