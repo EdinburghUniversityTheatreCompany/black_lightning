@@ -78,6 +78,8 @@ module Reimbursements
     PAYMENT_METHOD_UK_BACS = "uk_bacs".freeze
     PAYMENT_METHOD_INTERNATIONAL = "international".freeze
     PAYMENT_METHODS = [ PAYMENT_METHOD_UK_BACS, PAYMENT_METHOD_INTERNATIONAL ].freeze
+    PAYMENT_METHOD_OPTIONS = [ [ "UK bank account", PAYMENT_METHOD_UK_BACS ],
+                               [ "International (IBAN)", PAYMENT_METHOD_INTERNATIONAL ] ].freeze
 
     # A fixed list, not free text: a mistyped code is a payment EUSA's bank
     # cannot route. Adding one is a single entry here.

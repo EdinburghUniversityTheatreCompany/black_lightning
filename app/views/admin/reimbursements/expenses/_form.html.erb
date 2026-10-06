@@ -79,8 +79,7 @@
                                 action: "change->reimbursements-receipt#typeChanged" } } %>
 
     <%= f.input :payment_method, label: "How is this paid?",
-          collection: [ [ "UK bank account", Reimbursements::Expense::PAYMENT_METHOD_UK_BACS ],
-                        [ "International (IBAN)", Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL ] ],
+          collection: Reimbursements::Expense::PAYMENT_METHOD_OPTIONS,
           include_blank: false,
           hint: "Pick International to pay a bank outside the UK. EUSA fills in a separate " \
                 "payment form for those, and needs an IBAN and BIC instead of a sort code.",

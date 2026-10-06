@@ -188,12 +188,8 @@
                         "form for those and needs an IBAN and BIC instead of a sort code. Switching " \
                         "keeps the other rail's details, so it can be switched back." do %>
               <%= select_tag :payment_method,
-                             options_for_select(
-                               [ [ "UK bank account", Reimbursements::Expense::PAYMENT_METHOD_UK_BACS ],
-                                 [ "International (IBAN)",
-                                   Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL ] ],
-                               @expense.payment_method
-                             ),
+                             options_for_select(Reimbursements::Expense::PAYMENT_METHOD_OPTIONS,
+                                                @expense.payment_method),
                              data: { reimbursements_receipt_target: "paymentMethod",
                                      action: "change->reimbursements-receipt#paymentMethodChanged" },
                              class: input_classes %>
