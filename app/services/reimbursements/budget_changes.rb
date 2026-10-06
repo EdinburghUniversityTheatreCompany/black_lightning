@@ -4,8 +4,7 @@ module Reimbursements
   # lines', oldest first. A forecast stores only the new amount, so each line's
   # log is walked on its own: two lines revised at one meeting are independent.
   class BudgetChanges
-    Entry = Struct.new(:date, :subject, :area_total, :from, :to, :reason, :budget_update_id,
-                       keyword_init: true) do
+    Entry = Struct.new(:date, :subject, :area_total, :from, :to, :reason, keyword_init: true) do
       def area_total? = area_total
 
       # A first figure on a line that had none, not a change.
@@ -21,18 +20,13 @@ module Reimbursements
       entries.sort_by { |entry| [ entry.date || Date.new(0), entry.subject.to_s ] }
     end
 
-    # A loose line on its own: its own log, with no agreed total above it.
-    def self.for_budget(budget)
-      sequence(budget.forecasts, budget.initial_budget, budget.name, area_total: false)
-    end
-
     # One owner's log, in date order, each row carrying the figure it replaced.
     def self.sequence(forecasts, initial, subject, area_total:)
       previous = initial
       ordered(forecasts).map do |forecast|
         entry = Entry.new(date: forecast.date || forecast.created_at&.to_date, subject: subject,
                           area_total: area_total, from: previous, to: forecast.amount,
-                          reason: forecast.reason, budget_update_id: forecast.budget_update_id)
+                          reason: forecast.reason)
         previous = forecast.amount
         entry
       end

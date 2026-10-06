@@ -16,7 +16,6 @@ module Admin
         @title = @budget.name
         @summary = ::Reimbursements::SpendSummary.for_budget(@budget)
         load_claims([ @budget ])
-        @changes = ::Reimbursements::BudgetChanges.for_budget(@budget)
       end
 
       def index
