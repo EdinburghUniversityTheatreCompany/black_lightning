@@ -1,7 +1,6 @@
 # PaperTrail history and diffs for an editable block.
 class Admin::VersionHistoriesController < AdminController
   before_action :load_parent_record
-  before_action :load_version, only: :show
 
   def index
     @title = "Version History - #{helpers.get_object_name(@parent_record, include_class_name: true)}"
@@ -9,31 +8,15 @@ class Admin::VersionHistoriesController < AdminController
   end
 
   def show
+    @version = @parent_record.versions.find(params[:id])
     @title = "Version #{@version.id} - #{@version.event.titleize}"
     @diff = @parent_record.diff_for_version(@version)
   end
 
-  ALLOWED_PARENT_MODELS = %w[EditableBlock].freeze
-
   private
 
   def load_parent_record
-    parent_param = request.path_parameters.keys.find { |k| k.to_s.end_with?("_id") && k != :id }
-    parent_class_name = parent_param.to_s.chomp("_id").classify
-
-    raise ActionController::RoutingError.new("Not found") unless ALLOWED_PARENT_MODELS.include?(parent_class_name)
-
-    parent_class = begin
-      "Admin::#{parent_class_name}".constantize
-    rescue NameError
-      parent_class_name.constantize
-    end
-
-    @parent_record = parent_class.find(params[parent_param])
+    @parent_record = Admin::EditableBlock.find(params[:editable_block_id])
     authorize! :show, @parent_record
-  end
-
-  def load_version
-    @version = @parent_record.versions.find(params[:id])
   end
 end
