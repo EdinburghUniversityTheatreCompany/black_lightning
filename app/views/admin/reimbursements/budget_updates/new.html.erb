@@ -21,7 +21,7 @@
           <%= date_field_tag :effective_date, @effective_date, class: input_classes %>
         <% end %>
         <%= render "shared/form/field", label: "Shared note", name: :note do %>
-          <%= text_field_tag :note, nil, placeholder: "e.g. Agreed at the June budget meeting",
+          <%= text_field_tag :note, params[:note], placeholder: "e.g. Agreed at the June budget meeting",
                              class: input_classes %>
         <% end %>
       </div>

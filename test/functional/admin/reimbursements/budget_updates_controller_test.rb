@@ -96,11 +96,11 @@ module Admin
         assert_match(/at least one budget/i, response.body)
       end
 
-      test "create with a malformed effective date keeps the typed amounts" do
+      test "create with a malformed effective date keeps the typed amounts and note" do
         sign_in @user
 
         assert_no_difference -> { ::Reimbursements::BudgetUpdate.count } do
-          post :create, params: { effective_date: "not-a-date", note: "x",
+          post :create, params: { effective_date: "not-a-date", note: "June meeting",
                                   amounts: { @props.record_id => "500",
                                              @travel.record_id => "250" } }
         end
@@ -110,6 +110,7 @@ module Admin
         assert_match(/valid effective date/i, response.body)
         assert_select "input[name=?][value=?]", "amounts[#{@props.record_id}]", "500"
         assert_select "input[name=?][value=?]", "amounts[#{@travel.record_id}]", "250"
+        assert_select "input[name=note][value=?]", "June meeting"
       end
 
       test "an unreadable amount fails the whole update and names the budget" do
