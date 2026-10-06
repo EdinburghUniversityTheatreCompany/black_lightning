@@ -1,42 +1,40 @@
 <%# locals: (event:) %>
 
 <% schedule = Event::Schedule.for(event) %>
-<% details = event.schedule_details %>
 
 <%#
   FIXME(soqb): FoH think this view is cluttered. Limit to only when the data is useful (i.e. :single)
   since pretix doesn't list performances then.
 %>
-<% if (schedule.kind != :none || details.any?) && schedule.kind == :single %>
-  <%= render CardComponent.new(title: schedule.kind == :none ? 'Details' : event.occurrence_label.pluralize) do %>
+<% if schedule.kind == :single %>
+  <% details = event.schedule_details %>
+  <%= render CardComponent.new(title: event.occurrence_label.pluralize) do %>
     <%# One row per performance. Event::Schedule's collapsed blocks are for the box
         office board, where a fixed column has no room for a list. %>
-    <% if schedule.occurrences.any? %>
-      <ul class="divide-y divide-gray-200">
-        <% schedule.occurrences.each do |occurrence| %>
-          <li data-performance class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2
-                     <%= 'text-gray-400' if occurrence.on_date < Date.current %>">
-            <span class="font-medium"><%= date_span(occurrence.on_date, nil, long: true) %></span>
-            <span><%= time_span(occurrence.starts_at, occurrence.effective_ends_at) %></span>
+    <ul class="divide-y divide-gray-200">
+      <% schedule.occurrences.each do |occurrence| %>
+        <li data-performance class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2
+                   <%= 'text-gray-400' if occurrence.on_date < Date.current %>">
+          <span class="font-medium"><%= date_span(occurrence.on_date, nil, long: true) %></span>
+          <span><%= time_span(occurrence.starts_at, occurrence.effective_ends_at) %></span>
 
-            <%# Cancelled outranks sold out: showing both reads as two problems. %>
-            <% if occurrence.cancelled? %>
-              <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Cancelled</span>
-            <% elsif occurrence.sold_out? %>
-              <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Sold out</span>
-            <% end %>
+          <%# Cancelled outranks sold out: showing both reads as two problems. %>
+          <% if occurrence.cancelled? %>
+            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Cancelled</span>
+          <% elsif occurrence.sold_out? %>
+            <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Sold out</span>
+          <% end %>
 
-            <% occurrence.access_flag_labels.each do |label| %>
-              <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700"><%= label %></span>
-            <% end %>
+          <% occurrence.access_flag_labels.each do |label| %>
+            <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700"><%= label %></span>
+          <% end %>
 
-            <% if occurrence.note.present? %>
-              <span class="text-sm text-gray-500"><%= occurrence.note %></span>
-            <% end %>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
+          <% if occurrence.note.present? %>
+            <span class="text-sm text-gray-500"><%= occurrence.note %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
 
     <% if details.any? %>
       <p class="mt-3 text-sm text-gray-500"><%= details.to_sentence.upcase_first %>.</p>
