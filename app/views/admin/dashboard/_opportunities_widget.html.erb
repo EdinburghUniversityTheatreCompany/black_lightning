@@ -30,8 +30,6 @@
   <% end %>
 <% end %>
 
-<% if can?(:create, Opportunity) %>
-  <div class="px-4 py-3 border-t border-gray-100">
-    <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
-  </div>
-<% end %>
+<div class="px-4 py-3 border-t border-gray-100">
+  <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
+</div>
