@@ -8,22 +8,15 @@ class Admin::StaffingIndexRowComponent < ViewComponent::Base
 
   def rows
     @staffings_hash.map do |url, staffings|
-      filled = 0
-      unfilled = 0
-      staffings.each do |staffing|
-        staffing.staffing_jobs.each { |job| job.user_id.nil? ? unfilled += 1 : filled += 1 }
-      end
-      total = filled + unfilled
-
-      dates = staffings.map { |s| s.start_time.to_date }.sort
-      date_range = helpers.time_range_string(dates.first, dates.last, true, :short)
+      jobs = staffings.flat_map(&:staffing_jobs)
+      filled = jobs.count(&:user_id)
 
       {
-        url: url,
+        href: helpers.grid_admin_staffings_path(url, archived: @archived),
         show_title: staffings.first.show_title,
-        date_range: date_range,
-        positions_filled: "#{filled} of #{total} filled",
-        show_warning: total > 0 && (filled.to_f / total.to_f) <= 0.7
+        date_range: helpers.time_range_string(*staffings.map { |s| s.start_time.to_date }.minmax, true, :short),
+        positions_filled: "#{filled} of #{jobs.size} filled",
+        show_warning: jobs.any? && filled.fdiv(jobs.size) <= 0.7
       }
     end
   end
