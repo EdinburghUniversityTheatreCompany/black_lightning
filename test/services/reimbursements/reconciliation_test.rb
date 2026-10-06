@@ -402,7 +402,7 @@ module Reimbursements
     end
 
     test "detect_offsetting_pairs proposes the three real pair shapes and nothing else" do
-      pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+      pairs = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
 
       assert_equal 3, pairs.size
       assert_equal [ [ ACCRUAL_LEG[:narrative], REVERSAL_LEG[:narrative] ],
@@ -411,14 +411,10 @@ module Reimbursements
                    pairs.map { |pair| pair_narratives(pair) },
                    "highest-scoring pair first: 7 (same ref), 5 (cross-month), 4 (nominal+period+narrative)"
       assert_equal [ 7, 5, 4 ], pairs.map(&:score)
-      assert_equal [ COLLIDING_SPEND[:narrative], NEAR_MISS_DEBIT[:narrative],
-                     NEAR_MISS_CREDIT[:narrative] ],
-                   remaining.map(&:narrative),
-                   "the colliding genuine spend and the near-miss pair stay in the working set"
     end
 
     test "detect_offsetting_pairs orients each pair debit leg first" do
-      pairs, = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
+      pairs = Reconciliation.detect_offsetting_pairs(parse_shapes(REAL_SHAPES))
 
       pairs.each do |pair|
         assert_operator pair.debit_row.debit, :>, 0, "the debit leg carries the positive amount"
@@ -430,15 +426,13 @@ module Reimbursements
     test "detect_offsetting_pairs consumes each row at most once, best score first" do
       weaker_claimant = { nominal: "431580", date: "24/07/2025", period: "5", ref: "BACS",
                           narrative: "PO 40000123 accrual jul 25 400123", value: "186.23" }
-      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+      pairs = Reconciliation.detect_offsetting_pairs(
         parse_shapes([ weaker_claimant, ACCRUAL_LEG, REVERSAL_LEG ])
       )
 
-      assert_equal 1, pairs.size
+      assert_equal 1, pairs.size, "the weaker claimant (score 4) loses the reversal leg and stays unpaired"
       assert_equal [ ACCRUAL_LEG[:narrative], REVERSAL_LEG[:narrative] ], pair_narratives(pairs.first)
       assert_equal 7, pairs.first.score
-      assert_equal [ weaker_claimant[:narrative] ], remaining.map(&:narrative),
-                   "the weaker claimant (score 4) loses the reversal leg and stays unmatched"
     end
 
     # Each hard gate refuses a pair however well it would score. The cost-centre gate stops two pots'
@@ -455,10 +449,7 @@ module Reimbursements
       "zero amounts" => [ ACCRUAL_LEG.merge(value: "0.00"), REVERSAL_LEG.merge(value: "-0.00") ]
     }.each do |gate, shapes|
       test "detect_offsetting_pairs never pairs rows with #{gate}" do
-        pairs, remaining = Reconciliation.detect_offsetting_pairs(parse_shapes(shapes))
-
-        assert_empty pairs
-        assert_equal 2, remaining.size
+        assert_empty Reconciliation.detect_offsetting_pairs(parse_shapes(shapes))
       end
     end
 
@@ -466,29 +457,26 @@ module Reimbursements
     # ARE in it, and pair like any other.
     test "detect_offsetting_pairs pairs blank-code rows the caller has attributed to one centre" do
       rows = parse_shapes([ ACCRUAL_LEG.merge(cost_centre: ""), REVERSAL_LEG.merge(cost_centre: "") ])
-      pairs, remaining = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 7])
+      pairs = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 7])
 
       assert_equal 1, pairs.size
-      assert_empty remaining
     end
 
     test "detect_offsetting_pairs honours caller-supplied identities over the export's codes" do
       rows = parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG ])
-      pairs, remaining = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 8])
+      pairs = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 8])
 
       assert_empty pairs, "the caller attributed these two identical-looking codes to different pots"
-      assert_equal 2, remaining.size
     end
 
     # Two identical accruals and two identical reversals are FOUR transactions, so their two pairs must
     # stay distinguishable: on a content-only key, unticking either would offset both.
     test "two byte-identical pairs in one paste get distinct keys" do
-      pairs, remaining = Reconciliation.detect_offsetting_pairs(
+      pairs = Reconciliation.detect_offsetting_pairs(
         parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ])
       )
 
       assert_equal 2, pairs.size
-      assert_empty remaining
       assert_equal 2, pairs.map(&:key).uniq.size, "each pair of real rows needs its own key"
     end
 
@@ -496,8 +484,8 @@ module Reimbursements
     # leave both keys untouched.
     test "duplicate pair keys are stable when unrelated rows surround them" do
       duplicated = [ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ]
-      bare, = Reconciliation.detect_offsetting_pairs(parse_shapes(duplicated))
-      padded, = Reconciliation.detect_offsetting_pairs(
+      bare = Reconciliation.detect_offsetting_pairs(parse_shapes(duplicated))
+      padded = Reconciliation.detect_offsetting_pairs(
         parse_shapes([ COLLIDING_SPEND ] + duplicated + [ NEAR_MISS_DEBIT ])
       )
 

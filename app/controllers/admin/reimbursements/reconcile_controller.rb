@@ -103,7 +103,7 @@ module Admin
         new_entries, skipped_entries = dedup(attribution.attributed)
         @new_rows = new_entries.map(&:row)
         @skipped_rows = skipped_entries.map(&:row)
-        @offsetting_pairs, = detect_pairs(new_entries)
+        @offsetting_pairs = detect_pairs(new_entries)
         unpaired = entries_outside(new_entries, @offsetting_pairs)
         matched_debits, matched_credits, unmatched = build_matches(unpaired)
         @matched_debits = matched_debits.map { |entry, expense| [ entry.row, expense ] }
@@ -120,7 +120,7 @@ module Admin
         @skipped_count = skipped_entries.size
 
         # An unticked pair's legs go back into ordinary matching.
-        pairs, = detect_pairs(new_entries)
+        pairs = detect_pairs(new_entries)
         applied_pairs = pairs.select { |pair| ticked_offset_pair_keys.include?(pair.key) }
         matched_debits, matched_credits, unmatched =
           build_matches(entries_outside(new_entries, applied_pairs))

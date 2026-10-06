@@ -185,9 +185,8 @@ module Reimbursements
     # EUSA's financial year, and its accounting periods 1..12, run April to March.
     FINANCIAL_YEAR_START_MONTH = 4
 
-    # Finds the offsetting pairs in a parsed paste. Returns [pairs, remaining_rows]: OffsetPairs
-    # strongest evidence first (the order the preview shows for ticking), and every unpaired row in
-    # paste order.
+    # Finds the offsetting pairs in a parsed paste. Returns the OffsetPairs, strongest evidence first
+    # (the order the preview shows for ticking).
     #
     # Candidates have an identical absolute amount (exact BigDecimal), opposite signs, and the same
     # nominal code, cost centre and financial year. Each is scored, those below OFFSET_MIN_SCORE are
@@ -213,8 +212,7 @@ module Reimbursements
                                 score: score)
       end
 
-      remaining = rows.each_with_index.reject { |_row, index| consumed.include?(index) }.map(&:first)
-      [ pairs, remaining ]
+      pairs
     end
 
     # Content digest identifying one parsed row, stable across re-parses of the

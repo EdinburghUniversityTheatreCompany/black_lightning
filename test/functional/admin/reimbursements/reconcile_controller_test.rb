@@ -711,7 +711,7 @@ module Admin
       rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text)
       ::Reimbursements::Reconciliation
         .detect_offsetting_pairs(rows, cost_centres: rows.map { cost_centre.id.to_s })
-        .first.map(&:key)
+        .map(&:key)
     end
 
     # --- Uploading the sheet -------------------------------------------------
