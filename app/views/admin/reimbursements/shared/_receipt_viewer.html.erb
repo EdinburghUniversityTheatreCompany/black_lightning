@@ -46,12 +46,8 @@
               <%= image_tag receipt.preview_url, alt: "", loading: "lazy",
                     class: "mx-auto mb-1 h-40 w-full rounded bg-gray-50 object-contain",
                     data: { action: "error->receipt-viewer#imageFailed" } %>
-              <span data-receipt-fallback="true" hidden>
-                <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
-                  <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
-                </span>
-              </span>
-            <% else %>
+            <% end %>
+            <%= tag.span hidden: receipt.previewable?, data: { receipt_fallback: true } do %>
               <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
                 <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
               </span>
