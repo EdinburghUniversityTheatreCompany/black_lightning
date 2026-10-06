@@ -18,46 +18,22 @@
 
 <%= render CardComponent.new(title: "Summary") do %>
   <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
-    <div>
-      <div class="text-2xl font-semibold"><%= @expenses_paid %></div>
-      <div class="text-sm text-gray-600">Expenses marked Paid</div>
-    </div>
-    <div>
-      <div class="text-2xl font-semibold"><%= @offsets_linked %></div>
-      <div class="text-sm text-gray-600">Offsetting pairs linked</div>
-    </div>
-    <div>
-      <div class="text-2xl font-semibold"><%= @credits_linked %></div>
-      <div class="text-sm text-gray-600">Credit rows linked to budgets</div>
-    </div>
-    <div>
-      <div class="text-2xl font-semibold"><%= @unmatched_saved %></div>
-      <div class="text-sm text-gray-600">Unmatched rows saved</div>
-    </div>
-    <div>
-      <div class="text-2xl font-semibold"><%= @skipped_count %></div>
-      <div class="text-sm text-gray-600">Already-imported rows skipped</div>
-    </div>
+    <% [ [ @expenses_paid, "Expenses marked Paid" ],
+         [ @offsets_linked, "Offsetting pairs linked" ],
+         [ @credits_linked, "Credit rows linked to budgets" ],
+         [ @unmatched_saved, "Unmatched rows saved" ],
+         [ @skipped_count, "Already-imported rows skipped" ] ].each do |count, label| %>
+      <div>
+        <div class="text-2xl font-semibold"><%= count %></div>
+        <div class="text-sm text-gray-600"><%= label %></div>
+      </div>
+    <% end %>
   </div>
 <% end %>
 
 <%# Rows deliberately not imported are reported again here, so the summary is never quietly smaller
     than the paste. %>
-<% if @attribution.unrecognised_rows.any? %>
-  <%= render AlertComponent.new(type: :info) do %>
-    <%= pluralize(@attribution.unrecognised_rows.size, "row") %> were not imported:
-    <%= "cost centre".pluralize(@attribution.unrecognised_codes.size) %>
-    <strong><%= @attribution.unrecognised_codes.to_sentence %></strong>
-    <%= @attribution.unrecognised_codes.size == 1 ? "is" : "are" %> not set up here.
-  <% end %>
-<% end %>
-
-<% if @attribution.skipped_blank_rows.any? %>
-  <%= render AlertComponent.new(type: :info) do %>
-    <%= pluralize(@attribution.skipped_blank_rows.size, "row") %> with no cost centre
-    <%= @attribution.skipped_blank_rows.size == 1 ? "was" : "were" %> skipped, as you chose.
-  <% end %>
-<% end %>
+<%= render "attribution_skips", attribution: @attribution %>
 
 <p class="mt-2 text-sm text-gray-600">
   Nobody was emailed. Producers hear from us when their claim goes into a batch, and by the
@@ -66,7 +42,7 @@
 
 <%# "_top": the ledger has no matching frame, so a plain link out of this one renders "Content missing". %>
 <div class="mt-4 flex flex-wrap gap-2">
-  <% if @unmatched_saved.to_i.positive? %>
+  <% if @unmatched_saved.positive? %>
     <%= link_to "See the #{pluralize(@unmatched_saved, 'unmatched row')} on the EUSA Actuals ledger",
                 admin_reimbursements_actuals_path(
                   state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION

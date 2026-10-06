@@ -1,0 +1,15 @@
+<%# locals: (attribution:) %>
+<% if attribution.unrecognised_rows.any? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    <%= pluralize(attribution.unrecognised_rows.size, "row") %> skipped:
+    <%= "cost centre".pluralize(attribution.unrecognised_codes.size) %>
+    <strong><%= attribution.unrecognised_codes.to_sentence %></strong>
+    <%= attribution.unrecognised_codes.size == 1 ? "is" : "are" %> not set up here.
+  <% end %>
+<% end %>
+
+<% if attribution.skipped_blank_rows.any? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    <%= pluralize(attribution.skipped_blank_rows.size, "row") %> with no cost centre skipped, as you chose.
+  <% end %>
+<% end %>
