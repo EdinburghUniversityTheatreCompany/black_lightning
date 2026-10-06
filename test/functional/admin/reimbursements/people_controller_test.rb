@@ -103,6 +103,28 @@ module Admin
                     "only the named row opens"
     end
 
+    test "index forms carry the search filter so a save returns to it" do
+      sign_in @user
+
+      get :index, params: { q: "ivy" }
+
+      assert_select "form[action=?]", admin_reimbursements_person_path(@invalid_person.record_id, q: "ivy"), count: 2
+    end
+
+    test "index opens the page holding the person named by ?person=, unless a page is asked for" do
+      50.times { |i| create_reimbursements_person(name: format("Aaa %02d", i), email: "aaa#{i}@example.com") }
+      sign_in @user
+
+      get :index, params: { person: @valid_person.record_id }
+
+      assert_includes assigns(:people).map(&:record_id), @valid_person.record_id
+      assert_select "details[open]#person-#{@valid_person.record_id}"
+
+      get :index, params: { person: @valid_person.record_id, page: 1 }
+
+      assert_not_includes assigns(:people).map(&:record_id), @valid_person.record_id
+    end
+
     test "the People CSV carries the on-screen filter" do
       sign_in @user
 
@@ -159,6 +181,26 @@ module Admin
       assert_equal "No changes to save.", flash[:notice]
       assert_equal "089999", @valid_person.reload.payment_details.sort_code,
                    "the identical-digits submission must not rewrite the record"
+    end
+
+    test "an invalid save re-renders the filtered list with the edited row open" do
+      sign_in @user
+
+      patch :update, params: { id: @invalid_person.record_id, q: "ivy", sort_code: "08", account_number: "1" }
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Invalid Ivy" ], assigns(:people).map(&:name)
+      assert_select "details[open] input#sort_code_#{@invalid_person.record_id}[value=?]", "08"
+    end
+
+    test "an invalid save re-renders the page holding the edited row" do
+      50.times { |i| create_reimbursements_person(name: format("Aaa %02d", i), email: "aaa#{i}@example.com") }
+      sign_in @user
+
+      patch :update, params: { id: @valid_person.record_id, sort_code: "08", account_number: "1" }
+
+      assert_response :unprocessable_entity
+      assert_select "details[open] input#sort_code_#{@valid_person.record_id}[value=?]", "08"
     end
 
     test "invalid bank details re-render the form without a write, preserving the typed values" do

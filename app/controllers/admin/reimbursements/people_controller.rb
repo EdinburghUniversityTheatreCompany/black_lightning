@@ -67,7 +67,17 @@ module Admin
         @claim_counts = store.expense_counts_by_person_id
         # The row to open: the one just saved, or linked to from a Review card.
         @open_person_id = @edit_person_id || params[:person].to_s.presence
-        @people = paginate(filtered_people(people))
+        filtered = filtered_people(people)
+        @people = Kaminari.paginate_array(filtered).page(registry_page(filtered)).per(PAGE_SIZE)
+      end
+
+      # The page holding the open row, so it is on screen when it sits past the
+      # first page; an explicit ?page= wins.
+      def registry_page(filtered)
+        return params[:page] if params[:page].present? || @open_person_id.blank?
+
+        position = filtered.index { |person| person.record_id == @open_person_id }
+        position ? (position / PAGE_SIZE) + 1 : params[:page]
       end
 
       # Name or email, case-insensitive substring, over the store's memoized list.
@@ -134,11 +144,11 @@ module Admin
 
       # Re-renders (not redirects) so the row stays open with the typed values.
       def render_bank_details_error(sort_code, account_number, message)
-        load_registry
         @edit_person_id = @person.record_id
         @edit_sort_code = sort_code
         @edit_account_number = account_number
         @edit_error = message
+        load_registry
         render :index, status: :unprocessable_entity
       end
 

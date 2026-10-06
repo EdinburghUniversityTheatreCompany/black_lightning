@@ -104,7 +104,7 @@
             <% error_id = "bank_details_error_#{person.record_id}" if editing && @edit_error.present? %>
             <%# The fields hold the REAL values, hidden as a password rather than
                 masked: masking would invite saving "****4958" as an account number. %>
-            <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
+            <%= form_with url: admin_reimbursements_person_path(person.record_id, q: @query.presence), method: :patch,
                           class: "flex flex-wrap items-end gap-3",
                           data: { controller: "bank-details" } do %>
               <div>
@@ -138,7 +138,7 @@
               <p id="<%= error_id %>" role="alert" class="mt-2 text-sm text-danger"><%= @edit_error %></p>
             <% end %>
 
-            <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
+            <%= form_with url: admin_reimbursements_person_path(person.record_id, q: @query.presence), method: :patch,
                           class: "mt-3" do %>
               <%= hidden_field_tag :verify, "1" %>
               <% verify_hint_id = "verify_hint_#{person.record_id}" unless person.bank_details? %>
