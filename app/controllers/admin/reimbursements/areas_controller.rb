@@ -34,7 +34,6 @@ module Admin
         @expense_lines, @income_lines = @area.budgets.partition { |line| !line.income? }
         load_claims(@area.budgets)
         @changes = ::Reimbursements::BudgetChanges.for_area(@area)
-        @people_by_id = store.people.index_by(&:record_id)
       end
 
       def new

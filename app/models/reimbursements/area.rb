@@ -81,8 +81,7 @@ module Reimbursements
       attrs["id"].blank? && %w[name nominal_code initial_budget].all? { |key| attrs[key].blank? }
     end
 
-    accepts_nested_attributes_for :budgets, allow_destroy: false,
-                                            reject_if: UNTOUCHED_BUDGET_ROW
+    accepts_nested_attributes_for :budgets, reject_if: UNTOUCHED_BUDGET_ROW
 
     # People record id STRINGS, as Budget#owner_ids: OwnerReview compares them
     # against person.record_id.
@@ -152,8 +151,6 @@ module Reimbursements
 
       projected_amount - allocated
     end
-
-    def income? = budgets.any?(&:income?)
 
     def net_basis? = budget_basis == BASIS_NET
 
