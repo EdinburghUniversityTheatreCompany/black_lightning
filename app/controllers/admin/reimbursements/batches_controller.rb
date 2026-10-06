@@ -21,7 +21,7 @@ module Admin
 
       def show
         @batch = find_or_404(:find_batch)
-        @expenses = processed_expenses.select { |expense| expense.batch_id == @batch.record_id }
+        @expenses = batch_expenses(@batch)
       end
 
       def new
@@ -32,15 +32,11 @@ module Admin
       # back to today, a wrong payment date.
       def create
         bacs_date = parse_bacs_date(params[:bacs_date])
-        if bacs_date.nil?
+        error = "Enter a valid BACS date (YYYY-MM-DD) before building the batch." if bacs_date.nil?
+        error ||= "Enter a valid EUSA recipient email address before building the batch." if invalid_eusa_recipient?
+        if error
           assign_new_form
-          flash.now[:alert] = "Enter a valid BACS date (YYYY-MM-DD) before building the batch."
-          return render :new, status: :unprocessable_entity
-        end
-
-        if invalid_eusa_recipient?
-          assign_new_form
-          flash.now[:alert] = "Enter a valid EUSA recipient email address before building the batch."
+          flash.now[:alert] = error
           return render :new, status: :unprocessable_entity
         end
 
@@ -66,13 +62,13 @@ module Admin
 
       def reopen
         batch = find_or_404(:find_batch)
-        linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
+        linked = batch_expenses(batch)
         paid = linked.select { |expense| expense.status == ::Reimbursements::Status::PAID }
         return blocked_by_paid(paid) if paid.any?
 
         # Resolved BEFORE the revert: the mailbox is read off the batch's
         # expenses, and the revert unlinks them.
-        mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked))
+        mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked)) if batch.draft_message_id.present?
         return blocked_by_unconfirmed_draft if batch.draft_message_id.present? && mailbox.nil?
 
         linked.each { |expense| store.revert_expense_to_approved!(expense.record_id) }
@@ -86,14 +82,13 @@ module Admin
       # never on page load: a batch list must not wait on Microsoft.
       def check_draft
         batch = find_or_404(:find_batch)
-        linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
 
         if batch.draft_message_id.blank?
           return redirect_to_history(alert: "No EUSA draft was recorded for this batch, so there " \
                                             "is nothing to check. Look in Outlook before rebuilding it.")
         end
 
-        mailbox = mailbox_holding_draft(batch, draft_mailboxes(linked))
+        mailbox = mailbox_holding_draft(batch, draft_mailboxes(batch_expenses(batch)))
         if mailbox
           redirect_to_history(notice: "Checked just now: this batch's EUSA draft is still UNSENT in " \
                                       "#{mailbox}. EUSA has not been asked to pay it yet.")
@@ -116,11 +111,13 @@ module Admin
       def assign_new_form
         @title = "Build batch"
         @expenses = approved_expenses
-        @total = total(@expenses)
+        @total = @expenses.sum { |expense| expense.amount || 0 }
         @bacs_date = Date.current
         @sender_name = default_sender
         @eusa_recipient = @cost_centre.eusa_recipient_or_default
-        @default_email = compose_default_email(@bacs_date, @sender_name)
+        @default_email = ::Reimbursements::EusaEmailComposer.new.compose(
+          expenses: @expenses, bacs_date: @bacs_date, sender_name: @sender_name, cost_centre: @cost_centre
+        )
       end
 
       # The revert has already happened and stands, so a failed draft delete
@@ -147,24 +144,16 @@ module Admin
       # as permanently "already sent". Unplaced claims say nothing, so are skipped.
       def draft_mailboxes(linked_expenses)
         ids = linked_expenses.filter_map(&:cost_centre_id).uniq
-        derived = ids.one? && store.cost_centres.find { |centre| centre.id == ids.first }
+        derived = store.cost_centres.find { |centre| centre.id == ids.first } if ids.one?
         [ derived, ::Reimbursements::CostCentre.default ]
-          .select { |centre| centre.respond_to?(:send_mailbox) }
-          .filter_map { |centre| centre.send_mailbox.presence }.uniq
+          .compact.filter_map { |centre| centre.send_mailbox.presence }.uniq
       end
 
       # The first candidate still holding the draft; nil is the "may already
-      # have been sent" refusal.
+      # have been sent" refusal. Reopen must never revert a batch whose draft
+      # was already sent, and only Graph can tell.
       def mailbox_holding_draft(batch, mailboxes)
-        return mailboxes.first if batch.draft_message_id.blank?
-
-        mailboxes.find { |mailbox| confirmed_still_draft?(batch, mailbox) }
-      end
-
-      # Reopen must never revert a batch whose draft was already sent, and only
-      # Graph can tell.
-      def confirmed_still_draft?(batch, mailbox)
-        graph.draft_message?(mailbox: mailbox, message_id: batch.draft_message_id)
+        mailboxes.find { |mailbox| graph.draft_message?(mailbox: mailbox, message_id: batch.draft_message_id) }
       end
 
       def blocked_by_unconfirmed_draft
@@ -182,7 +171,12 @@ module Admin
         @cost_centre = selected_cost_centre || sole_cost_centre
         return if @cost_centre
 
-        return render_cost_centre_chooser if selectable_cost_centres.any?
+        # ASK rather than bounce: with no centre selected the sidebar's link
+        # carries none, and a redirect would make Build Batch unreachable from it.
+        if selectable_cost_centres.any?
+          @title = "Build batch"
+          return render :choose_cost_centre
+        end
 
         redirect_to admin_reimbursements_batches_path,
                     alert: "No cost centre configured. Seed one before building a batch."
@@ -190,13 +184,6 @@ module Admin
 
       def sole_cost_centre
         selectable_cost_centres.one? ? selectable_cost_centres.first : nil
-      end
-
-      # ASK rather than bounce: with no centre selected the sidebar's link
-      # carries none, and a redirect would make Build Batch unreachable from it.
-      def render_cost_centre_chooser
-        @title = "Build batch"
-        render :choose_cost_centre
       end
 
       # The money path's OWNERSHIP rule, not the screens' lenient filter, so an
@@ -221,13 +208,13 @@ module Admin
         store.expenses.select { |expense| expense.batch_id.present? }
       end
 
-      def total(expenses)
-        expenses.sum { |expense| expense.amount || 0 }
+      def batch_expenses(batch)
+        store.expenses.select { |expense| expense.batch_id == batch.record_id }
       end
 
       def parse_bacs_date(value)
         Date.parse(value.to_s)
-      rescue ArgumentError, TypeError
+      rescue ArgumentError
         nil
       end
 
@@ -239,13 +226,6 @@ module Admin
 
       def default_sender
         current_user.try(:full_name).presence || @cost_centre.finance_sender_name
-      end
-
-      def compose_default_email(bacs_date, sender_name)
-        ::Reimbursements::EusaEmailComposer.new.compose(
-          expenses: approved_expenses, bacs_date: bacs_date, sender_name: sender_name,
-          cost_centre: @cost_centre
-        )
       end
 
       def blocked_by_paid(paid)
