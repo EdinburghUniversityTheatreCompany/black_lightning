@@ -21,20 +21,16 @@ module Display
 
       private
 
-      def pool
-        @pool ||= Display::EventPool.upcoming(on: @on)
-      end
-
-      # The pool sorts events running today first, so find and first agree.
+      # The pool sorts tonight's shows first, so slot 1 is tonight's or the next one.
       def event
         return @event if defined?(@event)
 
-        @event = pool.find { |candidate| candidate.on_today?(@on) } || pool.first
+        @event = Display::EventPool.slot(1, on: @on)
       end
 
       # preload, not includes: TeamMember.ordered already joins users.
       def members
-        @members ||= event ? event.team_members.ordered.preload(:user).to_a : []
+        @members ||= event.team_members.ordered.preload(:user).to_a
       end
     end
   end
