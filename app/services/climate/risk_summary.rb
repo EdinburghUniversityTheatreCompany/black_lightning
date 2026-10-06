@@ -11,10 +11,9 @@ module Climate
   class RiskSummary
     HOUR = 3_600
 
-    def initialize(sensors:, range:, threshold: Climate::CONDENSATION_RISK_MARGIN)
+    def initialize(sensors:, range:)
       @sensors = Array(sensors)
       @range = range
-      @threshold = threshold
       @colors = SeriesColors.new
     end
 
@@ -59,7 +58,7 @@ module Climate
         days: by_day(hours) }
     end
 
-    def at_risk?(margin) = margin < @threshold
+    def at_risk?(margin) = margin < Climate::CONDENSATION_RISK_MARGIN
 
     # A missing hour BREAKS the run: a damp spell across a coverage hole was
     # never measured.
