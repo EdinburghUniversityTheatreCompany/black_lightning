@@ -9,14 +9,6 @@ class GalleryComponent < ViewComponent::Base
 
   private
 
-  def any_pictures?
-    @pictures.any?
-  end
-
-  def header_tag
-    "h#{@header_size}"
-  end
-
   def tags_for(picture)
     return [] unless @show_tags
 

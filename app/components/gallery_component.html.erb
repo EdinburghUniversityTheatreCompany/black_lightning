@@ -1,7 +1,6 @@
-<% if any_pictures? %>
+<% if @pictures.any? %>
   <div data-controller="fancybox">
-    <% header_tag = header_tag() %>
-    <%= content_tag(header_tag, "Gallery") %>
+    <%= content_tag("h#{@header_size}", "Gallery") %>
     <i class="text-sm text-gray-500">Click on a thumbnail to see the image in large size</i>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
