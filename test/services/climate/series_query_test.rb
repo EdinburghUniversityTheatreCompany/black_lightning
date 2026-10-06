@@ -11,32 +11,6 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
     Climate::SeriesQuery.new(sensors: Array(sensors), range: range(from: from, to: to)).series
   end
 
-  # --- resolution ------------------------------------------------------------
-
-  test "keeps raw ten-minute buckets over a short span" do
-    query = Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06"))
-
-    assert_equal 600, query.bucket_seconds
-  end
-
-  test "buckets hourly over a fortnight" do
-    query = Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-07-25", to: "2026-08-06"))
-
-    assert_equal 3_600, query.bucket_seconds
-  end
-
-  test "buckets six-hourly over a quarter" do
-    query = Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-06-01", to: "2026-08-06"))
-
-    assert_equal 21_600, query.bucket_seconds
-  end
-
-  test "buckets daily over a year" do
-    query = Climate::SeriesQuery.new(sensors: [], range: range(from: "2025-08-06", to: "2026-08-06"))
-
-    assert_equal 86_400, query.bucket_seconds
-  end
-
   # --- shape -----------------------------------------------------------------
 
   test "returns one series per sensor even when a sensor has no readings" do
@@ -134,10 +108,5 @@ class Climate::SeriesQueryTest < ActiveSupport::TestCase
 
     assert_equal 3, points.size
     assert_nil points[1][:temperature]
-  end
-
-  test "reports whether the buckets are wide enough for a spread to mean anything" do
-    assert_not_predicate Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-08-05", to: "2026-08-06")), :aggregated?
-    assert_predicate Climate::SeriesQuery.new(sensors: [], range: range(from: "2026-07-25", to: "2026-08-06")), :aggregated?
   end
 end

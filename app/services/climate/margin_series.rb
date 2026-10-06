@@ -19,8 +19,6 @@ module Climate
       @colors = SeriesColors.new
     end
 
-    def bucket_seconds = @buckets.seconds
-
     # -> [{ id:, name:, color_index:, points: [{ t: iso8601, margin: }] }]
     def series
       grouped = bucketed_rows

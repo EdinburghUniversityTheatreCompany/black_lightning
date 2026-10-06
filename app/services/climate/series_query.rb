@@ -14,7 +14,6 @@ module Climate
       @colors = SeriesColors.new
     end
 
-    def bucket_seconds = @buckets.seconds
     def aggregated? = @buckets.aggregated?
 
     # -> [{ id:, name:, location:, placement:, outdoor:, color_index:,
