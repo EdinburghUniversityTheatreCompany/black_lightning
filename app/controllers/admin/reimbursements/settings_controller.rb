@@ -49,7 +49,6 @@ module Admin
       end
 
       def edit
-        @title = "Settings: #{@cost_centre.name}"
         setup_folder_picker if params[:picker].present?
       end
 
@@ -65,7 +64,6 @@ module Admin
 
       # Probes the mailboxes and SharePoint destinations with the app's own credentials.
       def test_access
-        @title = "Settings: #{@cost_centre.name}"
         @access_checks = run_access_checks
         respond_to do |format|
           format.turbo_stream
@@ -77,6 +75,7 @@ module Admin
 
       def set_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.find_by!(key: params[:key])
+        @title = "Settings: #{@cost_centre.name}"
       end
 
       def set_nominal_codes
@@ -93,7 +92,6 @@ module Admin
         if @cost_centre.update(settings_params)
           redirect_to edit_path, notice: "Settings saved for #{@cost_centre.name}."
         else
-          @title = "Settings: #{@cost_centre.name}"
           flash.now[:alert] = @cost_centre.errors.full_messages.to_sentence
           render :edit, status: :unprocessable_entity
         end
