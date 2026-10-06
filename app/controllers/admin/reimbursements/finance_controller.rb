@@ -24,6 +24,8 @@ module Admin
 
       private
 
+      attr_reader :selected_financial_year, :selected_cost_centre
+
       def authorize_finance!
         authorize! :manage, :reimbursements_finance
       end
@@ -48,10 +50,6 @@ module Admin
         flash.now[:alert] = "There's no financial year called #{requested.inspect}. " \
                             "Showing the active year instead."
         ::Reimbursements::FinancialYear.current
-      end
-
-      def selected_financial_year
-        @selected_financial_year
       end
 
       # Every year, for the selector.
@@ -89,10 +87,6 @@ module Admin
         nil
       end
 
-      def selected_cost_centre
-        @selected_cost_centre
-      end
-
       # Read off the model, not the store: this runs in the before_action that decides
       # how the store is built.
       def selectable_cost_centres
@@ -116,8 +110,8 @@ module Admin
         find_or_404(:find_expense!)
       end
 
-      def paginate(collection)
-        Kaminari.paginate_array(collection).page(params[:page]).per(PAGE_SIZE)
+      def paginate(collection, per: PAGE_SIZE)
+        Kaminari.paginate_array(collection).page(params[:page]).per(per)
       end
 
       # The "Download CSV" response behind every finance list. Pass the FULL filtered

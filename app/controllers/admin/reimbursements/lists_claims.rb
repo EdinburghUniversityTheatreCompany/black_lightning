@@ -26,8 +26,7 @@ module Admin
         claims = claims_for_lines(lines)
         @claim_counts = ::Reimbursements::ClaimTabs.counts(claims)
         @claim_tab = ::Reimbursements::ClaimTabs.resolve(params[:status])
-        @claims = Kaminari.paginate_array(::Reimbursements::ClaimTabs.filter(claims, @claim_tab))
-                          .page(params[:page]).per(CLAIMS_PAGE_SIZE)
+        @claims = paginate(::Reimbursements::ClaimTabs.filter(claims, @claim_tab), per: CLAIMS_PAGE_SIZE)
       end
     end
   end
