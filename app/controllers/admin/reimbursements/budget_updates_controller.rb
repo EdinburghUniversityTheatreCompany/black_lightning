@@ -57,49 +57,21 @@ module Admin
 
       private
 
-      # "Replaced" is the line's newest forecast ordered before this one, the order
-      # current_forecast reads, so it is what removing this update falls back to. Nil for a
-      # first forecast, which falls back to the initial budget. "Now" is read separately
-      # because a later revision may already have superseded this one.
       def revision_rows(budget_update)
-        budget_update.forecasts.sort_by { |f| label_for(f).to_s.downcase }.map do |forecast|
-          owner = forecast.budget || forecast.area
-          { label: label_for(forecast), area_total: forecast.budget_id.nil?,
-            amount: forecast.amount, replaced: previous_forecast(forecast)&.amount,
-            initial: owner&.initial_budget, current: owner&.current_forecast,
-            superseded: superseded?(forecast, owner) }
-        end
+        budget_update.forecasts.map { |forecast| revision_row(forecast) }.sort_by { |row| row[:label].downcase }
       end
 
-      def label_for(forecast)
-        return forecast.budget.display_name if forecast.budget
-        return "#{forecast.area.name} (area total)" if forecast.area
-
-        "an unknown line"
-      end
-
-      def previous_forecast(forecast)
-        # Array has <=> but not <, so the comparison has to be spelled out.
-        siblings_of(forecast)
-          .select { |other| (sort_key(other) <=> sort_key(forecast)).negative? }
-          .max_by { |other| sort_key(other) }
-      end
-
-      def superseded?(forecast, owner)
-        return false if owner.nil?
-
-        siblings_of(forecast).any? { |other| (sort_key(other) <=> sort_key(forecast)).positive? }
-      end
-
-      def siblings_of(forecast)
+      # "Replaced" is the entry just before this one in the order current_forecast reads, so it
+      # is what removing this update falls back to (nil for a first forecast, which falls back
+      # to the initial budget). "Superseded" means a later entry already won.
+      def revision_row(forecast)
         owner = forecast.budget || forecast.area
-        return [] if owner.nil?
-
-        owner.forecasts.to_a
-      end
-
-      def sort_key(forecast)
-        [ forecast.date || Date.new(0), forecast.id ]
+        history = owner.forecasts.sort_by { |f| [ f.date || Date.new(0), f.id ] }
+        position = history.index(forecast)
+        { label: forecast.budget ? owner.display_name : "#{owner.name} (area total)",
+          amount: forecast.amount, replaced: (history[position - 1].amount if position.positive?),
+          initial: owner.initial_budget, current: owner.current_forecast,
+          superseded: history.last != forecast }
       end
 
       def set_up_form
