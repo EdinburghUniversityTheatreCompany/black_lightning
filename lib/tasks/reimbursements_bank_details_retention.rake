@@ -23,9 +23,9 @@ namespace :reimbursements do
       person = details.person
       # No bank digits at all: this is pasted into a chat with the committee.
       puts format("  %-30s %-30s last activity %s",
-                  person&.name.to_s.truncate(30),
-                  person&.email.to_s.truncate(30),
-                  [ details.updated_at, *person&.expenses&.map(&:updated_at) ].compact.max&.to_date)
+                  person.name.to_s.truncate(30),
+                  person.email.to_s.truncate(30),
+                  Reimbursements::BankDetailsRetention.last_activity(details).to_date)
     end
     puts "\nNothing has been changed. The nightly job (Reimbursements::BankDetailsRetentionJob) " \
          "is what actually clears them."

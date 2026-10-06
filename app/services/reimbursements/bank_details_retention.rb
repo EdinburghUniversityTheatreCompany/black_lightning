@@ -15,10 +15,11 @@ module Reimbursements
     class << self
       # Clears every stale payee's details; returns how many were cleared.
       def erase_stale!(as_of: Time.current)
-        cleared = stale(as_of: as_of).each { |details| erase!(details) }
-        # Names, never digits.
+        cleared = stale(as_of: as_of)
         cleared.each do |details|
-          Rails.logger.info("Reimbursements bank-details retention: cleared #{details.person&.name}")
+          erase!(details)
+          # Names, never digits.
+          Rails.logger.info("Reimbursements bank-details retention: cleared #{details.person.name}")
         end
         cleared.size
       end
@@ -32,12 +33,15 @@ module Reimbursements
 
       def stale?(details, cutoff)
         return false if details.sort_code.blank? && details.account_number.blank?
+        return false if details.person.expenses.any? { |expense| !TERMINAL_STATUSES.include?(expense.status) }
 
-        person = details.person
-        return false if person.nil?
-        return false if person.expenses.any? { |expense| !TERMINAL_STATUSES.include?(expense.status) }
+        last_activity(details) < cutoff
+      end
 
-        last_activity(details, person) < cutoff
+      # The details' own timestamp counts too: re-verified details are current
+      # even when the last claim is old, and unused ones still age out.
+      def last_activity(details)
+        [ details.updated_at, *details.person.expenses.map(&:updated_at) ].max
       end
 
       def erase!(details)
@@ -48,14 +52,6 @@ module Reimbursements
             "Bank details cleared: no claim activity for #{RETENTION_PERIOD.inspect} (retention)."
           )
         )
-      end
-
-      private
-
-      # The details' own timestamp counts too: re-verified details are current
-      # even when the last claim is old, and unused ones still age out.
-      def last_activity(details, person)
-        [ details.updated_at, *person.expenses.map(&:updated_at) ].compact.max
       end
     end
   end
