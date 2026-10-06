@@ -1,52 +1,21 @@
 <% @answers.each_with_index do |answer, index| %>
-  <% if @flush %>
-    <div class="<%= index > 0 ? 'border-t border-gray-200' : '' %>">
-      <div class="px-4 py-3 text-sm text-gray-900">
-        <%= helpers.render_markdown answer.question.question_text %>
-      </div>
-      <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 text-sm text-gray-700">
-        <% if answer.attachments.present? %>
-          <%# Normally one attachment, but more is possible. %>
-          <% if answer.attachments.count == 1 %>
-            <%= render AttachmentCardComponent.new(attachment: answer.attachments.first) %>
-          <% else %>
-            <%= render AttachmentsGalleryComponent.new(attachments: answer.attachments) %>
-          <% end %>
+  <div class="<%= separator_class if index > 0 %>">
+    <div class="<%= question_class %>"><%= helpers.render_markdown answer.question.question_text %></div>
+    <div class="<%= answer_class %>">
+      <% if answer.attachments.present? %>
+        <%# Normally one attachment, but more is possible. %>
+        <% if answer.attachments.one? %>
+          <%= render AttachmentCardComponent.new(attachment: answer.attachments.first) %>
+        <% else %>
+          <%= render AttachmentsGalleryComponent.new(attachments: answer.attachments) %>
         <% end %>
+      <% end %>
 
-        <% if answer.answer.present? %>
-          <%= helpers.render_markdown answer.answer %>
-        <% elsif answer.attachments.empty? %>
-          <span class="italic text-gray-400">This question has not been answered.</span>
-        <% end %>
-      </div>
+      <% if answer.answer.present? %>
+        <%= helpers.render_markdown answer.answer %>
+      <% elsif answer.attachments.empty? %>
+        <span class="italic text-gray-400">This question has not been answered.</span>
+      <% end %>
     </div>
-  <% else %>
-    <div class="<%= index > 0 ? 'border-t border-gray-200 pt-4 mt-4' : '' %>">
-      <div class="mb-1">
-        <div class="text-sm text-gray-900 mt-0.5">
-          <%= helpers.render_markdown answer.question.question_text %>
-        </div>
-      </div>
-
-      <div class="mt-3 bg-gray-50 rounded p-3">
-        <div class="text-sm text-gray-700 mt-0.5">
-          <% if answer.attachments.present? %>
-            <%# Normally one attachment, but more is possible. %>
-            <% if answer.attachments.count == 1 %>
-              <%= render AttachmentCardComponent.new(attachment: answer.attachments.first) %>
-            <% else %>
-              <%= render AttachmentsGalleryComponent.new(attachments: answer.attachments) %>
-            <% end %>
-          <% end %>
-
-          <% if answer.answer.present? %>
-            <%= helpers.render_markdown answer.answer %>
-          <% elsif answer.attachments.empty? %>
-            <span class="italic text-gray-400">This question has not been answered.</span>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  <% end %>
+  </div>
 <% end %>
