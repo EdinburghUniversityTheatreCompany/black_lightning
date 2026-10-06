@@ -1,18 +1,13 @@
 <%# locals: (event:, cast:, crew:, tonight:) %>
 <%
-  # Which of the two layouts this show gets, and how big the names may be --
-  # the measured arithmetic lives in DisplayHelper, next to the pixel figures
-  # it depends on.
+  # Which layout this show gets and how big the names may be; the arithmetic is in DisplayHelper.
   layout = display_credits_layout(cast.size, crew.size)
   name_size = layout[:name_size]
-  # Flattened to name/detail pairs so one partial can render either list: the
-  # two read the same on screen and differ only in where the second column of
-  # text comes from.
+  # Flattened to name/detail pairs so one partial renders either list.
   cast_members = cast.map { |member| [ member.user_name, member.cast_display_name ] }
   crew_members = crew.map { |member| [ member.user_name, member.position ] }
-  # Say what is behind the code. display_programme_url falls back to the event's
-  # own page when no programme has been linked, and "Scan for the digital
-  # programme" over a QR that opens a listing is worse than no QR at all.
+  # Say what is behind the code: display_programme_url falls back to the event's
+  # own page, and "Scan for the digital programme" over a listing is worse than no QR.
   qr_label = event.digital_programme_url.present? ? "Scan for the digital programme" : "Scan for more about this show"
 %>
 <%# Captured because it goes under one column, the other, or both. %>
