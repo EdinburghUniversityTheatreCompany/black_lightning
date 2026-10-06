@@ -1,36 +1,15 @@
-import { Controller } from "@hotwired/stimulus"
 import {
-  colorFor, endLabelPlugin, legendAndTooltip, loadChartJs,
+  ClimateChartController, colorFor, endLabelPlugin, legendAndTooltip,
   pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
 // One line per crypt sensor plotting the WORST margin in each bucket, not the
 // average, with everything under the threshold shaded.
-export default class extends Controller {
+export default class extends ClimateChartController {
   static targets = ["canvas"]
   static values = { series: Array, threshold: Number }
 
-  #charts = []
-
-  async connect() {
-    if (this.seriesValue.length === 0) return
-
-    const Chart = await loadChartJs()
-    if (!this.element.isConnected) return
-
-    this.#charts = [this.#build(Chart)]
-    this.element.climateCharts = this.#charts
-    this.element.dataset.climateMarginChartReady = String(this.#charts.length)
-  }
-
-  disconnect() {
-    this.#charts.forEach((chart) => chart.destroy())
-    this.#charts = []
-    delete this.element.climateCharts
-    delete this.element.dataset.climateMarginChartReady
-  }
-
-  #build(Chart) {
+  build(Chart) {
     const canvas = this.canvasTarget
     const title = "Margin above dew point (°C)"
     const scales = timeScaleOptions({ title, unit: "°C" })
@@ -42,7 +21,7 @@ export default class extends Controller {
       suffix: "The same figures are summarised as text above this chart.",
     }))
 
-    return new Chart(canvas, {
+    return [new Chart(canvas, {
       type: "line",
       data: {
         datasets: this.seriesValue.map((series) => ({
@@ -76,7 +55,7 @@ export default class extends Controller {
         },
         plugins: legendAndTooltip({ unit: "°C" }),
       },
-    })
+    })]
   }
 
   // Drawn under the lines, so a dip shows as a line entering shaded ground

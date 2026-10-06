@@ -1,6 +1,5 @@
-import { Controller } from "@hotwired/stimulus"
 import {
-  colorFor, withAlpha, endLabelPlugin, legendAndTooltip, loadChartJs,
+  ClimateChartController, colorFor, withAlpha, endLabelPlugin, legendAndTooltip,
   pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
@@ -8,39 +7,18 @@ import {
 // per sensor plus the outdoor comparison. Past two days the mean hides the
 // extremes, so each line also carries a shaded min-max band: the extreme is
 // what condenses.
-export default class extends Controller {
+export default class extends ClimateChartController {
   static targets = ["temperature", "humidity", "dewPoint"]
   static values = { series: Array, banded: Boolean }
 
-  #charts = []
   #syncing = false
 
-  async connect() {
-    if (this.seriesValue.length === 0) return
-
-    const Chart = await loadChartJs()
-
-    // Turbo can disconnect us mid-import, onto detached canvases.
-    if (!this.element.isConnected) return
-
-    this.#charts = [
-      this.#build(Chart, this.temperatureTarget, "temperature", "Temperature (°C)", "°C"),
-      this.#build(Chart, this.humidityTarget, "humidity", "Relative humidity (%)", "%"),
-      this.#build(Chart, this.dewPointTarget, "dew_point", "Dew point (°C)", "°C"),
-    ].filter(Boolean)
-
-    // Chart.js is an ES module, so there is no window.Chart: these handles are
-    // what the browser tests (and a console) read.
-    this.element.climateCharts = this.#charts
-    this.element.dataset.climateChartsReady = String(this.#charts.length)
-  }
-
-  disconnect() {
-    // Or every Turbo navigation back leaks a canvas and its listeners.
-    this.#charts.forEach((chart) => chart.destroy())
-    this.#charts = []
-    delete this.element.climateCharts
-    delete this.element.dataset.climateChartsReady
+  build(Chart) {
+    return [
+      this.#chart(Chart, this.temperatureTarget, "temperature", "Temperature (°C)", "°C"),
+      this.#chart(Chart, this.humidityTarget, "humidity", "Relative humidity (%)", "%"),
+      this.#chart(Chart, this.dewPointTarget, "dew_point", "Dew point (°C)", "°C"),
+    ]
   }
 
   #datasets(measure) {
@@ -82,9 +60,7 @@ export default class extends Controller {
     ]
   }
 
-  #build(Chart, canvas, measure, title, unit) {
-    if (!canvas) return null
-
+  #chart(Chart, canvas, measure, title, unit) {
     canvas.setAttribute("role", "img")
     canvas.setAttribute("aria-label", seriesAriaLabel({
       title, unit,
@@ -114,7 +90,7 @@ export default class extends Controller {
     if (this.#syncing) return
     this.#syncing = true
     try {
-      for (const chart of this.#charts) {
+      for (const chart of this.charts) {
         if (chart === source) continue
         const mapped = elements.map((element) => ({
           datasetIndex: element.datasetIndex,

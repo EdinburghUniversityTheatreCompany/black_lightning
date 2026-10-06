@@ -1,6 +1,5 @@
-import { Controller } from "@hotwired/stimulus"
 import {
-  chartOptions, colorFor, endLabelPlugin, loadChartJs, pointRadiusUnlessIsolated,
+  ClimateChartController, chartOptions, colorFor, endLabelPlugin, pointRadiusUnlessIsolated,
   seriesAriaLabel, withAlpha,
 } from "../lib/climate_chart"
 
@@ -16,31 +15,11 @@ const STYLES = {
   dashed: { borderDash: [6, 4], borderWidth: 2, alpha: 1 },
 }
 
-export default class extends Controller {
+export default class extends ClimateChartController {
   static targets = ["canvas"]
   static values = { series: Array }
 
-  #charts = []
-
-  async connect() {
-    if (this.seriesValue.length === 0) return
-
-    const Chart = await loadChartJs()
-    if (!this.element.isConnected) return
-
-    this.#charts = [this.#build(Chart)]
-    this.element.climateCharts = this.#charts
-    this.element.dataset.climateVentilationChartReady = String(this.#charts.length)
-  }
-
-  disconnect() {
-    this.#charts.forEach((chart) => chart.destroy())
-    this.#charts = []
-    delete this.element.climateCharts
-    delete this.element.dataset.climateVentilationChartReady
-  }
-
-  #build(Chart) {
+  build(Chart) {
     const canvas = this.canvasTarget
     const title = "Temperature and dew point (°C)"
 
@@ -53,7 +32,7 @@ export default class extends Controller {
       suffix: "Ventilating dries the crypt when the outside dew point sits below the crypt's own.",
     }))
 
-    return new Chart(canvas, {
+    return [new Chart(canvas, {
       type: "line",
       data: {
         datasets: this.seriesValue.map((line) => {
@@ -75,6 +54,6 @@ export default class extends Controller {
       },
       plugins: [endLabelPlugin()],
       options: chartOptions({ title, unit: "°C" }),
-    })
+    })]
   }
 }

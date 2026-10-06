@@ -1,32 +1,12 @@
-import { Controller } from "@hotwired/stimulus"
-import { AXIS_COLOR, GRID_COLOR, colorFor, loadChartJs, reducedMotion } from "../lib/climate_chart"
+import { AXIS_COLOR, ClimateChartController, GRID_COLOR, colorFor, reducedMotion } from "../lib/climate_chart"
 
 // Hours at risk per day, a bar group per crypt sensor. Mould follows how long
 // the air sat near saturation, so a bad week shows as a cluster, not one total.
-export default class extends Controller {
+export default class extends ClimateChartController {
   static targets = ["canvas"]
   static values = { summaries: Array }
 
-  #charts = []
-
-  async connect() {
-    const labels = this.#labels()
-    if (labels.length === 0) return
-
-    const Chart = await loadChartJs({ bars: true })
-    if (!this.element.isConnected) return
-
-    this.#charts = [this.#build(Chart, labels)]
-    this.element.climateCharts = this.#charts
-    this.element.dataset.climateRiskBarsReady = String(this.#charts.length)
-  }
-
-  disconnect() {
-    this.#charts.forEach((chart) => chart.destroy())
-    this.#charts = []
-    delete this.element.climateCharts
-    delete this.element.dataset.climateRiskBarsReady
-  }
+  chartJsOptions = { bars: true }
 
   // The union of days, so a day one sensor missed does not shift the others.
   #labels() {
@@ -35,13 +15,14 @@ export default class extends Controller {
     return [...dates].sort()
   }
 
-  #build(Chart, labels) {
+  build(Chart) {
     const canvas = this.canvasTarget
+    const labels = this.#labels()
 
     canvas.setAttribute("role", "img")
     canvas.setAttribute("aria-label", this.#ariaLabel())
 
-    return new Chart(canvas, {
+    return [new Chart(canvas, {
       type: "bar",
       data: {
         labels,
@@ -81,7 +62,7 @@ export default class extends Controller {
           },
         },
       },
-    })
+    })]
   }
 
   #ariaLabel() {

@@ -1,3 +1,5 @@
+import { Controller } from "@hotwired/stimulus"
+
 // Shared machinery for the climate dashboard's four chart controllers, so a
 // sensor is the same colour and shape on every chart.
 
@@ -62,6 +64,34 @@ export async function loadChartJs({ bars = false } = {}) {
   if (bars) Chart.register(BarController, BarElement, CategoryScale)
 
   return Chart
+}
+
+// Each subclass implements build(Chart), returning its charts.
+export class ClimateChartController extends Controller {
+  charts = []
+  chartJsOptions = {}
+
+  async connect() {
+    const Chart = await loadChartJs(this.chartJsOptions)
+
+    // Turbo can disconnect us mid-import, onto detached canvases.
+    if (!this.element.isConnected) return
+
+    this.charts = this.build(Chart)
+
+    // Chart.js is an ES module, so there is no window.Chart: these handles are
+    // what the browser tests (and a console) read.
+    this.element.climateCharts = this.charts
+    this.element.setAttribute(`data-${this.identifier}-ready`, String(this.charts.length))
+  }
+
+  disconnect() {
+    // Or every Turbo navigation back leaks a canvas and its listeners.
+    this.charts.forEach((chart) => chart.destroy())
+    this.charts = []
+    delete this.element.climateCharts
+    this.element.removeAttribute(`data-${this.identifier}-ready`)
+  }
 }
 
 export function timeScaleOptions({ title, unit }) {
