@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 const NAME_RE = /^\[([^\]]+)\]\[([^\]]+)\](.+)$/
 
 export default class extends Controller {
-  static targets = ["modal", "dialog", "changeList", "changeCount", "changeCountText"]
+  static targets = ["modal", "changeList", "changeCount", "changeCountText"]
 
   #initialState = new Map()
   #confirmed = false
@@ -30,19 +30,9 @@ export default class extends Controller {
     this.#showModal(changes)
   }
 
-  cancelSubmit() {
-    this.#hideModal()
-  }
-
-  backdropClick(event) {
-    if (!this.dialogTarget.contains(event.target)) {
-      this.#hideModal()
-    }
-  }
-
   approveSubmit() {
     this.#confirmed = true
-    this.#hideModal()
+    this.modalTarget.close()
     this.element.requestSubmit()
   }
 
@@ -97,13 +87,7 @@ export default class extends Controller {
     list.innerHTML = ""
     list.appendChild(this.#buildTable(changes))
 
-    this.modalTarget.classList.remove("hidden")
-    this.modalTarget.classList.add("flex")
-  }
-
-  #hideModal() {
-    this.modalTarget.classList.add("hidden")
-    this.modalTarget.classList.remove("flex")
+    this.modalTarget.showModal()
   }
 
   #buildTable(changes) {
