@@ -185,10 +185,7 @@ class Opportunity < ApplicationRecord
 
   # Creates an unreviewed company if none matches; only when company_name was given.
   def assign_company_from_name
-    return unless defined?(@company_name)
-
-    name = @company_name.to_s.strip
-    self.company = name.present? ? Company.find_or_build_by_name(name) : nil
+    self.company = Company.find_or_build_by_name(@company_name) if defined?(@company_name)
   end
 
   # Removes a never-reviewed company left behind by a spam or rejected submission.

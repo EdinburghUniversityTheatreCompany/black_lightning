@@ -61,9 +61,6 @@ class OpportunityRole < ApplicationRecord
   private
 
   def assign_department_from_name
-    return unless defined?(@department_name)
-
-    name = @department_name.to_s.strip
-    self.department = name.present? ? Department.find_or_build_by_name(name) : nil
+    self.department = Department.find_or_build_by_name(@department_name) if defined?(@department_name)
   end
 end
