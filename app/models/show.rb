@@ -66,7 +66,6 @@ class Show < Event
   OCCURRENCE_LABEL = "Performance".freeze
 
   include ApplicationHelper
-  include AcademicYearHelper
 
   validates :author, :price, presence: true
 
