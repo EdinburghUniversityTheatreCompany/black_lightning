@@ -23,22 +23,9 @@ class MembershipImport
   private
 
   def normalize_row(row)
-    name_data = parse_name(row["Name"])
-    id_data = collect_ids_from_row(row)
-
-    name_data.merge(id_data).merge(
-      email: row["Purchaser Email"].to_s.strip.downcase.presence,
-      member_type: row["Member Type"].to_s.strip.presence,
-      date_purchased: parse_date(row["Date Purchased"])
-    )
-  end
-
-  def parse_date(date_str)
-    return nil if date_str.blank?
-
-    Chronic.parse(date_str.to_s)&.to_date
-  rescue StandardError
-    nil
+    parse_name(row["Name"])
+      .merge(collect_ids_from_row(row))
+      .merge(email: row["Purchaser Email"].to_s.strip.downcase.presence)
   end
 
   def categorize_rows
