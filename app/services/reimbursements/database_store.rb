@@ -61,7 +61,7 @@ module Reimbursements
     # The selected centre's expenses, for the screens. Lenient: an unplaced claim shows under
     # every centre. The money path must not read it this way, see #expenses_owned_by_cost_centre.
     def expenses_for_cost_centre
-      in_cost_centre(expenses, cost_centre, &:cost_centre_id)
+      in_cost_centre(expenses, cost_centre)
     end
 
     # Every claim +centre+ is responsible for paying: what Build Batch reads.
@@ -173,17 +173,16 @@ module Reimbursements
     # The selected year's budgets, for the budget screens. An unscoped store sees every budget,
     # as a database whose rows predate financial years needs.
     def budgets_for_year
-      @budgets_for_year ||= scoped_to_cost_centre(scoped_to_year(budgets), &:cost_centre_id)
+      @budgets_for_year ||= scoped(budgets)
     end
 
     # Budgets with EUSA actuals preloaded (directly for income credits, through expenses for
     # debit legs), so the per-line rollup in the budgets index/overview and the Budgets export
     # costs no per-budget query. Year-scoped.
     def budgets_with_actuals
-      @budgets_with_actuals ||= scoped_to_cost_centre(
-        scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
-                                       area: :owners, expenses: :eusa_actuals).to_a),
-        &:cost_centre_id
+      @budgets_with_actuals ||= scoped(
+        Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
+                        area: :owners, expenses: :eusa_actuals).to_a
       )
     end
 
@@ -216,7 +215,7 @@ module Reimbursements
 
     # The areas the budget screens list.
     def areas_for_year
-      @areas_for_year ||= scoped_to_cost_centre(scoped_to_year(areas), &:cost_centre_id)
+      @areas_for_year ||= scoped(areas)
     end
 
     # Grouped by nominal code for the overview, blank-code bucket ("(none)") last. Built from
@@ -450,19 +449,18 @@ module Reimbursements
 
     # The selected year's budget revisions, newest first.
     def budget_updates
-      scoped_to_year(BudgetUpdate.includes(:created_by, :forecasts)
-                                 .order(effective_date: :desc, id: :desc).to_a)
+      in_year(BudgetUpdate.includes(:created_by, :forecasts)
+                          .order(effective_date: :desc, id: :desc).to_a, financial_year)
     end
 
     # Every logged forecast in the selected year and centre, newest first (the Forecast
     # revisions export sheet). Scoped through the OWNER: a forecast belongs to exactly one of a
     # budget or an area and carries neither's year or centre.
     def forecasts_for_scope
-      @forecasts_for_scope ||= begin
-        owned = BudgetForecast.includes(budget: :area, area: {}, budget_update: :created_by)
-                              .order(date: :desc, id: :desc).to_a
-        owned.select { |forecast| forecast_in_scope?(forecast) }
-      end
+      @forecasts_for_scope ||=
+        BudgetForecast.includes(budget: :area, area: {}, budget_update: :created_by)
+                      .order(date: :desc, id: :desc).to_a
+                      .select { |forecast| scoped([ forecast.budget || forecast.area ]).any? }
     end
 
     # Unscoped like #budgets: an update logged against last year's lines is still openable from
@@ -685,7 +683,7 @@ module Reimbursements
     # stays unscoped: it is the reconcile wizard's dedup pool and already-reconciled lookup,
     # which attribute per row and would re-import another centre's rows off a narrowed pool.
     def eusa_actuals_for_cost_centre
-      in_cost_centre(eusa_actuals, cost_centre, &:cost_centre_id)
+      in_cost_centre(eusa_actuals, cost_centre)
     end
 
     # Actuals already imported for an EUSA period (P1..P12), to dedup a pasted export. Both sides
@@ -883,15 +881,6 @@ module Reimbursements
 
     private
 
-    # In scope when the line or area it revises is (unplaced rows are lenient, as in #in_year).
-    def forecast_in_scope?(forecast)
-      owner = forecast.budget || forecast.area
-      return false if owner.nil?
-
-      in_year([ owner ], financial_year).any? &&
-        in_cost_centre([ owner ], cost_centre, &:cost_centre_id).any?
-    end
-
     def bust_eusa_actuals!
       @eusa_actuals = nil
     end
@@ -939,11 +928,11 @@ module Reimbursements
       areas_by_name[::Reimbursements::BudgetImport.match_key(attrs[:area_name])]&.id
     end
 
-    # --- Financial-year scoping ---------------------------------------------
+    # --- Scoping -------------------------------------------------------------
 
-    # +records+ narrowed to this store's financial year; an unscoped store gets the lot.
-    def scoped_to_year(records)
-      in_year(records, financial_year)
+    # +records+ narrowed to this store's year and cost centre; an unscoped store gets the lot.
+    def scoped(records)
+      in_cost_centre(in_year(records, financial_year), cost_centre)
     end
 
     # +records+ belonging to +year+, counting a record with NO year as belonging to it. Rows
@@ -957,23 +946,13 @@ module Reimbursements
       records.select { |record| record.financial_year_id.nil? || record.financial_year_id == year.id }
     end
 
-    # --- Cost-centre scoping -------------------------------------------------
-
-    # +records+ narrowed to this store's cost centre, +block+ answering each record's centre id.
-    def scoped_to_cost_centre(records, &block)
-      in_cost_centre(records, cost_centre, &block)
-    end
-
     # The same leniency as #in_year, for cost centres (cost_centre_id is nullable on every table
     # that has it). It is a filter, so an unplaced row can appear under several centres: safe on
     # read paths only, never where money moves (see #expenses_owned_by_cost_centre).
-    def in_cost_centre(records, centre, &block)
+    def in_cost_centre(records, centre)
       return records if centre.nil?
 
-      records.select do |record|
-        id = block.call(record)
-        id.nil? || id == centre.id
-      end
+      records.select { |record| record.cost_centre_id.nil? || record.cost_centre_id == centre.id }
     end
 
     # Whether a foreign-key violation on an expense write was the budget link. MySQL names the
