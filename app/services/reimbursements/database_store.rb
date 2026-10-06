@@ -1,61 +1,42 @@
 module Reimbursements
-  ##
-  # The ActiveRecord-backed repository — the single data gateway every
-  # controller and job talks to (built by Reimbursements.build_store).
+  # The ActiveRecord-backed repository: the single data gateway every controller and job talks
+  # to (built by Reimbursements.build_store). Lists are memoized per instance (one store per
+  # request or job run), so repeated reads in one render cost one query.
   #
-  # No cache layer: lists are memoized per instance (one store per request/job
-  # run) so repeated reads in one render cost one query.
-  #
-  # Writers accept an established attribute vocabulary
-  # (person_record_id/budget_record_id/batch_id strings, arrays for
-  # sharepoint_receipt_urls and linked_*_ids); nil values are dropped so
-  # email-in submissions can be created with gaps.
+  # Writers take the attribute vocabulary (person_record_id/budget_record_id/batch_id strings,
+  # arrays for sharepoint_receipt_urls and linked_*_ids); nil values are dropped so email-in
+  # claims can be created with gaps.
   class DatabaseStore
     # Raised instead of removing an expense's last receipt (drafts excepted).
     class LastReceiptError < StandardError; end
 
-    # Raised instead of converting a ledger row that stopped being convertible
-    # between the caller's check and the write (see create_expense_for_actual!).
+    # The ledger row stopped being convertible between the caller's check and the write.
     class NotConvertibleError < StandardError; end
 
-    # Raised instead of the raw foreign-key violation when the budget an expense
-    # names was deleted between the caller's check and the write. ExpenseForm's
-    # offerable-budget rule is what normally catches this, but finance deletes
-    # budgets while producers hold the submission form open (Honeybadger
-    # 134234926), so the delete can still land inside that window — and a
-    # Mysql2::Error there is a 500 that loses a filled-in claim. Named, so the
-    # controllers can re-render the form instead.
+    # The budget an expense names was deleted while its form was open (Honeybadger 134234926).
+    # Named so controllers re-render the form instead of 500ing and losing a filled-in claim.
     class BudgetGoneError < StandardError; end
 
-    # Raised instead of splitting a ledger row that stopped being splittable
-    # between the caller's check and the write (see #apportion_actual!).
+    # The ledger row stopped being splittable between the caller's check and the write.
     class NotApportionableError < StandardError; end
 
-    # Raised instead of writing shares that do not add up to the row they
-    # divide. £4,000 split into parts totalling £3,880 understates income by
-    # £120 with nothing on screen saying so, so the write is refused whole.
+    # Shares that do not sum to the row they divide. A short split understates income with
+    # nothing on screen saying so, so the write is refused whole.
     class ApportionmentMismatchError < StandardError; end
 
-    # Raised instead of unlinking a ledger row from a claim that exists ONLY
-    # because of it — a From-EUSA claim created by #create_expense_for_actual!.
-    # There is no earlier state to put that claim back into: unlinking would
-    # leave a Paid expense charged to a budget with nothing on the ledger
-    # behind it, and the row offering "Create expense" again beside it. Delete
-    # the claim instead.
+    # The claim exists only because of this ledger row (a From-EUSA claim), so there is no
+    # earlier state to unlink it to. Delete the claim instead.
     class ClaimFromRowError < StandardError; end
 
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
-    # The financial year the budget screens are scoped to, or nil for an
-    # unscoped store (jobs, the producer surfaces). Set once at construction —
-    # one store per request, so the memoized lists can never disagree with it.
+    # The year the budget screens are scoped to; nil for an unscoped store (jobs, producer
+    # surfaces). Set once at construction: one store per request.
     attr_reader :financial_year
 
-    # The cost centre the finance screens are scoped to, or nil for "every
-    # centre" — which is what an unscoped store (jobs, the producer surfaces)
-    # and a finance page with no ?cost_centre= both get. Set once at
-    # construction, for the same reason the year is.
+    # The cost centre the finance screens are scoped to; nil means every centre (unscoped
+    # stores, and a finance page with no ?cost_centre=).
     attr_reader :cost_centre
 
     def initialize(financial_year: nil, cost_centre: nil)
@@ -63,48 +44,36 @@ module Reimbursements
       @cost_centre = cost_centre
     end
 
-    # Attribute-vocabulary translations onto AR columns; everything else in
-    # the vocabulary already matches its column name.
+    # Vocabulary keys that differ from their AR column; the rest already match.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
     PERSON_FIELDS = %i[name email].freeze
-    # Bank fields route to the linked PaymentDetails record; the vocabulary is defined on
-    # that model, next to the columns it names.
+    # Bank fields route to the linked PaymentDetails record; the vocabulary lives on that model.
     PAYMENT_DETAILS_FIELDS = PaymentDetails::FIELDS
 
-    # The payee's payment_details ride along: every attention/BACS check asks an
-    # expense for its EFFECTIVE bank details, which falls through to the linked
-    # person, so without this a 150-payee workbook paid 150 extra queries.
-    #
-    # The budget's AREA rides along for the same reason: every screen, reminder
-    # and receipt filename names a claim's budget through Budget#display_name,
-    # which reads it.
+    # Preloads the payee's payment_details (every BACS/attention check reads the effective bank
+    # details, so a 150-payee workbook paid 150 queries) and the budget's area
+    # (Budget#display_name reads it).
     def expenses
       @expenses ||= Expense.includes(:batch, budget: :area, person: :payment_details)
                            .with_attached_receipt_files.to_a
     end
 
-    # The selected centre's expenses, for the SCREENS. Lenient: an unplaced
-    # claim shows under every centre — see #expenses_owned_by_cost_centre for
-    # why the money path must not read it this way. An expense resolves its
-    # centre through its budget, which +expenses+ preloads.
+    # The selected centre's expenses, for the screens. Lenient: an unplaced claim shows under
+    # every centre. The money path must not read it this way, see #expenses_owned_by_cost_centre.
     def expenses_for_cost_centre
       in_cost_centre(expenses, cost_centre, &:cost_centre_id)
     end
 
-    # Every claim +centre+ is RESPONSIBLE FOR PAYING — what Build Batch reads.
+    # Every claim +centre+ is responsible for paying: what Build Batch reads.
     #
-    # THE RULE, stated here and pointed at from everywhere else: a read-only
-    # filter may be lenient, but anything that MOVES MONEY must assign each
-    # claim to exactly one owner. Under the lenient filter an unplaced claim
-    # belongs to every centre at once, and BuildBatchJob's +limits_concurrency+
-    # key is per cost centre — so two centres' builds do not serialise, and the
-    # same claim reaches two BACS spreadsheets and two live EUSA drafts. EUSA
-    # pays twice. An unplaced claim therefore falls to the DEFAULT centre, the
-    # rule NightlyBatchJob#claims_by_cost_centre_id already uses to decide who
-    # is REMINDED: the centre told about a claim is the centre that can pay it.
+    # THE RULE: a read-only filter may be lenient, but anything that moves money assigns each
+    # claim to exactly one centre. BuildBatchJob's limits_concurrency key is per centre, so a
+    # claim visible to two centres reaches two live EUSA drafts and EUSA pays twice. An unplaced
+    # claim falls to the DEFAULT centre, as NightlyBatchJob#claims_by_cost_centre_id does for
+    # reminders (the centre told about a claim is the one that can pay it).
     #
-    # Raises on a nil centre rather than defaulting: "no centre" cannot mean
-    # "every centre" here, and [] would silently build an empty batch.
+    # Raises on a nil centre: "no centre" cannot mean "every centre" here, and [] would
+    # silently build an empty batch.
     def expenses_owned_by_cost_centre(centre)
       raise ArgumentError, "a batch is built for one cost centre; none was given" if centre.nil?
 
@@ -112,7 +81,6 @@ module Reimbursements
       expenses.select { |expense| (expense.cost_centre_id || default_id) == centre.id }
     end
 
-    # A person's expenses, newest submission first.
     def expenses_for(person_record_id)
       return [] if person_record_id.blank?
 
@@ -140,10 +108,8 @@ module Reimbursements
       Budget.includes(:forecasts, :own_owners, area: :owners).find_by(id: record_id)
     end
 
-    # Preloaded exactly as #areas is: the area edit page reads
-    # Area#committed_amount and #allocated, which call the equivalent Budget
-    # readers per line — so without the budgets' expenses and forecasts, the
-    # one screen those figures exist for pays two queries per budget line.
+    # Preloads what the area edit page's figures read (Area#committed_amount, #allocated per
+    # budget line).
     def find_area(record_id)
       Area.includes(:owners, :forecasts, budgets: %i[expenses forecasts]).find_by(id: record_id)
     end
@@ -156,14 +122,9 @@ module Reimbursements
       @people ||= Person.includes(:payment_details).to_a
     end
 
-    # The registry in the order the People screen reads it: by name, blanks
-    # last, id as the tiebreak.
-    #
-    # Ordered in SQL on purpose. The column collates utf8mb4_unicode_ci, which
-    # folds accents, while Ruby's String comparison is byte-wise — so an
-    # in-memory sort would put "Ábel" after "Zoe" and disagree with every other
-    # ordered list in the portal. The id tiebreak keeps two people of the same
-    # name in a stable order across page loads.
+    # By name, blanks last, id as tiebreak. Ordered in SQL because the column collates
+    # utf8mb4_unicode_ci, which folds accents while Ruby's sort is byte-wise ("Ábel" would land
+    # after "Zoe", unlike every other ordered list in the portal).
     def people_in_name_order
       @people_in_name_order ||=
         Person.includes(:payment_details)
@@ -172,13 +133,11 @@ module Reimbursements
     end
 
     # The owner sign-off (or finance override) covering one claim, or nil.
-    # The endorsing user is preloaded because every caller names them.
     def endorsement_for_expense(record_id)
       OwnerEndorsement.includes(:overridden_by).for_expense(record_id).first
     end
 
-    # The same, for a list of claims in one query — the Review queue draws a
-    # chip per card and would otherwise fire a query each.
+    # The same for many claims in one query: the Review queue draws a chip per card.
     def endorsements_by_expense(record_ids)
       return {} if record_ids.empty?
 
@@ -186,53 +145,40 @@ module Reimbursements
                       .where(expense_record_id: record_ids).index_by(&:expense_record_id)
     end
 
-    # How many claims each person has SUBMITTED, keyed by their record id.
-    # One grouped query, because the People index would otherwise count per
-    # row — and the count is a link to that person's filtered claim list.
+    # Claims submitted per person, keyed by record id, in one grouped query: the People index
+    # would otherwise count per row.
     def expense_counts_by_person_id
       @expense_counts_by_person_id ||=
         Expense.where.not(person_id: nil).group(:person_id).count
                .transform_keys(&:to_s)
     end
 
-    # Every configured cost centre, by name. Memoized like every other list, so
-    # the exporters' id->centre lookup costs one query per request however many
-    # rows they name a centre on.
+    # Memoized so the exporters' id->centre lookup costs one query however many rows name one.
     def cost_centres
       @cost_centres ||= CostCentre.order(:name).to_a
     end
 
-    # Every budget, every financial year, with the owners + forecasts every
-    # caller needs. Deliberately WITHOUT the actuals preload: most callers (the
-    # producer's budget <select>, the review queue's over-budget check, the
-    # nightly job) only want names and forecasts, and pulling the whole expenses
-    # + actuals ledger to draw a dropdown costs six queries and the entire
-    # expenses table in memory.
+    # Every budget, every financial year, WITHOUT the actuals preload: the producer's budget
+    # <select>, the review queue and the nightly job only want names and forecasts, and the
+    # ledger costs six queries plus the whole expenses table in memory.
     #
-    # Also deliberately NOT year-scoped. Its callers are id->budget LOOKUPS
-    # (Review, the expenses index, every export, the nightly job) and the
-    # reconcile matcher: scoping it would blank the budget name on last year's
-    # claims the moment this year was selected, and stop the year-boundary tail
-    # of EUSA credits matching their income line. The screens that LIST a year's
-    # budgets use #budgets_for_year.
+    # Deliberately not year-scoped either. Callers are id->budget lookups (Review, the expenses
+    # index, every export, the nightly job) and the reconcile matcher: scoping would blank the
+    # budget name on last year's claims and stop the year-boundary tail of EUSA credits matching
+    # their income line. Screens that list a year's budgets use #budgets_for_year.
     def budgets
       @budgets ||= Budget.includes(:forecasts, :own_owners, area: :owners).to_a
     end
 
-    # The selected financial year's budgets — what the budget screens list.
-    # An unscoped store (jobs, the producer surfaces) sees every budget, which
-    # is also what a database whose rows predate financial years needs.
+    # The selected year's budgets, for the budget screens. An unscoped store sees every budget,
+    # as a database whose rows predate financial years needs.
     def budgets_for_year
       @budgets_for_year ||= scoped_to_cost_centre(scoped_to_year(budgets), &:cost_centre_id)
     end
 
-    # Budgets with their EUSA actuals preloaded, for the two places that show the
-    # EUSA-actual rollup: the budgets index/overview and the Budgets export.
-    # Actuals are preloaded both directly (income credits on budget_id) and
-    # through expenses (expense debit legs), so the per-line rollup costs no
-    # per-budget query however many budgets there are.
-    #
-    # Year-scoped: every caller is a "this year's budget lines" view.
+    # Budgets with EUSA actuals preloaded (directly for income credits, through expenses for
+    # debit legs), so the per-line rollup in the budgets index/overview and the Budgets export
+    # costs no per-budget query. Year-scoped.
     def budgets_with_actuals
       @budgets_with_actuals ||= scoped_to_cost_centre(
         scoped_to_year(Budget.includes(:forecasts, :own_owners, :eusa_actuals, :actual_allocations,
@@ -241,82 +187,55 @@ module Reimbursements
       )
     end
 
-    # Budgets a submitter may charge an expense to — from the ACTIVE year, never
-    # the selected one. A finance user browsing next year's draft lines must not
-    # be able to file (or convert an EUSA row into) a claim against a year the
-    # portal hasn't switched to yet.
+    # Budgets a submitter may charge: from the ACTIVE year, never the selected one, so a finance
+    # user browsing next year's draft cannot file against it.
     #
-    # Deliberately NOT cost-centre scoped either, however tempting it looks
-    # sitting between two scoped readers. This is the submitter's budget picker,
-    # and it is the SAME list Review's picker, the actuals->expense conversion
-    # and the finance expense-edit form draw from: narrowing it to whichever
-    # centre finance happens to have selected would quietly stop a producer
-    # filing against the other one.
-    # Ordered by the label the pickers PRINT (see Budget#display_name). Order is
-    # presentation only — ExpenseForm validates against the ids it RENDERED,
-    # never a position.
+    # Deliberately not cost-centre scoped: this is the submitter's picker, shared with Review's
+    # picker, the actuals conversion and the finance expense-edit form, and narrowing it to the
+    # selected centre would stop a producer filing against the other one. Sorted by the label
+    # the pickers print (Budget#display_name); ExpenseForm validates the ids it rendered, never
+    # a position.
     def active_budgets
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:display_name)
     end
 
-    # Every area, every year — an id->record lookup, for exactly the reason
-    # #budgets is unscoped: narrowing it blanks the area name on another
-    # year's or another centre's claim.
-    #
-    # Preloads each area's budgets' expenses and forecasts too: Area#committed_amount
-    # and #allocated each call the equivalent Budget reader per budget, which
-    # reads the budget's own expenses/forecasts associations, so without this an
-    # areas index or a grouped budgets index would pay one or two queries per
-    # budget, per area, per render. `:forecasts` is there for the same reason
-    # one level up: Area#projected_amount reads the area's own forecast log.
+    # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads each
+    # budget's expenses, forecasts and allocations plus the area's own forecasts, because
+    # Area#committed_amount, #allocated and #projected_amount read them per budget per area
+    # (an N+1 on every areas index or grouped budgets index otherwise).
     def areas
       @areas ||= Area.includes(:owners, :forecasts,
                                budgets: %i[expenses forecasts actual_allocations]).to_a
     end
 
-    # record_id => name for every area, in ONE query and with no preloads — for
-    # the screens that only need to PRINT an area's name. #areas above preloads
-    # each area's budgets' expenses and forecasts because Area#committed_amount
-    # and #projected_amount read them; paying that to label a row is the 10->36
-    # shape Phase 1 guarded against. Unscoped for #areas' own reason.
+    # record_id => name for every area, in one query with no preloads, for screens that only
+    # print a name (#areas' preloads cost 10->36 queries). Unscoped like #areas.
     def area_names_by_id
       @area_names_by_id ||= Area.pluck(:id, :name).to_h { |id, name| [ id.to_s, name ] }
     end
 
-    # The areas the budget screens LIST.
+    # The areas the budget screens list.
     def areas_for_year
       @areas_for_year ||= scoped_to_cost_centre(scoped_to_year(areas), &:cost_centre_id)
     end
 
-    # Budgets grouped by nominal code for the overview page, ordered by code
-    # with the blank-code bucket ("(none)") sorted last. Built from
-    # #budgets_with_actuals, since the overview shows the EUSA-actual rollup for
-    # every line, so the grouped totals cost no extra queries.
+    # Grouped by nominal code for the overview, blank-code bucket ("(none)") last. Built from
+    # #budgets_with_actuals, so the grouped totals cost no extra queries.
     def budgets_by_nominal_code
       budgets_with_actuals.group_by { |b| b.nominal_code.presence || NO_CODE_LABEL }
              .sort_by { |code, _| [ code == NO_CODE_LABEL ? 1 : 0, code ] }
              .to_h
     end
 
-    # EUSA ledger rows that no budget's figures account for: not linked to an
-    # expense (which is how an Expense budget reaches its actuals), not linked
-    # to a budget (how an Income budget reaches its credits), and not a leg of
-    # an offsetting pair (an accrual and its reversal net to zero, so neither is
-    # spend).
+    # EUSA ledger rows no budget's figures account for: linked to no expense (how an Expense
+    # budget reaches its actuals) or budget (an Income budget's credits), and not a leg of an
+    # offsetting pair (which nets to zero).
     #
-    # Deliberately linkage-based rather than nominal-code based. Several budgets
-    # can share one nominal code, so a per-budget rollup can only ever count
-    # what is actually linked to it; defining this list by code instead would
-    # hide an unlinked row behind any budget sharing that code — which is
-    # precisely the spend this list exists to surface.
-    #
-    # Sorted by nominal code, then date, so finance can see which budget each
-    # row probably belongs to.
-    # An APPORTIONED row is excluded too, and that exclusion is load-bearing
-    # in the opposite direction from the rest: apportion_actual! CLEARS the
-    # row's budget_id, so without it every split row would reappear here as
-    # unlinked income — turning the one card that surfaces unattributed money
-    # into a permanent false alarm, which is how a real one stops being read.
+    # Linkage-based, not nominal-code based: budgets can share a code, so a code-based list would
+    # hide an unlinked row behind any budget sharing it, which is the spend this list exists to
+    # surface. An apportioned row is excluded too: it carries no budget_id, so without that every
+    # split row would reappear as unlinked income and the card would be a permanent false alarm.
+    # Sorted by code then date, so finance can see which budget a row probably belongs to.
     def unattributed_actuals
       eusa_actuals_for_cost_centre
         .select(&:needs_attention?)
@@ -325,11 +244,8 @@ module Reimbursements
 
     def update_budget!(record_id, attrs)
       budget = Budget.find(record_id)
-      # NOT attrs.compact: area_id may be a deliberate nil (detaching the budget
-      # from its area), and compact would silently drop that key so the write
-      # never reaches budget.update! at all. The only other optional attribute,
-      # initial_budget, is left out of the hash entirely when unset rather than
-      # sent as nil, so there's nothing else here for compact to have protected.
+      # Not attrs.compact: area_id may be a deliberate nil (detach), and compact would drop the
+      # key. initial_budget is left out of the hash when unset rather than sent as nil.
       attrs = attrs.dup
       owner_ids = attrs.delete(:owner_ids)
       budget.update!(attrs)
@@ -344,9 +260,8 @@ module Reimbursements
       area
     end
 
-    # Unused: AreasController#update writes through @area directly, because
-    # area_columns can't carry budgets_attributes. Kept for parity with
-    # create_area! and because it's the store's own API for the write it names.
+    # Unused: AreasController#update writes through @area directly, since area_columns cannot
+    # carry budgets_attributes.
     def update_area!(record_id, attrs)
       area = Area.find(record_id)
       area.update!(area_columns(attrs))
@@ -354,8 +269,8 @@ module Reimbursements
       area
     end
 
-    # REPLACE semantics — the area form's write, where removing an owner is
-    # meant to happen. The importer's #add_area_owners! only ever adds.
+    # REPLACE semantics, the area form's write, where removing an owner is intended.
+    # #add_area_owners! only adds.
     def sync_area_owners!(record_id, person_ids)
       Area.find(record_id).sync_owner_ids!(Array(person_ids).reject(&:blank?))
       bust_areas!
@@ -365,23 +280,14 @@ module Reimbursements
     ImportResult = Struct.new(:created, :revised, :owners_synced, :budget_update, :areas_created,
                               :re_homed, :area_owners_synced, :area_revised, keyword_init: true)
 
-    # Applies a confirmed BudgetImport: creates the new lines, logs the revised
-    # figures as ONE budget update, and re-syncs owners on lines that already
-    # existed.
+    # Applies a confirmed BudgetImport: creates the new lines, logs the revised figures as ONE
+    # budget update (so they reach the forecast history with the import as the note) and
+    # re-syncs owners on existing lines.
     #
-    # All-or-nothing, unlike the reconcile wizard's per-row rescue. A half
-    # imported budget list has no audit value and no obvious repair — the
-    # operator would be left reconciling a part-built year against the
-    # spreadsheet by eye — whereas re-running the whole import after a fix is
-    # cheap, because matching is by name and a second run finds the lines it
-    # already created.
-    #
-    # Revisions go through create_budget_update! rather than rewriting
-    # initial_budget, so the spreadsheet's revision lands in the forecast
-    # history with the import named as its note.
-    #
-    # Areas are created FIRST in the same transaction, so a +creates+ or
-    # +re_homes+ entry carrying +area_name:+ has an id to resolve to.
+    # All-or-nothing, unlike the reconcile wizard's per-row rescue: a half-imported list has no
+    # audit value and no obvious repair, while re-running after a fix is cheap because matching
+    # is by name. Areas are created first, so a creates/re_homes entry carrying +area_name:+ has
+    # an id to resolve to.
     def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
                         area_creates: [], re_homes: [], area_owner_syncs: [], area_revisions: [])
       result = nil
@@ -392,8 +298,6 @@ module Reimbursements
         end
         created = creates.map { |attrs| create_budget!(resolve_area(attrs, areas_by_name)) }
         adoptions.each { |adoption| adopt_budget!(adoption[:budget_id], adoption[:cost_centre]) }
-        # Only the ticked re-homes reach here; the controller filters the
-        # import's list by the ticked keys.
         re_homes.each do |re_home|
           re_home_budget!(re_home[:budget_id], resolve_area_id(re_home, areas_by_name))
         end
@@ -405,9 +309,8 @@ module Reimbursements
           add_area_owners!(area_id, sync[:owner_ids])
           area_owners_synced += 1
         end
-        # ONE update for both levels, which is what BudgetUpdate is for: one
-        # committee meeting revised a show's agreed total and its categories'
-        # allocations together.
+        # One update for both levels: a committee meeting revises an area's total and its
+        # lines' allocations together.
         forecasts = revisions + area_revisions
         update = if forecasts.any?
                    create_budget_update!(effective_date: Date.current, note: note,
@@ -434,16 +337,11 @@ module Reimbursements
       budget
     end
 
-    # The budget line for one (area, nominal code), created only where the
-    # lookup RE-TAKEN here — inside the transaction, behind the area's row
-    # lock — still finds none.
-    #
-    # BudgetFinder's own lookup is a read, and a double-submitted form passes
-    # it twice: two lines for one (area, code) split a show's spend across them
-    # and invent a second agreed figure, with nothing on either line saying so.
-    # Same shape and same reason as #create_expense_for_actual!. +name+ is the
-    # nominal code's label, which is also what the re-taken match reads to
-    # recognise a hand-named line.
+    # The budget line for one (area, nominal code), created only if the lookup re-taken here,
+    # inside the transaction behind the area's row lock, still finds none. BudgetFinder's own
+    # lookup is a read a double-submitted form passes twice, giving two lines for one
+    # (area, code) and a second agreed figure. +name+ is the code's label, which the match also
+    # reads to recognise a hand-named line.
     def find_or_create_budget_for_area!(area_id:, nominal_code:, name:, cost_centre: nil,
                                         financial_year: nil)
       budget = nil
@@ -459,10 +357,8 @@ module Reimbursements
       budget
     end
 
-    # Claims a budget that belongs to no cost centre yet for +cost_centre+. Only
-    # ever called for a budget whose cost_centre_id is nil (see
-    # BudgetImport#adoptions), so it can never move a line out of the pot that
-    # already owns it.
+    # Only called for a budget with no cost centre (BudgetImport#adoptions), so it never moves a
+    # line out of the pot that owns it.
     def adopt_budget!(record_id, cost_centre)
       budget = Budget.find(record_id)
       budget.update!(cost_centre: cost_centre) if budget.cost_centre_id.nil?
@@ -470,9 +366,8 @@ module Reimbursements
       budget
     end
 
-    # Unlike adopt_budget!, deliberately no "only when it's blank" guard:
-    # moving a line that already sits in another area is the whole point, and
-    # the operator ticked it against a preview stating "from -> to".
+    # No "only when blank" guard, unlike adopt_budget!: moving a line out of another area is the
+    # point, and the operator ticked it against a preview stating "from -> to".
     def re_home_budget!(record_id, area_id)
       budget = Budget.find(record_id)
       budget.update!(area_id: area_id)
@@ -488,18 +383,14 @@ module Reimbursements
       budget
     end
 
-    # ADDS and never removes: the sheet names one person per LINE, and nothing
-    # on a spreadsheet spells "remove this owner" (a blank cell says nothing,
-    # as a blank Amount does), so a subtraction here would drop a show's
-    # sign-off authority silently. Removal is hand-work on the area form,
-    # through #sync_area_owners!.
+    # Only ever ADDS: a spreadsheet cannot say "remove this owner" (a blank cell says nothing),
+    # so subtracting would drop a show's sign-off authority silently. Removal is hand-work on the
+    # area form (#sync_area_owners!).
     #
-    # The union is re-taken here as well as in BudgetImport#area_owner_syncs:
-    # that one compares against the copy the preview rendered, this one against
-    # whatever the area holds now. It must stay a union — Area#sync_owner_ids!
-    # is a DIFF sync, and handing it anything short of a superset deletes the
-    # difference. The `any?` guard is the backstop for the empty case, where
-    # `where.not(person_id: [])` is WHERE 1=1.
+    # The union is taken against what the area holds now; BudgetImport#area_owner_syncs compares
+    # against the preview's copy. It must stay a union: Area#sync_owner_ids! is a diff sync, so
+    # anything short of a superset deletes the difference. The `any?` guard covers the empty
+    # list, where `where.not(person_id: [])` is WHERE 1=1.
     def add_area_owners!(record_id, owner_ids)
       area = Area.find(record_id)
       union = area.owner_ids.map(&:to_i) | Array(owner_ids).compact_blank.map(&:to_i)
@@ -535,17 +426,15 @@ module Reimbursements
       bust_budgets!
     end
 
-    # Records a multi-budget revision in one gesture: a BudgetUpdate carrying
-    # the shared effective_date + note + author, and one BudgetForecast per
-    # entry linked to it (dated with the shared date, its reason set to the
-    # shared note). +forecasts+ is an array of {budget_id:, amount:} or
-    # {area_id:, amount:} — the caller drops blank amounts. All-or-nothing: an
-    # invalid entry rolls the whole update back.
+    # A multi-budget revision in one gesture: a BudgetUpdate carrying the shared date, note and
+    # author, and one BudgetForecast per entry (dated and reasoned from it). +forecasts+ holds
+    # {budget_id:, amount:} or {area_id:, amount:} entries; the caller drops blank amounts.
+    # All-or-nothing.
     def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
       update = nil
       BudgetUpdate.transaction do
-        # The year being VIEWED, not merely the live one: a revision logged
-        # while setting next year's budgets up belongs to next year.
+        # The year being viewed, not just the live one: a revision logged while setting next
+        # year's budgets up belongs to next year.
         update = BudgetUpdate.create!(effective_date: effective_date, note: note,
                                       created_by: created_by,
                                       financial_year: financial_year || FinancialYear.current)
@@ -565,13 +454,9 @@ module Reimbursements
                                  .order(effective_date: :desc, id: :desc).to_a)
     end
 
-    # Every logged forecast in the selected year and cost centre, newest first
-    # — the Forecast revisions export sheet.
-    #
-    # Scoped through the OWNER (a forecast belongs to exactly one of a budget or
-    # an area, neither of which it duplicates a year or centre from), so the
-    # sheet covers the same scope the other scoped sheets do and the workbook
-    # stays one coherent view.
+    # Every logged forecast in the selected year and centre, newest first (the Forecast
+    # revisions export sheet). Scoped through the OWNER: a forecast belongs to exactly one of a
+    # budget or an area and carries neither's year or centre.
     def forecasts_for_scope
       @forecasts_for_scope ||= begin
         owned = BudgetForecast.includes(budget: :area, area: {}, budget_update: :created_by)
@@ -580,27 +465,19 @@ module Reimbursements
       end
     end
 
-    # One update by id, with everything its page prints preloaded. Unscoped,
-    # for the reason #budgets is: an update logged against last year's lines is
-    # still openable from a bookmark, and blanking it would be worse than
-    # showing it.
+    # Unscoped like #budgets: an update logged against last year's lines is still openable from
+    # a bookmark.
     def find_budget_update(record_id)
       return nil if record_id.blank?
 
       BudgetUpdate.includes(:created_by, forecasts: %i[budget area]).find_by(id: record_id)
     end
 
-    # Undo a whole revision: the forecasts it logged go, then the update row.
-    #
-    # The forecasts have to be DESTROYED, not detached. `has_many :forecasts,
-    # dependent: :nullify` means destroying the update alone would leave every
-    # revision in place and merely unlabelled — the opposite of an undo, and a
-    # state nothing on screen could explain. Each line then falls back to
-    # whatever forecast preceded this one, because current_forecast is simply
-    # the latest by date and id.
-    #
-    # One transaction: a half-removed update leaves some lines reverted and
-    # some not, under a heading that no longer exists to say which.
+    # Undoes a revision: the forecasts it logged go, then the update row. The forecasts are
+    # DESTROYED, not detached: `dependent: :nullify` would leave every revision in place and
+    # merely unlabelled. Each line falls back to its previous forecast (current_forecast is the
+    # latest by date and id). One transaction, or some lines revert and some not, under a
+    # heading that no longer exists to say which.
     def delete_budget_update!(record_id)
       BudgetUpdate.transaction do
         update = BudgetUpdate.lock.find(record_id)
@@ -610,10 +487,10 @@ module Reimbursements
       bust_budgets!
     end
 
-    # Retries the auto_number MAX+1 race: two concurrent creates (portal vs
-    # poll job) can pick the same number; the unique index rejects the loser,
-    # which re-reads MAX on the retry. Explicit auto_numbers (the importer)
-    # are never retried — a collision there is real data corruption.
+    # Retries the auto_number MAX+1 race: two concurrent creates (portal vs poll job) can pick
+    # the same number; the unique index rejects the loser, which re-reads MAX on the retry.
+    # Explicit auto_numbers (the importer) are never retried: a collision there is real data
+    # corruption.
     def create_expense!(attrs)
       attempts = 0
       begin
@@ -632,23 +509,16 @@ module Reimbursements
       expense
     end
 
-    # Finance's historical-claims sheet, written as ONE transaction — the rule
-    # import_budgets! follows, and for the same reason: a half-imported ledger
-    # has no audit value and there is nothing on screen to say which half
-    # landed. ExpenseImport has already validated every row through ExpenseForm,
-    # so a raise here is a race (a double-submitted apply, or two operators),
-    # and rolling the lot back is what makes re-running it after a fix safe.
+    # Finance's historical-claims sheet as ONE transaction, the all-or-nothing rule of
+    # #import_budgets!. ExpenseImport has validated every row, so a raise here is a race
+    # (double-submitted apply, two operators) and rolling back makes re-running safe.
     #
-    # The rows carrying a number FROM THE SHEET go in first. auto_number is
-    # uniquely indexed and create_expense! assigns MAX+1 to a row without one,
-    # so an auto-numbered row inserted first can walk straight into a number a
-    # later row is about to claim — and create_expense! deliberately does not
-    # retry past a collision on a number it was handed, calling that real data
-    # corruption rather than something to paper over.
+    # Rows carrying a number FROM THE SHEET go in first: auto_number is uniquely indexed and
+    # create_expense! gives an unnumbered row MAX+1, which could walk into a number a later row is
+    # about to claim (and it deliberately does not retry past a collision on a handed number).
     #
-    # Nothing here notifies anyone: an import is bookkeeping, not an event.
-    # Every producer email in this portal is sent by BatchProcessor, the nightly
-    # reminders or an explicit reject — none of which a create can reach.
+    # Nothing here notifies anyone: an import is bookkeeping, and every producer email comes
+    # from BatchProcessor, the nightly reminders or an explicit reject.
     def import_expenses!(rows:)
       created = nil
       Expense.transaction do
@@ -659,40 +529,25 @@ module Reimbursements
       created
     end
 
-    # Hard-delete; only used for a producer discarding their own draft — the
-    # caller gates on status.
+    # Hard delete, for a producer discarding their own draft; the caller gates on status.
     def delete_expense!(record_id)
       Expense.find(record_id).destroy!
       bust_expenses!
     end
 
-    # See #update_expense!: a present-and-nil value for one of these clears the
-    # column instead of being read as "not edited here".
-    #
-    # foreign_amount ONLY, deliberately. `amount` keeps the compacted
-    # "nil means leave it alone" contract that four other write paths
-    # (BatchProcessor, the reject path, Review#save, the producer form) rely
-    # on, and every one of those validates it as positive before writing.
-    #
-    # payment_confirmed_date joins it for #unlink_actual_from_expense!, which
-    # must undo the settle it is reversing: left behind, the claim reads
-    # Submitted while still carrying the date it was paid on, from a ledger row
-    # that is no longer attached to it.
+    # A present-and-nil value for these clears the column; for every other column nil means
+    # "not edited here" (see #update_expense!). foreign_amount: blanking the invoice amount
+    # must not be a no-op that looks like a save. payment_confirmed_date: #unlink_actual_from_expense!
+    # must undo the settle it reverses. `amount` is deliberately absent: four other write paths
+    # (BatchProcessor, reject, Review#save, the producer form) rely on its "nil means leave it
+    # alone" contract.
     CLEARABLE_EXPENSE_COLUMNS = %i[foreign_amount payment_confirmed_date].freeze
 
     def update_expense!(record_id, attrs)
       expense = Expense.find(record_id)
       columns = expense_columns(attrs)
-      # A blank budget on the finance edit forms means "clear the budget" —
-      # nil-compaction would otherwise make the link settable but never
-      # removable.
+      # A blank budget_record_id clears the budget; compaction would make it settable only.
       columns[:budget_id] = nil if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
-      # Money columns the finance edit form may deliberately CLEAR.
-      # #expense_columns compacts nils away, which reads a missing key as "not
-      # edited here" — right for a form that posts a subset, but it made
-      # blanking the invoice amount a no-op that looked like a save: the field
-      # came back with the old figure still in it. A key that is present and
-      # nil is an instruction, not an omission.
       CLEARABLE_EXPENSE_COLUMNS.each do |key|
         columns[key] = nil if attrs.key?(key) && attrs[key].nil?
       end
@@ -711,12 +566,9 @@ module Reimbursements
       bust_expenses!
     end
 
-    # Refuses to leave a non-draft receipt-less (drafts don't require one).
-    # attachment_id is the BLOB ID the Attachment wrapper exposes — not the
-    # blob's signed id, which is a bearer token for ActiveStorage's permanent,
-    # unauthenticated routes and so is never put in front of a browser (see
-    # Expense.wrap_receipt). Matching is scoped to this expense's own files, so
-    # a bare id from elsewhere resolves to nothing.
+    # Refuses to leave a non-draft receipt-less. attachment_id is the BLOB id, never the signed
+    # id: that is a bearer token for ActiveStorage's unauthenticated routes and must not reach a
+    # browser (see Expense.wrap_receipt). Matching is scoped to this expense's own files.
     def remove_receipt!(expense_record_id, attachment_id)
       expense = Expense.find(expense_record_id)
       target = expense.receipt_files.find { |file| file.blob_id.to_s == attachment_id.to_s }
@@ -728,9 +580,8 @@ module Reimbursements
       bust_expenses!
     end
 
-    # Reverts a submitted expense to Approved, unlinking it from its batch so
-    # it re-enters Build Batch cleanly. Deliberately leaves producer_notified
-    # untouched so a rebuild won't re-email the producer.
+    # Back to Approved and out of its batch, so it re-enters Build Batch. Leaves
+    # producer_notified alone so a rebuild does not re-email the producer.
     def revert_expense_to_approved!(record_id)
       Expense.find(record_id).update!(status: Status::APPROVED, batch_id: nil,
                                       submitted_to_eusa_date: nil, receipts_offloaded: false,
@@ -742,11 +593,9 @@ module Reimbursements
       @batches ||= Batch.order(:id).to_a
     end
 
-    # The selected cost centre's batches. A Batch carries no cost-centre column;
-    # it takes its centre from the expenses it holds, which is exact now that a
-    # batch is built for one centre over that centre's claims only. A batch
-    # holding nothing (or only unplaced claims) has no centre and so shows under
-    # every one, the same leniency #in_cost_centre applies everywhere else.
+    # A Batch has no cost-centre column: it takes its centre from the expenses it holds (a batch
+    # is built for one centre). A batch holding nothing, or an unplaced claim, shows under every
+    # centre, the leniency #in_cost_centre applies.
     def batches_for_cost_centre
       return batches if cost_centre.nil?
 
@@ -765,13 +614,13 @@ module Reimbursements
       Batch.find_by(draft_message_id: message_id)
     end
 
-    # PersonLink's stored user->payee link: the real FK on this backend.
-    # update_column deliberately skips validations/callbacks so legacy user
-    # records that no longer validate can still use the portal.
+    # PersonLink's stored user->payee link: the real FK.
     def stored_person_link(user)
       user.reimbursements_person_id&.to_s
     end
 
+    # update_column skips validations and callbacks so legacy users that no longer validate can
+    # still use the portal.
     def remember_person_link!(user, person)
       user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
     end
@@ -806,8 +655,7 @@ module Reimbursements
       person
     end
 
-    # The People page and the portal's Payment Details page send a mix of
-    # Person columns and bank fields; the bank fields route to the linked
+    # Person columns and bank fields arrive mixed; the bank fields go to the linked
     # PaymentDetails record (created on first write).
     def update_person!(record_id, attrs)
       person = Person.find(record_id)
@@ -833,22 +681,16 @@ module Reimbursements
       @eusa_actuals ||= EusaActual.includes(:expense, :budget, allocations: :budget).to_a
     end
 
-    # The selected cost centre's ledger rows, for the Actuals browser and its
-    # CSV. +eusa_actuals+ itself stays unscoped: it is the reconcile wizard's
-    # dedup pool and its already-reconciled lookup, both of which attribute
-    # per ROW and would silently re-import another centre's rows off a narrowed
-    # pool.
+    # The selected centre's ledger rows, for the Actuals browser and its CSV. +eusa_actuals+
+    # stays unscoped: it is the reconcile wizard's dedup pool and already-reconciled lookup,
+    # which attribute per row and would re-import another centre's rows off a narrowed pool.
     def eusa_actuals_for_cost_centre
       in_cost_centre(eusa_actuals, cost_centre, &:cost_centre_id)
     end
 
-    # Actuals already imported for a given EUSA period (P1..P12), used to dedup
-    # a freshly-pasted export against what's already stored for that period.
-    # Both sides go through Reconciliation.normalise_period rather than
-    # comparing the stored strings. The write paths normalise, and the backfill
-    # normalised what was already there — but a row that slipped in unpadded
-    # (a console fix predating this, a database the backfill has not reached)
-    # must still be recognised as already imported, or re-pasting the month
+    # Actuals already imported for an EUSA period (P1..P12), to dedup a pasted export. Both sides
+    # go through Reconciliation.normalise_period: a row that slipped in unpadded (a console fix,
+    # a database the backfill has not reached) must still be recognised, or a re-paste
     # double-counts it in the ledger and every rollup.
     def actuals_for_period(period)
       key = Reconciliation.normalise_period(period)
@@ -873,21 +715,12 @@ module Reimbursements
       actual
     end
 
-    # Link an actual to an expense and settle the claim in one transaction: it
-    # becomes Paid on the row's date, and an INTERNATIONAL claim's amount is
-    # corrected to what EUSA's bank actually charged.
-    #
-    # That correction is the point. An international claim's stored amount is
-    # the GBP estimate finance typed at review, because nobody knows the rate
-    # until the payment clears; the actual is the real cost. Left uncorrected,
-    # every budget rollup keeps quoting the estimate forever. `amount_excl_vat`
-    # follows automatically (Expense mirrors it on that rail, there being no
-    # reclaimable UK VAT on a foreign invoice).
-    #
-    # One method rather than three steps at each call site, because the reconcile
-    # apply and the manual link on the Actuals index both do exactly this, and a
-    # half-applied settle leaves an actual pointing at a claim still reading
-    # Submitted.
+    # Links an actual to an expense and settles the claim in one transaction: Paid on the row's
+    # date, and an international claim's amount corrected to what EUSA's bank charged. Its stored
+    # amount is finance's GBP estimate, and uncorrected every budget rollup quotes it forever
+    # (amount_excl_vat follows, as Expense mirrors it on that rail). One method because reconcile
+    # apply and the Actuals manual link both do exactly this, and a half-applied settle leaves an
+    # actual pointing at a claim still reading Submitted.
     def settle_expense_from_actual!(actual_id, expense_id, payment_date:, gbp_charged: nil)
       settled = EusaActual.transaction do
         link_actual_to_expense!(actual_id, expense_id)
@@ -906,17 +739,12 @@ module Reimbursements
       actual
     end
 
-    # Turns an unlinked debit row into a From-EUSA expense and links the row to
-    # it as ONE unit. Returns the new expense; raises NotConvertibleError if the
-    # row is not (or is no longer) convertible.
-    #
-    # Both halves matter. Creating the expense and linking afterwards as two
-    # writes leaves, on a failure between them, a Paid expense charged to a budget
-    # while the row stays unlinked and keeps offering its "Create expense" button,
-    # so the next click double-counts the same EUSA charge. And the caller's
-    # convertibility check is a read that goes stale on a double-submitted form,
-    # so it is re-taken here under a row lock: the second writer blocks until the
-    # first commits, then sees the link and is refused.
+    # Turns an unlinked debit row into a From-EUSA expense and links the row to it as one unit;
+    # raises NotConvertibleError if the row is not (or no longer) convertible. Two writes could
+    # leave a Paid expense charged to a budget while the row keeps offering "Create expense", so
+    # the next click double-counts the same EUSA charge. The caller's check goes stale on a
+    # double-submitted form, so it is re-taken here under a row lock: the second writer blocks,
+    # then sees the link and is refused.
     def create_expense_for_actual!(actual_id, attrs)
       expense = nil
       EusaActual.transaction do
@@ -930,13 +758,9 @@ module Reimbursements
       expense
     end
 
-    # Imports both legs of an offsetting pair and cross-links them as ONE unit.
-    #
-    # Two separate create_actual! calls followed by a link leave the worst state
-    # available if anything in the middle fails: the debit leg committed WITHOUT
-    # the offset stamp, so every rollup reads it as real spend. Re-pasting cannot
-    # repair that, because dedup then skips the already-imported leg and the pair
-    # can never be re-formed. Returns the two linked legs.
+    # Imports both legs of an offsetting pair and cross-links them as one unit; returns the two
+    # legs. Separate creates could commit the debit leg without the offset stamp, so every rollup
+    # reads it as spend, and re-pasting cannot repair it because dedup skips the imported leg.
     def create_offsetting_pair!(debit_attrs, credit_attrs)
       legs = EusaActual.transaction do
         debit = create_actual!(debit_attrs)
@@ -947,14 +771,10 @@ module Reimbursements
       legs
     end
 
-    # The way back out of an offset: both legs lose the stamp and the
-    # cross-link and become ordinary ledger rows again. Reachable from either
-    # leg, all-or-nothing, and it deletes nothing.
-    #
-    # The pairing heuristic can be wrong, and being wrong hides real spend from
-    # the ledger view and every rollup, so this has to be reversible without a
-    # console. Any row pointing AT this one is cleared too, so a half-linked row
-    # from an older import can't be left behind.
+    # The way back out of an offset: both legs lose the stamp and cross-link and become ordinary
+    # rows. Reachable from either leg, all-or-nothing, deletes nothing. The pairing heuristic can
+    # be wrong, and a wrong pair hides real spend, so this must work without a console. Any row
+    # pointing at this one is cleared too, so a half-linked row from an older import is not left.
     def unlink_offsetting_pair!(actual_id)
       legs = EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
@@ -968,21 +788,15 @@ module Reimbursements
       legs
     end
 
-    # Splits one credit row across several income budgets as ONE unit, so a
-    # Stripe payout covering five shows lands on five income lines.
+    # Splits one credit row across several income budgets as one unit (a Stripe payout covering
+    # five shows lands on five income lines). #apportionable? refuses a row that has a budget, so
+    # the allocations are the only answer to whose income it is: a row holding both would count
+    # its full value on the old line and its shares on the new ones.
     #
-    # The row's own budget_id is CLEARED: the allocations become the single
-    # answer to "whose income is this", and a row holding both would have its
-    # full value counted on the old line AND its shares counted on the new
-    # ones. #apportionable? already refuses a row that carries one, so this is
-    # belt and braces for a link landing inside the window.
-    #
-    # The guard is re-taken here under a row lock, exactly as
-    # #create_expense_for_actual! does: the controller's check is a read that
-    # goes stale on a double-submitted form, and a second split would double
-    # the income. One transaction for the same reason the offsetting pair is
-    # one — a half-written split leaves the row reading as unlinked while some
-    # of its shares already sit on budgets, and nothing on screen says so.
+    # The guard is re-taken under a row lock (the controller's check goes stale on a
+    # double-submitted form, and a second split would double the income) and the parts must sum
+    # to the row's total. One transaction, so a half-written split cannot leave the row reading as
+    # unlinked while some shares already sit on budgets.
     def apportion_actual!(actual_id, allocations)
       EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
@@ -1003,14 +817,9 @@ module Reimbursements
       EusaActual.find(actual_id)
     end
 
-    # The way back out of a split: the shares go and the row becomes an
-    # ordinary unlinked credit again, ready to be split differently or linked
-    # whole. It deletes no ledger row — finance needs the audit trail.
-    #
-    # The stamp is cleared only when it is the one this write put there, so
-    # calling this on a row carrying some other status (an offsetting leg,
-    # which #apportionable? would never have let through in the first place)
-    # cannot silently strip it.
+    # The way back out of a split: the shares go and the row is an ordinary unlinked credit
+    # again. Deletes no ledger row. The stamp is cleared only if it is STATUS_APPORTIONED, so a
+    # row carrying another status (an offsetting leg) cannot be stripped by mistake.
     def remove_apportionment!(actual_id)
       EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
@@ -1024,19 +833,9 @@ module Reimbursements
       EusaActual.find(actual_id)
     end
 
-    # The way back out of a wrong match to an INCOME line: the row loses its
-    # budget and becomes an ordinary unlinked credit again, ready to be split
-    # or linked to the right line.
-    #
-    # It is what makes "Split across budgets" reachable on the row it was built
-    # for. Reconcile attaches a whole box-office settlement to one income line,
-    # and #apportionable? refuses a row that already carries a budget — so the
-    # one control that exists for splitting a payout across five shows never
-    # appeared on the payout.
-    #
-    # Nothing else moves. A budget link is a pure attribution: no claim's status
-    # hangs off it, so clearing it changes only which line's figures count this
-    # money, which is the whole point.
+    # The way back out of a wrong match to an income line: the row loses its budget. This makes
+    # "Split across budgets" reachable on a reconciled payout, since #apportionable? refuses a
+    # row that already carries a budget. Nothing else moves: a budget link is pure attribution.
     def unlink_actual_from_budget!(actual_id)
       actual = EusaActual.find(actual_id)
       actual.update!(budget_id: nil)
@@ -1045,24 +844,12 @@ module Reimbursements
       actual
     end
 
-    # The way back out of a wrong match to a CLAIM — and it undoes the
-    # settlement as well as the link, in one transaction.
-    #
-    # That is the whole difficulty. #settle_expense_from_actual! writes both:
-    # the link AND Paid + payment_confirmed_date on the claim. Clearing the
-    # link alone would leave a claim reading Paid with no ledger row behind it
-    # and no screen saying so — a money screen stating something untrue, which
-    # is worse than the wrong match it was meant to fix. So a claim this row
-    # settled goes back to Submitted, the status it necessarily held: a claim
-    # reaches the ledger by being in a batch.
-    #
-    # A claim that is NOT Paid is left alone rather than pushed anywhere: it was
-    # linked without being settled (the plain #link_actual_to_expense! path), so
-    # there is nothing to undo but the link.
-    #
-    # An INTERNATIONAL claim keeps the corrected amount. The estimate finance
-    # typed at review is overwritten by what EUSA's bank actually charged and is
-    # not recorded anywhere, so it cannot be restored — the callers say so.
+    # The way back out of a wrong match to a claim, undoing the settlement as well as the link in
+    # one transaction. #settle_expense_from_actual! wrote Paid + payment_confirmed_date, so
+    # clearing the link alone would leave a Paid claim with no ledger row behind it. A claim this
+    # row settled goes back to Submitted, the status it held on reaching the ledger; one that is
+    # not Paid was only linked, so only the link goes. An international claim keeps the corrected
+    # amount: the estimate it overwrote is recorded nowhere, so it cannot be restored.
     def unlink_actual_from_expense!(actual_id)
       actual = EusaActual.transaction do
         row = EusaActual.lock.find(actual_id)
@@ -1080,10 +867,9 @@ module Reimbursements
       actual
     end
 
-    # Records that two imported rows cancel each other out (an accrual and its
-    # reversal). Both rows survive — finance needs the audit trail — so each leg
-    # is stamped "offset" and pointed at the other. All-or-nothing: a half-
-    # stamped pair would show one leg as noise and the other as real spend.
+    # Marks two imported rows as cancelling each other (an accrual and its reversal): each is
+    # stamped "offset" and pointed at the other. Both rows survive, finance needs the audit trail.
+    # All-or-nothing, or one leg shows as noise and the other as real spend.
     def link_offsetting_pair!(actual_id, counterpart_id)
       legs = [ EusaActual.find(actual_id), EusaActual.find(counterpart_id) ]
       EusaActual.transaction do
@@ -1098,9 +884,7 @@ module Reimbursements
 
     private
 
-    # A forecast is in scope when the line or area it revises is. An owner with
-    # no year or centre is lenient-scoped in, the rule #in_year and
-    # #in_cost_centre already follow for every unstamped row.
+    # In scope when the line or area it revises is (unplaced rows are lenient, as in #in_year).
     def forecast_in_scope?(forecast)
       owner = forecast.budget || forecast.area
       return false if owner.nil?
@@ -1132,9 +916,8 @@ module Reimbursements
       @areas_for_year = nil
     end
 
-    # Swaps a line's +area_name:+ (an area this run is creating) for the new
-    # row's +area_id:+. A line naming an area that already existed arrives with
-    # +area_id:+ set and passes through untouched.
+    # Swaps a line's +area_name:+ (an area this run creates) for the new row's +area_id:+. A line
+    # naming an existing area already carries +area_id:+ and passes through.
     def resolve_area(attrs, areas_by_name)
       return attrs unless attrs[:area_name]
 
@@ -1147,11 +930,10 @@ module Reimbursements
       areas_by_name.fetch(::Reimbursements::BudgetImport.match_key(attrs[:area_name])).id
     end
 
-    # NIL when the named area wasn't created after all — owner syncs are
-    # grouped by the area each line names whether or not its re-home stayed
-    # ticked, so an area nothing lands in has no owners to write.
-    # #resolve_area_id keeps its raising fetch: a create or re-home reaching a
-    # missing area IS a bug.
+    # nil when the named area was not created after all: owner syncs are grouped by the area each
+    # line names, ticked re-home or not, so an area nothing lands in has no owners to write.
+    # #resolve_area_id keeps its raising fetch, since a create or re-home reaching a missing area
+    # is a bug.
     def resolve_optional_area_id(attrs, areas_by_name)
       return attrs[:area_id] if attrs[:area_name].blank?
 
@@ -1160,22 +942,16 @@ module Reimbursements
 
     # --- Financial-year scoping ---------------------------------------------
 
-    # +records+ narrowed to this store's financial year. An unscoped store (a
-    # job, the producer surfaces) gets the lot.
+    # +records+ narrowed to this store's financial year; an unscoped store gets the lot.
     def scoped_to_year(records)
       in_year(records, financial_year)
     end
 
-    # +records+ belonging to +year+, treating a record with NO year as belonging
-    # to it.
-    #
-    # That leniency is deliberate and mirrors the reconcile matcher's handling
-    # of a budget with no cost centre. Every row written before financial years
-    # existed is unstamped, and the backfill is what fixes that — but if the
-    # backfill hasn't run (or half ran), the strict reading makes the finance
-    # team's entire budget list and every submitter's budget picker go EMPTY,
-    # with nothing on screen to explain it. Showing an unplaced row under the
-    # year being viewed is visible and correctable; hiding real money is not.
+    # +records+ belonging to +year+, counting a record with NO year as belonging to it. Rows
+    # written before financial years are unstamped until the backfill runs, and the strict
+    # reading would empty the budget list and every submitter's picker with nothing on screen to
+    # say why. An unplaced row shown under the viewed year is visible and correctable; hidden
+    # money is not.
     def in_year(records, year)
       return records if year.nil?
 
@@ -1184,31 +960,14 @@ module Reimbursements
 
     # --- Cost-centre scoping -------------------------------------------------
 
-    # +records+ narrowed to this store's cost centre, +block+ answering each
-    # record's own centre id. A store with no centre ("All cost centres", every
-    # job, the producer surfaces) gets the lot.
+    # +records+ narrowed to this store's cost centre, +block+ answering each record's centre id.
     def scoped_to_cost_centre(records, &block)
       in_cost_centre(records, cost_centre, &block)
     end
 
-    # +records+ belonging to +centre+, treating a record with NO cost centre as
-    # belonging to it.
-    #
-    # That leniency is the same rule #in_year states for financial years, and
-    # for the same reason: cost_centre_id is nullable on every table that has it
-    # and predates this scoping, so a portal whose rows were written before the
-    # column existed would show a finance user an EMPTY budget list, an empty
-    # ledger and an empty review queue the moment they picked a centre — with
-    # nothing on screen to say why. An unplaced row shown under the centre being
-    # viewed is visible and correctable; hidden money is not.
-    #
-    # It is a filter, so an unplaced row may appear under more than one centre.
-    # That is safe HERE and nowhere else: see #expenses_owned_by_cost_centre for
-    # the money path's stricter "unplaced falls to the DEFAULT centre" rule, and
-    # why a lenient read on a path that moves money pays the same claim twice.
-    # NightlyBatchJob#claims_by_cost_centre_id uses that same strict rule, for
-    # the same reason in the other direction: a reminder has to reach exactly
-    # one set of recipients.
+    # The same leniency as #in_year, for cost centres (cost_centre_id is nullable on every table
+    # that has it). It is a filter, so an unplaced row can appear under several centres: safe on
+    # read paths only, never where money moves (see #expenses_owned_by_cost_centre).
     def in_cost_centre(records, centre, &block)
       return records if centre.nil?
 
@@ -1218,18 +977,15 @@ module Reimbursements
       end
     end
 
-    # Whether a foreign-key violation on an expense write was the BUDGET link
-    # specifically. MySQL names the constraint, not the column, and an expense
-    # links to a person, a batch and a financial year as well — so the answer
-    # comes from re-reading the row rather than from parsing the error, and any
-    # other broken link is re-raised as itself instead of being mislabelled.
+    # Whether a foreign-key violation on an expense write was the budget link. MySQL names the
+    # constraint, not the column, and an expense also links to a person, batch and year, so this
+    # re-reads the row instead of parsing the error; any other broken link re-raises as itself.
     def budget_gone?(attrs)
       record_id = attrs[:budget_record_id]
       record_id.present? && !Budget.exists?(record_id)
     end
 
-    # nil values are dropped (email-in gaps); the sharepoint URL array joins
-    # into the newline column.
+    # Drops nils (email-in gaps) and joins the sharepoint URL array into its newline column.
     def expense_columns(attrs)
       attrs.compact.each_with_object({}) do |(key, value), columns|
         case key
