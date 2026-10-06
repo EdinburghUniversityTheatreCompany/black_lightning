@@ -265,8 +265,12 @@ module Reimbursements
       return nil if raw.values.all?(&:blank?)
 
       row = FIELDS.each_key.to_h { |field| [ field, text(raw, field) ] }
-      %i[amount amount_excl_vat].each { |field| read_amount(row, field) }
-      %i[submitted_on paid_on].each { |field| read_date(row, field) }
+      { amount: :parse_amount, amount_excl_vat: :parse_amount, submitted_on: :parse_date,
+        paid_on: :parse_date, auto_number: :parse_number }.each do |field, parser|
+        raw = row[field]
+        row[field] = send(parser, raw)
+        row[:"raw_#{field}"] = raw if row[field] == :unreadable
+      end
       row[:payee_email] = row[:payee_email].downcase
       row[:status] = normalize_status(row[:status])
       row[:expense_type] = normalize_type(row[:expense_type])
@@ -277,18 +281,6 @@ module Reimbursements
     def text(raw, field)
       value = raw[header_for[field]].to_s.strip
       @escaped ? unescape_cell(value) : value
-    end
-
-    def read_amount(row, field)
-      raw = row[field]
-      row[field] = parse_amount(raw)
-      row[:"raw_#{field}"] = raw if row[field] == :unreadable
-    end
-
-    def read_date(row, field)
-      raw = row[field]
-      row[field] = parse_date(raw)
-      row[:"raw_#{field}"] = raw if row[field] == :unreadable
     end
 
     # --- Which column is which -----------------------------------------------
@@ -307,6 +299,12 @@ module Reimbursements
     def parse_amount(raw)
       AmountParser.parse!(raw)
     rescue AmountParser::Error
+      :unreadable
+    end
+
+    def parse_number(raw)
+      Integer(raw, 10) if raw.present?
+    rescue ArgumentError
       :unreadable
     end
 
@@ -494,22 +492,20 @@ module Reimbursements
     # create_expense! does not retry past a collision on a number it was handed (it calls
     # that data corruption), so the unique index's collision is reported by row here.
     def auto_number_error(row, duplicated)
-      return nil if row[:auto_number].blank?
-
-      number = Integer(row[:auto_number], 10)
-      if duplicated[:numbers].include?(number)
+      number = row[:auto_number]
+      if number == :unreadable
+        "#{row[:raw_auto_number].inspect} isn't an expense number."
+      elsif duplicated[:numbers].include?(number)
         "Expense number #{number} is used by more than one line in this sheet."
       elsif @taken_numbers.include?(number)
         "Expense number #{number} already belongs to another claim in the portal."
       end
-    rescue ArgumentError
-      "#{row[:auto_number].inspect} isn't an expense number."
     end
 
     def duplicated_values
       references = @rows.filter_map { |row| self.class.key_match(row[:reference]) }
                         .tally.select { |_ref, count| count > 1 }.keys.to_set
-      numbers = @rows.filter_map { |row| Integer(row[:auto_number], 10) rescue nil }
+      numbers = @rows.map { |row| row[:auto_number] }.grep(Integer)
                      .tally.select { |_number, count| count > 1 }.keys.to_set
       { references: references, numbers: numbers }
     end
@@ -554,7 +550,7 @@ module Reimbursements
       )
       # Only when the sheet gave one: create_expense! reads `attrs.key?(:auto_number)` to
       # decide whether to retry a collision, so a nil under that key disables the retry.
-      attrs[:auto_number] = Integer(row[:auto_number], 10) if row[:auto_number].present?
+      attrs[:auto_number] = row[:auto_number] if row[:auto_number]
       attrs
     end
   end

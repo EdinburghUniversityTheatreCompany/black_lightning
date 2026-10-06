@@ -298,6 +298,7 @@ module Reimbursements
         { amount: "100", amount_excl_vat: "120" } => /excl/i,
         { amount: "-5" } => /positive/i,
         { expense_type: "Petty cash" } => /type/i,
+        { auto_number: "four-one-seven" } => /"four-one-seven" isn't an expense number/,
         { status: Status::APPROVED, expense_type: Expense::TYPE_INVOICE } => /payee/i
       }.each do |cells, message|
         import = build_import(tsv(row(**cells)))
