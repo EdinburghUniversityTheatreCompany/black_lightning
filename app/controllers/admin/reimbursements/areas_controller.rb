@@ -39,56 +39,50 @@ module Admin
       end
 
       def new
-        @title = "New area"
         @area = ::Reimbursements::Area.new
-        @people = store.people
-        @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-        @owner_ids = []
+        render_form(:new, [])
       end
 
       def create
         attrs = area_params
         if (error = validation_error(attrs))
-          @title = "New area"
           @area = ::Reimbursements::Area.new(attrs)
-          @people = store.people
-          @cost_centres = ::Reimbursements::CostCentre.order(:name).to_a
-          @owner_ids = Array(area_form_params[:owner_ids])
-          flash.now[:alert] = error
-          return render(:new, status: :unprocessable_entity)
+          return render_form(:new, posted_owner_ids, error: error)
         end
 
         area = store.create_area!(attrs.merge(financial_year: selected_financial_year,
                                               cost_centre: chosen_cost_centre))
-        store.sync_area_owners!(area.record_id, Array(area_form_params[:owner_ids]).compact_blank)
+        store.sync_area_owners!(area.record_id, posted_owner_ids)
         redirect_to edit_admin_reimbursements_area_path(area.record_id), notice: "Area created."
       end
 
-      def edit
-        @title = "Area: #{@area.name}"
-        @people = store.people
-        @owner_ids = @area.owner_ids
-      end
+      def edit = render_form(:edit, @area.owner_ids)
 
       def update
         attrs = area_params
         if (error = validation_error(attrs))
-          @title = "Area: #{@area.name}"
-          @people = store.people
-          @owner_ids = Array(area_form_params[:owner_ids])
-          flash.now[:alert] = error
-          return render(:edit, status: :unprocessable_entity)
+          return render_form(:edit, posted_owner_ids, error: error)
         end
 
         @area.assign_attributes(attrs)
         budgets_attrs = permitted_budgets_attributes
         @area.budgets_attributes = budgets_attrs if budgets_attrs
         @area.save!
-        store.sync_area_owners!(@area.record_id, Array(area_form_params[:owner_ids]).compact_blank)
+        store.sync_area_owners!(@area.record_id, posted_owner_ids)
         redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
       end
 
       private
+
+      def render_form(action, owner_ids, error: nil)
+        @title = action == :new ? "New area" : "Area: #{@area.name}"
+        @people = store.people
+        @owner_ids = owner_ids
+        flash.now[:alert] = error if error
+        render action, status: error ? :unprocessable_entity : :ok
+      end
+
+      def posted_owner_ids = Array(area_form_params[:owner_ids]).compact_blank
 
       # Finance, or a person the area's owners name. Anyone else gets a 404, not
       # a 403, which would tell a stranger the area exists.
