@@ -231,17 +231,11 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "http://test.host/shows/the-crucible", display_programme_url(show)
   end
 
-  test "event_page_path uses the subclass route" do
-    show = FactoryBot.create(:show, slug: "the-crucible")
-
-    assert_equal "/shows/the-crucible", event_page_path(show)
-  end
-
-  # resources :events is index-only, so polymorphic_path raises, and a raise mid-render blanks the screen.
-  test "event_page_path falls back to the listing for an event with no show route" do
+  # resources :events is index-only, so polymorphic_url raises, and a raise mid-render blanks the screen.
+  test "display_event_url falls back to the listing for an event with no show route" do
     event = Event.new(id: 1, slug: "mystery")
 
-    assert_equal events_path, event_page_path(event)
+    assert_equal events_url, display_event_url(event)
   end
 
   test "display_title_size steps down as the title gets longer" do

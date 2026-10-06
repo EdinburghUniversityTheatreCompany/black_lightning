@@ -83,16 +83,12 @@ module DisplayHelper
     event.digital_programme_url.presence || display_event_url(event)
   end
 
-  def display_event_url(event)
-    "#{request.base_url}#{event_page_path(event)}"
-  end
-
   # A bare Event has no show route (`resources :events` is index-only) and
-  # polymorphic_path would raise mid-render, blanking the screen. Fall back to the listing.
-  def event_page_path(event)
-    polymorphic_path(event)
+  # polymorphic_url would raise mid-render, blanking the screen. Fall back to the listing.
+  def display_event_url(event)
+    polymorphic_url(event)
   rescue NoMethodError, ActionController::UrlGenerationError
-    events_path
+    events_url
   end
 
   # An editable block for the screen. Its markdown links mean nothing where nobody
