@@ -10,10 +10,7 @@ module Reimbursements
 
     # Well above the default 3-minute lock: a 200-row batch's uploads can take
     # longer, and a lock expiring mid-run lets a second build past single-flight.
-    limits_concurrency to: 1, duration: 30.minutes, key: ->(*args) {
-      params = args.last.is_a?(Hash) ? args.last : {}
-      "reimbursements_build_batch_#{params[:cost_centre_key]}"
-    }
+    limits_concurrency duration: 30.minutes, key: ->(params) { "reimbursements_build_batch_#{params[:cost_centre_key]}" }
 
     # Test seams (the suite has no mocking library).
     class_attribute :graph_builder, default: -> { GraphClient.new }
