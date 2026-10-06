@@ -21,7 +21,7 @@ class Admin::Proposals::CallsController < AdminController
       .accessible_by(current_ability, :read)
       .includes(:call, team_members: :user)
       .references(:call)
-      .where(admin_proposals_calls: { archived: [ false, nil ] })
+      .merge(Admin::Proposals::Call.not_archived)
       .order("admin_proposals_calls.editing_deadline ASC")
 
     @awaiting_approval = scoped.awaiting_approval
@@ -60,10 +60,6 @@ class Admin::Proposals::CallsController < AdminController
       :submission_deadline, :editing_deadline, :name, :archived,
       questions_attributes: [ :id, :_destroy, :question_text, :response_type ]
     ]
-  end
-
-  def index_query_params
-    { archived: [ nil, false ] }
   end
 
   def new_title
