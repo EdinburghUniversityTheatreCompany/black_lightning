@@ -125,8 +125,8 @@ export default class extends Controller {
   insertImage() { this.#fileInput?.click() }
   insertTable(event) { this.#showTableDialog(event) }
 
-  undo() { if (this.#mode === "edit") this.#cmd(this.#cmds.undoCommand) }
-  redo() { if (this.#mode === "edit") this.#cmd(this.#cmds.redoCommand) }
+  undo() { this.#cmd(this.#cmds.undoCommand) }
+  redo() { this.#cmd(this.#cmds.redoCommand) }
 
   #textarea = null
   #editor = null
@@ -285,9 +285,7 @@ export default class extends Controller {
     return new Promise(resolve => { this.#dialogResolve = resolve })
   }
 
-  async #mountEditor(value = null) {
-    const markdown = value ?? this.#textarea.value
-
+  async #mountEditor() {
     const [
       { Editor, defaultValueCtx, rootCtx, editorViewCtx, commandsCtx },
       { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
@@ -329,7 +327,7 @@ export default class extends Controller {
     this.#editor = await Editor.make()
       .config(ctx => {
         ctx.set(rootCtx, this.#editorEl)
-        ctx.set(defaultValueCtx, markdown)
+        ctx.set(defaultValueCtx, this.#textarea.value)
         ctx.get(listenerCtx).markdownUpdated((_ctx, md) => {
           this.#textarea.value = md
         })
@@ -639,11 +637,8 @@ export default class extends Controller {
       })
       if (coords) return coords
     }
-    if (this.#sourceTextarea) {
-      const rect = this.#sourceTextarea.getBoundingClientRect()
-      return { left: rect.left, bottom: rect.top + 28 }
-    }
-    return null
+    const rect = this.#sourceTextarea.getBoundingClientRect()
+    return { left: rect.left, bottom: rect.top + 28 }
   }
 
   // Anchors below a button event or a {left, bottom} pair.
