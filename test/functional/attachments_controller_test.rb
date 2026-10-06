@@ -27,7 +27,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
       assert_response :success
       assert_equal content_type, response.headers["Content-Type"]
-      assert_equal "#{disposition}; #{filename}", response.headers["Content-Disposition"]
+      assert_equal ActionDispatch::Http::ContentDisposition.format(disposition:, filename:), response.headers["Content-Disposition"]
       assert_equal "sandbox", response.headers["Content-Security-Policy"]
     end
   end
@@ -41,7 +41,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal "application/pdf", response.headers["Content-Type"]
-    assert_equal "inline; #{attachment.file.filename}", response.headers["Content-Disposition"]
+    assert_equal ActionDispatch::Http::ContentDisposition.format(disposition: "inline", filename: attachment.file.filename.to_s), response.headers["Content-Disposition"]
   end
 
   test "should get image file as thumb" do
@@ -55,7 +55,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal "image/png", response.headers["Content-Type"]
-    assert_equal "inline; #{attachment.file.filename}", response.headers["Content-Disposition"]
+    assert_equal ActionDispatch::Http::ContentDisposition.format(disposition: "inline", filename: attachment.file.filename.to_s), response.headers["Content-Disposition"]
 
     # It would be nice to check the dimensions of the response.
   end

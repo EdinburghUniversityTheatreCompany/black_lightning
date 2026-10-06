@@ -18,11 +18,12 @@ class AttachmentsController < ApplicationController
     response.headers["Content-Type"] = @attachment.file.content_type
     response.headers["Content-Security-Policy"] = "sandbox"
 
-    inline_ok = %w[application/pdf image/png image/jpeg image/gif image/webp].include?(@attachment.file.content_type)
-    disposition = inline_ok ? "inline" : "attachment"
-    response.headers["Content-Disposition"] = "#{disposition}; #{@attachment.file.filename}"
+    inline = %w[application/pdf image/png image/jpeg image/gif image/webp].include?(@attachment.file.content_type)
+    response.headers["Content-Disposition"] = ActionDispatch::Http::ContentDisposition.format(
+      disposition: inline ? "inline" : "attachment", filename: @attachment.file.filename.to_s
+    )
 
-    if params[:style]&.to_s&.downcase == "thumb" && @attachment.file.image?
+    if params[:style].to_s.casecmp?("thumb") && @attachment.file.image?
       variant = @attachment.file.blob.variant(helpers.thumb_variant).processed
 
       @attachment.file.blob.service.download(variant.key) do |chunk|
