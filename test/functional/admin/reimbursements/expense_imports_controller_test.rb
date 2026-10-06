@@ -131,6 +131,14 @@ module Admin
         assert_includes response.body, "not in this sheet"
       end
 
+      test "preview names the only cost centre in its heading when none was picked" do
+        sign_in @user
+
+        post :preview, params: import_params(tsv(row), cost_centre_id: "")
+
+        assert_includes response.body, "Preview: Fringe 2027 · #{@cost_centre.name}"
+      end
+
       test "preview refuses an empty paste" do
         sign_in @user
 

@@ -7,8 +7,7 @@
 
 <%# The heading names its own destination: the page <h1> sits outside this frame, so it
     still says whatever the page loaded with. %>
-<%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}" \
-                                    "#{" · #{selected_cost_centre.name}" if selected_cost_centre}") do %>
+<%= render CardComponent.new(title: "Preview: #{selected_financial_year.label} · #{chosen_cost_centre.name}") do %>
   <p class="mb-4 text-sm text-gray-600">
     Nothing has been written yet. Check the lines below, then confirm at the bottom.
   </p>
