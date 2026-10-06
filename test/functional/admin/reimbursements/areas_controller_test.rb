@@ -25,6 +25,7 @@ module Admin
         create_reimbursements_area(name: "Committee", initial_budget: 5_000,
                                    budget_basis: "net")
         create_reimbursements_area(name: "Unbudgeted")
+        create_reimbursements_area(name: "Termtime", initial_budget: 0)
 
         get :index
 
@@ -34,9 +35,12 @@ module Admin
                "the spend cap's row does not say so: #{rows.inspect}")
         assert(rows.any? { |row| row.include?("Committee") && row.include?("£5,000.00 (net)") },
                "the net allowance's row does not say so: #{rows.inspect}")
-        # "- (expenses)" would read as a claim about expenses, not an unset plan.
-        assert(rows.any? { |row| row.include?("Unbudgeted") && !row.include?("(expenses)") },
-               "an area with no agreed total was qualified anyway: #{rows.inspect}")
+        # "- (expenses)" would read as a claim about expenses, not an unset plan, and
+        # a £0 with nothing allocated is as unset as no figure at all.
+        %w[Unbudgeted Termtime].each do |name|
+          assert(rows.any? { |row| row.include?(name) && !row.include?("(expenses)") },
+                 "#{name} has no agreed total but was qualified anyway: #{rows.inspect}")
+        end
       end
 
       # The empty hidden field beside a multiple select is what clears the list:
