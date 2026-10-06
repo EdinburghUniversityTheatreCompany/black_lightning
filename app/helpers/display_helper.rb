@@ -16,31 +16,14 @@ module DisplayHelper
   # passed states the run, never a past date.
   def display_when(event, on: Date.current)
     schedule = Event::Schedule.for(event)
+    return "Every #{schedule.weekday_name}, #{short_time(schedule.starts_at)}" if schedule.kind == :weekly
 
-    case schedule.kind
-    when :weekly then "Every #{schedule.weekday_name}#{display_curtain(schedule)}"
-    when :single, :range then display_run_when(event, schedule, on)
-    else display_irregular_when(event, schedule, on)
-    end
-  end
-
-  def display_run_when(event, schedule, on)
-    block = schedule.blocks.first
-
-    block.ends_on < on ? display_date_range(event) : display_block_when(block)
-  end
-
-  def display_irregular_when(event, schedule, on)
     blocks = schedule.blocks
-
-    return display_date_range(event) if blocks.empty? || blocks.all? { |block| block.ends_on < on }
-
+    current = blocks.find { |block| block.ends_on >= on }
+    return display_date_range(event) unless current
     return blocks.map { |block| display_block_when(block) }.join("\n") if blocks.size <= WHEN_MAX_BLOCKS
 
-    block = blocks.find { |candidate| (candidate.starts_on..candidate.ends_on).cover?(on) } ||
-            blocks.find { |candidate| candidate.ends_on >= on }
-
-    block ? display_block_when(block) : display_date_range(event)
+    display_block_when(current)
   end
 
   def display_block_when(block)
@@ -48,10 +31,6 @@ module DisplayHelper
     first = block.occurrences.first
 
     "#{span}, #{time_span(first.starts_at, first.ends_at)}"
-  end
-
-  def display_curtain(schedule)
-    schedule.starts_at ? ", #{short_time(schedule.starts_at)}" : ""
   end
 
   # The derived Event#price ("£10 / £8 concessions / £7 members") truncates in the
