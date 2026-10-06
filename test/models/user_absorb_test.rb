@@ -180,4 +180,44 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { source.reload }
     assert_equal "s9922002@ed.ac.uk", third_user.reload.email
   end
+
+  # Avatar tests
+
+  test "absorb with keep_from_source avatar takes the source's avatar" do
+    attach_avatar(@target_user)
+    attach_avatar(@source_user)
+    source_blob = @source_user.avatar.blob
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "avatar" ])
+
+    assert result[:success], result[:errors].inspect
+    assert_equal source_blob, @target_user.reload.avatar.blob
+  end
+
+  test "absorb keeps the target's avatar by default" do
+    attach_avatar(@target_user)
+    attach_avatar(@source_user)
+    target_blob = @target_user.avatar.blob
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], result[:errors].inspect
+    assert_equal target_blob, @target_user.reload.avatar.blob
+  end
+
+  test "absorb gives the target the source's avatar when it has none" do
+    attach_avatar(@source_user)
+    source_blob = @source_user.avatar.blob
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], result[:errors].inspect
+    assert_equal source_blob, @target_user.reload.avatar.blob
+  end
+
+  private
+
+  def attach_avatar(user)
+    user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+  end
 end
