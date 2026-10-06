@@ -394,19 +394,11 @@ class EventTest < ActionView::TestCase
     assert_nil event.next_occurrence
   end
 
-  # next_occurrence answers "which day"; the display needs the record so it can
-  # print a curtain time, which is the whole point of storing performances.
-  test "next_occurrence_at returns the occurrence itself, skipping the ones gone by" do
+  test "next_occurrence skips the occurrences before the date asked from" do
     event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
     FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 1).noon + 7.hours)
-    wanted = FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 3).noon + 7.hours)
+    FactoryBot.create(:event_occurrence, event: event, starts_at: (Date.current + 3).noon + 7.hours)
 
-    assert_equal wanted, event.next_occurrence_at(Date.current + 2)
-  end
-
-  test "next_occurrence_at is nil for an event with no occurrences" do
-    event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
-
-    assert_nil event.next_occurrence_at
+    assert_equal Date.current + 3, event.next_occurrence(Date.current + 2)
   end
 end

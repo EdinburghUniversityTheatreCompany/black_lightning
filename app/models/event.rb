@@ -430,7 +430,8 @@ class Event < ApplicationRecord
     event_occurrences.any? { |occurrence| occurrence.on_date == date }
   end
 
-  # The next date it plays on or after +from+, or nil.
+  # The next date it plays on or after +from+, or nil. Works in memory, not by
+  # query: the box office display asks this of every event in its pool.
   def next_occurrence(from = Date.current)
     return nil if start_date.nil? || end_date.nil?
 
@@ -438,14 +439,7 @@ class Event < ApplicationRecord
     return nil if from > end_date
     return from if event_occurrences.empty?
 
-    next_occurrence_at(from)&.on_date
-  end
-
-  # In memory, not queried: the box office display asks this of every event in
-  # its pool.
-  def next_occurrence_at(from = Date.current)
-    event_occurrences.select { |occurrence| occurrence.on_date && occurrence.on_date >= from }
-                     .min_by(&:starts_at)
+    event_occurrences.filter_map(&:on_date).select { |date| date >= from }.min
   end
 
   # Returns a list of the all authors for every event.
