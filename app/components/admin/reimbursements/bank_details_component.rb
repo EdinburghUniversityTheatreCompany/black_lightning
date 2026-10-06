@@ -9,29 +9,22 @@ module Admin
     # form as the CSV exports and the notes trail.
     class BankDetailsComponent < ViewComponent::Base
       # +payee+ names the toggle for screen readers.
-      def initialize(sort_code:, account_number:, payee: nil, separator: " / ")
+      def initialize(sort_code:, account_number:, payee: nil)
         @sort_code = sort_code.to_s
         @account_number = account_number.to_s
         @payee = payee.presence
-        @separator = separator
       end
 
       private
 
-      attr_reader :separator
-
       def blank_details? = @sort_code.blank? && @account_number.blank?
 
-      def masked = join(mask(@sort_code), mask(@account_number))
+      def masked = join(::Reimbursements::BankDetails.mask(@sort_code), ::Reimbursements::BankDetails.mask(@account_number))
 
       def revealed = join(@sort_code, @account_number)
 
-      def mask(value)
-        ::Reimbursements::BankDetails.mask(value).presence || "-"
-      end
-
       def join(sort_code, account_number)
-        [ sort_code.presence || "-", account_number.presence || "-" ].join(separator)
+        [ sort_code.presence || "-", account_number.presence || "-" ].join(" / ")
       end
 
       def toggle_label
