@@ -59,18 +59,14 @@ module Reimbursements
     def write_row(sheet, row_index, row)
       # Every text cell is formula-sanitised, the bank and nominal cells too as
       # defence in depth (nominal_code_override has no format validation).
-      write(sheet, row_index, COL_PAYEE, sanitize(row.payee_name))
+      write(sheet, row_index, COL_PAYEE, CellSanitizer.sanitize(row.payee_name))
       write(sheet, row_index, COL_AMOUNT, row.amount.to_f)
-      write_text(sheet, row_index, COL_SORT_CODE, sanitize(row.sort_code))
-      write_text(sheet, row_index, COL_ACCOUNT_NUMBER, sanitize(row.account_number))
-      write_text(sheet, row_index, COL_NOMINAL_CODE, sanitize(row.nominal_code))
+      write_text(sheet, row_index, COL_SORT_CODE, CellSanitizer.sanitize(row.sort_code))
+      write_text(sheet, row_index, COL_ACCOUNT_NUMBER, CellSanitizer.sanitize(row.account_number))
+      write_text(sheet, row_index, COL_NOMINAL_CODE, CellSanitizer.sanitize(row.nominal_code))
       write(sheet, row_index, COL_COST_CENTRE, row.cost_centre)
-      write(sheet, row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
-      write(sheet, row_index, COL_DESCRIPTION, sanitize(row.description))
-    end
-
-    def sanitize(value)
-      CellSanitizer.sanitize(value)
+      write(sheet, row_index, COL_PAYMENT_REFERENCE, CellSanitizer.sanitize(row.payment_reference))
+      write(sheet, row_index, COL_DESCRIPTION, CellSanitizer.sanitize(row.description))
     end
   end
 end
