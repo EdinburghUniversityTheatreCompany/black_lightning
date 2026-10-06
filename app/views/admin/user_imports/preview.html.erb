@@ -33,14 +33,7 @@
               <td><%= item[:row][:original_name] %></td>
               <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
               <td>
-                <% case item[:match_type] %>
-                <% when :user_id %>
-                  <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
-                <% when :student_id %>
-                  <span class="font-monospace"><%= item[:row][:student_id] %></span>
-                <% when :associate_id %>
-                  <span class="font-monospace"><%= item[:row][:associate_id] %></span>
-                <% end %>
+                <span class="font-monospace"><%= import_match_label(item) %></span>
               </td>
               <td>
                 <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
@@ -129,20 +122,10 @@
               </td>
               <td>
                 <% item[:existing_users].each_with_index do |user, i| %>
-                  <% years = @import.years_active_cache[user.id] %>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "link_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_link_#{user.id}" %>
-                    <%= label_tag "action_#{item[:index]}_link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
-                  </div>
+                  <%= import_choice(item[:index], "link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(@import.years_active_cache[user.id])})", checked: i.zero?) %>
                 <% end %>
-                <div class="form-check">
-                  <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                  <%= label_tag "action_#{item[:index]}_create", "Different person (create new)", class: "form-check-label" %>
-                </div>
-                <div class="form-check">
-                  <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
-                  <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
-                </div>
+                <%= import_choice(item[:index], "create", "Different person (create new)") %>
+                <%= import_choice(item[:index], "skip", "Skip") %>
               </td>
             </tr>
           <% end %>
@@ -189,14 +172,8 @@
                 <% end %>
               </td>
               <td>
-                <div class="form-check">
-                  <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                  <%= label_tag "action_#{item[:index]}_create", "Create", class: "form-check-label" %>
-                </div>
-                <div class="form-check">
-                  <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
-                  <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
-                </div>
+                <%= import_choice(item[:index], "create", "Create", checked: true) %>
+                <%= import_choice(item[:index], "skip", "Skip") %>
               </td>
             </tr>
           <% end %>
