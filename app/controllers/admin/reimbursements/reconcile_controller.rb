@@ -120,18 +120,15 @@ module Admin
         @skipped_count = skipped_entries.size
 
         # An unticked pair's legs go back into ordinary matching.
-        pairs = detect_pairs(new_entries)
-        applied_pairs = pairs.select { |pair| ticked_offset_pair_keys.include?(pair.key) }
-        matched_debits, matched_credits, unmatched =
-          build_matches(entries_outside(new_entries, applied_pairs))
+        ticked = ticked_offset_pair_keys
+        pairs = detect_pairs(new_entries).select { |pair| ticked.include?(pair.key) }
+        matched_debits, matched_credits, unmatched = build_matches(entries_outside(new_entries, pairs))
 
-        committed_pairs, committed_debits, committed_credits, committed_unmatched =
-          apply_reconciliation(new_entries, applied_pairs, matched_debits, matched_credits, unmatched)
-
-        @offsets_linked = committed_pairs.size
-        @expenses_paid = committed_debits.size
-        @credits_linked = committed_credits.size
-        @unmatched_saved = committed_unmatched.size
+        imported_at = Time.current
+        @offsets_linked = pairs.count { |pair| apply_offsetting_pair(new_entries, pair, imported_at) }
+        @expenses_paid = matched_debits.count { |entry, expense| apply_debit_row(entry, expense, imported_at) }
+        @credits_linked = matched_credits.count { |entry, budget| apply_credit_row(entry, budget, imported_at) }
+        @unmatched_saved = unmatched.count { |entry| apply_unmatched_row(entry, imported_at) }
       end
 
       # The uploaded sheet as text, or nil when no file was picked. An unreadable file is reported on
@@ -321,19 +318,6 @@ module Admin
         reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
-      # Returns the subset of each list that committed, so the summary counts never claim more than
-      # happened.
-      def apply_reconciliation(entries, pairs, matched_debits, matched_credits, unmatched)
-        imported_at = Time.current
-
-        committed_pairs = pairs.select { |pair| apply_offsetting_pair(entries, pair, imported_at) }
-        committed_debits = matched_debits.select { |entry, expense| apply_debit_row(entry, expense, imported_at) }
-        committed_credits = matched_credits.select { |entry, budget| apply_credit_row(entry, budget, imported_at) }
-        committed_unmatched = unmatched.select { |entry| apply_unmatched_row(entry, imported_at) }
-
-        [ committed_pairs, committed_debits, committed_credits, committed_unmatched ]
-      end
-
       # Both legs are imported and cross-linked in one store call; see
       # DatabaseStore#create_offsetting_pair! for why a half-written pair is unrepairable.
       def apply_offsetting_pair(entries, pair, imported_at)
@@ -367,20 +351,17 @@ module Admin
       end
 
       # One row's failure must not abort the paste: a 500 after rows 1..k-1 committed leaves a partly
-      # applied paste with nothing on screen saying so. The rest still commits and the failed row is
-      # named. Re-pasting cannot reveal it either, since committed rows read as already imported.
+      # applied paste with nothing on screen saying so. The rest still commits, the failed row is named,
+      # and the counts cover only what committed. Re-pasting cannot reveal it either, since committed
+      # rows read as already imported.
       def with_row_rescue(subject)
         yield
         true
       rescue StandardError => e
-        report_reconciliation_row_failure(subject, e)
-        false
-      end
-
-      def report_reconciliation_row_failure(subject, error)
-        log_and_notify("Reimbursements: reconciliation row failed for #{subject} — #{error.message}", error,
+        log_and_notify("Reimbursements: reconciliation row failed for #{subject} — #{e.message}", e,
                        context: { source: "reimbursements_reconciliation_apply", subject: subject })
-        (@reconciliation_errors ||= []) << "#{subject}: #{error.message}"
+        (@reconciliation_errors ||= []) << "#{subject}: #{e.message}"
+        false
       end
 
       # source_month is never written (the EUSA period scopes). The cost centre is stored as the
