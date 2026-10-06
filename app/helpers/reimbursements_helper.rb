@@ -174,9 +174,12 @@ module ReimbursementsHelper
   # the corrected amount, as the estimate it replaced is not recorded.
   def reimbursements_unlink_confirm(actual)
     if actual.linked_expense_ids.any?
-      "Unlink this row from its claim? The row stays on the ledger and goes back to needing "         "attention. If the claim was marked Paid by this match it returns to Submitted, and an "         "international claim keeps the amount EUSA actually charged."
+      "Unlink this row from its claim? The row stays on the ledger and goes back to needing " \
+        "attention. If the claim was marked Paid by this match it returns to Submitted, and an " \
+        "international claim keeps the amount EUSA actually charged."
     else
-      "Unlink this row from its income line? The row stays on the ledger, that line stops "         "counting this money, and the row can then be split across several budgets."
+      "Unlink this row from its income line? The row stays on the ledger, that line stops " \
+        "counting this money, and the row can then be split across several budgets."
     end
   end
 
