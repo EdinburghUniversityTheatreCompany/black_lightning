@@ -598,43 +598,21 @@ class User < ApplicationRecord
     StringSimilarity.fuzzy_name_match?(name1, name2, threshold: threshold)
   end
 
-  # Potential duplicate pairs, in five buckets:
+  # Potential duplicate pairs, in three buckets:
   #   same_id: same student_id, associate_id or equivalent sms email (definite duplicates)
   #   fuzzy_name_overlapping / fuzzy_name_non_overlapping: same last name, fuzzy first name,
   #     split by whether their years of activity overlap
-  #   fuzzy_both_overlapping / fuzzy_both_no_overlap: fuzzy on both names, excluding exact last
-  #     names. Left empty here: the controller loads them from cached_duplicates, which
-  #     RefreshFuzzyBothDuplicatesJob fills because the scan is O(n²).
+  # The fuzzy_both buckets (fuzzy on both names) come from cached_duplicates, which
+  # RefreshFuzzyBothDuplicatesJob fills because that scan is O(n²); Admin::DuplicatesController sets them.
   # Each fuzzy pair carries years_active_cache so views need not re-query.
   def self.find_potential_duplicates
-    duplicates = {
-      same_id: [],
-      fuzzy_name_overlapping: [],
-      fuzzy_name_non_overlapping: [],
-      fuzzy_both_overlapping: [],
-      fuzzy_both_no_overlap: []
-    }
+    duplicates = { same_id: [], fuzzy_name_overlapping: [], fuzzy_name_non_overlapping: [] }
 
-    # unscoped: the default ORDER BY clashes with GROUP BY in MySQL.
-    duplicate_student_ids = unscoped.where.not(student_id: [ nil, "" ])
-                                    .group(:student_id)
-                                    .having("COUNT(*) > 1")
-                                    .pluck(:student_id)
-    if duplicate_student_ids.any?
-      users_by_student_id = where(student_id: duplicate_student_ids).group_by(&:student_id)
-      duplicate_student_ids.each do |sid|
-        duplicates[:same_id] << { users: users_by_student_id[sid], match_type: :student_id, id_value: sid }
-      end
-    end
-
-    duplicate_associate_ids = unscoped.where.not(associate_id: [ nil, "" ])
-                                      .group(:associate_id)
-                                      .having("COUNT(*) > 1")
-                                      .pluck(:associate_id)
-    if duplicate_associate_ids.any?
-      users_by_associate_id = where(associate_id: duplicate_associate_ids).group_by(&:associate_id)
-      duplicate_associate_ids.each do |aid|
-        duplicates[:same_id] << { users: users_by_associate_id[aid], match_type: :associate_id, id_value: aid }
+    %i[student_id associate_id].each do |column|
+      values = shared_values(column)
+      users_by_value = where(column => values).group_by(&column)
+      values.each do |value|
+        duplicates[:same_id] << { users: users_by_value[value], match_type: column, id_value: value }
       end
     end
 
@@ -648,10 +626,7 @@ class User < ApplicationRecord
       duplicates[:same_id] << { users: [ sms_user, counterpart ], match_type: :email, id_value: normalized_email }
     end
 
-    duplicate_last_names = unscoped.where.not(last_name: [ nil, "" ])
-                                   .group(:last_name)
-                                   .having("COUNT(*) > 1")
-                                   .pluck(:last_name)
+    duplicate_last_names = shared_values(:last_name)
 
     if duplicate_last_names.any?
       all_users = where(last_name: duplicate_last_names).to_a
@@ -666,16 +641,18 @@ class User < ApplicationRecord
           next if u1.marked_not_duplicate?(u2)
           next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
 
-          if u1.years_overlap?(u2, years_active_cache: years_active_cache)
-            duplicates[:fuzzy_name_overlapping] << { users: [ u1, u2 ], years_overlap: true, years_active_cache: years_active_cache }
-          else
-            duplicates[:fuzzy_name_non_overlapping] << { users: [ u1, u2 ], years_overlap: false, years_active_cache: years_active_cache }
-          end
+          bucket = u1.years_overlap?(u2, years_active_cache: years_active_cache) ? :fuzzy_name_overlapping : :fuzzy_name_non_overlapping
+          duplicates[bucket] << { users: [ u1, u2 ], years_active_cache: years_active_cache }
         end
       end
     end
 
     duplicates
+  end
+
+  # unscoped: the default ORDER BY clashes with GROUP BY in MySQL.
+  private_class_method def self.shared_values(column)
+    unscoped.where.not(column => [ nil, "" ]).group(column).having("COUNT(*) > 1").pluck(column)
   end
 
   ##

@@ -130,13 +130,6 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_empty matches, "Marked not-duplicates should not appear in results"
   end
 
-  test "find_potential_duplicates returns empty arrays for fuzzy_both buckets" do
-    duplicates = User.find_potential_duplicates
-
-    assert_equal [], duplicates[:fuzzy_both_overlapping], "Bucket 4 should be empty (computed by background job)"
-    assert_equal [], duplicates[:fuzzy_both_no_overlap], "Bucket 5 should be empty (computed by background job)"
-  end
-
   # Merge helper methods tests
 
   test "overlapping_team_memberships_with returns count of shared shows" do
