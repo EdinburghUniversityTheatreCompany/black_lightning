@@ -16,28 +16,20 @@ module Reimbursements
       SHEET_NAME = "People".freeze
       SLUG = "people".freeze
 
-      # The on-screen badge's word for no bank details, which blocks approval
-      # as hard as a failed check.
-      MISSING_LABEL = "Missing".freeze
-
       private
 
       def row(person)
         [
           person.name, person.email,
-          mask(person.sort_code), mask(person.account_number),
+          # .presence: nothing on file is an empty cell, not a redacted value.
+          BankDetails.mask(person.sort_code).presence, BankDetails.mask(person.account_number).presence,
           modulus_label(person), person.verified ? "Yes" : "No"
         ]
       end
 
-      # .presence: nothing on file is an empty cell, not a redacted value.
-      def mask(value)
-        BankDetails.mask(value).presence
-      end
-
       # The page badge's vocabulary: Valid / Invalid / Outside spec / Missing.
       def modulus_label(person)
-        return MISSING_LABEL unless person.bank_details?
+        return "Missing" unless person.bank_details?
 
         checker.check(person.sort_code, person.account_number).to_s.humanize
       end
