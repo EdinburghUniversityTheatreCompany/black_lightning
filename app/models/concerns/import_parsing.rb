@@ -93,22 +93,10 @@ module ImportParsing
     end
   end
 
-  # Find column value by looking for headers containing any of the keywords (case-insensitive)
-  # Shared helper for flexible column name matching
-  def find_column(row, *keywords)
-    # First try exact matches for common variations
-    keywords.each do |keyword|
-      return row[keyword] if row[keyword].present?
-      return row[keyword.capitalize] if row[keyword.capitalize].present?
-      return row[keyword.upcase] if row[keyword.upcase].present?
-    end
-
-    # Fallback: find first column whose header contains ALL keywords
-    matching_key = row.keys.find do |k|
-      header = k.to_s.downcase
-      keywords.all? { |kw| header.include?(kw.downcase) }
-    end
-    row[matching_key] if matching_key
+  # The header named `keyword` (any of lower, Capitalised, UPPER case), else the first header containing it.
+  def find_column(row, keyword)
+    row.values_at(keyword, keyword.capitalize, keyword.upcase).find(&:present?) ||
+      row.find { |header, _| header.to_s.downcase.include?(keyword.downcase) }&.last
   end
 
   def parse_name(name_string)
