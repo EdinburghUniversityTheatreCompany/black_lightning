@@ -277,6 +277,18 @@ module Admin
         assert_select "[aria-controls^='reasons-edits-']", count: 0
       end
 
+      # The Flags column is blank on Submitted/Paid/Rejected rows, so the filter
+      # must not list them.
+      test "the needs-attention filter lists only rows that show a flag" do
+        flagged = expense_at("Pending", receipt: false)
+        expense_at("Paid", receipt: false)
+        sign_in @user
+
+        get :index, params: { attention: "1" }
+
+        assert_equal [ flagged.record_id ], assigns(:expenses).map(&:record_id)
+      end
+
       test "index does not flag a clean expense" do
         expense_at("Pending")
         sign_in @user

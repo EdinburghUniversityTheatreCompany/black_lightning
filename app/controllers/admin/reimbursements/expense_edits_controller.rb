@@ -137,9 +137,11 @@ module Admin
         result = result.select { |e| e.status == @status_filter } if @status_filter.present?
         result = result.select { |e| e.budget&.record_id == @budget_filter } if @budget_filter.present?
         result = result.select { |e| e.person&.record_id == @person_filter } if @person_filter.present?
+        # Only the rows whose Flags the table draws (see attention_actionable?).
         if @attention_only
           result = result.select do |e|
-            ::Reimbursements::ReviewSupport.needs_attention(e, @budget_by_id, modulus_checker)
+            ::Reimbursements::ReviewSupport.attention_actionable?(e) &&
+              ::Reimbursements::ReviewSupport.needs_attention(e, @budget_by_id, modulus_checker)
           end
         end
         result = result.select { |e| matches_query?(e, @query) } if @query.present?
