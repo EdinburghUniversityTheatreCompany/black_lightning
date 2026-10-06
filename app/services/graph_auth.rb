@@ -38,37 +38,32 @@ module GraphAuth
   # (Graph returns absolute follow-up URLs). Raises AuthError on 401/403, Error on other non-2xx.
   def graph_request(http_method, path, params: nil, body: nil)
     uri = graph_uri(path, params)
-    status, response_body = send_graph_request(http_method, uri, body)
+    json = body&.to_json
+    status, response_body = send_graph_request(http_method, uri, json)
     if http_method == :get && TRANSIENT_STATUSES.include?(status)
       (@sleeper || method(:sleep)).call(TRANSIENT_RETRY_DELAY)
-      status, response_body = send_graph_request(http_method, uri, body)
+      status, response_body = send_graph_request(http_method, uri, json)
     end
 
-    raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
-    unless (200..299).cover?(status)
-      error_class = status == 404 ? NotFoundError : Error
-      raise error_class, "Graph #{http_method.to_s.upcase} #{path} failed (#{status}): " \
-                         "#{graph_error_detail(response_body)}"
-    end
-
-    response_body.blank? ? {} : JSON.parse(response_body)
+    parse_graph_response(status, response_body, "#{http_method.to_s.upcase} #{path}")
   end
 
-  def send_graph_request(http_method, uri, body)
-    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => "application/json" }
-    @http.call(http_method, uri, headers, body&.to_json)
+  def send_graph_request(http_method, uri, body, content_type: "application/json")
+    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => content_type }
+    @http.call(http_method, uri, headers, body)
   end
 
   # For binary uploads: the body is sent verbatim under an explicit content type.
   def graph_raw_request(http_method, url, raw_body, content_type:)
-    headers = { "Authorization" => "Bearer #{graph_token}", "Content-Type" => content_type }
-    status, response_body = @http.call(http_method, URI(url), headers, raw_body)
+    status, response_body = send_graph_request(http_method, URI(url), raw_body, content_type: content_type)
+    parse_graph_response(status, response_body, "#{http_method.to_s.upcase} upload")
+  end
 
+  def parse_graph_response(status, response_body, label)
     raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
     unless (200..299).cover?(status)
       error_class = status == 404 ? NotFoundError : Error
-      raise error_class, "Graph #{http_method.to_s.upcase} upload failed (#{status}): " \
-                         "#{graph_error_detail(response_body)}"
+      raise error_class, "Graph #{label} failed (#{status}): #{graph_error_detail(response_body)}"
     end
 
     response_body.blank? ? {} : JSON.parse(response_body)
