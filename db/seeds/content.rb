@@ -38,11 +38,7 @@ admin = User.find_by!(email: "admin@bedlamtheatre.co.uk")
     show_public: false
   }
 ].each do |attrs|
-  news = News.find_or_initialize_by(slug: attrs[:slug])
-  if news.new_record?
-    news.assign_attributes(attrs.merge(author: admin))
-    news.save!
-  end
+  find_or_seed(News, { slug: attrs[:slug] }, attrs.merge(author: admin))
 end
 
 # Opportunities
@@ -72,14 +68,7 @@ end
     approved: false
   }
 ].each do |attrs|
-  opportunity = Opportunity.find_or_initialize_by(title: attrs[:title])
-  if opportunity.new_record?
-    opportunity.assign_attributes(attrs.merge(
-      creator: admin,
-      approver: attrs[:approved] ? admin : nil
-    ))
-    opportunity.save!
-  end
+  find_or_seed(Opportunity, { title: attrs[:title] }, attrs.merge(creator: admin, approver: attrs[:approved] ? admin : nil))
 end
 
 # Editable Blocks

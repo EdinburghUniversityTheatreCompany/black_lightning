@@ -5,6 +5,11 @@ def find_or_seed(klass, find_attrs, other_attrs = {})
   record
 end
 
+# questions: [[text, response_type], ...]; returns the created Admin::Questions in order.
+def seed_questions(questionable, questions)
+  questions.map { |text, type| Admin::Question.create!(questionable: questionable, question_text: text, response_type: type) }
+end
+
 def seed_puts(msg)
   puts "  [seed] #{msg}"
 end

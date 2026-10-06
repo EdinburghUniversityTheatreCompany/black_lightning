@@ -1,15 +1,17 @@
-alice = User.find_by!(email: "alice.jones@sms.ed.ac.uk")
-chloe = User.find_by!(email: "chloe.harvey@sms.ed.ac.uk")
-harry = User.find_by!(email: "harry.walsh@sms.ed.ac.uk")
+alice, chloe, harry = seed_demo_users.values_at(:alice, :chloe, :harry)
+
+proposal_questions = [
+  [ "Why do you want to put on this show?", "Long Text" ],
+  [ "What is your directorial vision?", "Long Text" ],
+  [ "What is your estimated budget?", "Short Text" ],
+  [ "Have you directed at Bedlam before?", "Yes/No" ]
+]
 
 # Proposal call question template
 standard_template = Admin::Proposals::CallQuestionTemplate.find_or_initialize_by(name: "Standard Proposal Questions")
 if standard_template.new_record?
   standard_template.save!
-  Admin::Question.create!(questionable: standard_template, question_text: "Why do you want to put on this show?", response_type: "Long Text")
-  Admin::Question.create!(questionable: standard_template, question_text: "What is your directorial vision?", response_type: "Long Text")
-  Admin::Question.create!(questionable: standard_template, question_text: "What is your estimated budget?", response_type: "Short Text")
-  Admin::Question.create!(questionable: standard_template, question_text: "Have you directed at Bedlam before?", response_type: "Yes/No")
+  seed_questions(standard_template, proposal_questions)
 end
 
 # Active proposal call
@@ -21,10 +23,7 @@ if call.new_record?
     archived: false
   )
   call.save!
-  Admin::Question.create!(questionable: call, question_text: "Why do you want to put on this show?", response_type: "Long Text")
-  Admin::Question.create!(questionable: call, question_text: "What is your directorial vision?", response_type: "Long Text")
-  Admin::Question.create!(questionable: call, question_text: "What is your estimated budget?", response_type: "Short Text")
-  Admin::Question.create!(questionable: call, question_text: "Have you directed at Bedlam before?", response_type: "Yes/No")
+  seed_questions(call, proposal_questions)
 end
 
 # Archived call from previous semester
@@ -36,8 +35,7 @@ if archived_call.new_record?
     archived: true
   )
   archived_call.save!
-  Admin::Question.create!(questionable: archived_call, question_text: "Why do you want to put on this show?", response_type: "Long Text")
-  Admin::Question.create!(questionable: archived_call, question_text: "What is your directorial vision?", response_type: "Long Text")
+  seed_questions(archived_call, proposal_questions.first(2))
 end
 
 # Proposals for active call
@@ -65,12 +63,8 @@ end
   }
 ].each do |attrs|
   user = attrs.delete(:user)
-  proposal = Admin::Proposals::Proposal.find_or_initialize_by(show_title: attrs[:show_title], call: call)
-  if proposal.new_record?
-    proposal.assign_attributes(attrs)
-    proposal.save!
-    TeamMember.find_or_create_by(user: user, teamwork: proposal) do |tm|
-      tm.position = "Director"
-    end
+  proposal = find_or_seed(Admin::Proposals::Proposal, { show_title: attrs[:show_title], call: call }, attrs)
+  TeamMember.find_or_create_by(user: user, teamwork: proposal) do |tm|
+    tm.position = "Director"
   end
 end

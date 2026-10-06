@@ -2,46 +2,22 @@
 post_show_template = Admin::Questionnaires::QuestionnaireTemplate.find_or_initialize_by(name: "Post-Show Debrief")
 if post_show_template.new_record?
   post_show_template.save!
-  Admin::Question.create!(
-    questionable: post_show_template,
-    question_text: "How did the run go overall?",
-    response_type: "Long Text"
-  )
-  Admin::Question.create!(
-    questionable: post_show_template,
-    question_text: "Were there any significant technical issues?",
-    response_type: "Long Text"
-  )
-  Admin::Question.create!(
-    questionable: post_show_template,
-    question_text: "What would you do differently?",
-    response_type: "Long Text"
-  )
-  Admin::Question.create!(
-    questionable: post_show_template,
-    question_text: "Approximate audience numbers",
-    response_type: "Number"
-  )
+  seed_questions(post_show_template, [
+    [ "How did the run go overall?", "Long Text" ],
+    [ "Were there any significant technical issues?", "Long Text" ],
+    [ "What would you do differently?", "Long Text" ],
+    [ "Approximate audience numbers", "Number" ]
+  ])
 end
 
 crew_application_template = Admin::Questionnaires::QuestionnaireTemplate.find_or_initialize_by(name: "Crew Application")
 if crew_application_template.new_record?
   crew_application_template.save!
-  Admin::Question.create!(
-    questionable: crew_application_template,
-    question_text: "What role(s) are you applying for?",
-    response_type: "Short Text"
-  )
-  Admin::Question.create!(
-    questionable: crew_application_template,
-    question_text: "Describe your relevant experience",
-    response_type: "Long Text"
-  )
-  Admin::Question.create!(
-    questionable: crew_application_template,
-    question_text: "Are you available for the full run?",
-    response_type: "Yes/No"
-  )
+  seed_questions(crew_application_template, [
+    [ "What role(s) are you applying for?", "Short Text" ],
+    [ "Describe your relevant experience", "Long Text" ],
+    [ "Are you available for the full run?", "Yes/No" ]
+  ])
 end
 
 # Questionnaires attached to shows
@@ -54,21 +30,11 @@ seed_post_show_debrief = lambda do |show, name:, run_answer:, technical_answer:,
   next unless show && Admin::Questionnaires::Questionnaire.where(event: show).none?
 
   q = Admin::Questionnaires::Questionnaire.create!(event: show, name: name)
-  q1 = Admin::Question.create!(
-    questionable: q,
-    question_text: "How did the run go overall?",
-    response_type: "Long Text"
-  )
-  q2 = Admin::Question.create!(
-    questionable: q,
-    question_text: "Were there any significant technical issues?",
-    response_type: "Long Text"
-  )
-  q3 = Admin::Question.create!(
-    questionable: q,
-    question_text: "Approximate audience numbers",
-    response_type: "Number"
-  )
+  q1, q2, q3 = seed_questions(q, [
+    [ "How did the run go overall?", "Long Text" ],
+    [ "Were there any significant technical issues?", "Long Text" ],
+    [ "Approximate audience numbers", "Number" ]
+  ])
   Admin::Answer.create!(question: q1, answerable: q, answer: run_answer)
   Admin::Answer.create!(question: q2, answerable: q, answer: technical_answer)
   Admin::Answer.create!(question: q3, answerable: q, answer: audience_answer)
