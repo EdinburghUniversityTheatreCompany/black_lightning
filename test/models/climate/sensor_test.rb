@@ -73,11 +73,4 @@ class Climate::SensorTest < ActiveSupport::TestCase
     assert_not sensor.valid?
     assert sensor.errors[:in_crypt].present?
   end
-
-  test "the in_crypt scope returns only the ticked sensors" do
-    crypt = create_climate_sensor(display_name: "Crypt", in_crypt: true)
-    create_climate_sensor(display_name: "Dressing room", in_crypt: false)
-
-    assert_equal [ crypt.id ], Climate::Sensor.in_crypt.pluck(:id)
-  end
 end

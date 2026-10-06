@@ -16,7 +16,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows)
 
     assert_equal 3, sensor.readings.count
-    assert_in_delta 17.0, sensor.readings.chronological.first.temperature_c.to_f, 0.001
+    assert_in_delta 17.0, sensor.readings.order(:recorded_at).first.temperature_c.to_f, 0.001
   end
 
   test "computes the dew point when a row has none" do
@@ -45,7 +45,7 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
     # poll repairs whatever an outage lost.
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows(count: 5))
-    sensor.readings.chronological.to_a[1..2].each(&:destroy)
+    sensor.readings.order(:recorded_at).to_a[1..2].each(&:destroy)
 
     assert_equal 3, sensor.readings.count
 

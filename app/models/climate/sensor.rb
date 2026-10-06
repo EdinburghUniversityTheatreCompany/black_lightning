@@ -38,7 +38,6 @@ module Climate
     # A Govee sensor is only as fresh as its last imported CSV, so its window is
     # a day. The outdoor feed polls hourly.
     STALE_AFTER = { SOURCE_GOVEE => 26.hours, SOURCE_OPEN_METEO => 3.hours }.freeze
-    DEFAULT_STALE_AFTER = 26.hours
 
     has_many :readings, class_name: "Climate::Reading", dependent: :delete_all, inverse_of: :sensor
 
@@ -54,10 +53,8 @@ module Climate
 
     scope :active, -> { where(active: true) }
     scope :govee, -> { where(source: SOURCE_GOVEE) }
-    scope :open_meteo, -> { where(source: SOURCE_OPEN_METEO) }
     scope :outdoor, -> { where(placement: PLACEMENT_OUTDOOR) }
     scope :in_display_order, -> { order(Arel.sql("placement = 'outdoor'"), :position, :id) }
-    scope :in_crypt, -> { where(in_crypt: true) }
 
     # Ensured in code, not seeded by a data migration: test and CI databases are
     # schema-loaded, so a migration would never run there. The poll job calls this
@@ -76,7 +73,6 @@ module Climate
       end
     end
 
-    def govee? = source == SOURCE_GOVEE
     def open_meteo? = source == SOURCE_OPEN_METEO
     def outdoor? = placement == PLACEMENT_OUTDOOR
 
@@ -86,11 +82,11 @@ module Climate
       @latest_reading = readings.order(recorded_at: :desc).first
     end
 
-    def stale_after = STALE_AFTER.fetch(source, DEFAULT_STALE_AFTER)
+    def stale_after = STALE_AFTER.fetch(source)
 
     # No readings at all counts as stale.
-    def stale?(now = Time.current)
-      latest_reading.nil? || latest_reading.recorded_at < now - stale_after
+    def stale?
+      latest_reading.nil? || latest_reading.recorded_at < stale_after.ago
     end
 
     def to_label = display_name

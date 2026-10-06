@@ -35,9 +35,6 @@ module Climate
     validates :recorded_at, uniqueness: { scope: :sensor_id }
     validates :raw_temperature_unit, length: { maximum: 1 }, allow_nil: true
 
-    scope :between, ->(from, to) { where(recorded_at: from..to) }
-    scope :chronological, -> { order(:recorded_at) }
-
     def dew_point_margin
       return nil if temperature_c.nil? || dew_point_c.nil?
 

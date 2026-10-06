@@ -40,10 +40,10 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
   end
 
   test "creates the outdoor sensor if it is not there yet" do
-    Climate::Sensor.open_meteo.destroy_all
+    Climate::Sensor.where(source: Climate::Sensor::SOURCE_OPEN_METEO).destroy_all
     use_source
 
-    assert_difference -> { Climate::Sensor.open_meteo.count }, 1 do
+    assert_difference -> { Climate::Sensor.where(source: Climate::Sensor::SOURCE_OPEN_METEO).count }, 1 do
       Climate::OutdoorPollJob.perform_now
     end
   end
