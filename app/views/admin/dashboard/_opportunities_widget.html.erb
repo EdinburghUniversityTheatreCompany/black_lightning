@@ -1,6 +1,6 @@
 <%# locals: (opportunities: Opportunity.active.includes(:company, :roles), displayed_opportunities_count: 5) %>
 
-<% pending = Opportunity.where(approved: false).where("expiry_date > ?", Date.current) %>
+<% pending = Opportunity.awaiting_review %>
 
 <% if can?(:manage, Opportunity) && pending.any? %>
   <div class="border-b border-amber-200 bg-amber-50 px-4 py-2">

@@ -90,7 +90,9 @@ class Opportunity < ApplicationRecord
 
   # If you update this, you must also update the active? method and the permission somewhere at the top of ability.rb.
   # You might also have to update the opportunities helper.
-  scope :listable, -> { where("approved = true AND expiry_date > ?", Date.current) }
+  scope :unexpired, -> { where("expiry_date > ?", Date.current) }
+  scope :listable, -> { unexpired.where(approved: true) }
+  scope :awaiting_review, -> { unexpired.where(approved: false) }
   scope :active, -> { listable.eutc_first }
 
   # EUTC companies first, then by expiry. Orders on opportunities columns only, so it stays valid

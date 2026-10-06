@@ -2,7 +2,7 @@ require "test_helper"
 
 class OpportunityDigestJobTest < ActiveJob::TestCase
   test "does not send any emails when there are no pending opportunities" do
-    Opportunity.where(approved: false).where("expiry_date > ?", Date.current).destroy_all
+    Opportunity.awaiting_review.destroy_all
 
     assert_no_enqueued_jobs only: MailDeliveryJob do
       OpportunityDigestJob.perform_now

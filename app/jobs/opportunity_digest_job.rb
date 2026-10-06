@@ -2,15 +2,11 @@ class OpportunityDigestJob < ApplicationJob
   queue_as :default
 
   def perform
-    opportunities = Opportunity.where(approved: false).where("expiry_date > ?", Date.current)
+    opportunities = Opportunity.awaiting_review.to_a
+    return if opportunities.empty?
 
-    return if opportunities.none?
-
-    reviewers = Role.find_by(name: "Opportunity Reviewer")&.users || []
-
-    opportunities_list = opportunities.to_a
-    reviewers.each do |user|
-      OpportunityDigestMailer.digest(user, opportunities_list).deliver_later
+    User.with_role("Opportunity Reviewer").each do |user|
+      OpportunityDigestMailer.digest(user, opportunities).deliver_later
     end
   end
 end
