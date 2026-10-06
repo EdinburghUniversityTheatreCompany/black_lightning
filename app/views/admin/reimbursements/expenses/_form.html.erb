@@ -94,13 +94,13 @@
     <div data-reimbursements-receipt-target="ukAmount" class="<%= 'hidden' if form.international? %>">
       <%= f.input :amount, label: "Amount (£, incl. VAT)", required: !form.international?,
             hint: "What actually left your account, or the invoice total.",
-            input_html: { inputmode: "decimal", required: false,
+            input_html: { inputmode: "decimal",
                           data: { rail_required: true, reimbursements_receipt_target: "amount",
                                   action: "input->reimbursements-receipt#checkAmount " \
                                           "input->reimbursements-receipt#checkVat" } } %>
       <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)", required: !form.international?,
             hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.",
-            input_html: { inputmode: "decimal", required: false,
+            input_html: { inputmode: "decimal",
                           data: { rail_required: true, reimbursements_receipt_target: "amountExclVat",
                                   action: "input->reimbursements-receipt#checkVat" } } %>
 
@@ -124,12 +124,11 @@
       <%= f.input :foreign_currency, label: "Currency", required: false,
             collection: Reimbursements::Expense::FOREIGN_CURRENCIES, include_blank: false,
             hint: "The currency the invoice is in. EUSA's form states it, so their bank pays " \
-                  "the supplier in it.",
-            input_html: { required: false } %>
+                  "the supplier in it." %>
       <%= f.input :foreign_amount, label: "Amount, as printed on the invoice", required: form.international?,
             hint: "The invoice total in the currency above. Finance works out the pound " \
                   "equivalent when they review this, so you don't need to convert it.",
-            input_html: { inputmode: "decimal", required: false, data: { rail_required: true } } %>
+            input_html: { inputmode: "decimal", data: { rail_required: true } } %>
     </div>
 
     <%# The amount input toggles this live via checkAmount. %>
@@ -142,26 +141,21 @@
       <%= f.input :large_amount_acknowledged, as: :boolean,
             label: "Yes, this amount is correct." %>
     </div>
-    <%# Required to SUBMIT but optional for a draft. Show the required star so
-        the star set matches what submit needs (they were unstarred, so a
-        rushed user filled only the starred fields and hit surprise errors),
-        but leave client-side enforcement off (input_html required: false) so
-        the "Save as draft" path and server-side validation keep working. %>
+    <%# Starred because submit needs them; Save as draft skips browser validation
+        through formnovalidate. %>
     <%= f.input :budget_record_id, label: "Budget", required: true,
           collection: budgets.map { |b| [ b.picker_label, b.record_id ] },
           include_blank: "Choose a budget…",
-          hint: "Not sure? Pick the closest and mention it in the description.",
-          input_html: { required: false } %>
+          hint: "Not sure? Pick the closest and mention it in the description." %>
 
-    <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
-          input_html: { required: false } %>
+    <%= f.input :description, label: "Description", hint: "What's it for?", required: true %>
 
     <%# The live counter sits in the hint, under the field it counts. %>
     <%= f.input :payment_reference, label: "Payment reference", required: true,
           hint: safe_join([ "What EUSA puts on the bank transfer. Invoices usually specify one; " \
                             "otherwise the invoice number or a short label. ",
                             tag.span(data: { reimbursements_receipt_target: "referenceCounter" }) ]),
-          input_html: { required: false, maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+          input_html: { maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
                         data: { reimbursements_receipt_target: "reference",
                                 action: "input->reimbursements-receipt#updateCounter" } } %>
 
