@@ -135,7 +135,7 @@ class Admin::OpportunitiesController < AdminController
   end
 
   def includes_args
-    [ :creator, :company, :roles ]
+    [ :creator, :company ]
   end
 
   def order_args
