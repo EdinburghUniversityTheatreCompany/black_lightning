@@ -23,27 +23,19 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     JS
   end
 
-  def tom_select(text, from:)
-    select_id, option_value = tom_select_option(text, from: from)
-    execute_script("document.getElementById('#{select_id}').tomselect.setValue('#{option_value}')")
-  end
+  def tom_select(text, from:) = tom_select_call("setValue", text, from)
 
   # For multiple selects: setValue replaces every choice, addItem adds one.
-  def tom_select_add(text, from:)
-    select_id, option_value = tom_select_option(text, from: from)
-    execute_script("document.getElementById('#{select_id}').tomselect.addItem('#{option_value}')")
-  end
+  def tom_select_add(text, from:) = tom_select_call("addItem", text, from)
 
   private
 
   # Tom Select rewrites the label's `for` to its own "-ts-control" element.
-  def tom_select_option(text, from:)
-    label = find("label", text: from)
-    select_id = label["for"].sub(/-ts-control$/, "")
-    option_value = evaluate_script(
-      "Array.from(document.getElementById('#{select_id}').options).find(o => o.text.trim() === '#{text.gsub("'", "\\'")}')?.value"
-    )
-    raise "tom_select: option '#{text}' not found in select '#{select_id}'" if option_value.nil?
-    [ select_id, option_value ]
+  def tom_select_call(method, text, from)
+    select_id = find("label", text: from)["for"].delete_suffix("-ts-control")
+    value = evaluate_script("Array.from(document.getElementById(arguments[0]).options).find(o => o.text.trim() === arguments[1])?.value", select_id, text)
+    raise "tom_select: option '#{text}' not found in select '#{select_id}'" if value.nil?
+
+    execute_script("document.getElementById(arguments[0]).tomselect.#{method}(arguments[1])", select_id, value)
   end
 end
