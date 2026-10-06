@@ -20,6 +20,20 @@ class Admin::DuplicatesControllerTest < ActionController::TestCase
     assert_includes same_id_dups.first[:users], user2
   end
 
+  test "cached fuzzy pairs show the years each user was active" do
+    active = FactoryBot.create(:user, first_name: "Anna", last_name: "Smith")
+    idle = FactoryBot.create(:user, first_name: "Ana", last_name: "Smyth")
+    show = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
+    TeamMember.create!(user: active, teamwork: show, position: "Actor")
+    CachedDuplicate.create!(user1: active, user2: idle, bucket_type: "overlapping")
+
+    get :index
+
+    row = "tr#pair-#{[ active.id, idle.id ].min}-#{[ active.id, idle.id ].max}"
+    assert_select row, text: /Active: 23\/24/
+    assert_select row, text: /No activity recorded/
+  end
+
   test "should mark users as not duplicates and redirect for HTML" do
     user1 = FactoryBot.create(:user, first_name: "John", last_name: "UniqueTestSmith")
     user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "UniqueTestSmith")

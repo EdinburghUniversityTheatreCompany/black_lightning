@@ -6,8 +6,8 @@ class Admin::DuplicatesController < AdminController
     @duplicates = User.find_potential_duplicates
 
     # The fuzzy-both buckets come from the cache the background job fills.
-    @duplicates[:fuzzy_both_overlapping] = load_cached_duplicates("overlapping")
-    @duplicates[:fuzzy_both_no_overlap] = load_cached_duplicates("no_overlap")
+    @duplicates[:fuzzy_both_overlapping] = load_cached_duplicates(CachedDuplicate.overlapping)
+    @duplicates[:fuzzy_both_no_overlap] = load_cached_duplicates(CachedDuplicate.no_overlap)
 
     @title = "Potential Duplicate Users"
   end
@@ -29,13 +29,9 @@ class Admin::DuplicatesController < AdminController
 
   private
 
-  def load_cached_duplicates(bucket_type)
-    CachedDuplicate.includes(:user1, :user2).where(bucket_type: bucket_type).map do |cached|
-      {
-        users: [ cached.user1, cached.user2 ],
-        years_overlap: (bucket_type == "overlapping"),
-        years_active_cache: {}
-      }
-    end
+  def load_cached_duplicates(scope)
+    pairs = scope.includes(:user1, :user2).to_a
+    years = User.bulk_years_active_for(pairs.flat_map { |pair| [ pair.user1_id, pair.user2_id ] })
+    pairs.map { |pair| { users: [ pair.user1, pair.user2 ], years_active_cache: years } }
   end
 end
