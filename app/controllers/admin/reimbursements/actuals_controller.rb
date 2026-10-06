@@ -37,7 +37,7 @@ module Admin
         @periods = actuals.map(&:period).reject(&:blank?).uniq.sort
         @period = params[:period].to_s.strip
         @search = params[:search].to_s.strip
-        @state = resolved_state
+        resolve_state
 
         actuals = actuals.select { |a| a.period == @period } if @period.present?
         actuals = actuals.select { |a| a.matches_search?(@search) } if @search.present?
@@ -249,21 +249,17 @@ module Admin
 
       # ?include_offsets=1 without a state means the full ledger: an offset leg never needs
       # attention, so the default view would hold none of what was asked for.
-      def resolved_state
-        return params[:state] if STATES.include?(params[:state])
-        return STATE_ALL if ActiveModel::Type::Boolean.new.cast(params[:include_offsets]).present?
-
-        STATE_NEEDS_ATTENTION
+      def resolve_state
+        include_offsets = ActiveModel::Type::Boolean.new.cast(params[:include_offsets]) || false
+        default_state = include_offsets ? STATE_ALL : STATE_NEEDS_ATTENTION
+        @state = STATES.include?(params[:state]) ? params[:state] : default_state
+        # Show offsetting rows applies only to the full ledger.
+        @include_offsets = include_offsets && @state == STATE_ALL
       end
 
-      # "Show offsetting rows" applies only to the full ledger.
       def apply_state(actuals)
-        if @state == STATE_NEEDS_ATTENTION
-          @include_offsets = false
-          return actuals.select(&:needs_attention?)
-        end
+        return actuals.select(&:needs_attention?) if @state == STATE_NEEDS_ATTENTION
 
-        @include_offsets = ActiveModel::Type::Boolean.new.cast(params[:include_offsets]).present?
         @include_offsets ? actuals : actuals.reject(&:offset?)
       end
 
