@@ -7,8 +7,6 @@ if ENV["COVERAGE"]
 
   # "rails" must be the argument: a bare string inside the block is evaluated and discarded.
   SimpleCov.start "rails" do
-    skip "/test/"
-    skip "/config/"
     enable_coverage :branch
   end
 end
@@ -62,10 +60,6 @@ class ActiveSupport::TestCase
         klass.destination_root = "#{klass.destination_root}-#{worker}"
       end
     end
-
-    # Workers would otherwise overwrite each other's coverage results; a
-    # distinct command_name per worker lets SimpleCov merge them instead.
-    SimpleCov.command_name("MiniTest-#{worker}") if ENV["COVERAGE"]
   end
 
   teardown do
