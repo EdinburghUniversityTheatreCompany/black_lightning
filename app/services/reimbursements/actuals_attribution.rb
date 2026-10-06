@@ -21,15 +21,6 @@ module Reimbursements
 
     Result = Data.define(:attributed, :unrecognised_rows, :unassigned_blank_rows,
                          :skipped_blank_rows) do
-      # The rows that may be imported, in paste order.
-      def rows = attributed.map(&:row)
-
-      # Identity strings parallel to #rows, for
-      # Reconciliation.detect_offsetting_pairs' cost-centre gate. Ids rather
-      # than codes, so blank-code rows the operator assigned by hand are gated
-      # as members of the pot they chose rather than as "blank".
-      def cost_centre_keys = attributed.map { |entry| entry.cost_centre.id.to_s }
-
       # For the "cost centres G12, H03 are not set up here" line.
       def unrecognised_codes
         unrecognised_rows.map { |row| row.cost_centre.to_s.strip.upcase }.uniq.sort
@@ -37,9 +28,6 @@ module Reimbursements
 
       # Applying now would silently drop the blank-code rows.
       def blank_choice_required? = unassigned_blank_rows.any?
-
-      # Every row this paste will NOT import, whatever the reason.
-      def dropped_rows = unrecognised_rows + unassigned_blank_rows + skipped_blank_rows
     end
 
     def initialize(cost_centres:)

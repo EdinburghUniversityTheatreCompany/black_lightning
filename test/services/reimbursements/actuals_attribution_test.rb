@@ -35,8 +35,7 @@ module Reimbursements
       result = attribute(parse("F40", "BED", "F40"))
 
       assert_equal [ @fringe, @termtime, @fringe ], result.attributed.map(&:cost_centre)
-      assert_equal [ "Row 0", "Row 1", "Row 2" ], result.rows.map(&:narrative)
-      assert_empty result.dropped_rows
+      assert_equal [ "Row 0", "Row 1", "Row 2" ], result.attributed.map { |entry| entry.row.narrative }
     end
 
     test "matching a code is case- and whitespace-insensitive" do
@@ -88,19 +87,6 @@ module Reimbursements
 
       assert_empty result.attributed
       assert result.blank_choice_required?, "a bogus id must not silently import the rows anywhere"
-    end
-
-    test "cost_centre_keys identify the attributed centre, not the exported code" do
-      result = attribute(parse("F40", ""), blank_choice: @fringe.id.to_s)
-
-      assert_equal [ @fringe.id.to_s, @fringe.id.to_s ], result.cost_centre_keys,
-                   "an assigned blank row is in the pot the operator chose, not in 'blank'"
-    end
-
-    test "dropped_rows collects every row the paste will not import" do
-      result = attribute(parse("F40", "G12", ""), blank_choice: nil)
-
-      assert_equal 2, result.dropped_rows.size
     end
   end
 end
