@@ -1,5 +1,5 @@
 class Admin::UserBioComponentPreview < Admin::ApplicationComponentPreview
-  # User with both avatar and bio
+  # User with a bio
   def default
     user = User.where.not(bio: [ nil, "" ]).first || sample_user
     render Admin::UserBioComponent.new(user: user)

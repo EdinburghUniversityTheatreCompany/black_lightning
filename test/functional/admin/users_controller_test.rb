@@ -12,9 +12,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  # Breadcrumbs are built from the URL path, and an id segment titleizes into nonsense. The
-  # mechanism is generic (it reads the record the controller loaded), so cover it here as
-  # well as on the reimbursements budget it was reported against.
+  # The breadcrumb names the record the controller loaded, not the id segment of the URL.
   test "the edit breadcrumb names the user instead of their id" do
     get :edit, params: { id: @user }
 
@@ -38,9 +36,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert assigns(:link_to_admin_events)
   end
 
-  # The id used to be readable from the breadcrumb, as a side effect of it being built from
-  # the URL. The breadcrumb names the user now, so the profile has to show the id itself —
-  # to the member whose profile it is as well as to anyone else who can open it.
+  # The breadcrumb names the user, so the profile shows the id itself, to its owner as well.
   test "show displays the user's id" do
     get :show, params: { id: @user }
 
@@ -172,7 +168,6 @@ class Admin::UsersControllerTest < ActionController::TestCase
     @user.reload
     original_encrypted_password = @user.encrypted_password
 
-    # Submit the same password that's currently set
     put :update, params: {
       id: @user,
       user: {
@@ -185,10 +180,8 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to admin_user_path(@user)
     @user.reload
 
-    # Password should not have changed
     assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when same as current"
 
-    # But other fields should have been updated
     assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
   end
 
@@ -199,7 +192,6 @@ class Admin::UsersControllerTest < ActionController::TestCase
     @user.reload
     original_encrypted_password = @user.encrypted_password
 
-    # Submit a different password
     put :update, params: {
       id: @user,
       user: {
@@ -212,14 +204,11 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to admin_user_path(@user)
     @user.reload
 
-    # Password should have changed
     assert_not_equal original_encrypted_password, @user.encrypted_password, "Password should have been updated when different from current"
 
-    # Verify user can log in with new password
     assert @user.valid_password?(new_password), "User should be able to authenticate with new password"
     assert_not @user.valid_password?(current_password), "User should not be able to authenticate with old password"
 
-    # Other fields should have been updated too
     assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
   end
 
@@ -229,7 +218,6 @@ class Admin::UsersControllerTest < ActionController::TestCase
     @user.reload
     original_encrypted_password = @user.encrypted_password
 
-    # Submit blank password
     put :update, params: {
       id: @user,
       user: {
@@ -242,25 +230,19 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to admin_user_path(@user)
     @user.reload
 
-    # Password should not have changed
     assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when blank"
 
-    # User should still be able to log in with current password
     assert @user.valid_password?(current_password), "User should still be able to authenticate with current password"
 
-    # Other fields should have been updated
     assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
   end
 
-  # Regression guard: permitted_params used to delete password keys from the live
-  # request params as a side effect. It must not mutate params — it only decides
-  # which keys are permitted.
+  # permitted_params must not mutate the live request params: a re-rendered form needs them.
   test "permitted_params does not mutate the request params" do
     current_password = "password123"
     @user.update!(password: current_password, password_confirmation: current_password)
 
-    # A password equal to the current one is treated as unchanged (so it is not
-    # re-assigned), but the submitted value must remain in the request params.
+    # Equal to the current password counts as unchanged, but the submitted value stays in params.
     put :update, params: {
       id: @user,
       user: {
@@ -308,8 +290,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     users.each { |user| assert_includes_user(user) }
 
-    # `response.body["pagination"]["more"]` was string-slicing the raw JSON, which always
-    # came back nil and so asserted nothing. Read the parsed flag instead.
+    # Read the parsed flag: string-slicing the raw JSON always came back nil.
     assert_not response.parsed_body["pagination"]["more"]
   end
 
@@ -388,10 +369,8 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
   private
 
-  # The autocomplete list is JSON, so assert against the parsed results rather than
-  # substrings of the body. Faker hands out colliding first/last names often enough that a
-  # `response.body` substring check is genuinely flaky in both directions, and a name
-  # containing & or < is escaped in the JSON so it would not match literally either.
+  # Assert on the parsed JSON: Faker name collisions make body-substring checks flaky, and a name
+  # with & or < is escaped in the JSON so it never matches literally.
   def autocomplete_results
     response.parsed_body["results"]
   end

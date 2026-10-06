@@ -45,8 +45,7 @@ class UserAbsorbTest < ActiveSupport::TestCase
     result = @target_user.absorb(@source_user)
 
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    # Due to uniqueness constraint, only one team membership per user per show
-    # Positions are concatenated with '/'
+    # One membership per user per show, so the positions are joined with '/'.
     assert_equal initial_count, @target_user.team_membership.reload.count
     position = @target_user.team_membership.find_by(teamwork: show).position
     assert_equal "Director / Producer", position
@@ -156,9 +155,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
     assert_not User.exists?(source_id), "Source user should be deleted"
   end
-
-  # Transaction rollback test - we test this by verifying data consistency after success
-  # The transaction behavior is tested by Rails itself, so we just verify successful transfers
 
   # Return value tests
 
@@ -320,7 +316,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
   end
 
   test "absorb with keep_from_source email overrides unknown_ email logic" do
-    # Even though target has unknown_ email, explicitly choosing email should work
     @target_user.update!(email: "unknown_12345678@bedlamtheatre.co.uk")
     @source_user.update!(email: "source@example.com")
 
@@ -359,11 +354,9 @@ class UserAbsorbTest < ActiveSupport::TestCase
     user2 = FactoryBot.create(:member)
     user3 = FactoryBot.create(:member)
 
-    # Create multiple cached duplicates involving source user
     dup1 = CachedDuplicate.create!(user1: @source_user, user2: user1, bucket_type: "overlapping")
     dup2 = CachedDuplicate.create!(user1: user2, user2: @source_user, bucket_type: "no_overlap")
     dup3 = CachedDuplicate.create!(user1: @source_user, user2: user3, bucket_type: "overlapping")
-    # Create one that should remain (doesn't involve source user)
     dup_keep = CachedDuplicate.create!(user1: user1, user2: user2, bucket_type: "overlapping")
 
     result = @target_user.absorb(@source_user)

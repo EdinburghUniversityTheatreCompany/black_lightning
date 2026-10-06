@@ -1,9 +1,8 @@
-# Module providing string similarity functions for fuzzy matching.
+# Name similarity for fuzzy duplicate matching.
 module StringSimilarity
   module_function
 
-  # Calculates the Levenshtein similarity between two strings.
-  # Returns a value between 0.0 (completely different) and 1.0 (identical).
+  # 0.0 (completely different) to 1.0 (identical).
   def levenshtein_similarity(s1, s2)
     return 1.0 if s1 == s2
     return 0.0 if s1.empty? || s2.empty?
@@ -12,8 +11,6 @@ module StringSimilarity
     1 - (distance.to_f / [ s1.length, s2.length ].max)
   end
 
-  # Calculates the Levenshtein distance (edit distance) between two strings.
-  # Returns the minimum number of single-character edits needed to change one string into the other.
   def levenshtein_distance(s1, s2)
     return s2.length if s1.empty?
     return s1.length if s2.empty?
@@ -35,20 +32,18 @@ module StringSimilarity
     matrix[s1.length][s2.length]
   end
 
-  # Normalizes a name for comparison by stripping, downcasing, and removing non-letters.
+  # Strips, downcases and removes everything but a-z.
   def normalize_name(name)
     name.to_s.strip.downcase.gsub(/[^a-z]/, "")
   end
 
-  # Checks if one name is an abbreviation of another.
-  # E.g., "Leo" is an abbreviation of "Leonardo"
+  # "Leo" abbreviates "Leonardo".
   def abbreviation?(short, long)
     return false if short.length >= long.length
     long.start_with?(short)
   end
 
-  # Returns a confidence score (0.0-1.0) for how well two names match.
-  # Exact normalized match → 1.0, abbreviation → 0.9, otherwise Levenshtein similarity.
+  # 1.0 for an exact normalised match, 0.9 for an abbreviation, otherwise the Levenshtein similarity.
   def match_confidence(name1, name2)
     n1 = normalize_name(name1)
     n2 = normalize_name(name2)
@@ -59,8 +54,7 @@ module StringSimilarity
     levenshtein_similarity(n1, n2)
   end
 
-  # Fuzzy matches two names using normalization, abbreviation check, and Levenshtein similarity.
-  # Returns true if the names are considered a match.
+  # True when the names are equal once normalised, abbreviate one another, or reach `threshold` similarity.
   def fuzzy_name_match?(name1, name2, threshold: 0.6)
     n1 = normalize_name(name1)
     n2 = normalize_name(name2)

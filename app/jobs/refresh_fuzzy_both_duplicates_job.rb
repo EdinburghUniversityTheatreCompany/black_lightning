@@ -1,7 +1,6 @@
 ##
-# Background job to refresh fuzzy-both-names duplicate detection.
-# Groups users by first letter of last name to reduce O(n²) to manageable size.
-# Stores results in cached_duplicates table for fast page loads.
+# Refreshes cached_duplicates with pairs whose first and last names are both fuzzy matches.
+# Users are grouped by the first letter of the last name to keep the O(n²) scan manageable.
 ##
 class RefreshFuzzyBothDuplicatesJob < ApplicationJob
   queue_as :default
@@ -9,18 +8,13 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
   def perform
     Rails.logger.info "Starting fuzzy-both-names duplicate refresh..."
 
-    # Clear old results
     CachedDuplicate.delete_all
 
-    # Group users by first letter of last name. Only the columns the pairwise
-    # comparison actually touches are loaded (id/name for matching, the JSON
-    # not-duplicate list for the skip check) — a full User row carries ~40
-    # columns, and every user is resident at once for the O(n2) group scan, so
-    # the narrow select keeps this job's peak RSS proportional to the work.
+    # Narrow select: every user is resident for the O(n²) scan, and a full row carries ~40
+    # columns, so this keeps peak RSS proportional to the work.
     users_by_letter = User.select(:id, :first_name, :last_name, :not_duplicate_user_ids)
                           .to_a.group_by { |u| u.last_name&.first&.upcase || "Z" }
 
-    # Process each letter group
     users_by_letter.each do |letter, users|
       Rails.logger.info "Processing #{users.size} users with last name starting with '#{letter}'"
       check_group(users)
@@ -32,35 +26,29 @@ class RefreshFuzzyBothDuplicatesJob < ApplicationJob
   private
 
   def check_group(users)
-    # Bulk-load years_active for performance
     all_user_ids = users.map(&:id)
     years_active_cache = User.bulk_years_active_for(all_user_ids)
 
-    # Track processed pairs to avoid duplicates
     processed_pairs = Set.new
 
-    # Check all combinations within this group
     users.combination(2).each do |user1, user2|
       pair_id = [ user1.id, user2.id ].sort
 
       next if processed_pairs.include?(pair_id)
       next if user1.marked_not_duplicate?(user2)
 
-      # Skip exact last name matches (those belong in buckets 2/3)
+      # Exact last names belong in buckets 2/3 of User.find_potential_duplicates.
       next if user1.last_name && user2.last_name && user1.last_name.casecmp?(user2.last_name)
 
-      # Check fuzzy matching on both names
       next unless User.fuzzy_last_name_match?(user1.last_name, user2.last_name)
       next unless User.fuzzy_first_name_match?(user1.first_name, user2.first_name)
 
-      # Determine bucket type based on year overlap
       bucket_type = if user1.years_overlap?(user2, years_active_cache: years_active_cache)
         "overlapping"
       else
         "no_overlap"
       end
 
-      # Store result
       CachedDuplicate.create!(
         user1_id: [ user1.id, user2.id ].min,
         user2_id: [ user1.id, user2.id ].max,

@@ -13,11 +13,8 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
 
   test "years_active returns academic years from events" do
     user = FactoryBot.create(:user)
-    # Create a show with this user as a team member
     show = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
 
-    # The show should have team members by default from the factory
-    # Add our user to the show
     TeamMember.create!(user: user, teamwork: show, position: "Actor")
 
     years = user.years_active
@@ -61,7 +58,6 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     show = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
     TeamMember.create!(user: user1, teamwork: show, position: "Actor")
 
-    # user2 has no events
     assert user1.years_overlap?(user2), "Should return true when one user has no activity data"
   end
 
@@ -224,7 +220,6 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_empty matches, "Marked not-duplicates should not appear in results"
   end
 
-  # Buckets 4 & 5: Now computed by background job, not by User.find_potential_duplicates
   test "find_potential_duplicates returns empty arrays for fuzzy_both buckets" do
     duplicates = User.find_potential_duplicates
 
@@ -242,13 +237,11 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     show2 = FactoryBot.create(:show)
     show3 = FactoryBot.create(:show)
 
-    # Both users on show1 and show2
     TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
     TeamMember.create!(user: user2, teamwork: show1, position: "Director")
     TeamMember.create!(user: user1, teamwork: show2, position: "Stage Manager")
     TeamMember.create!(user: user2, teamwork: show2, position: "Producer")
 
-    # Only user1 on show3
     TeamMember.create!(user: user1, teamwork: show3, position: "Actor")
 
     assert_equal 2, user1.overlapping_team_memberships_with(user2)

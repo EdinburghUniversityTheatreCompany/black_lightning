@@ -129,10 +129,6 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "existing user validates and saves without the orphan google columns" do
-    # Regression: dev/test carried orphan google_* columns (never migrated to
-    # production), and length validations on them crashed admin/users#update in
-    # production with `undefined method 'google_access_token'`. The columns are
-    # dropped now; validating/saving a user must not reference them.
     @user.first_name = "Regression"
     assert @user.valid?, @user.errors.full_messages.to_sentence
     assert @user.save
@@ -328,7 +324,6 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "student_id not extracted from non-matching emails" do
-    # Start with no student_id
     @user.update!(student_id: nil)
 
     non_matching_emails = [
@@ -355,12 +350,10 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user.update!(email: "s1234567@ed.ac.uk")
     assert_equal "s1234567", @user.student_id
 
-    # Create another user with a different email but manually set the same student_id
     user2 = FactoryBot.create(:user, email: "s9999999@ed.ac.uk")
     user2.update!(student_id: "s1234567")
     assert_equal "s1234567", user2.student_id
 
-    # Both users should exist with the same student_id
     assert_equal 2, User.where(student_id: "s1234567").count
   end
 
@@ -510,7 +503,6 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "find_by_profile_completion_token returns nil for token with wrong purpose" do
-    # Generate a token with a different purpose
     wrong_purpose_token = @user.signed_id(purpose: :password_reset, expires_in: 7.days)
 
     found_user = User.find_by_profile_completion_token(wrong_purpose_token)
@@ -519,17 +511,13 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "find_by_profile_completion_token returns nil after profile completion" do
-    # Make user incomplete
     @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token
 
-    # Verify token works before completion
     assert_equal @user, User.find_by_profile_completion_token(token)
 
-    # Complete the profile (this resets the salt)
     @user.complete_profile!
 
-    # Token should now be invalid due to salt reset
     assert_nil User.find_by_profile_completion_token(token)
   end
 
@@ -538,14 +526,11 @@ class Admin::UserTest < ActiveSupport::TestCase
     original_salt = @user.profile_completion_salt
     token = @user.profile_completion_token
 
-    # Verify token works with original salt
     found = User.find_by_profile_completion_token(token)
     assert_equal @user, found
 
-    # Change the salt directly (simulate profile completion)
     @user.update_column(:profile_completion_salt, SecureRandom.hex(8))
 
-    # Token should now be invalid
     assert_nil User.find_by_profile_completion_token(token)
   end
 
@@ -585,12 +570,10 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   # Ransack tests
   test "ransackable_attributes includes member_id for users with :read permission" do
-    # Create a user with a role that has :read permission for User
     user_with_read = FactoryBot.create(:user)
     role = Role.create!(name: "User Viewer")
     user_with_read.add_role(role)
 
-    # Grant the role :read permission for User using existing fixture
     permission = admin_permissions(:can_read_users)
     role.permissions << permission
 
@@ -606,12 +589,10 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "ransack search with member_id_cont works for users with :read permission" do
-    # Create test users with IDs
     user1 = FactoryBot.create(:user, student_id: "s1234567")
     user2 = FactoryBot.create(:user, associate_id: "ASSOC123")
     user3 = FactoryBot.create(:user, student_id: "s9999999")
 
-    # Create a user with :read permission
     searcher = FactoryBot.create(:user)
     role = Role.create!(name: "User Viewer")
     searcher.add_role(role)
@@ -620,11 +601,9 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     ability = Ability.new(searcher)
 
-    # This should not raise an error
     q = User.ransack({ member_id_cont: "123" }, auth_object: ability)
     results = q.result
 
-    # Should find both user1 (s1234567 contains 123) and user2 (ASSOC123 contains 123)
     assert_includes results, user1, "Should find user with student_id containing '123'"
     assert_includes results, user2, "Should find user with associate_id containing '123'"
     assert_not_includes results, user3, "Should not find user without '123' in member_id"
@@ -654,17 +633,13 @@ class Admin::UserTest < ActiveSupport::TestCase
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
-    # Grant admin to source user
     source_user.add_role(:admin)
     assert source_user.has_role?(:admin), "Setup: source user should have :admin"
 
-    # Perform absorb
     result = target_user.absorb(source_user)
 
-    # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify admin role was NOT transferred
     assert_not target_user.has_role?(:admin), "Target user should NOT have :admin after absorbing admin"
     assert_not_includes result[:transferred][:roles], "Admin", "Admin role should not be in transferred roles list"
   end
@@ -673,13 +648,10 @@ class Admin::UserTest < ActiveSupport::TestCase
     admin_user = FactoryBot.create(:admin)
     source_admin = FactoryBot.create(:admin)
 
-    # Perform absorb
     result = admin_user.absorb(source_admin)
 
-    # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify target admin still has only one :admin role (no duplicates)
     admin_role_count = admin_user.roles.where(name: "Admin").count
     assert_equal 1, admin_role_count, "Target admin should have exactly one :admin role, not duplicated"
   end
@@ -688,21 +660,16 @@ class Admin::UserTest < ActiveSupport::TestCase
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
-    # Grant non-admin roles to source user
     source_user.add_role(:member)
     source_user.add_role(:committee)
 
-    # Perform absorb
     result = target_user.absorb(source_user)
 
-    # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify non-admin roles were transferred
     assert target_user.has_role?(:member), "Target should have :member role"
     assert target_user.has_role?(:committee), "Target should have :committee role"
 
-    # Verify returned transferred roles list contains the capitalized role names
     assert_includes result[:transferred][:roles], "Member", "Member should be in transferred roles"
     assert_includes result[:transferred][:roles], "Committee", "Committee should be in transferred roles"
   end
@@ -711,31 +678,25 @@ class Admin::UserTest < ActiveSupport::TestCase
     target_user = FactoryBot.create(:user)
     source_user = FactoryBot.create(:user)
 
-    # Grant mixed roles to source user
     source_user.add_role(:admin)
     source_user.add_role(:member)
     source_user.add_role(:committee)
 
-    # Perform absorb
     result = target_user.absorb(source_user)
 
-    # Verify absorb was successful
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
 
-    # Verify only non-admin roles were transferred
     assert target_user.has_role?(:member), "Target should have :member role"
     assert target_user.has_role?(:committee), "Target should have :committee role"
     assert_not target_user.has_role?(:admin), "Target should NOT have :admin role"
 
-    # Verify only non-admin roles are in transferred list
     assert_includes result[:transferred][:roles], "Member"
     assert_includes result[:transferred][:roles], "Committee"
     assert_not_includes result[:transferred][:roles], "Admin"
   end
 
   test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
-    # Simulate pre-normalization DB state: two records whose emails normalize to the same value.
-    # Raw SQL bypasses the Rails normalizes callback, which would otherwise prevent storing sms.ed.ac.uk.
+    # Raw SQL bypasses the normalizes callback, to simulate data stored before the normalisation.
     target = FactoryBot.create(:user, email: "s9911001@ed.ac.uk")
     source = FactoryBot.create(:user)
     ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9911001@sms.ed.ac.uk' WHERE id = #{source.id}")
@@ -748,8 +709,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "absorb succeeds when source sms.ed.ac.uk email normalizes to email held by a third user" do
-    # Simulate legacy DB state: source has raw sms.ed.ac.uk while a separate user holds the
-    # normalized ed.ac.uk form. The merge should succeed without corrupting the third user.
+    # Raw SQL bypasses the normalizes callback; the third user must not be touched.
     third_user = FactoryBot.create(:user, email: "s9922002@ed.ac.uk")
     source     = FactoryBot.create(:user)
     ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9922002@sms.ed.ac.uk' WHERE id = #{source.id}")

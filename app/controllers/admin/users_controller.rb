@@ -47,14 +47,12 @@ class Admin::UsersController < AdminController
   def merge
     @title = "Merge User Into #{@user.name_or_email}"
 
-    # If source_user_id is provided (e.g., from duplicates view), pre-load for preview
     if params[:source_user_id].present?
       @source_user = User.find_by(id: params[:source_user_id])
     end
   end
 
   def merge_preview
-    # Redirect to merge with source_user_id in URL so URL reflects state
     redirect_to merge_admin_user_path(@user, source_user_id: params[:source_user_id])
   end
 
@@ -96,7 +94,7 @@ class Admin::UsersController < AdminController
 
     @users = @users.with_role(:member) if params[:show_non_members] != "1"
 
-    # Exclude specific user (e.g., when selecting merge source, exclude target)
+    # The merge picker leaves out the target.
     @users = @users.where.not(id: params[:exclude_id]) if params[:exclude_id].present?
 
     @users = @users.reorder(:first_name, :last_name).page(page).per(per_page)
@@ -126,16 +124,13 @@ class Admin::UsersController < AdminController
   def create_activation
     authorize! :create, User
 
-    # Handle both new user creation and resend
     if params[:user_id].present?
-      # Resend to existing user
       user = User.find(params[:user_id])
       user.send_welcome_email
 
       helpers.append_to_flash(:success, "Profile completion email resent to #{user.email}")
       redirect_to activate_admin_users_path
     else
-      # Create new user
       @user = User.new_user(activation_user_params)
       @user.add_role(:member) if params[:user][:is_member] == "1"
 
@@ -172,14 +167,12 @@ class Admin::UsersController < AdminController
     password = params.dig(:user, :password)
     password_confirmation = params.dig(:user, :password_confirmation)
 
-    # Don't assign the password when it's blank or (for an existing user) unchanged.
-    # Excluding it from the permit list has the same effect as dropping it — without
-    # mutating the live request params (which must stay intact for form re-renders).
+    # Don't assign a blank or unchanged password. Leaving it out of the permit list, rather than
+    # deleting it from params, keeps the live params intact for form re-renders.
     drop_password = password.blank? || (@user&.persisted? && @user.valid_password?(password))
     perm_params.delete(:password) if drop_password
 
-    # Drop the confirmation when it's blank, or whenever the password itself is dropped
-    # (an orphan confirmation would fail Devise's confirmation validation).
+    # An orphan confirmation would fail Devise's confirmation validation.
     perm_params.delete(:password_confirmation) if password_confirmation.blank? || drop_password
 
     perm_params.push(role_ids: []) if current_user.admin?

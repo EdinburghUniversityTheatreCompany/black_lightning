@@ -5,7 +5,6 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
     user1 = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
     user2 = FactoryBot.create(:user, first_name: "Katie", last_name: "Trunbull")
 
-    # Both users have no events, so years_overlap? returns true
     RefreshFuzzyBothDuplicatesJob.perform_now
 
     cached = CachedDuplicate.where(bucket_type: "overlapping")
@@ -48,7 +47,6 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
 
     RefreshFuzzyBothDuplicatesJob.perform_now
 
-    # Should not appear in fuzzy_both buckets (these go in buckets 2/3 instead)
     cached = CachedDuplicate.all
     assert_empty cached, "Exact last name matches should not be in cached duplicates"
   end
@@ -66,7 +64,6 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
   end
 
   test "groups users by first letter of last name" do
-    # Create users with similar names but different first letters
     smith1 = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
     smyth = FactoryBot.create(:user, first_name: "Jon", last_name: "Smyth")
     turnbull = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
@@ -75,22 +72,18 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
     RefreshFuzzyBothDuplicatesJob.perform_now
 
     cached = CachedDuplicate.all
-    # Should find Smith/Smyth (both S) and Turnbull/Trunbull (both T)
     assert_equal 2, cached.count, "Should find duplicates within same first letter groups"
   end
 
   test "clears old cached results before running" do
-    # Create a cached entry for users that are NOT actually duplicates
     user1 = FactoryBot.create(:user, first_name: "Alice", last_name: "Anderson")
     user2 = FactoryBot.create(:user, first_name: "Bob", last_name: "Brown")
     CachedDuplicate.create!(user1_id: user1.id, user2_id: user2.id, bucket_type: "overlapping")
 
     assert_equal 1, CachedDuplicate.count
 
-    # Run job - should clear old entry since these aren't actual duplicates
     RefreshFuzzyBothDuplicatesJob.perform_now
 
-    # Old entry should be cleared
     assert_equal 0, CachedDuplicate.count, "Should clear old cached results"
   end
 
@@ -98,12 +91,10 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
     user1 = FactoryBot.create(:user, first_name: "Test", last_name: nil)
     user2 = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
 
-    # Should not crash
     assert_nothing_raised do
       RefreshFuzzyBothDuplicatesJob.perform_now
     end
 
-    # Should not find any duplicates (nil last names are skipped)
     assert_equal 0, CachedDuplicate.count
   end
 
@@ -112,7 +103,6 @@ class RefreshFuzzyBothDuplicatesJobTest < ActiveJob::TestCase
     user1 = FactoryBot.create(:user, first_name: "Alice", last_name: nil)
     user2 = FactoryBot.create(:user, first_name: "Bob", last_name: nil)
 
-    # Should not crash when checking combinations within the group
     assert_nothing_raised do
       RefreshFuzzyBothDuplicatesJob.perform_now
     end

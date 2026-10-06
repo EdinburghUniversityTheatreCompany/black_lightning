@@ -84,9 +84,7 @@ class StringSimilarityTest < ActiveSupport::TestCase
   end
 
   test "fuzzy_name_match respects custom threshold" do
-    # With high threshold, similar names should not match
     assert_not StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.95)
-    # With low threshold, different names might match
     assert StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.5)
   end
 
