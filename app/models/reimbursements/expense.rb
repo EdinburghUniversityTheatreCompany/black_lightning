@@ -147,6 +147,7 @@ module Reimbursements
     def pending? = status == Status::PENDING
     def draft? = status == Status::DRAFT
     def approved? = status == Status::APPROVED
+    def rejected? = status == Status::REJECTED
 
     # Never internal "From EUSA" entries: editing one in the portal would
     # rewrite its type to a submitter type.

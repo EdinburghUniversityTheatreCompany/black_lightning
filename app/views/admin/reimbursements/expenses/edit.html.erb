@@ -1,5 +1,5 @@
 <p class="mb-3 text-gray-600">
-  <% if @expense.status == Reimbursements::Status::DRAFT %>
+  <% if @expense.draft? %>
     Finish this draft and submit it below.
   <% else %>
     You can edit this claim while it's still waiting for review. Once the finance team
@@ -19,7 +19,7 @@
       url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
       show_receipt_input: false, current_status: @expense.status %>
 
-<% if @expense.status == Reimbursements::Status::DRAFT %>
+<% if @expense.draft? %>
   <%# Its own form: destroy shares the update's URL, so inside the edit form a
       lost _method race would silently SAVE the draft instead. %>
   <div class="-mt-2 mb-4 flex flex-wrap items-center gap-3">

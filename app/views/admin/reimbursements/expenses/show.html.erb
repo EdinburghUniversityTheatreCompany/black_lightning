@@ -9,7 +9,7 @@
     <% end %>
   </div>
 
-  <% if @expense.status == Reimbursements::Status::REJECTED && @expense.rejection_reason.present? %>
+  <% if @expense.rejected? && @expense.rejection_reason.present? %>
     <div class="mb-3"><%= render AlertComponent.new(type: :danger) do %>
       Not approved: <%= @expense.rejection_reason %>
     <% end %></div>

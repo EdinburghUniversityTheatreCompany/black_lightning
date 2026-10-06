@@ -69,7 +69,7 @@ module Admin
       # in the reply they are already writing.
       def reopen
         expense = find_expense!
-        unless expense.status == ::Reimbursements::Status::REJECTED
+        unless expense.rejected?
           redirect_to_edit(expense, alert: "Only a rejected claim can be reopened. " \
                                            "##{expense.auto_number} is #{expense.status}.")
           return

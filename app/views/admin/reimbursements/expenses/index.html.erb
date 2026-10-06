@@ -48,7 +48,7 @@
        ].compact, " ")
        description = safe_join([
          expense.description.presence || content_tag(:span, "(no description yet)", class: "text-gray-500"),
-         (content_tag(:div, "Rejected: #{expense.rejection_reason}", class: "text-sm text-danger") if expense.status == Reimbursements::Status::REJECTED && expense.rejection_reason.present?)
+         (content_tag(:div, "Rejected: #{expense.rejection_reason}", class: "text-sm text-danger") if expense.rejected? && expense.rejection_reason.present?)
        ].compact)
        {
          fields: [

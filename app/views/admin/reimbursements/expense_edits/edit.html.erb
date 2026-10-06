@@ -19,7 +19,7 @@
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(@expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= @expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(@expense.status), pill: true).with_content(@expense.status) %>
-    <% if @expense.status == ::Reimbursements::Status::REJECTED %>
+    <% if @expense.rejected? %>
       <%= button_to "Reopen this claim",
             admin_reimbursements_reopen_expense_edit_path(@expense.record_id),
             method: :post, class: btn_classes(:secondary, :sm),
@@ -122,7 +122,7 @@
           <% end %>
           <q><%= @expense.rejection_reason %></q>
           <%# The reason survives a reopen, so label it as history. %>
-          <% if @expense.status != ::Reimbursements::Status::REJECTED %>
+          <% unless @expense.rejected? %>
             <span class="text-gray-500">(reopened since)</span>
           <% end %>
         </dd>

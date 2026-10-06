@@ -71,7 +71,7 @@ module Admin
       # Only a Draft is deleted; a Pending claim is withdrawn from its edit form.
       def destroy
         @expense = find_own_editable_expense!(params[:id])
-        unless @expense.status == ::Reimbursements::Status::DRAFT
+        unless @expense.draft?
           redirect_to admin_reimbursements_expenses_path,
                       alert: "Only a draft can be deleted. Withdraw a submitted claim from its edit page instead."
           return
