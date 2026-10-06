@@ -178,8 +178,6 @@ module Reimbursements
     # disagree with the debit/credit pair every rollup reads.
     def apportionable_total = -EusaActual.net([ self ])
 
-    def allocated_total = allocations.sum { |allocation| allocation.amount || 0 }
-
     # "Show A £2,500.00; Show B £1,500.00", largest share first then by name; blank when not split.
     # On the model so the ledger and the CSV print the same string. The "£" stays in the export:
     # this describes several amounts and is not a column anything sums.

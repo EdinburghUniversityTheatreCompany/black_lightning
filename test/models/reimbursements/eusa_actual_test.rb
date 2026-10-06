@@ -53,7 +53,6 @@ module Reimbursements
 
       assert_predicate actual.reload, :apportioned?
       assert_not_predicate actual, :apportionable?
-      assert_equal BigDecimal("4000"), actual.allocated_total
     end
 
     # Credits less debits, as EusaActual.net derives every rollup's; NOT the stored `net`, which can
