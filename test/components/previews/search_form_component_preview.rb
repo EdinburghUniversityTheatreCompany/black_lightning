@@ -1,42 +1,21 @@
 class SearchFormComponentPreview < ViewComponent::Preview
-  def default
-    render SearchFormComponent.new(
-      q: User.ransack,
-      input_fields: {
-        first_name_cont: { label: "First name" },
-        last_name_cont: { label: "Last name" },
-        email_cont: {}
-      },
-      columns: 1
-    )
-  end
+  FIELDS = {
+    first_name_cont: { label: "First name" },
+    last_name_cont: { label: "Last name" },
+    email_cont: {},
+    phone_cont: { label: "Phone" },
+    address_cont: { label: "Address" },
+    city_cont: { label: "City" },
+    postal_code_cont: { label: "Postal code" }
+  }.freeze
 
-  def two_columns
-    render SearchFormComponent.new(
-      q: User.ransack,
-      input_fields: {
-        first_name_cont: { label: "First name" },
-        last_name_cont: { label: "Last name" },
-        email_cont: {},
-        phone_cont: { label: "Phone" }
-      },
-      columns: 2
-    )
-  end
+  def default = form(3, 1)
+  def two_columns = form(4, 2)
+  def with_collapse = form(7, 1)
 
-  def with_collapse
-    render SearchFormComponent.new(
-      q: User.ransack,
-      input_fields: {
-        first_name_cont: { label: "First name" },
-        last_name_cont: { label: "Last name" },
-        email_cont: {},
-        phone_cont: { label: "Phone" },
-        address_cont: { label: "Address" },
-        city_cont: { label: "City" },
-        postal_code_cont: { label: "Postal code" }
-      },
-      columns: 1
-    )
+  private
+
+  def form(count, columns)
+    render SearchFormComponent.new(q: User.ransack, input_fields: FIELDS.first(count).to_h, columns:)
   end
 end
