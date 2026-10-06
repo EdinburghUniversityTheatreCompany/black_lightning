@@ -199,10 +199,6 @@ class Ability
     # Stops `can :manage, Role` from covering add_user and remove_user.
     cannot [ :add_user, :remove_user ], Role
 
-    if user&.admin?
-      can [ :add_user, :remove_user ], Role
-    end
-
     # All users with role X control the roles which have X as a parent.
     child_roles_this_user_can_manage = Role.joins(:parents).where(parents_roles: { id: user.roles }).pluck(:id)
 
