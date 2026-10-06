@@ -91,9 +91,7 @@ module Climate
       sensor = sensor_for(message, attachment)
       return skip(message, "could not tell which sensor it is from") if sensor.nil?
 
-      # dup first: force_encoding mutates its receiver and Graph's string is
-      # frozen; the FrozenError would leave the message unread forever.
-      parsed = CsvImport.new(attachment[:bytes].to_s.dup.force_encoding(Encoding::UTF_8))
+      parsed = CsvImport.new(attachment[:bytes])
       return skip(message, parsed.errors.to_sentence) unless parsed.valid?
 
       ReadingIngest.upsert_series!(sensor: sensor, rows: parsed.rows).written

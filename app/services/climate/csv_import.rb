@@ -26,7 +26,9 @@ module Climate
       @errors = []
       @skipped = []
       @unit = nil
-      parse(text.to_s)
+      # dup first: force_encoding mutates its receiver and Graph hands back a
+      # frozen string; the FrozenError would leave the message unread forever.
+      parse(text.to_s.dup.force_encoding(Encoding::UTF_8))
     end
 
     def valid? = @errors.empty?

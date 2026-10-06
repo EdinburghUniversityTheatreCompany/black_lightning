@@ -37,11 +37,7 @@ module Admin
         render :new, status: :unprocessable_content
       end
 
-      def import_text
-        return uploaded_file.read.dup.force_encoding(Encoding::UTF_8) if uploaded_file
-
-        params[:pasted_text].to_s
-      end
+      def import_text = uploaded_file ? uploaded_file.read : params[:pasted_text].to_s
 
       # Duck-typed so a crafted string param for :file cannot reach #read.
       def uploaded_file
