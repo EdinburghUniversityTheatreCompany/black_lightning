@@ -103,25 +103,17 @@ module ReimbursementsHelper
   def reimbursements_payment_amount(expense)
     return reimbursements_money(expense.amount) unless expense.international?
 
-    "#{reimbursements_currency_symbol(expense.foreign_currency)}#{number_with_precision(
-      expense.foreign_amount || 0, precision: 2, delimiter: ","
-    )}"
+    currency = expense.foreign_currency.to_s
+    symbol = CURRENCY_SYMBOLS.fetch(currency) { "#{currency} ".lstrip }
+    "#{symbol}#{number_with_precision(expense.foreign_amount || 0, precision: 2, delimiter: ",")}"
   end
 
-  # Only unambiguous symbols: "$" and "kr" each cover several currencies, so those keep
-  # their ISO code ("CAD 500.00").
+  # "$" and "kr" each cover several currencies, so those (and anything unlisted) print
+  # the ISO code and a space: "CAD 500.00".
   CURRENCY_SYMBOLS = { "EUR" => "€", "GBP" => "£", "USD" => "US$", "JPY" => "¥" }.freeze
 
-  # Falls back to the ISO code plus a space ("SEK 12.50").
-  def reimbursements_currency_symbol(currency)
-    CURRENCY_SYMBOLS.fetch(currency.to_s, "#{currency} ".lstrip)
-  end
-
-  # The one "no value" glyph, as reimbursements_date and reimbursements_money print for nil.
-  BLANK_VALUE = "-".freeze
-
   def reimbursements_value(value)
-    value.presence || BLANK_VALUE
+    value.presence || "-"
   end
 
   # Choices for the cost centre of pasted rows that name none, on the Reconcile preview.
