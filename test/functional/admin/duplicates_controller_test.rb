@@ -34,6 +34,18 @@ class Admin::DuplicatesControllerTest < ActionController::TestCase
     assert_select row, text: /No activity recorded/
   end
 
+  test "marking a cached pair as not duplicates removes it from the report" do
+    user1 = FactoryBot.create(:user, first_name: "Anna", last_name: "Smith")
+    user2 = FactoryBot.create(:user, first_name: "Ana", last_name: "Smyth")
+    CachedDuplicate.create!(user1: user1, user2: user2, bucket_type: "no_overlap")
+
+    post :mark_not_duplicate, params: { user_id: user2.id, other_user_id: user1.id }
+    get :index
+
+    assert_equal 0, CachedDuplicate.count
+    assert_empty assigns(:duplicates)[:fuzzy_both_no_overlap]
+  end
+
   test "should mark users as not duplicates and redirect for HTML" do
     user1 = FactoryBot.create(:user, first_name: "John", last_name: "UniqueTestSmith")
     user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "UniqueTestSmith")

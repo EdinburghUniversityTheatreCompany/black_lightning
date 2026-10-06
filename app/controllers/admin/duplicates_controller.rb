@@ -17,6 +17,8 @@ class Admin::DuplicatesController < AdminController
     @user2 = User.find(params[:other_user_id])
 
     @user1.mark_not_duplicate(@user2)
+    low, high = [ @user1.id, @user2.id ].minmax
+    CachedDuplicate.where(user1_id: low, user2_id: high).delete_all
 
     respond_to do |format|
       format.turbo_stream
