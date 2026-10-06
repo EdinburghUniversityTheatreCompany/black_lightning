@@ -1,6 +1,6 @@
 module Display
   module Panels
-    class Credits < Base
+    class Credits
       def initialize(on: Date.current)
         @on = on
       end

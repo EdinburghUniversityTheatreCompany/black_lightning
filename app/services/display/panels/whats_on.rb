@@ -1,6 +1,6 @@
 module Display
   module Panels
-    class WhatsOn < Base
+    class WhatsOn
       # More than fits the frame: the board scrolls the overflow (.display-marquee in
       # display.css), so this caps how long a pass takes, not the screen height.
       ROWS = 12

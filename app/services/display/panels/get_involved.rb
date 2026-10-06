@@ -1,6 +1,6 @@
 module Display
   module Panels
-    class GetInvolved < Base
+    class GetInvolved
       LIMIT = 5
 
       # The website's own empty-state copy, so it is edited in one place.

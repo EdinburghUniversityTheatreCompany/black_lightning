@@ -1,6 +1,6 @@
 module Display
   module Panels
-    class News < Base
+    class News
       # The list is bounded by the space it has, not a count: headlines are set at
       # one size and taken until the space runs out, so a title long enough to wrap
       # crowds out the ones below it. Deliberate: a half-read headline (ellipsis)

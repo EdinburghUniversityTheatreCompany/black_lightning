@@ -3,7 +3,7 @@ module Display
     # Something from the archive that ran on today's date in an earlier year.
     # Event.on_date matches month and day only and skips runs crossing the new
     # year, which Bedlam does not programme.
-    class OnThisDay < Base
+    class OnThisDay
       MAX_RUN_DAYS = 60
 
       def initialize(on: Date.current)

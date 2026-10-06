@@ -1,7 +1,7 @@
 module Display
   module Panels
     # One slot of the EventPool rotation (slots wrap).
-    class NextEvent < Base
+    class NextEvent
       def initialize(slot, on: Date.current)
         @slot = slot
         @on = on
