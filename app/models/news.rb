@@ -95,9 +95,7 @@ class News < ApplicationRecord
       # For new records title_was is nil, so treat any pre-set slug as manually set
       return if old_title.nil?
       # A slug that doesn't derive from the old title was set by hand: keep it.
-      unless slug == old_title || slug.start_with?("#{old_title}-")
-        return
-      end
+      return unless slug == old_title || slug.start_with?("#{old_title}-")
     end
 
     candidate_slug = base_slug
