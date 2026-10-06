@@ -10,7 +10,7 @@ export default class extends Controller {
   #confirmed = false
 
   connect() {
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
+    this.#checkboxes.forEach(checkbox => {
       this.#initialState.set(this.#key(checkbox), checkbox.checked)
     })
   }
@@ -46,6 +46,14 @@ export default class extends Controller {
     this.element.requestSubmit()
   }
 
+  get #checkboxes() {
+    return this.element.querySelectorAll('input[type="checkbox"]:not([disabled])')
+  }
+
+  #changed(checkbox) {
+    return checkbox.checked !== (this.#initialState.get(this.#key(checkbox)) ?? false)
+  }
+
   #key(checkbox) {
     return `${checkbox.name}::${checkbox.value}`
   }
@@ -57,9 +65,8 @@ export default class extends Controller {
   }
 
   #updateHighlights() {
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
-      const changed = checkbox.checked !== (this.#initialState.get(this.#key(checkbox)) ?? false)
-      checkbox.closest("td")?.classList.toggle("permission-changed", changed)
+    this.#checkboxes.forEach(checkbox => {
+      checkbox.closest("td")?.classList.toggle("permission-changed", this.#changed(checkbox))
     })
   }
 
@@ -77,12 +84,9 @@ export default class extends Controller {
   }
 
   #gatherChanges() {
-    const rows = []
-    this.element.querySelectorAll('input[type="checkbox"]:not([disabled])').forEach(checkbox => {
-      const initial = this.#initialState.get(this.#key(checkbox)) ?? false
-      if (checkbox.checked === initial) return
+    const rows = [...this.#checkboxes].filter(checkbox => this.#changed(checkbox)).map(checkbox => {
       const { role, subject, action } = this.#parse(checkbox)
-      rows.push({ role, subject, action, type: checkbox.checked ? "added" : "removed" })
+      return { role, subject, action, type: checkbox.checked ? "added" : "removed" }
     })
     rows.sort((a, b) => a.role.localeCompare(b.role) || a.subject.localeCompare(b.subject) || a.action.localeCompare(b.action))
     return rows
