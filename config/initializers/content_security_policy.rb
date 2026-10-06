@@ -10,12 +10,10 @@ Rails.application.configure do
     # Nothing is loaded from pretix.eu: the shop domain serves the widget's script and stylesheet.
     policy.script_src :self, "https://tickets.bedlamtheatre.co.uk", "https://apis.google.com", :unsafe_inline, :unsafe_eval
     # Allow @vite/client to hot reload javascript changes in development
-    policy.script_src *policy.script_src, :unsafe_eval, "http://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
+    policy.script_src *policy.script_src, "http://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
 
     # The widget's stylesheet comes from the shop; pretix.eu 404s it. See PretixHelper.
     policy.style_src :self, :unsafe_inline, "https://tickets.bedlamtheatre.co.uk"
-    # Allow @vite/client to hot reload style changes in development
-    policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
 
     # Browsers enforce style-src-elem separately for <link> and <style>; the pretix widget's
     # stylesheet (shared/_pretix_widget, lib/pretix.js) needs the shop origin here too.
