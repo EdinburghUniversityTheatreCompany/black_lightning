@@ -39,16 +39,17 @@ module Admin
       def overview
         @title = "Budget overview"
         grouped = store.budgets_by_nominal_code
+        budgets = grouped.values.flatten
         @rollups = grouped.map { |code, group| ::Reimbursements::NominalCodeRollup.new(code, group) }
-        @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, grouped.values.flatten)
-        build_area_rollups(grouped.values.flatten)
+        @grand_total = ::Reimbursements::NominalCodeRollup.new(nil, budgets)
+        build_area_rollups(budgets)
         unattributed = store.unattributed_actuals
         @unattributed_by_code = unattributed.group_by do |actual|
           actual.nominal_code.presence || ::Reimbursements::DatabaseStore::NO_CODE_LABEL
         end
         # Over the same scoped budgets the cards total, so the summary counts
         # only lines the tables show.
-        @over_budget_count = grouped.values.flatten.count(&:over_budget?)
+        @over_budget_count = budgets.count(&:over_budget?)
         # A count beside the net, which is debits less credits and can
         # legitimately be negative.
         @unattributed_count = unattributed.size

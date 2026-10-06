@@ -166,7 +166,7 @@
           <tr class="border-t-2 border-gray-400 font-semibold">
             <td colspan="4" class="py-2 text-right">Total unattributed (debits less credits)</td>
             <td class="py-2 text-right">
-              <%= reimbursements_money(reimbursements_actuals_net(@unattributed_by_code.values.flatten)) %>
+              <%= reimbursements_money(@unattributed_total) %>
             </td>
           </tr>
         </tfoot>
