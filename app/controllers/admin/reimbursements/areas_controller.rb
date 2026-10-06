@@ -6,8 +6,7 @@ module Admin
     # edited inline as nested fields.
     #
     # Model-backed (assigns onto @area and save!s), so the form is simple_form_for
-    # and nests under params[:reimbursements_area]; #area_form_params falls back
-    # to flat params for controller tests.
+    # and nests under params[:reimbursements_area].
     class AreasController < FinanceController
       include ListsClaims
 
@@ -100,12 +99,7 @@ module Admin
         @area = find_or_404(:find_area)
       end
 
-      # A browser post nests under params[:reimbursements_area]; only a
-      # controller test posts flat params.
-      def area_form_params
-        nested = params[:reimbursements_area]
-        nested.present? ? nested : params
-      end
+      def area_form_params = params.require(:reimbursements_area)
 
       # The parsed BigDecimal, never the raw param: AR's to_d would store "£1,200" as 0.
       def area_params

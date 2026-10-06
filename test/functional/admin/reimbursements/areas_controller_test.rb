@@ -66,8 +66,10 @@ module Admin
         person = create_reimbursements_person(name: "Alice", email: "alice@example.com")
 
         assert_difference -> { ::Reimbursements::Area.count }, 1 do
-          post :create, params: { name: "Cogito", initial_budget: "£1,200",
-                                  budget_basis: "net", owner_ids: [ person.record_id ] }
+          post :create, params: { reimbursements_area: {
+            name: "Cogito", initial_budget: "£1,200", budget_basis: "net",
+            owner_ids: [ person.record_id ]
+          } }
         end
 
         area = ::Reimbursements::Area.order(:id).last
@@ -87,8 +89,7 @@ module Admin
         area = create_reimbursements_area(name: "Cogito")
         area.sync_owner_ids!([ alice.id, bob.id ])
 
-        patch :update, params: { id: area.record_id, name: "Cogito",
-                                 owner_ids: [ alice.record_id ] }
+        patch_area area, owner_ids: [ alice.record_id ]
 
         assert_equal [ alice.record_id ], area.reload.owner_ids
       end
@@ -96,7 +97,7 @@ module Admin
       test "the form switches an area between a spend cap and a net allowance" do
         area = create_reimbursements_area(name: "Committee")
 
-        patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "net" }
+        patch_area area, budget_basis: "net"
 
         assert_equal "net", area.reload.budget_basis
       end
@@ -105,7 +106,7 @@ module Admin
         # save! would raise on the inclusion validation and 500 the form.
         area = create_reimbursements_area(name: "Committee", budget_basis: "net")
 
-        patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "gross" }
+        patch_area area, budget_basis: "gross"
 
         assert_response :redirect
         assert_equal "net", area.reload.budget_basis
@@ -113,7 +114,7 @@ module Admin
 
       test "rejects a blank name" do
         assert_no_difference -> { ::Reimbursements::Area.count } do
-          post :create, params: { name: "" }
+          post :create, params: { reimbursements_area: { name: "" } }
         end
 
         assert_response :unprocessable_entity
@@ -139,9 +140,8 @@ module Admin
         area = create_reimbursements_area(name: "Cogito", financial_year: year, cost_centre: centre)
 
         assert_difference -> { ::Reimbursements::Budget.count }, 1 do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320" } }
+          patch_area area, budgets_attributes: {
+            "0" => { name: "Cogito: Marketing", nominal_code: "432320" }
           }
         end
 
@@ -159,10 +159,8 @@ module Admin
         line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
                                             area: area)
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito Autumn",
-          budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "" } }
-        }
+        patch_area area, name: "Cogito Autumn",
+                         budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "" } }
 
         assert_redirected_to edit_admin_reimbursements_area_path(area.record_id)
         assert_equal "Cogito Autumn", area.reload.name
@@ -174,11 +172,8 @@ module Admin
       test "an untouched Add budget line row is dropped rather than 500ing the form" do
         area = create_reimbursements_area(name: "Cogito")
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "", nominal_code: "",
-                                         budget_type: "Expense", initial_budget: "" } }
-        }
+        patch_area area, budgets_attributes: { "0" => { name: "", nominal_code: "",
+                                                        budget_type: "Expense", initial_budget: "" } }
 
         assert_redirected_to edit_admin_reimbursements_area_path(area.record_id)
         assert_empty area.reload.budgets
@@ -190,10 +185,7 @@ module Admin
                                             area: area)
 
         assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { id: line.id, area_id: "" } }
-          }
+          patch_area area, budgets_attributes: { "0" => { id: line.id, area_id: "" } }
         end
 
         assert_nil line.reload.area_id
@@ -220,8 +212,7 @@ module Admin
           { name: "Marketing", nominal_code: "432320", budget_type: "Nonsense" } => /valid budget type/
         }.each do |row, message|
           assert_no_difference -> { ::Reimbursements::Budget.count } do
-            patch :update, params: { id: area.record_id, name: "Cogito",
-                                     budgets_attributes: { "0" => row } }
+            patch_area area, budgets_attributes: { "0" => row }
           end
 
           assert_response :unprocessable_entity, row.inspect
@@ -234,11 +225,8 @@ module Admin
       test "a nested budget row cannot carry fields the form does not render" do
         area = create_reimbursements_area(name: "Cogito")
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320",
-                                         active: "0", cost_centre_id: "999" } }
-        }
+        patch_area area, budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320",
+                                                        active: "0", cost_centre_id: "999" } }
 
         budget = area.reload.budgets.last
         assert budget.active, "a field the form never renders must not be writable through it"
@@ -248,11 +236,8 @@ module Admin
       test "a new nested row takes its type and a parsed initial budget" do
         area = create_reimbursements_area(name: "Cogito")
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "Ticket income", nominal_code: "301000",
-                                         budget_type: "Income", initial_budget: "£1,200" } }
-        }
+        patch_area area, budgets_attributes: { "0" => { name: "Ticket income", nominal_code: "301000",
+                                                        budget_type: "Income", initial_budget: "£1,200" } }
 
         budget = area.reload.budgets.last
         assert_equal "Income", budget.budget_type
@@ -267,11 +252,8 @@ module Admin
         budget = create_reimbursements_budget(name: "Marketing", area: area,
                                               initial_budget: BigDecimal("800"))
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { id: budget.id, name: "Marketing",
-                                         nominal_code: "432320", initial_budget: "" } }
-        }
+        patch_area area, budgets_attributes: { "0" => { id: budget.id, name: "Marketing",
+                                                        nominal_code: "432320", initial_budget: "" } }
 
         assert_equal BigDecimal("800"), budget.reload.initial_budget
       end
@@ -279,13 +261,18 @@ module Admin
       test "a blank amount on a new line leaves it with no plan rather than a £0 one" do
         area = create_reimbursements_area(name: "Cogito")
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
-                                         initial_budget: "" } }
-        }
+        patch_area area, budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
+                                                        initial_budget: "" } }
 
         assert_nil area.reload.budgets.last.initial_budget
+      end
+
+      private
+
+      # Posts fields nested under reimbursements_area, as simple_form_for does.
+      def patch_area(area, **fields)
+        patch :update, params: { id: area.record_id,
+                                 reimbursements_area: { name: area.name, **fields } }
       end
     end
   end
