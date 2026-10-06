@@ -1,0 +1,7 @@
+<%# locals: (call:) %>
+<h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
+<small class="text-gray-500">
+  Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+  &middot;
+  Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+</small>

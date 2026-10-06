@@ -1,7 +1,6 @@
 <%# locals: () %>
 
 <% can_act = can_act_on_proposals(@proposals) %>
-<% redirect_param = { redirect_to: admin_proposals_call_proposals_path(@call) } %>
 
 <% headers = [:show_title] %>
 <% headers << "Actions" if can_act %>
