@@ -94,11 +94,10 @@ module Reimbursements
     # reminder to the wrong centre is visible and correctable, one to nobody
     # leaves a producer waiting. Prefer the wrong reminder over silence.
     def claims_by_cost_centre_id
-      return @claims_by_cost_centre_id if defined?(@claims_by_cost_centre_id)
-
-      default_id = CostCentre.default&.id
-      @claims_by_cost_centre_id =
+      @claims_by_cost_centre_id ||= begin
+        default_id = CostCentre.default&.id
         store.expenses.group_by { |expense| expense.budget&.cost_centre_id || default_id }
+      end
     end
 
     # --- Stale pending reminder -------------------------------------------
