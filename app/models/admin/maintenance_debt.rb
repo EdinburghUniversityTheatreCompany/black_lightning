@@ -58,17 +58,9 @@ class Admin::MaintenanceDebt < ApplicationRecord
     where(state: 0).where.missing(:maintenance_credit)
   end
 
-  def self.unfulfilled_before_date(on_date)
-    where(state: :normal)
-      .where.missing(:maintenance_credit)
-      .where("due_by < ?", on_date)
-  end
+  def self.unfulfilled_before_date(on_date) = unfulfilled.where(due_by: ...on_date)
 
-  def self.unfulfilled_after_date(from_date)
-    where(state: :normal)
-      .where.missing(:maintenance_credit)
-      .where("due_by >= ?", from_date)
-  end
+  def self.unfulfilled_after_date(from_date) = unfulfilled.where(due_by: from_date..)
 
   # See above for an explanation.
   def unfulfilled?
