@@ -17,10 +17,6 @@ module Climate
     UNIT_PATTERNS = { UNIT_CELSIUS => /celsius|centigrade|\(\s*c\s*\)|°\s*c\b/,
                       UNIT_FAHRENHEIT => /fahrenheit|\(\s*f\s*\)|°\s*f\b/ }.freeze
 
-    TIMESTAMP_KEYWORDS = %w[timestamp time date].freeze
-    TEMPERATURE_KEYWORDS = %w[temp].freeze
-    HUMIDITY_KEYWORDS = %w[humid].freeze
-
     MAX_ROWS = 200_000 # a 2-year export at 1-minute sampling is ~1M; refuse beyond sanity
 
     attr_reader :rows, :errors, :skipped, :unit
@@ -33,7 +29,7 @@ module Climate
       parse(text.to_s)
     end
 
-    def valid? = @errors.empty? && @rows.any?
+    def valid? = @errors.empty?
 
     private
 
@@ -57,20 +53,16 @@ module Climate
     def parse_table(body)
       first_line = body.each_line.first.to_s
       delimiter = first_line.count("\t") > first_line.count(",") ? "\t" : ","
-      table = CSV.parse(body, col_sep: delimiter, skip_blanks: true)
-      return table if table.size > 1
-
-      @errors << "That file has headers but no readings."
-      nil
+      CSV.parse(body, col_sep: delimiter, skip_blanks: true)
     rescue CSV::MalformedCSVError => e
       @errors << "That file could not be read as CSV (#{e.message})."
       nil
     end
 
     def locate_columns(headers)
-      @time_index = find_column(headers, TIMESTAMP_KEYWORDS)
-      @temp_index = find_column(headers, TEMPERATURE_KEYWORDS)
-      @humidity_index = find_column(headers, HUMIDITY_KEYWORDS)
+      @time_index = find_column(headers, %w[time date])
+      @temp_index = find_column(headers, %w[temp])
+      @humidity_index = find_column(headers, %w[humid])
 
       @errors << "No timestamp column found." if @time_index.nil?
       @errors << "No temperature column found." if @temp_index.nil?
