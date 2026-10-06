@@ -203,13 +203,12 @@ module Reimbursements
       assert_not person.reload.verified?
     end
 
-    test "actuals: create with linked ids, per-period lookup, and linking" do
+    test "actuals: create, per-period lookup, and linking" do
       expense = Expense.create!(status: Status::PAID)
       budget = Budget.create!(name: "Props")
 
       actual = store.create_actual!(nominal_code: "4000", narrative: "BACS", debit: 10,
-                                    period: "P1", linked_expense_ids: [ expense.record_id ],
-                                    linked_budget_ids: [])
+                                    period: "P1", expense_id: expense.id)
       assert_equal [ expense.record_id ], actual.linked_expense_ids
       assert_empty actual.linked_budget_ids
 

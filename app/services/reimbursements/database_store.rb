@@ -4,8 +4,8 @@ module Reimbursements
   # request or job run), so repeated reads in one render cost one query.
   #
   # Writers take the attribute vocabulary (person_record_id/budget_record_id/batch_id strings,
-  # arrays for sharepoint_receipt_urls and linked_*_ids); nil values are dropped so email-in
-  # claims can be created with gaps.
+  # an array for sharepoint_receipt_urls); nil values are dropped so email-in claims can be
+  # created with gaps.
   class DatabaseStore
     # Raised instead of removing an expense's last receipt (drafts excepted).
     class LastReceiptError < StandardError; end
@@ -632,14 +632,14 @@ module Reimbursements
     end
 
     def create_batch!(attrs)
-      batch = Batch.create!(batch_columns(attrs))
+      batch = Batch.create!(attrs.compact)
       bust_batches!
       batch
     end
 
     def update_batch!(record_id, attrs)
       batch = Batch.find(record_id)
-      batch.update!(batch_columns(attrs))
+      batch.update!(attrs.compact)
       bust_batches!
       batch
     end
@@ -702,8 +702,7 @@ module Reimbursements
     end
 
     def create_actual!(attrs)
-      actual = EusaActual.create!(actual_columns(attrs)
-                                    .reverse_merge(financial_year: FinancialYear.current))
+      actual = EusaActual.create!(attrs.compact.reverse_merge(financial_year: FinancialYear.current))
       bust_eusa_actuals!
       actual
     end
@@ -987,26 +986,9 @@ module Reimbursements
 
     # Drops nils (email-in gaps) and joins the sharepoint URL array into its newline column.
     def expense_columns(attrs)
-      attrs.compact.each_with_object({}) do |(key, value), columns|
-        case key
-        when :person_record_id, :budget_record_id then columns[EXPENSE_KEY_MAP.fetch(key)] = value
-        when :sharepoint_receipt_urls then columns[key] = Array(value).join("\n")
-        else columns[key] = value
-        end
-      end
-    end
-
-    def batch_columns(attrs)
-      attrs.compact
-    end
-
-    def actual_columns(attrs)
-      attrs.compact.each_with_object({}) do |(key, value), columns|
-        case key
-        when :linked_expense_ids then columns[:expense_id] = Array(value).first
-        when :linked_budget_ids then columns[:budget_id] = Array(value).first
-        else columns[key] = value
-        end
+      attrs.compact.to_h do |key, value|
+        value = Array(value).join("\n") if key == :sharepoint_receipt_urls
+        [ EXPENSE_KEY_MAP.fetch(key, key), value ]
       end
     end
 
