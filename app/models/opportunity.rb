@@ -98,10 +98,7 @@ class Opportunity < ApplicationRecord
   # EUTC companies first, then by expiry. Orders on opportunities columns only, so it stays valid
   # with SELECT DISTINCT (the department filter joins roles).
   scope :eutc_first, -> {
-    ids = Company.where(internal: true).ids
-    return reorder("expiry_date ASC") if ids.empty?
-
-    reorder(Arel.sql("CASE WHEN opportunities.company_id IN (#{ids.join(',')}) THEN 0 ELSE 1 END, expiry_date ASC"))
+    reorder(Arel.sql("CASE WHEN opportunities.company_id IN (SELECT id FROM companies WHERE internal) THEN 0 ELSE 1 END, expiry_date ASC"))
   }
 
   def self.ransackable_attributes(auth_object = nil)
