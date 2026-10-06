@@ -70,12 +70,23 @@ class Admin::MembershipImportsController < AdminController
     row = item["row"].with_indifferent_access
     case action
     when "activate"
-      activate_user(User.find_by(id: item["existing_user_id"]), row, results)
+      user = User.find_by(id: item["existing_user_id"])
+      return results[:errors] << "User not found for activation" unless user
+
+      fill_blanks(user, row)
+      activate(user)
+      results[:activated] += 1
     when "create"
-      create_and_activate_user(row, results)
+      activate(create_user_from_row(row))
+      results[:created] += 1
     when /\Amerge_(\d+)\z/
       # a candidate picked from a multi-candidate fuzzy match
-      merge_and_activate(User.find_by(id: $1.to_i), row, results)
+      user = User.find_by(id: $1.to_i)
+      return results[:errors] << "User not found for merge" unless user
+
+      fill_blanks(user, row, names: true)
+      activate(user)
+      results[:merged] += 1
     else
       results[:skipped] += 1
     end
@@ -83,84 +94,28 @@ class Admin::MembershipImportsController < AdminController
     results[:errors] << "Error processing #{row[:original_name]}: #{e.message}"
   end
 
-  def activate_user(user, row, results)
-    return results[:errors] << "User not found for activation" unless user
-
-    update_email_if_unknown(user, row[:email])
-    update_ids_if_missing(user, row)
-    user.add_role(:member)
-    user.send_welcome_email
-    @synced_user_ids << user.id
-    results[:activated] += 1
-  end
-
-  def create_and_activate_user(row, results)
-    email = row[:email].presence || generate_unknown_email
-
-    user = User.new_user(
-      email: email,
-      first_name: row[:first_name],
-      last_name: row[:last_name],
-      student_id: row[:student_id],
-      associate_id: row[:associate_id]
-    )
-
-    if user.save
+  def activate(user)
+    unless user.member?
       user.add_role(:member)
       user.send_welcome_email
-      @synced_user_ids << user.id
-      results[:created] += 1
-    else
-      results[:errors] << "Failed to create #{row[:original_name]}: #{user.errors.full_messages.join(', ')}"
-    end
-  end
-
-  def merge_and_activate(existing_user, row, results)
-    return results[:errors] << "User not found for merge" unless existing_user
-
-    update_email_if_unknown(existing_user, row[:email])
-    update_ids_if_missing(existing_user, row)
-
-    if existing_user.first_name.blank? && row[:first_name].present?
-      existing_user.update(first_name: row[:first_name])
-    end
-    if existing_user.last_name.blank? && row[:last_name].present?
-      existing_user.update(last_name: row[:last_name])
-    end
-
-    unless existing_user.member?
-      existing_user.add_role(:member)
-      existing_user.send_welcome_email
     end
 
     # Collected even when the role was already held: the placeholder email may have
     # been rewritten, and pretix matches on email.
-    @synced_user_ids << existing_user.id
-    results[:merged] += 1
+    @synced_user_ids << user.id
   end
 
-  def update_email_if_unknown(user, new_email)
-    return unless new_email.present?
-    return unless user.email.match?(/\Aunknown_.*@bedlamtheatre\.co\.uk\z/)
+  # One update per attribute, so a failing write (an email already taken) does not block the rest.
+  def fill_blanks(user, row, names: false)
+    user.update(email: row[:email]) if row[:email].present? && user.email.match?(/\Aunknown_.*@bedlamtheatre\.co\.uk\z/)
 
-    user.update(email: new_email)
-  end
-
-  def update_ids_if_missing(user, row)
-    user.update(student_id: row[:student_id]) if row[:student_id].present? && user.student_id.blank?
-    user.update(associate_id: row[:associate_id]) if row[:associate_id].present? && user.associate_id.blank?
-  end
-
-  def generate_unknown_email
-    "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk"
+    (%i[student_id associate_id] + (names ? %i[first_name last_name] : [])).each do |attribute|
+      user.update(attribute => row[attribute]) if row[attribute].present? && user[attribute].blank?
+    end
   end
 
   def format_results(results)
-    parts = []
-    parts << "#{results[:activated]} activated" if results[:activated] > 0
-    parts << "#{results[:created]} created" if results[:created] > 0
-    parts << "#{results[:merged]} merged" if results[:merged] > 0
-    parts << "#{results[:skipped]} skipped" if results[:skipped] > 0
+    parts = results.slice(:activated, :created, :merged, :skipped).filter_map { |key, count| "#{count} #{key}" if count.positive? }
 
     message = "Import complete: #{parts.join(', ')}"
     message += ". Errors: #{results[:errors].join('; ')}" if results[:errors].any?
