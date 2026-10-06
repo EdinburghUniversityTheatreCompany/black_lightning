@@ -14,8 +14,8 @@
                   download_admin_reimbursements_export_path(request.query_parameters),
                   class: btn_classes(:primary) %>
       <span class="text-sm text-gray-600">
-        <%= @store_label = [ selected_financial_year&.label || "Every year",
-                             selected_cost_centre&.name || "every cost centre" ].join(" · ") %>
+        <%= [ selected_financial_year&.label || "Every year",
+              selected_cost_centre&.name || "every cost centre" ].join(" · ") %>
       </span>
     </div>
   <% end %>
