@@ -55,11 +55,8 @@ class Admin::MembershipImportsController < AdminController
     results = { activated: 0, created: 0, merged: 0, skipped: 0, errors: [] }
     @synced_user_ids = []
 
-    categorized.each do |bucket, items|
-      items.each do |item|
-        action = determine_action(bucket, item["index"], actions)
-        process_item(item, action, results)
-      end
+    categorized.values.flatten.each do |item|
+      process_item(item, actions[item["index"].to_s], results)
     end
 
     # One enqueue for the whole import: a row can activate a user AND rewrite their
@@ -67,24 +64,6 @@ class Admin::MembershipImportsController < AdminController
     Pretix::SyncMembershipJob.enqueue_for(@synced_user_ids)
 
     results
-  end
-
-  def determine_action(bucket, index, actions)
-    explicit_action = actions[index.to_s]
-    return explicit_action if explicit_action.present?
-
-    case bucket.to_sym
-    when :already_active
-      "skip"
-    when :activate_by_id, :activate_by_email
-      "activate"
-    when :propose_merge
-      "skip" # needs an explicit decision
-    when :create_new
-      "create"
-    else
-      "skip"
-    end
   end
 
   def process_item(item, action, results)
@@ -97,7 +76,7 @@ class Admin::MembershipImportsController < AdminController
     when /\Amerge_(\d+)\z/
       # a candidate picked from a multi-candidate fuzzy match
       merge_and_activate(User.find_by(id: $1.to_i), row, results)
-    when "skip"
+    else
       results[:skipped] += 1
     end
   rescue StandardError => e
