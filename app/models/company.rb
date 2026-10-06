@@ -33,7 +33,6 @@ class Company < ApplicationRecord
   normalizes :instagram, with: ->(value) { value&.strip&.delete_prefix("@").presence }
 
   scope :internal_first, -> { order(internal: :desc, name: :asc) }
-  scope :unreviewed, -> { where(reviewed: false) }
 
   # The new record is saved by belongs_to autosave when the parent opportunity is saved.
   def self.find_or_build_by_name(name)
