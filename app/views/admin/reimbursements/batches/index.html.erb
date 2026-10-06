@@ -17,12 +17,10 @@
 </div>
 
 <%
-  # So an operator can clear a handled alert instead of waiting out the
-  # seven-day window with a red banner on screen.
-  # An attempt's messages, blank lines dropped, as both branches below need
-  # them counted before they are rendered.
   attempt_messages = ->(attempt) { attempt.error_messages.to_s.split("\n").reject(&:blank?) }
 
+  # So an operator can clear a handled alert instead of waiting out the
+  # seven-day window with a red banner on screen.
   dismiss_button = lambda do |attempt|
     next unless attempt.dismissible?
 
