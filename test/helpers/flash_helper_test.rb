@@ -1,16 +1,6 @@
 require "test_helper"
 
 class FlashHelperTest < ActionView::TestCase
-  test "swal_alert_info" do
-    assert_equal "error", swal_alert_info(:alert)
-    assert_equal "error", swal_alert_info(:error)
-    assert_equal "success", swal_alert_info(:success)
-    assert_equal "success", swal_alert_info(:notice)
-    assert_equal "warning", swal_alert_info(:warning)
-    assert_equal "info",  swal_alert_info(:info)
-    assert_equal "info",  swal_alert_info(:pineapple), "Info is not the default value for unspecified keys"
-  end
-
   test "append to flash" do
     assert_nil flash[:error]
 

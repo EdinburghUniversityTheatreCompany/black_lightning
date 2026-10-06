@@ -1,20 +1,6 @@
 module FlashHelper
   include FormattingHelper
 
-  def swal_alert_info(key)
-    case key.to_sym
-    when :error, :alert
-      "error"
-    # Notice is only really used by devise, and only for success messages.
-    when :success, :notice
-      "success"
-    when :warning
-      "warning"
-    else
-      "info"
-    end
-  end
-
   # Adds a message to the flash hash, ensuring that it is an array, and that every message occurs only once.
   def append_to_flash(key, message)
     if flash[key].blank?
@@ -59,7 +45,7 @@ module FlashHelper
   # re-rendered page cannot replay it.
   def flash_alerts_for_script
     standardise_flash
-    alert_hash = flash_as_alert_hash.to_h
+    alert_hash = flash_as_alert_hash
     flash.discard
     alert_hash
   end
