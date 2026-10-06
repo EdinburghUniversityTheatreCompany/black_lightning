@@ -1,12 +1,7 @@
 module Climate
   ##
-  # Dew point from temperature + relative humidity, by the Magnus formula.
-  # Condensation forms at or below it, so "temperature minus dew point" is the
-  # damp-risk margin this whole feature exists to watch.
-  #
-  # Coefficients are Alduchov & Eskridge (1996), max error about 0.1 °C over
-  # -40..+50 °C, better than the older Tetens 17.27/237.7 pair at the cold, damp
-  # end we care about.
+  # Dew point from temperature and relative humidity, by the Magnus formula with
+  # Alduchov & Eskridge (1996) coefficients (max error ~0.1 °C over -40..+50 °C).
   module DewPoint
     A = 17.625
     B = 243.04 # °C
@@ -21,8 +16,7 @@ module Climate
       humidity = relative_humidity.to_f
       return nil unless humidity.positive?
 
-      # Above 100 % is miscalibration, not supersaturated air. Clamping keeps
-      # the guarantee every consumer relies on: Td <= T.
+      # Above 100 % is miscalibration; clamping keeps Td <= T, which consumers rely on.
       humidity = 100.0 if humidity > 100.0
 
       temperature = temperature_c.to_f

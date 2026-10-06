@@ -11,10 +11,8 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
     fake
   end
 
-  # Strictly historical hours. A window running up to "now" would have its last
-  # row dropped by the future-row guard, which is correct behaviour but makes
-  # the row arithmetic in these tests confusing. That guard has its own test in
-  # reading_ingest_test.rb.
+  # Strictly historical hours, so the future-row guard (tested in
+  # reading_ingest_test) does not confuse the row arithmetic.
   def rows(count: 4)
     from = (count + 1).hours.ago.change(min: 0)
     Array.new(count) do |index|
@@ -96,8 +94,7 @@ class Climate::OutdoorPollJobTest < ActiveSupport::TestCase
   end
 
   test "a failure is not reported while the outdoor line is still current" do
-    # Open-Meteo's free tier sheds load with the odd 503 and the next successful
-    # poll re-serves the window, so one failure is nothing to wake anybody for.
+    # The free tier sheds load with the odd 503, and the next poll re-serves the window.
     sensor = outdoor_climate_sensor
     create_climate_reading(sensor: sensor, recorded_at: 1.hour.ago)
     use_source(ClimateTestHelpers::FakeOutdoorSource.new(rows: Climate::OpenMeteoClient::Error.new("503")))

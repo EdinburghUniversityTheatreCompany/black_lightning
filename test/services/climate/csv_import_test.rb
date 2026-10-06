@@ -1,9 +1,8 @@
 require "test_helper"
 
 class Climate::CsvImportTest < ActiveSupport::TestCase
-  # Byte-for-byte the shape Govee Home emails, including the UTF-8 BOM, the
-  # sample-frequency prose in the timestamp header, and the stray space after
-  # the first comma.
+  # The shape Govee Home emails: UTF-8 BOM, sampling prose in the timestamp
+  # header, stray space after the first comma.
   REAL_EXPORT = "﻿Timestamp for sample frequency every 15 min min, Temperature_Celsius,Relative_Humidity\n" \
                 "2026-08-06 09:22:00,24.6,53.7\n" \
                 "2026-08-06 09:37:00,20,63.4\n" \
@@ -38,21 +37,17 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
   end
 
   test "strips the byte order mark so the first header is readable" do
-    # Without stripping it the first header reads "﻿Timestamp…" and the
-    # timestamp column is never found.
+    # Unstripped, the BOM makes the first header unmatchable.
     assert_predicate import(REAL_EXPORT), :valid?
     assert_equal Climate::CsvImport::UNIT_CELSIUS, import(REAL_EXPORT).unit
   end
-
-  # --- units -----------------------------------------------------------------
 
   test "detects Celsius from the header" do
     assert_equal Climate::CsvImport::UNIT_CELSIUS, import(REAL_EXPORT).unit
   end
 
   test "detects Fahrenheit from the header and converts to Celsius" do
-    # The export names whatever unit the APP is set to display, which is the
-    # whole reason this is read rather than assumed.
+    # The export names whatever unit the app displays, hence read, not assumed.
     text = "Timestamp,Temperature_Fahrenheit,Relative_Humidity\n2026-08-06 09:22:00,53.6,53.7\n"
     result = import(text)
 
@@ -69,16 +64,13 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
   end
 
   test "refuses a file whose temperature unit it cannot identify" do
-    # Guessing here is exactly the mistake the old verify-the-unit flow existed
-    # to prevent; refusing is the safe direction.
+    # Refusing is the safe direction: a guessed unit stores Fahrenheit as Celsius.
     text = "Timestamp,Temperature,Relative_Humidity\n2026-08-06 09:22:00,24.6,53.7\n"
     result = import(text)
 
     assert_not result.valid?
     assert_match(/unit/i, result.errors.first)
   end
-
-  # --- structure -------------------------------------------------------------
 
   test "refuses a file with no timestamp column" do
     text = "Temperature_Celsius,Relative_Humidity\n24.6,53.7\n"

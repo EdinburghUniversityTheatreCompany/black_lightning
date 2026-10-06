@@ -1,11 +1,7 @@
-# Builders and fakes for the climate monitor tests: database seed helpers for
-# sensors and readings, permission grants, and fake external clients (Govee,
-# outdoor weather). External services are always faked through the +http:+ or
-# builder seams — this suite has no mocking library.
+# Seed helpers, permission grants and the outdoor-weather fake for the climate
+# tests. External services are faked through the +http:+ or builder seams.
 module ClimateTestHelpers
   include HoneybadgerTestHelpers
-
-  # --- Database seed helpers -------------------------------------------------
 
   def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,
                             placement: Climate::Sensor::PLACEMENT_INDOOR,
@@ -18,7 +14,6 @@ module ClimateTestHelpers
     )
   end
 
-  # The one outdoor row, through the same ensure the poll job uses.
   def outdoor_climate_sensor = Climate::Sensor.outdoor_source!
 
   def create_climate_reading(sensor:, recorded_at: Time.current, temperature_c: 12.0,
@@ -36,9 +31,6 @@ module ClimateTestHelpers
     )
   end
 
-  # --- Permission grants -----------------------------------------------------
-
-  # :read, :climate — sees the dashboard, cannot touch sensor configuration.
   def grant_climate_read_permission(user)
     role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
       r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
@@ -47,8 +39,8 @@ module ClimateTestHelpers
     role
   end
 
-  # :manage, :climate — CanCan's :manage matches any action, so this implies
-  # :read as well; the tests assert that rather than granting both.
+  # CanCan's :manage matches any action, so this implies :read; tests assert
+  # that rather than granting both.
   def grant_climate_manage_permission(user)
     role = ::Role.find_by(name: "Climate Manager") || ::Role.create!(name: "Climate Manager").tap do |r|
       r.permissions << Admin::Permission.create(action: "manage", subject_class: "climate")
@@ -56,8 +48,6 @@ module ClimateTestHelpers
     user.add_role("Climate Manager")
     role
   end
-
-  # --- Fake external clients -------------------------------------------------
 
   # Stands in for Climate::OpenMeteoClient.
   class FakeOutdoorSource

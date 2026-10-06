@@ -3,8 +3,6 @@ require "test_helper"
 class Climate::ReadingIngestTest < ActiveSupport::TestCase
   include ClimateTestHelpers
 
-  # --- window upsert ---------------------------------------------------------
-
   def outdoor_rows(count: 3, from: Time.zone.parse("2026-08-06 10:00"), temperature: 17.0)
     Array.new(count) do |index|
       { recorded_at: from + index.hours, temperature_c: temperature + index,
@@ -44,7 +42,6 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   test "a re-run after a gap backfills the missing hours" do
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows(count: 5))
-    # Simulate an outage having lost the middle of the window.
     sensor.readings.chronological.to_a[1..2].each(&:destroy)
 
     assert_equal 3, sensor.readings.count
@@ -72,7 +69,6 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "skips an implausible outdoor row without losing the rest of the window" do
-    # One bad row must not cost us the other 71.
     sensor = outdoor_climate_sensor
     rows = outdoor_rows(count: 3)
     rows[1] = rows[1].merge(temperature_c: 900.0)

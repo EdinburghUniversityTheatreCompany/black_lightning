@@ -1,6 +1,5 @@
 <%# locals: (url:, method:, submit_label:, title:, intro:) %>
-<%# The whole card, so Save and Cancel sit in the card footer as they do on
-    every other admin form. `intro` is the caller's captured explanation. %>
+<%# The card sits inside the form so the footer's Save and Cancel stay inside it. %>
 <%= simple_form_for @sensor, url: url, method: method, as: :climate_sensor do |f| %>
   <%= render CardComponent.new(title: title) do |card| %>
     <% card.with_footer do %>

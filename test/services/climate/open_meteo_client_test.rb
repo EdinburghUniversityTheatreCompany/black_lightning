@@ -34,8 +34,8 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
   end
 
   test "parses timestamps in the application zone, not UTC" do
-    # It returns naive local wall-clock strings; reading them as UTC would shift
-    # every outdoor point an hour through BST.
+    # Naive local wall-clock strings; reading them as UTC would shift every
+    # outdoor point an hour through BST.
     client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00" ],
                                                 temperatures: [ 17.6 ], humidities: [ 68 ],
                                                 dew_points: [ 11.6 ]) ] ])
@@ -63,7 +63,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
   end
 
   test "needs no api key" do
-    # Nothing to configure, so no environment can be half set up.
     client, http = build_client([ [ 200, series_body ] ])
 
     client.hourly_series(latitude: 55.9467, longitude: -3.1903)
@@ -72,7 +71,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
   end
 
   test "past_days is what makes an outage self-heal" do
-    # Each poll re-serves the last N days, so a gap fills itself.
     client, http = build_client([ [ 200, series_body ] ])
 
     client.hourly_series(latitude: 55.9467, longitude: -3.1903, past_days: 7)

@@ -1,10 +1,8 @@
 module Climate
   ##
-  # The dashboard's URL state: +?from=2026-08-01&to=2026-08-06+.
-  #
-  # An unusable range is clamped and SAID SO (the controller flashes it) rather
-  # than silently rendering a different range as though it were the one asked
-  # for, as the reimbursements year selector does when it falls back.
+  # The dashboard's URL state: +?from=2026-08-01&to=2026-08-06+. An unusable
+  # range is clamped and SAID SO (the controller flashes it), never silently
+  # rendered as a different range.
   class DateRange
     DEFAULT_DAYS = 7
     MAX_DAYS = 366
@@ -13,8 +11,7 @@ module Climate
 
     # Either may be absent: a bare /admin/climate means the last week. That
     # default is deliberately NOT written back into the URL, so the clean link
-    # keeps meaning "recent" while the presets emit explicit dates and keep
-    # meaning the same thing tomorrow.
+    # keeps meaning "recent" while the presets emit explicit dates.
     def self.from_params(params)
       to = parse_date(params[:to]) || Date.current
       from = parse_date(params[:from]) || (to - (DEFAULT_DAYS - 1).days)

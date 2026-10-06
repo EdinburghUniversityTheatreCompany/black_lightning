@@ -7,9 +7,8 @@ class Climate::DewPointTest < ActiveSupport::TestCase
   end
 
   test "equals the temperature at 100 percent relative humidity" do
-    # Saturated air is at its own dew point, by definition. That is the formula's
-    # one exactly-known fixed point, so it is the sharpest check on the
-    # coefficients.
+    # Saturated air is at its own dew point: the formula's one exactly-known fixed
+    # point, so the sharpest check on the coefficients.
     assert_in_delta 12.0, Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 100), 0.01
   end
 
@@ -26,10 +25,9 @@ class Climate::DewPointTest < ActiveSupport::TestCase
 
   test "handles sub-zero temperatures" do
     # γ = ln(0.75) + (17.625 × -5)/(243.04 - 5) = -0.65787; Td = 243.04γ/(17.625 - γ) = -8.75.
-    # These are the water coefficients throughout. Below freezing the physically
-    # distinct quantity is the frost point, but every weather source we compare
-    # against (Open-Meteo included) reports dew point over water, so matching it
-    # keeps the indoor and outdoor lines on the same scale.
+    # Water coefficients throughout: below freezing the frost point is the
+    # physically distinct quantity, but weather sources (Open-Meteo included)
+    # report dew point over water, so this keeps indoor and outdoor on one scale.
     assert_in_delta(-8.75, Climate::DewPoint.celsius(temperature_c: -5, relative_humidity: 75), 0.05)
   end
 
@@ -44,8 +42,7 @@ class Climate::DewPointTest < ActiveSupport::TestCase
   end
 
   test "treats a humidity above 100 as saturated instead of going above the temperature" do
-    # A sensor reporting 101 % is miscalibrated, not reporting supersaturated air;
-    # clamping keeps dew point <= temperature, which every consumer assumes.
+    # 101 % is a miscalibrated sensor; clamping keeps dew point <= temperature.
     assert_in_delta 12.0, Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 101), 0.01
   end
 

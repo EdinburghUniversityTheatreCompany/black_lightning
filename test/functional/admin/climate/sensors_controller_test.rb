@@ -30,7 +30,6 @@ module Admin
         viewer
       end
 
-      # --- index -----------------------------------------------------------
 
       test "lists the sensors" do
         create_climate_sensor(display_name: "Crypt north")
@@ -49,7 +48,6 @@ module Admin
         assert_response :success
       end
 
-      # --- create ----------------------------------------------------------
 
       test "creates a sensor" do
         assert_difference -> { ::Climate::Sensor.count }, 1 do
@@ -65,8 +63,7 @@ module Admin
       end
 
       test "a form cannot smuggle in a second outdoor feed" do
-        # source and placement are controller-set. A second "outdoor" row would
-        # be polled by nothing and would sit dead on the dashboard.
+        # A second "outdoor" row would be polled by nothing.
         post :create, params: { climate_sensor: { display_name: "Fake outside",
                                                   source: "open_meteo", placement: "outdoor" } }
         sensor = ::Climate::Sensor.order(:id).last
@@ -93,7 +90,6 @@ module Admin
         assert_response :forbidden
       end
 
-      # --- update ----------------------------------------------------------
 
       test "updates the operator-owned fields" do
         sensor = create_climate_sensor
@@ -135,7 +131,6 @@ module Admin
         assert_not_equal "Hijacked", sensor.reload.display_name
       end
 
-      # --- destroy ---------------------------------------------------------
 
       test "deleting a sensor takes its readings with it" do
         sensor = create_climate_sensor

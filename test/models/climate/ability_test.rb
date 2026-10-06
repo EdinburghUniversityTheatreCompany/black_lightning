@@ -1,8 +1,6 @@
 require "test_helper"
 
-# The :climate grid permission. app/models/ability.rb asks for a test per
-# permission, and this one has two tiers (read the charts vs configure the
-# sensors) whose relationship is worth pinning down.
+# The :climate grid permission, in two tiers: read the charts, configure the sensors.
 class Climate::AbilityTest < ActiveSupport::TestCase
   include ClimateTestHelpers
 
@@ -21,8 +19,6 @@ class Climate::AbilityTest < ActiveSupport::TestCase
   end
 
   test "the read permission does NOT grant configuring sensors" do
-    # Otherwise anyone who can look at the charts could flip a sensor's
-    # temperature unit, which silently rewrites what every future reading means.
     user = FactoryBot.create(:user)
     grant_climate_read_permission(user)
 
@@ -63,8 +59,7 @@ class Climate::AbilityTest < ActiveSupport::TestCase
   end
 
   test "the sensor models are kept out of the permission grid" do
-    # They are managed only through the climate pages, so a CRUD row for them in
-    # the grid would be meaningless, the same rule as the reimbursements models.
+    # Managed only through the climate pages, so a grid CRUD row would be meaningless.
     controller = Admin::PermissionsController.new
     controller.send(:set_models_and_roles)
     models = controller.instance_variable_get(:@models)

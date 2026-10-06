@@ -99,8 +99,7 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   end
 
   test "leaves a message unread when more than one sensor exists" do
-    # Govee's email identifies no device, so with two sensors there is nothing
-    # to resolve on. Guessing would file one wall's readings under another.
+    # Govee's email names no device, so two sensors leave nothing to resolve on.
     north = create_climate_sensor(display_name: "Crypt north")
     south = create_climate_sensor(display_name: "Crypt south")
     fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
@@ -246,8 +245,8 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   end
 
   test "never imports against the outdoor feed" do
-    # It is the only sensor here, but it is not a Govee one, and a crypt file
-    # landing on the comparison line would corrupt it.
+    # The only sensor here, but not a Govee one: a crypt file on the comparison
+    # line would corrupt it.
     outdoor = outdoor_climate_sensor
     fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
                                        attachments: { "1" => [ csv_attachment ] }))
