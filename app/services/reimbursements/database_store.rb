@@ -259,15 +259,6 @@ module Reimbursements
       area
     end
 
-    # Unused: AreasController#update writes through @area directly, since area_columns cannot
-    # carry budgets_attributes.
-    def update_area!(record_id, attrs)
-      area = Area.find(record_id)
-      area.update!(area_columns(attrs))
-      bust_areas!
-      area
-    end
-
     # REPLACE semantics, the area form's write, where removing an owner is intended.
     # #add_area_owners! only adds.
     def sync_area_owners!(record_id, person_ids)

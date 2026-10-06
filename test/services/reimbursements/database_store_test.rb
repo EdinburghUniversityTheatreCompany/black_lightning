@@ -1045,18 +1045,6 @@ module Reimbursements
       assert_includes store.areas_for_year.map(&:id), area.id
     end
 
-    test "update_area! updates the row and busts the memoized lists" do
-      area = create_reimbursements_area(name: "Cogito")
-      store.areas # memoize the stale name in
-
-      updated = store.update_area!(area.record_id, name: "Cogito Renamed",
-                                   initial_budget: BigDecimal("750"))
-
-      assert_equal "Cogito Renamed", updated.name
-      assert_equal BigDecimal("750"), updated.initial_budget
-      assert_equal "Cogito Renamed", store.areas.find { |a| a.id == area.id }.name
-    end
-
     test "sync_area_owners! diff-syncs the owners join table" do
       alice = Person.create!(name: "Alice", email: "alice@example.com")
       bob = Person.create!(name: "Bob", email: "bob@example.com")
