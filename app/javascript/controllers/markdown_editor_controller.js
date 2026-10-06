@@ -1,5 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
 
+const DIALOG_WIDTH = 340
+
+const LINK_FIELDS = `
+  <label class="milkdown-link-dialog__label">Text
+    <input type="text" name="text" class="form-control form-control-sm mt-1" placeholder="Link text (optional)">
+  </label>
+  <label class="milkdown-link-dialog__label">URL
+    <input type="url" name="href" class="form-control form-control-sm mt-1" placeholder="https://" required>
+  </label>`
+
+const TABLE_FIELDS = `
+  <div style="display:flex;gap:0.75rem">
+    <label class="milkdown-link-dialog__label" style="flex:1">Rows
+      <input type="number" name="rows" class="form-control form-control-sm mt-1" value="3" min="1" max="20">
+    </label>
+    <label class="milkdown-link-dialog__label" style="flex:1">Columns
+      <input type="number" name="cols" class="form-control form-control-sm mt-1" value="3" min="1" max="10">
+    </label>
+  </div>`
+
 export default class extends Controller {
   static values = {
     uploadUrl: String,
@@ -119,9 +139,8 @@ export default class extends Controller {
   #previewEl = null
   #fileInput = null
   #linkDialog = null
-  #linkDialogResolve = null
   #tableDialog = null
-  #tableDialogResolve = null
+  #dialogResolve = null
 
   #cmds = {}
   #ctx = {}
@@ -213,25 +232,25 @@ export default class extends Controller {
     this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
     this.element.appendChild(this.#fileInput)
 
-    this.#linkDialog = this.#buildLinkDialog()
+    this.#linkDialog = this.#buildDialog("Insert link", LINK_FIELDS, data => ({
+      href: data.get("href"), text: data.get("text")
+    }))
     document.body.appendChild(this.#linkDialog)
 
-    this.#tableDialog = this.#buildTableDialog()
+    this.#tableDialog = this.#buildDialog("Insert table", TABLE_FIELDS, data => ({
+      rows: parseInt(data.get("rows"), 10) || 3, cols: parseInt(data.get("cols"), 10) || 3
+    }))
     document.body.appendChild(this.#tableDialog)
   }
 
-  #buildLinkDialog() {
+  // A modal whose submit resolves #dialogResolve with read(formData). Only one is open at a time.
+  #buildDialog(title, fieldsHtml, read) {
     const dialog = document.createElement("dialog")
     dialog.className = "milkdown-link-dialog"
     dialog.innerHTML = `
       <form class="milkdown-link-dialog__form">
-        <p class="milkdown-link-dialog__title">Insert link</p>
-        <label class="milkdown-link-dialog__label">Text
-          <input type="text" name="text" class="form-control form-control-sm mt-1" placeholder="Link text (optional)">
-        </label>
-        <label class="milkdown-link-dialog__label">URL
-          <input type="url" name="href" class="form-control form-control-sm mt-1" placeholder="https://" required>
-        </label>
+        <p class="milkdown-link-dialog__title">${title}</p>
+        ${fieldsHtml}
         <div class="milkdown-link-dialog__actions">
           <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
           <button type="submit" class="btn btn-sm btn-primary">Insert</button>
@@ -242,24 +261,27 @@ export default class extends Controller {
     const form = dialog.querySelector("form")
     form.addEventListener("submit", e => {
       e.preventDefault()
-      const data = new FormData(form)
-      const result = { href: data.get("href"), text: data.get("text") }
+      const resolve = this.#dialogResolve
+      this.#dialogResolve = null
       dialog.close()
-      this.#linkDialogResolve?.(result)
-      this.#linkDialogResolve = null
+      resolve?.(read(new FormData(form)))
     })
 
-    dialog.querySelector("[data-cancel]").addEventListener("click", () => {
-      dialog.close()
-    })
+    dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close())
 
     // Escape, Cancel and the backdrop all land here and resolve null.
     dialog.addEventListener("close", () => {
-      this.#linkDialogResolve?.(null)
-      this.#linkDialogResolve = null
+      this.#dialogResolve?.(null)
+      this.#dialogResolve = null
     })
 
     return dialog
+  }
+
+  #ask(dialog, focusName) {
+    dialog.showModal()
+    dialog.querySelector(`[name='${focusName}']`).focus()
+    return new Promise(resolve => { this.#dialogResolve = resolve })
   }
 
   async #mountEditor(value = null) {
@@ -499,7 +521,7 @@ export default class extends Controller {
   async #showLinkDialog(event) {
     if (this.#mode === "preview") return
 
-    this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords(), 340)
+    this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords())
 
     let selectedText = ""
     if (this.#mode === "source") {
@@ -519,10 +541,7 @@ export default class extends Controller {
     form.reset()
     form.querySelector("[name='text']").value = selectedText
 
-    this.#linkDialog.showModal()
-    this.#linkDialog.querySelector("[name='href']").focus()
-
-    const result = await new Promise(resolve => { this.#linkDialogResolve = resolve })
+    const result = await this.#ask(this.#linkDialog, "href")
     if (!result?.href) return
 
     const { href, text } = result
@@ -560,54 +579,12 @@ export default class extends Controller {
     })
   }
 
-  #buildTableDialog() {
-    const dialog = document.createElement("dialog")
-    dialog.className = "milkdown-table-dialog"
-    dialog.innerHTML = `
-      <form class="milkdown-link-dialog__form">
-        <p class="milkdown-link-dialog__title">Insert table</p>
-        <div style="display:flex;gap:0.75rem">
-          <label class="milkdown-link-dialog__label" style="flex:1">Rows
-            <input type="number" name="rows" class="form-control form-control-sm mt-1" value="3" min="1" max="20">
-          </label>
-          <label class="milkdown-link-dialog__label" style="flex:1">Columns
-            <input type="number" name="cols" class="form-control form-control-sm mt-1" value="3" min="1" max="10">
-          </label>
-        </div>
-        <div class="milkdown-link-dialog__actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary">Insert</button>
-        </div>
-      </form>
-    `
-
-    const form = dialog.querySelector("form")
-    form.addEventListener("submit", e => {
-      e.preventDefault()
-      const data = new FormData(form)
-      const result = { rows: parseInt(data.get("rows"), 10) || 3, cols: parseInt(data.get("cols"), 10) || 3 }
-      dialog.close()
-      this.#tableDialogResolve?.(result)
-      this.#tableDialogResolve = null
-    })
-
-    dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close())
-    dialog.addEventListener("close", () => {
-      this.#tableDialogResolve?.(null)
-      this.#tableDialogResolve = null
-    })
-
-    return dialog
-  }
-
   async #showTableDialog(event) {
     if (this.#mode === "preview") return
 
-    this.#positionDialog(this.#tableDialog, event, 260)
-    this.#tableDialog.showModal()
-    this.#tableDialog.querySelector("[name='rows']").focus()
+    this.#positionDialog(this.#tableDialog, event)
 
-    const result = await new Promise(resolve => { this.#tableDialogResolve = resolve })
+    const result = await this.#ask(this.#tableDialog, "rows")
     if (!result) return
 
     const { rows, cols } = result
@@ -683,7 +660,7 @@ export default class extends Controller {
   }
 
   // Anchors below a button event or a {left, bottom} pair.
-  #positionDialog(dialog, anchor, maxWidth = 340) {
+  #positionDialog(dialog, anchor) {
     let left, bottom
     if (anchor?.currentTarget) {
       const rect = anchor.currentTarget.getBoundingClientRect()
@@ -697,7 +674,7 @@ export default class extends Controller {
     }
     dialog.style.margin = "0"
     dialog.style.position = "fixed"
-    dialog.style.left = `${Math.min(left, window.innerWidth - maxWidth - 16)}px`
+    dialog.style.left = `${Math.min(left, window.innerWidth - DIALOG_WIDTH - 16)}px`
     dialog.style.top = `${bottom + 6}px`
   }
 
