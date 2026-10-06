@@ -1,23 +1,19 @@
-<%# locals: (hide_alert: @hide_alert) %>
+<%# locals: () %>
+<%# turbo:load fires only for visits, never after a 422 re-render, so show the flash at once
+    when the bundle is loaded (Turbo re-runs body scripts on every render) and wait for
+    turbo:load only on the first full page load. data-turbo-temporary keeps the script out of
+    the snapshot cache, so back/forward cannot replay an old flash. %>
+<script nonce="<%= request.content_security_policy_nonce %>" data-turbo-temporary>
+  (function () {
+    const flash = <%= flash_alerts_for_script.to_json.html_safe %>;
+    if (Object.keys(flash).length === 0) return;
 
-<% hide_alert = false %>
-<% if hide_alert != true %>
-  <%# turbo:load fires only for visits, never after a 422 re-render, so show the flash at once
-      when the bundle is loaded (Turbo re-runs body scripts on every render) and wait for
-      turbo:load only on the first full page load. data-turbo-temporary keeps the script out of
-      the snapshot cache, so back/forward cannot replay an old flash. %>
-  <script nonce="<%= request.content_security_policy_nonce %>" data-turbo-temporary>
-    (function () {
-      const flash = <%= flash_alerts_for_script.to_json.html_safe %>;
-      if (Object.keys(flash).length === 0) return;
-
-      if (window.showFlashAlerts) {
+    if (window.showFlashAlerts) {
+      window.showFlashAlerts(flash);
+    } else {
+      document.addEventListener('turbo:load', function () {
         window.showFlashAlerts(flash);
-      } else {
-        document.addEventListener('turbo:load', function () {
-          window.showFlashAlerts(flash);
-        }, { once: true });
-      }
-    })();
-  </script>
-<% end %>
+      }, { once: true });
+    }
+  })();
+</script>
