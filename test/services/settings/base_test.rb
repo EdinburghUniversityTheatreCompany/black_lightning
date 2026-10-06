@@ -52,18 +52,14 @@ class Settings::BaseTest < ActiveSupport::TestCase
     assert_nil settings.api_token
   end
 
-  # The suite has no mocking library, so a source that answers from memory
-  # stands in for one backed by ENV and credentials.
+  # No mocking library: a source answering from memory stands in for one backed by ENV and credentials.
   FakeSource = Struct.new(:env_result, :credentials_result) do
     def env_value(_key) = env_result
     def credentials_value(_key) = credentials_result
   end
 
-  # The ordering rule: every ENV source is tried before any credentials source,
-  # NOT source by source. The environment is how a deployment overrides what is
-  # baked in, so a fallback prefix must still beat the primary namespace's
-  # committed value. Graph::Settings is the real case -- GRAPH_* then
-  # REIMBURSEMENTS_*, then the two credentials namespaces.
+  # Every ENV source is tried before any credentials source (Settings::Base#raw_value);
+  # Graph::Settings is the real case.
   test "a fallback ENV source beats the primary credentials source" do
     settings = build_settings { setting :azure_client_id }
     settings.settings_sources << FakeSource.new(nil, "from-primary-creds")

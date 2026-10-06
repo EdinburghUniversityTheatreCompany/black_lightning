@@ -1,7 +1,5 @@
-##
-# The daily budget-owner endorsement digest (see
-# Reimbursements::OwnerEndorsementDigestJob). Sent through the website's own
-# mailer, not the reimbursements Graph mailbox.
+# The daily budget-owner digest (Reimbursements::OwnerEndorsementDigestJob), through the
+# website's own mailer, not Graph.
 class OwnerEndorsementDigestMailer < ApplicationMailer
   def digest(user, expenses)
     @user = user

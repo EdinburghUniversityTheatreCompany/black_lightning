@@ -1,13 +1,8 @@
 module Reimbursements
-  ##
-  # Shared once-daily IT-subcommittee alert for a Microsoft Graph app-only
-  # credential failure (GraphAuth::AuthError). Every reimbursements job that
-  # talks to Graph (MailboxPollJob, NightlyBatchJob, BuildBatchJob) shares the
-  # same Entra client-credential, so a broken/expired secret affects all of
-  # them identically — one shared dedup key means a credential failure hit by
-  # more than one job in the same cycle sends a single email, not one per job.
-  # The alert itself goes through ordinary ActionMailer (not Graph), since
-  # Graph is exactly what's broken.
+  # Once-a-day IT-subcommittee alert for a Graph credential failure (GraphAuth::AuthError).
+  # Every Graph job shares one Entra credential, so one shared dedup key sends a single email
+  # however many jobs hit it in a cycle. The alert goes through ActionMailer, not Graph, since
+  # Graph is what's broken.
   module GraphAuthAlert
     CACHE_KEY = "reimbursements/auth-failure-alerted".freeze
 

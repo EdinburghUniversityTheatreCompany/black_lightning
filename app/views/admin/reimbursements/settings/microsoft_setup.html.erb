@@ -1,10 +1,4 @@
-<%# The manual Microsoft 365 steps the app cannot do itself, on their own page.
-
-    They lived inside the cost centre's Settings form as a collapsed section, where a
-    wall of PowerShell and Graph JSON sat between the routine controls an operator
-    edits weekly — the mailboxes, the notification address, the nominal codes. These
-    steps are needed ONCE per cost centre, by somebody with Exchange Online or
-    SharePoint admin rights, who is usually not the person editing the settings. %>
+<%# The manual Microsoft 365 steps, needed once per cost centre by someone with Exchange or SharePoint admin rights; kept off the Settings form. %>
 <%= render "shared/back_link", text: "Back to #{@cost_centre.name}",
            path: edit_admin_reimbursements_setting_path(@cost_centre.key) %>
 

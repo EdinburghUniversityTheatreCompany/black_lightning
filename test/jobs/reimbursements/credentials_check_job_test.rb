@@ -3,8 +3,7 @@ require "test_helper"
 module Reimbursements
   class CredentialsCheckJobTest < ActiveSupport::TestCase
     setup do
-      # The dedup cache key persists across job runs; tests must not leak it
-      # into each other (the test cache is a FileStore).
+      # The dedup cache key persists across runs (a FileStore in test): don't leak it between tests.
       Rails.cache.delete(CredentialsCheckJob::WARNING_CACHE_KEY)
     end
 
@@ -45,9 +44,8 @@ module Reimbursements
     end
 
     test "a second run the same day does not resend the warning" do
-      # Solid Queue's recurring-task catch-up can enqueue more than one run for
-      # the same day after downtime, and an operator can perform_now this job
-      # manually — a same-day repeat must not resend the identical warning.
+      # Solid Queue's catch-up after downtime can enqueue several runs for one day, and an
+      # operator can perform_now: a same-day repeat must not resend the warning.
       ENV["REIMBURSEMENTS_AZURE_SECRET_EXPIRES_ON"] = 10.days.from_now.to_date.iso8601
 
       assert_emails 1 do

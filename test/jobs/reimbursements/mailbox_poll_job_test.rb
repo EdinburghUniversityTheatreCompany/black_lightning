@@ -4,10 +4,9 @@ module Reimbursements
   class MailboxPollJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Interface-compatible stand-in for MailboxClient recording replies/moves.
-    # Models the real idempotency guarantee: mark_read hides the message from
-    # unread_messages, so a message read once is never re-processed even if the
-    # (best-effort) move fails. Toggles let a step fail like Graph would.
+    # Stand-in for MailboxClient recording replies and moves. mark_read hides the message from
+    # unread_messages, as the real idempotency guarantee does, even if the best-effort move
+    # fails. Toggles make a step fail like Graph would.
     class FakeMailbox
       attr_reader :replies, :moves, :reads
       attr_accessor :fail_mark_read, :fail_move
@@ -68,8 +67,7 @@ module Reimbursements
       @budget = create_reimbursements_budget(name: "Props", active: true)
       @store = DatabaseStore.new
       @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
-      # One cost centre (the fringe fixture); the builder receives it and returns
-      # the fake mailbox for it. The multi-cost-centre test overrides this.
+      # One cost centre (the fringe fixture); the multi-cost-centre test overrides this.
       MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
       MailboxPollJob.store_builder = -> { @store }
     end
@@ -121,9 +119,7 @@ module Reimbursements
       assert_equal 0, Expense.count
     end
 
-    # The reply is written in the name of the cost centre whose mailbox the
-    # message arrived on. A termtime submitter told to write to the Fringe's
-    # finance address emails a team that can't help them.
+    # The reply names the cost centre whose mailbox the message arrived on, not the Fringe's.
     test "the automated reply names the cost centre whose mailbox it came from" do
       termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
@@ -140,9 +136,7 @@ module Reimbursements
     end
 
     test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do
-      # mark_read_and_move moves BEFORE marking read specifically so a move
-      # failure here (no expense created on this path) leaves the message
-      # unread and safe to retry, rather than marked-read-but-never-filed.
+      # Moves BEFORE marking read, so a move failure leaves the message unread and retryable.
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
       @mailbox.fail_move = true
 
@@ -197,8 +191,7 @@ module Reimbursements
       assert_equal [ [ "msgBlank", :rejected ] ], @mailbox.moves
     end
 
-    # Real PNG bytes, not a stand-in string: an inline image now has to survive
-    # ReceiptIntake's metadata strip, which decodes it.
+    # Real PNG bytes: an inline image has to survive ReceiptIntake's metadata strip, which decodes it.
     test "processes a pasted-in-body receipt (inline image)" do
       pasted = { filename: "pasted-receipt.png", content_type: "image/png",
                  bytes: File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png")) }
@@ -218,8 +211,7 @@ module Reimbursements
       expense = Expense.sole
       assert_equal Status::DRAFT, expense.status
       assert_equal @person, expense.person
-      # Only the subject seeds the description; amount/budget/reference are left
-      # blank for the submitter to complete in the portal.
+      # Only the subject seeds the description; the rest is left for the submitter.
       assert_equal "Taxi receipt", expense.description, "the subject seeds the description"
       assert_nil expense.amount, "the amount is left for the portal"
       assert_nil expense.amount_excl_vat
@@ -235,11 +227,8 @@ module Reimbursements
     end
 
     test "an attach failure still marks read and replies (no duplicate minting), but withholds the move" do
-      # The move to Processed is gated on attach succeeding: a partially-
-      # attached draft stays visible in the Inbox as a signal something needs
-      # manual follow-up, rather than being filed away looking identical to a
-      # fully successful run. The reply must still go out — the submitter is
-      # waiting on their portal link regardless of the attach outcome.
+      # The move to Processed is gated on attach: a partly attached draft stays in the Inbox.
+      # The reply still goes out, since the submitter is waiting on their link.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       @store.define_singleton_method(:attach_receipt!) { |*| raise "storage down" }
 
@@ -313,8 +302,7 @@ module Reimbursements
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
 
-    # Emailing an iPhone photo to the shared mailbox is a likely route in, so
-    # email-in converts too: the draft carries a JPEG, not the HEIC.
+    # Email-in converts HEIC too: the draft carries a JPEG.
     test "an emailed HEIC photo is converted to a JPEG on the draft" do
       heic = { filename: "IMG_1234.HEIC", content_type: "image/heic",
               bytes: File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.heic")) }
@@ -329,9 +317,8 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    # A damaged photo must not raise inside the poll (that would leave the
-    # message unread and reprocessed forever); it just isn't a usable receipt,
-    # so the sender gets the existing "please attach the receipt" reply.
+    # A damaged photo must not raise inside the poll (the message would be reprocessed for ever):
+    # it is just not a usable receipt.
     test "an emailed HEIC that can't be decoded falls back to the missing-receipt reply" do
       broken = { filename: "IMG_9.HEIC", content_type: "image/heic",
                 bytes: File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) }
@@ -378,10 +365,8 @@ module Reimbursements
     end
 
     test "a message retried across poll cycles after a downstream failure counts once toward the sender's daily limit" do
-      # A message left unread by a downstream failure (a data-layer blip, not a
-      # sender problem) gets reprocessed every cycle until it succeeds — that
-      # must not inflate one real email into many against the sender's tally,
-      # or a transient outage could get a legitimate sender rate-limited.
+      # A message left unread by a downstream failure is reprocessed every cycle; that must not
+      # inflate the sender's tally.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       @store.define_singleton_method(:create_expense!) { |*| raise "boom" }
 
@@ -505,9 +490,8 @@ module Reimbursements
 
     test "an already-seen message whose earlier cycle died before the attach is finished, not duplicated" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      # The earlier cycle created the expense (stamping the message id) but
-      # crashed before attach/reply — the receipt-less draft must not be
-      # filed away receipt-less with the sender never told.
+      # An earlier cycle created the expense but crashed before attach/reply: the draft must not
+      # be filed away receipt-less with the sender never told.
       orphan = Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
 
       assert_no_difference -> { Expense.count } do
@@ -522,10 +506,7 @@ module Reimbursements
 
     # --- Vanished mailbox messages (Graph 404 ErrorItemNotFound) -----------
 
-    # Drives the REAL MailboxClient (not the FakeMailbox) over FakeHttp so the
-    # 404 swallowing in MailboxClient#mark_read/#move/#reply is exercised end to
-    # end: a message handled or deleted by hand in Outlook between the poll's
-    # listing and the mark_read PATCH is nothing to alert about.
+    # Drives the REAL MailboxClient over FakeHttp, so its 404 swallowing is exercised end to end.
     test "a message whose mark_read 404s (vanished from the mailbox) doesn't abort the poll or alert" do
       setup_job(messages: [])
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
@@ -565,15 +546,9 @@ module Reimbursements
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
-    # Exchange CHANGES a message's id when the message is moved, so a mark_read
-    # 404 can mean "still in the mailbox, still unread, under a new id". A
-    # blanket 404 swallow turns that into silence: the expense is created,
-    # mark_read reports SUCCESS, the sender is never told their claim arrived,
-    # and no Honeybadger notice or duplicate_risk flag says so.
-    #
-    # Drives the REAL MailboxClient over FakeHttp, like the confirmed-gone test
-    # above, so the difference between the two is only what the confirmation GET
-    # answers.
+    # Exchange changes a message's id on move, so a mark_read 404 can mean "still in the mailbox,
+    # under a new id". Swallowing it would leave the sender un-replied with no Honeybadger notice
+    # or duplicate_risk flag. Drives the REAL MailboxClient over FakeHttp.
     test "a mark_read 404 on a message that still exists flags duplicate_risk loudly" do
       setup_job(messages: [])
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
@@ -602,8 +577,7 @@ module Reimbursements
       assert_equal 1, notified.size, "a moved-but-present message must reach Honeybadger"
       assert notified.first.last.dig(:context, :duplicate_risk),
              "the duplicate_risk flag is the whole point of the loud path: #{notified.first.inspect}"
-      # Nothing is attempted after the failed commit point: replying to or filing a
-      # still-unread message would be acting on a message the next cycle will retry.
+      # Nothing is attempted after the failed commit point: the next cycle retries the unread message.
       assert_equal 5, http.requests.size,
                    "no reply and no move after mark_read failed: #{http.requests.map(&:uri).inspect}"
     ensure

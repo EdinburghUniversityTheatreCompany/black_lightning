@@ -70,9 +70,8 @@ module Reimbursements
       assert_equal recipients, reminder[:to]
       assert_match(/awaiting approval/, reminder[:subject])
       assert_match "5 day", reminder[:html]
-      # The ready-to-batch alert prompts Build Batch and carries NO draft link.
-      # A flagged claim is listed with its reason, and counted in the subject,
-      # rather than diverting the whole alert into a separate email.
+      # The ready-to-batch alert carries NO draft link; a flagged claim is listed with its reason
+      # and counted in the subject, not diverted into a separate email.
       assert_match(/ready to batch/, approved[:subject])
       assert_match(/1 flagged/, approved[:subject])
       assert_match "no receipt", approved[:html]
@@ -144,11 +143,8 @@ module Reimbursements
       assert_includes html, "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
     end
 
-    # The portal is multi-cost-centre (termtime becomes a second row), so no
-    # subject or sign-off may hardcode "Bedlam Fringe" — a termtime claimant
-    # must never be emailed about a Fringe expense. Everything is driven off
-    # the cost centre threaded into Notifier, so a second centre gets correct
-    # copy the moment its row exists.
+    # No subject or sign-off may hardcode "Bedlam Fringe": a termtime claimant must never be
+    # emailed about a Fringe expense. Copy comes from the cost centre threaded into Notifier.
     test "every subject and sign-off comes from the cost centre, never a literal Bedlam" do
       centre = cost_centre(name: "Termtime Payments")
       notifier, graph = build(centre: centre)

@@ -1,25 +1,13 @@
 module Reimbursements
-  ##
-  # Sends the producer- and operator-facing reimbursements emails through
-  # Microsoft Graph (GraphClient#send_mail) so they genuinely originate from the
-  # cost centre's send mailbox and land in its Sent Items — rather than through
-  # ActionMailer / MailerSend from the generic website-noreply address.
+  # Sends the producer and operator emails through Graph (GraphClient#send_mail) so they come
+  # from the cost centre's send mailbox and land in its Sent Items, not from the website-noreply
+  # address. Each message renders an ERB template (app/views/reimbursements/emails) in the bare
+  # "reimbursements_mailer" layout via ApplicationController.render, so it works outside a
+  # request.
   #
-  # It mirrors EusaEmailComposer's render pattern: each message renders an ERB
-  # template to an HTML string via ApplicationController.render (running outside
-  # a request — from a controller action, BatchProcessor, or the nightly job),
-  # wrapped in the "reimbursements_mailer" layout (its own minimal <!DOCTYPE>/
-  # <head>/<title> wrapper — deliberately not the app's shared, fully-branded
-  # mail layout, whose marketing tone doesn't fit a plain finance notice) and
-  # hands the result to +send_mail+. Templates live in
-  # app/views/reimbursements/emails.
-  #
-  # Callers pass the sending +cost_centre+: it supplies the send mailbox AND
-  # every piece of society-specific copy (subject prefix, sign-offs, contact
-  # address). It is threaded into the template assigns ONCE here, so no call site
-  # has to pass a signature string. The IT/credential alerts stay on ActionMailer
-  # (ReimbursementsMailer): they go to a configured subcommittee address with no
-  # cost-centre mailbox context.
+  # +cost_centre+ supplies the mailbox and all society-specific copy, and is added to every
+  # template's assigns once, here. IT/credential alerts stay on ActionMailer
+  # (ReimbursementsMailer): they have no cost-centre mailbox context.
   class Notifier
     def initialize(cost_centre:, graph: nil)
       @cost_centre = cost_centre
@@ -27,10 +15,8 @@ module Reimbursements
       @graph = graph || GraphClient.new
     end
 
-    # Both producer methods take +greeting_name+ already derived by the call
-    # site (GreetingName.for), keeping the person lookup out of the render path
-    # and this boundary ActiveRecord-free. NB the +payee_name+ keys inside the
-    # operator-alert row hashes below are a different thing: still full names.
+    # The producer methods take +greeting_name+ already derived (GreetingName.for), keeping this
+    # boundary ActiveRecord-free. The +payee_name+ keys in the operator row hashes are still full names.
 
     # Producer: their expense was rejected on Review reject.
     def rejection(to:, greeting_name:, auto_number:, amount:, budget_name:, description:, reason:)
@@ -43,10 +29,9 @@ module Reimbursements
       )
     end
 
-    # Producer: one notification per payee for a processed BACS batch. This is
-    # the ONLY payment-side email a producer gets: Reconcile deliberately sends
-    # no "EUSA has paid you" follow-up, because the actuals export it runs off
-    # arrives weeks after the money did (see ReconcileController).
+    # Producer: one per payee for a processed BACS batch. The ONLY payment-side email a producer
+    # gets: Reconcile sends none, because the actuals export it runs off arrives weeks after
+    # the money did.
     def producer_notification(to:, greeting_name:, line_items:, bacs_date:, total:)
       count = line_items.size
       send_email(
@@ -71,14 +56,9 @@ module Reimbursements
       )
     end
 
-    # Budget owner: the claims charged to their budgets that are waiting on their
-    # sign-off. Addressed to ONE owner (finance's reminders go to a shared
-    # mailbox; this one is personal work), hence +to+ and +greeting_name+ rather
-    # than the +recipients+ the operator reminders take.
-    #
-    # No age threshold behind it, unlike #pending_reminder: a claim awaiting your
-    # sign-off is new work assigned to you, so it is named on the first run-day
-    # after it arrives.
+    # Budget owner: claims on their budgets awaiting their sign-off. Personal work, so +to+ and
+    # +greeting_name+ rather than the shared-mailbox +recipients+. No age threshold, unlike
+    # #pending_reminder: a claim awaiting sign-off is new work, named from the first run-day.
     def owner_sign_off_reminder(to:, greeting_name:, rows:, run_date:)
       count = rows.size
       send_email(
@@ -90,13 +70,9 @@ module Reimbursements
       )
     end
 
-    # Operator: everything sitting in the Approved queue, ready to be built into
-    # a batch. Rows carrying a non-empty :flags need a look on the Review page
-    # first; they are still listed, and still counted in the total, because this
-    # is a reminder and not a gate — the nightly submits nothing either way.
-    #
-    # flagged_count is derived here rather than passed in, so a caller cannot
-    # desynchronise the subject line from the table underneath it.
+    # Operator: the Approved queue, ready to batch. Rows with :flags need a look on Review first
+    # but are still listed and counted: this is a reminder, not a gate. flagged_count is derived
+    # here so the subject cannot drift from the table.
     def approved_ready(recipients:, expenses:, total:, run_date:, next_run_day: nil)
       count = expenses.size
       flagged = expenses.count { |expense| Array(expense[:flags]).any? }
@@ -110,11 +86,9 @@ module Reimbursements
       )
     end
 
-    # Operator: the EUSA draft was created and awaits review + send. +errors+
-    # carries any best-effort step failures (SharePoint upload, producer
-    # notification, batch flags) — the draft itself is still valid and ready to
-    # send, but the template must not claim those steps all succeeded when
-    # +errors+ is non-empty.
+    # Operator: the EUSA draft awaits review and send. +errors+ lists best-effort step failures
+    # (upload, notification, flags): the draft is still valid, but the template must not claim
+    # those steps succeeded.
     def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, errors: [])
       count = expenses.size
       send_email(
@@ -139,9 +113,7 @@ module Reimbursements
 
     private
 
-    # Every template gets @cost_centre for free, so its sign-off and contact
-    # details come from the sending cost centre without each caller having to
-    # remember to pass a name through.
+    # Every template gets @cost_centre, so sign-off and contact details come from the sending centre.
     def send_email(to:, subject:, template:, assigns:)
       html = ApplicationController.render(
         template: template, layout: "reimbursements_mailer",
@@ -152,18 +124,10 @@ module Reimbursements
       result
     end
 
-    # Record what went to whom, AFTER the send and never before it.
-    #
-    # This is the one chokepoint every message here passes through, which is
-    # why the log lives at it rather than at each of the nine call sites — nine
-    # of them would drift. NotificationLog.record swallows its own failures, so
-    # a logging problem can never stop the portal telling somebody their claim
-    # was rejected; an unlogged email that went out beats a logged one that did
-    # not.
-    #
-    # The KIND is the template's own basename, so a new message type is logged
-    # the moment it exists rather than when somebody remembers to add it to a
-    # list.
+    # Logged AFTER the send, never before. Every message passes this one chokepoint, so the log
+    # lives here rather than at nine call sites. NotificationLog.record swallows its own
+    # failures: an unlogged email that went out beats a logged one that did not. The KIND is the
+    # template's basename, so a new message type logs itself.
     def log_send(to:, subject:, template:)
       NotificationLog.record(kind: File.basename(template.to_s), recipients: to,
                              subject: subject, cost_centre: @cost_centre)

@@ -1,10 +1,7 @@
-##
-# Default HTTP transport for the app's outbound service clients. Callable as
-# +(method, uri, headers, body) -> [status, body_string, response_headers]+ so
-# tests can substitute a plain fake (this suite has no mocking library).
-# +response_headers+ is a flat {lower-case-name => value} hash, there for a
-# client that has to read one — the Govee client reads its rate-limit budget
-# out of it; the Graph clients destructure status + body and ignore it.
+# Default HTTP transport for the outbound service clients: +(method, uri, headers, body) ->
+# [status, body_string, response_headers]+, so tests can pass a plain fake. +response_headers+
+# is a flat {lower-case-name => value} hash for clients that read one (Govee's rate-limit
+# budget); the Graph clients ignore it.
 module HttpTransport
   OPEN_TIMEOUT = 10
   READ_TIMEOUT = 60

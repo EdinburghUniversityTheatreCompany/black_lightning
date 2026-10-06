@@ -29,8 +29,7 @@
   </thead>
   <tbody>
     <% @expenses.each do |expense| %>
-      <%# Inline style, not a class: the mailer layout ships no stylesheet, and
-          Outlook would not honour one anyway. %>
+      <%# Inline style: the mailer layout ships no stylesheet and Outlook would ignore one. %>
       <tr style="<%= 'background-color: #fff4e5;' if Array(expense[:flags]).any? %>">
         <td>#<%= expense[:auto_number] %></td>
         <td><%= expense[:payee_name] %></td>

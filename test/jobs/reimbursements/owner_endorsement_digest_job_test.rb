@@ -5,8 +5,7 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     setup do
-      # The owning person shares an email with a real portal user, so they can
-      # be nudged; the submitter is a different, account-less person.
+      # The owner shares an email with a real portal user; the submitter is an account-less person.
       @owner_user = users(:member)
       @owner = create_reimbursements_person(name: "Olga Owner", email: @owner_user.email)
       @submitter = create_reimbursements_person(name: "Sam Sub", email: "sam@example.com")
@@ -24,11 +23,10 @@ module Reimbursements
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
     end
 
-    # An owner of two shows gets one digest naming "Marketing" twice, and this
-    # email is the only thing that reaches them — see Budget#display_name.
+    # An owner of two shows gets one digest naming "Marketing" twice (Budget#display_name).
     test "the digest names the show, not just the category" do
-      # The owner goes on the AREA: Budget#owners reads through it, so a line
-      # in an ownerless area has no sign-off gate at all.
+      # The owner goes on the AREA: Budget#owners reads through it, so a line in an ownerless
+      # area has no sign-off gate.
       area = create_reimbursements_area(name: "Cogito")
       area.owners << @owner
       @budget.update!(area: area)
@@ -47,8 +45,7 @@ module Reimbursements
     end
 
     test "does not email an owner who has no portal account" do
-      # The only owner's email matches no User, so they can't endorse — the
-      # finance override covers them and no digest is sent.
+      # The only owner's email matches no User, so no digest: the finance override covers them.
       accountless = create_reimbursements_person(name: "Olga", email: "nouser@example.com")
       @budget.budget_ownerships.destroy_all
       @budget.owners << accountless
@@ -99,9 +96,8 @@ module Reimbursements
     end
 
     test "resolves an owner by the stored person link when emails differ" do
-      # The owner's People email doesn't match their portal account's email, but
-      # the durable PersonLink (users.reimbursements_person_id on this backend)
-      # still resolves them.
+      # The owner's People email differs from their portal email; the stored PersonLink still
+      # resolves them.
       @owner.update!(email: "different-people-email@example.com")
       @owner_user.update_column(:reimbursements_person_id, @owner.id)
       awaiting_expense

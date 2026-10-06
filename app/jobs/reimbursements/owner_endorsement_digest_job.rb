@@ -1,11 +1,8 @@
 module Reimbursements
-  ##
-  # Daily nudge to budget owners about pending claims charged to their budgets
-  # that still await their sign-off (the E3 gate). Sent through the website's
-  # own mailer (SMTP), not the Graph shared mailbox. Only owners with a portal
-  # account can endorse, so only they are emailed — owners without an account
-  # are covered by the finance override path instead. Any one owner's
-  # endorsement clears a claim, so every owner of a budget is nudged about it.
+  # Daily nudge to budget owners about pending claims awaiting their sign-off, through the
+  # website's own mailer (SMTP), not Graph. Only owners with a portal account can endorse, so
+  # only they are emailed; the rest are covered by the finance override. Any one owner's
+  # endorsement clears a claim, so every owner of a budget is nudged.
   class OwnerEndorsementDigestJob < ApplicationJob
     def perform
       pending = store.expenses.select(&:pending?)
@@ -18,12 +15,9 @@ module Reimbursements
         person = people_by_id[owner_person_id]
         next if person.nil?
 
-        # Prefer the durable stored link; the id's shape says which column can
-        # match — numeric ids are the reimbursements_person FK, "rec…" ids the
-        # legacy airtable_person_id left over from the import.
-        # Fall back to email only for an owner who never opened the portal:
-        # User emails are normalised on write while People emails aren't, so
-        # email-only matching would silently miss a legitimately-linked owner.
+        # Stored link first (numeric ids are the reimbursements_person FK, "rec…" ids the legacy
+        # airtable_person_id). Email is the fallback only for an owner who never opened the portal:
+        # User emails are normalised on write, People emails aren't.
         user = if owner_person_id.match?(/\A\d+\z/)
                  User.find_by(reimbursements_person_id: owner_person_id)
         else
@@ -32,11 +26,9 @@ module Reimbursements
         user ||= User.find_by(email: person.email) if person.email.present?
         next if user.nil? # no portal account -> can't endorse; finance override covers them
 
-        # deliver_now (not _later): the mail carries a whole expense collection
-        # that isn't worth serializing as job args, and we're already inside a
-        # background job.
-        # Isolate each send so one owner's failure doesn't abort the digest (or
-        # trigger a whole-job retry that re-mails everyone).
+        # deliver_now: the mail carries a whole expense collection, not worth serialising as job
+        # args. Each send is isolated so one owner's failure doesn't abort the digest or retry the
+        # whole job and re-mail everyone.
         begin
           OwnerEndorsementDigestMailer.digest(user, expenses).deliver_now
         rescue StandardError => e
@@ -47,8 +39,7 @@ module Reimbursements
 
     private
 
-    # Fan each awaiting claim out to every owner of its budget — any one of them
-    # can endorse it, so all of them should hear about it.
+    # Any one owner can endorse, so each claim goes to all of its budget's owners.
     def expenses_by_owner(awaiting)
       by_owner = Hash.new { |hash, key| hash[key] = [] }
       awaiting.each do |expense|

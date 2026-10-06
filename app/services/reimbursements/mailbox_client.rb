@@ -1,9 +1,6 @@
 module Reimbursements
-  ##
-  # The reimbursements receipt mailbox. All the Graph plumbing lives in
-  # Graph::MailboxClient, shared with the climate CSV mailbox; this only pins
-  # the default address to the cost centre's own receive mailbox and keeps the
-  # constant names every rescue in this subsystem already uses.
+  # The reimbursements receipt mailbox: Graph::MailboxClient defaulting to the cost centre's
+  # receive mailbox, plus the error names this subsystem rescues.
   class MailboxClient < ::Graph::MailboxClient
     Error = ::GraphAuth::Error
     AuthError = ::GraphAuth::AuthError

@@ -1,30 +1,19 @@
 module Reimbursements
-  ##
-  # Microsoft Graph client for the *operator* side of reimbursements: creating
-  # and sending the EUSA email, uploading receipts + the BACS xlsx to SharePoint,
-  # and browsing SharePoint for the Settings folder picker. Auth is app-only
-  # client-credentials, shared with MailboxClient via GraphAuth — a multi-user
-  # web app can't do the per-user interactive OAuth a desktop tool would.
+  # Graph client for the operator side: the EUSA draft and notification emails, SharePoint
+  # uploads (receipts, BACS xlsx) and the folder picker. App-only auth, shared with
+  # Graph::MailboxClient via GraphAuth.
   #
-  # Permissions required (a MANUAL setup step, see docs/graph-mailbox-rbac.md).
-  # They come from two different systems, which is the thing to keep straight:
-  #   * Mail (send the EUSA draft / producer notifications, create the draft in
-  #     the send mailbox) is NOT an Entra grant. Exchange assigns the app
-  #     "Application Mail Full Access" over a management scope naming each
-  #     mailbox. Consenting Mail.* in Entra would re-grant the whole tenant,
-  #     since the two systems union rather than intersect.
-  #   * Sites.Selected is an Entra application permission, granted write
-  #     per-site (least-privilege): upload receipts + BACS xlsx and browse a
-  #     granted site's drives/folders. Cannot search/enumerate sites, so the
-  #     Settings picker addresses each cost centre's configured site by URL
-  #     (see #get_site). RBAC has no SharePoint equivalent.
+  # Permissions (manual setup, docs/graph-mailbox-rbac.md) come from two systems:
+  #   * Mail is NOT an Entra grant: Exchange assigns "Application Mail Full Access" over a
+  #     management scope naming each mailbox. Consenting Mail.* in Entra would re-grant the
+  #     whole tenant, since the two systems union rather than intersect.
+  #   * Sites.Selected is an Entra permission granted per site. It cannot search sites, so the
+  #     Settings picker addresses each cost centre's configured site by URL (#get_site).
   class GraphClient
     include ::GraphAuth
 
-    # Attachments under this size are inlined into the draft's create payload;
-    # larger ones need a per-attachment upload session (Graph's documented cap).
+    # Graph's cap for inline draft attachments; larger ones need an upload session.
     INLINE_ATTACHMENT_LIMIT = 3_000_000
-    # Files under this size use the simple upload endpoint; larger ones a session.
     SIMPLE_UPLOAD_LIMIT = 4 * 1024 * 1024
     UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
 
@@ -39,8 +28,7 @@ module Reimbursements
     Drive = Struct.new(:id, :name, keyword_init: true)
     Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
 
-    # A created draft: its message +id+ (stored on the Batch so a reopen can
-    # delete the stale draft) and its +web_link+ (opened in Outlook to review + send).
+    # +id+ is stored on the Batch so a reopen can delete the stale draft; +web_link+ opens it in Outlook.
     Draft = Struct.new(:id, :web_link, keyword_init: true)
 
     def initialize(settings: Settings, http: nil, clock: nil, sleeper: nil)
@@ -50,10 +38,7 @@ module Reimbursements
       @sleeper = sleeper
     end
 
-    # Create a draft in the shared mailbox and return a Draft (its message id +
-    # webLink — open in Outlook on the web to review, then send manually). Small
-    # attachments are inlined; large ones stream via an upload session after the
-    # draft exists.
+    # Small attachments are inlined; large ones stream via an upload session once the draft exists.
     def create_draft(mailbox:, to:, subject:, html:, attachments: [], cc: [])
       unless @settings.outbound_enabled?
         Rails.logger.info("Reimbursements create_draft suppressed (outbound disabled): to=#{Array(to).join(',')}")
@@ -75,40 +60,28 @@ module Reimbursements
       Draft.new(id: message_id, web_link: draft["webLink"].to_s)
     end
 
-    # Delete a message from a mailbox — used to clean up the stale EUSA draft
-    # when a batch is reopened for rebuild. Graph replies 204 (no body).
-    #
-    # Gated: a non-production shell holding real Azure credentials must not delete
-    # a message out of the live shared mailbox. RAISES rather than returning nil,
-    # because nil is this method's success value — a silently suppressed delete
-    # would have BatchesController tell the operator the old EUSA draft has been
-    # deleted while it sits in Outlook ready to be sent alongside the rebuilt one.
+    # Gated, and RAISES when suppressed rather than returning nil (its success value): a silent
+    # no-op would have BatchesController report the old EUSA draft deleted while it sits in
+    # Outlook, ready to send beside the rebuilt one.
     def delete_message(mailbox:, message_id:)
       refuse_outbound!("delete message #{message_id} from #{mailbox}")
       graph_request(:delete, "/users/#{mailbox}/messages/#{message_id}")
       nil
     end
 
-    # Verifies a message still exists as an unsent draft — required before a
-    # reopen deletes it, so a batch whose draft was already sent by hand in
-    # Outlook (this app has no visibility into that step by design) is never
-    # mistaken for one still safe to discard. Any failure to confirm — the
-    # message was deleted/sent/moved (a 404), a permissions issue, or a
-    # genuine Graph outage — is treated identically as NOT confirmed, so the
-    # caller refuses to reopen rather than assuming the safe case.
+    # Required before a reopen deletes a draft, so one already sent by hand in Outlook is never
+    # mistaken for discardable. Any failure to confirm (404, permissions, outage) means not confirmed.
     def draft_message?(mailbox:, message_id:)
       message = graph_request(:get, "/users/#{mailbox}/messages/#{message_id}", params: { "$select" => "isDraft" })
       message["isDraft"] == true
     rescue StandardError
-      # Not just ::GraphAuth::Error: a genuine network-level outage (timeout,
-      # DNS failure, TLS error) raises a raw transport exception that never
-      # reaches graph_request's own status check, and must fail closed here
-      # exactly like a 404/permissions error would.
+      # Not just GraphAuth::Error: a raw transport error (timeout, DNS, TLS) never reaches the
+      # status check and must fail closed too.
       false
     end
 
-    # Send an email immediately from the mailbox (Notifier uses this for the
-    # rejection / "you've been paid" / producer / operator emails). No attachments.
+    # Sends immediately, no attachments. Notifier uses this for the rejection, producer and
+    # operator emails.
     def send_mail(mailbox:, to:, subject:, html:)
       unless @settings.outbound_enabled?
         Rails.logger.info("Reimbursements send_mail suppressed (outbound disabled): to=#{Array(to).join(',')} subject=#{subject.inspect}")
@@ -122,23 +95,15 @@ module Reimbursements
       nil
     end
 
-    # Upload a file into a SharePoint folder; returns its webUrl.
-    #
-    # Gated: this is the call that carries the bank details. BatchProcessor uploads
-    # the BACS xlsx (every payee's full sort code and account number) and every
-    # receipt BEFORE the EUSA draft, so an ungated dev shell with real Azure
-    # credentials would PUT them straight into production SharePoint. RAISES
-    # rather than returning "" or a fake URL: BatchProcessor counts a returned URL
-    # as an uploaded receipt and stamps receipts_offloaded from it, which is what
+    # Returns the webUrl. Gated, and RAISES when suppressed: this carries the bank details (BACS
+    # xlsx, receipts), and BatchProcessor stamps receipts_offloaded from a returned URL, which
     # tells an operator it is safe to delete the only local copy.
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
       refuse_outbound!("SharePoint upload of #{filename}")
       raise ::GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
 
-      # Sanitise path separators, then percent-encode the filename segment so
-      # spaces/parens/&c. don't blow up URI() ("bad URI (is not URI?)"). Only the
-      # segment is encoded — Graph's ":/…:/content" addressing delimiters, which
-      # live in the literal format string below, must stay unencoded.
+      # Percent-encode only the filename segment (spaces and parens break URI()); the :/…:/content
+      # delimiters in the format strings below must stay literal.
       safe_name = ERB::Util.url_encode(filename.to_s.tr("/\\", "__"))
       if content.bytesize < SIMPLE_UPLOAD_LIMIT
         url = "#{GraphAuth::GRAPH_URL}/drives/#{drive_id}/items/#{folder_id}:/#{safe_name}:/content"
@@ -150,25 +115,16 @@ module Reimbursements
       end
     end
 
-    # A light read probe confirming the app can reach a mailbox, i.e. the address
-    # matches the Exchange management scope that grants this app its mail access.
-    # Returns true on success; raises (403 etc.) so the Settings access-check turns
-    # it into a failed row with the Graph message. One scope gates read, send and
-    # poll alike, so this read is a fair proxy for "email-in and batch drafting
-    # will work". Exchange caches the scope for up to 2 hours, so a mailbox added
-    # moments ago still fails here well after Test-ServicePrincipalAuthorization
-    # reports it in scope.
+    # Read probe that the app can reach a mailbox, i.e. the address matches the Exchange scope
+    # behind its mail access (one scope gates read, send and poll). Raises on 403 etc. Exchange
+    # caches the scope for up to 2 hours, so a mailbox added moments ago still fails here.
     def check_mailbox(address)
       graph_request(:get, "/users/#{address}/mailFolders/inbox", params: { "$select" => "id" })
       true
     end
 
-    # A minimal reachability probe for the integration status dashboard: acquire
-    # an app-only Graph token. Confirms the Azure app credentials are valid and
-    # login.microsoftonline.com is reachable, without touching any mailbox or
-    # site (that per-resource access is the Settings access-check's job). Returns
-    # true; raises (AuthError/Error) so the dashboard turns a failure into a
-    # failed row carrying the message.
+    # Acquires an app-only token: confirms the Azure credentials work and Microsoft login is
+    # reachable, touching no mailbox or site. Raises on failure.
     def check_reachable
       graph_token
       true
@@ -176,11 +132,8 @@ module Reimbursements
 
     # --- SharePoint browse (Settings folder picker) ------------------------
 
-    # Resolve a SharePoint site by its browser URL (e.g.
-    # "https://tenant.sharepoint.com/sites/Finance") to its Graph Site + id, using
-    # the server-relative path form Graph accepts for Sites.Selected apps. Such an
-    # app can address a site it's been granted by path but can't search across the
-    # tenant, so the Settings picker starts from each cost centre's configured URL.
+    # Resolves a site by its browser URL through the server-relative path form. A Sites.Selected
+    # app can address a granted site by path but cannot search the tenant.
     def get_site(site_url)
       uri = URI(site_url.to_s.strip)
       site = graph_request(:get, "/sites/#{uri.host}:#{uri.path.to_s.chomp('/')}")
@@ -204,24 +157,11 @@ module Reimbursements
 
     private
 
-    # The outbound gate for Graph calls with a SIDE EFFECT, i.e. everything except
-    # reads. Production always passes; anywhere else needs the explicit
-    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in (a staging box on a throwaway tenant,
-    # or the test suite, which fakes the transport anyway).
-    #
-    # The scope is deliberately "no outbound side effect", not "no outbound mail":
-    # the same real Azure credentials that let a dev shell read a real tenant also
-    # let it write to one, and SharePoint upload / message delete were the two
-    # writes carrying bank details. Read-only probes (#check_mailbox,
-    # #check_reachable, #draft_message?, #get_site, #list_drives,
-    # #list_folder_contents) stay ungated: they are how the Settings dashboard
-    # and folder picker report on a real tenant, and they mutate nothing.
-    #
-    # #create_draft and #send_mail keep their older suppress-and-stub behaviour
-    # (a "suppressed-…" draft id, nil) so a dev Build Batch still walks the whole
-    # flow; only the calls whose stub a caller could mistake for real success
-    # raise. Everything the gate refuses is contained by an existing rescue, so a
-    # dev Build Batch performs zero outbound Graph calls and reports why.
+    # Gate for calls with a side effect (everything except reads), not just mail: the credentials
+    # that read a tenant can also write to it, and SharePoint upload and message delete carry bank
+    # details. Production always passes; elsewhere needs REIMBURSEMENTS_ENABLE_OUTBOUND.
+    # create_draft and send_mail stub instead (a "suppressed-" id, nil) so a dev Build Batch still
+    # walks the flow; only calls whose stub could pass for success raise.
     def refuse_outbound!(description)
       return if @settings.outbound_enabled?
 
@@ -230,8 +170,7 @@ module Reimbursements
             "Set REIMBURSEMENTS_ENABLE_OUTBOUND to opt in (only against a throwaway tenant)."
     end
 
-    # Follows Graph's @odata.nextLink so a site/drive with more items than fit
-    # in one page (folders, drives) isn't silently truncated to the first page.
+    # Follows @odata.nextLink so a long list isn't truncated to its first page.
     def paginated(http_method, path)
       items = []
       next_link = path
@@ -244,8 +183,7 @@ module Reimbursements
       items
     end
 
-    # Hand-entered email addresses carry stray whitespace; an un-stripped
-    # address is rejected by Graph as an invalid recipient.
+    # Hand-entered addresses carry stray whitespace, which Graph rejects.
     def recipients(addresses)
       Array(addresses).filter_map do |address|
         cleaned = address.to_s.strip
@@ -271,8 +209,7 @@ module Reimbursements
       upload_in_chunks(upload_url, attachment.content)
     end
 
-    # Stream content to a pre-authenticated upload session in 4 MB chunks. The
-    # final chunk's response carries the created item (webUrl); return it.
+    # Streams to a pre-authenticated upload session; returns the final chunk's response (the item).
     def upload_in_chunks(upload_url, content)
       total = content.bytesize
       last = {}

@@ -1,22 +1,15 @@
 module Graph
-  ##
-  # Microsoft Graph client for a shared mailbox, using app-only
-  # (client-credentials) auth — Exchange scopes the Entra app to named mailboxes
-  # through RBAC for Applications. Send and receive go through the same credential,
-  # which is why the app polls instead of using ActionMailbox (and why standing
-  # ActionMailbox up would mean new inbound infrastructure: Microsoft 365 has no
-  # inbound webhook).
-  #
-  # Shared: the reimbursements receipt mailbox and the climate CSV mailbox are
-  # both instances of this, differing only in which address they watch.
+  # Graph client for one shared mailbox (app-only auth; Exchange scopes the Entra app to named
+  # mailboxes). The reimbursements receipt mailbox and the climate CSV mailbox are both
+  # instances, differing only in address. It polls rather than using ActionMailbox because
+  # Microsoft 365 has no inbound webhook.
   class MailboxClient
     include ::GraphAuth
 
     FOLDERS = { processed: "Processed", rejected: "Rejected" }.freeze
     PAGE_SIZE = 20
 
-    # Auth + request plumbing lives in GraphAuth. These aliases keep the error
-    # constant names callers have always rescued.
+    # Callers rescue these names; the classes live in GraphAuth.
     Error = ::GraphAuth::Error
     AuthError = ::GraphAuth::AuthError
     NotFoundError = ::GraphAuth::NotFoundError
@@ -47,9 +40,8 @@ module Graph
       end
     end
 
-    # Every file attachment counts, including images pasted into the body
-    # (inline) — signature logos are rare enough that reviewers just ignore
-    # them. Only attached mail items (forwarded messages) are skipped.
+    # Inline images count too (signature logos are rare enough to ignore). Only attached mail
+    # items (forwards) are skipped.
     def attachments(message_id)
       response = graph_request(:get, "/users/#{@mailbox}/messages/#{message_id}/attachments")
       response.fetch("value").filter_map do |attachment|
@@ -72,9 +64,8 @@ module Graph
       swallow_only_if_gone(message_id, "reply", e)
     end
 
-    # The idempotency commit point: unread_messages filters on isRead eq false,
-    # so once a message is read the next poll won't re-fetch (and re-process)
-    # it. Kept separate from +move+ so a move failure never leaves it unread.
+    # The idempotency commit point: unread_messages never re-fetches a read message. Separate
+    # from +move+ so a move failure never leaves it unread.
     def mark_read(message_id)
       return nil unless outbound?
 
@@ -84,16 +75,12 @@ module Graph
       swallow_only_if_gone(message_id, "mark_read", e)
     end
 
-    # Files the message under Processed/Rejected. Best-effort tidy-up: it runs
-    # after +mark_read+, so a failure here can't cause reprocessing.
+    # Best-effort tidy-up after +mark_read+, so a failure here cannot cause reprocessing.
     def move(message_id, folder)
       return nil unless outbound?
 
-      # Resolve the destination folder OUTSIDE the rescue below. folder_id ->
-      # find_or_create_folder issues its own GET (and possibly POST) against
-      # /mailFolders, so inside the message-scoped rescue a 404 from a folder
-      # misconfiguration reads as "the message is gone" and gets swallowed,
-      # hiding a real setup problem.
+      # Resolve the folder OUTSIDE the rescue below: its own GET/POST against /mailFolders would
+      # otherwise turn a folder 404 into "message gone" and swallow a setup problem.
       destination = folder_id(folder)
 
       begin
@@ -105,19 +92,12 @@ module Graph
       end
     end
 
-    # Convenience for the reject paths (no expense created, so a failure just
-    # retries next cycle). Moves first, then marks read: a move failure then
-    # leaves the message unread and retried, whereas the reverse order leaves a
-    # read-but-unfiled message stuck in the Inbox forever, since unread_messages
-    # would never fetch it again to retry the move. The symmetric edge case — move
-    # succeeds, mark_read fails, leaving an unread message sitting in
-    # Rejected/Processed — is the accepted trade-off, being strictly less bad than
-    # reprocessing.
-    #
-    # A 404 on either call propagates unless the message is confirmed gone (see
-    # swallow_only_if_gone), so a moved-but-present message aborts into
-    # MailboxPollJob#process's rescue: logged, reported, left unread. Right
-    # outcome here — no expense exists yet and the message really wasn't filed.
+    # For the reject paths (no expense exists, so a failure just retries). Moves BEFORE marking
+    # read: a move failure leaves the message unread and retried, whereas read-then-fail strands
+    # it in the Inbox, never fetched again. The reverse edge (moved, mark_read fails) leaves an
+    # unread message in Rejected/Processed, which is less bad than reprocessing. A 404 propagates
+    # unless the message is confirmed gone, so a moved-but-present message aborts into
+    # MailboxPollJob#process's rescue: logged, reported, left unread.
     def mark_read_and_move(message_id, folder)
       move(message_id, folder)
       mark_read(message_id)
@@ -126,17 +106,11 @@ module Graph
 
     private
 
-    # A message-scoped mutation (reply / mark_read / move) 404'd. That is USUALLY
-    # because someone handled or deleted the message by hand in Outlook between the
-    # poll's listing and this call, and alerting on it every retry cycle would be
-    # noise. So the 404 is swallowed — but only once CONFIRMED.
-    #
-    # A 404 alone does not prove the message is gone: Exchange CHANGES a message's
-    # id when the message is moved, so the same 404 can mean "still in the mailbox,
-    # still unread, just under a new id". Swallowing that defeats the loud path
-    # these callers depend on — MailboxPollJob detects a failed mutation only by
-    # the raise, so a moved-but-present message would leave the sender un-replied
-    # and the message un-filed with nothing above logger.info to say so.
+    # A reply/mark_read/move 404'd. Usually someone handled the message by hand in Outlook after
+    # the poll listed it, which is not worth alerting on every cycle: swallowed, but only once
+    # CONFIRMED. A 404 alone does not prove it is gone: Exchange changes a message's id on move,
+    # so it can mean "still here, still unread, under a new id". Swallowing that would hide a
+    # failed mutation, which MailboxPollJob detects only by the raise.
     def swallow_only_if_gone(message_id, action, error)
       raise error if message_present?(message_id)
 
@@ -146,11 +120,8 @@ module Graph
       nil
     end
 
-    # Read-only existence probe on the same message id the mutation used. Only a
-    # 404 here proves the message is really gone. Anything else inconclusive (a
-    # 5xx, a timeout, an auth problem) fails CLOSED as "still present", so an
-    # unclear answer takes the loud path rather than quietly abandoning a message
-    # that may still need processing.
+    # Read-only probe on the same id. Only a 404 proves the message is gone; anything
+    # inconclusive (5xx, timeout, auth) fails CLOSED as "present" and takes the loud path.
     def message_present?(message_id)
       graph_request(:get, "/users/#{@mailbox}/messages/#{message_id}", params: { "$select" => "id" })
       true
@@ -160,19 +131,14 @@ module Graph
       true
     end
 
-    # Belt-and-braces guard against outbound mutations (reply / move / mark_read)
-    # in non-production without an explicit opt-in — even if someone drives a
-    # MailboxClient from a dev `rails console` outside the poll job (whose own
-    # guard already covers the recurring path). Reads/probes stay ungated. NB:
-    # deliberately NOT enforced inside GraphAuth#graph_request — find_or_create_folder
-    # does a GET then a POST, and a blanket verb-level block would make the POST
-    # return {} and blow up .fetch("id").
+    # Belt and braces against mutations in non-production without an opt-in, e.g. from a dev
+    # console outside the poll job. Deliberately NOT enforced in GraphAuth#graph_request:
+    # find_or_create_folder's POST would return {} and blow up .fetch("id").
     def outbound?
       @settings.outbound_enabled?
     end
 
-    # Folder ids never change once created, so they're cached across job runs
-    # (a fresh client per run would otherwise re-query Graph each cycle).
+    # Folder ids never change, so they are cached across job runs.
     def folder_id(key)
       @folder_ids[key] ||= Rails.cache.fetch("reimbursements/graph-folder/#{@mailbox}/#{key}",
                                              expires_in: 12.hours) do

@@ -4,9 +4,8 @@ module Reimbursements
   class GraphClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Delegates outbound_enabled? to the real Settings so the send/draft
-    # suppression guard reads the same REIMBURSEMENTS_ENABLE_OUTBOUND seam the
-    # suite sets (test_helper opts in; a suppression test deletes it).
+    # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
+    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
     FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
       def outbound_enabled?
         Reimbursements::Settings.outbound_enabled?
@@ -144,21 +143,10 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    # The gate has to be "no outbound Graph SIDE EFFECT", not merely "no outbound
-    # mail": upload and delete are the two calls carrying bank details.
-    # BatchProcessor uploads the BACS xlsx (full sort codes and account numbers)
-    # and every receipt BEFORE create_draft, so an ungated dev shell holding real
-    # Azure credentials would PUT them into PRODUCTION SharePoint on a Build
-    # Batch, and reopen could DELETE a real draft out of the live mailbox.
-    #
-    # These two raise rather than returning a plausible stub, unlike create_draft /
-    # send_mail: a suppressed upload that returned "" or a fake URL would be
-    # counted as uploaded by BatchProcessor and stamp receipts_offloaded, telling
-    # an operator it is safe to delete the only copy of a receipt that was never
-    # backed up; and a suppressed delete that returned nil would tell the operator
-    # "the old EUSA draft has been deleted" when it is still sitting there. Both
-    # call sites already rescue StandardError into a visible best-effort error, so
-    # raising is both louder and truer.
+    # Upload and delete are gated because they carry bank details (the BACS xlsx and receipts go
+    # up BEFORE create_draft). They RAISE rather than stub, unlike create_draft / send_mail: a
+    # stubbed upload would stamp receipts_offloaded on a receipt never backed up, and a stubbed
+    # delete would report the old EUSA draft gone while it is still there.
     test "upload_to_folder is suppressed with no Graph request when outbound is disabled" do
       client, http = build_client([ token_response, [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ] ])
       original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
@@ -186,10 +174,7 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    # The whole suite runs with REIMBURSEMENTS_ENABLE_OUTBOUND set, so without
-    # this the production branch of the gate is never exercised and deleting
-    # `return true if Rails.env.production?` from Settings would stay green while
-    # production silently stopped uploading and deleting.
+    # The suite sets the opt-in, so this is the only test of the gate's production branch.
     test "production performs the upload and the delete without the ENV opt-in" do
       original_env = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
       original_rails_env = Rails.env
@@ -214,8 +199,7 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original_env if original_env
     end
 
-    # Read-only probes must keep working in a dev shell: they are how the Settings
-    # dashboard and folder picker report on a real tenant, and they mutate nothing.
+    # Read-only probes stay ungated: the Settings dashboard and folder picker use them on a real tenant.
     test "read-only Graph probes are not gated by the outbound switch" do
       original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
       client, http = build_client([
@@ -332,9 +316,8 @@ module Reimbursements
     end
 
     test "upload_to_folder's small-file PUT raises NotFoundError on a 404, still loud (graph_raw_request)" do
-      # 404s are only swallowed on the mailbox mutation paths (a vanished
-      # message is genuinely nothing to do). A 404 uploading a receipt means a
-      # missing drive/folder — a real error that must fail loudly, not vanish.
+      # A 404 here means a missing drive or folder and must stay loud; only the mailbox mutation
+      # paths swallow 404s.
       client, = build_client([ token_response, [ 404, { error: { code: "itemNotFound" } }.to_json ] ])
 
       assert_raises(GraphAuth::NotFoundError) do
@@ -485,7 +468,7 @@ module Reimbursements
       client, http = build_client([ token_response ])
 
       assert client.check_reachable
-      # Only the token request was made — no per-resource Graph call.
+      # Only the token request: no per-resource Graph call.
       assert_equal 1, http.requests.size
       assert_includes http.requests.last.uri, "oauth2/v2.0/token"
     end

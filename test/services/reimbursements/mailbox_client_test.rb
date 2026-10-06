@@ -4,9 +4,8 @@ module Reimbursements
   class MailboxClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Delegates outbound_enabled? to the real Settings so the reply/move/mark_read
-    # belt-and-braces guards read the same REIMBURSEMENTS_ENABLE_OUTBOUND seam the
-    # suite opts into (test_helper), and a suppression test can delete it.
+    # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
+    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
     FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
       def outbound_enabled?
         Reimbursements::Settings.outbound_enabled?
@@ -26,8 +25,8 @@ module Reimbursements
     end
 
     setup do
-      # Folder ids are cached in Rails.cache across job runs; tests must not
-      # leak them into each other (the test cache is a FileStore).
+      # Folder ids are cached across job runs in Rails.cache (a FileStore in test): don't leak
+      # them between tests.
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
@@ -122,9 +121,8 @@ module Reimbursements
     end
 
     test "mark_read_and_move moves to an existing folder, then marks read" do
-      # Moves first: a move failure must leave the message unread (safe to
-      # retry — no expense exists yet on this reject path), not the reverse,
-      # which would leave a read-but-unfiled message stuck forever.
+      # Moves first: a move failure must leave the message unread (safe to retry on this reject
+      # path), not read-but-unfiled for ever.
       client, http = build_client([
         token_response,
         [ 200, { value: [ { id: "fld-processed" } ] }.to_json ],    # folder lookup
@@ -244,14 +242,12 @@ module Reimbursements
       assert_empty pauses
     end
 
-    # The real Graph error body when a message no longer exists (handled or
-    # deleted by hand in Outlook between the poll's listing and the mutation).
+    # The real Graph body for a message handled or deleted by hand in Outlook.
     ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",
                                 message: "The specified object was not found in the store." } }.to_json
 
     test "a bare graph_request 404 raises NotFoundError (loud, for non-mutation paths)" do
-      # unread_messages is a read path — a 404 here is a real problem and must
-      # still surface. NotFoundError < Error, so existing rescues still catch it.
+      # unread_messages is a read path: a 404 there is a real problem and must surface.
       client, = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
 
       error = assert_raises(GraphAuth::NotFoundError) { client.unread_messages }
@@ -294,12 +290,9 @@ module Reimbursements
     end
 
     # --- A 404 does NOT prove the message is gone ----------------------------
-    #
-    # Exchange CHANGES a message's id when the message is moved, so a mutation can
-    # 404 on a message that is still sitting in the mailbox, still unread. A
-    # blanket swallow turns that into silence: the draft is created, mark_read
-    # reports success, the sender is never told their claim arrived, and nothing
-    # above logger.info fires — no Honeybadger, no duplicate_risk flag.
+    # Exchange changes a message's id on move, so a mutation can 404 on a message still sitting
+    # unread in the mailbox. A blanket swallow turns that into silence: no reply, no Honeybadger
+    # notice, no duplicate_risk flag.
 
     test "mark_read stays loud when a 404 is contradicted by the message still existing" do
       client, http = build_client([
@@ -334,9 +327,8 @@ module Reimbursements
       assert_raises(GraphAuth::NotFoundError) { client.move("msg1", :processed) }
     end
 
-    # An inconclusive confirmation (5xx, timeout, auth) must fail CLOSED — treat
-    # the message as still present and take the loud path, rather than swallowing
-    # a message that may still need processing.
+    # An inconclusive confirmation (5xx, timeout, auth) fails CLOSED: treated as still present,
+    # taking the loud path.
     test "an inconclusive existence check keeps the 404 loud" do
       client, = build_client([
         token_response,
@@ -347,9 +339,7 @@ module Reimbursements
       assert_raises(GraphAuth::NotFoundError) { client.mark_read("msg1") }
     end
 
-    # move wrapped folder_id -> find_or_create_folder inside the same rescue, so a
-    # 404 from the FOLDER lookup was mislabelled "message gone" and swallowed —
-    # hiding a mailbox/folder misconfiguration entirely.
+    # A 404 from the FOLDER lookup must not read as "message gone": it is a mailbox setup problem.
     test "a 404 from the folder lookup is not mislabelled as the message being gone" do
       client, http = build_client([
         token_response,
