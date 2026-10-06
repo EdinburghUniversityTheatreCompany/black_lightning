@@ -50,24 +50,6 @@ class Admin::StaffingJob < ApplicationRecord
     staffable.end_time < DateTime.current
   end
 
-  def ical_calendar(method:)
-    require "icalendar"
-    require "icalendar/tzinfo"
-
-    cal = Icalendar::Calendar.new
-    cal.prodid = "-//Bedlam Theatre//BlackLightning//EN"
-    cal.ip_method = method.to_s.upcase
-
-    cal.add_event(build_ical_event)
-    cal
-  end
-
-  def to_ical_event
-    require "icalendar"
-
-    build_ical_event
-  end
-
   def counts_towards_debt?
     staffable.present? && staffable.counts_towards_debt? && name.downcase != "committee rep"
   end
@@ -80,9 +62,16 @@ class Admin::StaffingJob < ApplicationRecord
     all.where(id: ids)
   end
 
-  private
+  def ical_calendar(method:)
+    cal = Icalendar::Calendar.new
+    cal.prodid = "-//Bedlam Theatre//BlackLightning//EN"
+    cal.ip_method = method.to_s.upcase
 
-  def build_ical_event
+    cal.add_event(to_ical_event)
+    cal
+  end
+
+  def to_ical_event
     event = Icalendar::Event.new
     event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
     event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
@@ -95,59 +84,8 @@ class Admin::StaffingJob < ApplicationRecord
     event
   end
 
-  def send_calendar_invite_email
-    # Skip template jobs: they have no real date or time.
-    return if staffable.is_a?(Admin::StaffingTemplate)
-
-    if saved_change_to_user_id?
-      old_user_id, new_user_id = saved_change_to_user_id
-
-      if old_user_id.present?
-        old_user = User.find(old_user_id)
-        bump_calendar_sequence
-        ics_data = ical_calendar(method: :cancel).to_ical
-
-        StaffingMailer.calendar_cancellation(
-          recipient: old_user,
-          staffing: staffable,
-          job_name: name,
-          ics_data: ics_data
-        ).deliver_later
-      end
-
-      if new_user_id.present?
-        StaffingMailer.calendar_invite(self, method: :request).deliver_later
-      end
-    elsif saved_change_to_name? && user.present?
-      bump_calendar_sequence
-      StaffingMailer.calendar_invite(self, method: :request).deliver_later
-    end
-  end
-
-  def send_calendar_cancellation_email
-    return if staffable.is_a?(Admin::StaffingTemplate)
-    return unless user.present?
-
-    bump_calendar_sequence
-    ics_data = ical_calendar(method: :cancel).to_ical
-
-    StaffingMailer.calendar_cancellation(
-      recipient: user,
-      staffing: staffable,
-      job_name: name,
-      ics_data: ics_data
-    ).deliver_later
-  end
-
-  public
-
   def bump_calendar_sequence
-    new_seq = calendar_sequence + 1
-    unless destroyed?
-      update_column(:calendar_sequence, new_seq)
-      self.calendar_sequence = new_seq
-    end
-    new_seq
+    update_column(:calendar_sequence, calendar_sequence + 1) unless destroyed?
   end
 
   # Associates itself with the soonest upcoming Maintenance Debt
@@ -181,5 +119,36 @@ class Admin::StaffingJob < ApplicationRecord
 
       user.reallocate_staffing_debts if user.present?
     end
+  end
+
+  private
+
+  def send_calendar_invite_email
+    # Skip template jobs: they have no real date or time.
+    return if staffable.is_a?(Admin::StaffingTemplate)
+
+    if saved_change_to_user_id?
+      old_user_id, new_user_id = saved_change_to_user_id
+
+      send_cancellation_to(User.find(old_user_id)) if old_user_id.present?
+      StaffingMailer.calendar_invite(self, method: :request).deliver_later if new_user_id.present?
+    elsif saved_change_to_name? && user.present?
+      bump_calendar_sequence
+      StaffingMailer.calendar_invite(self, method: :request).deliver_later
+    end
+  end
+
+  def send_calendar_cancellation_email
+    send_cancellation_to(user) if user.present? && !staffable.is_a?(Admin::StaffingTemplate)
+  end
+
+  def send_cancellation_to(recipient)
+    bump_calendar_sequence
+    StaffingMailer.calendar_cancellation(
+      recipient: recipient,
+      staffing: staffable,
+      job_name: name,
+      ics_data: ical_calendar(method: :cancel).to_ical
+    ).deliver_later
   end
 end
