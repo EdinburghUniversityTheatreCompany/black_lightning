@@ -26,17 +26,15 @@
 <% if @candidates.empty? %>
   <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do %>
     <p class="mb-0 text-gray-600">
-      <%# Naming the four gates is the only way the operator can tell "nothing
-          matches" from "I am looking in the wrong place". %>
+      <%# Naming the four gates lets the operator tell "nothing matches" from "wrong place". %>
       Nothing on the ledger can cancel this row out. A counterpart has to be the same amount on
       the opposite side, on the same nominal code, in the same financial year and the same cost
       centre, and be attached to nothing itself.
     </p>
   <% end %>
 <% else %>
-  <%# form_with wraps the card, never the other way round: the footer is a
-      component SLOT, so a form opened inside the card renders its submit
-      outside the <form> and the button silently does nothing. %>
+  <%# form_with wraps the card, never the reverse: the footer is a component slot, so a form opened
+      inside the card puts the submit button outside the <form>. %>
   <%= form_with url: confirm_offset_admin_reimbursements_actual_path(@actual.record_id),
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which row does it cancel out?", html_class: "mt-4") do |card| %>
@@ -58,8 +56,7 @@
               <span class="text-gray-600"><%= reimbursements_date(candidate.date) %></span>
               <span class="font-mono text-gray-600"><%= candidate.period.presence || "-" %></span>
               <% if candidate.ref.present? && candidate.ref == @actual.ref %>
-                <%# The strongest signal the automatic matcher scores on, so it
-                    is worth marking even though nothing here is ranked. %>
+                <%# The strongest signal the matcher scores on, so worth marking though nothing is ranked. %>
                 <%= render BadgeComponent.new(type: :success, pill: true).with_content("Same reference") %>
               <% end %>
               <span class="block text-gray-600">

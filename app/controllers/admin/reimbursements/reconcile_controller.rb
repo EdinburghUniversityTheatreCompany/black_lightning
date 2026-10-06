@@ -1,49 +1,19 @@
 module Admin
   module Reimbursements
     ##
-    # EUSA actuals reconciliation for the finance team: a three-step wizard.
+    # EUSA actuals reconciliation, a three-step wizard: paste the export (show); preview (attribute each
+    # row to the cost centre its own Cost Centre column names, dedup, propose offsetting pairs, match the
+    # rest); apply (write the actuals, link them, mark matched expenses Paid). Stateless: preview and apply
+    # re-parse the pasted text carried in the form, so apply always re-checks a fresh actuals list.
     #
-    #   1. show    — paste the monthly EUSA actuals export.
-    #   2. preview — parse (legacy/Sage auto-detect), ATTRIBUTE each row to the
-    #                cost centre its own Cost Centre column names, dedup against
-    #                rows already imported for the same EUSA period + cost
-    #                centre, propose the offsetting pairs (an accrual and its
-    #                reversal), and match the rest — debits to Submitted/Paid
-    #                expenses, credits to income budgets, both scoped to the
-    #                row's cost centre.
-    #   3. apply   — create EUSA Actuals records, link them to the matched
-    #                expense/budget, cross-link the offsetting pairs the
-    #                operator left ticked, and mark matched expenses Paid.
+    # NOTHING IS EMAILED TO THE PRODUCER HERE. Actuals land weeks after the BACS run they confirm, so a
+    # "you've been paid" note is old news; Paid is bookkeeping, not an event.
     #
-    # NOTHING IS EMAILED TO THE PRODUCER HERE. Reconciliation runs off EUSA's
-    # monthly actuals export, which lands weeks after the BACS run it confirms —
-    # by then the money is already in the producer's account, and a "you've been
-    # paid" note arrives as news they had long ago. The producer's one
-    # notification is Notifier#producer_notification, sent when their claim goes
-    # into a batch (BatchProcessor). Paid here is a bookkeeping state, not an
-    # event to announce.
-    #
-    # PER-ROW COST CENTRES: a paste may span as many centres as it likes, each
-    # row landing in the centre its own Cost Centre column names. Filtering a
-    # paste to one code loses every other centre's rows silently. See
-    # Reimbursements::ActualsAttribution for the three outcomes (attributed /
-    # unrecognised code, skipped visibly / blank code, needing an explicit
-    # operator choice).
-    #
-    # The wizard is stateless: preview/apply re-parse the pasted text carried in
-    # the form (the parse + match functions are pure), so nothing is stashed in
-    # the session and the dedup on apply always re-checks a fresh actuals list.
-    # The operator's blank-row choice travels in the form too, the way the
-    # offsetting-pair ticks do, and apply refuses to commit anything while that
-    # answer is missing rather than dropping those rows at the commit step.
-    #
-    # Dedup keys off each row's own EUSA period AND cost centre, so a single
-    # paste spanning several of either is deduped bucket-by-bucket.
+    # A paste may span several cost centres, each row landing in the one it names (see
+    # Reimbursements::ActualsAttribution). Filtering to one code would lose the rest silently.
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
-      # A submit with neither a paste nor a file. It used to re-render step 1
-      # in silence, which reads as the button having done nothing.
       NOTHING_GIVEN_ALERT =
         "Paste the actuals rows, or upload the sheet, before parsing.".freeze
 
@@ -61,11 +31,8 @@ module Admin
 
       def preview
         @title = "Reconcile EUSA actuals"
-        # An upload beats the text box, for the reason ReadsImportSource gives:
-        # the preview carries the sheet on as TEXT in a hidden field, so apply
-        # only ever sees text and an upload has no second file to re-send. The
-        # file is converted ONCE, here, and everything downstream runs on
-        # exactly what a paste produces.
+        # An upload beats the text box and is converted to text once: apply only ever sees the
+        # hidden-field text, and an upload has no second file to re-send.
         @pasted_text = text_from_upload || params[:pasted_text].to_s
         return render :show if @upload_error
 
@@ -114,11 +81,8 @@ module Admin
           return
         end
 
-        # An unanswered blank-cost-centre question blocks the WHOLE paste rather
-        # than quietly importing the rows that do have a centre: the operator
-        # cannot be shown a confirmation and then have rows disappear behind it.
-        # The preview is re-rendered rather than redirected to, so a 300-row
-        # paste survives the refusal.
+        # An unanswered blank-cost-centre question blocks the WHOLE paste, and the preview is re-rendered,
+        # not redirected, so a large paste survives the refusal.
         if attribution.blank_choice_required?
           @title = "Reconcile EUSA actuals"
           flash.now[:alert] = BLANK_CHOICE_ALERT
@@ -132,9 +96,7 @@ module Admin
 
       private
 
-      # Everything preview shows, from an attributed paste. Shared with apply's
-      # refusal path so a blocked apply lands the operator back on a working
-      # preview instead of an empty form.
+      # Shared with apply's refusal path, so a blocked apply lands on a working preview.
       def build_preview(attribution)
         @attribution = attribution
         @cost_centres = configured_cost_centres
@@ -157,8 +119,7 @@ module Admin
         new_entries, skipped_entries = dedup(attribution.attributed)
         @skipped_count = skipped_entries.size
 
-        # Only the pairs the operator left ticked are collapsed; an unticked
-        # pair's legs go back into the ordinary matching as genuine rows.
+        # An unticked pair's legs go back into ordinary matching.
         pairs, = detect_pairs(new_entries)
         applied_pairs = pairs.select { |pair| ticked_offset_pair_keys.include?(pair.key) }
         matched_debits, matched_credits, unmatched =
@@ -173,9 +134,8 @@ module Admin
         @unmatched_saved = committed_unmatched.size
       end
 
-      # The uploaded sheet as text, or nil when no file was picked. A file the
-      # reader cannot open is reported on the form rather than 500ing with the
-      # operator's upload lost.
+      # The uploaded sheet as text, or nil when no file was picked. An unreadable file is reported on
+      # the form, not as a 500 that loses the upload.
       def text_from_upload
         file = params[:actuals_file]
         return nil unless file.respond_to?(:path)
@@ -183,7 +143,7 @@ module Admin
         ::Reimbursements::ActualsUpload.to_text(file)
       rescue ::Reimbursements::ActualsUpload::UnreadableError => e
         @upload_error = true
-        # The message already carries its advice; adding more states it twice.
+        # e.message already carries the advice.
         flash.now[:alert] = "Couldn't read that file: #{e.message}"
         nil
       end
@@ -195,10 +155,8 @@ module Admin
         nil
       end
 
-      # Attribute each parsed row to the cost centre its own code names, or nil
-      # when none is configured at all (there is then nothing to reconcile
-      # against, and inventing a code would file real money under a pot that
-      # doesn't exist).
+      # Nil when no cost centre is configured: inventing a code would file money under a pot that
+      # doesn't exist.
       def attribute(rows)
         return nil if configured_cost_centres.empty?
 
@@ -211,22 +169,11 @@ module Admin
         @configured_cost_centres ||= ::Reimbursements::CostCentre.order(:id).to_a
       end
 
-      # Split attributed rows into [new, already-imported] using the dedup key
-      # against the actuals already stored for the same EUSA period AND cost
-      # centre.
-      #
-      # The cost centre belongs in the bucket key because a paste can span
-      # several centres: two can each carry a row with the same nominal code,
-      # narrative and amount in the same period (a shared supplier charge split
-      # between pots, the same recurring journal), and on a period-only key the
-      # second centre's row reads as "already imported" and vanishes.
-      #
-      # A STORED row with no cost centre of its own (a blank code, or a row
-      # predating the column) is counted in EVERY centre's bucket. It cannot say
-      # which pot it belongs to, and here the asymmetry runs the OTHER way from
-      # the offsetting-pair heuristic: skipping a re-import leaves a visible gap
-      # in a paste, whereas importing a duplicate double-counts real spend in the
-      # ledger and every rollup.
+      # Splits attributed rows into [new, already-imported] by dedup key against the actuals stored for
+      # the same EUSA period AND cost centre. The centre is in the bucket key because two pots can carry
+      # the same charge in one period. A STORED row with no cost centre counts in EVERY centre's bucket:
+      # skipping a re-import leaves a visible gap, importing a duplicate double-counts spend (the
+      # asymmetry runs the other way from pairing).
       def dedup(entries)
         existing = Hash.new do |cache, key|
           period, cost_centre_id = key
@@ -243,21 +190,17 @@ module Admin
         end
       end
 
-      # Offsetting pairs over the attributed rows, gated to within a cost centre:
-      # two unrelated real transactions in two pots must never be stamped as
-      # cancelling each other out. The identities are the resolved cost centre
-      # ids, not the exported codes, so a blank-code row the operator assigned to
-      # a pot pairs as a member of that pot.
+      # Offsetting pairs within a cost centre, so two pots' unrelated transactions never cancel. The
+      # identities are the resolved centre ids, not exported codes, so a blank-code row the operator
+      # assigned pairs as a member of its pot.
       def detect_pairs(entries)
         ::Reimbursements::Reconciliation.detect_offsetting_pairs(
           entries.map(&:row), cost_centres: entries.map { |entry| entry.cost_centre.id.to_s }
         )
       end
 
-      # The pair keys the operator left ticked on the preview. Every proposed
-      # pair renders as a ticked checkbox alongside one blank hidden entry, so
-      # the parameter is always present when pairs were shown: an absent key
-      # means unticked, never "we didn't ask".
+      # The pair keys left ticked. Each proposed pair posts a blank hidden entry beside its checkbox, so
+      # an absent key means unticked, never "we didn't ask".
       def ticked_offset_pair_keys
         keys = params[:offset_pair_keys]
         return Set.new unless keys.is_a?(Array)
@@ -265,29 +208,17 @@ module Admin
         keys.map(&:to_s).compact_blank.to_set
       end
 
-      # Attributed rows not claimed by one of the applied pairs, in paste order.
-      # Keyed on the pair's row INDEXES, not row equality: two byte-identical
-      # rows in one paste are two real transactions, and pairing one must not
-      # silently drop the other.
+      # Entries not consumed by the pairs, in paste order. Keyed on row INDEXES, not equality: two
+      # byte-identical rows are two transactions.
       def entries_outside(entries, pairs)
         consumed = pairs.flat_map { |pair| [ pair.debit_index, pair.credit_index ] }.to_set
         entries.each_with_index.reject { |_entry, index| consumed.include?(index) }.map(&:first)
       end
 
-      # Match debits to Submitted/Paid expenses (each claimed at most once) and
-      # credits to income budgets. Returns [matched_debits, matched_credits,
-      # unmatched] where matched_* are [attributed entry, expense|budget] pairs.
-      #
-      # Both matches are SCOPED TO THE ROW'S COST CENTRE. Without that, a
-      # termtime debit of the same amount and nominal code could mark a Fringe
-      # expense Paid, attributing the money to the wrong pot and closing a claim
-      # nobody has actually paid. A row that finds no expense in its own cost
-      # centre simply lists as unmatched, which a human can see and fix.
-      #
-      # Expenses already reconciled are excluded so a later or overlapping EUSA
-      # export can never re-match or re-pay an expense that's already been paid —
-      # the dedup only catches an identical row, so a row that differs slightly
-      # would otherwise slip through.
+      # Matches debits to Submitted/Paid expenses (each claimed at most once) and credits to income
+      # budgets. Returns [matched_debits, matched_credits, unmatched]; a match is [entry, expense|budget].
+      # Both are scoped to the row's cost centre (a termtime debit must not mark a Fringe claim Paid), and
+      # already-reconciled expenses are excluded because dedup only catches an identical row.
       def build_matches(entries)
         remaining = matchable_expenses
         income_budgets = income_budgets_pool
@@ -325,11 +256,9 @@ module Admin
         [ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]
       end
 
-      # Every expense a debit row is allowed to match, as a fresh array the
-      # caller may consume from (a matched expense is deleted so it can't be
-      # claimed twice). Not yet cost-centre scoped — expenses_in does that per
-      # row, from this one shared pool, so an expense claimed by any row is out
-      # of reach of every other row whatever its cost centre.
+      # Every expense a debit may match, as a fresh array the caller consumes from. Cost centre scoping
+      # is per row (expenses_in) from this one pool, so an expense claimed by any row is out of reach of
+      # every other row.
       def matchable_expenses
         reconciled_ids = reconciled_expense_ids
         store.expenses.select do |e|
@@ -350,39 +279,20 @@ module Admin
         budgets.select { |budget| in_cost_centre?(budget.cost_centre_id, cost_centre) }
       end
 
-      # Whether a record belonging to +record_cost_centre_id+ is in +cost_centre+.
-      #
-      # An expense with no budget at all, or a budget with no cost centre, has no
-      # cost centre to compare — Budget#cost_centre_id is nullable and predates
-      # this scoping. Such a record is treated as belonging to the row's centre
-      # ONLY while exactly one cost centre is configured, because then there is
-      # nowhere else it could belong and the scoping cannot be wrong. The moment
-      # a second centre exists the ambiguity is real, so we stop guessing: the
-      # unattributed expense drops out of matching and its rows list as unmatched
-      # until someone gives its budget a cost centre. Guessing instead would pay
-      # a claim out of the wrong pot.
+      # A record with no cost centre (no budget, or a nil Budget#cost_centre_id) belongs to the row's
+      # centre only while exactly one centre is configured. Once a second exists, stop guessing: the row
+      # lists as unmatched until someone gives its budget a centre, instead of paying the wrong pot.
       def in_cost_centre?(record_cost_centre_id, cost_centre)
         return record_cost_centre_id == cost_centre.id if record_cost_centre_id
 
         configured_cost_centres.one?
       end
 
-      # What each proposed pair would do if the operator unticked it, as
-      # { pair key => { expense:, budget: } }.
-      #
-      # The "will mark N matched expenses Paid" count is computed from the
-      # UNPAIRED rows only, but apply hands an unticked pair's legs back to the
-      # ordinary matching, so it can pay expenses the confirmation never
-      # mentioned. Naming the specific expense per pair is more use than a
-      # corrected total: it tells the operator what THIS tick is deciding,
-      # before they submit, and stays right however many pairs they untick.
-      #
-      # Pairs are walked in order, each consuming its match from the pool that
-      # the ordinary matching left behind, because apply claims each expense
-      # once — two lookalike pairs must not both promise to pay the same one.
-      #
-      # Each pair's cost centre comes from its legs' entries, so the note only
-      # ever names an expense the unticked pair could really pay.
+      # What unticking each pair would do, as { pair key => { expense:, budget: } }. The "mark N matched
+      # expenses Paid" count covers unpaired rows only, but an unticked pair's legs go back to ordinary
+      # matching, so naming the expense each tick decides is more use than a corrected total. Pairs
+      # consume from the pool the ordinary matching left, in order, so two lookalike pairs never both
+      # promise the same expense; each leg is scoped to its own entry's cost centre.
       def offset_pair_consequences(pairs, entries, matched_debits)
         claimed = matched_debits.map { |_entry, expense| expense.record_id }.to_set
         remaining = matchable_expenses.reject { |e| claimed.include?(e.record_id) }
@@ -401,30 +311,18 @@ module Admin
         end
       end
 
-      # Record ids of every expense already linked to an imported EUSA actual —
-      # the durable, cross-paste signal that an expense has been reconciled.
+      # Record ids of every expense linked to an imported actual.
       def reconciled_expense_ids
         store.eusa_actuals.flat_map(&:linked_expense_ids).to_set
       end
 
-      # An expense counts as already reconciled if an imported actual links to it
-      # or a payment has been confirmed against it — either means "already paid",
-      # so it must not be matched (and paid) a second time.
+      # Linked to an actual or payment-confirmed both mean already paid: never match it a second time.
       def already_reconciled?(expense, reconciled_ids)
         reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
-      # Each row's write sequence is rescued independently, so one row's failure
-      # can't abort the whole paste: the rest of the batch still commits, and the
-      # operator gets a report naming the row that failed. Without this, an
-      # exception on row k used to 500 the whole request after rows 1..k-1 had
-      # already committed — a partly-applied paste with nothing on screen saying
-      # so, which re-pasting can't clarify either, because apply is
-      # idempotent-by-design (already_reconciled? excludes anything already
-      # linked) so the committed rows just read as "already imported".
-      # Returns [committed_pairs, committed_debits, committed_credits,
-      # committed_unmatched] — each the subset that actually made it through, so
-      # the caller's summary counts never claim more happened than really did.
+      # Returns the subset of each list that committed, so the summary counts never claim more than
+      # happened.
       def apply_reconciliation(entries, pairs, matched_debits, matched_credits, unmatched)
         imported_at = Time.current
 
@@ -436,10 +334,8 @@ module Admin
         [ committed_pairs, committed_debits, committed_credits, committed_unmatched ]
       end
 
-      # Both legs are imported and then pointed at each other: the pair nets to
-      # zero, but finance still needs to see that both entries exist. One store
-      # call, one transaction — see DatabaseStore#create_offsetting_pair! for why
-      # a half-written pair is unrepairable.
+      # Both legs are imported and cross-linked in one store call; see
+      # DatabaseStore#create_offsetting_pair! for why a half-written pair is unrepairable.
       def apply_offsetting_pair(entries, pair, imported_at)
         with_row_rescue("an offsetting pair") do
           store.create_offsetting_pair!(actuals_attrs(entries[pair.debit_index], imported_at),
@@ -450,9 +346,7 @@ module Admin
       def apply_debit_row(entry, expense, imported_at)
         with_row_rescue("expense ##{expense.auto_number}") do
           actual = store.create_actual!(actuals_attrs(entry, imported_at))
-          # gbp_charged corrects an INTERNATIONAL claim's amount from finance's
-          # estimate to what the bank really charged; the store ignores it on a
-          # UK claim, whose amount was never an estimate.
+          # gbp_charged corrects an international claim's estimate; the store ignores it on a UK claim.
           store.settle_expense_from_actual!(actual.record_id, expense.record_id,
                                             payment_date: entry.row.date,
                                             gbp_charged: entry.row.debit)
@@ -472,9 +366,9 @@ module Admin
         end
       end
 
-      # Runs the block, returning true; a raised StandardError is reported and
-      # converted to false so one row's failure can't abort the whole paste
-      # (see apply_reconciliation's comment above for why this matters).
+      # One row's failure must not abort the paste: a 500 after rows 1..k-1 committed leaves a partly
+      # applied paste with nothing on screen saying so. The rest still commits and the failed row is
+      # named. Re-pasting cannot reveal it either, since committed rows read as already imported.
       def with_row_rescue(subject)
         yield
         true
@@ -489,13 +383,9 @@ module Admin
         (@reconciliation_errors ||= []) << "#{subject}: #{error.message}"
       end
 
-      # The EUSA period (from the row) is the scoping key, so source_month is
-      # never written and its column stays blank on new rows.
-      #
-      # The cost centre is stored as the resolved FK only. The exported code
-      # itself is not persisted: it is the *input* to attribution, kept on the
-      # parser's ActualsRow for exactly as long as that decision takes, and
-      # storing it beside the answer would only let the two disagree.
+      # source_month is never written (the EUSA period scopes). The cost centre is stored as the
+      # resolved FK only: the exported code is the input to attribution, and storing it beside the
+      # answer would let the two disagree.
       def actuals_attrs(entry, imported_at)
         row = entry.row
         {

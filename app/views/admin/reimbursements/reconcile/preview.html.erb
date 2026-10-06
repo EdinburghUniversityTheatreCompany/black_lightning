@@ -1,8 +1,4 @@
-<%# Same Turbo Frame as show/apply — see show.html.erb for why the wizard
-    renders inside a frame. %>
 <%= turbo_frame_tag "reconcile" do %>
-<%# The wizard's steps read "Step 1" and then "Step 3" — this screen is the
-    missing two, and was headed nothing at all. %>
 <h2 class="mb-2 text-lg font-semibold">Step 2: Review the matches</h2>
 <p class="mb-3 text-gray-600">
   Every row is imported under the cost centre its own Cost Centre column names, and is matched
@@ -14,9 +10,6 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%# What the paste covers, when it covers more than one pot: say plainly which
-    centres these rows landed in rather than leaving a multi-centre paste
-    looking like a single-centre one. %>
 <% attributed_by_centre = @attribution.attributed.map(&:cost_centre).tally %>
 <% if attributed_by_centre.size > 1 %>
   <%= render AlertComponent.new(type: :info) do %>
@@ -26,8 +19,6 @@
   <% end %>
 <% end %>
 
-<%# A code we don't have set up is another society's spend in a whole-organisation
-    export. Skipping it is right; skipping it silently is the bug this replaces. %>
 <% if @attribution.unrecognised_rows.any? %>
   <%= render AlertComponent.new(type: :warning) do %>
     <%= pluralize(@attribution.unrecognised_rows.size, "row") %> skipped:
@@ -37,9 +28,8 @@
   <% end %>
 <% end %>
 
-<%# A blank cost centre is never inferred, not even when only one is configured:
-    that guess is exactly what files real spend under the wrong pot the day a
-    second pot exists. Nothing imports until the operator answers. %>
+<%# A blank cost centre is never inferred, even with one centre configured: that guess files real
+    spend under the wrong pot once a second exists. %>
 <% if @attribution.blank_choice_required? %>
   <%= render CardComponent.new(title: "Rows with no cost centre") do %>
     <p class="mb-3 text-gray-600">
@@ -119,9 +109,7 @@
                 <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) %></td>
-                <%# The claim this row is about to mark Paid, as a link to it.
-                    "_top" because a link inside a Turbo Frame navigates the
-                    FRAME, and the edit page carries no matching one. %>
+                <%# "_top": a link inside a Turbo Frame navigates the frame, and the edit page has none. %>
                 <td class="py-1 pr-3">
                   <%= link_to "##{expense.auto_number}",
                               edit_admin_reimbursements_expense_edit_path(expense.record_id),
@@ -211,16 +199,11 @@
     <% end %>
   <% end %>
 
-  <%# The offsetting-pair tickboxes and the Apply button are one form: the
-      pairs you leave ticked are the pairs that get collapsed. %>
+  <%# The pair tickboxes and Apply are one form: ticked pairs are the ones collapsed. %>
   <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
-    <%# @pasted_text, never params[:pasted_text]: an UPLOADED sheet arrives as
-        a file and is converted to text by the controller, so the raw param is
-        empty and this form would apply nothing at all. %>
+    <%# @pasted_text, never params[:pasted_text]: that is empty on the upload path. %>
     <%= hidden_field_tag :pasted_text, @pasted_text %>
-    <%# The wizard keeps no session state, so the blank-cost-centre answer rides
-        along with the paste the way the pair ticks do. Without it, apply
-        re-derives "no choice made" and refuses. %>
+    <%# blank_cost_centre_id rides along like the pair ticks, or apply re-derives "no choice" and refuses. %>
     <%= hidden_field_tag :blank_cost_centre_id, params[:blank_cost_centre_id] %>
 
     <%= render CardComponent.new(title: "Offsetting pairs (#{@offsetting_pairs.size})") do %>
@@ -280,10 +263,8 @@
                   <td class="py-1 pr-3"></td>
                   <td class="py-1 pr-3 text-right"><%= reimbursements_money(pair.credit_row.credit) %></td>
                 </tr>
-                <%# Applying restores an unticked pair's legs to the ordinary
-                    matching, so say what that would do BEFORE the operator
-                    submits: the "N matched expenses" count above covers the
-                    unpaired rows only. %>
+                <%# An unticked pair's legs go back to ordinary matching, so say what that does before
+                    submit: the "N matched expenses" count covers unpaired rows only. %>
                 <% if spans == 3 %>
                   <tr class="border-b border-gray-100">
                     <td class="py-1 pr-3 text-warning" colspan="7">

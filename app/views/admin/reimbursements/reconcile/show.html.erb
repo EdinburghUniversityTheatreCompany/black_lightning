@@ -1,9 +1,5 @@
-<%# The whole wizard lives in one Turbo Frame: preview/apply POST back the full
-    pasted text and render their step directly (the wizard is stateless, so a
-    redirect can't carry the paste). Outside a frame Turbo Drive REJECTS
-    non-redirect form responses and silently discards them — the buttons would
-    do nothing. Inside the frame, direct renders are valid and turbo_confirm
-    still works. %>
+<%# The whole wizard lives in one Turbo Frame: the stateless steps render directly rather than
+    redirect, and Turbo Drive silently discards non-redirect form responses outside a frame. %>
 <%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
   Import the monthly EUSA actuals sheet and reconcile it against submitted expenses
@@ -13,10 +9,6 @@
   <%= link_to "What the words mean", admin_reimbursements_glossary_path, class: "underline" %>.
 </p>
 
-<%# Where the sheet comes from. The page asked for "the monthly EUSA actuals
-    sheet" and never said who sends it, how often, or what to do when it has
-    not arrived — which for a successor is the difference between a monthly
-    routine and a file they have never seen. %>
 <%= render CardComponent.new(title: "Where this sheet comes from", html_class: "mb-4") do %>
   <p class="mb-0 text-sm text-gray-600">
     EUSA's finance office emails its ledger export once a month, and it lands weeks after the
@@ -29,11 +21,8 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%# multipart: true, or the browser posts the file's NAME and nothing else —
-    `form_with url:` does not infer it from a file_field_tag the way the form
-    builder's file_field does, and a request-level test never sees it because
-    ActionController::TestCase bypasses form encoding entirely. Both import
-    wizards already say it; this form did not. %>
+<%# multipart: true is required on form_with url:, or only the file's NAME is posted. A request test
+    cannot see it. %>
 <%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post,
               multipart: true do %>
   <%= render CardComponent.new(title: "Step 1: Paste actuals data") do |card| %>
@@ -41,10 +30,6 @@
       <%= render "shared/form/actions", submit: "Parse and match" %>
     <% end %>
 
-    <%# The upload half was never passed, so this was paste-only on the one
-        screen whose input arrives as an email attachment. The file is turned
-        into the same text a paste produces (ActualsUpload) before anything
-        else sees it, so the two routes cannot give different answers. %>
     <%= render "shared/form/paste_or_upload",
           text_name: :pasted_text,
           text_label: "Actuals data (tab- or comma-separated, include the header row)",

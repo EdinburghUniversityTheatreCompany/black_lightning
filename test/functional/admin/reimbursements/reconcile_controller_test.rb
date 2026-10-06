@@ -7,8 +7,7 @@ module Admin
 
     HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
 
-    # DatabaseStore whose actual-link writes raise for chosen targets: one
-    # row's transient write failure amid others that must still commit.
+    # DatabaseStore whose actual-link writes raise for chosen targets.
     class FlakyLinkStore < ::Reimbursements::DatabaseStore
       attr_accessor :fail_expense_link_ids, :fail_budget_links
 
@@ -31,8 +30,7 @@ module Admin
       end
     end
 
-    # DatabaseStore that fails part-way through writing an offsetting pair: on
-    # the second leg's insert, or on the cross-link that follows it.
+    # DatabaseStore that fails part-way through writing an offsetting pair: on the second leg's insert or the cross-link.
     class HalfPairStore < ::Reimbursements::DatabaseStore
       def initialize(fail_on:)
         super()
@@ -60,8 +58,7 @@ module Admin
       users(:member).add_role("Business Manager")
       @user = users(:member)
 
-      # A Submitted expense that a debit row should match: nominal 439999,
-      # excl-VAT 123.45, submitted to EUSA within 14 days of the actuals date.
+      # A Submitted expense the debit row matches: nominal 439999, 123.45 excl VAT, submitted within 14 days.
       @person = create_reimbursements_person(name: "Alice Producer", email: "alice@example.com")
       @budget = create_reimbursements_budget(name: "Props", nominal_code: "439999")
       @income = create_reimbursements_budget(name: "Ticket income", nominal_code: "250000",
@@ -72,10 +69,8 @@ module Admin
         submitted_to_eusa_date: Date.new(2026, 5, 10), receipt: false
       )
 
-      # Reconcile deliberately emails NOBODY (see the controller's header): a
-      # real Notifier over a recording FakeGraphClient so the "no email" test
-      # below is a genuine assertion, and a regression records here instead of
-      # reaching Graph.
+      # Reconcile emails nobody: a real Notifier over a recording FakeGraphClient makes the no-email
+      # test a genuine assertion, and a regression records here instead of reaching Graph.
       @graph = FakeGraphClient.new
       ReconcileController.notifier_builder =
         ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
@@ -145,8 +140,7 @@ module Admin
 
     # --- Step 2: preview / parse + dedup + match ---------------------------
 
-    # Saying so beats guessing a code: a guess would file another cost centre's
-    # ledger under this one and leave every rollup quietly wrong.
+    # Saying so beats guessing a code, which would file another centre's ledger under this one.
     test "preview says so when no cost centre is configured, rather than assuming one" do
       sign_in @user
       ::Reimbursements::CostCentre.delete_all
@@ -259,8 +253,6 @@ module Admin
     end
 
     test "a single paste dedups each period independently" do
-      # Period 03 already imported; period 04 is not. Re-pasting both keeps only
-      # the period-04 row.
       create_reimbursements_actual(nominal_code: "439999", period: "03",
                                    narrative: "Alice Producer", debit: BigDecimal("123.45"))
       sign_in @user
@@ -292,16 +284,12 @@ module Admin
 
       post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
-      # Reconciliation runs weeks after the BACS run, so a "you've been paid"
-      # note reaches a producer who was paid long ago. Nothing is sent.
       assert_empty @graph.send_mails, "marking an expense Paid must not email the producer"
       assert_match(/Nobody was emailed/, response.body, "and the apply page says so")
 
       assert_response :success
-      # One EUSA Actuals row created, then linked to the expense.
       actual = ::Reimbursements::EusaActual.sole
       assert_equal [ @expense.record_id ], actual.linked_expense_ids
-      # Expense flipped to Paid with a payment-confirmed date.
       @expense.reload
       assert_equal ::Reimbursements::Status::PAID, @expense.status
       assert_equal Date.new(2026, 5, 13), @expense.payment_confirmed_date
@@ -380,11 +368,8 @@ module Admin
     end
 
     test "an already-reconciled expense is not re-matched by a later paste" do
-      # @expense was already paid in an earlier period and linked to an imported
-      # actual. A later/overlapping export carries a near-identical row (same
-      # nominal/amount, matching date, but a slightly different narrative) so the
-      # per-period dedup does NOT skip it. The re-pay guard must exclude the
-      # already-linked expense so it can't be re-matched or re-paid.
+      # @expense was paid in an earlier period and linked to an actual. A later export carries a
+      # near-identical row (different narrative) that dedup does not skip; the re-pay guard must.
       @expense.update!(status: ::Reimbursements::Status::PAID)
       create_reimbursements_actual(nominal_code: "439999", period: "02",
                                    narrative: "Alice Producer OLD",
@@ -398,7 +383,6 @@ module Admin
       assert_response :success
       assert_equal 0, assigns(:expenses_paid)
       assert_equal 1, assigns(:unmatched_saved)
-      # The expense itself is left untouched — no second flip-to-Paid write.
       assert_nil @expense.reload.payment_confirmed_date
     end
 
@@ -409,8 +393,7 @@ module Admin
         submitted_to_eusa_date: Date.new(2026, 5, 10), nominal_code_override: "555555",
         receipt: false
       )
-      # second_expense's link write fails (simulating a transient blip after its
-      # Actual record was already created); @expense's row is untouched.
+      # second_expense's link write fails after its Actual was created; @expense's row is untouched.
       BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_expense_link_ids: [ second_expense.record_id ]) }
       sign_in @user
 
@@ -419,8 +402,6 @@ module Admin
       }
 
       assert_response :success
-      # @expense committed fully (Paid); second_expense's failure didn't abort
-      # it, and doesn't leave a silent "all good" report either.
       assert_equal 1, assigns(:expenses_paid)
       assert_equal ::Reimbursements::Status::PAID, @expense.reload.status
       assert_equal ::Reimbursements::Status::SUBMITTED, second_expense.reload.status
@@ -448,8 +429,8 @@ module Admin
 
     # --- Offsetting pairs --------------------------------------------------
     #
-    # An accrual and its reversal on the same nominal code and reference, a day
-    # apart in consecutive periods: the shape that dominates a real EUSA export.
+    # An accrual and its reversal on one nominal code and reference, a day apart in consecutive
+    # periods: the shape that dominates a real EUSA export.
 
     ACCRUAL_REF = "J000000884".freeze
     ACCRUAL_NOMINAL = "331300".freeze
@@ -517,9 +498,8 @@ module Admin
       assert_equal 2, assigns(:unmatched_saved)
     end
 
-    # The whole point of pairing: an accrual leg that happens to look like a
-    # real claim must not pay that claim. Only rows left OUT of a pair reach the
-    # debit-to-expense matcher.
+    # The point of pairing: an accrual leg that looks like a real claim must not pay it. Only rows
+    # left OUT of a pair reach the debit-to-expense matcher.
     test "an applied pair's legs never match (or pay) an expense" do
       lookalike = create_reimbursements_expense(
         person: @person, budget: @budget, amount: BigDecimal("500.00"),
@@ -538,8 +518,8 @@ module Admin
       assert_equal 0, assigns(:expenses_paid)
     end
 
-    # Unticking hands the legs back to the ordinary matcher, so a leg that does
-    # match an expense pays it — the operator's judgement, not the heuristic's.
+    # Unticking hands the legs back to the ordinary matcher, so a leg that matches pays: the
+    # operator's judgement, not the heuristic's.
     test "unticking a pair returns its legs to the ordinary debit matching" do
       lookalike = create_reimbursements_expense(
         person: @person, budget: @budget, amount: BigDecimal("500.00"),
@@ -569,10 +549,8 @@ module Admin
 
     # --- The preview is honest about what unticking would do ---------------
     #
-    # preview counts matched expenses over the UNPAIRED rows only, while apply
-    # hands an unticked pair's legs back to the ordinary matching and can pay
-    # expenses the confirmation never mentioned. Each pair therefore
-    # states what unticking it would cost.
+    # The matched-expenses count covers UNPAIRED rows only, but apply hands an unticked pair's legs
+    # back to the matcher, so each pair states what unticking it would pay.
 
     def lookalike_expense
       create_reimbursements_expense(
@@ -624,11 +602,8 @@ module Admin
 
     # --- A pair is written all-or-nothing ----------------------------------
     #
-    # A half-written pair is the worst state available: the debit leg is
-    # committed WITHOUT the offset stamp, so every rollup reads it as real
-    # spend, and re-pasting cannot repair it because dedup then skips that leg
-    # and the pair can never be re-formed. Both legs and the cross-link are one
-    # transaction.
+    # A half-written pair leaves the debit leg unstamped, so every rollup reads it as real spend, and
+    # re-pasting cannot repair it because dedup then skips that leg.
 
     test "a pair whose second leg fails to insert writes neither leg" do
       BaseController.store_builder = ->(**) { HalfPairStore.new(fail_on: :second_leg) }
@@ -659,9 +634,8 @@ module Admin
 
     # --- Duplicate pairs ---------------------------------------------------
     #
-    # A paste really can contain the same £10 accrual and reversal twice: two
-    # separate transactions, two separate pairs. They must get two tickboxes,
-    # because ticking one and unticking the other has to mean exactly that.
+    # A paste can hold the same accrual and reversal twice: two pairs, which need two tickboxes so
+    # that ticking one and unticking the other means exactly that.
 
     def duplicate_pairs_paste
       accrual = accrual_row(amount: "10.00")
@@ -701,9 +675,6 @@ module Admin
     end
 
     # --- Per-row cost centres ----------------------------------------------
-    #
-    # The export names the cost centre per row, so each row lands where its own
-    # code says rather than being filtered down to one code and dropped.
 
     test "a paste spanning two cost centres imports every row under its own" do
       termtime = create_termtime_cost_centre
@@ -729,8 +700,7 @@ module Admin
       assert_equal fringe_cost_centre, ::Reimbursements::EusaActual.sole.cost_centre
     end
 
-    # Another society's spend in a whole-organisation export. Skipping it is
-    # right; skipping it silently is the bug this replaces.
+    # Another society's spend in a whole-organisation export: skipped, but never silently.
     test "preview reports the rows it skipped for an unconfigured cost centre, and names the codes" do
       sign_in @user
       paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
@@ -762,9 +732,8 @@ module Admin
       [ HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
     end
 
-    # Not inferred even here, where the fixture is the only cost centre in the
-    # database: "it must be the only one" is exactly the guess that files real
-    # spend under the wrong pot the day a second pot exists.
+    # Not inferred even here, with the fixture as the only centre: that guess files real spend under
+    # the wrong pot once a second exists.
     test "preview asks where blank-cost-centre rows belong rather than assuming the only centre" do
       sign_in @user
 
@@ -826,9 +795,7 @@ module Admin
 
     # --- Offsetting pairs never span cost centres --------------------------
     #
-    # A false positive here stamps two unrelated real transactions as cancelling
-    # out, hiding real spend from BOTH pots' rollups with no way back except the
-    # "Not offsetting" button. A false negative just leaves two visible rows.
+    # A false positive hides real spend from BOTH pots' rollups; a false negative leaves two visible rows.
 
     test "an accrual and a reversal in different cost centres are never paired" do
       create_termtime_cost_centre
@@ -943,10 +910,8 @@ module Admin
       assert_equal 1, assigns(:skipped_rows).size
     end
 
-    # A row imported before this column existed can't say which pot it is in, and
-    # here the asymmetry runs the other way from the pairing heuristic: skipping
-    # a re-import leaves a visible gap, whereas importing a duplicate silently
-    # double-counts real spend in the ledger and every rollup.
+    # A stored row with no cost centre can't say which pot it is in: skipping a re-import leaves a
+    # visible gap, importing a duplicate double-counts spend.
     test "a stored row with no cost centre of its own still blocks a re-import" do
       create_termtime_cost_centre
       create_reimbursements_actual(nominal_code: "439999", period: "03", narrative: "Alice Producer",
@@ -959,9 +924,7 @@ module Admin
       assert_equal 1, assigns(:skipped_rows).size
     end
 
-    # Preview and apply both re-derive the pairs from the pasted text (the
-    # wizard keeps no session state), so the tickbox keys must survive the round
-    # trip. The helper mimics what the preview form posts back.
+    # The tickbox keys must survive the stateless round trip; this mimics what the preview form posts back.
     def offsetting_pair_keys(pasted_text, cost_centre: ::Reimbursements::CostCentre.default)
       rows = ::Reimbursements::Reconciliation.parse_actuals_rows(pasted_text)
       ::Reimbursements::Reconciliation
@@ -970,8 +933,6 @@ module Admin
     end
 
     # --- Uploading the sheet -------------------------------------------------
-    # This was paste-only on the one screen whose input arrives as an email
-    # attachment, though the shared partial has always taken a file.
 
     def actuals_xlsx(rows)
       require "caxlsx"
@@ -985,8 +946,7 @@ module Admin
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     end
 
-    # The OLE2 compound-file signature every legacy .xls opens with, so the
-    # +name+ can lie about the format the way a renamed file does.
+    # The OLE2 signature every legacy .xls opens with, so +name+ can lie about the format like a renamed file.
     def actuals_legacy_xls(name: "actuals.xls")
       file = Tempfile.new([ "actuals", File.extname(name) ])
       file.binmode
@@ -995,8 +955,7 @@ module Admin
       Rack::Test::UploadedFile.new(file.path, "application/vnd.ms-excel", original_filename: name)
     end
 
-    # A .xlsx by name and by first bytes (so it is not caught as legacy) that
-    # Roo still cannot open: the blanket rescue's path.
+    # A .xlsx by name and first bytes (so not caught as legacy) that Roo still cannot open.
     def actuals_unreadable_xlsx
       file = Tempfile.new([ "actuals", ".xlsx" ])
       file.binmode
@@ -1112,10 +1071,8 @@ module Admin
       assert_no_match(/extension option|tmp/, error.message)
     end
 
-    # The picker now offers only .xlsx, so an operator holding a legacy file
-    # renames it rather than converting it. Roo is then told "xlsx", rubyzip
-    # fails on bytes that are not a zip, and its raw message — tmp path
-    # included — is what the operator reads. The CONTENT decides, not the name.
+    # An operator holding a legacy file renames it .xlsx; the raw rubyzip message (tmp path included)
+    # must not leak. The CONTENT decides, not the name.
     test "an .xls renamed .xlsx is still recognised as the older format" do
       error = assert_raises(::Reimbursements::ActualsUpload::UnreadableError) do
         ::Reimbursements::ActualsUpload.to_text(actuals_legacy_xls(name: "actuals.xlsx"))
@@ -1125,9 +1082,7 @@ module Admin
       assert_no_match(/tmp|Zip|zip/, error.message)
     end
 
-    # Dropping the flash's blanket advice left the empty-sheet refusal stating
-    # no next step at all, while the comment above GENERIC_ADVICE claimed every
-    # message carried one. Each raise site is pinned so the invariant is true.
+    # Each raise site is pinned so every refusal carries a next step.
     test "every refusal states a next step" do
       upload = ::Reimbursements::ActualsUpload
 
@@ -1143,10 +1098,7 @@ module Admin
       end
     end
 
-    # Every message carries its own advice, chosen where the cause is known, so
-    # the flash must not bolt a second copy on: the operator was reading
-    # "…or paste the rows instead. Save it as .xlsx or .csv, or paste the rows
-    # instead."
+    # Every message carries its own advice, so the flash must not add a second copy.
     test "the flash states the advice once" do
       sign_in @user
 
@@ -1161,11 +1113,9 @@ module Admin
       assert_includes ::Reimbursements::ActualsUpload::ACCEPT.split(","), ".xlsx"
     end
 
-    # A cell's own tab would split the row into two columns and shift every
-    # figure one place left — silently, into the wrong column.
+    # A cell's own tab would split the row into two columns and shift every figure left, silently.
     test "a tab inside a spreadsheet cell cannot shift the row's columns" do
-      # The tab has to be INSIDE one cell, which is the only way a spreadsheet
-      # can carry one — a row built by splitting on tabs would never show this.
+      # The tab has to be INSIDE one cell, which a row built by splitting on tabs would never show.
       cells = debit_row.split("\t")
       cells[5] = "Alice\tProducer"
       text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ HEADER.split("\t"), cells ]))

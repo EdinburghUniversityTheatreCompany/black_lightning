@@ -28,9 +28,8 @@
     </p>
   <% end %>
 <% else %>
-  <%# form_with wraps the card, never the other way round: the footer is a
-      component SLOT, so a form opened inside the card renders its submit button
-      outside the <form> and the button silently does nothing. %>
+  <%# form_with wraps the card, never the reverse: the footer is a component slot, so a form opened
+      inside the card puts the submit button outside the <form>. %>
   <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id),
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which claim did this pay?") do |card| %>
@@ -59,10 +58,8 @@
                   ).with_content(expense.status) %>
               <span class="block text-gray-600">
                 <%= expense.budget&.display_name.presence || "(no budget)" %>
-                <%# The claim's POT. A row belongs to one centre and a claim
-                    resolves one through its budget, so a candidate from the
-                    other centre is almost certainly the wrong answer — and
-                    the list said nothing about it. %>
+                <%# The claim's pot: a row belongs to one centre, so a candidate from the other is almost
+                    certainly wrong. %>
                 <% if (centre = @cost_centres_by_id[expense.budget&.cost_centre_id]) %>
                   <span class="text-gray-500">(<%= centre.name %>)</span>
                 <% end %>

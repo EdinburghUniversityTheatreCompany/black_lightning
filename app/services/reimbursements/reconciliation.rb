@@ -4,11 +4,9 @@ require "digest"
 
 module Reimbursements
   ##
-  # Pure functions for reconciling EUSA "actuals" exports against expenses and
-  # budgets — no Rails dependencies, so they unit-test without a database. Every
-  # row is parsed and carries its own cost-centre code; deciding which centre a
-  # row lands in belongs to Reimbursements::ActualsAttribution, which can look
-  # codes up.
+  # Pure functions for reconciling EUSA "actuals" exports against expenses and budgets, with no
+  # database access so they unit-test without one. Each parsed row carries its own cost-centre code;
+  # deciding which centre it lands in is Reimbursements::ActualsAttribution's job.
   module Reconciliation
     ##
     # One row from the EUSA actuals sheet.
@@ -18,21 +16,13 @@ module Reimbursements
     )
 
     ##
-    # Two rows of a paste that cancel each other out (an accrual and its
-    # reversal, a journal booked and re-booked), with the evidence score that
-    # got them proposed.
+    # Two rows of a paste that cancel out (an accrual and its reversal, a journal booked and re-booked),
+    # with the evidence score that got them proposed.
     #
-    # +key+ identifies the pair by each leg's CONTENT plus which occurrence of
-    # that content it is (0 for the first row carrying it, 1 for the next, ...),
-    # never by absolute position. The content digest survives the stateless
-    # wizard's re-parse on apply; the occurrence counter keeps two byte-identical
-    # pairs apart, since a paste really can contain two separate £10 accruals and
-    # their two reversals, and on a content-only key those collapse into one
-    # tickbox so ticking one "votes for" the other. A bare row index would
-    # separate them too, but moves whenever anything earlier in the paste changes.
-    #
-    # A key that fails to match on apply reads as unticked: both legs import as
-    # ordinary rows for a human to look at. Inventing an offset is the
+    # +key+ is each leg's CONTENT digest plus its occurrence number (0 for the first row carrying that
+    # content, 1 for the next), never a position: the digest survives the stateless wizard's re-parse,
+    # and the occurrence keeps two byte-identical pairs on two tickboxes. A key that fails to match on
+    # apply reads as unticked and both legs import as ordinary rows, because inventing an offset is the
     # unrecoverable mistake.
     OffsetPair = Data.define(:debit_row, :credit_row, :debit_index, :credit_index,
                              :debit_occurrence, :credit_occurrence, :score) do
@@ -42,23 +32,16 @@ module Reimbursements
       end
     end
 
-    # Cost Centre is deliberately NOT required: some exports omit the column
-    # entirely, and that is a paste whose rows have no cost centre (for an
-    # operator to assign), not a malformed one.
+    # Cost Centre is deliberately not required: some exports omit the column, which gives rows with no
+    # cost centre for an operator to assign, not a malformed paste.
     REQUIRED_COLUMNS = %i[nominal_code date period narrative].freeze
 
     module_function
 
-    # Parse pasted tab- or comma-separated actuals text into typed rows. Accepts
-    # both the legacy 10-column layout and the Sage export (headers drive the
-    # column mapping, so order/extra columns don't matter). Raises ArgumentError
-    # on missing columns or unparseable values.
-    #
-    # EVERY row comes back, whatever cost centre it names — the parser is pure
-    # (no Rails), so it cannot know which codes are configured here and must not
-    # pretend to. Attribution — this centre's rows, an unrecognised code, a blank
-    # one needing an operator's choice — belongs to ActualsAttribution on the
-    # Rails side, which can actually look the codes up.
+    # Parses pasted tab- or comma-separated actuals text into typed rows. Accepts the legacy 10-column
+    # layout and the Sage export (headers drive the column mapping). Raises ArgumentError on missing
+    # columns or unparseable values. EVERY row comes back whatever cost centre it names: the parser
+    # cannot know which codes are configured here, so attribution belongs to ActualsAttribution.
     def parse_actuals_rows(text)
       text = text.to_s.strip
       return [] if text.empty?
@@ -102,9 +85,8 @@ module Reimbursements
           cost_centre: cost_centre,
           ref: col_map.key?(:ref) ? cell.call(:ref) : "",
           date: parsed_date,
-          # Normalised here, at the one place a pasted sheet becomes rows, so
-          # the dedup bucket key and the offsetting-pair period score compare
-          # the same spelling the ledger stores.
+          # Normalised where a pasted sheet becomes rows, so dedup and the pair period score compare
+          # the spelling the ledger stores.
           period: normalise_period(cell.call(:period)),
           narrative: cell.call(:narrative),
           narrative_1: col_map.key?(:narrative_1) ? cell.call(:narrative_1) : "",
@@ -117,22 +99,11 @@ module Reimbursements
       rows
     end
 
-    # The one canonical spelling of an EUSA accounting period, so "6" and "06"
-    # are one month rather than two.
-    #
-    # ZERO-PADDED TO TWO DIGITS is the form EUSA's own exports carry — it is
-    # why Exports::Base#add_sheet has to pin string cells (a bare "03" is
-    # coerced to the number 3 by a spreadsheet otherwise) — and it is the only
-    # form that SORTS: on the unpadded spelling "10" sorts between "1" and "2",
-    # so the ledger's period picker listed the year's months out of order.
-    #
-    # ONLY a purely numeric value is touched, and only up to two digits' worth
-    # (Sage's year-end period 13 included). Anything else — a blank, a "P6", a
-    # whole date — is stored exactly as the sheet spelled it: padding something
-    # we do not understand would be guessing at a figure finance reads back.
-    #
-    # Idempotent by construction, which is what lets it sit on a
-    # before_validation AND in the parser AND in the backfill.
+    # The one canonical spelling of an EUSA period: zero-padded to two digits, so "6" and "06" are one
+    # month and "10" no longer sorts between "1" and "2". Only a purely numeric value of up to two digits
+    # is touched (Sage's period 13 included); anything else ("P6", a date, blank) stays as the sheet
+    # spelled it, since padding what we cannot read would be guessing. Idempotent, which is what lets it
+    # sit on a before_validation, in the parser and in the backfill.
     def normalise_period(value)
       stripped = value.to_s.strip
       return stripped unless /\A\d+\z/.match?(stripped)
@@ -141,45 +112,30 @@ module Reimbursements
       number <= 99 ? format("%02d", number) : stripped
     end
 
-    # Canonical key for deduplicating EUSA Actuals rows. Uses narrative (not date,
-    # which timezone shifts can move) and normalises amounts so a zero BigDecimal,
-    # an absent field (nil/"") and a float all compare equal.
+    # Canonical key for deduplicating EUSA Actuals rows. Narrative rather than date, which timezone
+    # shifts can move; an absent amount compares equal to a zero one.
     def actuals_row_dedup_key(nominal_code, narrative, debit, credit)
       [ nominal_code.to_s, narrative.to_s.strip, norm_amount(debit), norm_amount(credit) ]
     end
 
     AMOUNT_TOLERANCE = BigDecimal("0.01")
-    # An international claim is matched against a PERCENTAGE window instead of
-    # the penny one. Its stored amount is finance's GBP estimate, entered at
-    # review; the actual is what EUSA's bank charged after the FX spread and its
-    # fees, which differ by pounds on a few hundred rather than by pence. Under
-    # the penny window every international claim would sit permanently
-    # unmatched: stuck Submitted, never Paid, its budget line frozen on the
-    # estimate.
-    #
-    # 5% covers a bank's retail spread and transfer fee with room to spare, and
-    # is still far short of the gap between two different payments. The window
-    # is deliberately NOT widened for the UK rail, where a penny is right: the
-    # governing asymmetry says an unmatched row a human can see beats a wrong
-    # link every rollup then repeats.
+    # International claims match on a PERCENTAGE window, not the penny one: the stored amount is
+    # finance's GBP estimate and the actual is what EUSA's bank charged after the FX spread and fees,
+    # pounds apart on a few hundred. 5% covers that and is far short of the gap between two different
+    # payments. It is not widened for the UK rail: an unmatched row a human can see beats a wrong link
+    # every rollup repeats.
     INTERNATIONAL_TOLERANCE_RATE = BigDecimal("0.05")
     DATE_WINDOW_DAYS = 14
 
-    # Best matching expense for a debit row: nominal code equal (case-insensitive),
-    # amount within £0.01 (excl-VAT preferred, else gross), and either the
-    # submitted-to-EUSA date or the payment-confirmed date within 14 days of the
-    # row date. Two same-amount, same-nominal-code expenses submitted around the
-    # same time are otherwise indistinguishable, so the candidate whose date is
-    # CLOSEST to the row's wins rather than whichever comes first in +expenses+,
-    # narrowing (though not eliminating) which record a genuine tie is attributed
-    # to. Returns nil if nothing matches.
+    # Best expense for a debit row: nominal code equal (case-insensitive), amount within
+    # amount_tolerance_for (excl-VAT preferred, else gross), and the submitted-to-EUSA or
+    # payment-confirmed date within 14 days of the row. Of several candidates the one whose date is
+    # CLOSEST wins, which narrows (not eliminates) where a genuine tie goes. Returns nil if nothing matches.
     def match_debit_to_expense(row, expenses)
       candidates = expenses.filter_map do |expense|
         next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
 
-        # A zero amount_excl_vat is the documented "not yet known" sentinel,
-        # not a genuine zero — || alone doesn't fall back to the gross amount
-        # for it, since 0/BigDecimal("0") are truthy in Ruby.
+        # 0 ex-VAT means "not yet known" (0 is truthy, so || alone would not fall back to gross).
         excl_vat = expense.amount_excl_vat
         compare_amount = excl_vat.nil? || excl_vat.zero? ? expense.amount : excl_vat
         next if compare_amount.nil? ||
@@ -192,76 +148,54 @@ module Reimbursements
       candidates.min_by { |(_expense, distance)| distance }&.first
     end
 
-    # How far the row's amount may sit from the claim's before they stop being
-    # the same payment. Read off the EXPENSE, because nothing on the actuals row
-    # says whether a payment went out through BACS or over SWIFT — verified
-    # against the BED 25/26 export — and nothing needs to: the matcher walks
-    # expenses, and each one knows its own rail.
-    #
-    # The percentage never narrows below the penny floor, or a small claim would
-    # get a sub-penny window and fail on a rounding difference.
+    # How far a row's amount may sit from the claim's. Read off the EXPENSE because nothing on the
+    # actuals row says whether a payment went by BACS or SWIFT, and nothing needs to: each expense
+    # knows its own rail. The percentage never narrows below the penny floor, or a small claim would
+    # fail on a rounding difference.
     def amount_tolerance_for(expense, compare_amount)
       return AMOUNT_TOLERANCE unless expense.international?
 
       [ (compare_amount.abs * INTERNATIONAL_TOLERANCE_RATE), AMOUNT_TOLERANCE ].max
     end
 
-    # Matching income budget for a credit row: nominal code equal
-    # (case-insensitive). No amount/date match needed for income. First match or nil.
+    # First income budget with an equal nominal code (case-insensitive); income needs no amount or
+    # date match.
     def match_credit_to_budget(row, budgets)
       budgets.find { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
     end
 
     # --- offsetting pairs --------------------------------------------------
 
-    # Scoring weights, tuned against a real 309-row EUSA F40 export. The reference
-    # there matches only about half the time, and legs routinely straddle months
-    # (a September accrual released in October; one pair three months apart), so
-    # neither can be a hard filter: a genuine claim can collide by amount with an
-    # unrelated reversal, and only weighing the evidence keeps the two apart.
-    #
-    # The nominal code IS a hard filter (see offset_candidates) and still scores,
-    # so the score a pair shows finance keeps its /8 scale.
+    # Scoring weights, tuned against a real 309-row EUSA F40 export, where the reference matches only
+    # half the time and legs straddle months, so neither can be a hard filter. Same nominal code IS a
+    # hard filter (offset_candidates) and still scores, so the score finance sees keeps its /8 scale.
     OFFSET_SCORE_SAME_REF = 4
     OFFSET_SCORE_SAME_NOMINAL = 2
     OFFSET_SCORE_SAME_PERIOD = 1
     OFFSET_SCORE_NARRATIVE_PREFIX = 1
-    # A pair must reach this to be proposed at all. Since same nominal code is
-    # required, every candidate starts from 2 and has to find 2 more points: a
-    # reference match takes it to 6, or 5/4 once the date penalty bites (ref
-    # agreement ALONE is 4 minus that penalty, so only a same-day reference match
-    # clears the floor by itself); without a reference, period + narrative
-    # agreement on the same day is exactly 4. Anything weaker (nominal + period a
-    # fortnight apart is 2) leaves BOTH rows in the working set rather than
-    # guessing. Maximum is 8: everything agreeing, same day.
+    # A pair needs this to be proposed. Same nominal gives every candidate 2, so it must find 2 more:
+    # a reference match (4, less the date penalty, so alone only same-day clears it) or, without one,
+    # period plus narrative on the same day. Anything weaker leaves BOTH rows unpaired. Maximum is 8.
     OFFSET_MIN_SCORE = 4
     # Legs this far apart or less cost 1 point, further costs 2.
     OFFSET_NEAR_DATE_DAYS = 31
-    # Narratives count as agreeing when their normalised forms share this many
-    # leading characters. In the real export the shared-prefix length is bimodal
-    # (either 0 or 10+ characters), so anywhere in that gap behaves identically.
+    # Narratives agree when their normalised forms share this many leading characters; in the real
+    # export the shared-prefix length is bimodal (0 or 10+), so anywhere in the gap behaves the same.
     OFFSET_NARRATIVE_PREFIX_CHARS = 8
     # EUSA's financial year, and its accounting periods 1..12, run April to March.
     FINANCIAL_YEAR_START_MONTH = 4
 
-    # Finds the offsetting pairs in a parsed paste. Returns
-    # [pairs, remaining_rows]: +pairs+ are OffsetPairs ordered strongest
-    # evidence first (what the preview shows for ticking), +remaining_rows+ is
-    # every row that was NOT paired, in paste order, ready for the ordinary
-    # debit->expense / credit->budget matching.
+    # Finds the offsetting pairs in a parsed paste. Returns [pairs, remaining_rows]: OffsetPairs
+    # strongest evidence first (the order the preview shows for ticking), and every unpaired row in
+    # paste order.
     #
-    # Candidates are rows with an identical absolute amount (exact BigDecimal,
-    # never a float), opposite signs, on the same nominal code, in the same COST
-    # CENTRE, in the same financial year. Each is scored, anything below
-    # OFFSET_MIN_SCORE is dropped, and the survivors are taken greedily
-    # strongest-first so a row can only ever belong to one pair and the
-    # best-evidenced claim on a leg wins.
+    # Candidates have an identical absolute amount (exact BigDecimal), opposite signs, and the same
+    # nominal code, cost centre and financial year. Each is scored, those below OFFSET_MIN_SCORE are
+    # dropped, and the rest taken greedily strongest-first so a row belongs to at most one pair.
     #
-    # +cost_centres+ is an optional array of identity strings parallel to
-    # +rows+, for a caller that has already resolved each row's attribution: a
-    # blank-code row an operator assigned by hand belongs to the pot they chose,
-    # not to "blank". Omitted, each row's own exported code is used and a blank
-    # agrees with nothing.
+    # +cost_centres+ is an optional array of identity strings parallel to +rows+, for a caller that has
+    # resolved each row's attribution (a blank-code row assigned by hand belongs to the pot chosen).
+    # Omitted, each row's exported code is used and a blank agrees with nothing.
     def detect_offsetting_pairs(rows, cost_centres: nil)
       candidates = offset_candidates(rows, cost_centres || rows.map(&:cost_centre))
       occurrences = row_occurrences(rows)
@@ -291,9 +225,8 @@ module Reimbursements
       Digest::SHA256.hexdigest(fields.map(&:to_s).join(""))[0, 12]
     end
 
-    # For each row, how many EARLIER rows in the paste carry byte-identical
-    # content: 0 for the first occurrence, 1 for the next, and so on. This is
-    # what lets two duplicate pairs have two tickboxes (see OffsetPair#key).
+    # How many EARLIER rows carry byte-identical content, so duplicate pairs get distinct tickboxes
+    # (see OffsetPair#key).
     def row_occurrences(rows)
       seen = Hash.new(0)
       rows.map do |row|
@@ -305,10 +238,8 @@ module Reimbursements
     end
     private_class_method :row_occurrences
 
-    # The eligible pairs, strongest evidence first; ties break on paste order so
-    # the result is deterministic. Rows are bucketed by absolute amount before
-    # pairing, so a big paste doesn't pay for comparing every row with every
-    # other one.
+    # The eligible pairs, strongest first, ties by paste order. Rows are bucketed by absolute amount so
+    # a big paste doesn't compare every row with every other.
     def offset_candidates(rows, cost_centre_keys)
       signed = rows.each_with_index.filter_map do |row, index|
         amount = row.debit - row.credit
@@ -321,22 +252,13 @@ module Reimbursements
 
         bucket.combination(2) do |(row_a, index_a, amount_a), (row_b, index_b, amount_b)|
           next unless amount_a.negative? ^ amount_b.negative?
-          # Same nominal code is a HARD requirement, not just 2 points. A Sage
-          # payment-run reference is stamped across every row of the run, so
-          # ref (4) + period (1) on the same day clears the floor with no code
-          # agreement at all and pairs a cost with an unrelated income of the
-          # same size: both stamped offset, the cost hidden from every rollup,
-          # and the expense behind it never paid. In the real 309-row export
-          # essentially every genuine pair was same-nominal (accrual/reversal
-          # and re-booked journal pairs, not cross-code reclassifications), so
-          # this costs approximately nothing. Blank codes agree on nothing, so
-          # they never pair either.
+          # Same nominal code is a HARD requirement, not just 2 points: a Sage payment-run ref is stamped
+          # across a whole run, so ref + period on one day would pair a cost with unrelated income of the
+          # same size and hide it from every rollup. Genuine pairs were same-nominal anyway. Blank codes
+          # never pair.
           next unless same_field?(row_a.nominal_code, row_b.nominal_code)
-          # Same cost centre, for the same reason and with more at stake: a
-          # paste may span several pots, and two unrelated real transactions of
-          # the same size on the same code in two different pots would otherwise
-          # be stamped as cancelling out, hiding real spend from BOTH pots'
-          # rollups irrecoverably.
+          # Same cost centre, for the same reason: two pots' unrelated transactions must never cancel
+          # and hide real spend from both rollups.
           next unless same_field?(cost_centre_keys[index_a], cost_centre_keys[index_b])
           next unless same_financial_year?(row_a.date, row_b.date)
 
@@ -353,9 +275,7 @@ module Reimbursements
     end
     private_class_method :offset_candidates
 
-    # How much evidence says these two rows are the same transaction booked
-    # both ways. See the OFFSET_SCORE_* constants for why each signal weighs
-    # what it does.
+    # Evidence that two rows are one transaction booked both ways; see the OFFSET_SCORE_* constants.
     def offset_pair_score(row_a, row_b)
       score = 0
       score += OFFSET_SCORE_SAME_REF if same_field?(row_a.ref, row_b.ref)
@@ -394,9 +314,8 @@ module Reimbursements
     end
     private_class_method :financial_year_start_year
 
-    # An accrual and its reversal are usually the same narrative with one word
-    # swapped part-way through ("PO 40000123 accrual ..." / "PO 40000123
-    # reversal ..."), so the shared LEADING run is the signal, not equality.
+    # An accrual and its reversal share a narrative with one word swapped part-way ("PO 40000123
+    # accrual" / "PO 40000123 reversal"), so the shared LEADING run is the signal, not equality.
     def narrative_prefix_similar?(left, right)
       left = normalise_narrative(left)
       right = normalise_narrative(right)
@@ -424,11 +343,8 @@ module Reimbursements
     def norm_amount(value)
       return "0.0" if value.nil? || value == ""
 
-      # BigDecimal (not Float) so the key is exact at every magnitude — a float
-      # round-trip collapses distinct large amounts onto one key. BigDecimal("0")
-      # renders "0.0", matching the nil/"" branch above, but BigDecimal("-0.00")
-      # renders "-0.0", so a negative zero must normalise to the same key as an
-      # ordinary zero.
+      # BigDecimal not Float, so the key is exact at every magnitude. BigDecimal("-0.00") renders
+      # "-0.0", so a negative zero is normalised to the same key as an ordinary zero.
       amount = BigDecimal(value.to_s)
       amount.zero? ? "0.0" : amount.to_s("F")
     rescue ArgumentError, TypeError

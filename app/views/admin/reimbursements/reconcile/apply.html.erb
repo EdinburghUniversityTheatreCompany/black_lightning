@@ -1,5 +1,3 @@
-<%# Same Turbo Frame as show/preview — see show.html.erb for why the wizard
-    renders inside a frame. %>
 <%= turbo_frame_tag "reconcile" do %>
 <% if @reconciliation_errors.present? %>
   <%= render AlertComponent.new(type: :warning) do %>
@@ -43,9 +41,8 @@
   </div>
 <% end %>
 
-<%# Rows this paste deliberately did not import. Reported after the fact as
-    well as in the preview, so the numbers in the summary above are never quietly
-    smaller than the paste. %>
+<%# Rows deliberately not imported are reported again here, so the summary is never quietly smaller
+    than the paste. %>
 <% if @attribution.unrecognised_rows.any? %>
   <%= render AlertComponent.new(type: :info) do %>
     <%= pluralize(@attribution.unrecognised_rows.size, "row") %> were not imported:
@@ -67,12 +64,7 @@
   time these actuals arrive the money is already in their account.
 </p>
 
-<%# "Unmatched rows saved: N" in the summary above is a to-do list, and this
-    screen's only action used to be "Reconcile another month" — no route at all
-    to where those rows get resolved. The ledger's needs-attention view IS that
-    list. turbo_frame "_top" because this whole wizard renders inside a frame,
-    and a link out of one navigates the FRAME: the ledger has no matching frame,
-    so without it Turbo renders "Content missing". %>
+<%# "_top": the ledger has no matching frame, so a plain link out of this one renders "Content missing". %>
 <div class="mt-4 flex flex-wrap gap-2">
   <% if @unmatched_saved.to_i.positive? %>
     <%= link_to "See the #{pluralize(@unmatched_saved, 'unmatched row')} on the EUSA Actuals ledger",

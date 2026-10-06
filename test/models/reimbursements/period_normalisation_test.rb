@@ -2,13 +2,9 @@ require "test_helper"
 
 module Reimbursements
   ##
-  # The EUSA accounting period has ONE canonical spelling, zero-padded to two
-  # digits, so the ledger's filter cannot offer "05", "06", "5" and "6" as four
-  # different months (it did: ?period=6 returned 12 rows and ?period=06 five).
-  #
-  # Covered here: the pure rule, the model write path, the backfill of rows
-  # already stored, and — the one that actually costs money if it breaks — that
-  # dedup still recognises a re-pasted row across the two spellings.
+  # The EUSA period has ONE canonical spelling, zero-padded to two digits. Covers the pure rule, the
+  # model write path, the backfill, and the one that costs money if it breaks: dedup still recognising
+  # a re-pasted row across the two spellings.
   class PeriodNormalisationTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
@@ -62,8 +58,7 @@ module Reimbursements
 
     test "the backfill rewrites stored rows and reports how many" do
       unpadded = create_reimbursements_eusa_actual(period: "6", debit: BigDecimal("10"))
-      # update_column, not the model: the before_validation callback is exactly
-      # what this backfill exists to have been missing.
+      # update_column, not the model: the before_validation is what this backfill exists to have been missing.
       unpadded.update_column(:period, "6")
       already = create_reimbursements_eusa_actual(period: "07", debit: BigDecimal("11"))
 
@@ -93,10 +88,8 @@ module Reimbursements
 
     # --- Dedup across the two spellings ------------------------------------
     #
-    # The reconcile wizard buckets a paste by (period, cost centre) and asks
-    # the store for what is already imported for that period. If the two
-    # spellings did not meet, re-pasting a month would import every row a
-    # second time and double-count real spend in the ledger and every rollup.
+    # If the spellings did not meet, re-pasting a month would import every row twice and double-count
+    # real spend.
 
     test "an unpadded paste finds a stored padded row for the same month" do
       create_reimbursements_eusa_actual(period: "06", narrative: "BACS RUN",

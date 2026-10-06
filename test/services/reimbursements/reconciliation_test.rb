@@ -3,8 +3,7 @@ require "bigdecimal"
 
 module Reimbursements
   class ReconciliationTest < ActiveSupport::TestCase
-    # The pure Reconciliation matchers read the AR models' public interface
-    # (effective nominal code, amounts, dates); built unpersisted.
+    # The pure matchers read the AR models' public interface; built unpersisted.
     Expense = Reimbursements::Expense
     Budget = Reimbursements::Budget
 
@@ -183,10 +182,8 @@ module Reimbursements
       assert_equal bd("1234.56"), rows.first.debit
     end
 
-    # The parser does not filter by cost centre: it is pure (no Rails), so it
-    # cannot know which codes are configured here. It hands every row back with
-    # the code the export gave it, and the Rails-side attribution decides what
-    # is ours, what is skipped and what needs an operator's choice.
+    # The parser does not filter by cost centre: every row comes back with its own code, and
+    # ActualsAttribution decides what is ours.
 
     test "a row from another cost centre is returned, carrying its own code" do
       other = "439999\tF99\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
@@ -207,9 +204,7 @@ module Reimbursements
       assert_equal %w[F40 BED F99], rows.map(&:cost_centre)
     end
 
-    # Some exports omit the column entirely. That is not a malformed paste —
-    # it is a paste whose rows have no cost centre, which the operator has to
-    # assign by hand before any of them can import.
+    # Some exports omit the column: that is a paste whose rows have no cost centre, not a malformed one.
     test "a header with no Cost Centre column parses, leaving every code blank" do
       header = "Nominal\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet"
       row_text = "439999\tBACS001\t15/03/2025\t03\tAlice\tShow\t123.45\t\t123.45"
@@ -251,9 +246,7 @@ module Reimbursements
       assert_equal "F40", row.cost_centre
       assert_equal "BACS", row.ref
       assert_equal Date.new(2026, 4, 24), row.date
-      # The Sage sheet really does write the month unpadded, which is half of
-      # why the ledger ended up offering "05", "06", "5" and "6" as four
-      # months. The parser normalises it to the one canonical spelling.
+      # Sage writes the month unpadded; the parser normalises it to the canonical spelling.
       assert_equal "01", row.period
       assert_equal "EN-LIANG LEE - TECH PC GRAPHICS CARD", row.narrative
       assert_equal "", row.narrative_1
@@ -302,16 +295,9 @@ module Reimbursements
 
     # --- The international rail ---------------------------------------------
     #
-    # An international claim's stored amount is finance's GBP ESTIMATE, entered
-    # at review; the actual is what EUSA's bank charged after the FX spread and
-    # its fees. Those differ by pounds on a few hundred, not by pence, so the
-    # penny window that is right for a UK claim would leave every international
-    # one permanently unmatched: stuck Submitted, never Paid, its budget line
-    # frozen on the estimate.
-    #
-    # Nothing on the actuals ROW says a payment was international (checked
-    # against the BED 25/26 sheet), and nothing needs to: the matcher walks
-    # EXPENSES, and each expense knows its own rail.
+    # An international claim's stored amount is finance's GBP ESTIMATE; the actual is what EUSA's bank
+    # charged after the FX spread, pounds apart on a few hundred, so the penny window would leave it
+    # permanently unmatched. Nothing on the actuals row says the rail: each expense knows its own.
 
     def international_expense(amount: bd("230.00"), **attrs)
       expense(amount: amount, **attrs).tap do |e|
@@ -343,9 +329,8 @@ module Reimbursements
       assert_nil Reconciliation.match_debit_to_expense(debit_row(debit: bd("299.00")), [ exp ])
     end
 
-    # The governing asymmetry: a false match stamps one claim's spend onto
-    # another, which every rollup then repeats. Widening the window for the UK
-    # rail too would buy nothing and cost exactly that.
+    # A false match stamps one claim's spend onto another and every rollup repeats it, so the wider
+    # window is not given to the UK rail.
     test "a UK claim keeps the penny window" do
       exp = expense(amount: bd("230.00"))
 
@@ -408,9 +393,7 @@ module Reimbursements
     end
 
     test "debit falls back to gross amount when amount_excl_vat is the zero not-yet-known sentinel" do
-      # 0/BigDecimal("0") are truthy in Ruby, so a plain || wouldn't fall back
-      # to the gross amount here — it would compare against a hard zero and
-      # never match any real debit row.
+      # 0 is truthy, so a plain || would compare against a hard zero and never match.
       exp = expense(amount: bd("120.00"), amount_excl_vat: bd("0"))
       assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("120.00")), [ exp ])
     end
@@ -435,12 +418,8 @@ module Reimbursements
     end
 
     test "debit prefers the candidate with the CLOSEST date, not just the first in the list" do
-      # Two same-nominal-code, same-amount expenses submitted around the same
-      # time are otherwise indistinguishable — picking whichever happens to
-      # come first would risk swapping which one this payment is attributed
-      # to. The row's date is 2025-03-15; the second candidate is a much
-      # closer match (same day) than the first (10 days off), so it must win
-      # even though it's listed second.
+      # Two same-nominal, same-amount expenses are otherwise indistinguishable: the closer date
+      # (same day) must win over the first listed (10 days off).
       farther = expense(submitted_date: Date.new(2025, 3, 5))
       closer = expense(submitted_date: Date.new(2025, 3, 15))
 
@@ -496,31 +475,20 @@ module Reimbursements
     end
 
     # --- detect_offsetting_pairs -------------------------------------------
+    # The fixtures are ANONYMISED reproductions of the pair shapes in a real 309-row EUSA F40 export:
+    # codes, dates, periods, refs and amounts keep the real structure the heuristic keys on; narratives
+    # and payees are invented.
     #
-    # The fixtures below are ANONYMISED reproductions of the pair shapes in a
-    # real EUSA F40 export (309 rows). Nominal codes, dates, periods, ref
-    # formats and amounts keep the real structure because that is exactly what
-    # the heuristic keys on; every narrative and payee is invented.
-    #
-    #   Shape 1  same-ref accrual <-> reversal: same nominal, same date,
-    #            periods differ (accrual booked in one period, released in the
-    #            next). Narratives share a long prefix but diverge mid-string
-    #            ("... accrual ..." vs "... reversal ..."). Scores 7.
-    #   Shape 2  two journal legs on the SAME nominal with DIFFERENT refs, same
-    #            date and period, narratives agreeing on their prefix. Scores
-    #            exactly 4 (nominal + period + narrative), the floor at which a
-    #            pair is proposed without a ref match at all.
-    #   Shape 3  cross-month accrual release: same ref and nominal, three
-    #            months apart, periods differ. The 92-day gap costs the full
-    #            2-point date penalty, so it survives on ref + nominal +
-    #            narrative and scores 5.
-    #   Collision  a GENUINE spend row whose amount happens to equal shape 1's
-    #            (real export: a real 186.23 claim colliding with an unrelated
-    #            186.23 reversal). Different nominal, unrelated narrative, 13
-    #            days later, and it only shares the period, so it scores 0 and
-    #            must be left alone.
-    #   Near miss  same nominal and period, different ref, unrelated
-    #            narratives, 16 days apart: scores 2 and must NOT be paired.
+    #   Shape 1  same-ref accrual <-> reversal: same nominal and date, periods differ, narratives share
+    #            a long prefix and diverge mid-string. Scores 7.
+    #   Shape 2  two journal legs on one nominal, different refs, same date and period, narratives
+    #            agreeing on a prefix. Scores exactly 4, the floor with no ref match at all.
+    #   Shape 3  cross-month accrual release: same ref and nominal three months apart. The 92-day gap
+    #            costs the full 2 points, so it scores 5.
+    #   Collision  a GENUINE spend row whose amount equals shape 1's (a real 186.23 claim colliding with
+    #            an unrelated 186.23 reversal). Different nominal, unrelated narrative: scores 0, left alone.
+    #   Near miss  same nominal and period, different ref, unrelated narratives, 16 days apart: scores 2,
+    #            must NOT be paired.
 
     # One row in the real Sage export's column order (SAGE_HEADER above).
     def sage_row(nominal:, date:, period:, ref:, narrative:, value:, cost_centre: "F40")
@@ -547,12 +515,9 @@ module Reimbursements
     NEAR_MISS_CREDIT = { nominal: "432320", date: "28/05/2025", period: "2", ref: "1137",
                          narrative: "PI 40000456 1234567890", value: "-200.00" }.freeze
 
-    # A Sage payment-run reference is stamped across every row of the run, so a
-    # cost and an unrelated income of the same size share it. On the score alone
-    # that is ref (4) + period (1) with no date penalty = 5, comfortably over the
-    # floor, and both rows would be stamped offset: the lighting hire vanishes
-    # from the ledger and the expense behind it is never paid. Same nominal code
-    # is therefore a hard requirement, not a scoring signal.
+    # A Sage payment-run reference is stamped across every row of a run, so a cost and an unrelated
+    # income of the same size share it: ref (4) + period (1) = 5 clears the floor. Same nominal code is
+    # therefore a hard requirement, not a scoring signal.
     CROSS_NOMINAL_DEBIT = { nominal: "041000", date: "12/06/2025", period: "3", ref: "BACS0099",
                             narrative: "Lighting hire for the summer run", value: "1234.56" }.freeze
     CROSS_NOMINAL_CREDIT = { nominal: "081000", date: "12/06/2025", period: "3", ref: "BACS0099",
@@ -615,9 +580,7 @@ module Reimbursements
       assert_equal 2, remaining.size
     end
 
-    # Greed matters when two eligible pairs compete for the same leg: the
-    # stronger evidence must win and the loser must be left unmatched rather
-    # than paired with whatever is left over.
+    # When two eligible pairs compete for a leg, the stronger evidence wins and the loser stays unmatched.
     test "detect_offsetting_pairs consumes each row at most once, best score first" do
       weaker_claimant = { nominal: "431580", date: "24/07/2025", period: "5", ref: "BACS",
                           narrative: "PO 40000123 accrual jul 25 400123", value: "186.23" }
@@ -666,9 +629,8 @@ module Reimbursements
       assert_equal 2, remaining.size
     end
 
-    # ...unless the caller has resolved the attribution itself. Blank-code rows
-    # an operator has assigned to one pot ARE in that pot, so they pair like any
-    # other, and the caller says so by passing the identities it resolved.
+    # ...unless the caller has resolved attribution: blank-code rows an operator assigned to one pot
+    # ARE in it, and pair like any other.
     test "detect_offsetting_pairs pairs blank-code rows the caller has attributed to one centre" do
       rows = parse_shapes([ ACCRUAL_LEG.merge(cost_centre: ""), REVERSAL_LEG.merge(cost_centre: "") ])
       pairs, remaining = Reconciliation.detect_offsetting_pairs(rows, cost_centres: %w[7 7])
@@ -749,11 +711,8 @@ module Reimbursements
       assert_equal forwards.first.key, with_lead_row.first.key
     end
 
-    # Two identical accruals and two identical reversals are FOUR real
-    # transactions, so the two pairs they form must stay distinguishable. On a
-    # content-only key they collapse into one, and unticking either one of them
-    # in the preview offsets both — stamping a genuine transaction as
-    # bookkeeping noise.
+    # Two identical accruals and two identical reversals are FOUR transactions, so their two pairs must
+    # stay distinguishable: on a content-only key, unticking either would offset both.
     test "two byte-identical pairs in one paste get distinct keys" do
       pairs, remaining = Reconciliation.detect_offsetting_pairs(
         parse_shapes([ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ])
@@ -764,10 +723,8 @@ module Reimbursements
       assert_equal 2, pairs.map(&:key).uniq.size, "each pair of real rows needs its own key"
     end
 
-    # The occurrence counter that keeps duplicates apart counts only rows with
-    # identical CONTENT, so it survives the re-parse the same way the digest
-    # does: adding unrelated rows around a duplicated pair leaves both keys
-    # untouched.
+    # The occurrence counter counts identical CONTENT only, so unrelated rows around a duplicated pair
+    # leave both keys untouched.
     test "duplicate pair keys are stable when unrelated rows surround them" do
       duplicated = [ ACCRUAL_LEG, REVERSAL_LEG, ACCRUAL_LEG, REVERSAL_LEG ]
       bare, = Reconciliation.detect_offsetting_pairs(parse_shapes(duplicated))
