@@ -1,6 +1,6 @@
 import {
   ClimateChartController, colorFor, withAlpha, endLabelPlugin, legendAndTooltip,
-  pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
+  lineDataset, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
 // Three stacked charts (temperature, humidity, dew point) on one x-axis, a line
@@ -24,20 +24,11 @@ export default class extends ClimateChartController {
   #datasets(measure) {
     return this.seriesValue.flatMap((series) => {
       const color = colorFor(series.color_index)
-      const line = {
-        label: series.name,
-        // false, so the server's explicit nulls BREAK the line across an outage.
-        spanGaps: false,
-        data: series.points.map((point) => ({ x: point.t, y: point[measure] })),
-        borderColor: color,
-        backgroundColor: color,
+      const line = lineDataset({
+        label: series.name, points: series.points, key: measure, color,
         // Second cue for the outdoor line besides hue.
         borderDash: series.outdoor ? [6, 4] : [],
-        borderWidth: 2,
-        pointRadius: pointRadiusUnlessIsolated(),
-        pointHoverRadius: 5,
-        tension: 0.2,
-      }
+      })
 
       return this.bandedValue ? [...this.#band(series, measure, color), line] : [line]
     })

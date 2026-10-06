@@ -36,7 +36,7 @@ export function reducedMotion() {
 // pointRadius: 0 lets the line carry the ink, but a point with no line either
 // side (an island around a real gap, e.g. Buckets#gap_threshold's two-point
 // fallback) would draw as nothing. This gives just that point a dot.
-export function pointRadiusUnlessIsolated(radius = 3) {
+function pointRadiusUnlessIsolated(radius = 3) {
   const hasY = (point) => point && point.y !== null && point.y !== undefined
 
   return (context) => {
@@ -45,6 +45,23 @@ export function pointRadiusUnlessIsolated(radius = 3) {
 
     const isolated = !hasY(data[context.dataIndex - 1]) && !hasY(data[context.dataIndex + 1])
     return isolated ? radius : 0
+  }
+}
+
+// spanGaps stays false so the server's explicit nulls BREAK the line across an
+// outage instead of interpolating through it.
+export function lineDataset({ label, points, key, color, borderDash = [] }) {
+  return {
+    label,
+    spanGaps: false,
+    data: points.map((point) => ({ x: point.t, y: point[key] })),
+    borderColor: color,
+    backgroundColor: color,
+    borderDash,
+    borderWidth: 2,
+    pointRadius: pointRadiusUnlessIsolated(),
+    pointHoverRadius: 5,
+    tension: 0.2,
   }
 }
 

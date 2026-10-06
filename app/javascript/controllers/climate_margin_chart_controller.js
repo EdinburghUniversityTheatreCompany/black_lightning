@@ -1,6 +1,6 @@
 import {
   ClimateChartController, colorFor, endLabelPlugin, legendAndTooltip,
-  pointRadiusUnlessIsolated, reducedMotion, seriesAriaLabel, timeScaleOptions,
+  lineDataset, reducedMotion, seriesAriaLabel, timeScaleOptions,
 } from "../lib/climate_chart"
 
 // One line per crypt sensor plotting the WORST margin in each bucket, not the
@@ -24,16 +24,8 @@ export default class extends ClimateChartController {
     return [new Chart(canvas, {
       type: "line",
       data: {
-        datasets: this.seriesValue.map((series) => ({
-          label: series.name,
-          spanGaps: false,
-          data: series.points.map((point) => ({ x: point.t, y: point.margin })),
-          borderColor: colorFor(series.color_index),
-          backgroundColor: colorFor(series.color_index),
-          borderWidth: 2,
-          pointRadius: pointRadiusUnlessIsolated(),
-          pointHoverRadius: 5,
-          tension: 0.2,
+        datasets: this.seriesValue.map((series) => lineDataset({
+          label: series.name, points: series.points, key: "margin", color: colorFor(series.color_index),
         })),
       },
       plugins: [this.#riskBandPlugin(), endLabelPlugin()],

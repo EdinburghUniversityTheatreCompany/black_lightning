@@ -1,5 +1,5 @@
 import {
-  ClimateChartController, chartOptions, colorFor, endLabelPlugin, pointRadiusUnlessIsolated,
+  ClimateChartController, chartOptions, colorFor, endLabelPlugin, lineDataset,
   seriesAriaLabel, withAlpha,
 } from "../lib/climate_chart"
 
@@ -10,9 +10,9 @@ import {
 // read as one place, and the outdoor line is dashed so it reads apart without
 // relying on colour.
 const STYLES = {
-  solid: { borderDash: [], borderWidth: 2, alpha: 1 },
-  muted: { borderDash: [2, 3], borderWidth: 2, alpha: 0.65 },
-  dashed: { borderDash: [6, 4], borderWidth: 2, alpha: 1 },
+  solid: { borderDash: [], alpha: 1 },
+  muted: { borderDash: [2, 3], alpha: 0.65 },
+  dashed: { borderDash: [6, 4], alpha: 1 },
 }
 
 export default class extends ClimateChartController {
@@ -37,19 +37,10 @@ export default class extends ClimateChartController {
       data: {
         datasets: this.seriesValue.map((line) => {
           const style = STYLES[line.style] ?? STYLES.solid
-          const color = withAlpha(colorFor(line.color_index), style.alpha)
-          return {
-            label: line.label,
-            spanGaps: false,
-            data: line.points.map((point) => ({ x: point.t, y: point.value })),
-            borderColor: color,
-            backgroundColor: color,
-            borderDash: style.borderDash,
-            borderWidth: style.borderWidth,
-            pointRadius: pointRadiusUnlessIsolated(),
-            pointHoverRadius: 5,
-            tension: 0.2,
-          }
+          return lineDataset({
+            label: line.label, points: line.points, key: "value",
+            color: withAlpha(colorFor(line.color_index), style.alpha), borderDash: style.borderDash,
+          })
         }),
       },
       plugins: [endLabelPlugin()],
