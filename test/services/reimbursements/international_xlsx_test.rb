@@ -34,7 +34,7 @@ module Reimbursements
       assert_equal "432540", cell(sheet, "C12").value
       assert_equal "F40", cell(sheet, "E12").value
       assert_equal "DEUTDEFF500", cell(sheet, "C13").value
-      assert_equal "DE89370400440532013000", cell(sheet, "E13").value
+      assert_equal "DE89 3704 0044 0532 0130 00", cell(sheet, "E13").value, "grouped in fours"
     end
 
     # --- Currency ------------------------------------------------------------
@@ -77,12 +77,6 @@ module Reimbursements
       %w[C11 C13 E13].each { |ref| assert_equal "@", cell(sheet, ref).number_format.format_code, ref }
       assert_equal "m/d/yyyy", cell(sheet, "E10").number_format.format_code
       assert_equal Date.new(2026, 10, 1), cell(sheet, "E10").value.to_date
-    end
-
-    test "the IBAN is written grouped, as a human checks it" do
-      sheet = parsed(InternationalXlsx.new.generate(payment, format_iban: true))
-
-      assert_equal "DE89 3704 0044 0532 0130 00", cell(sheet, "E13").value
     end
 
     # The template caches the SAMPLE payment's formula answers, so without a

@@ -53,8 +53,7 @@ module Reimbursements
     end
 
     # Re-reads the template on every call, so one instance builds many forms.
-    # +format_iban+ groups the IBAN in fours, as a human checks it against an invoice.
-    def generate(payment, format_iban: false)
+    def generate(payment)
       # Not at file scope: eager loading would pull rubyXL into every process.
       require "rubyXL"
       require "rubyXL/convenience_methods"
@@ -68,7 +67,7 @@ module Reimbursements
               "template has no '#{SHEET_NAME}' sheet (found: #{workbook.worksheets.map(&:sheet_name).inspect})"
       end
 
-      write_form(sheet, payment, format_iban: format_iban)
+      write_form(sheet, payment)
       force_recalculation(workbook)
       workbook.stream.string
     end
@@ -115,7 +114,7 @@ module Reimbursements
       raise TemplateError, "#{payment.iban.presence || 'a blank IBAN'} is not a valid IBAN."
     end
 
-    def write_form(sheet, payment, format_iban:)
+    def write_form(sheet, payment)
       # Submitter free text is formula-sanitised, as in the BACS spreadsheet.
       write(sheet, CELL_PAYEE, CellSanitizer.sanitize(payment.payee_name))
       write(sheet, CELL_DESCRIPTION, CellSanitizer.sanitize(payment.description))
@@ -128,10 +127,9 @@ module Reimbursements
       write(sheet, CELL_NOMINAL_CODE, CellSanitizer.sanitize(payment.nominal_code))
       write(sheet, CELL_COST_CENTRE, CellSanitizer.sanitize(payment.cost_centre))
 
-      iban = BankDetails.normalize_iban(payment.iban)
-      iban = BankDetails.format_iban(iban) if format_iban
       text(sheet, CELL_BIC, BankDetails.normalize_bic(payment.bic))
-      text(sheet, CELL_IBAN, iban)
+      # Grouped in fours, as a human checks it against an invoice.
+      text(sheet, CELL_IBAN, BankDetails.format_iban(BankDetails.normalize_iban(payment.iban)))
     end
 
     # change_contents keeps the template's style; add_cell would drop it. The

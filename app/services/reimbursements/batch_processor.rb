@@ -157,7 +157,7 @@ module Reimbursements
         bacs_date: bacs_date, cost_centre_slug: @cost_centre.slug,
         payee_name: expense.effective_payee_name, auto_number: expense.auto_number
       )
-      xlsx_attachment(filename, @international_xlsx.generate(payment, format_iban: true))
+      xlsx_attachment(filename, @international_xlsx.generate(payment))
     end
 
     # Expense record id => renamed receipt attachments.
