@@ -292,7 +292,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :shows do
+    concern :admin_event do
       resources :feedbacks, except: [ :show ]
 
       resources :show_crew_imports, only: [ :new ] do
@@ -303,44 +303,19 @@ ChaosRails::Application.routes.draw do
       end
 
       member do
-        patch "update_debt_settings", to: "shows#update_debt_settings"
-        post "sync_performances"
-        post "convert_to_season", to: "shows#convert_to_season"
-        post "convert_to_workshop", to: "shows#convert_to_workshop"
+        patch :update_debt_settings
+        post :sync_performances
       end
     end
 
-    resources :workshops do
-      resources :feedbacks, except: [ :show ]
-
-      resources :show_crew_imports, only: [ :new ] do
-        collection do
-          post :preview
-          post :confirm
-        end
-      end
-
+    resources :shows, concerns: :admin_event do
       member do
-        patch "update_debt_settings", to: "workshops#update_debt_settings"
-        post "sync_performances"
+        post :convert_to_season
+        post :convert_to_workshop
       end
     end
-
-    resources :seasons do
-      resources :feedbacks, except: [ :show ]
-
-      resources :show_crew_imports, only: [ :new ] do
-        collection do
-          post :preview
-          post :confirm
-        end
-      end
-
-      member do
-        patch "update_debt_settings", to: "seasons#update_debt_settings"
-        post "sync_performances"
-      end
-    end
+    resources :workshops, concerns: :admin_event
+    resources :seasons, concerns: :admin_event
 
     resources :debt_notifications, only: [ :index ]
 
