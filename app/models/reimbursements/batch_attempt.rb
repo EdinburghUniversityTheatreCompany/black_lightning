@@ -67,7 +67,7 @@ module Reimbursements
 
     # A running build resolves itself within minutes; offering to hide it
     # invites hiding something live.
-    def dismissible? = !(building? && !stale?)
+    def dismissible? = !building? || stale?
 
     def resolve!(status:, error_messages: nil, batch_record_id: nil)
       update!(status: status, error_messages: error_messages.presence,
