@@ -609,13 +609,13 @@ class User < ApplicationRecord
 
     if duplicate_last_names.any?
       all_users = where(last_name: duplicate_last_names).to_a
-      users_by_last_name = all_users.group_by(&:last_name)
+      users_by_last_name = all_users.group_by { |u| u.last_name.downcase }
 
       all_user_ids = all_users.map(&:id)
       years_active_cache = bulk_years_active_for(all_user_ids)
 
       duplicate_last_names.each do |ln|
-        users = users_by_last_name[ln]
+        users = users_by_last_name[ln.downcase]
         users.combination(2).each do |u1, u2|
           next if u1.marked_not_duplicate?(u2)
           next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)

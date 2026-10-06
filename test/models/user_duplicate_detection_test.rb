@@ -115,6 +115,15 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_equal 1, fuzzy_matches.size
   end
 
+  test "find_potential_duplicates matches last names that differ only in case" do
+    user1 = FactoryBot.create(:user, first_name: "John", last_name: "Zqxsmith")
+    user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "zqxsmith")
+
+    duplicates = User.find_potential_duplicates
+
+    assert(duplicates[:fuzzy_name_overlapping].any? { |d| d[:users].include?(user1) && d[:users].include?(user2) })
+  end
+
   test "find_potential_duplicates excludes marked not-duplicates" do
     user1 = FactoryBot.create(:user, first_name: "John", last_name: "TestSmith")
     user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "TestSmith")
