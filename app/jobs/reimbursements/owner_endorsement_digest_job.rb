@@ -15,15 +15,9 @@ module Reimbursements
         person = people_by_id[owner_person_id]
         next if person.nil?
 
-        # Stored link first (numeric ids are the reimbursements_person FK, "rec…" ids the legacy
-        # airtable_person_id). Email is the fallback only for an owner who never opened the portal:
-        # User emails are normalised on write, People emails aren't.
-        user = if owner_person_id.match?(/\A\d+\z/)
-                 User.find_by(reimbursements_person_id: owner_person_id)
-        else
-                 User.find_by(airtable_person_id: owner_person_id)
-        end
-        user ||= User.find_by(email: person.email) if person.email.present?
+        # Stored link first; email is the fallback only for an owner who never opened the portal,
+        # because User emails are normalised on write and People emails aren't.
+        user = person.user || (User.find_by(email: person.email) if person.email.present?)
         next if user.nil? # no portal account -> can't endorse; finance override covers them
 
         # deliver_now: the mail carries a whole expense collection, not worth serialising as job
