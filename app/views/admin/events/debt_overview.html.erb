@@ -41,26 +41,20 @@
                   <span class="text-gray-500">No tags</span>
                 <% end %>
               </td>
-              <td>
-                <% if show.maintenance_debt_amount.present? %>
-                  <strong><%= show.maintenance_debt_amount %></strong>
-                  <% if show.maintenance_debt_start.present? %>
-                    (due <%= show.maintenance_debt_start.strftime("%d %b %y") %>)
+              <% %w[maintenance staffing].each do |kind| %>
+                <% amount = show.public_send("#{kind}_debt_amount") %>
+                <% due = show.public_send("#{kind}_debt_start") %>
+                <td>
+                  <% if amount.present? %>
+                    <strong><%= amount %></strong>
+                    <% if due.present? %>
+                      (due <%= due.strftime("%d %b %y") %>)
+                    <% end %>
+                  <% else %>
+                    <span class="text-gray-500">Not configured</span>
                   <% end %>
-                <% else %>
-                  <span class="text-gray-500">Not configured</span>
-                <% end %>
-              </td>
-              <td>
-                <% if show.staffing_debt_amount.present? %>
-                  <strong><%= show.staffing_debt_amount %></strong>
-                  <% if show.staffing_debt_start.present? %>
-                    (due <%= show.staffing_debt_start.strftime("%d %b %y") %>)
-                  <% end %>
-                <% else %>
-                  <span class="text-gray-500">Not configured</span>
-                <% end %>
-              </td>
+                </td>
+              <% end %>
               <td>
                 <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: btn_classes(:primary, :sm) %>
               </td>
