@@ -23,7 +23,7 @@ class FieldListComponentPreview < ViewComponent::Preview
     return render FieldListComponent.new(fields: { name: "No pictures in this database" }) if picture.nil?
 
     render FieldListComponent.new(
-      fields: { poster: { type: "image", image: picture.image, variant: helpers.thumb_variant } },
+      fields: { poster: { type: "image", image: picture.image, variant: ApplicationController.helpers.thumb_variant } },
       admin_site: true
     )
   end
