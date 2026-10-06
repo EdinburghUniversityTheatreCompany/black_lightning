@@ -39,14 +39,12 @@ module Reimbursements
     # A SharePoint upload destination (a drive + a folder within it).
     Folder = Struct.new(:drive_id, :folder_id, keyword_init: true)
 
-    # nightly_run_days holds Ruby wdays (0=Sun..6=Sat), stored as a JSON string
-    # so it round-trips through a plain string column (MySQL can't default a
-    # TEXT/JSON column).
-    NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
-
     # Cap for +short_code+, which prefixes this centre's budgets in a picker
     # ("BF - Improverts: Other").
     SHORT_CODE_MAX = 16
+
+    # Ruby wdays (0=Sun..6=Sat), stored as a JSON string so it round-trips
+    # through a plain string column (MySQL can't default a TEXT/JSON column).
     serialize :nightly_run_days, coder: JSON
 
     # Both ";" (Outlook's) and "," separate addresses: a list read the other way
@@ -175,37 +173,16 @@ module Reimbursements
       Array(nightly_run_days).include?(date.wday)
     end
 
-    # The most recent configured run-day on or before +date+ (looking back up to
-    # a week), or nil if no run-days are configured.
-    def most_recent_nightly_run_day(date = Date.current)
-      return nil if Array(nightly_run_days).empty?
-
-      (0..6).each do |delta|
-        day = date - delta
-        return day if nightly_run_today?(day)
-      end
-      nil
-    end
-
     # Whether a run-day has come due and not been handled: catches up a day the
     # job missed, and +last_nightly_run_on+ stops one firing twice.
     def nightly_due?(date = Date.current)
-      target = most_recent_nightly_run_day(date)
-      return false if target.nil?
-      return true if last_nightly_run_on.nil?
-
-      last_nightly_run_on < target
+      target = (0..6).map { |back| date - back }.find { |day| nightly_run_today?(day) }
+      target.present? && (last_nightly_run_on.nil? || last_nightly_run_on < target)
     end
 
     # The next run-day after +date+, for the approved-ready reminder; nil if none is configured.
     def next_nightly_run_day(date = Date.current)
-      return nil if Array(nightly_run_days).empty?
-
-      (1..7).each do |delta|
-        day = date + delta
-        return day if nightly_run_today?(day)
-      end
-      nil
+      (1..7).map { |ahead| date + ahead }.find { |day| nightly_run_today?(day) }
     end
 
     # update_column, not update!: an unrelated validation (a blank
