@@ -307,7 +307,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     {
       admin_proposals_calls_path => admin_proposals_calls_path,
       admin_proposals_call_proposals_path(@call) => admin_proposals_call_proposals_path(@call),
-      "https://evil.example.com" => admin_proposals_proposal_path(proposal)
+      "https://evil.example.com" => admin_proposals_proposal_path(proposal),
+      "https://evil.example.com#{admin_proposals_calls_path}" => admin_proposals_proposal_path(proposal)
     }.each do |referrer, expected|
       proposal.update!(status: :awaiting_approval)
       @request.headers["HTTP_REFERER"] = referrer

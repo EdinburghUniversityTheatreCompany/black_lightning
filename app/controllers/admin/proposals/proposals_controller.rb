@@ -11,7 +11,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   before_action :set_paper_trail_whodunnit
   load_and_authorize_resource class: Admin::Proposals::Proposal
-  skip_authorize_resource only: %i[new create pending]
+  skip_authorize_resource only: %i[new create]
 
   ##
   # GET /admin/proposals/calls/1/proposals
@@ -153,18 +153,9 @@ class Admin::Proposals::ProposalsController < AdminController
 
   # Actions taken from the calls dashboard or a call's proposal list return there.
   def post_action_redirect_path
-    def rec(p)
-      Rails.application.routes.recognize_path p
-    end
-    allowed = [
-      admin_proposals_calls_path,
-      admin_proposals_call_proposals_path(@proposal.call)
-    ]
-
-    recd = rec request.referrer
-    return request.referrer if allowed.any? { |p| rec(p) == recd }
-
-    admin_proposals_proposal_path(@proposal)
+    back = url_from(request.referrer)
+    allowed = [ admin_proposals_calls_path, admin_proposals_call_proposals_path(@proposal.call) ]
+    back && allowed.include?(URI(back).path) ? back : admin_proposals_proposal_path(@proposal)
   end
 
   def call_closed_message(call)
