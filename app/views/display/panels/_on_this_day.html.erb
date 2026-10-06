@@ -1,14 +1,6 @@
 <%# locals: (event:, years_ago:) %>
 <div class="relative h-full w-full overflow-hidden bg-neutral-950">
-  <%# nil when the blob is missing from storage: degrade to text over black, not a 500. %>
-  <% if (image_url = display_image_url(event)) %>
-    <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover opacity-70", alt: "" %>
-  <% end %>
-
-  <%# The logo carries its own scrim: white on a pale poster would vanish. %>
-  <div class="absolute inset-x-0 top-0 flex justify-end bg-gradient-to-b from-black/70 to-transparent px-16 pb-24 pt-10">
-    <%= display_logo %>
-  </div>
+  <%= render "display/panels/artwork", event: event, dim: true %>
 
   <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/90 to-transparent px-16 pb-16 pt-48">
     <p class="mb-4 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">
