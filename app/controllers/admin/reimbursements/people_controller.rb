@@ -5,9 +5,9 @@ module Admin
     # modulus badge, inline bank-detail editing with an audit line in the notes,
     # Mark verified, and registering an existing user as a payee.
     class PeopleController < FinanceController
+      before_action -> { @query = params[:q].to_s.strip }, only: %i[index update]
+
       def index
-        @title = "Reimbursements People"
-        @query = params[:q].to_s.strip
         respond_to do |format|
           format.html { load_registry }
           # The on-screen filter carries through; bank details are masked (Exports::People).
@@ -26,7 +26,11 @@ module Admin
       # finance must be able to name one who has never saved details.
       def create
         user = ::User.find_by(id: params[:user_id])
-        return render_new_error("Pick a user account to register.") if user.nil?
+        if user.nil?
+          @title = "Register a person"
+          @error = "Pick a user account to register."
+          return render :new, status: :unprocessable_entity
+        end
 
         # PersonLink resolves by stored link THEN email, so this also catches
         # someone held under their address but never linked.
@@ -54,15 +58,8 @@ module Admin
                            "#{person.name.presence || person.email}."
       end
 
-      def render_new_error(message)
-        @title = "Register a person"
-        @error = message
-        render :new, status: :unprocessable_entity
-      end
-
       def load_registry
-        # Also reached from #update's invalid-save re-render, which never ran #index.
-        @query = params[:q].to_s.strip
+        @title = "Reimbursements People"
         people = store.people_in_name_order
         # Over the WHOLE registry, not the filtered page: a filter hiding one
         # half of a pair would hide the warning too.
@@ -141,7 +138,6 @@ module Admin
 
       # Re-renders (not redirects) so the row stays open with the typed values.
       def render_bank_details_error(sort_code, account_number, message)
-        @title = "Reimbursements People"
         load_registry
         @edit_person_id = @person.record_id
         @edit_sort_code = sort_code
