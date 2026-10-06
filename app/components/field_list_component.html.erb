@@ -3,26 +3,26 @@
     <% title = title_for(label) %>
 
     <li class="list-row py-2">
-      <% if block_field?(value) %>
+      <% if value.is_a?(Hash) %>
         <% case value[:type] %>
-        <% when FieldListComponent::MARKDOWN %>
+        <% when "markdown" %>
           <h3 id="<%= label %>"><%= title %></h3>
 
           <%= helpers.render_markdown(value[:markdown]) %>
 
-        <% when FieldListComponent::IMAGE %>
+        <% when "image" %>
           <h3 id="<%= label %>"><%= title %></h3>
 
           <% if real_image?(value) %>
             <%= render(ImageComponent.new(image: value[:image], variant: value[:variant])) %>
-            <% if downloadable? %>
+            <% if @admin_site %>
               <%= link_to "Download original image", url_for(value[:image]), class: "small text-gray-500", target: "_blank" %>
             <% end %>
           <% else %>
             No Image
           <% end %>
 
-        <% when FieldListComponent::CONTENT %>
+        <% when "content" %>
           <% if value.key?(:header) %>
             <h3 id="<%= label %>"><%= value[:header] %></h3>
           <% end %>
