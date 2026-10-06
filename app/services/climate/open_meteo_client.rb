@@ -24,7 +24,7 @@ module Climate
     end
 
     # -> [{ recorded_at: Time, temperature_c: Float, relative_humidity: Float,
-    #       dew_point_c: Float }]
+    #       dew_point_c: Float or nil }]
     def hourly_series(latitude:, longitude:, past_days: DEFAULT_PAST_DAYS,
                       forecast_days: DEFAULT_FORECAST_DAYS)
       body = request(latitude: latitude, longitude: longitude,
@@ -80,14 +80,8 @@ module Climate
         { recorded_at: Time.zone.parse(time),
           temperature_c: temperature.to_f,
           relative_humidity: humidity.to_f,
-          dew_point_c: dew_point(dew_points[index], temperature, humidity) }
+          dew_point_c: dew_points[index]&.to_f }
       end
-    end
-
-    def dew_point(reported, temperature, humidity)
-      return reported.to_f unless reported.nil?
-
-      DewPoint.celsius(temperature_c: temperature, relative_humidity: humidity)
     end
   end
 end

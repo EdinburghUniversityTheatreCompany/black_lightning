@@ -81,16 +81,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_equal 1, rows.size
   end
 
-  test "computes a missing dew point from temperature and humidity" do
-    client, = build_client([ [ 200, series_body(times: [ "2026-08-05T12:00" ],
-                                                temperatures: [ 20.0 ], humidities: [ 50 ],
-                                                dew_points: [ nil ]) ] ])
-
-    rows = client.hourly_series(latitude: 55.9467, longitude: -3.1903)
-
-    assert_in_delta 9.26, rows.first[:dew_point_c], 0.05
-  end
-
   test "returns no rows when the hourly block is absent" do
     client, = build_client([ [ 200, { latitude: 55.9 }.to_json ] ])
 
