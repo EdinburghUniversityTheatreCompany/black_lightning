@@ -52,15 +52,11 @@ module Reimbursements
   class EusaActual < ApplicationRecord
     include RecordId
 
-    # reconciliation_status value stamped on both legs of an offsetting pair
-    # (an accrual and its reversal, a journal booked and re-booked). Anything
-    # else — including a blank status — is an ordinary ledger row.
+    # Stamped on both legs of an offsetting pair (an accrual and its reversal).
     STATUS_OFFSET = "offset".freeze
 
-    # reconciliation_status value stamped on a credit row finance has split
-    # across several income budgets. It is what the ledger view and the CSV
-    # read to say "Apportioned" rather than leaving the row looking unlinked;
-    # the allocations themselves are the record of who got what.
+    # Stamped on a credit row split across income budgets; the export prints it.
+    # #apportioned? reads the allocations, not this.
     STATUS_APPORTIONED = "apportioned".freeze
 
     belongs_to :expense, class_name: "Reimbursements::Expense", optional: true,
@@ -68,61 +64,40 @@ module Reimbursements
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
 
-    # Which pot this ledger row belongs to, resolved at import from the export's
-    # own Cost Centre column (see Admin::Reimbursements::ReconcileController).
-    #
-    # This is the ONLY record of a row's cost centre — deliberately not stored
-    # alongside the exported code as a string, since two sources of the same fact
-    # can only ever disagree. The exported
-    # code still exists where attribution actually needs it — on the parser's
-    # Reconciliation::ActualsRow — it just isn't persisted twice.
-    #
-    # Optional, because a row whose code matched no configured cost centre, or
-    # that arrived with the column blank, genuinely has no centre, and guessing
-    # one would file real spend under the wrong pot.
+    # The only record of a row's cost centre, resolved at import from the export's Cost Centre
+    # column; the exported code is not stored as well. Optional: a row whose code matched no
+    # centre, or arrived blank, has none, and guessing would file spend under the wrong pot.
     belongs_to :cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
-    # An offsetting pair's two legs each point at the other, so this reads the
-    # same from either side.
+    # The two legs of an offsetting pair point at each other.
     belongs_to :offset_of, class_name: "Reimbursements::EusaActual", optional: true,
                            inverse_of: :offset_counterpart
     has_one :offset_counterpart, class_name: "Reimbursements::EusaActual",
                                  foreign_key: :offset_of_id, inverse_of: :offset_of,
                                  dependent: :nullify
 
-    # Each income budget's share of this row, when finance has split it. Only
-    # ever populated on a credit row (see #apportionable?).
+    # Each income budget's share of this row; only ever on a credit (see #apportionable?).
     has_many :allocations, class_name: "Reimbursements::ActualAllocation",
                            foreign_key: :eusa_actual_id, inverse_of: :eusa_actual,
                            dependent: :destroy
 
-    # EVERY write path lands here — the reconcile apply, an offsetting pair, a
-    # hand fix in a console — so the ledger cannot acquire a second spelling of
-    # one month again. The parser normalises too (so a paste's dedup bucket key
-    # matches what is stored) and this is the backstop under it.
-    # Reconciliation.normalise_period is the ONE definition; it is a pure
-    # function with no Rails dependencies, so the model may call it.
+    # Every write path normalises, so the ledger cannot gain a second spelling of a month. The
+    # parser does too, so a paste's dedup key matches what is stored. Reconciliation.normalise_period
+    # is the one definition.
     before_validation :normalise_period
 
-    # The net position of a set of ledger rows, from the spending side: debits
-    # less credits, so a supplier refund or a credit note reduces the figure
-    # instead of inflating it. Offsetting legs are dropped rather than netted:
-    # an accrual and its reversal cancel out, so neither is spend, and dropping
-    # both is right even when only one leg happens to be linked to an expense.
-    #
-    # The single definition of "what did this cost", shared by the budget
-    # rollups and the overview's unattributed list.
+    # What the rows cost: debits less credits, so a refund reduces the figure. Offsetting legs are
+    # dropped, not netted: both are noise even when only one leg is linked to an expense. The one
+    # definition, shared by the budget rollups and the overview's unattributed list.
     def self.net(actuals)
       actuals.reject(&:offset?).sum { |a| (a.debit || 0) - (a.credit || 0) }
     end
 
-    # The PORO exposed arrays of linked record ids; reconcile only ever links
-    # one of each, so these wrap the single FKs to keep the array interface.
+    # Array interface kept from the old PORO; a row links at most one of each.
     def linked_expense_ids = [ self[:expense_id]&.to_s ].compact
     def linked_budget_ids = [ self[:budget_id]&.to_s ].compact
 
-    # Key matching Reconciliation.actuals_row_dedup_key so an imported row can
-    # be compared against a freshly-parsed ActualsRow to skip re-importing.
+    # Comparable with a freshly parsed ActualsRow, to skip re-importing.
     def dedup_key
       Reconciliation.actuals_row_dedup_key(nominal_code, narrative, debit, credit)
     end
@@ -131,23 +106,14 @@ module Reimbursements
       reconciliation_status == STATUS_OFFSET
     end
 
-    # Only an unlinked debit row can become a From-EUSA expense: a credit is
-    # income, an already-linked row would double-count, and an offsetting leg is
-    # bookkeeping noise that nets to zero against its counterpart — turning one
-    # into an expense would invent spend that never happened.
+    # An unlinked debit. An offsetting leg nets to zero, so converting it would invent spend.
     def convertible_to_expense?
       debit.present? && debit.positive? && self[:expense_id].blank? && !offset?
     end
 
-    # Splittable across several income budgets: a credit that landed, attached
-    # to nothing yet, and not an offsetting leg.
-    #
-    # DEBITS are deliberately out. A debit row is split by converting it into
-    # several expenses, which already works (#convertible_to_expense?), and a
-    # debit budget's figure totals through its EXPENSES rather than through
-    # budget_id — a different mechanism that allocations would not reach.
-    # An offsetting leg nets to zero against its counterpart, so apportioning
-    # one would invent income, exactly as converting one would invent spend.
+    # An unattached credit that is not an offsetting leg (splitting one would invent income).
+    # Debits are out on purpose: they are split by converting to several expenses, and a debit
+    # budget's figure totals through its expenses, which allocations would not reach.
     def apportionable?
       credit.present? && credit.positive? && self[:budget_id].blank? &&
         self[:expense_id].blank? && !offset? && !apportioned?
@@ -155,54 +121,32 @@ module Reimbursements
 
     def apportioned? = allocations.any?
 
-    # A row nobody has finished with: attached to no claim and no budget, not a
-    # leg of an offsetting pair, not split across income lines.
-    #
-    # The ONE definition, because two screens act on it and must not disagree:
-    # the ledger's default "needs attention" filter — which is the list of what
-    # is left to do after a reconcile — and DatabaseStore#unattributed_actuals,
-    # the overview card that stops unlinked spend disappearing. They were the
-    # same predicate written twice; a row the ledger hid but the card counted
-    # would be money with no screen to resolve it on.
+    # Attached to no claim or budget, not an offsetting leg, not split. The ONE definition: the
+    # ledger's default filter and DatabaseStore#unattributed_actuals both read it, or a row the
+    # ledger hid but the overview counted would be money with no screen to resolve it on.
     def needs_attention?
       !offset? && self[:expense_id].blank? && self[:budget_id].blank? && !apportioned?
     end
 
-    # Whether this row can be paired with another as an offsetting pair by
-    # hand. It is #needs_attention? plus "carries a figure at all".
-    #
-    # Only an UNFINISHED row: stamping a row that is linked to a claim or an
-    # income line as offset would hide real spend from every rollup AND leave
-    # the claim reading Paid with nothing behind it. That restriction is also
-    # exactly the re-pair case, since "Not offsetting" returns both legs to
-    # precisely this state.
+    # #needs_attention? plus a figure. Only unfinished rows: offsetting a row linked to a claim
+    # would hide real spend and leave the claim Paid with nothing behind it. This is also exactly
+    # the state "Not offsetting" returns both legs to.
     def pairable?
       needs_attention? && signed_amount != 0
     end
 
-    # Debits positive, credits negative — the sign an offsetting pair has to
-    # cancel. Read off debit and credit rather than the stored `net` column,
-    # which is parsed separately from the export's own Net cell and can be
-    # blank or disagree (the reason EusaActual.net derives every rollup).
+    # Debits positive, credits negative. Read off debit and credit, not the stored `net`, which is
+    # parsed from the export's own Net cell and can be blank or disagree.
     def signed_amount
       (debit || 0) - (credit || 0)
     end
 
-    # The rows this one could cancel out with: the HARD requirements
-    # Reconciliation.detect_offsetting_pairs applies, and nothing softer.
-    #
-    # No scoring, unlike the detector: a person is choosing, so an extra row on
-    # the picker costs a glance while a false positive hides real spend.
-    #
-    # The cost centre is checked in the MODEL rather than by scoping the
-    # picker's source, because #confirm_offset re-checks through this same
-    # method and the "Mark as offsetting" link carries no centre — scoping the
-    # list alone would leave the write open. Two same-size rows on one code in
-    # two pots, stamped as cancelling out, leave BOTH pots' rollups short.
-    #
-    # Laxer than the detector in one place: two rows with NO centre pair, since
-    # rows predating cost centres are read as belonging everywhere rather than
-    # nowhere (the leniency DatabaseStore#in_year states).
+    # The rows this one could cancel out with: the hard requirements of
+    # Reconciliation.detect_offsetting_pairs, with no scoring (a person is choosing, so an extra
+    # row costs a glance where a false positive hides real spend). The cost centre is checked here,
+    # not by scoping the picker, because #confirm_offset re-checks through this method and the
+    # "Mark as offsetting" link carries no centre. Two rows with no centre pair, as rows predating
+    # cost centres count as belonging everywhere.
     def offset_candidates(rows)
       rows.select do |row|
         row.id != id && row.pairable? &&
@@ -213,13 +157,9 @@ module Reimbursements
       end
     end
 
-    # Whether this row answers a free-text search of the ledger: its narrative,
-    # its EUSA reference, its nominal code or either amount.
-    #
-    # Amounts are compared with the separators a person types stripped out
-    # ("£1,340" and "1340.00" are the same row), because the narrative is
-    # frequently a payment-run label and the AMOUNT is the only thing the
-    # operator has to go on.
+    # Free-text search over narrative, reference, nominal code and either amount. Amounts are
+    # compared with typed separators stripped ("£1,340" finds 1340.00): the narrative is often a
+    # payment-run label, so the amount is the only clue.
     def matches_search?(term)
       term = term.to_s.strip.downcase
       return true if term.blank?
@@ -233,31 +173,16 @@ module Reimbursements
       [ debit, credit ].compact.any? { |amount| amount.to_s.include?(number) }
     end
 
-    # What a split has to add up to: credits less debits, the same derivation
-    # EusaActual.net uses (negated, since this is the income side) and so the
-    # exact figure Budget#credit_actual_total would have counted had the row
-    # been attached whole.
-    #
-    # NOT the stored +net+ column. That is parsed from the export's own Net
-    # cell, which is a second statement of the same fact — it can be blank on
-    # a hand-created row and can disagree with the debit/credit pair every
-    # rollup actually reads. Splitting against a figure no rollup reads is how
-    # the parts would stop summing to the whole.
+    # What a split must add up to: credits less debits, the figure Budget#credit_actual_total would
+    # have counted had the row been attached whole. NOT the stored `net`, which can be blank or
+    # disagree with the debit/credit pair every rollup reads.
     def apportionable_total = -EusaActual.net([ self ])
 
     def allocated_total = allocations.sum { |allocation| allocation.amount || 0 }
 
-    # The budgets a split was divided between, each with its share:
-    # "Show A £2,500.00; Show B £1,500.00". Blank when the row is not split.
-    #
-    # On the MODEL rather than in a helper because the ledger page and the
-    # Actuals export both print it, and a finance user reading the CSV must
-    # not be told something different from one reading the screen. The "£" is
-    # kept even in the export, where amounts are normally bare numerals: this
-    # is a description of several amounts, not a column anything sums.
-    #
-    # Ordered by share, largest first, then by name — stable between renders,
-    # rather than following insertion order.
+    # "Show A £2,500.00; Show B £1,500.00", largest share first then by name; blank when not split.
+    # On the model so the ledger and the CSV print the same string. The "£" stays in the export:
+    # this describes several amounts and is not a column anything sums.
     def allocation_summary
       allocations
         .sort_by { |a| [ -(a.amount || 0), a.budget&.display_name.to_s ] }
@@ -273,8 +198,6 @@ module Reimbursements
       self.period = Reconciliation.normalise_period(period)
     end
 
-    # number_to_currency with the same unit reimbursements_money uses, so the
-    # summary reads identically to every other money figure in the portal.
     def money(amount)
       ActiveSupport::NumberHelper.number_to_currency(amount || 0, unit: "£")
     end

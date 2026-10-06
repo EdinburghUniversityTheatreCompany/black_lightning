@@ -69,9 +69,7 @@ module Admin
         assert_empty @payout.reload.allocations
       end
 
-      # The picker is drawn from a scoped list while the write is unscoped —
-      # the shape of the area-select bug. The posted ids are checked against
-      # the ids this page actually RENDERED.
+      # Posted ids are checked against the ids the page RENDERED: the picker list is scoped, the write is not.
       test "a budget the form did not offer is refused" do
         sign_in @user
         hidden = create_reimbursements_budget(name: "Retired", budget_type: "Income",
@@ -122,10 +120,7 @@ module Admin
         assert_predicate @payout, :apportionable?
       end
 
-      # "Split" alone is the state the row is in, not what it means; the
-      # shares are the whole point of having split it.
-      # ?state=all: a split row is a row somebody has finished with, so the
-      # index's default "needs attention" view leaves it out by design.
+      # state=all: a split row is finished with, so the default view leaves it out.
       test "the ledger row names its shares and offers the undo" do
         sign_in @user
         post_split(two_way_split)
@@ -145,9 +140,7 @@ module Admin
         assert_match "Split across budgets", response.body
       end
 
-      # Splitting a row moves money between budgets' figures, so it is behind
-      # the same finance gate as the rest of this controller rather than the
-      # producer portal's.
+      # Behind the finance gate, not the producer portal's.
       test "portal access alone does not open the split screen" do
         grant_producer_permission(users(:member_with_phone_number))
         sign_in users(:member_with_phone_number)

@@ -5,17 +5,15 @@ module Admin
   class ActualsControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
-    # A store whose actual-to-expense link write always fails: the conversion's
-    # second write dying after the expense was created.
+    # The actual-to-expense link write always fails (the conversion's second write).
     class UnlinkableStore < ::Reimbursements::DatabaseStore
       def link_actual_to_expense!(_actual_id, _expense_id)
         raise "blip"
       end
     end
 
-    # A store that hands the controller a STALE row: the copy the before_action
-    # checks still looks unlinked while the stored row has already been
-    # converted. This is what a second click on a double-submitted form sees.
+    # Hands the controller a stale row: the before_action's copy looks unlinked while the stored
+    # row is already converted, as a second click on a double-submitted form sees it.
     class StaleActualStore < ::Reimbursements::DatabaseStore
       def find_actual(record_id)
         super&.tap { |actual| actual.expense_id = nil }
@@ -48,8 +46,7 @@ module Admin
       )
     end
 
-    # store_builder is a class attribute, so a test that swaps in a failing store
-    # must hand the real one back or every later test inherits it.
+    # store_builder is a class_attribute: restore it or every later test inherits a swapped store.
     teardown do
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
     end
@@ -82,9 +79,7 @@ module Admin
 
     # --- Index -------------------------------------------------------------
 
-    # ?state=all, because the page now OPENS on the rows needing attention (see
-    # the state-filter tests below). This one is about the ledger's contents
-    # and its ordering, so it asks for the whole thing.
+    # state=all: the default view hides linked rows.
     test "lists every imported actual, newest imported first" do
       sign_in @user
       get :index, params: { state: "all" }
@@ -117,8 +112,7 @@ module Admin
                    "the legacy row's transaction date fallback slots it between the two imported rows"
     end
 
-    # Newest-imported first with 50/page; distinct imported_at timestamps make
-    # which row lands on which page deterministic.
+    # Distinct imported_at timestamps make which row lands on which page deterministic.
     def seed_paged_actuals(count)
       ::Reimbursements::EusaActual.delete_all
       (1..count).map do |n|
@@ -151,10 +145,6 @@ module Admin
     end
 
     test "shows the linked-to state per row" do
-      # Seeded here because the test used to render ONE unlinked row and pass
-      # on the page's chrome: the Finance sidebar's old "Expenses" link carried
-      # the word "Expense" until the nav was regrouped, so a bare body match was
-      # satisfied whatever the rows said.
       budget = create_reimbursements_budget(name: "Ticket income", budget_type: "Income")
       expense = create_reimbursements_expense(budget: budget, description: "Linked claim")
       create_reimbursements_eusa_actual(narrative: "Paid by BACS", debit: 10,
@@ -163,14 +153,10 @@ module Admin
                                         budget_id: budget.record_id)
 
       sign_in @user
-      # The full ledger: it opens on the rows needing attention, which is
-      # exactly the view a LINKED row is filtered out of.
       get :index, params: { state: "all" }
 
       assert_response :success
-      # The BADGES in the "Linked to" column, not a bare body match: reading the
-      # whole page let the sidebar satisfy this (its "Expenses" link carried the
-      # word until the nav was regrouped), so it passed whatever the rows said.
+      # The table, not the body: the sidebar's own "Expenses" link used to satisfy a body match.
       ledger = css_select("table").map(&:text).join(" ")
       assert_includes ledger, "Expense"
       assert_includes ledger, "Budget"
@@ -221,7 +207,6 @@ module Admin
                    rows.first
       assert_equal 4, rows.size, "header + three actuals"
 
-      # The expense-linked debit row resolves the expense's auto-number.
       exp_row = rows.find { |r| r[2] == "Alice Producer" }
       assert_equal %w[2026-05-13 Debit], exp_row.values_at(0, 1)
       assert_equal "123.45", exp_row[3]
@@ -229,7 +214,6 @@ module Admin
       assert_equal "03", exp_row[6]
       assert_equal "", exp_row[7].to_s, "an ordinary row has no reconciliation status"
 
-      # The budget-linked credit row resolves the budget name.
       bud_row = rows.find { |r| r[2] == "Box office" }
       assert_equal "Credit", bud_row[1]
       assert_equal "-500.0", bud_row[3], "income is signed negative (see the export's Amount note)"
@@ -320,11 +304,6 @@ module Admin
     end
 
     # --- The needs-attention filter ----------------------------------------
-    #
-    # The ledger is read after a reconcile to find what is LEFT to do, and a
-    # row already attached to a claim or a budget offers no action at all — 17
-    # of the 50 rows on the first page were inert. So the page opens on the
-    # leftovers, with the whole ledger one click away.
 
     test "the index opens on the rows that need attention" do
       sign_in @user
@@ -378,9 +357,7 @@ module Admin
       assert_equal 3, assigns(:matching_count)
     end
 
-    # An old link or bookmark asking for the offsets must still get them: an
-    # offsetting leg is never a row needing attention, so answering with the
-    # needs-attention view would be the control lying.
+    # An old bookmark asking for the offsets must still get them (an offset leg never needs attention).
     test "asking for the offsets alone opens the full ledger" do
       create_offsetting_pair
       sign_in @user
@@ -475,10 +452,6 @@ module Admin
     end
 
     # --- Undoing an offset --------------------------------------------------
-    #
-    # A false positive in the pairing heuristic stamps real spend as noise,
-    # hiding it from the ledger view and every rollup. There has to be a way
-    # back that doesn't need a console.
 
     test "unoffset clears the stamp and the cross-link on both legs" do
       accrual, reversal = create_offsetting_pair
@@ -655,8 +628,7 @@ module Admin
       assert_response :not_found
     end
 
-    # A From-EUSA expense records a cost EUSA has already taken from us, so it
-    # is created settled: it must never enter the review or BACS batch pipeline.
+    # Created settled: a From-EUSA expense never enters review or a BACS batch.
     test "create_expense creates a Paid From-EUSA expense dated from the ledger row" do
       sign_in @user
 
@@ -672,8 +644,7 @@ module Admin
       assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
       assert_equal ::Reimbursements::Status::PAID, expense.status
       assert_equal @unlinked.date, expense.payment_confirmed_date
-      # Not the day finance clicked: the lists sort and date claims by this, and
-      # a conversion done weeks after the charge must not read as a new claim.
+      # The ledger date, not the click date: lists sort and date claims by it.
       assert_equal @unlinked.date, expense.submitted_at.to_date
       assert_equal BigDecimal("42.0"), expense.amount
       assert_equal BigDecimal("42.0"), expense.amount_excl_vat
@@ -788,11 +759,8 @@ module Admin
     end
 
     # --- Conversion is one unit ---------------------------------------------
-    #
-    # The "already converted" guard is state-based, so the expense and its link
-    # must commit together: a Paid expense whose link write failed leaves the row
-    # unlinked and still offering "Create expense", and the next click
-    # double-counts the same EUSA charge.
+    # The expense and its link must commit together, or a failed link leaves the row offering
+    # "Create expense" and the next click double-counts the charge.
 
     test "a conversion whose link write fails creates no expense at all" do
       BaseController.store_builder = ->(**) { UnlinkableStore.new }
@@ -812,9 +780,8 @@ module Admin
       assert_empty @unlinked.reload.linked_expense_ids
     end
 
-    # The convertibility check has to be re-taken inside the writing
-    # transaction: a second click whose before_action read the row before the
-    # first click committed would otherwise convert it again.
+    # The convertibility check is re-taken inside the writing transaction: a second click's
+    # before_action read predates the first click's commit.
     test "a conversion racing another one is refused rather than duplicated" do
       BaseController.store_builder = ->(**) { StaleActualStore.new }
       ::Reimbursements::EusaActual.find(@unlinked.id).update!(expense: @expense)
@@ -846,12 +813,6 @@ module Admin
     end
 
     # --- Manual link to a claim ---------------------------------------------
-    #
-    # The matcher is deliberately conservative and leaves a row unmatched rather
-    # than inventing a link, so a human needs a way to finish the job. It is
-    # also the backstop under the international window: an international claim's
-    # stored amount is only finance's estimate until the payment clears, and a
-    # rate that moved far enough lands outside even the widened tolerance.
 
     def international_claim(amount: BigDecimal("230.00"))
       create_reimbursements_expense(
@@ -875,9 +836,6 @@ module Admin
     end
 
     # --- What Link to claim offers, and in what order ------------------------
-    #
-    # The list was every claim in the portal ordered by amount alone — 37 of
-    # them, Draft and Rejected included, with a Rejected one ranked third.
 
     test "link_expense offers no draft or rejected claim" do
       draft = create_reimbursements_expense(auto_number: 90, budget: @budget,
@@ -917,9 +875,6 @@ module Admin
       assert_includes numbers, approved.auto_number
     end
 
-    # The narrative is routinely "BACS PAYMENT KIRSTY TOLMIE" — the strongest
-    # evidence on the row — while amount-closeness alone ranked her claim
-    # sixth behind four unrelated ones that happened to be nearer.
     test "a claim whose payee the narrative names outranks a closer amount" do
       @unlinked.update!(narrative: "BACS PAYMENT KIRSTY TOLMIE")
       kirsty = create_reimbursements_person(name: "Kirsty Tolmie", email: "kirsty@example.com")
@@ -938,9 +893,8 @@ module Admin
       assert_equal named.auto_number, assigns(:candidates).first.auto_number
     end
 
-    # A ledger row belongs to one pot and a claim resolves one through its
-    # budget, so a candidate from the other centre is almost certainly the
-    # wrong answer — and the list said nothing about it.
+    # A claim resolves its centre through its budget, so the list names it: another centre's claim
+    # is almost certainly the wrong answer.
     test "link_expense names each candidate's cost centre" do
       centre = ::Reimbursements::CostCentre.default
       placed = create_reimbursements_budget(name: "Placed", cost_centre: centre)
@@ -981,10 +935,8 @@ module Admin
       assert(assigns(:budget_groups).flat_map(&:last).all? { |label, _| label.include?("·") })
     end
 
-    # The MARKUP, not just the ivar: a bare collection with group_method
-    # renders one OPTION PER GROUP — the label as its text and the whole array
-    # as its value — which looks plausible on the page and offers no budget at
-    # all. Only `as: :grouped_select` really groups.
+    # The MARKUP, not the ivar: a bare collection with group_method renders one option per group
+    # and offers no budget. Only `as: :grouped_select` really groups.
     test "new_expense renders real optgroups, each holding its budgets" do
       create_reimbursements_budget(name: "Sundries", nominal_code: "500000")
       sign_in @user
@@ -1031,8 +983,6 @@ module Admin
       assert_equal claim.id, @unlinked.reload[:expense_id]
     end
 
-    # The whole point of linking an international claim: its stored amount was
-    # the estimate, and the budget would otherwise quote it forever.
     test "confirm_link corrects an international claim to what EUSA charged" do
       claim = international_claim
       sign_in @user
@@ -1072,9 +1022,6 @@ module Admin
     end
 
     # --- Unlink -------------------------------------------------------------
-    # A wrong match had no way back short of a console, and an income line
-    # holding a whole settlement could never be split, because apportionable?
-    # refuses a row that already carries a budget.
 
     test "unlinking from an income line makes the row splittable again" do
       sign_in @user
@@ -1112,9 +1059,7 @@ module Admin
       assert_nil @linked_expense.reload.expense_id
     end
 
-    # The claim exists only because of the row, so there is no earlier state to
-    # return it to: unlinking would leave a Paid expense charged to a budget
-    # with nothing on the ledger behind it.
+    # The claim exists only because of the row, so there is no earlier state to return it to.
     test "refuses to unlink a claim that was created from this row" do
       @expense.update!(expense_type: ::Reimbursements::Expense::TYPE_FROM_EUSA,
                        status: ::Reimbursements::Status::PAID)
@@ -1150,17 +1095,13 @@ module Admin
       get :index, params: { state: "all" }
 
       assert_response :success
-      # Prefix match: the button carries the page's filters through its action,
-      # so the path it posts to is never the bare one.
+      # Prefix match: the button's action carries the page's filters.
       assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@linked_expense.record_id)
       assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@linked_budget.record_id)
       assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(@unlinked.record_id), count: 0
     end
 
-    # Unlink is additive rather than another branch of the action chain. A
-    # budget-linked DEBIT is still convertible (convertible_to_expense? reads
-    # expense_id, not budget_id), so as an elsif the button was unreachable on
-    # exactly the row an operator is most likely to have mis-attributed.
+    # Additive, not an elsif: a budget-linked debit is still convertible (that reads expense_id).
     test "a budget-linked debit offers Unlink alongside its conversion controls" do
       row = create_reimbursements_actual(nominal_code: "432320", period: "03",
                                          narrative: "Venue recharge", date: Date.new(2026, 5, 15),
@@ -1175,11 +1116,8 @@ module Admin
     end
 
     # --- Pairing two rows by hand -------------------------------------------
-    # "Not offsetting" was one-way: it returns both legs to ordinary rows and
-    # nothing put them back.
 
-    # A counterpart for @unlinked (a £42 debit on 500000): the same figure on
-    # the opposite side, same code, same year.
+    # The opposite side of @unlinked (a £42 debit on 500000): same figure, code and year.
     def counterpart_for_unlinked(**attrs)
       create_reimbursements_actual(nominal_code: "500000", period: "05", narrative: "Reversal",
                                    date: Date.new(2026, 6, 20), debit: nil,
@@ -1217,9 +1155,8 @@ module Admin
       refute_includes assigns(:candidates).map(&:record_id), linked.record_id
     end
 
-    # Two unrelated real transactions of the same size on one code in two pots,
-    # stamped as cancelling out, hide real spend from BOTH pots' rollups, and
-    # re-pasting cannot repair it because dedup then skips both legs.
+    # Two pots' rows stamped as cancelling out leave both pots' rollups short, and re-pasting
+    # cannot repair it (dedup skips both legs).
     test "never offers a counterpart from another cost centre" do
       other = create_second_reimbursements_cost_centre
       ours = counterpart_for_unlinked(cost_centre_id: @unlinked.cost_centre_id)
@@ -1233,8 +1170,7 @@ module Admin
       refute_includes ids, theirs.record_id, "two pots' rows never cancel each other out"
     end
 
-    # The picker is a read that goes stale, and the link carries no cost centre
-    # at all, so the gate has to hold on the write too.
+    # The picker is a stale read and the link carries no centre, so the gate must hold on the write.
     test "refuses a counterpart from another cost centre on submit" do
       other = create_second_reimbursements_cost_centre
       theirs = counterpart_for_unlinked(cost_centre_id: other.id)
@@ -1247,8 +1183,7 @@ module Admin
       refute theirs.reload.offset?
     end
 
-    # Rows predating cost centres carry none, and the portal reads an unplaced
-    # row as belonging everywhere rather than nowhere.
+    # Rows predating cost centres have none and count as belonging everywhere.
     test "two rows with no cost centre still pair, but not with a placed row" do
       @unlinked.update!(cost_centre_id: nil)
       unplaced = counterpart_for_unlinked(cost_centre_id: nil)

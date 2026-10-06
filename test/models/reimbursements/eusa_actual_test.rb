@@ -47,8 +47,7 @@ module Reimbursements
       assert_equal accrual, reversal.offset_of
     end
 
-    # An offset leg is bookkeeping noise that nets to zero, so it must never be
-    # turned into an expense however it is linked.
+    # An offset leg nets to zero, so it must never become an expense however it is linked.
     test "an offset leg is never convertible to an expense" do
       actual = EusaActual.create!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10,
                                   reconciliation_status: EusaActual::STATUS_OFFSET)
@@ -117,11 +116,8 @@ module Reimbursements
       assert_equal BigDecimal("4000"), actual.allocated_total
     end
 
-    # The figure a split must add up to is derived exactly as EusaActual.net
-    # derives every rollup's: credits less debits. NOT the stored `net`
-    # column, which is parsed from the export's own Net cell and so is a
-    # second statement of the same fact that can disagree with (or be blank
-    # beside) the debit/credit pair the budget totals actually read.
+    # Credits less debits, as EusaActual.net derives every rollup's; NOT the stored `net`, which can
+    # disagree with or be blank beside the debit/credit pair.
     test "the apportionable total is credits less debits, not the stored net column" do
       actual = create_reimbursements_eusa_actual(credit: 4000, debit: 250)
       actual.update_column(:net, 0)

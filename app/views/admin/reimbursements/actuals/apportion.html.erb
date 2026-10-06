@@ -27,10 +27,8 @@
     </p>
   <% end %>
 <% else %>
-  <%# form_with wraps the card, never the other way round: the footer is a
-      component SLOT, so a form opened inside the card renders its submit
-      outside the <form> and the button silently does nothing. A request test
-      cannot see that; actuals_apportion_js_test clicks the real button. %>
+  <%# form_with wraps the card, never the reverse: the footer is a component slot, so a form opened
+      inside the card renders its submit outside the <form>. Only actuals_apportion_js_test sees it. %>
   <%= form_with url: create_apportionment_admin_reimbursements_actual_path(@actual.record_id),
                 method: :post,
                 data: { controller: "apportion-total",
@@ -41,13 +39,8 @@
         A budget can only take one share, so if a show genuinely has two, add them together.
       </p>
 
-      <%# The five rows are a starting point, not a ceiling: a Stripe payout can
-          cover more shows than that, and the form used to offer no way past it.
-          nested-form clones the template below, substituting a timestamp for
-          NEW_RECORD — #submitted_shares reads params[:shares].values, so the
-          keys never have to be 0..n. The cloned <select> is picked up by
-          select_controller's MutationObserver (it sits on <body>), so the new
-          row gets its Tom Select like the rest. %>
+      <%# nested-form clones the template below. select_controller's MutationObserver (on <body>)
+          gives the cloned <select> its Tom Select. %>
       <div data-controller="nested-form">
         <div class="space-y-3">
           <% @shares.each_with_index do |share, index| %>
@@ -61,7 +54,7 @@
         </template>
 
         <p class="mt-3">
-          <%# type="button": inside a form, a bare <button> submits it. %>
+          <%# type="button": a bare <button> inside a form submits it. %>
           <button type="button" class="<%= btn_classes(:secondary, :sm) %>"
                   data-action="nested-form#add">Add another share</button>
         </p>
@@ -74,12 +67,9 @@
 
       <% card.with_footer do %>
         <div class="form-actions flex flex-wrap items-center gap-2">
-          <%# Disabled until the parts add up. The server refuses a short split
-              anyway — this only saves the operator the round trip. %>
-<%# ButtonComponent's shared classes carry no disabled styling, so without
-          these a disabled submit looks exactly like a live one and the
-          operator clicks a button that cannot do anything. Local rather than
-          on BASE_CLASSES: that is every button in the app and Mick's call. %>
+          <%# Disabled until the parts add up (the server refuses a short split anyway).
+              ButtonComponent's classes carry no disabled styling, so without these a disabled
+              submit looks live. Local rather than on BASE_CLASSES, which is every button. %>
           <%= submit_tag "Save the split", disabled: true,
                 class: "#{btn_classes(:primary)} disabled:opacity-50 " \
                        "disabled:cursor-not-allowed disabled:hover:bg-white " \

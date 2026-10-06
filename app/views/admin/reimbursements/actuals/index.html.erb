@@ -19,8 +19,6 @@
 
 <%= render CardComponent.new(title: "Filter") do %>
   <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
-    <%# The state rides in the URL like every other filter, so a "what is left
-        to do" view is a link somebody can bookmark or send. %>
     <div>
       <%= label_tag :state, "Show", class: FormStyles::LABEL %>
       <%= select_tag :state,
@@ -41,8 +39,7 @@
       <%= search_field_tag :search, @search, placeholder: "Narrative, ref or amount",
                            class: input_classes(width: "w-64") %>
     </div>
-    <%# Only on the full ledger: an offsetting leg nets to zero, so it is never
-        a row needing attention and the tickbox could only ever add nothing. %>
+    <%# Full ledger only: an offset leg never needs attention. %>
     <% unless needs_attention %>
       <div class="flex items-center gap-2 pb-1">
         <%= check_box_tag :include_offsets, "1", @include_offsets, class: "h-4 w-4" %>
@@ -58,8 +55,7 @@
 
 <div class="my-2 flex flex-wrap items-center justify-between gap-3">
   <p class="mb-0 text-sm text-gray-600">
-    <%# The headline count sits outside the branch: both readings lead on a
-        count, and herb-lint flags a tag repeated across every branch. %>
+    <%# Outside the branch: herb-lint flags a tag repeated across every branch. %>
     <strong><%= pluralize(needs_attention ? @needs_attention_count : @actuals.total_count, "row") %></strong>
     <% if needs_attention %>
       <%= @needs_attention_count == 1 ? "needs" : "need" %> attention
@@ -71,8 +67,6 @@
     <% end %>
   </p>
   <div class="flex flex-wrap items-center gap-2">
-    <%# The switch between the two views, as a button rather than only as the
-        select above: this is the one control the page is read for. %>
     <% if needs_attention %>
       <%= link_to "Show all rows",
                   admin_reimbursements_actuals_path(filters.merge(state: all_state)),
@@ -89,9 +83,7 @@
   </div>
 </div>
 
-<%# The hidden-offsets sentence IS the way to those rows — it was a statement
-    with no route to what it described, and "Not offsetting" (the only undo for
-    a mis-detected pair) was reachable nowhere else. %>
+<%# Hidden-offsets sentence: the only route to "Not offsetting" from the default view. %>
 <% if @offset_count.positive? && !@include_offsets %>
   <p class="mb-2 text-sm text-gray-600">
     <%= pluralize(@offset_count, "row") %> cancel out against a counterpart
@@ -105,8 +97,6 @@
 
 <% if @actuals.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>
-    <%# "Nothing imported yet" and "nothing left to do" are different answers,
-        and the default filter makes the second one the common case. %>
     <p class="py-4 text-center text-gray-600">
       <% if needs_attention && @matching_count.positive? %>
         Nothing here needs attention: every row is attached to a claim or a budget.

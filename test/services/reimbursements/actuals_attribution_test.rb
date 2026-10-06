@@ -54,9 +54,8 @@ module Reimbursements
                    "the preview has to say WHICH codes were dropped, not just how many rows"
     end
 
-    # Even with a single cost centre configured, a blank code is never inferred.
-    # "It must be the only one" is exactly the guess that files real spend under
-    # the wrong pot the day a second pot exists.
+    # A blank code is never inferred, even with one centre: "it must be the only one" files spend
+    # under the wrong pot the day a second exists.
     test "blank-code rows are held back until the operator chooses, even with one centre" do
       single = ActualsAttribution.new(cost_centres: [ @fringe ])
       result = single.call(parse("F40", ""), blank_choice: nil)
@@ -74,9 +73,8 @@ module Reimbursements
       refute_predicate result, :blank_choice_required?
     end
 
-    # "Not ours" is a real answer to a mandatory question — without it an
-    # operator facing another society's blank rows has no honest way past the
-    # gate except to park them under whichever centre is nearest to hand.
+    # "Not ours" is a real answer to the mandatory question; without it the operator must park
+    # another society's rows under the nearest centre.
     test "the skip choice drops the blank rows without blocking the rest" do
       result = attribute(parse("F40", ""), blank_choice: ActualsAttribution::SKIP)
 

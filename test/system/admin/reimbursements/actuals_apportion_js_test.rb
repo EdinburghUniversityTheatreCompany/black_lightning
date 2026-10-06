@@ -2,12 +2,8 @@ require "application_system_test_case"
 
 module Admin
   module Reimbursements
-    # Browser tests for the split-an-EUSA-credit screen. Two things only a real
-    # browser sees: the running total that tells the operator whether the parts
-    # add up, and that the submit button is INSIDE the form — the card footer is
-    # a component slot, so a form opened inside the card renders its submit
-    # outside the <form> and the button silently does nothing. A request-level
-    # test POSTs straight to the action and cannot catch that.
+    # Only a browser sees the running total and that the submit button is inside the form (the card
+    # footer is a component slot; a request test POSTs straight to the action).
     class ActualsApportionJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -21,8 +17,7 @@ module Admin
         visit apportion_admin_reimbursements_actual_path(@payout.record_id)
       end
 
-      # Tom Select hides the original <select>, so Capybara's own #select can't
-      # touch it. Drive the widget the way an operator does.
+      # Tom Select hides the original <select>; drive the widget as an operator does.
       def tom_select(option_text, select_id:)
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click

@@ -1,37 +1,19 @@
 module Reimbursements
   ##
-  # Decides which cost centre each pasted EUSA actuals row belongs to.
+  # Decides which cost centre each pasted EUSA actuals row belongs to, from the row's own Cost
+  # Centre column, so one paste may span several centres. Lives apart from the pure Reconciliation
+  # parser because it looks codes up in the database. Only the first outcome imports:
   #
-  # The export carries a Cost Centre column per row, so nobody has to tell the
-  # wizard which centre a paste is for: every row lands in the centre its own
-  # code names, and a paste may span as many centres as it likes. Filtering a
-  # paste down to one code (a hardcoded "F40", or CostCentre.default) silently
-  # drops every other society's row.
-  #
-  # This lives on the Rails side, apart from the pure Reconciliation parser,
-  # precisely because deciding needs to look codes up in the database.
-  #
-  # Three outcomes, and only the first one imports:
-  #
-  #   attributed             the row's code names a configured cost centre
-  #   unrecognised_rows      the row names a code we don't have (another
-  #                          society's spend in a whole-organisation export).
-  #                          Skipped — but VISIBLY: the preview reports the count
-  #                          and the codes, because a silent drop is what this
-  #                          class exists to prevent.
-  #   blank-code rows        the export omitted the column, or left the cell
-  #                          empty. These ALWAYS need an explicit operator
-  #                          choice, even when only one cost centre is
-  #                          configured: inferring "well, it must be the only
-  #                          one" is exactly the guess that files real spend
-  #                          under the wrong pot the day a second pot appears.
-  #                          Unchosen, they sit in +unassigned_blank_rows+ and
-  #                          must not import. The choice may also be SKIP, the
-  #                          operator saying "these are not ours".
+  #   attributed        the row's code names a configured cost centre
+  #   unrecognised_rows a code we don't have (another society's spend). Skipped, but reported with
+  #                     its code in the preview: a silent drop is what this class exists to prevent.
+  #   blank-code rows   no code in the export. These ALWAYS need an operator choice, even with one
+  #                     centre configured: inferring the only one files real spend under the wrong
+  #                     pot the day a second appears. Unchosen they sit in +unassigned_blank_rows+
+  #                     and must not import.
   class ActualsAttribution
-    # The blank-row choice meaning "don't import these at all". A real choice,
-    # so the operator can proceed past a mandatory question honestly rather than
-    # parking the rows under whichever centre is nearest to hand.
+    # The blank-row choice meaning "these are not ours": a real answer, so the operator can get past
+    # the mandatory question without parking the rows under the nearest centre.
     SKIP = "skip".freeze
 
     # One row and the cost centre it was attributed to.
@@ -48,14 +30,12 @@ module Reimbursements
       # as members of the pot they chose rather than as "blank".
       def cost_centre_keys = attributed.map { |entry| entry.cost_centre.id.to_s }
 
-      # The unrecognised codes as the operator typed them, de-duplicated, for
-      # the "cost centres G12, H03 are not set up here" line.
+      # For the "cost centres G12, H03 are not set up here" line.
       def unrecognised_codes
         unrecognised_rows.map { |row| row.cost_centre.to_s.strip.upcase }.uniq.sort
       end
 
-      # Blank-code rows are still waiting on a choice, so nothing may be applied
-      # yet: applying would silently drop them.
+      # Applying now would silently drop the blank-code rows.
       def blank_choice_required? = unassigned_blank_rows.any?
 
       # Every row this paste will NOT import, whatever the reason.
@@ -67,10 +47,8 @@ module Reimbursements
       @by_code = @cost_centres.index_by { |centre| normalise(centre.eusa_code) }
     end
 
-    # +blank_choice+ is what the operator picked for the blank-code rows: a cost
-    # centre id, SKIP, or nothing. An id that matches no configured centre reads
-    # as nothing — the safe direction, since it leaves those rows unimported and
-    # the question still on screen.
+    # +blank_choice+ is a cost centre id, SKIP or nothing. An unknown id reads as nothing, the safe
+    # direction: the rows stay unimported and the question stays on screen.
     def call(rows, blank_choice: nil)
       chosen = resolve_blank_choice(blank_choice)
       attributed = []

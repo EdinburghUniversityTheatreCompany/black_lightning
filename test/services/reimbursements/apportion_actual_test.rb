@@ -57,9 +57,6 @@ module Reimbursements
       assert_nil @actual.reconciliation_status
     end
 
-    # The stamp is what the ledger view and the CSV read to say the row is
-    # accounted for — without it the row reads as an ordinary unlinked credit
-    # while its income already sits on budgets.
     test "a split row is stamped apportioned and carries no budget of its own" do
       @store.apportion_actual!(@actual.id, [ { budget_id: @a.id, amount: BigDecimal("4000") } ])
 
@@ -68,9 +65,7 @@ module Reimbursements
       assert_not_predicate @actual, :offset?
     end
 
-    # The parts have to add up to the figure the ROLLUPS read — credits less
-    # debits — not to the stored net column, which is parsed separately from
-    # the export's own Net cell and can disagree with the pair.
+    # The parts add up to what the rollups read (credits less debits), not the stored net column.
     test "the sum is checked against credits less debits, not the stored net" do
       row = create_reimbursements_eusa_actual(credit: 1000, debit: 100)
       row.update_column(:net, -1000)
@@ -90,9 +85,8 @@ module Reimbursements
       end
     end
 
-    # Splitting twice would double the income. The guard is re-taken inside
-    # the transaction under a row lock, so the second write is refused even
-    # when the caller's own check was taken before the first one committed.
+    # A second split would double the income. The guard is re-taken inside the transaction under a
+    # row lock, so it holds even when the caller's check predates the first commit.
     test "refuses a second split of a row already apportioned" do
       @store.apportion_actual!(@actual.id, [ { budget_id: @a.id, amount: BigDecimal("4000") } ])
 
@@ -103,8 +97,7 @@ module Reimbursements
       assert_equal 1, @actual.reload.allocations.count
     end
 
-    # All-or-nothing: a half-written split leaves the row reading as unlinked
-    # while some of its shares are already on budgets.
+    # All-or-nothing: a half-written split leaves the row unlinked with some shares already on budgets.
     test "a share naming no budget writes nothing at all" do
       assert_raises(ActiveRecord::RecordInvalid) do
         @store.apportion_actual!(@actual.id, [
