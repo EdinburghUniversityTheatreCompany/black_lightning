@@ -70,16 +70,15 @@ module Reimbursements
     # several NULLs through, and an area with no year or centre yet has NULLs in both.
     validates :name, uniqueness: { scope: [ :financial_year_id, :cost_centre_id ] }
 
-    # The fields the operator fills in, as opposed to AreasController::BUDGET_ROW_FIELDS.
-    TYPED_BUDGET_ROW_FIELDS = %w[name nominal_code initial_budget].freeze
-
     # NOT :all_blank: the Type select has no blank option, so an untouched "Add
     # budget line" row still posts budget_type and would reach save! with no name.
-    # AreasController#budget_row_error must judge by the same list: a row one calls
-    # untouched and the other incomplete is a silent 500 or a silently dropped line.
-    # A figure typed with no name counts as touched, so it is reported.
+    # Untouched means the fields the operator fills in are blank.
+    # AreasController#budget_row_error calls this same lambda, and the two must
+    # agree: a row one calls untouched and the other incomplete is a silent 500 or
+    # a silently dropped line. A figure typed with no name counts as touched, so it
+    # is reported.
     UNTOUCHED_BUDGET_ROW = lambda do |attrs|
-      attrs["id"].blank? && TYPED_BUDGET_ROW_FIELDS.all? { |key| attrs[key].blank? }
+      attrs["id"].blank? && %w[name nominal_code initial_budget].all? { |key| attrs[key].blank? }
     end
 
     accepts_nested_attributes_for :budgets, allow_destroy: false,

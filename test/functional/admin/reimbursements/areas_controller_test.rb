@@ -192,8 +192,7 @@ module Admin
         assert_no_difference -> { ::Reimbursements::Budget.count } do
           patch :update, params: {
             id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "",
-                                           area_id: "" } }
+            budgets_attributes: { "0" => { id: line.id, area_id: "" } }
           }
         end
 
@@ -207,9 +206,8 @@ module Admin
         incomplete = /needs a name and a nominal code/
 
         {
-          # A truncated POST with neither name nor code key: the key guard must read
-          # the lambda's fields, or the row is absent there, touched in the lambda
-          # and raises in save!.
+          # A truncated POST with neither name nor code key still carries a figure,
+          # so it is touched and reported, not built nameless to raise in save!.
           { budget_type: "Expense", initial_budget: "500" } => incomplete,
           # Half-filled, not untouched: report it rather than drop a line the
           # operator thinks they added.

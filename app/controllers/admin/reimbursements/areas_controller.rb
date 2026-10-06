@@ -65,8 +65,7 @@ module Admin
         end
 
         @area.assign_attributes(attrs)
-        budgets_attrs = permitted_budgets_attributes
-        @area.budgets_attributes = budgets_attrs if budgets_attrs
+        @area.budgets_attributes = permitted_budgets_attributes if permitted_budgets_attributes
         @area.save!
         store.sync_area_owners!(@area.record_id, posted_owner_ids)
         redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
@@ -139,17 +138,9 @@ module Admin
       # dropping it leaves an existing line's figure alone. Memoised so the
       # validation and the write read the same parsed rows.
       def permitted_budgets_attributes
-        return @permitted_budgets_attributes if defined?(@permitted_budgets_attributes)
-
-        source = area_form_params
-        @permitted_budgets_attributes =
-          if source[:budgets_attributes].blank?
-            nil
-          else
-            rows = source.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
-            rows.each_value { |row| normalise_initial_budget(row) }
-            rows
-          end
+        @permitted_budgets_attributes ||=
+          area_form_params.permit(budgets_attributes: BUDGET_ROW_FIELDS)[:budgets_attributes]
+                          &.each_value { |row| normalise_initial_budget(row) }
       end
 
       # An unreadable value stays raw for #budget_row_value_error to report
@@ -176,17 +167,11 @@ module Admin
       # A NEW line needs a name and a nominal code. An EXISTING row is checked
       # only for its name: the form posts every child row, so requiring a code
       # would lock an area holding a code-less line (supported state) out of its
-      # own form, Detach included. A blank name would raise in save!.
+      # own form, Detach included. A blank name would raise in save!, but a row
+      # posted with no name key at all (detach-only) is not a blank name.
       def budget_row_error(row)
-        # No typed key means absent, not incomplete. The list must be the
-        # lambda's, or a row carrying only a figure is absent here, touched there
-        # and raises in save!.
-        return nil if ::Reimbursements::Area::TYPED_BUDGET_ROW_FIELDS.none? { |key| row.key?(key) }
-
         if row[:id].present?
-          return "A budget line's name can't be blank." if row[:name].blank?
-
-          return nil
+          return row.key?(:name) && row[:name].blank? ? "A budget line's name can't be blank." : nil
         end
         return nil if ::Reimbursements::Area::UNTOUCHED_BUDGET_ROW.call(row)
         return nil if row[:name].present? && row[:nominal_code].present?
