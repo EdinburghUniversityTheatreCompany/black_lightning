@@ -39,10 +39,8 @@ class GetInvolvedController < ApplicationController
   def create
     authorize! :create, Opportunity
 
-    # Build with a guard: this is a public endpoint, so a crafted invalid enum value would
-    # otherwise raise ArgumentError. Treat it as a normal invalid submission.
     @opportunity = Opportunity.new(opportunity_params)
-    @opportunity.creator = current_user if user_signed_in?
+    @opportunity.creator = current_user
     @opportunity.approved = false
 
     # Logged so a false positive on a real user is observable.
@@ -60,9 +58,6 @@ class GetInvolvedController < ApplicationController
     else
       rerender_new
     end
-  rescue ArgumentError
-    @opportunity ||= Opportunity.new
-    rerender_new
   end
 
   def page

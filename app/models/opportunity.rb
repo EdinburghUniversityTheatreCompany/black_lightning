@@ -63,7 +63,7 @@ class Opportunity < ApplicationRecord
   # Blank-position rows (an accidental "Add role") are dropped silently.
   accepts_nested_attributes_for :roles, allow_destroy: true, reject_if: ->(attrs) { attrs["position"].blank? }
 
-  enum :email_visibility, { no_one: 0, members_only: 1, everyone: 2 }, default: :no_one
+  enum :email_visibility, { no_one: 0, members_only: 1, everyone: 2 }, default: :no_one, validate: true
 
   enum :compensation_type, {
     unpaid: 0,
@@ -71,14 +71,14 @@ class Opportunity < ApplicationRecord
     paid: 2,
     profit_share: 3,
     tbc: 4
-  }, default: :tbc, prefix: :compensation
+  }, default: :tbc, prefix: :compensation, validate: true
 
   enum :experience_level, {
     any: 0,
     student: 1,
     amateur: 2,
     professional: 3
-  }, default: :any, prefix: :experience
+  }, default: :any, prefix: :experience, validate: true
 
   validates :expiry_date, :description, presence: true
   validates :contact_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
