@@ -64,19 +64,19 @@ export default class extends Controller {
 
   bold() {
     this.#mode === "source"
-      ? this.#sourceInline("**", "**", "bold")
+      ? this.#sourceWrap("**", "**", "bold")
       : this.#insertInlineMark("strong", this.#cmds.toggleStrongCommand, "bold")
   }
 
   italic() {
     this.#mode === "source"
-      ? this.#sourceInline("*", "*", "italic")
+      ? this.#sourceWrap("*", "*", "italic")
       : this.#insertInlineMark("emphasis", this.#cmds.toggleEmphasisCommand, "italic")
   }
 
   strike() {
     this.#mode === "source"
-      ? this.#sourceInline("~~", "~~", "strikethrough")
+      ? this.#sourceWrap("~~", "~~", "strikethrough")
       : this.#insertInlineMark("strike_through", this.#cmds.toggleStrikethroughCommand, "strikethrough")
   }
 
@@ -110,13 +110,13 @@ export default class extends Controller {
 
   inlineCode() {
     this.#mode === "source"
-      ? this.#sourceInline("`", "`", "code")
+      ? this.#sourceWrap("`", "`", "code")
       : this.#insertInlineMark("inlineCode", this.#cmds.toggleInlineCodeCommand, "code")
   }
 
   codeBlock() {
     this.#mode === "source"
-      ? this.#sourceBlock("```\n", "\n```", "code")
+      ? this.#sourceWrap("```\n", "\n```", "code")
       : this.#cmd(this.#cmds.createCodeBlockCommand)
   }
 
@@ -423,7 +423,7 @@ export default class extends Controller {
   }
 
   // Wraps the selection (or a placeholder) in before/after and selects the middle.
-  #sourceInline(before, after, placeholder) {
+  #sourceWrap(before, after, placeholder) {
     const ta = this.#sourceTextarea
     const start = ta.selectionStart
     const end = ta.selectionEnd
@@ -441,19 +441,6 @@ export default class extends Controller {
     const lineStart = ta.value.lastIndexOf("\n", pos - 1) + 1
     ta.value = ta.value.substring(0, lineStart) + prefix + ta.value.substring(lineStart)
     ta.setSelectionRange(pos + prefix.length, pos + prefix.length)
-    this.#textarea.value = ta.value
-    ta.focus()
-  }
-
-  #sourceBlock(before, after, placeholder) {
-    const ta = this.#sourceTextarea
-    const start = ta.selectionStart
-    const end = ta.selectionEnd
-    const selected = ta.value.substring(start, end)
-    const text = selected || placeholder
-    const insertion = before + text + after
-    ta.value = ta.value.substring(0, start) + insertion + ta.value.substring(end)
-    ta.setSelectionRange(start + before.length, start + before.length + text.length)
     this.#textarea.value = ta.value
     ta.focus()
   }
@@ -594,7 +581,7 @@ export default class extends Controller {
       const sep = "| " + Array(cols).fill("---").join(" | ") + " |"
       const row = "| " + Array(cols).fill("Cell").join(" | ") + " |"
       const table = [header, sep, ...Array(rows - 1).fill(row)].join("\n")
-      this.#sourceBlock("", "\n", table)
+      this.#sourceWrap("", "\n", table)
       return
     }
 
