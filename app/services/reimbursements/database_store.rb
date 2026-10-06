@@ -289,9 +289,7 @@ module Reimbursements
     # an id to resolve to.
     def import_budgets!(creates:, revisions:, owner_syncs:, note:, created_by:, adoptions: [],
                         area_creates: [], re_homes: [], area_owner_syncs: [], area_revisions: [])
-      result = nil
-      area_owners_synced = 0
-      Budget.transaction do
+      result = Budget.transaction do
         areas_by_name = area_creates.to_h do |attrs|
           [ ::Reimbursements::BudgetImport.match_key(attrs[:name]), create_area!(attrs) ]
         end
@@ -301,6 +299,7 @@ module Reimbursements
           re_home_budget!(re_home[:budget_id], resolve_area_id(re_home, areas_by_name))
         end
         owner_syncs.each { |sync| sync_budget_owners!(sync[:budget_id], sync[:owner_ids]) }
+        area_owners_synced = 0
         area_owner_syncs.each do |sync|
           area_id = resolve_optional_area_id(sync, areas_by_name)
           next if area_id.nil?
@@ -315,11 +314,11 @@ module Reimbursements
                    create_budget_update!(effective_date: Date.current, note: note,
                                          created_by: created_by, forecasts: forecasts)
         end
-        result = ImportResult.new(created: created.size, revised: revisions.size,
-                                  owners_synced: owner_syncs.size, budget_update: update,
-                                  areas_created: areas_by_name.size, re_homed: re_homes.size,
-                                  area_owners_synced: area_owners_synced,
-                                  area_revised: area_revisions.size)
+        ImportResult.new(created: created.size, revised: revisions.size,
+                         owners_synced: owner_syncs.size, budget_update: update,
+                         areas_created: areas_by_name.size, re_homed: re_homes.size,
+                         area_owners_synced: area_owners_synced,
+                         area_revised: area_revisions.size)
       end
       bust_budgets!
       bust_areas!
@@ -343,13 +342,11 @@ module Reimbursements
     # reads to recognise a hand-named line.
     def find_or_create_budget_for_area!(area_id:, nominal_code:, name:, cost_centre: nil,
                                         financial_year: nil)
-      budget = nil
-      Budget.transaction do
+      budget = Budget.transaction do
         area = Area.lock.find(area_id)
-        budget = BudgetFinder.match(area.budgets.to_a, area: area, nominal_code: nominal_code,
-                                    label: name)
-        budget ||= create_budget!(name: name, nominal_code: nominal_code, area: area,
-                                  cost_centre: cost_centre, financial_year: financial_year)
+        BudgetFinder.match(area.budgets.to_a, area: area, nominal_code: nominal_code, label: name) ||
+          create_budget!(name: name, nominal_code: nominal_code, area: area,
+                         cost_centre: cost_centre, financial_year: financial_year)
       end
       bust_budgets!
       bust_areas!
@@ -430,18 +427,18 @@ module Reimbursements
     # {budget_id:, amount:} or {area_id:, amount:} entries; the caller drops blank amounts.
     # All-or-nothing.
     def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
-      update = nil
-      BudgetUpdate.transaction do
+      update = BudgetUpdate.transaction do
         # The year being viewed, not just the live one: a revision logged while setting next
         # year's budgets up belongs to next year.
-        update = BudgetUpdate.create!(effective_date: effective_date, note: note,
-                                      created_by: created_by,
-                                      financial_year: financial_year || FinancialYear.current)
+        created = BudgetUpdate.create!(effective_date: effective_date, note: note,
+                                       created_by: created_by,
+                                       financial_year: financial_year || FinancialYear.current)
         forecasts.each do |entry|
           BudgetForecast.create!(budget_id: entry[:budget_id], area_id: entry[:area_id],
                                  amount: entry[:amount], date: effective_date,
-                                 reason: note, budget_update: update)
+                                 reason: note, budget_update: created)
         end
+        created
       end
       bust_budgets!
       update
@@ -518,10 +515,9 @@ module Reimbursements
     # Nothing here notifies anyone: an import is bookkeeping, and every producer email comes
     # from BatchProcessor, the nightly reminders or an explicit reject.
     def import_expenses!(rows:)
-      created = nil
-      Expense.transaction do
+      created = Expense.transaction do
         numbered, unnumbered = rows.partition { |attrs| attrs[:auto_number].present? }
-        created = (numbered + unnumbered).map { |attrs| create_expense!(attrs) }
+        (numbered + unnumbered).map { |attrs| create_expense!(attrs) }
       end
       bust_expenses!
       created
@@ -743,13 +739,13 @@ module Reimbursements
     # double-submitted form, so it is re-taken here under a row lock: the second writer blocks,
     # then sees the link and is refused.
     def create_expense_for_actual!(actual_id, attrs)
-      expense = nil
-      EusaActual.transaction do
+      expense = EusaActual.transaction do
         actual = EusaActual.lock.find(actual_id)
         raise NotConvertibleError unless actual.convertible_to_expense?
 
-        expense = create_expense!(attrs)
-        link_actual_to_expense!(actual_id, expense.record_id)
+        created = create_expense!(attrs)
+        link_actual_to_expense!(actual_id, created.record_id)
+        created
       end
       bust_eusa_actuals!
       expense
