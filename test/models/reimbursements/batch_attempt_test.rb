@@ -58,7 +58,7 @@ module Reimbursements
       failed.dismiss!(email: "finance@example.com")
       failed.reload
 
-      assert_predicate failed, :dismissed?
+      assert_not_nil failed.dismissed_at
       assert_predicate failed, :failed?
       assert_equal "boom", failed.error_messages
       assert_equal "recBat9", failed.batch_record_id

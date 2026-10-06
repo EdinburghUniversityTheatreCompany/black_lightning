@@ -37,7 +37,7 @@ module Admin
 
         post :dismiss, params: { id: attempt.id }
 
-        assert_not attempt.reload.dismissed?
+        assert_nil attempt.reload.dismissed_at
         assert_match(/still running/i, flash[:alert])
       end
 
@@ -48,7 +48,7 @@ module Admin
           post :dismiss, params: { id: attempt.id }
         end
 
-        assert_predicate attempt.reload, :dismissed?
+        assert_not_nil attempt.reload.dismissed_at
       end
 
       test "a producer without the finance permission cannot dismiss" do
@@ -60,7 +60,7 @@ module Admin
         post :dismiss, params: { id: attempt.id }
 
         assert_response :forbidden
-        assert_not attempt.reload.dismissed?
+        assert_nil attempt.reload.dismissed_at
       end
 
       test "404s on an unknown attempt" do

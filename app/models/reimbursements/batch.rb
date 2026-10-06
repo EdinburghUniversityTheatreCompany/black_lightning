@@ -39,6 +39,5 @@ module Reimbursements
     def eusa_draft_created
       draft_message_id.present? || date_sent.present?
     end
-    alias eusa_draft_created? eusa_draft_created
   end
 end

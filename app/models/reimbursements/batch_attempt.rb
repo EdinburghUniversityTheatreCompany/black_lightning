@@ -41,7 +41,6 @@ module Reimbursements
 
     validates :status, inclusion: { in: STATUSES }
 
-    scope :building, -> { where(status: "building") }
     # A clean build is redundant with its Batch, and nothing_to_build is the
     # expected outcome of a serialised double-click, so neither is alerted on.
     # The trailing where applies to the whole OR.
@@ -60,8 +59,6 @@ module Reimbursements
     def stale?
       building? && created_at < STALE_AFTER.ago
     end
-
-    def dismissed? = dismissed_at.present?
 
     # Hides the alert; the record stays.
     def dismiss!(email: nil)
