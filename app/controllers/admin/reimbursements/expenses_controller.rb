@@ -33,7 +33,7 @@ module Admin
         redirect_with_attachment_result(expense.record_id, created_notice)
       rescue ::Reimbursements::DatabaseStore::BudgetGoneError
         # The budget went between the form-level check and the insert.
-        budget_gone_error
+        @form.errors.add(:budget_record_id, ::Reimbursements::ExpenseForm::BUDGET_GONE)
         render_form(:new, "New Expense")
       end
 
@@ -64,7 +64,7 @@ module Admin
         notice = @form.draft? ? "Draft saved." : "Expense updated."
         redirect_with_attachment_result(@expense.record_id, "#{notice}#{dropped_budget_note}")
       rescue ::Reimbursements::DatabaseStore::BudgetGoneError
-        budget_gone_error
+        @form.errors.add(:budget_record_id, ::Reimbursements::ExpenseForm::BUDGET_GONE)
         render_form(:edit, "Edit Expense")
       end
 
@@ -106,12 +106,6 @@ module Admin
         @title = title
         @budgets = offerable_budgets
         render template, status: :unprocessable_entity
-      end
-
-      def budget_gone_error
-        @form.errors.add(:budget_record_id, "is no longer available: the finance team removed " \
-                                            "or retired it just now. Everything else you typed " \
-                                            "has been kept: pick another budget and submit again.")
       end
 
       def created_notice

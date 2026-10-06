@@ -20,6 +20,9 @@ module Reimbursements
     RECEIPT_ACCEPT_ATTRIBUTE = (ACCEPTED_RECEIPT_TYPES + %w[.heic .heif]).join(",").freeze
     MAX_RECEIPT_BYTES = 5.megabytes # per-receipt upload cap; a batch mails them all as attachments
     REFERENCE_LIMIT = 18 # EUSA truncates payment references beyond this
+    BUDGET_GONE = "is no longer available. The finance team removed or retired it while you " \
+                  "were filling this in. Everything else you typed has been kept: pick " \
+                  "another budget and submit again.".freeze
 
     attr_accessor :expense_type, :amount, :amount_excl_vat, :budget_record_id,
                   :description, :payment_reference, :payee_name_override,
@@ -255,9 +258,7 @@ module Reimbursements
     def budget_still_offerable
       return if draft? || !stale_budget?
 
-      errors.add(:budget_record_id, "is no longer available. The finance team removed or " \
-                                    "retired it while you were filling this in. Everything else " \
-                                    "you typed has been kept: pick another budget and submit again.")
+      errors.add(:budget_record_id, BUDGET_GONE)
     end
 
     def receipts_valid
