@@ -1,0 +1,8 @@
+<% ButtonComponent::SIZE_CLASSES.each_key do |size| %>
+  <div class="flex flex-wrap gap-2 mb-4">
+    <% ButtonComponent::VARIANT_CLASSES.each_key do |variant| %>
+      <%= render ButtonComponent.new(href: "#", variant:, size:).with_content("#{variant} #{size}") %>
+    <% end %>
+  </div>
+<% end %>
+<%= render ButtonComponent.new(disabled: true).with_content("Disabled button") %>

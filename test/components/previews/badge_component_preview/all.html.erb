@@ -1,0 +1,6 @@
+<div class="flex flex-wrap gap-2">
+  <% BadgeComponent::STYLES.each_key do |type| %>
+    <%= render BadgeComponent.new(type:).with_content(type.to_s) %>
+  <% end %>
+  <%= render BadgeComponent.new(type: :primary, pill: true).with_content("42") %>
+</div>

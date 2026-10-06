@@ -1,0 +1,3 @@
+<% AlertComponent::STYLES.each_key do |type| %>
+  <%= render AlertComponent.new(type:).with_content("A #{type} alert message.") %>
+<% end %>
