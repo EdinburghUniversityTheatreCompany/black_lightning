@@ -170,7 +170,6 @@ module SchemaHelper
   end
 
   def event_performance_schemas(event)
-    return [] unless event.respond_to?(:event_occurrences)
     return [] unless event.occurrences_are_performances?
 
     event.event_occurrences.map do |occurrence|
@@ -225,8 +224,6 @@ module SchemaHelper
 
   # Matched EXACTLY, so "Assistant Director" is not published as the director.
   def event_crew_person(event, role)
-    return nil unless event.respond_to?(:team_members)
-
     member = event.team_members.find do |candidate|
       candidate.position_segments.any? { |part| part.casecmp?(role) }
     end
@@ -254,16 +251,10 @@ module SchemaHelper
   def listed_events
     return [] unless controller&.action_name == "index"
 
-    collection = @events || @shows || @workshops || @seasons
-
-    return [] unless collection.respond_to?(:to_a)
-
-    collection.to_a.select { |item| item.is_a?(Event) }
+    Array(@events || @shows || @workshops || @seasons).grep(Event)
   end
 
   def event_performers(event)
-    return nil unless event.respond_to?(:team_members)
-
     performers = event.team_members.select(&:cast?).filter_map { |member| member.user&.name }
 
     return nil if performers.empty?
