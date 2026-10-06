@@ -802,8 +802,7 @@ module Reimbursements
           ActualAllocation.create!(eusa_actual_id: actual.id, budget_id: allocation[:budget_id],
                                    amount: allocation[:amount])
         end
-        actual.update!(budget_id: nil,
-                       reconciliation_status: EusaActual::STATUS_APPORTIONED)
+        actual.update!(reconciliation_status: EusaActual::STATUS_APPORTIONED)
       end
       bust_eusa_actuals!
       bust_budgets!
