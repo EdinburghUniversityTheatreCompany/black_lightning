@@ -78,7 +78,6 @@ class User < ApplicationRecord
   validates :calendar_email, length: { maximum: 255 }
   validates :profile_completion_salt, length: { maximum: 255 }
   before_save :unify_numbers
-  before_save :ensure_calendar_token
   before_save :ensure_profile_completion_salt
   before_validation :extract_student_id_from_email, if: :email_changed?
 
@@ -886,10 +885,6 @@ class User < ApplicationRecord
     person = reimbursements_person ||
              Reimbursements::Person.find_by(email: email.to_s.presence)
     person&.payment_details&.destroy!
-  end
-
-  def ensure_calendar_token
-    self.calendar_token ||= SecureRandom.base58(24)
   end
 
   def ensure_profile_completion_salt
