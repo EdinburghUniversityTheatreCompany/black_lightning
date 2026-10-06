@@ -422,6 +422,11 @@ class User < ApplicationRecord
     }
   end
 
+  KEEPABLE_FIELDS = {
+    "name" => %i[first_name last_name], "email" => %i[email], "phone_number" => %i[phone_number],
+    "student_id" => %i[student_id], "associate_id" => %i[associate_id]
+  }.freeze
+
   # Merges source_user into this user and destroys it. keep_from_source names the fields to copy
   # from the source (name, email, phone_number, student_id, associate_id, avatar).
   # Returns { success:, errors:, transferred: }.
@@ -440,35 +445,14 @@ class User < ApplicationRecord
     }
 
     ActiveRecord::Base.transaction do
+      park_source_email = -> { source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk") }
+
       keep_from_source.each do |field|
-        case field.to_s
-        when "name"
-          self.first_name = source_user.first_name
-          self.last_name = source_user.last_name
-        when "email"
-          if source_user.email != email
-            source_email = source_user.email
-            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-            self.email = source_email
-          end
-        when "phone_number"
-          self.phone_number = source_user.phone_number
-        when "student_id"
-          self.student_id = source_user.student_id
-        when "associate_id"
-          self.associate_id = source_user.associate_id
-        when "avatar"
-          if source_user.avatar.attached?
-            avatar.purge if avatar.attached?
-            avatar.attach(source_user.avatar.blob)
-          end
-        end
+        KEEPABLE_FIELDS.fetch(field.to_s, []).each { |attr| public_send("#{attr}=", source_user.public_send(attr)) }
       end
-      # A source email that normalises to ours (sms.ed.ac.uk vs ed.ac.uk) would fail uniqueness
-      # on save, so move it aside first.
-      if source_user.email == email
-        source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-      end
+      # Taking the source's email, or one that normalises to ours (sms.ed.ac.uk vs ed.ac.uk),
+      # would fail uniqueness on save, so move it aside first.
+      park_source_email.call if keep_from_source.include?("email") || source_user.email == email
       save! if changed?
 
       # Replace our unknown_ placeholder email with the source's real one.
@@ -480,7 +464,7 @@ class User < ApplicationRecord
           source_email = source_user.email
           # Skip when a third user already holds the normalised email.
           unless User.where.not(id: [ id, source_user.id ]).exists?(email: source_email)
-            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+            park_source_email.call
             update!(email: source_email)
           end
         end
@@ -517,18 +501,14 @@ class User < ApplicationRecord
         end
       end
 
-      source_user.membership_card&.destroy
-
       if marketing_creatives_profile.nil? && source_user.marketing_creatives_profile.present?
         source_user.marketing_creatives_profile.update!(user_id: id)
       else
         source_user.marketing_creatives_profile&.destroy
       end
 
-      unless keep_from_source.include?("avatar")
-        if !avatar.attached? && source_user.avatar.attached?
-          avatar.attach(source_user.avatar.blob)
-        end
+      if source_user.avatar.attached? && (keep_from_source.include?("avatar") || !avatar.attached?)
+        avatar.attach(source_user.avatar.blob)
       end
 
       reallocate_maintenance_debts
