@@ -370,12 +370,17 @@ module Reimbursements
       budget = candidates.first if candidates.one?
       base = { row: row, person: person, budget: budget }
 
-      error = row_error(row, people, budget, candidates, duplicated)
+      error = reference_error(row, duplicated)
       return Entry.new(**base, bucket: :invalid, error: error) if error
 
+      # Skipped whatever else is wrong with it, and before the expense number is checked:
+      # the claim it created earlier holds that number.
       if @imported_keys.include?(self.class.key_match(row[:reference]))
         return Entry.new(**base, bucket: :already_imported)
       end
+
+      error = row_error(row, people, budget, candidates, duplicated)
+      return Entry.new(**base, bucket: :invalid, error: error) if error
 
       form = form_for(row, budget)
       unless form.valid?
@@ -386,10 +391,9 @@ module Reimbursements
       Entry.new(**base, bucket: :create, attrs: attrs_for(row, form, person))
     end
 
-    # What a row can be wrong about before the form sees it, most fundamental first.
+    # What a row to be created can be wrong about before the form sees it, most fundamental first.
     def row_error(row, people, budget, candidates, duplicated)
-      reference_error(row, duplicated) ||
-        status_error(row) ||
+      status_error(row) ||
         (submitter_error(row, people) unless people.one?) ||
         (ambiguous_budget_error(row, candidates) if candidates.many?) ||
         (budget_error(row) if budget.nil?) ||

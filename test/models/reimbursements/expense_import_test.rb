@@ -141,7 +141,7 @@ module Reimbursements
       assert_match(/Amount and Amount excl VAT/, import.errors.to_sentence)
     end
 
-    # --- The unique index folds case; the pre-flight read has to too ---------
+    # --- IDs and the double-apply guard ---------------------------------------
 
     test "a reference already on record, in any case, is skipped while the rest import" do
       existing = create_reimbursements_expense(person: @payee, budget: @budget, receipt: false,
@@ -153,6 +153,17 @@ module Reimbursements
       assert import.valid?
       assert_equal %i[already_imported create], import.entries.map(&:bucket)
       assert_equal [ "OLD-2" ], import.creates.map { |attrs| attrs[:import_key] }
+    end
+
+    test "a row already imported under its expense number is skipped, not blocked by it" do
+      existing = create_reimbursements_expense(person: @payee, budget: @budget, receipt: false,
+                                               import_key: "OLD-1", auto_number: 417)
+
+      import = build_import(tsv(row(reference: "OLD-1", auto_number: "417")),
+                            existing_expenses: [ existing ])
+
+      assert import.valid?, import.entries.filter_map(&:error).inspect
+      assert_equal :already_imported, import.entries.sole.bucket
     end
 
     test "two references differing only in case block the sheet" do
