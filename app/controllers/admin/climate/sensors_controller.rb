@@ -14,15 +14,11 @@ module Admin
 
       def new
         @title = "New sensor"
-        @sensor = ::Climate::Sensor.new(source: ::Climate::Sensor::SOURCE_GOVEE,
-                                        placement: ::Climate::Sensor::PLACEMENT_INDOOR,
-                                        active: true)
+        @sensor = ::Climate::Sensor.new(active: true)
       end
 
       def create
         @sensor = ::Climate::Sensor.new(sensor_params)
-        @sensor.source = ::Climate::Sensor::SOURCE_GOVEE
-        @sensor.placement = ::Climate::Sensor::PLACEMENT_INDOOR
 
         if @sensor.save
           redirect_to admin_climate_sensors_path, notice: "#{@sensor.display_name} added."
@@ -65,9 +61,9 @@ module Admin
         @sensor = ::Climate::Sensor.find(params[:id])
       end
 
-      # source and placement are never form-settable: every hand-made sensor is an
-      # indoor Govee one, and the outdoor row is ensured in code. A form setting
-      # them could add a second "outdoor" feed that nothing polls.
+      # source and placement are never permitted: every hand-made sensor takes the
+      # column defaults (indoor Govee), and the outdoor row is ensured in code. A
+      # form setting them could add a second "outdoor" feed that nothing polls.
       def sensor_params
         params.require(:climate_sensor).permit(:display_name, :location, :active, :position, :in_crypt)
       end
