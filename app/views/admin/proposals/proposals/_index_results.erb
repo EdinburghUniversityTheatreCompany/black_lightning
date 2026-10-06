@@ -12,7 +12,7 @@
     "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal_labels(proposal, true)}".html_safe
   ]
 
-  fields << safe_join(proposal_action_buttons(proposal).compact, " ") if can_act
+  fields << proposal_action_buttons(proposal) if can_act
 
   { fields: fields }
 end %>

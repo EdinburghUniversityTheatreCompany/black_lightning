@@ -38,7 +38,7 @@ class MassMail < ApplicationRecord
   end
 
   def prepare_send!
-    raise(Exceptions::MassMail::NoRecipients, "There are no recipients") if recipients.nil? || recipients.empty?
+    raise(Exceptions::MassMail::NoRecipients, "There are no recipients") if recipients.empty?
     raise(Exceptions::MassMail::NoSender, "There is no sender") if sender.nil?
     raise(Exceptions::MassMail::AlreadySent, "The mass mail has already been send") unless draft
 
@@ -53,7 +53,7 @@ class MassMail < ApplicationRecord
   private
 
   def send_date_is_in_the_past?
-    !send_date.present? || (send_date.present? && send_date < DateTime.current)
+    send_date.blank? || send_date < DateTime.current
   end
 
   def check_if_mail_has_been_sent

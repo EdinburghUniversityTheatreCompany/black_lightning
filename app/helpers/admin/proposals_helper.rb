@@ -33,7 +33,7 @@ module Admin::ProposalsHelper
       end
     end
 
-    buttons
+    safe_join(buttons.compact, " ")
   end
 
   def proposal_labels(proposal, pull_right, show_debtors: true)

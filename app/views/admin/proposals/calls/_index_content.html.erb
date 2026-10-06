@@ -58,7 +58,7 @@
 
         <% field_sets = proposals.map do |proposal|
           fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-          fields << safe_join(proposal_action_buttons(proposal).compact, " ") if can_act
+          fields << proposal_action_buttons(proposal) if can_act
           { fields: fields }
         end %>
 
@@ -94,7 +94,7 @@
 
         <% field_sets = proposals.map do |proposal|
           fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-          fields << safe_join(proposal_action_buttons(proposal).compact, " ") if can_act
+          fields << proposal_action_buttons(proposal) if can_act
           { fields: fields }
         end %>
 

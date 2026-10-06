@@ -91,7 +91,7 @@ class Venue < ApplicationRecord
       # and not in Rails, which is less critical and will not produce a Rails error blocking the web page.
       return nil unless latlng_array.length == 2
 
-      location.split(",")
+      latlng_array
     else
       nil
     end

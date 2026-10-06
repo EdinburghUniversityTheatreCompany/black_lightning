@@ -48,7 +48,7 @@ class Admin::EditableBlock < ApplicationRecord
   scope :for_subpage, ->(subpage_type) { where("url LIKE ?", "#{subpage_type}%") }
 
   def self.groups
-    select("`group`").distinct.map(&:group).reject(&:blank?)
+    distinct.pluck(:group).compact_blank
   end
 
   def self.ransackable_attributes(auth_object = nil)
