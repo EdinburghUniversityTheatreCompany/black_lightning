@@ -182,10 +182,9 @@ module Reimbursements
     # On the model so the ledger and the CSV print the same string. The "£" stays in the export:
     # this describes several amounts and is not a column anything sums.
     def allocation_summary
-      allocations
-        .sort_by { |a| [ -(a.amount || 0), a.budget&.display_name.to_s ] }
-        .map { |a| "#{a.budget&.display_name.presence || '(budget gone)'} #{money(a.amount)}" }
-        .join("; ")
+      allocations.sort_by { |a| [ -a.amount, a.budget.display_name ] }
+                 .map { |a| "#{a.budget.display_name} #{ActiveSupport::NumberHelper.number_to_currency(a.amount, unit: '£')}" }
+                 .join("; ")
     end
 
     private
@@ -194,10 +193,6 @@ module Reimbursements
       return if period.nil?
 
       self.period = Reconciliation.normalise_period(period)
-    end
-
-    def money(amount)
-      ActiveSupport::NumberHelper.number_to_currency(amount || 0, unit: "£")
     end
   end
 end
