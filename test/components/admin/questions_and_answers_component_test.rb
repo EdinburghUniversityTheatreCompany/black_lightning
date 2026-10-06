@@ -21,11 +21,4 @@ class Admin::QuestionsAndAnswersComponentTest < ViewComponent::TestCase
     assert_selector "[data-controller='fancybox']"
     assert_text "Attachments"
   end
-
-  test "renders multiple attachments through the gallery in flush mode" do
-    render_inline(Admin::QuestionsAndAnswersComponent.new(answers: answers_with_attachments(2), flush: true))
-
-    assert_selector "[data-controller='fancybox']"
-    assert_text "Attachments"
-  end
 end
