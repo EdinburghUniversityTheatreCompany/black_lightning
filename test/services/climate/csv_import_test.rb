@@ -72,6 +72,19 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
     assert_match(/3/, result.skipped.first) # the file's own line number
   end
 
+  test "refuses a file over the row limit with one error, not one per surplus row" do
+    original = Climate::CsvImport::MAX_ROWS
+    silence_warnings { Climate::CsvImport.const_set(:MAX_ROWS, 2) }
+    rows = (1..4).map { |minute| "2026-08-06 09:0#{minute}:00,14.6,53.7\n" }.join
+
+    result = import("Timestamp,Temperature_Celsius,Relative_Humidity\n#{rows}")
+
+    assert_not result.valid?
+    assert_equal 1, result.errors.size
+  ensure
+    silence_warnings { Climate::CsvImport.const_set(:MAX_ROWS, original) }
+  end
+
   test "skips a blank trailing line without complaint" do
     result = import("#{REAL_EXPORT}\n\n")
 

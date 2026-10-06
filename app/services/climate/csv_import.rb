@@ -45,6 +45,7 @@ module Climate
 
       headers = table.shift.to_a.map { |cell| cell.to_s.strip }
       return unless locate_columns(headers)
+      return @errors << "That file has more than #{MAX_ROWS} rows; split it into smaller exports." if table.size > MAX_ROWS
 
       # +2 so the reported number is the line an operator sees in an editor.
       table.each_with_index { |row, index| read_row(row, index + 2) }
@@ -92,11 +93,6 @@ module Climate
 
     def read_row(row, line_number)
       return if row.compact.empty?
-
-      if @rows.size >= MAX_ROWS
-        @errors << "That file has more than #{MAX_ROWS} rows; split it into smaller exports."
-        return
-      end
 
       recorded_at = parse_time(row[@time_index])
       temperature = parse_number(row[@temp_index])
