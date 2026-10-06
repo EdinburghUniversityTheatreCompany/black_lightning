@@ -2,8 +2,7 @@ require "test_helper"
 
 class Display::RotationTest < ActiveSupport::TestCase
   setup do
-    # The cursor is cache state and the process keeps its cache between tests:
-    # without this, where the last test left it decides what this one sees.
+    # The cursor is process cache state.
     Rails.cache.clear
   end
 
@@ -46,8 +45,7 @@ class Display::RotationTest < ActiveSupport::TestCase
     assert seen.uniq.size > 1, "fallback never moved off one entry: #{seen.inspect}"
   end
 
-  # Solid Cache's failsafe only swallows its own transient errors, and nothing in
-  # the panel chain rescues -- an unswallowed one would blank the screen.
+  # The failsafe swallows only its own errors; nothing else rescues.
   test "a cache that raises still moves the slide on" do
     seen = with_cache(raising_store) { 20.times.map { Display::Rotation.next_index("panel", size: 4) } }
 
@@ -57,7 +55,7 @@ class Display::RotationTest < ActiveSupport::TestCase
 
   private
 
-  # The suite has no mocking library, so the store is swapped for a real one.
+  # No mocking library: swap the store for a real one.
   def with_cache(store)
     original = Rails.cache
     Rails.cache = store

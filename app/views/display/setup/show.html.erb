@@ -15,9 +15,6 @@
   <tbody>
     <% @playlist.each do |entry| %>
       <tr>
-        <%# A link, not just a <code> string: whoever is configuring the Pi should
-            be able to click through and see the page. The URL stays visible
-            because they also have to copy it. %>
         <% url = "#{request.base_url}#{entry[:path]}" %>
         <td><%= link_to tag.code(url), url %></td>
         <td><%= entry[:seconds] %>s</td>

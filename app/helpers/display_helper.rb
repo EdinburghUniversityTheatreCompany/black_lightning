@@ -3,26 +3,17 @@ module DisplayHelper
     date_span(event.start_date, event.end_date)
   end
 
-  # How many stretches the when-column can state before it stops fitting.
-  # Measured in Chrome against the real board, not guessed: the column renders
-  # 496px wide (31rem) and "Fri 25 - Sat 26 Sep, 11.45pm" is 428px, so a stretch
-  # is one unwrapped line. Two of them stack to 151px inside a row the title and
-  # image already make 444px tall, so the second line costs nothing. Even the
-  # longest string this can produce ("Wed 30 Sep - Sun 4 Oct, 10.30am -
-  # 11.30pm", ~700px, which wraps to two) leaves two stretches inside that row.
-  # Re-measure if the column width or text size changes.
+  # How many stretches the when-column can state. Measured in Chrome: the column is
+  # 496px wide, a stretch is one unwrapped line, and two stack inside a row the title
+  # and image already make 444px tall. Re-measure if the column width or text size changes.
   WHEN_MAX_BLOCKS = 2
 
-  ##
-  # What to print in the "when" column: the shape of the WHOLE run, as the poster
-  # states it, not the part still to come.
-  #
-  # A five-night run is one range rather than the next night of five. A year of
-  # Fridays is "Every Friday" -- its raw range reads "Sep 1 - Jun 30", which
-  # tells nobody when to turn up and is the string this method exists to avoid.
-  # Anything else, including every archive row with no performances at all, falls
-  # back to the plain date range exactly as before.
-  ##
+  # The "when" column states the WHOLE run, as the poster does: five nights are one
+  # range, a year of Fridays is "Every Friday". Two blocks (a matinee, a late show)
+  # are both stated, a line each, whatever the date: naming only today's block hid the
+  # other, and one span would claim the late show on every night. Past WHEN_MAX_BLOCKS
+  # only the current-or-next block fits. A half-entered list whose every date has
+  # passed states the run, never a past date.
   def display_when(event, on: Date.current)
     schedule = Event::Schedule.for(event)
 
@@ -33,40 +24,15 @@ module DisplayHelper
     end
   end
 
-  ##
-  # One run, stated whole. Unless every performance in it has already gone by
-  # while the run itself has not ended -- a half-entered list -- in which case
-  # naming a date in the past is worse than naming the run.
-  ##
   def display_run_when(event, schedule, on)
     block = schedule.blocks.first
 
     block.ends_on < on ? display_date_range(event) : display_block_when(block)
   end
 
-  ##
-  # No single run to state -- a run with a matinee or a late show in it, or a
-  # festival whose opening hours change by the day.
-  #
-  # Two blocks are BOTH stated, on a line each, and the result is the same
-  # whatever the date: an evening run with midnight shows on the Friday and
-  # Saturday has to advertise the midnight shows, in advance and on the night
-  # alike. Naming only the block covering today advertised one and hid the other,
-  # so somebody in the box office on the Saturday saw no sign of the late show;
-  # and folding both times into the one span ("Wed 23 - Sat 26 Sep, 7pm &
-  # 11.45pm") would instead claim a midnight show on all four nights.
-  #
-  # Past WHEN_MAX_BLOCKS the column cannot hold them, and the block covering
-  # today is what is left -- a festival's bare date range says nothing about its
-  # hours. That is the one date-dependent case; failing a current block it takes
-  # the next still to come, because a run that has not opened yet has none.
-  ##
   def display_irregular_when(event, schedule, on)
     blocks = schedule.blocks
 
-    # Nothing to state, or a half-entered list whose every date is behind us
-    # while the run says it is still on. Naming a date in the past is worse than
-    # naming the run -- the same rule display_run_when applies to a single run.
     return display_date_range(event) if blocks.empty? || blocks.all? { |block| block.ends_on < on }
 
     return blocks.map { |block| display_block_when(block) }.join("\n") if blocks.size <= WHEN_MAX_BLOCKS
@@ -88,11 +54,9 @@ module DisplayHelper
     schedule.starts_at ? ", #{short_time(schedule.starts_at)}" : ""
   end
 
-  # The compact price for a fixed-width column on a screen read from across a
-  # room. The derived Event#price says "£10 / £8 concessions / £7 members", which
-  # is right on the website and does not fit here -- it truncates to
-  # "£10 / £8 concessio...". Structured bands collapse to "£10/8/7"; an event
-  # without them falls back to whatever was typed.
+  # The derived Event#price ("£10 / £8 concessions / £7 members") truncates in the
+  # board's fixed 256px column, so bands collapse to "£10/8/7". An event without
+  # bands (the archive) falls back to whatever was typed.
   def display_price(event)
     prices = event.ticket_prices
 
@@ -102,30 +66,20 @@ module DisplayHelper
     "£#{prices.map { |price| price.formatted_amount.delete_prefix('£') }.join('/')}"
   end
 
-  # The white wordmark with the red arch -- the only logo asset that reads on
-  # this screen's black. Kept small on the content panels: the show is the
-  # message, the logo is the signature.
+  # The only logo asset that reads on this screen's black.
   def display_logo(css_class: "h-14 w-auto")
     image_tag("bedlam-logo_single-line-white-for-red.png", class: css_class, alt: "Bedlam Theatre")
   end
 
   QR_MODULE_SIZE = 4
 
-  # A raster PNG rather than inline SVG, and that is not a style preference.
-  # The SVG version rendered as a blank square on the Anthias player while
-  # looking correct in a desktop browser, and survived being given an explicit
-  # intrinsic size, so the cause is something about that engine's SVG support
-  # rather than one fixable attribute. An <img> has no such failure mode.
-  # img_src already allows :data, so this asks nothing of the CSP and still
-  # makes no external request.
-  #
-  # Encoding costs about 15ms and the code for a given URL never changes, while
-  # the Pi re-fetches these pages every few seconds forever -- so the encoded
-  # image is cached and only the tag is rebuilt per request.
   def self.qr_cache_key(url)
     [ "display/qr", QR_MODULE_SIZE, url ]
   end
 
+  # A raster PNG, not inline SVG: SVG rendered as a blank square on Anthias even
+  # with an intrinsic size. img_src already allows data:. Encoding costs ~15ms and
+  # the Pi re-fetches these pages forever, so the image is cached by URL.
   def display_qr_code(url, css_class: "h-64 w-64", label: "Scan to book")
     encoded = Rails.cache.fetch(DisplayHelper.qr_cache_key(url), expires_in: 1.week) do
       qr = RQRCode::QRCode.new(url, level: :m)
@@ -144,10 +98,8 @@ module DisplayHelper
     display_event_url(event)
   end
 
-  # The programme QR always resolves to something. A footer that appears for one
-  # show and vanishes for the next reads as a broken slide from across the room,
-  # and every event has a page on the site even when nobody has made a
-  # programme -- so the fallback is that page rather than nothing.
+  # The programme QR always resolves to something: a footer that vanishes for one
+  # show reads as a broken slide, so the fallback is the event's own page.
   def display_programme_url(event)
     event.digital_programme_url.presence || display_event_url(event)
   end
@@ -156,76 +108,45 @@ module DisplayHelper
     "#{request.base_url}#{event_page_path(event)}"
   end
 
-  # Show, Workshop and Season each have a public show route; a bare Event does
-  # not (`resources :events` is index-only), and polymorphic_path would raise
-  # mid-render -- which on this screen means a blank box office, not a 500 page
-  # somebody sees. The events listing is the honest fallback.
+  # A bare Event has no show route (`resources :events` is index-only) and
+  # polymorphic_path would raise mid-render, blanking the screen. Fall back to the listing.
   def event_page_path(event)
     polymorphic_path(event)
   rescue NoMethodError, ActionController::UrlGenerationError
     events_path
   end
 
-  # The news body is markdown, and truncating the raw source puts "##", "**" and
-  # "[text](https://...)" on a wall-mounted screen. Render it, strip the tags,
-  # and undo the sanitizer's entity escaping -- truncate escapes again on the way
-  # out, so leaving them would print "&amp;".
-  # An editable block, rendered for the screen. The site's blocks carry markdown
-  # links ("submit your own"), which mean nothing where nobody can touch them --
-  # the QR beside this is the call to action, so keep the words and drop the
-  # anchors.
-  #
-  # The first `false` matches what the home page widget passes: display_block
-  # only writes when the stored admin_page differs, and the Pi re-fetches this
-  # page every few seconds forever, so a write here would never stop. The second
-  # drops the block's Edit button -- the sanitizer strips its anchor but keeps
-  # the word, so an admin browsing the screen leaves a bare "Edit" in the copy.
+  # An editable block for the screen. Its markdown links mean nothing where nobody
+  # can click, and the QR is the call to action, so keep the words and drop the
+  # anchors. The first `false` matches the home page widget: display_block writes
+  # when the stored admin_page differs, which the re-fetching Pi would do forever.
+  # The second drops the Edit button, whose word the sanitizer would keep.
   def display_block_text(name)
     sanitize(display_block(name, false, false), tags: %w[p br strong em ul ol li], attributes: [])
   end
 
-  # Fitting the credits to a 1080p screen. A 90-seat house still puts up big
-  # casts, so the type steps down rather than the list running off a screen
-  # nobody can scroll.
-  #
-  # Measured in the browser at 1920x1080: the page header leaves
-  # CREDITS_COLUMN_HEIGHT for a column, a heading costs CREDITS_HEADING_HEIGHT of
-  # it, a name costs its line height plus the 8px gap under it
-  # (CREDITS_ROW_STRIDES), and the QR block is a flat 160px wherever it lands.
-  #
-  # Pixels rather than a row count, because the QR is not a whole number of rows
-  # and is a different fraction of one at each size -- under three at text-5xl,
-  # nearly five at text-xl. Counting it as a fixed four let an 18-name cast size
-  # for the names alone and pushed the QR off the bottom of the screen.
+  # The credits fit a 1080p screen by stepping the type down. Measured at 1920x1080:
+  # the page header leaves CREDITS_COLUMN_HEIGHT, a name costs its line height plus
+  # an 8px gap (CREDITS_ROW_STRIDES), the QR is a flat 160px. Pixels, not rows: the
+  # QR is a different fraction of a row at each size (under three at text-5xl, nearly
+  # five at text-xl), and a fixed count pushed it off the screen for an 18-name cast.
   CREDITS_COLUMN_HEIGHT = 795
   CREDITS_HEADING_HEIGHT = 56
   CREDITS_LIST_HEIGHT = CREDITS_COLUMN_HEIGHT - CREDITS_HEADING_HEIGHT
   CREDITS_QR_HEIGHT = 160
-  # Air above a heading that follows another section, which only the flowed
-  # layout has -- side by side puts one section in each column. Deliberately
-  # modest: it competes directly with name size, and at 40px an 18-cast, 2-crew
-  # show missed text-5xl by a single pixel. Four times the gap between names is
-  # plenty to read as a new section.
+  # Air above a heading that follows another section (flowed layout only). Modest on
+  # purpose: it competes with name size, and at 40px an 18-cast, 2-crew show missed
+  # text-5xl by one pixel.
   CREDITS_SECTION_GAP = 32
   CREDITS_ROW_STRIDES = {
     "text-5xl" => 56, "text-4xl" => 48, "text-3xl" => 44, "text-2xl" => 40,
     "text-xl" => 36, "text-base" => 32
   }.freeze
 
-  # Two ways to lay the slide out.
-  #
-  # SIDE BY SIDE is Cast in one column against Company in the other, and it is
-  # the clearer read: the eye finds "who played whom" in one place. But it sizes
-  # off the LONGER list, so three cast against eighteen crew wastes a whole
-  # column and shrinks every name to fit the crew list into half the screen.
-  #
-  # FLOWED runs both lists as one sequence down the first column and on into the
-  # second, headings and all, so the two share the space evenly.
-  #
-  # Which one is used is decided by which lets the names be BIGGER, with a tie
-  # going to side by side. That needs no threshold on "how lopsided is lopsided":
-  # flow only wins where a column was going to waste, and it is exactly then
-  # that it buys a size step -- three steps, for an 18-cast, 2-crew show.
+  # Side by side (Cast against Company) is the clearer read but sizes off the longer
+  # list, so 3 cast against 18 crew wastes a column. Flowed runs both lists down the
+  # first column and into the second. Whichever allows bigger names wins, a tie going
+  # to side by side: flow only wins where a column was going to waste.
   def display_credits_layout(cast_count, crew_count)
     side = credits_first_fit { |stride| side_by_side_height(cast_count, crew_count, stride) <= CREDITS_LIST_HEIGHT }
     flowed = credits_first_fit { |stride| flowed_height(cast_count, crew_count, stride) <= credits_flow_height }
@@ -239,7 +160,6 @@ module DisplayHelper
 
   private
 
-  # The index of the first size the block yields true for, or nil if none does.
   def credits_first_fit
     CREDITS_ROW_STRIDES.values.index { |stride| yield(stride) }
   end
@@ -255,8 +175,8 @@ module DisplayHelper
       crew_count * stride + (qr_in_cast_column ? 0 : CREDITS_QR_HEIGHT) ].max
   end
 
-  # Both lists and their headings, halved: what one of the two flowed columns
-  # has to hold. A list with nobody in it prints no heading, so it costs none.
+  # What one of the two flowed columns holds: both lists and headings, halved.
+  # An empty list prints no heading.
   def flowed_height(cast_count, crew_count, stride)
     sections = [ cast_count, crew_count ].count(&:positive?)
     headings = sections * CREDITS_HEADING_HEIGHT + (sections > 1 ? CREDITS_SECTION_GAP : 0)
@@ -264,10 +184,7 @@ module DisplayHelper
     ((headings + (cast_count + crew_count) * stride) / 2.0).ceil
   end
 
-  # A tie goes to side by side, so a normal show keeps Cast beside Company and
-  # only a wasted column moves. When NEITHER fits -- a company past what this
-  # screen holds at any size -- the smallest size is going to be used either way,
-  # so it comes down to which loses less off the end.
+  # A tie goes to side by side, and so does neither layout fitting.
   def prefer_flowed?(cast_count, crew_count, side, flowed)
     return false if flowed.nil?
     return true if side.nil? && flowed
@@ -278,8 +195,7 @@ module DisplayHelper
     flowed < side
   end
 
-  # nil index = nothing on the scale fitted, which is a company past what this
-  # screen holds at any size. Shrink as far as we can and let the caps clip.
+  # nil = nothing fitted (a company past what the screen holds): shrink fully and let the caps clip.
   def credits_size_at(index)
     (index && CREDITS_ROW_STRIDES.keys[index]) || CREDITS_ROW_STRIDES.keys.last
   end
@@ -287,16 +203,13 @@ module DisplayHelper
   def flowed_layout(flowed)
     { mode: :flowed,
       name_size: credits_size_at(flowed),
-      # The QR is a footer under both columns here rather than under one of
-      # them: the flow balances, so neither column has spare room the other
-      # does not, and the height it needs is taken off the flow before it runs.
+      # The QR is a footer under both columns: the flow balances, so its height
+      # comes off the flow before it runs.
       flow_height: credits_flow_height }
   end
 
   def side_by_side_layout(cast_count, crew_count, side)
-    # The QR goes under whichever list is SHORTER, so the room it takes is room
-    # that column had going spare and the other keeps its full height. That is
-    # nearly always the cast, which puts it bottom left.
+    # The QR goes under the shorter list (nearly always the cast, bottom left), so it takes spare room.
     qr_in_cast_column = cast_count <= crew_count
     name_size = credits_size_at(side)
     tallest = side_by_side_height(cast_count, crew_count, CREDITS_ROW_STRIDES.fetch(name_size))
@@ -304,15 +217,12 @@ module DisplayHelper
     { mode: :side_by_side,
       name_size: name_size,
       qr_in_cast_column: qr_in_cast_column,
-      # A hard cap on each list, so it can only ever push itself off the bottom
-      # and never the QR under it. The arithmetic assumes one line per person,
-      # which a long enough name against a character name breaks -- and the code
-      # is the one thing here that leads to the names it just cut.
+      # A hard cap per list, so a name that wraps (the arithmetic assumes one line
+      # per person) clips its own list and never the QR beneath it.
       cast_list_height: credits_column_list_height(qr_in_cast_column),
       crew_list_height: credits_column_list_height(!qr_in_cast_column),
-      # Centre the columns in the space they leave -- unless the names need all
-      # of it, in which case start at the top so a long list loses its tail
-      # rather than its heading.
+      # Centre the columns unless the names need all the space: then start at the
+      # top so a long list loses its tail, not its heading.
       block_position: tallest > CREDITS_LIST_HEIGHT ? "content-start" : "content-center" }
   end
 
@@ -322,11 +232,9 @@ module DisplayHelper
 
   public
 
-  # Poster titles are sized by length rather than truncated: naming the show is
-  # the page's whole job, so a long title steps down instead of being cut off.
-  # Two lines at the top size is fine -- the text block is anchored to the bottom
-  # of the page, so a taller title grows up into the artwork rather than pushing
-  # the dates and price off screen.
+  # Titles step down by length rather than truncate: naming the show is the page's
+  # job. The text block is anchored to the bottom, so a taller title grows up into
+  # the artwork instead of pushing the dates and price off screen.
   TITLE_SIZES = { 22 => "text-8xl", 46 => "text-7xl", 80 => "text-6xl" }.freeze
   SMALLEST_TITLE_SIZE = "text-5xl".freeze
 
@@ -343,19 +251,14 @@ module DisplayHelper
     truncate(text, length: length, separator: " ")
   end
 
-  # The 1920x1200 variant, not slideshow_image_url's 960x500 -- this is a 1080p
-  # screen and the smaller one visibly upscales.
+  # The 1920x1200 variant: slideshow_image_url's 960x500 visibly upscales on a 1080p
+  # screen. fetch_image attaches a placeholder when nothing is uploaded (an
+  # idempotent write, as on the public pages).
   #
-  # fetch_image attaches a generated placeholder when nothing is uploaded, so
-  # this normally always returns something. That is a write on a read path, but
-  # it is idempotent and matches what the public event pages already do.
-  #
-  # Returns nil when the blob row exists but its object is gone from storage.
-  # The panel chain guarantees a panel is *selected*; this is the only render
-  # step that reaches the network, so it is the one place the never-blank
-  # guarantee could still fail -- and an unattended screen would then show a 500
-  # for as long as that event is in the pool. Callers must guard the image_tag
-  # and degrade to text over black.
+  # nil when the blob row exists but its object is gone from storage. This is the
+  # only render step that reaches storage, so callers must guard the image_tag and
+  # degrade to text over black, or the unattended screen shows a 500 for as long as
+  # the event is in the pool.
   def display_image_url(event)
     rails_representation_url(event.fetch_image.variant(large_display_variant).processed, only_path: true)
   rescue ActiveStorage::FileNotFoundError

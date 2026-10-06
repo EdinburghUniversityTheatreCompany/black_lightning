@@ -6,8 +6,8 @@ class DisplayHelperTest < ActionView::TestCase
   include PretixHelper
   include MdHelper
 
-  # The two fits, written out again rather than called through the helper, so the
-  # sweep below compares the layout it chose against an independent reading.
+  # The two fits are written out independently of the helper, so the sweeps
+  # compare the layout it chose against an independent reading.
   def side_by_side_size(cast, crew)
     qr = cast <= crew
     DisplayHelper::CREDITS_ROW_STRIDES.find { |_, stride|
@@ -26,7 +26,6 @@ class DisplayHelperTest < ActionView::TestCase
     }&.first
   end
 
-  # A five-night evening run, which two of the tests below both need.
   def run_of_five(from: Date.new(2026, 10, 11))
     event = FactoryBot.create(:show, start_date: from, end_date: from + 4)
 
@@ -56,13 +55,10 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Mon 30 Mar – Thu 2 Apr", display_date_range(event)
   end
 
-  # Mick's ask: five nights in a row is a range, not the next night of five.
   test "display_when collapses a consecutive run into one range" do
     assert_equal "Sun 11 – Thu 15 Oct, 7.30pm", display_when(run_of_five)
   end
 
-  # The whole run, not the part still to come -- Mick's call. The board states
-  # the run the way the poster does.
   test "display_when states the whole run even once it has started" do
     event = FactoryBot.create(:show, start_date: Date.current - 2, end_date: Date.current + 2)
     (-2..2).each do |offset|
@@ -80,8 +76,6 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Sun 11 Oct, 8pm", display_when(event)
   end
 
-  # The Improverts. Their raw range is "Sep 4 - Jun 30", which tells nobody when
-  # to turn up -- the exact string display_when exists to avoid.
   test "display_when names the weekday for a standing weekly fixture" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 4), end_date: Date.new(2027, 6, 30))
     6.times do |week|
@@ -92,8 +86,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Every Friday, 7.30pm", display_when(event)
   end
 
-  # A Season's occurrences are opening hours, and the close is the half that
-  # says when somebody has to be out.
+  # A Season's occurrences are opening hours, so the close is stated.
   test "display_when prints the span when an occurrence states its own end" do
     season = FactoryBot.create(:season, start_date: Date.new(2026, 8, 30), end_date: Date.new(2026, 9, 2))
     FactoryBot.create(:event_occurrence, event: season,
@@ -103,8 +96,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Sun 30 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 30))
   end
 
-  # A show states a curtain time and a running time, not an end per night, so
-  # printing a derived "7.30pm – 9.45pm" on every line would be noise.
+  # A show states a curtain and a running time, so a derived end would be noise.
   test "display_when prints a bare curtain when the end is only derived" do
     show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7),
                                     duration_minutes: 135)
@@ -113,17 +105,15 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Wed 4 Mar, 7.30pm", display_when(show, on: Date.new(2026, 3, 1))
   end
 
-  # Every archive event has no performances, so this is the path almost all of
-  # them take, and it has to keep printing what it printed before.
+  # The path every archive event takes.
   test "display_when falls back to the range when nothing is scheduled" do
     event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
 
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event)
   end
 
-  # Scattered dates: the next one, with its curtain time. A bare "Tue 3 - Sat 7
-  # Mar" both drops the time and implies it plays every night in between, which it
-  # does not; the event page carries the full list.
+  # Scattered dates: the next one with its curtain time. A bare range drops the
+  # time and implies every night in between.
   test "display_when names the next date for an irregular set of dates" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
     [ 0, 2, 4 ].each do |offset|
@@ -135,8 +125,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Thu 5 Mar, 7.30pm", display_when(event, on: Date.new(2026, 3, 4))
   end
 
-  # A half-entered list: the run says it is still on, but every performance in it
-  # is behind us. Naming a date in the past is worse than naming the run.
+  # Half-entered list: the run is on but every listed performance has passed.
   test "display_when states the run once its only performance has passed" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 10, 11), end_date: Date.new(2026, 10, 20))
     FactoryBot.create(:event_occurrence, event: event,
@@ -146,8 +135,6 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Sun 11 – Tue 20 Oct", display_when(event, on: Date.new(2026, 10, 15))
   end
 
-  # Once every date has gone by there is no block left to name, so the run's own
-  # dates are all that is left to state.
   test "display_when falls back to the range once every date has passed" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
     [ 0, 2 ].each do |offset|
@@ -158,9 +145,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 7))
   end
 
-  # A matinee makes the schedule :irregular. The board used to name only the block
-  # covering today, so on a day with both a matinee and an evening it advertised
-  # one and hid the other -- and in advance it hid the matinee entirely.
+  # A matinee makes the schedule :irregular; both blocks are stated.
   test "display_when states both curtain times for a run with a matinee" do
     event = run_of_five
     FactoryBot.create(:event_occurrence, event: event,
@@ -170,9 +155,8 @@ class DisplayHelperTest < ActionView::TestCase
                  display_when(event, on: Date.new(2026, 10, 1))
   end
 
-  # The case Mick spotted: Rocky Horror plays 7pm Wed-Sat with midnight shows on
-  # the Friday and Saturday. The board named the 7pm block and nothing else, so
-  # somebody in the box office on Saturday night saw no sign of the late show.
+  # Rocky Horror: 7pm Wed-Sat with midnight shows on Friday and Saturday. The
+  # late show must be advertised.
   test "display_when states a late-show block alongside the evening run" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 9, 23), end_date: Date.new(2026, 9, 26))
     (23..26).each do |day|
@@ -190,9 +174,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal expected, display_when(event, on: Date.new(2026, 9, 26)), "and on the night"
   end
 
-  # A run states the whole run, so it reads the same in advance as it does mid-run.
-  # (Once every date has passed the half-entered-list rule takes over and names
-  # the run instead -- see the test above.)
+  # The same before and during the run.
   test "display_when for two blocks reads the same before and during the run" do
     event = run_of_five
     FactoryBot.create(:event_occurrence, event: event,
@@ -203,8 +185,7 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # Past two, the column cannot hold them and the today-based reading is what is
-  # left. DisplayHelper::WHEN_MAX_BLOCKS is measured, not guessed.
+  # Past WHEN_MAX_BLOCKS only the block covering today is left.
   test "display_when falls back to the block covering today when there are too many" do
     event = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 8))
     [ [ 3, 19 ], [ 5, 14 ], [ 7, 21 ] ].each do |day, hour|
@@ -216,9 +197,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Thu 5 Mar, 2pm", display_when(event, on: Date.new(2026, 3, 5))
   end
 
-  # A festival whose hours change by the day has no single run to state, and the
-  # bare date range says nothing about when it is open. The stretch covering
-  # today is what somebody in front of the screen can act on.
+  # A festival whose hours change by the day has no single run: state the stretch covering today.
   test "display_when states the block covering today when there is no single run" do
     season = FactoryBot.create(:season, start_date: Date.new(2026, 8, 30), end_date: Date.new(2026, 9, 2))
     [ [ 30, 8, 10, 23 ], [ 31, 8, 10, 23 ], [ 1, 9, 12, 25 ], [ 2, 9, 12, 22 ] ].each do |day, month, open_h, close_h|
@@ -227,15 +206,13 @@ class DisplayHelperTest < ActionView::TestCase
                         ends_at: Time.zone.local(2026, month, day) + close_h.hours)
     end
 
-    # Sun and Mon share their hours, so they fold; Tue closes at 1am and Wed at
-    # 10pm, which are different hours and so different blocks.
+    # Sun and Mon share hours so they fold; Tue (1am) and Wed (10pm) are separate blocks.
     assert_equal "Sun 30 – Mon 31 Aug, 10am – 11pm", display_when(season, on: Date.new(2026, 8, 31))
     assert_equal "Tue 1 Sep, 12pm – 1am", display_when(season, on: Date.new(2026, 9, 1))
     assert_equal "Wed 2 Sep, 12pm – 10pm", display_when(season, on: Date.new(2026, 9, 2))
   end
 
-  # The column is a fixed 256px on a screen read from across a room, and the
-  # derived price string ("£10 / £8 concessions / £7 members") truncates in it.
+  # The board's column is a fixed 256px; the derived "£10 / £8 concessions / £7 members" truncates in it.
   test "display_price collapses structured bands to fit the board" do
     event = FactoryBot.build(:show, ticket_prices: [
       { "category" => "standard", "amount" => "10" },
@@ -258,7 +235,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Free", display_price(event)
   end
 
-  # Every archive event has no bands, so this is the path almost all of them take.
+  # The path every archive event takes (no bands).
   test "display_price falls back to whatever was typed" do
     event = FactoryBot.build(:show, price: "Pay what you can")
 
@@ -277,8 +254,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "https://example.com/programme.pdf", display_programme_url(event)
   end
 
-  # A footer that appears for one show and vanishes for the next reads as a
-  # broken slide from across the room, so the code always resolves to something.
+  # The programme QR always resolves to something.
   test "display_programme_url falls back to the event's own page" do
     show = FactoryBot.create(:show, slug: "the-crucible", digital_programme_url: nil)
 
@@ -291,8 +267,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "/shows/the-crucible", event_page_path(show)
   end
 
-  # resources :events is index-only, so polymorphic_path would raise -- and a
-  # raise while rendering this screen is a blank box office, not a 500 page.
+  # resources :events is index-only, so polymorphic_path raises, and a raise mid-render blanks the screen.
   test "event_page_path falls back to the listing for an event with no show route" do
     event = Event.new(id: 1, slug: "mystery")
 
@@ -321,8 +296,6 @@ class DisplayHelperTest < ActionView::TestCase
     assert_match(/\.\.\.\z/, text)
   end
 
-  # A long title must step down a size rather than be cut off -- the poster
-  # page's whole job is naming the show.
   test "display_title_size steps down as the title gets longer" do
     short = display_title_size("The Crucible")
     medium = display_title_size("Richard O'Brien's The Rocky Horror Show")
@@ -339,8 +312,7 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # The QR lands in the column with room to spare, which for a normal show is
-  # the cast -- putting it bottom left.
+  # The QR goes under the shorter list, normally the cast (bottom left).
   test "display_credits_layout puts the QR under the shorter list" do
     assert display_credits_layout(8, 12)[:qr_in_cast_column], "8 cast against 12 crew should carry it left"
     assert display_credits_layout(12, 12)[:qr_in_cast_column], "an even split should still go left"
@@ -353,8 +325,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "text-5xl", layout[:name_size]
   end
 
-  # Cast beside Company is the clearer read, so it is what a show gets unless
-  # flowing actually buys bigger names.
+  # Cast beside Company unless flowing buys bigger names.
   test "display_credits_layout keeps a balanced show side by side" do
     [ [ 1, 2 ], [ 8, 12 ], [ 10, 10 ], [ 12, 12 ], [ 18, 18 ] ].each do |cast, crew|
       assert_equal :side_by_side, display_credits_layout(cast, crew)[:mode],
@@ -362,8 +333,7 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # Side by side sizes off the LONGER list, so a lopsided show wastes a whole
-  # column and shrinks every name to fit the other one into half the screen.
+  # Side by side sizes off the longer list, so a lopsided show wastes a column.
   test "display_credits_layout flows a lopsided show, and the names get bigger for it" do
     { [ 3, 18 ] => "text-4xl", [ 18, 2 ] => "text-5xl", [ 16, 3 ] => "text-5xl",
       [ 5, 14 ] => "text-5xl", [ 0, 15 ] => "text-5xl" }.each do |(cast, crew), expected|
@@ -374,8 +344,7 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # The whole reason for choosing between them: whichever it picks has to be the
-  # one that can print the names bigger.
+  # Whichever layout it picks must be the one that prints the names bigger.
   test "display_credits_layout never picks the layout with the smaller type" do
     sizes = DisplayHelper::CREDITS_ROW_STRIDES.keys
 
@@ -393,10 +362,8 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # The point of the pixel arithmetic: whichever column carries the QR has to fit
-  # its names AND the code, or the code goes off the bottom of a screen nobody is
-  # watching. An 18-name cast fits text-2xl on its own and does not once the QR
-  # is under it.
+  # Whichever column carries the QR must fit its names AND the code: an 18-name
+  # cast fits text-2xl alone and does not once the QR is under it.
   test "display_credits_layout never picks a size the QR does not fit at" do
     (0..18).each do |cast|
       (0..18).each do |crew|
@@ -424,11 +391,9 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # A long enough name wraps, and a company bigger than the scale can serve
-  # overflows outright -- neither of which row arithmetic can see coming. The cap
-  # is the unconditional guarantee underneath it: the column carrying the QR is
-  # never allowed the QR's own height, whatever the names do, so the list loses
-  # its tail rather than the code being pushed off the screen.
+  # A wrapping name or an oversized company defeats the row arithmetic. The cap is
+  # the guarantee: the column under the QR never gets the QR's height, so the list
+  # loses its tail, not the code.
   test "display_credits_layout always reserves the QR's height from the list it sits under" do
     [ [ 4, 9 ], [ 18, 18 ], [ 40, 40 ] ].each do |cast, crew|
       layout = display_credits_layout(cast, crew)
@@ -445,8 +410,7 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # The flowed layout takes the QR off the top of what it has to fill, rather
-  # than under one column, because a balanced flow leaves neither column spare.
+  # The flowed layout takes the QR off the top of the flow: a balanced flow leaves no column spare.
   test "display_credits_layout takes the QR's height out of the flow" do
     layout = display_credits_layout(3, 18)
 
@@ -454,8 +418,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, layout[:flow_height]
   end
 
-  # Past the scale it shrinks as far as it can rather than clipping from a size
-  # that never fitted.
+  # Past the scale it shrinks fully rather than clipping from a size that never fitted.
   test "display_credits_layout falls to the smallest size for a company beyond the screen" do
     assert_equal DisplayHelper::CREDITS_ROW_STRIDES.keys.last, display_credits_layout(30, 30)[:name_size]
   end
@@ -465,10 +428,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "content-start", display_credits_layout(30, 30)[:block_position]
   end
 
-  # Inline SVG rendered as a blank square on the Anthias player while looking
-  # correct in a desktop browser, and survived an attempt to fix its intrinsic
-  # sizing. A raster image has no such failure mode, and img-src already allows
-  # data: so this needs nothing from the CSP.
+  # SVG rendered as a blank square on Anthias; a raster image has no such failure mode.
   test "display_qr_code renders a PNG data URI, not an svg" do
     html = display_qr_code("https://example.com")
 
@@ -476,8 +436,7 @@ class DisplayHelperTest < ActionView::TestCase
     assert_no_match(/<svg/, html)
   end
 
-  # The Pi re-fetches these pages every few seconds, forever, and a QR for a
-  # given URL never changes.
+  # The Pi re-fetches forever and a given URL's code never changes.
   test "display_qr_code caches the encoded image by url" do
     url = "https://example.com/cache-me"
     Rails.cache.delete(DisplayHelper.qr_cache_key(url))

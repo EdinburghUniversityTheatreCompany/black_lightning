@@ -4,10 +4,8 @@
 
   <p class="mb-10 text-4xl font-bold uppercase tracking-[0.3em] text-display-accent">Latest News</p>
 
-  <%# The safety net under Display::Panels::News's budget: the budget decides how
-      many headlines to print, this decides what happens when it is wrong. Without
-      it an over-count pushes the QR code -- the only thing on this slide anybody
-      can act on -- off the bottom instead of clipping the last headline. %>
+  <%# Safety net under News's budget: a wrong count clips the last headline instead
+      of pushing the QR code off the bottom. %>
   <ul class="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden">
     <% articles.each do |article| %>
       <li>

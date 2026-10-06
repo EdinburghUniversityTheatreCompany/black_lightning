@@ -25,18 +25,14 @@ module Display
         @pool ||= Display::EventPool.upcoming(on: @on)
       end
 
-      # The pool already sorts events running today to the front, so find and
-      # first agree whenever anything is on tonight. Written out anyway: this
-      # page is "tonight's credits", and it should say so at the point it picks
-      # rather than lean on an ordering rule defined in another file.
+      # The pool sorts events running today first, so find and first agree.
       def event
         return @event if defined?(@event)
 
         @event = pool.find { |candidate| candidate.on_today?(@on) } || pool.first
       end
 
-      # preload rather than includes: TeamMember.ordered already joins users to
-      # order by them, and preload fetches the records without fighting it.
+      # preload, not includes: TeamMember.ordered already joins users.
       def members
         @members ||= event ? event.team_members.ordered.preload(:user).to_a : []
       end

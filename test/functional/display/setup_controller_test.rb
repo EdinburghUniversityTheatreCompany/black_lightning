@@ -12,9 +12,7 @@ class Display::SetupControllerTest < ActionController::TestCase
     end
   end
 
-  # A volunteer copies these into a Raspberry Pi that then plays them forever.
-  # A renamed route must fail here, not silently leave the page listing dead
-  # URLs that nobody re-checks.
+  # A renamed route must fail here, not leave the page listing dead URLs.
   test "every playlist path resolves to a display controller" do
     Display::SetupController.playlist.each do |entry|
       recognized = Rails.application.routes.recognize_path(entry[:path])

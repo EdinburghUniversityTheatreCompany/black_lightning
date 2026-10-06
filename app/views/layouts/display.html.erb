@@ -8,8 +8,7 @@
   <%= vite_client_tag %>
   <%= vite_stylesheet_tag "display.css", "data-turbo-track": "reload" %>
 </head>
-<%# No JavaScript entrypoint on purpose: this screen has no interaction, and
-    the application bundle would pull in Stimulus controllers it cannot use. %>
+<%# No JavaScript entrypoint on purpose: this screen has no interaction. %>
 <body class="overflow-hidden bg-neutral-950 text-white">
   <main class="h-screen w-screen overflow-hidden">
     <%= yield %>

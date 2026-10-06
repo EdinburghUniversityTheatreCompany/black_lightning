@@ -15,12 +15,10 @@
   # programme" over a QR that opens a listing is worse than no QR at all.
   qr_label = event.digital_programme_url.present? ? "Scan for the digital programme" : "Scan for more about this show"
 %>
-<%# Captured, not written out repeatedly: it goes under one column or the other,
-    or under both, depending on the layout. %>
+<%# Captured because it goes under one column, the other, or both. %>
 <% qr_block = capture do %>
-  <%# mt-auto, not a fixed offset: for a short list this drops the QR to the
-      foot of the column beside it, so the two end together rather than leaving
-      it floating under three names. %>
+  <%# mt-auto: a short list drops the QR to the foot of its column rather than
+      leaving it floating under three names. %>
   <div class="mt-auto flex items-center gap-6 pt-8">
     <%= display_qr_code(display_programme_url(event), css_class: "h-32 w-32", label: qr_label) %>
     <p class="text-3xl leading-snug text-neutral-300"><%= qr_label %></p>
@@ -39,10 +37,9 @@
   </div>
 
   <% if layout[:mode] == :flowed %>
-    <%# Both lists as one sequence, down the first column and on into the second,
-        so a short cast beside a long company list stops wasting half the screen.
-        The browser balances the two itself, which also absorbs a name long
-        enough to wrap -- something the row arithmetic cannot see coming. %>
+    <%# Both lists as one sequence, down the first column and into the second, so a
+        short cast beside a long company stops wasting half the screen. The browser
+        balances the columns, which absorbs a name that wraps. %>
     <div class="columns-2 gap-16 overflow-hidden" style="height: <%= layout[:flow_height] %>px">
       <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
       <%= render "display/panels/credits_section", title: "Company", members: crew_members,
@@ -52,9 +49,8 @@
   <% else %>
     <div class="grid flex-1 grid-cols-2 gap-16 overflow-hidden <%= layout[:block_position] %>">
       <div class="flex flex-col">
-        <%# Capped in pixels rather than by a Tailwind class: the figure is
-            derived from the measured constants in DisplayHelper, and Tailwind
-            never generates a class name that is only ever built at runtime. %>
+        <%# Capped in pixels: the figure comes from DisplayHelper's measured constants,
+            and Tailwind never generates a class built at runtime. %>
         <div class="overflow-hidden" style="max-height: <%= layout[:cast_list_height] %>px">
           <%= render "display/panels/credits_section", title: "Cast", members: cast_members, name_size: name_size %>
         </div>

@@ -1,9 +1,8 @@
 module Display
   module Panels
     class WhatsOn < Base
-      # More than fits the frame: the board scrolls the overflow past (see
-      # .display-marquee in display.css), so this caps how long a pass takes to
-      # read, not the height of the screen. The Fringe pool is far longer.
+      # More than fits the frame: the board scrolls the overflow (.display-marquee in
+      # display.css), so this caps how long a pass takes, not the screen height.
       ROWS = 12
 
       def initialize(on: Date.current)

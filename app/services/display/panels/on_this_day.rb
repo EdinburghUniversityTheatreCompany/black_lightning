@@ -1,11 +1,8 @@
 module Display
   module Panels
     # Something from the archive that ran on today's date in an earlier year.
-    #
-    # Event.on_date matches on month and day only, and its own comment records
-    # that it deliberately skips runs crossing the new year (the Imps,
-    # Candlewasters). Bedlam does not programme across the new year, so that gap
-    # costs nothing and is cheaper than a second scope kept in step with it.
+    # Event.on_date matches month and day only and skips runs crossing the new
+    # year, which Bedlam does not programme.
     class OnThisDay < Base
       MAX_RUN_DAYS = 60
 
@@ -27,10 +24,9 @@ module Display
 
       private
 
-      # A date in the middle of the Fringe matches dozens of archive shows, and
-      # the screen comes back to this URL every few minutes: Display::Rotation
-      # moves on one place per render so it is a different show each time rather
-      # than the oldest one all day.
+      # A mid-Fringe date matches dozens of archive shows and the screen returns
+      # every few minutes: Rotation moves on one place per render, so it is a
+      # different show each time.
       def event
         return @event if defined?(@event)
 
@@ -52,15 +48,11 @@ module Display
              .where(is_public: true)
              .where("end_date < ?", @on - 1.year)
              .where("DATEDIFF(end_date, start_date) <= ?", MAX_RUN_DAYS)
-             # fetch_image attaches a generated placeholder, so "has artwork" has
-             # to be asked of the database, before anything calls it -- and asked
-             # of the blob's filename, since the placeholder is an attachment too.
+             # Filters on the blob's filename: fetch_image attaches a placeholder too.
              .with_uploaded_image
-             # reorder, not order: Event's default_scope is end_date DESC, so
-             # order would append and "oldest" would mean something else. id
-             # breaks ties, because the rotation walks this list by position and
-             # two shows opening on the same date would otherwise be free to swap
-             # places between renders -- showing one twice and skipping the other.
+             # reorder, not order: Event's default_scope is end_date DESC. id breaks
+             # ties because Rotation walks this list by position, and two shows
+             # opening on the same date could swap places between renders.
              .reorder(:start_date, :id)
              .pluck(:id)
       end

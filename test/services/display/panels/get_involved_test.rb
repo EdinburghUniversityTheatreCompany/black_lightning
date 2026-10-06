@@ -3,12 +3,9 @@ require "test_helper"
 class Display::Panels::GetInvolvedTest < ActiveSupport::TestCase
   fixtures :opportunities, :opportunity_roles
 
-  # The fixtures deliberately contain no "No Opportunities" block, so these two
-  # tests exercise the with-copy and without-copy halves of `available?`.
+  # The fixtures contain no "No Opportunities" block.
   test "is unavailable when nothing is open and no empty-state copy exists" do
-    # opportunity_roles has no cascading FK, and delete_all bypasses the
-    # model's dependent: :destroy -- children must go first, matching
-    # empty_the_database! in pages_controller_test.rb.
+    # Children first: delete_all bypasses dependent: :destroy.
     OpportunityRole.delete_all
     Opportunity.delete_all
 

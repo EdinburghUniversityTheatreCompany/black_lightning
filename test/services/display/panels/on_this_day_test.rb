@@ -3,14 +3,12 @@ require "test_helper"
 class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
   setup do
     Event.delete_all
-    # The cursor is cache state and the process keeps its cache between tests:
-    # without this, where the last test left it decides what this one sees.
+    # The rotation cursor is process cache state.
     Rails.cache.clear
   end
 
-  # A short run over today's month and day, N years back. Two days rather than
-  # one because on 29 February the start slips back to the 28th, and a one-day
-  # run there would not cover today at all.
+  # A short run over today's month and day, N years back. Two days because on 29 Feb
+  # the start slips to the 28th and a one-day run would not cover today.
   def archive_show(years_ago:, attach_image: true, run_days: 2, is_public: true)
     start_date = Date.current - years_ago.years
 
@@ -18,7 +16,7 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
                              start_date: start_date, end_date: start_date + run_days)
   end
 
-  # A fresh panel per call: a new fetch of the URL is what rotates the pick.
+  # A fresh panel per call: each fetch of the URL rotates the pick.
   def rendered_event_id
     Display::Panels::OnThisDay.new.locals[:event].id
   end
@@ -85,25 +83,21 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
   end
 
   test "excludes a run longer than sixty days" do
-    # A residency or a term-long season matches most of the calendar and is not
-    # an "on this day" story.
+    # A residency or term-long season matches most of the calendar.
     archive_show(years_ago: 8, run_days: 90)
 
     assert_not Display::Panels::OnThisDay.new.available?
   end
 
   test "excludes an event with no real artwork" do
-    # fetch_image would attach a generated placeholder, so the guard has to be a
-    # join on the attachment, checked before anything calls fetch_image.
     archive_show(years_ago: 8, attach_image: false)
 
     assert_not Display::Panels::OnThisDay.new.available?
   end
 
   test "excludes an event whose only artwork is a generated placeholder" do
-    # fetch_image *attaches* the placeholder, so any archive page anyone has
-    # ever opened carries an attachment. Asking only whether one exists answers
-    # "has this been looked at", not "has a poster".
+    # fetch_image attaches a placeholder, so "has an attachment" means "has been
+    # viewed", not "has a poster".
     show = archive_show(years_ago: 8, attach_image: false)
     show.fetch_image
 

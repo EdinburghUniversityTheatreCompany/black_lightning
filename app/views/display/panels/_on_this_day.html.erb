@@ -1,13 +1,11 @@
 <%# locals: (event:, years_ago:) %>
 <div class="relative h-full w-full overflow-hidden bg-neutral-950">
-  <%# nil when the blob has gone missing from storage. Degrading to the text
-      over black beats a 500 on an unattended screen. %>
+  <%# nil when the blob is missing from storage: degrade to text over black, not a 500. %>
   <% if (image_url = display_image_url(event)) %>
     <%= image_tag image_url, class: "absolute inset-0 h-full w-full object-cover opacity-70", alt: "" %>
   <% end %>
 
-  <%# The logo sits over the artwork, so it carries its own scrim: a white
-      wordmark on a pale poster would otherwise disappear. %>
+  <%# The logo carries its own scrim: white on a pale poster would vanish. %>
   <div class="absolute inset-x-0 top-0 flex justify-end bg-gradient-to-b from-black/70 to-transparent px-16 pb-24 pt-10">
     <%= display_logo %>
   </div>
