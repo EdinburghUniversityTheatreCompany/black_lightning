@@ -1,42 +1,21 @@
 module Reimbursements
   ##
-  # Finance's spreadsheet of claims that were settled outside the portal, read
-  # into buckets an operator confirms before anything is written. Table-less; a
-  # pure function of its inputs, so the preview and the apply that follows it
-  # can each build one from the same text and be certain they agree.
+  # Finance's spreadsheet of claims settled outside the portal, read into buckets
+  # (create, already_imported, invalid) an operator confirms before anything is
+  # written. Table-less and a pure function of its inputs, so the preview and the
+  # apply after it agree. One invalid row blocks the whole import.
   #
-  # Pasted TSV and uploaded xlsx both come in through ImportParsing, as
-  # BudgetImport does, and an upload is normalised straight to TSV (#to_tsv)
-  # and carried through the preview in a hidden field. Nothing is kept in the
-  # session or on disk, and apply re-parses and re-validates from scratch.
+  # The sheet's ID is written to `expenses.import_key` behind a UNIQUE index: the
+  # wizard is stateless, so a second click re-posts the same sheet, and a claim has
+  # no natural key. Every other rule comes from ExpenseForm, with `internal` set as
+  # ExpenseForm.from_actual sets it, because the Expense model validates almost nothing.
   #
-  # Buckets: +create+, +already_imported+ (a Reference already on record,
-  # reported and never re-created) and +invalid+, which blocks the WHOLE import
-  # — all-or-nothing like import_budgets!, because a half-imported ledger has no
-  # audit value and re-running after a fix is cheap.
-  #
-  # No Person is ever created from a bare email (BudgetImport#resolve_owners
-  # states the rule); the error points the operator at the People screen.
-  #
-  # **Double apply** is stopped by the sheet's own Reference, written to
-  # `expenses.import_key` behind a UNIQUE index. The wizard is stateless so a
-  # second click re-posts the same sheet, and a claim has no natural key the way
-  # a budget line has its name. The pre-flight read below keeps the preview
-  # honest; the index is what holds when that read goes stale.
-  #
-  # **Every rule comes from ExpenseForm**, because the Expense model validates
-  # almost nothing — so each line goes through the same form the submission form
-  # uses, with `internal` set as ExpenseForm.from_actual sets it.
-  #
-  # **Columns are matched here, NOT through ImportParsing#find_column**, whose
-  # "any header containing the keyword" fallback is catastrophic on a sheet
-  # whose fields are near-anagrams: read through it, "Payment reference"
-  # answered to the dedupe key (collapsing two of a payee's claims into one) and
-  # "Account number" answered to the expense number (numbering every later claim
-  # in the portal from 66,374,959). Neither is catchable downstream. So: EXACT
-  # names first, then MULTI-WORD phrases only — a bare word is never a substring
-  # hint — two fields resolving to one column is a blocking error, and the
-  # preview STATES the column read for each field.
+  # Columns are matched here, NOT through ImportParsing#find_column. Its "header
+  # contains the keyword" fallback read "Payment reference" as the dedupe key
+  # (collapsing two of a payee's claims into one) and "Account number" as the expense
+  # number (numbering every later claim in the portal from 66,374,959). So: exact names
+  # first, then multi-word phrases only; two fields on one column is a blocking error;
+  # the preview states the column read for each field.
   class ExpenseImport
     include ImportParsing
     include StrictColumnMatching
@@ -44,19 +23,13 @@ module Reimbursements
     # What a row became, plus everything the preview needs to explain it.
     Entry = Struct.new(:row, :bucket, :person, :budget, :attrs, :error, keyword_init: true)
 
-    # One entry per column, in the order #to_tsv writes them: +label+ is the
-    # canonical heading, +hint+ the template's explanation under it, +exact+
-    # matches a header WHOLE, +contains+ matches a substring and is multi-word
-    # only (see the class note).
-    #
-    # A heading not listed here is simply not found, which reads as "the sheet
-    # has no X column" for a required field and a blank for an optional one —
-    # the safe direction, since a column read as the WRONG field is silent
-    # while one not read at all is stated.
+    # One entry per column, in #to_tsv order: +label+ is the canonical heading, +hint+
+    # the template's explanation row, +exact+ matches a header whole, +contains+ a
+    # multi-word substring. A heading not listed is not found, which is stated; one
+    # read as the wrong field would not be.
     FIELDS = {
-      # Headed "ID", not "Reference": a sheet that also carries a Payment
-      # reference made the two read as the same thing, and they are opposites —
-      # this one is unique per claim, that one repeats across a payee's claims.
+      # Headed "ID", not "Reference": beside a Payment reference the two read as one
+      # thing, and they are opposites (unique per claim vs repeated across a payee's claims).
       reference: {
         label: "ID",
         hint: "Your sheet's own id for this claim, different on every row",
@@ -70,8 +43,7 @@ module Reimbursements
         exact: [ "status", "state" ],
         contains: [ "claim status", "expense status", "payment status" ]
       },
-      # "Submitter", not "Payee": on an Invoice the payee is the supplier in
-      # Payee name, while this is whoever the claim belongs to.
+      # "Submitter", not "Payee": on an Invoice the payee is the supplier, in Payee name.
       payee_email: {
         label: "Submitter email",
         hint: "Email of the person the claim belongs to, as on the People screen",
@@ -163,86 +135,63 @@ module Reimbursements
 
     TSV_HEADERS = FIELDS.each_value.map { |spec| spec[:label] }.freeze
 
-    # The template's second row, explaining each column under its heading.
-    # A sheet still carrying it has that row skipped, or its words would be
-    # read as a claim with an unreadable amount and block the import.
+    # The template's second row. A sheet still carrying it has that row skipped, or its
+    # words would read as a claim with an unreadable amount.
     TEMPLATE_HINTS = FIELDS.each_value.map { |spec| spec[:hint] }.freeze
 
-    # The only columns a sheet must carry. The rest are optional, and several
-    # (Type, the payee trio) exist so a claim that needs them is importable at
-    # all rather than because a typical sheet carries them.
-    # The submitter is required too, but either of its two columns will do
-    # (#report_missing_columns).
+    # The columns a sheet must carry. The submitter is required too, but either of its
+    # two columns will do (#report_missing_columns).
     REQUIRED_FIELDS = %i[reference status budget amount].freeze
 
-    # Columns whose CELL every row has to fill — a different requirement from
-    # REQUIRED_FIELDS above, which is about columns the sheet must CARRY.
-    #
-    # The two were conflated in the form's copy and in the template's hints,
-    # and that is how the screen came to say Payment reference was optional
-    # while an Approved row was refused with "Payment reference must not be
-    # blank": the cell rules are ExpenseForm's, not this class's, and nothing
-    # tied the words to them. #required_cell_labels is what the form prints,
-    # and a test asserts ExpenseForm really refuses a blank in each.
+    # Columns whose CELL every row must fill, unlike REQUIRED_FIELDS (columns the sheet
+    # must carry). The cell rules are ExpenseForm's; #required_cell_labels is what the
+    # form prints, so the copy cannot call one of these optional.
     REQUIRED_CELL_FIELDS = %i[reference status budget amount description payment_reference].freeze
 
-    # Fields whose cells may hold a tab or a newline, so must be unescaped when
-    # the text came back from #to_tsv. See @escaped below.
+    # Fields whose cells may hold a tab or a newline, so are unescaped on #to_tsv input.
     TEXT_FIELDS = %i[reference submitter_name budget description payment_reference
                      payee_name_override].freeze
 
-    # Statuses a row may name, matched case-insensitively so a sheet saying
-    # "paid" lands where the operator plainly meant it to.
+    # Matched case-insensitively, so "paid" lands where the operator meant it.
     STATUSES = Status.all
 
-    # A claim at one of these has already been paid, or never will be — the
-    # reading behind ExpenseForm#settled?. Stated as the SETTLED set rather than
-    # the live one on purpose, the same way BankDetailsRetention states its
-    # terminal set: a status this doesn't recognise counts as live, so a new one
-    # inherits the stricter rule rather than the looser one.
+    # Already paid, or never will be: what ExpenseForm#settled? reads. Stated as the
+    # settled set, so a status added later counts as live and gets the stricter rule.
     SETTLED_STATUSES = [ Status::SUBMITTED, Status::PAID, Status::REJECTED ].freeze
 
-    # expenses.import_key is a string(255). Checked here so an over-long
-    # reference is a row the operator can fix, rather than a ValueTooLong
-    # raised mid-transaction — which surfaces inside the wizard's Turbo Frame
-    # as a 500 with the paste lost.
+    # expenses.import_key is string(255). Checked here so an over-long ID is a row error,
+    # not a ValueTooLong 500 inside the wizard's Turbo Frame with the paste lost.
     IMPORT_KEY_LIMIT = 255
 
-    # The required columns by their canonical heading, for the form's copy.
     def self.required_labels
       REQUIRED_FIELDS.map { |field| FIELDS.fetch(field)[:label] }
     end
 
-    # The columns every ROW must fill, by their canonical heading.
     def self.required_cell_labels
       REQUIRED_CELL_FIELDS.map { |field| FIELDS.fetch(field)[:label] }
     end
 
     attr_reader :entries, :financial_year, :cost_centre
 
-    # +input_type+ is :paste (the operator's own text), :xlsx (an upload), or
-    # :canonical_tsv — this class's own #to_tsv output coming back from the
-    # preview's hidden field, which is the ONLY input whose cells carry escape
-    # sequences. Unescaping the operator's paste instead rewrote a typed
-    # "C:\temp\report.pdf" with a real tab before storing it.
+    # +input_type+ is :paste, :xlsx, or :canonical_tsv: this class's own #to_tsv output
+    # coming back from the preview's hidden field. Only that is unescaped; doing it to a
+    # paste rewrote a typed "C:\temp\report.pdf" with a real tab.
     def initialize(data, input_type:, financial_year:, cost_centre:, budgets: [], people: [],
                    existing_expenses: [])
       @errors = []
       @financial_year = financial_year
       @cost_centre = cost_centre
       @escaped = input_type == :canonical_tsv
-      # Grouped under BOTH spellings, never index_by. The budget rename made
-      # same-named lines in different areas normal, and index_by kept the last
-      # one silently — a settled claim charged to an arbitrary show. Spellings
-      # come from BudgetImport so the two importers cannot disagree about what a
-      # budget is called.
+      # Grouped under BOTH spellings (BudgetImport's, so the importers agree on a budget's
+      # name), never index_by: it kept the last of same-named lines in different areas,
+      # charging a settled claim to an arbitrary show.
       @budgets_by_name = budgets.each_with_object({}) do |budget, index|
         BudgetImport.name_spellings(budget.name, budget.area&.name).each do |spelling|
           (index[BudgetImport.match_key(spelling)] ||= []) << budget
         end
       end
-      # Payees with no email are left out: they would all index under "", and a
-      # blank cell matched whichever came last (140 claims to Fringe Society).
+      # Payees with no email are left out: they all index under "", so a blank cell
+      # matched whichever came last (140 claims went to Fringe Society).
       @people_by_email = people.select { |person| person.email.present? }
                                .index_by { |person| person.email.strip.downcase }
       @people_by_name = people.group_by { |person| self.class.name_key(person.name) }
@@ -253,21 +202,14 @@ module Reimbursements
       @entries = categorize
     end
 
-    # Compared the way the UNIQUE index does: import_key is utf8mb4_unicode_ci,
-    # so "OLD-1" and "old-1" are ONE key to MySQL. Comparing case-sensitively
-    # previewed them as two creates and then rolled the whole sheet back
-    # forever, blaming a concurrent operator that did not exist.
-    #
-    # The collation also folds ACCENTS and this deliberately does not: a sheet
-    # mixing "réf-1" and "ref-1" still dead-ends (#apply's rescue names the fix),
-    # because over-matching would bucket a genuinely new claim as already
-    # imported and drop it silently — the far worse direction.
+    # Compared as the UNIQUE index does: import_key is utf8mb4_unicode_ci, so "OLD-1" and
+    # "old-1" are one key. Accents are deliberately NOT folded though the collation folds
+    # them: a sheet mixing "réf-1" and "ref-1" still dead-ends (#apply's rescue names the
+    # fix), but over-matching would drop a new claim as already imported.
     def self.key_match(value) = value.to_s.strip.downcase.presence
 
-    # A typed name against a stored one: case, spacing and accents carry no meaning.
     def self.name_key(value) = I18n.transliterate(value.to_s).downcase.squish.presence
 
-    # Nothing is written unless every row is readable. See the class comment.
     def valid?
       @errors.empty? && @entries.any? && @entries.none? { |entry| entry.bucket == :invalid }
     end
@@ -279,29 +221,20 @@ module Reimbursements
       entries_in(:create).map(&:attrs)
     end
 
-    # Claims about to be created at a status the portal still acts on. The
-    # preview says out loud what will happen to them: an Approved claim goes on
-    # the next BACS spreadsheet for its cost centre — EUSA pays it a second
-    # time — and its producer is emailed; a Pending or Draft one lands in Review
-    # and is named to its budget owners on the next nightly run-day. That is a
-    # legitimate thing to want (finance may be importing a live queue), but it
-    # is the opposite of the "bookkeeping only" the rest of this screen implies.
+    # Creates at a status the portal still acts on, which the preview warns about.
     def live_entries
       entries_in(:create).reject { |entry| SETTLED_STATUSES.include?(entry.row[:status]) }
     end
 
-    # Canonical heading => the sheet's own heading it was read from (nil when
-    # the sheet has no such column). Rendered by the preview: keyword matching
-    # can only ever be nearly right, and stating what was read is worth more
-    # than any amount of tuning.
+    # Canonical heading => the sheet's own heading it was read from (nil when absent).
+    # The preview prints it: keyword matching can only be nearly right.
     def column_mapping
       FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
     end
 
-    # The sheet as canonical TSV, for the hidden field that carries an upload
-    # from the preview into apply. Tabs and newlines inside a cell are escaped
-    # rather than dropped: an xlsx cell really can contain them, and one stray
-    # tab would otherwise shift every later column when apply re-parses.
+    # The sheet as canonical TSV, carrying an upload through the preview's hidden field.
+    # Tabs and newlines in a cell are escaped, not dropped: an xlsx cell can hold them,
+    # and a stray tab would shift every later column on re-parse.
     def to_tsv
       ([ TSV_HEADERS.join("\t") ] + @rows.map { |row| tsv_row(row) }).join("\n")
     end
@@ -316,9 +249,8 @@ module Reimbursements
       FIELDS.each_key.map { |field| escape_cell(cell_for(row, field)) }.join("\t")
     end
 
-    # An unreadable value is carried on VERBATIM. The preview re-renders from
-    # this text after a blocked apply, so replacing it with a blank would hide
-    # the very cell the operator has to go and fix.
+    # An unreadable value is carried on verbatim: the preview re-renders from this text
+    # after a blocked apply, and a blank would hide the cell the operator has to fix.
     def cell_for(row, field)
       value = row[field]
       case value
@@ -330,9 +262,8 @@ module Reimbursements
       end
     end
 
-    # One normalised row per sheet line. Called by ImportParsing's parsers.
-    # Returns nil for a wholly blank line so trailing sheet padding is ignored
-    # rather than reported as thirty nameless claims.
+    # One normalised row per sheet line, called by ImportParsing's parsers. Nil for a
+    # wholly blank line, so trailing padding isn't reported as nameless claims.
     def normalize_row(raw)
       @header_for ||= resolve_headers(raw.keys)
       return nil if raw.values.all?(&:blank?)
@@ -346,8 +277,7 @@ module Reimbursements
       row
     end
 
-    # Escape sequences are undone only for text that came back from #to_tsv —
-    # never for the operator's own paste, where a backslash is a backslash.
+    # Escape sequences are undone only for #to_tsv output, never the operator's paste.
     def text(raw, field)
       value = raw[header_for[field]].to_s.strip
       @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value
@@ -371,10 +301,8 @@ module Reimbursements
       FIELDS.transform_values { |spec| match_header(headers, spec) }
     end
 
-    # Two fields reading the same column is refused rather than resolved: which
-    # of them the operator meant is exactly what cannot be guessed, and picking
-    # one writes the wrong value into a money or identity field with nothing on
-    # screen to say so.
+    # Two fields on one column are refused, not resolved: picking one writes a wrong value
+    # into a money or identity field with nothing on screen to say so.
     def ambiguous_columns
       header_for.compact.group_by { |_field, header| header }
                 .select { |_header, pairs| pairs.size > 1 }
@@ -395,8 +323,6 @@ module Reimbursements
       :unreadable
     end
 
-    # Nil rather than "" for a blank, so #row_error can tell "no status typed"
-    # from "a status I don't recognise" and say the right thing about each.
     def normalize_status(raw)
       return nil if raw.blank?
 
@@ -416,7 +342,7 @@ module Reimbursements
     def categorize
       return [] if @rows.empty?
 
-      # A problem with the SHEET is one problem, not thirty broken lines.
+      # A problem with the sheet is one problem, not thirty broken lines.
       report_ambiguous_columns
       report_missing_columns
       return [] if @errors.any?
@@ -468,10 +394,7 @@ module Reimbursements
       Entry.new(**base, bucket: :create, attrs: attrs_for(row, form, person))
     end
 
-    # Everything a row can be wrong about BEFORE the form sees it: the sheet's
-    # own coordinates (reference, status) and the two records it has to resolve.
-    # Ordered cheapest-and-most-fundamental first, so a row missing its
-    # reference is told that rather than being told about its budget.
+    # What a row can be wrong about before the form sees it, most fundamental first.
     def row_error(row, people, budget, candidates, duplicated)
       reference_error(row, duplicated) ||
         status_error(row) ||
@@ -518,10 +441,9 @@ module Reimbursements
       end
     end
 
-    # Never auto-created from a bare email — a person named by their address is
-    # what the unique index on Person#email exists to stop, and a claim paid to
-    # a stub record has nowhere to send the money. Points at the screen that
-    # fixes it, as the budget import's preview does.
+    # Nobody is auto-created from a bare email: a person named by their address is what
+    # the unique index on Person#email exists to stop, and a claim paid to a stub has
+    # nowhere to send the money.
     def submitter_error(row, people)
       if row[:payee_email].blank? && row[:submitter_name].blank?
         "This line names no submitter. Give the email or the name of the person the claim " \
@@ -535,7 +457,6 @@ module Reimbursements
       end
     end
 
-    # The email wins when there is one: it is unique, and a name is not.
     def people_for(row)
       return Array(@people_by_email[row[:payee_email]]) if row[:payee_email].present?
 
@@ -553,10 +474,9 @@ module Reimbursements
         "#{ambiguous_budget_fix(candidates)}"
     end
 
-    # The suggestion is asked of the INDEX, not assumed: "Cogito: Marketing"
-    # resolves nothing when two areas are both called Cogito, and a fix
-    # instruction that reproduces the same block is worse than none. A candidate
-    # with no area has no spelling of its own either.
+    # The suggestion is asked of the index, not assumed: "Cogito: Marketing" resolves
+    # nothing when two areas are both called Cogito, and a fix that reproduces the same
+    # block is worse than none. A budget with no area has no spelling of its own.
     def ambiguous_budget_fix(candidates)
       spelling = candidates.filter_map { |budget| "#{budget.area.name}: #{budget.name}" if budget.area }
                            .find { |candidate| budgets_named(candidate).one? }
@@ -574,11 +494,9 @@ module Reimbursements
       end
     end
 
-    # An explicit number is honoured, so a historical claim keeps the number it
-    # was known by — but never blindly: auto_number is uniquely indexed, and
-    # create_expense! deliberately does NOT retry past a collision on a number
-    # it was handed, calling that real data corruption. So the collision is
-    # caught here, where it can be reported by row instead of raising.
+    # An explicit number is honoured, so a historical claim keeps its number. But
+    # create_expense! does not retry past a collision on a number it was handed (it calls
+    # that data corruption), so the unique index's collision is reported by row here.
     def auto_number_error(row, duplicated)
       return nil if row[:auto_number].blank?
 
@@ -604,11 +522,9 @@ module Reimbursements
       [ financial_year&.label, cost_centre&.name ].compact_blank.join(" / ").presence || "this year"
     end
 
-    # The form object the submission and finance-edit screens use, so the
-    # importer enforces the same rules rather than a restatement of them that
-    # can drift. `internal` is set exactly as ExpenseForm.from_actual sets it:
-    # an imported claim has no receipt to attach and no itemised VAT, and there
-    # is nobody present to tick a soft block's acknowledgement.
+    # The form the submission and finance-edit screens use, so the importer enforces the
+    # same rules, not a restatement that can drift. `internal` is set as
+    # ExpenseForm.from_actual sets it: no receipt, no itemised VAT, nobody to tick a soft block.
     def form_for(row, budget)
       ExpenseForm.new(
         expense_type: row[:expense_type],
@@ -617,10 +533,8 @@ module Reimbursements
         require_receipts: false,
         budget_record_id: budget.record_id,
         amount: row[:amount]&.to_s("F"),
-        # Blank ex-VAT charges the WHOLE amount to the budget, the conservative
-        # reading and the one ExpenseForm.from_actual already takes for a cost
-        # with no VAT breakdown. Nil would fail its own presence rule and read
-        # as a broken row.
+        # A blank ex-VAT charges the whole amount, as ExpenseForm.from_actual does; nil
+        # would fail the presence rule and read as a broken row.
         amount_excl_vat: (row[:amount_excl_vat] || row[:amount])&.to_s("F"),
         description: row[:description],
         payment_reference: row[:payment_reference],
@@ -630,12 +544,10 @@ module Reimbursements
       )
     end
 
-    # The form's own parsed attributes, plus the columns only an import writes.
-    #
-    # create_attrs is read rather than the row: AR casts a String to a decimal
-    # column with #to_d, so handing a validated "£1,200" straight through would
-    # store 0. The status is merged OVER the form's own (which is only ever
-    # Draft or Pending), exactly as the actuals->expense conversion merges Paid.
+    # The form's parsed attributes plus the columns only an import writes. create_attrs is
+    # read, not the row: AR casts a String to a decimal with #to_d, so a validated
+    # "£1,200" passed through would store 0. The status is merged over the form's own
+    # (only ever Draft or Pending), as the actuals conversion merges Paid.
     def attrs_for(row, form, person)
       attrs = form.create_attrs(person.record_id).merge(
         status: row[:status],
@@ -644,10 +556,8 @@ module Reimbursements
         payment_confirmed_date: row[:paid_on],
         submitted_at: row[:submitted_on]&.beginning_of_day
       )
-      # Only present when the sheet gave one: create_expense! reads
-      # `attrs.key?(:auto_number)` to decide whether a unique-index collision is
-      # worth retrying, so a nil under that key would silently disable the retry
-      # for every row.
+      # Only when the sheet gave one: create_expense! reads `attrs.key?(:auto_number)` to
+      # decide whether to retry a collision, so a nil under that key disables the retry.
       attrs[:auto_number] = Integer(row[:auto_number], 10) if row[:auto_number].present?
       attrs
     end

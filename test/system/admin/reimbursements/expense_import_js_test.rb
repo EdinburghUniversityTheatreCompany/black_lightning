@@ -3,21 +3,13 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     ##
-    # The expense import wizard, clicked for real.
+    # The expense import wizard, clicked for real. A request test POSTs straight to #preview
+    # and #apply, so it cannot see the three things only a browser does:
     #
-    # A request test cannot cover this: it POSTs straight to #preview and #apply
-    # with whatever parameters it likes, so it passes just as happily when the
-    # real form never sends them. Three things here are only visible to a
-    # browser, and two of them have shipped broken in this app before:
-    #
-    #   * the form_with must wrap the CardComponent, not sit inside it — the
-    #     footer is a component SLOT, so a form opened inside renders its submit
-    #     button outside the <form> and the button silently does nothing;
-    #   * the wizard is stateless, so the sheet only survives into apply through
-    #     a hidden field the preview renders. A request test hands apply the
-    #     text itself and proves nothing about that field;
-    #   * every step must render inside the Turbo Frame, or Turbo Drive discards
-    #     a perfectly good response and the screen never changes.
+    #   * form_with must wrap the CardComponent: the footer is a slot, so a form opened
+    #     inside renders its submit button outside the <form>;
+    #   * the sheet survives into apply only through the preview's hidden field;
+    #   * every step must render inside the Turbo Frame, or Turbo Drive discards the response.
     class ExpenseImportJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
@@ -38,9 +30,8 @@ module Admin
 
       def sheet(*rows) = ([ HEADERS ] + rows).join("\n")
 
-      # Sets the box the way a paste lands. fill_in TYPES the first four
-      # characters of a long value as real keys, and the Tab in the template's
-      # "ID\tStatus" heading moves focus out of the textarea, dropping the tab.
+      # Sets the box the way a paste lands: fill_in TYPES the first four characters of a
+      # long value as real keys, and the Tab in "ID\tStatus" leaves the textarea.
       def paste_sheet(with:)
         find_field("Paste the sheet").execute_script("this.value = arguments[0]", with)
       end
@@ -53,8 +44,7 @@ module Admin
 
       def xlsx_row(reference) = claim(reference).split("\t")
 
-      # A real .xlsx on disk, so the upload goes through Roo exactly as the
-      # operator's would.
+      # A real .xlsx on disk, so the upload goes through Roo.
       def xlsx_of(rows)
         require "caxlsx"
         package = Axlsx::Package.new
@@ -71,7 +61,6 @@ module Admin
         paste_sheet with: sheet(claim("OLD-1"), claim("OLD-2"))
         click_on "Preview import"
 
-        # The preview reached the screen, which is what the Turbo Frame buys.
         assert_text "Preview: Fringe 2027"
         assert_text "New claims (2)"
         assert_text "Fake blood OLD-1"
@@ -141,9 +130,8 @@ module Admin
         assert_text "Register a person"
       end
 
-      # The whole to_tsv round trip only runs on an upload — a paste never needs
-      # it — so covering it anywhere but a browser proves nothing about the file
-      # input, the multipart form or the hidden field the preview writes from it.
+      # The to_tsv round trip only runs on an upload, so only a browser exercises the file
+      # input, the multipart form and the hidden field.
       test "an uploaded xlsx previews and imports, carrying the sheet with no file to re-send" do
         visit admin_reimbursements_expense_import_path
 
@@ -153,8 +141,7 @@ module Admin
 
         assert_text "New claims (2)"
 
-        # There is no file on the apply request: everything the upload said has
-        # to be in the hidden field by now.
+        # No file on the apply request: the hidden field has to carry everything.
         assert_includes find("input[name='pasted_text']", visible: false).value, "XL-1"
 
         assert_difference -> { ::Reimbursements::Expense.count }, +2 do
@@ -166,9 +153,6 @@ module Admin
                      ::Reimbursements::Expense.order(:id).pluck(:import_key)
       end
 
-      # Which pot a claim lands in is decided by the budget it is charged to, so
-      # picking the wrong centre imports against the wrong budgets — and the
-      # select is the only thing that says which.
       test "picking a non-default cost centre imports against that centre's budgets" do
         termtime = create_second_reimbursements_cost_centre
         create_reimbursements_budget(name: "Termtime props", cost_centre: termtime,

@@ -1,24 +1,19 @@
-<%# The whole wizard lives in one Turbo Frame, as the budget import and
-    Reconcile do: preview and apply POST the sheet back and render their step
-    directly, because the wizard is stateless and a redirect can't carry the
-    paste. OUTSIDE a frame Turbo Drive rejects non-redirect form responses and
-    silently discards them. %>
+<%# The wizard lives in one Turbo Frame: preview and apply render their step directly
+    because a redirect can't carry the paste, and outside a frame Turbo Drive silently
+    discards a non-redirect form response. %>
 <%= turbo_frame_tag "expense_import" do %>
-<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
-    Turbo Frame navigates THE FRAME, and a destination with no matching frame
-    lands as "Content missing" instead of the page. %>
+<%# Every link out of this frame needs turbo_frame: "_top", or the frame navigates to a
+    destination with no matching frame and shows "Content missing". %>
 <%= render "shared/back_link", text: "All expenses", turbo_frame: "_top",
            path: admin_reimbursements_expense_edits_path %>
 
-<%# Flash lives in the layout, outside this frame, so a frame-only response
-    would never show it. %>
+<%# Flash lives in the layout, outside the frame, so a frame-only response never shows it. %>
 <% if flash[:alert].present? %>
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%# form_with wraps the CardComponent, never the other way round: the footer is
-    a component SLOT, so a form opened inside the card renders its submit button
-    outside the <form> and the button silently does nothing. %>
+<%# form_with wraps the CardComponent, never the reverse: the footer is a slot, so a form
+    opened inside the card renders its submit button outside the <form>. %>
 <%= form_with url: preview_admin_reimbursements_expense_import_path,
               method: :post, multipart: true do %>
   <%= render CardComponent.new(title: "Import expenses") do |card| %>
@@ -37,9 +32,6 @@
 
     <p class="mb-2 text-sm text-gray-600">
       Columns read: <strong><%= ::Reimbursements::ExpenseImport::TSV_HEADERS.to_sentence %></strong>.
-      <%# Two different requirements, and conflating them is how this screen
-          came to call Payment reference optional while an Approved row was
-          refused for leaving it blank. %>
       The sheet must carry
       <strong><%= ::Reimbursements::ExpenseImport.required_labels.to_sentence %></strong>,
       and every row must fill
@@ -84,10 +76,6 @@
     </dl>
 
     <div class="flex flex-col gap-4">
-      <%# Both halves of the destination. A claim's budget is matched by name
-          within one (year, cost centre), so neither can be assumed — whichever
-          side the link prefilled arrives selected, and the operator picks the
-          other. %>
       <%= render "shared/form/field", label: "Financial year", name: :year,
             html_class: "sm:w-1/2" do %>
         <%= select_tag :year,
@@ -96,7 +84,7 @@
                        class: input_classes %>
       <% end %>
 
-      <%# No preselect of the first centre — see the budget import's note. %>
+      <%# No preselected centre: a sheet of claims in the wrong pot is a large quiet mistake. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,

@@ -1,33 +1,12 @@
 module Admin
   module Reimbursements
     ##
-    # Import claims that were settled outside the portal — the years finance
-    # ran on a spreadsheet, or a pot the portal only took over halfway through.
-    # A three-step wizard, deliberately the same shape as the budget import:
+    # Import claims settled outside the portal, as a three-step wizard shaped like the
+    # budget import: show (year, cost centre, paste or upload), preview (parse and
+    # bucket), apply (one transaction). Stateless, see ExpenseImport. Year and cost centre
+    # are form fields, not path segments: they are orthogonal, so neither can nest.
     #
-    #   1. show    — pick the year and the cost centre, paste the sheet or
-    #                upload the xlsx.
-    #   2. preview — parse and categorise (create / already imported / invalid).
-    #   3. apply   — write the lot in ONE transaction.
-    #
-    # STATELESS: an upload is normalised to TSV on the way in and carried
-    # through the preview in a hidden field, so nothing is kept in the session
-    # or on disk, and apply re-parses and re-validates from scratch rather than
-    # trusting what the preview decided.
-    #
-    # THAT IS ALSO WHY THE SHEET NEEDS AN ID COLUMN. Re-posting the same
-    # text is what a second click does, and a claim has no natural key the way
-    # a budget line has its name — see ExpenseImport, and the unique index on
-    # expenses.import_key that backs it.
-    #
-    # BOTH COORDINATES ARE FORM FIELDS, as they are on the budget import: a
-    # claim is charged to a budget matched by name within one (financial year,
-    # cost centre), and the two are orthogonal, so neither can be a path
-    # segment without hiding the other from the entry points that know it.
-    #
-    # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
-    # via FinanceController. Producers never see this: it writes claims in
-    # somebody else's name, at any status, with no receipt.
+    # Finance only: it writes claims in somebody else's name, at any status, with no receipt.
     class ExpenseImportsController < FinanceController
       include ReadsImportSource
 
@@ -45,24 +24,18 @@ module Admin
         "Choose which cost centre paid these claims. Nothing has been imported, and the sheet " \
         "you pasted is still below.".freeze
 
-      # Deliberately does NOT assert what happened. Two things reach here: a
-      # genuine race (somebody imported the same sheet meanwhile), and a
-      # reference that collides with one already stored only under the column's
-      # utf8mb4_unicode_ci collation — which folds ACCENTS as well as case,
-      # while the pre-flight read folds case alone. Blaming a concurrent
-      # operator for the second is a dead end: previewing again shows the same
-      # rows and the import can never succeed. Naming the fix covers both.
+      # Deliberately does not blame a concurrent operator. An ID can also collide with a
+      # stored one only under the column's collation, which folds accents where the
+      # pre-flight read folds case alone, and previewing again would show the same rows
+      # for ever. Naming the fix covers both.
       RACED_ALERT =
         "Nothing was imported: one of those IDs is already on a claim in the portal. " \
         "Either somebody imported this sheet while you were looking at it (preview it again " \
         "to see what is left), or an ID differs from one already imported only by an " \
         "accent, which the database counts as the same. Renaming it fixes that.".freeze
 
-      # Names no year, for the same reason the budget import's doesn't: the
-      # <h1> sits OUTSIDE the wizard's Turbo Frame, so a preview of a different
-      # year than the page loaded with would leave the heading and the card
-      # stating different years. Each step's own heading, inside the frame,
-      # names the year it is actually talking about.
+      # Names no year: the <h1> sits outside the wizard's Turbo Frame, so a preview of
+      # another year would leave it disagreeing with the card. Each step's own heading names its year.
       before_action -> { @title = "Import expenses" }
 
       def show
@@ -72,8 +45,6 @@ module Admin
       def preview
         return render(:show) unless source_present?
         return render(:show, status: :unprocessable_entity) unless destination_available?
-        # Step 1 again, with the paste still in the box — the operator has to
-        # name the pot before seeing a preview of what would land in it.
         return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
 
         build_import
@@ -87,20 +58,15 @@ module Admin
 
         build_import
 
-        # Re-validated here, not merely trusted from the preview: apply parses
-        # the text afresh, so anything unreadable has to stop it a second time.
         return render_blocked_preview unless @import.valid?
 
         @created = store.import_expenses!(rows: @import.creates)
         render :apply
       rescue ActiveRecord::RecordNotUnique
-        # The pre-flight "already imported" read went stale between this
-        # request's parse and its write. The unique index caught it and the
-        # transaction rolled the whole sheet back, which is the point.
+        # The pre-flight read went stale; the unique index rolled the whole sheet back.
         render_blocked_preview(RACED_ALERT)
       end
 
-      # The columns the importer reads, with a row explaining each, as a CSV to start from.
       def template
         import = ::Reimbursements::ExpenseImport
         send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
@@ -113,20 +79,15 @@ module Admin
         @import = ::Reimbursements::ExpenseImport.new(
           import_source, input_type: input_type,
           financial_year: selected_financial_year, cost_centre: chosen_cost_centre,
-          # Scoped to the destination, so "which budget is this?" is asked of
-          # the year and pot being imported into rather than of whichever
-          # happens to be active. Expenses are NOT scoped: an already-used
-          # reference or expense number must be found wherever it lives, or the
-          # double-apply guard has a hole exactly the size of the other pot.
+          # Budgets are scoped to the destination. Expenses are NOT: an ID or expense number
+          # already used must be found in any pot, or the double-apply guard has a hole.
           budgets: store.budgets_for_year, people: store.people,
           existing_expenses: store.expenses
         )
       end
 
-      # Whether there is anything to import INTO at all — a portal with no
-      # years or no centres set up, where the form's selects would be empty and
-      # there is nothing to choose. Distinct from "the operator hasn't picked a
-      # cost centre yet", which #render_blocked_preview handles.
+      # False when no financial year or cost centre is set up, so the form's selects
+      # would be empty.
       def destination_available?
         if selected_financial_year.nil?
           flash.now[:alert] = NO_FINANCIAL_YEAR_ALERT
@@ -139,19 +100,14 @@ module Admin
         false
       end
 
-      # Re-render the preview with the problems shown rather than redirecting:
-      # a forty-line paste must survive the refusal.
+      # Re-render the preview rather than redirecting: a forty-line paste must survive.
       def render_blocked_preview(alert = nil)
-        # The cost centre is settled before the preview is ever drawn now
-        # (#cost_centre_chosen?), so the only thing that can still block here
-        # is a row the sheet spells wrong.
         flash.now[:alert] =
           alert || "Nothing was imported. Fix the lines flagged below and try again."
         render :preview, status: :unprocessable_entity
       end
 
-      # Both coordinates carry through "Start again" and "Cancel", so a refused
-      # import comes back to the form the operator filled in, not a blank one.
+      # Both coordinates carry through "Start again" and "Cancel".
       def import_path
         admin_reimbursements_expense_import_path(
           year: selected_financial_year&.key, cost_centre: chosen_cost_centre&.key

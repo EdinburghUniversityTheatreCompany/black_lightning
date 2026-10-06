@@ -1,4 +1,3 @@
-<%# Same frame as the earlier steps — see show.html.erb. %>
 <%= turbo_frame_tag "expense_import" do %>
 <%= render CardComponent.new(title: "Imported into #{selected_financial_year.label}") do %>
   <ul class="mb-4 list-disc pl-5 text-sm">
@@ -22,9 +21,8 @@
 
   <% live = @created.reject { |expense| ::Reimbursements::ExpenseImport::SETTLED_STATUSES.include?(expense.status) } %>
   <% if live.any? %>
-    <%# The import itself emails nobody, but what it wrote decides what happens
-        next — and saying "nobody was emailed" full stop read as a promise about
-        tomorrow night that it could not keep. %>
+    <%# The import emails nobody, but what it wrote decides what happens next, so "nobody
+        was emailed" alone would promise too much. %>
     <div class="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
       <p class="font-medium">
         <%= pluralize(live.size, "claim") %> went into the LIVE queue.
@@ -39,9 +37,6 @@
   <% end %>
 
   <div class="flex flex-wrap gap-3">
-<%# Every link out of this frame needs turbo_frame: "_top": a link inside a
-    Turbo Frame navigates THE FRAME, and a destination with no matching frame
-    lands as "Content missing" instead of the page. %>
     <%= link_to "See the expenses", admin_reimbursements_expense_edits_path,
                 class: btn_classes(:primary), data: { turbo_frame: "_top" } %>
     <%= link_to "Import another sheet", import_path, class: btn_classes(:secondary) %>

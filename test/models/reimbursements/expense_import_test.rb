@@ -43,8 +43,7 @@ module Reimbursements
                               people: people, existing_expenses: existing_expenses)
     end
 
-    # A show's line after the area rename: the area holds the grouping and the
-    # budget is bare.
+    # A show's line after the area rename: the area holds the grouping, the budget is bare.
     def marketing_in(show)
       area = create_reimbursements_area(name: show, cost_centre: @cost_centre,
                                         financial_year: @year)
@@ -53,9 +52,6 @@ module Reimbursements
     end
 
     # --- Budgets whose names the area rename changed -------------------------
-    # Settled claims come through here, so a budget resolved to the wrong show
-    # is real money on the wrong line with nothing on screen. The rename made
-    # same-named lines in different areas normal, and index_by kept the last.
 
     test "a sheet still writing the prefix finds the renamed line" do
       marketing = marketing_in("Cogito")
@@ -78,8 +74,6 @@ module Reimbursements
       assert_match(/in Improverts/, error)
     end
 
-    # "Area: Line" resolves a candidate that has an area and nothing else, so
-    # offering it for two loose budgets would name a fix that cannot be made.
     test "the ambiguity message offers a fix that exists" do
       budgets = [ marketing_in("Cogito"), marketing_in("Improverts") ]
       loose = [ @budget, create_reimbursements_budget(name: "Props", cost_centre: @cost_centre,
@@ -93,9 +87,8 @@ module Reimbursements
       assert_no_match(/Area: Line/, none.entries.sole.error)
     end
 
-    # Two areas of one name is the lenient-scoping shape, and "Cogito: Marketing"
-    # then resolves nothing — so the message must not name it as the fix, and
-    # the candidates must be told apart by something.
+    # Two areas of one name: "Cogito: Marketing" resolves nothing, so it must not be
+    # offered as the fix.
     test "the fix is not a spelling that reproduces the same block" do
       here = marketing_in("Cogito")
       stale = create_reimbursements_budget(name: "Marketing", area: Area.create!(name: "Cogito"))
@@ -120,10 +113,8 @@ module Reimbursements
     end
 
     # --- A sheet finance actually has --------------------------------------
-    #
-    # Every other test here builds its sheet from TSV_HEADERS, which is the one
-    # input the column matcher cannot get wrong. These use the headings a real
-    # spreadsheet carries, which is where it did.
+    # Every other test builds its sheet from TSV_HEADERS, which the column matcher cannot
+    # get wrong. These use the headings a real spreadsheet carries, where it did.
 
     REAL_HEADERS = "Claim ID\tStatus\tPayee email\tBudget\tAmount\t" \
                    "Payment reference\tDescription\tPayee name\tSort code\t" \
@@ -137,10 +128,8 @@ module Reimbursements
         account, "Petty cash" ].join("\t")
     end
 
-    # The BACS reference repeats across a payee's claims by design, so reading
-    # it as the dedupe key either blocks the sheet naming a column the operator
-    # never mapped, or buckets a later genuinely-different claim as already
-    # imported and drops it.
+    # The BACS reference repeats across a payee's claims, so as the dedupe key it would
+    # bucket a later, different claim as already imported and drop it.
     test "the dedupe key comes from the sheet's own id column, never Payment reference" do
       import = build_import(real_sheet(real_row("2019-014"), real_row("2019-015")))
 
@@ -148,9 +137,9 @@ module Reimbursements
       assert_equal %w[2019-014 2019-015], import.creates.map { |attrs| attrs[:import_key] }
     end
 
-    # A supplier's account number parses as an Integer, isn't taken and isn't
-    # duplicated, so nothing downstream catches it — and Expense's before_create
-    # then numbers every later claim in the portal from 66,374,959.
+    # A supplier's account number parses as an Integer and is neither taken nor
+    # duplicated, so nothing downstream catches it: Expense's before_create would number
+    # every later claim in the portal from 66,374,959.
     test "an Account number column is never read as the expense number" do
       import = build_import(real_sheet(real_row("2019-014")))
 
@@ -165,8 +154,6 @@ module Reimbursements
       assert_not import.creates.sole.key?(:auto_number)
     end
 
-    # Keyword tuning can only ever be nearly right, so the preview states what
-    # it read. This is the reader for it.
     test "the import reports which column it read for each field" do
       import = build_import(real_sheet(real_row("2019-014")))
 
@@ -176,9 +163,8 @@ module Reimbursements
       assert_nil import.column_mapping.fetch("Expense number")
     end
 
-    # "Total amount excl VAT" reads as both the gross and the net — a plausible
-    # heading, and exactly the case where picking one silently charges the wrong
-    # figure to a budget.
+    # "Total amount excl VAT" reads as both gross and net; picking one would silently
+    # charge the wrong figure to a budget.
     test "two fields resolving to one column block the import, naming both" do
       headers = "Reference\tStatus\tPayee email\tBudget\tTotal amount excl VAT"
       import = build_import([ headers,
@@ -477,8 +463,8 @@ module Reimbursements
 
     # --- Who the claim belongs to --------------------------------------------
 
-    # Several payees have no email, and a blank cell matched whichever of them
-    # was indexed last: 140 claims in production went to "Fringe Society".
+    # A blank cell once matched whichever email-less payee was indexed last (140 claims
+    # went to "Fringe Society").
     test "a blank submitter email never matches a payee who has no email" do
       emailless = create_reimbursements_person(name: "Fringe Society", email: nil)
 
@@ -547,8 +533,7 @@ module Reimbursements
       assert_equal "Reference", import.column_mapping.fetch("ID")
     end
 
-    # The template's explanation row is words, not a claim: left in, it would
-    # block the whole import on an unreadable amount and an unknown payee.
+    # The template's explanation row is words, not a claim: left in, it would block the import.
     test "a sheet still carrying the template's explanation row imports only its real rows" do
       import = build_import([ HEADERS, ExpenseImport::TEMPLATE_HINTS.join("\t"), row ].join("\n"))
 
@@ -616,9 +601,9 @@ module Reimbursements
 
     # --- The hidden field the wizard carries ----------------------------------
 
-    # A pasted sheet can't hold either character — parse_tsv splits on them —
-    # so they only ever arrive from an xlsx cell, already escaped, and must
-    # leave escaped or one stray tab shifts every later column on the re-parse.
+    # A pasted sheet can't hold a tab or newline (parse_tsv splits on them), so they only
+    # arrive from an xlsx cell, already escaped, and must leave escaped or a stray tab
+    # shifts every later column on the re-parse.
     test "a cell holding a tab or a newline survives the round trip into apply" do
       import = build_import(tsv(row(description: "Blood\\tand\\nglitter")),
                             input_type: :canonical_tsv)

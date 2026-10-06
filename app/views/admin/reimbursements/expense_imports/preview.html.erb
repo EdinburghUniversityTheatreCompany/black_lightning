@@ -1,4 +1,3 @@
-<%# Same frame as step 1 — see show.html.erb for why the wizard needs one. %>
 <%= turbo_frame_tag "expense_import" do %>
 <%= render "shared/back_link", text: "Start again", path: import_path %>
 
@@ -6,8 +5,8 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%# The heading names its own destination. The page <h1> can't: it sits outside
-    this frame, so it still says whatever the page loaded with. %>
+<%# The heading names its own destination: the page <h1> sits outside this frame, so it
+    still says whatever the page loaded with. %>
 <%= render CardComponent.new(title: "Preview: #{selected_financial_year.label}" \
                                     "#{" · #{selected_cost_centre.name}" if selected_cost_centre}") do %>
   <p class="mb-4 text-sm text-gray-600">
@@ -26,9 +25,7 @@
             <strong><%= entry.row[:reference].presence || "(no ID)" %></strong>:
             <%= entry.error %>
             <% if entry.person.nil? && (entry.row[:payee_email].present? || entry.row[:submitter_name].present?) %>
-              <%# Never auto-created from a bare email (ExpenseImport), so this
-                  is the operator's job — and the link has to actually go
-                  somewhere. %>
+              <%# Nothing is auto-created from a bare email, so registering them is the operator's job. %>
               <%= link_to "Register them on the People screen",
                           new_admin_reimbursements_person_path, class: "underline font-medium",
                           data: { turbo_frame: "_top" } %>.
@@ -96,10 +93,6 @@
 
   <% live = @import.live_entries %>
   <% if live.any? %>
-    <%# Importing a live claim is legitimate — finance may be importing a queue
-        rather than a history — but it is the opposite of what the rest of this
-        screen implies, so it is stated rather than left to be discovered on the
-        next batch run. %>
     <div class="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
       <p class="font-medium">
         <%= pluralize(live.size, "claim") %> here
@@ -127,11 +120,7 @@
     </div>
   <% end %>
 
-  <%# What the matcher read, stated. Keyword matching can only ever be nearly
-      right, and a column read as the wrong field is otherwise invisible — a
-      "Payment reference" column read as the dedupe key silently collapsed two
-      claims into one, and an "Account number" read as the expense number
-      corrupted the numbering of every later claim in the portal. %>
+  <%# What the matcher read, stated: a column read as the wrong field is otherwise invisible. %>
   <details class="mt-4 text-sm">
     <summary class="cursor-pointer text-gray-600">
       Columns read from your sheet (check these before importing)
@@ -164,15 +153,12 @@
 
   <%= form_with url: apply_admin_reimbursements_expense_import_path,
                 method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
-    <%# The sheet travels as canonical TSV, so apply re-parses exactly what was
-        previewed — including an upload, which has no file to re-send. The
-        destination travels with it: apply resolves the year and cost centre
-        from params exactly as this step did, so it cannot land in a different
-        pair than the one previewed here. %>
+    <%# The sheet travels as canonical TSV so apply re-parses what was previewed, an upload
+        included (it has no file to re-send). The year and cost centre travel with it, so
+        apply cannot land in a different pair. %>
     <%= hidden_field_tag :pasted_text, @import.to_tsv %>
-    <%# Marks the text above as this class's OWN escaped output, so apply
-        unescapes it. Without it a backslash the operator typed is unescaped as
-        though we had written it. %>
+    <%# Marks the text above as this class's own escaped output, so apply unescapes it and
+        not a backslash the operator typed. %>
     <%= hidden_field_tag :canonical, "1" %>
     <%= hidden_field_tag :year, selected_financial_year&.key %>
     <%= hidden_field_tag :cost_centre_id, selected_cost_centre&.id %>

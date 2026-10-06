@@ -81,9 +81,8 @@ module Admin
         assert_match(/No financial year is set up yet/, response.body)
       end
 
-      # Turbo Drive rejects a non-redirect response to a form POST and discards
-      # it, so a stateless wizard has to live in one Turbo Frame — the same
-      # reason the budget import and Reconcile do.
+      # Turbo Drive discards a non-redirect response to a form POST, so the wizard
+      # lives in one Turbo Frame.
       test "every wizard step renders inside the turbo frame" do
         sign_in @user
 
@@ -219,10 +218,8 @@ module Admin
       end
 
       # --- An import must not email anyone -----------------------------------
-      #
-      # Every producer email in this portal is sent by BatchProcessor, the
-      # nightly reminders or an explicit reject. Thirty historical claims
-      # landing at once must reach none of them.
+      # Every producer email comes from BatchProcessor, the nightly reminders or an
+      # explicit reject; an import must reach none of them.
 
       test "apply sends no mail and enqueues no job" do
         sign_in @user
@@ -243,11 +240,8 @@ module Admin
       end
 
       # --- The cost centre has to be chosen ----------------------------------
-      #
-      # The wizard preselected `selectable_cost_centres.first` while everywhere
-      # else in this portal "none" means "every centre" as a stated safety
-      # rule. A whole sheet of settled claims into the wrong pot is a large
-      # quiet mistake.
+      # A whole sheet of claims in the wrong pot is a large quiet mistake, so the
+      # first centre is never preselected.
 
       test "apply accepts a blank cost centre while only one is configured" do
         sign_in @user
@@ -302,10 +296,7 @@ module Admin
       end
 
       # --- What the screen says is required --------------------------------
-      # The intro listed four required columns and the template called Payment
-      # reference optional, while ExpenseForm refused an Approved row for
-      # leaving it blank. Two different requirements — columns the sheet must
-      # CARRY, and cells every row must FILL — conflated in the copy.
+      # Columns the sheet must CARRY and cells every row must FILL are separate requirements.
 
       test "every column the screen calls row-required really is" do
         blanks = { description: "", payment_reference: "" }
