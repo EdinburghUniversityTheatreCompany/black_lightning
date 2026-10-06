@@ -37,16 +37,9 @@
 #  fk_rails_...  (company_id => companies.id)
 #
 class Opportunity < ApplicationRecord
-  validates :title, length: { maximum: 255 }
-  validates :description, length: { maximum: 16777215 }
-  validates :contact_email, length: { maximum: 255 }
-  validates :project, length: { maximum: 255 }
-  validates :author, length: { maximum: 255 }
-  validates :apply_url, length: { maximum: 255 }
-  validates :submitter_name, length: { maximum: 255 }
-  validates :submitter_email, length: { maximum: 255 }
-  validates :dates, length: { maximum: 255 }
-  validates :location, length: { maximum: 255 }
+  validates :title, :contact_email, :project, :author, :apply_url, :submitter_name, :submitter_email,
+            :dates, :location, length: { maximum: 255 }
+  validates :description, presence: true, length: { maximum: 16777215 }
   # +website_url+ is the spam honeypot; +company_name+ is a virtual field resolved to a Company
   # before validation.
   attr_accessor :website_url
@@ -80,7 +73,7 @@ class Opportunity < ApplicationRecord
     professional: 3
   }, default: :any, prefix: :experience, validate: true
 
-  validates :expiry_date, :description, presence: true
+  validates :expiry_date, presence: true
   validates :contact_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :submitter_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validate :creator_or_submitter

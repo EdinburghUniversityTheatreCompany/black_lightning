@@ -28,7 +28,7 @@
 #  fk_rails_...  (opportunity_id => opportunities.id)
 #
 class OpportunityRole < ApplicationRecord
-  validates :position, length: { maximum: 255 }
+  validates :position, presence: true, length: { maximum: 255 }
   validates :note, length: { maximum: 255 }
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
@@ -38,8 +38,6 @@ class OpportunityRole < ApplicationRecord
   attr_writer :department_name
 
   before_validation :assign_department_from_name
-
-  validates :position, presence: true
 
   normalizes :position, with: ->(position) { position&.strip }
 

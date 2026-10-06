@@ -22,14 +22,10 @@
 #  index_companies_on_slug  (slug) UNIQUE
 #
 class Company < ApplicationRecord
-  validates :name, length: { maximum: 255 }
-  validates :slug, length: { maximum: 255 }
-  validates :website, length: { maximum: 255 }
-  validates :instagram, length: { maximum: 255 }
+  validates :name, presence: true, uniqueness: { case_sensitive: false }, length: { maximum: 255 }
+  validates :slug, :website, :instagram, length: { maximum: 255 }
   has_many :opportunities, dependent: :nullify
   has_many :events, dependent: :nullify
-
-  validates :name, presence: true, uniqueness: { case_sensitive: false }
 
   acts_as_url :name, url_attribute: :slug
 
