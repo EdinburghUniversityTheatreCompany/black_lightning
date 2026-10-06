@@ -17,8 +17,7 @@ module MdHelper
   def render_markdown(md)
     return "" if md.blank?
 
-    html = ::Commonmarker.to_html(md, options: MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
-    html = apply_ial(html)
+    html = apply_ial(commonmark(md))
     sanitized = Rails::Html::SafeListSanitizer.new.sanitize(html, tags: %w[
       p h1 h2 h3 h4 h5 h6 br hr
       em strong i b
@@ -53,16 +52,12 @@ module MdHelper
   # False in a mailer view: there is no request, and a relative href is dead in an email.
   def web_request?
     respond_to?(:request) && request.present?
-  rescue StandardError
-    false
   end
 
   def render_plain(md)
     return "" if md.nil?
 
-    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(
-      ::Commonmarker.to_html(md, options: MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
-    ))
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(commonmark(md)))
   end
 
   def truncate_markdown(content, length = 100)
@@ -70,6 +65,10 @@ module MdHelper
   end
 
   private
+
+  def commonmark(md)
+    ::Commonmarker.to_html(md, options: MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
+  end
 
   def apply_ial(html)
     doc = Nokogiri::HTML::DocumentFragment.parse(html)
