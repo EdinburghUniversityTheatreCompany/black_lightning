@@ -8,6 +8,7 @@ module Reimbursements
       @person = create_reimbursements_person(name: "Pat", email: "pat@example.com")
     end
 
+    # Left is not Budget#remaining, which ignores the pipeline; both are wanted.
     test "left subtracts BOTH committed spend and claims still waiting" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 1_000)
       spend(budget, 200, Status::PAID)
@@ -19,15 +20,7 @@ module Reimbursements
       assert_equal 200, summary.spent
       assert_equal 300, summary.waiting
       assert_equal 500, summary.left
-    end
-
-    # Left is not Budget#remaining, which ignores the pipeline; both are wanted.
-    test "left is not Budget#remaining, which ignores the pipeline" do
-      budget = create_reimbursements_budget(name: "Props", initial_budget: 1_000)
-      spend(budget, 300, Status::PENDING)
-
-      assert_equal 1_000, budget.remaining
-      assert_equal 700, SpendSummary.for_budget(budget).left
+      assert_equal 800, budget.remaining, "remaining ignores the pipeline"
     end
 
     test "left is negative and over_by positive when the budget is blown" do
@@ -41,24 +34,19 @@ module Reimbursements
       assert_equal 2_426.13, summary.over_by
     end
 
-    test "a line nobody set a budget for has no left, rather than a zero" do
-      budget = create_reimbursements_budget(name: "Props")
-      spend(budget, 50, Status::PAID)
-
-      summary = SpendSummary.for_budget(budget)
-
-      assert summary.no_budget_set?
-      assert_nil summary.left
-      assert_not summary.over?
-      assert_not summary.bar?
-    end
-
     # PlannedAmount: a £0 plan is unset, not a cap all spend is over.
-    test "a plan of exactly zero counts as unset" do
-      budget = create_reimbursements_budget(name: "Props", initial_budget: 0)
-      spend(budget, 50, Status::PAID)
+    test "a line with no plan, or a plan of exactly zero, has no left rather than a zero" do
+      [ nil, 0 ].each do |plan|
+        budget = create_reimbursements_budget(name: "Props #{plan.inspect}", initial_budget: plan)
+        spend(budget, 50, Status::PAID)
 
-      assert SpendSummary.for_budget(budget).no_budget_set?
+        summary = SpendSummary.for_budget(budget)
+
+        assert summary.no_budget_set?, "plan #{plan.inspect}"
+        assert_nil summary.left, "plan #{plan.inspect}"
+        assert_not summary.over?, "plan #{plan.inspect}"
+        assert_not summary.bar?, "plan #{plan.inspect}"
+      end
     end
 
     test "an area with an agreed total compares against it" do
@@ -90,16 +78,18 @@ module Reimbursements
       assert_nil summary.unallocated
     end
 
-    test "an area with a zero total and unbudgeted lines has no budget at all" do
-      area = create_reimbursements_area(name: "Last years business", initial_budget: 0)
-      line = create_reimbursements_budget(name: "Last years business", area: area)
-      spend(line, 3_273.20, Status::PAID)
+    test "an area with no total or a zero total, and unbudgeted lines, has no budget but still totals spend" do
+      [ nil, 0 ].each do |total|
+        area = create_reimbursements_area(name: "Tech #{total.inspect}", initial_budget: total)
+        line = create_reimbursements_budget(name: "Tech #{total.inspect}", area: area)
+        spend(line, 3_273.20, Status::PAID)
 
-      summary = SpendSummary.for_area(area.reload)
+        summary = SpendSummary.for_area(area.reload)
 
-      assert summary.no_budget_set?
-      assert_nil summary.left
-      assert_equal 3_273.20, summary.spent
+        assert summary.no_budget_set?, "total #{total.inspect}"
+        assert_nil summary.left, "total #{total.inspect}"
+        assert_equal 3_273.20, summary.spent, "total #{total.inspect}"
+      end
     end
 
     test "an area with no lines at all still reports its agreed total" do
@@ -142,17 +132,6 @@ module Reimbursements
       area.reload
       assert_equal area.unallocated, SpendSummary.for_area(area).unallocated
       assert_equal 1_400, SpendSummary.for_area(area).unallocated
-    end
-
-    test "an area whose lines are all unbudgeted still totals their spend" do
-      area = create_reimbursements_area(name: "Tech")
-      line = create_reimbursements_budget(name: "Tech", area: area)
-      spend(line, 2_526.13, Status::PAID)
-
-      summary = SpendSummary.for_area(area.reload)
-
-      assert summary.no_budget_set?
-      assert_equal 2_526.13, summary.spent
     end
 
     test "the bar scales to the overspend so it fills rather than overflows" do

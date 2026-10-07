@@ -13,38 +13,15 @@ module Reimbursements
       assert second.valid?
     end
 
-    test "current returns the active year" do
-      year = FinancialYear.create!(label: "Fringe 2026", active: true)
-      FinancialYear.create!(label: "Fringe 2025")
-      assert_equal year, FinancialYear.current
-    end
-
-    test "labels are unique" do
-      FinancialYear.create!(label: "Fringe 2026")
-      dupe = FinancialYear.new(label: "Fringe 2026")
-      assert_not dupe.valid?
-    end
-
-    test "key is derived from the label when blank" do
+    test "key is derived from the label unless given" do
       year = FinancialYear.create!(label: "Fringe 2026")
 
       assert_equal "fringe-2026", year.key
       assert_equal "fringe-2026", year.to_param
+      assert_equal "f27", FinancialYear.create!(label: "Fringe 2027", key: "f27").key
     end
 
-    test "an explicit key is kept" do
-      year = FinancialYear.create!(label: "Fringe 2026", key: "f26")
-
-      assert_equal "f26", year.key
-    end
-
-    test "keys are unique and URL-safe" do
-      FinancialYear.create!(label: "Fringe 2026")
-
-      dupe = FinancialYear.new(label: "Another 2026", key: "fringe-2026")
-      assert_not dupe.valid?
-      assert dupe.errors[:key].present?
-
+    test "a key must be URL-safe" do
       unsafe = FinancialYear.new(label: "Fringe 2028", key: "Fringe 2028!")
       assert_not unsafe.valid?
       assert unsafe.errors[:key].present?

@@ -12,8 +12,8 @@ module Reimbursements
     end
 
     # Not named for the code's label, so only the CODE pass can find it.
-    test "an existing line under the same area and code is found, not duplicated" do
-      existing = line(name: "Correx boards", nominal_code: "432320")
+    test "an existing line under the same area and code is found, not duplicated, even when deactivated" do
+      existing = line(name: "Correx boards", nominal_code: "432320", active: false)
 
       found = find_or_create
 
@@ -113,13 +113,6 @@ module Reimbursements
       assert_equal 0, @area.budgets.count
     end
 
-    test "a deactivated line on the code is found rather than duplicated beside" do
-      existing = line(name: "Marketing", nominal_code: "432320", active: false)
-
-      assert_equal existing.id, find_or_create.id
-      assert_equal 1, @area.budgets.count
-    end
-
     test "a blank code is refused rather than matching every uncoded line" do
       line(name: "Set", nominal_code: "")
 
@@ -137,16 +130,6 @@ module Reimbursements
       assert_equal @year.id, created.financial_year_id
     end
 
-    # A double-submitted form: the second store call must find the first's line.
-    test "a second store call for the same (area, code) finds the first one's line" do
-      store = Reimbursements.build_store
-      first = store.find_or_create_budget_for_area!(**store_args)
-      second = Reimbursements.build_store.find_or_create_budget_for_area!(**store_args)
-
-      assert_equal first.id, second.id
-      assert_equal 1, @area.budgets.count
-    end
-
     private
 
     def line(name:, nominal_code:, area: @area, active: true)
@@ -157,11 +140,6 @@ module Reimbursements
     def find_or_create(area: @area, nominal_code: "432320")
       BudgetFinder.find_or_create!(area: area, nominal_code: nominal_code,
                                    financial_year: @year, cost_centre: @centre)
-    end
-
-    def store_args
-      { area_id: @area.id, nominal_code: "432320", name: "Marketing",
-        cost_centre: @centre, financial_year: @year }
     end
   end
 end

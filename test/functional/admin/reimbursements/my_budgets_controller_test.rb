@@ -6,9 +6,7 @@ module Admin
       include ReimbursementsTestHelpers
 
       setup do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-        users(:member).add_role("Producer")
+        grant_producer_permission(users(:member))
         @user = users(:member)
 
         @owner = create_reimbursements_person(email: @user.email, name: "Olive Owner")

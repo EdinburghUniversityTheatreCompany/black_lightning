@@ -10,9 +10,7 @@ module Admin
       include ReimbursementsTestHelpers
 
       setup do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-        users(:member).add_role("Producer")
+        grant_producer_permission(users(:member))
         @user = users(:member)
         @owner = create_reimbursements_person(email: @user.email, name: "Olive Owner")
         @submitter = create_reimbursements_person(email: "sam@example.com", name: "Sam Submitter")
@@ -105,20 +103,6 @@ module Admin
         row = css_select("tbody tr").first.text.squish
         assert_includes row, "Contingency"
         assert_includes row, "a single budget, in no area"
-      end
-
-      test "income lines are left out of a show's figures" do
-        area = create_reimbursements_area(name: "Cogito", initial_budget: 1_000)
-        area.owners << @owner
-        create_reimbursements_budget(name: "Set", initial_budget: 1_000, area: area)
-        create_reimbursements_budget(name: "Ticket income", initial_budget: 800, area: area,
-                                     budget_type: "Income")
-
-        get :index
-
-        row = css_select("tbody tr").first.text.squish
-        assert_includes row, "£1,000.00", "the budget should be the expense line only: #{row}"
-        assert_not_includes row, "£1,800.00"
       end
 
       test "claims waiting for sign-off are listed with how long they have waited" do

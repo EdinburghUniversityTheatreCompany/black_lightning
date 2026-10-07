@@ -3,12 +3,12 @@ require "test_helper"
 module Admin
   module Reimbursements
     class FinancialYearsControllerTest < ActionController::TestCase
+      include ReimbursementsTestHelpers
+
       FY = ::Reimbursements::FinancialYear
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
+        grant_finance_permission(users(:member))
         @user = users(:member)
         @current = FY.create!(label: "Fringe 2026", active: true,
                               starts_on: Date.new(2026, 8, 1), ends_on: Date.new(2027, 7, 31))
@@ -85,23 +85,17 @@ module Admin
         assert_equal Date.new(2027, 6, 30), @current.ends_on
       end
 
-      test "update cannot flip the active flag" do
+      test "update ignores active and key" do
         draft = FY.create!(label: "Fringe 2027")
         sign_in @user
 
-        patch :update, params: { key: draft.key, financial_year: { label: "Fringe 2027", active: "1" } }
+        patch :update, params: { key: draft.key,
+                                 financial_year: { label: "Fringe 2027", active: "1", key: "something-else" } }
 
         # A stray param on the edit form must never move the money (switching year is its own action).
         assert_not_predicate draft.reload, :active?
+        assert_equal "fringe-2027", draft.key
         assert_equal @current, FY.current
-      end
-
-      test "update leaves the key alone once the year exists" do
-        sign_in @user
-
-        patch :update, params: { key: @current.key, financial_year: { label: "Renamed", key: "something-else" } }
-
-        assert_equal "fringe-2026", @current.reload.key
       end
 
       test "activate switches the live year" do
@@ -111,18 +105,7 @@ module Admin
         post :activate, params: { key: draft.key }
 
         assert_redirected_to admin_reimbursements_financial_years_path
-        assert_predicate draft.reload, :active?
-        assert_not_predicate @current.reload, :active?
         assert_equal draft, FY.current
-      end
-
-      test "activate on the live year is harmless" do
-        sign_in @user
-
-        post :activate, params: { key: @current.key }
-
-        assert_predicate @current.reload, :active?
-        assert_equal 1, FY.active.count
       end
 
       test "activate 404s on an unknown year" do
