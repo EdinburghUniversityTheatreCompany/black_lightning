@@ -3,18 +3,9 @@ import "../controllers"
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";
+import { confirmDialog } from "../lib/confirm"
 
-Turbo.config.forms.confirm = (message) => {
-  return window.Swal.fire({
-    icon: "warning",
-    html: message,
-    title: "Are you sure?",
-    showCancelButton: true,
-    confirmButtonText: "Yes",
-    cancelButtonText: "Cancel",
-    buttonsStyling: true,
-  }).then(result => result.isConfirmed)
-}
+Turbo.config.forms.confirm = confirmDialog
 
 Turbo.StreamActions.toast = function () {
   window.Toast.fire({ icon: this.getAttribute("type"), html: this.getAttribute("message") })
