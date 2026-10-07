@@ -1,33 +1,25 @@
-# Seed helpers, permission grants and the outdoor-weather fake for the climate
-# tests. External services are faked through the +http:+ or builder seams.
+# Seed helpers and permission grants for the climate tests.
 module ClimateTestHelpers
   include HoneybadgerTestHelpers
 
-  def create_climate_sensor(display_name: "Crypt, north wall", source: Climate::Sensor::SOURCE_GOVEE,
-                            placement: Climate::Sensor::PLACEMENT_INDOOR,
-                            active: true, location: nil, position: 0,
-                            latitude: nil, longitude: nil, in_crypt: false)
-    Climate::Sensor.create!(
-      display_name: display_name, source: source, placement: placement,
-      active: active, location: location, position: position,
-      latitude: latitude, longitude: longitude, in_crypt: in_crypt
-    )
+  # An indoor Govee sensor: source and placement take the column defaults.
+  def create_climate_sensor(display_name: "Crypt, north wall", active: true, location: nil,
+                            position: 0, in_crypt: false)
+    Climate::Sensor.create!(display_name: display_name, active: active, location: location,
+                            position: position, in_crypt: in_crypt)
   end
 
   def outdoor_climate_sensor = Climate::Sensor.outdoor_source!
 
   def create_climate_reading(sensor:, recorded_at: Time.current, temperature_c: 12.0,
-                             relative_humidity: 78.0, dew_point_c: nil,
-                             raw_temperature: nil, raw_temperature_unit: "C")
+                             relative_humidity: 78.0, dew_point_c: nil)
     dew_point_c ||= Climate::DewPoint.celsius(temperature_c: temperature_c,
                                               relative_humidity: relative_humidity)
 
     Climate::Reading.create!(
       sensor: sensor, recorded_at: recorded_at,
       temperature_c: temperature_c, relative_humidity: relative_humidity,
-      dew_point_c: dew_point_c,
-      raw_temperature: raw_temperature || temperature_c,
-      raw_temperature_unit: raw_temperature_unit
+      dew_point_c: dew_point_c, raw_temperature: temperature_c, raw_temperature_unit: "C"
     )
   end
 
@@ -47,22 +39,5 @@ module ClimateTestHelpers
     end
     user.add_role("Climate Manager")
     role
-  end
-
-  # Stands in for Climate::OpenMeteoClient.
-  class FakeOutdoorSource
-    attr_reader :calls
-
-    def initialize(rows: [])
-      @rows = rows
-      @calls = []
-    end
-
-    def hourly_series(latitude:, longitude:, **options)
-      @calls << { latitude: latitude, longitude: longitude, **options }
-      raise @rows if @rows.is_a?(Exception)
-
-      @rows
-    end
   end
 end

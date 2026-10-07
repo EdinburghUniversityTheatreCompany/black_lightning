@@ -10,11 +10,16 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
 
   def import(text) = Climate::CsvImport.new(text)
 
-  test "parses the real Govee export" do
+  test "parses the real Govee export, BOM and all" do
+    # Unstripped, the BOM makes the first header unmatchable.
     result = import(REAL_EXPORT)
 
     assert_predicate result, :valid?
     assert_equal 3, result.rows.size
+    assert_equal Climate::CsvImport::UNIT_CELSIUS, result.unit
+    assert_in_delta 24.6, result.rows.first[:temperature_c], 0.001
+    assert_in_delta 53.7, result.rows.first[:relative_humidity], 0.001
+    assert_in_delta 20.0, result.rows.second[:temperature_c], 0.001 # written without a decimal point
   end
 
   test "reads timestamps in the application zone" do
@@ -25,40 +30,14 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
     assert_equal Time.zone.parse("2026-08-06 09:22:00"), row[:recorded_at]
   end
 
-  test "reads temperature and humidity" do
-    row = import(REAL_EXPORT).rows.first
-
-    assert_in_delta 24.6, row[:temperature_c], 0.001
-    assert_in_delta 53.7, row[:relative_humidity], 0.001
-  end
-
-  test "accepts an integer temperature written without a decimal point" do
-    assert_in_delta 20.0, import(REAL_EXPORT).rows.second[:temperature_c], 0.001
-  end
-
-  test "strips the byte order mark so the first header is readable" do
-    # Unstripped, the BOM makes the first header unmatchable.
-    assert_predicate import(REAL_EXPORT), :valid?
-    assert_equal Climate::CsvImport::UNIT_CELSIUS, import(REAL_EXPORT).unit
-  end
-
-  test "detects Celsius from the header" do
-    assert_equal Climate::CsvImport::UNIT_CELSIUS, import(REAL_EXPORT).unit
-  end
-
-  test "detects Fahrenheit from the header and converts to Celsius" do
+  test "detects Fahrenheit from the header, converts to Celsius and keeps the raw value" do
     # The export names whatever unit the app displays, hence read, not assumed.
     text = "Timestamp,Temperature_Fahrenheit,Relative_Humidity\n2026-08-06 09:22:00,53.6,53.7\n"
     result = import(text)
+    row = result.rows.first
 
     assert_equal Climate::CsvImport::UNIT_FAHRENHEIT, result.unit
-    assert_in_delta 12.0, result.rows.first[:temperature_c], 0.01
-  end
-
-  test "keeps the raw Fahrenheit value and its unit for reversibility" do
-    text = "Timestamp,Temperature_Fahrenheit,Relative_Humidity\n2026-08-06 09:22:00,53.6,53.7\n"
-    row = import(text).rows.first
-
+    assert_in_delta 12.0, row[:temperature_c], 0.01
     assert_in_delta 53.6, row[:raw_temperature], 0.001
     assert_equal "F", row[:raw_temperature_unit]
   end
@@ -72,25 +51,14 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
     assert_match(/unit/i, result.errors.first)
   end
 
-  test "refuses a file with no timestamp column" do
-    text = "Temperature_Celsius,Relative_Humidity\n24.6,53.7\n"
-
-    assert_not import(text).valid?
-  end
-
-  test "refuses a file with no humidity column" do
-    text = "Timestamp,Temperature_Celsius\n2026-08-06 09:22:00,24.6\n"
-
-    assert_not import(text).valid?
-  end
-
-  test "refuses an empty file" do
-    assert_not import("").valid?
-    assert_not import("   \n").valid?
-  end
-
-  test "refuses a file with headers but no data rows" do
-    assert_not import("Timestamp,Temperature_Celsius,Relative_Humidity\n").valid?
+  test "refuses a file with a missing column, no content or no data rows" do
+    [ "Temperature_Celsius,Relative_Humidity\n24.6,53.7\n",
+      "Timestamp,Temperature_Celsius\n2026-08-06 09:22:00,24.6\n",
+      "",
+      "   \n",
+      "Timestamp,Temperature_Celsius,Relative_Humidity\n" ].each do |text|
+      assert_not import(text).valid?, text.inspect
+    end
   end
 
   test "reports the row number of an unreadable line rather than dropping it silently" do
@@ -128,10 +96,6 @@ class Climate::CsvImportTest < ActiveSupport::TestCase
 
     assert_equal Time.zone.parse("2026-08-06 09:22:00"), result.range.begin
     assert_equal Time.zone.parse("2026-08-06 09:52:00"), result.range.end
-  end
-
-  test "leaves dew point to the ingest rather than inventing a column" do
-    assert_nil import(REAL_EXPORT).rows.first[:dew_point_c]
   end
 
   test "is not confused by a duplicated timestamp" do

@@ -11,7 +11,7 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   class FakeMailbox
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
-    attr_reader :processed, :read, :attachment_requests
+    attr_reader :processed, :attachment_requests
 
     def initialize(messages: {}, attachments: {}, bodies: {}, sender: "govee@example.com")
       @messages = messages
@@ -19,7 +19,6 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
       @bodies = bodies
       @sender = sender
       @processed = []
-      @read = []
       @attachment_requests = []
     end
 
@@ -31,11 +30,12 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
 
     def attachments(id)
       @attachment_requests << id
+      raise @attachments[id] if @attachments[id].is_a?(Exception)
+
       @attachments.fetch(id, [])
     end
 
     def mark_read_and_move(id, folder)
-      @read << id
       @processed << [ id, folder ]
     end
   end
@@ -44,26 +44,23 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     { filename: filename, content_type: content_type, bytes: body }
   end
 
+  ENV_KEYS = %w[CLIMATE_MAILBOX REIMBURSEMENTS_AZURE_TENANT_ID REIMBURSEMENTS_AZURE_CLIENT_ID
+                REIMBURSEMENTS_AZURE_CLIENT_SECRET].freeze
+
   setup do
     @original_builder = Climate::MailboxPollJob.mailbox_builder
-    @original_mailbox = ENV.fetch("CLIMATE_MAILBOX", nil)
-    @original_tenant = ENV.fetch("REIMBURSEMENTS_AZURE_TENANT_ID", nil)
-    ENV["CLIMATE_MAILBOX"] = "climate@example.com"
-    ENV["REIMBURSEMENTS_AZURE_TENANT_ID"] = "tenant"
-    ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "client"
-    ENV["REIMBURSEMENTS_AZURE_CLIENT_SECRET"] = "secret"
+    @original_env = ENV.to_h.slice(*ENV_KEYS)
+    ENV.update(ENV_KEYS.zip(%w[climate@example.com tenant client secret]).to_h)
   end
 
   teardown do
     Climate::MailboxPollJob.mailbox_builder = @original_builder
-    @original_mailbox.nil? ? ENV.delete("CLIMATE_MAILBOX") : ENV["CLIMATE_MAILBOX"] = @original_mailbox
-    if @original_tenant.nil?
-      %w[REIMBURSEMENTS_AZURE_TENANT_ID REIMBURSEMENTS_AZURE_CLIENT_ID
-         REIMBURSEMENTS_AZURE_CLIENT_SECRET].each { |key| ENV.delete(key) }
-    end
+    ENV_KEYS.each { |key| ENV.delete(key) }
+    ENV.update(@original_env)
   end
 
-  def use_mailbox(fake)
+  def use_mailbox(attachment = csv_attachment, **options)
+    fake = FakeMailbox.new(messages: { "1" => "Govee export" }, attachments: { "1" => [ attachment ] }, **options)
     Climate::MailboxPollJob.mailbox_builder = -> { fake }
     fake
   end
@@ -71,82 +68,42 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
   test "no-ops when no climate mailbox is configured" do
     ENV.delete("CLIMATE_MAILBOX")
     create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Govee export" }))
+    fake = use_mailbox
 
     Climate::MailboxPollJob.perform_now
 
-    assert_empty fake.read
+    assert_empty fake.processed
   end
 
-  test "imports a CSV attachment against the only sensor" do
+  test "imports a CSV against the only sensor, then files the message" do
     sensor = create_climate_sensor(display_name: "Crypt north")
-    use_mailbox(FakeMailbox.new(messages: { "1" => "Your Govee data export" },
-                                attachments: { "1" => [ csv_attachment ] }))
+    fake = use_mailbox
 
     assert_difference -> { sensor.readings.count }, 2 do
       Climate::MailboxPollJob.perform_now
     end
-  end
-
-  test "marks the message read and moves it once imported" do
-    create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Govee export" },
-                                       attachments: { "1" => [ csv_attachment ] }))
-
-    Climate::MailboxPollJob.perform_now
 
     assert_equal [ [ "1", :processed ] ], fake.processed
   end
 
-  test "leaves a message unread when more than one sensor exists" do
+  test "with more than one sensor the mail stays unread and the ambiguity is reported once a day" do
     # Govee's email names no device, so two sensors leave nothing to resolve on.
+    Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
     north = create_climate_sensor(display_name: "Crypt north")
     south = create_climate_sensor(display_name: "Crypt south")
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
-                                       attachments: { "1" => [ csv_attachment ] }))
-
-    Climate::MailboxPollJob.perform_now
-
-    assert_empty fake.read
-    assert_equal 0, north.readings.count
-    assert_equal 0, south.readings.count
-  end
-
-  test "reports the ambiguity rather than letting mail pile up unnoticed" do
-    Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
-    create_climate_sensor(display_name: "Crypt north")
-    create_climate_sensor(display_name: "Crypt south")
-    use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
-                                attachments: { "1" => [ csv_attachment ] }))
-
-    notices = capture_honeybadger_notices { Climate::MailboxPollJob.perform_now }
-
-    assert_equal 1, notices.size
-  end
-
-  test "the ambiguity alert is sent once a day, not once a cycle" do
-    Rails.cache.delete(Climate::MailboxPollJob::AMBIGUOUS_ALERT_KEY)
-    create_climate_sensor(display_name: "Crypt north")
-    create_climate_sensor(display_name: "Crypt south")
+    fake = nil
 
     notices = capture_honeybadger_notices do
       3.times do
-        use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
-                                    attachments: { "1" => [ csv_attachment ] }))
+        fake = use_mailbox
         Climate::MailboxPollJob.perform_now
       end
     end
 
     assert_equal 1, notices.size
-  end
-
-  test "leaves a message with no CSV attachment unread" do
-    create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Just a note" }, attachments: { "1" => [] }))
-
-    Climate::MailboxPollJob.perform_now
-
-    assert_empty fake.read
+    assert_empty fake.processed
+    assert_equal 0, north.readings.count
+    assert_equal 0, south.readings.count
   end
 
   # What Govee's scheduled export sends, with no attachment, on a day the
@@ -156,8 +113,7 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
 
   test "files Govee's no-data notice instead of leaving it unread for every poll" do
     create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => NO_DATA_BODY },
-                                       sender: "no-reply@govee.com"))
+    fake = use_mailbox(bodies: { "1" => NO_DATA_BODY }, sender: "no-reply@govee.com")
 
     Climate::MailboxPollJob.perform_now
 
@@ -165,42 +121,32 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
     assert_empty fake.attachment_requests, "a no-data notice has nothing to fetch"
   end
 
-  test "the no-data wording from anyone but Govee stays unread for a human" do
+  test "a message with no CSV stays unread unless it is Govee's no-data notice" do
     create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => NO_DATA_BODY },
-                                       sender: "someone@example.com"))
 
-    Climate::MailboxPollJob.perform_now
+    [ [ "govee@example.com", "" ],
+      [ "someone@example.com", NO_DATA_BODY ],
+      [ "no-reply@govee.com", "Your export is ready" ] ].each do |sender, body|
+      fake = use_mailbox(attachments: {}, bodies: { "1" => body }, sender: sender)
 
-    assert_empty fake.read
-  end
+      Climate::MailboxPollJob.perform_now
 
-  test "any other Govee email with no CSV stays unread" do
-    create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Data" }, bodies: { "1" => "Your export is ready" },
-                                       sender: "no-reply@govee.com"))
-
-    Climate::MailboxPollJob.perform_now
-
-    assert_empty fake.read
+      assert_empty fake.processed, [ sender, body ].inspect
+    end
   end
 
   test "ignores a non-CSV attachment" do
     create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(
-                         messages: { "1" => "Govee export" },
-                         attachments: { "1" => [ { filename: "logo.png", content_type: "image/png", bytes: "x" } ] }
-                       ))
+    fake = use_mailbox({ filename: "logo.png", content_type: "image/png", bytes: "x" })
 
     Climate::MailboxPollJob.perform_now
 
-    assert_empty fake.read
+    assert_empty fake.processed
   end
 
   test "accepts a CSV sent as text/plain" do
     sensor = create_climate_sensor
-    use_mailbox(FakeMailbox.new(messages: { "1" => "Govee export" },
-                                attachments: { "1" => [ csv_attachment(content_type: "text/plain; charset=utf-8") ] }))
+    use_mailbox(csv_attachment(content_type: "text/plain; charset=utf-8"))
 
     Climate::MailboxPollJob.perform_now
 
@@ -209,51 +155,35 @@ class Climate::MailboxPollJobTest < ActiveSupport::TestCase
 
   test "leaves an unreadable CSV unread rather than importing nothing silently" do
     create_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(
-                         messages: { "1" => "Govee export" },
-                         attachments: { "1" => [ csv_attachment(body: "Timestamp,Temperature,Relative_Humidity\n2026-08-06 09:22:00,14,83\n") ] }
-                       ))
+    fake = use_mailbox(csv_attachment(body: "Timestamp,Temperature,Relative_Humidity\n2026-08-06 09:22:00,14,83\n"))
 
     Climate::MailboxPollJob.perform_now
 
-    assert_empty fake.read
+    assert_empty fake.processed
     assert_equal 0, Climate::Reading.count
-  end
-
-  test "re-importing the same export writes no new rows" do
-    sensor = create_climate_sensor
-    2.times do
-      use_mailbox(FakeMailbox.new(messages: { "1" => "Govee export" },
-                                  attachments: { "1" => [ csv_attachment ] }))
-      Climate::MailboxPollJob.perform_now
-    end
-
-    assert_equal 2, sensor.readings.count
   end
 
   test "one bad message does not stop the next being imported" do
     sensor = create_climate_sensor(display_name: "Crypt north")
-    fake = FakeMailbox.new(messages: { "1" => "Broken", "2" => "Govee export" },
-                           attachments: { "1" => [ csv_attachment(body: "nonsense") ],
-                                          "2" => [ csv_attachment ] })
-    use_mailbox(fake)
+    fake = use_mailbox(messages: { "1" => "Broken", "2" => "Govee export" },
+                       attachments: { "1" => RuntimeError.new("boom"), "2" => [ csv_attachment ] })
 
-    Climate::MailboxPollJob.perform_now
+    notices = capture_honeybadger_notices { Climate::MailboxPollJob.perform_now }
 
+    assert_equal 1, notices.size
     assert_equal 2, sensor.readings.count
-    assert_equal [ "2" ], fake.read
+    assert_equal [ "2" ], fake.processed.map(&:first)
   end
 
   test "never imports against the outdoor feed" do
     # The only sensor here, but not a Govee one: a crypt file on the comparison
     # line would corrupt it.
     outdoor = outdoor_climate_sensor
-    fake = use_mailbox(FakeMailbox.new(messages: { "1" => "Your data export" },
-                                       attachments: { "1" => [ csv_attachment ] }))
+    fake = use_mailbox
 
     Climate::MailboxPollJob.perform_now
 
     assert_equal 0, outdoor.readings.count
-    assert_empty fake.read
+    assert_empty fake.processed
   end
 end

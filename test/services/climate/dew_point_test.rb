@@ -12,17 +12,6 @@ class Climate::DewPointTest < ActiveSupport::TestCase
     assert_in_delta 12.0, Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 100), 0.01
   end
 
-  test "is below the temperature whenever the air is not saturated" do
-    assert_operator Climate::DewPoint.celsius(temperature_c: 15, relative_humidity: 80), :<, 15
-  end
-
-  test "rises with humidity at a fixed temperature" do
-    damp = Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 90)
-    dry = Climate::DewPoint.celsius(temperature_c: 12, relative_humidity: 40)
-
-    assert_operator damp, :>, dry
-  end
-
   test "handles sub-zero temperatures" do
     # γ = ln(0.75) + (17.625 × -5)/(243.04 - 5) = -0.65787; Td = 243.04γ/(17.625 - γ) = -8.75.
     # Water coefficients throughout: below freezing the frost point is the

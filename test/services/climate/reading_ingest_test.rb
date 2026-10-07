@@ -19,18 +19,19 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
     assert_in_delta 17.0, sensor.readings.chronological.first.temperature_c.to_f, 0.001
   end
 
-  test "re-upserting an overlapping window leaves the row count unchanged" do
-    # The self-healing property: the hourly poll re-sends the last two days.
+  test "computes the dew point when a row has none" do
     sensor = outdoor_climate_sensor
-    Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows)
 
-    assert_no_difference -> { Climate::Reading.count } do
-      Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows)
-    end
+    Climate::ReadingIngest.upsert_series!(sensor: sensor,
+                                          rows: outdoor_rows(count: 1).map { |row| row.except(:dew_point_c) })
+
+    assert_in_delta Climate::DewPoint.celsius(temperature_c: 17.0, relative_humidity: 70.0),
+                    sensor.readings.sole.dew_point_c.to_f, 0.01
   end
 
   test "re-upserting refreshes a corrected value" do
-    # Open-Meteo revises recent hours, so the second pass must overwrite.
+    # The hourly poll re-sends the last two days and Open-Meteo revises recent
+    # hours, so the second pass must overwrite rather than add a row.
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows(count: 1))
     Climate::ReadingIngest.upsert_series!(sensor: sensor,
@@ -40,6 +41,8 @@ class Climate::ReadingIngestTest < ActiveSupport::TestCase
   end
 
   test "a re-run after a gap backfills the missing hours" do
+    # Why Open-Meteo was chosen: past_days re-serves recent history, so the next
+    # poll repairs whatever an outage lost.
     sensor = outdoor_climate_sensor
     Climate::ReadingIngest.upsert_series!(sensor: sensor, rows: outdoor_rows(count: 5))
     sensor.readings.chronological.to_a[1..2].each(&:destroy)

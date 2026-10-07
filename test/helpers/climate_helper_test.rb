@@ -32,8 +32,9 @@ class ClimateHelperTest < ActionView::TestCase
   end
 
   test "does not mention a spell when there was not one" do
-    sentence = climate_risk_sentence(summary(hours_with_readings: 10, hours_at_risk: 0))
+    sentence = climate_risk_sentence(summary(hours_with_readings: 10, hours_at_risk: 3))
 
+    assert_match(/3 of the 10 hours/, sentence)
     assert_no_match(/spell/, sentence)
   end
 end

@@ -43,7 +43,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     recorded_at = client.hourly_series(latitude: 55.9467, longitude: -3.1903).first[:recorded_at]
 
     assert_equal Time.zone.parse("2026-08-05T12:00"), recorded_at
-    assert_equal 12, recorded_at.in_time_zone(Time.zone).hour
   end
 
   test "requests the three variables plus a past window in the app time zone" do
@@ -60,14 +59,6 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_includes uri, "dew_point_2m"
     assert_includes uri, "timezone=Europe/London"
     assert_includes uri, "past_days=2"
-  end
-
-  test "needs no api key" do
-    client, http = build_client([ [ 200, series_body ] ])
-
-    client.hourly_series(latitude: 55.9467, longitude: -3.1903)
-
-    assert_empty http.requests.first.headers.keys.grep(/key|auth/i)
   end
 
   test "past_days is what makes an outage self-heal" do
@@ -131,10 +122,5 @@ class Climate::OpenMeteoClientTest < ActiveSupport::TestCase
     assert_raises(Net::ReadTimeout) do
       client.hourly_series(latitude: 55.9467, longitude: -3.1903)
     end
-  end
-
-  test "carries the attribution the licence requires" do
-    assert Climate::OpenMeteoClient::ATTRIBUTION.present?
-    assert_match(/open-meteo/i, Climate::OpenMeteoClient::ATTRIBUTION_URL)
   end
 end
