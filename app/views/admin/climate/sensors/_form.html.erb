@@ -14,9 +14,11 @@
     <%= f.input :location, label: "Location",
                 hint: "Where in the building it sits, e.g. \"Crypt, north wall\"." %>
     <%= f.input :position, label: "Order", hint: "Lower numbers appear first on the dashboard." %>
-    <%= f.input :active, as: :boolean, label: "Active",
+    <%= f.input :active, as: :boolean, label: "Active", wrapper_html: { class: ("mb-0" if @sensor.outdoor?) },
                 hint: "Inactive sensors keep their readings but are left off the dashboard." %>
-    <%= f.input :in_crypt, as: :boolean, label: "In the crypt", wrapper_html: { class: "mb-0" },
-                hint: "Include this sensor in the condensation-risk and ventilation charts." %>
+    <% unless @sensor.outdoor? %>
+      <%= f.input :in_crypt, as: :boolean, label: "In the crypt", wrapper_html: { class: "mb-0" },
+                  hint: "Include this sensor in the condensation-risk and ventilation charts." %>
+    <% end %>
   <% end %>
 <% end %>

@@ -105,6 +105,19 @@ module Admin
 
         assert_match(/cannot be deleted/i, flash[:alert])
       end
+
+      test "only a Govee sensor's edit form offers the In the crypt box" do
+        # Ticking it on the outdoor row always fails validation.
+        get :edit, params: { id: create_climate_sensor.id }
+
+        assert_select "input[type=checkbox][name='climate_sensor[in_crypt]']", 1
+
+        get :edit, params: { id: outdoor_climate_sensor.id }
+
+        assert_response :success
+        assert_select "input[type=checkbox][name='climate_sensor[active]']", 1
+        assert_select "input[name='climate_sensor[in_crypt]']", 0
+      end
     end
   end
 end
