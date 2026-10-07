@@ -66,16 +66,7 @@ module LabelHelper
         user_labels_for(user, nil, :always, true)
     end
 
-    BADGE_CLASS_MAP = {
-      "bg-primary"   => "bg-primary text-white",
-      "bg-success"   => "bg-success/15 text-success",
-      "bg-danger"    => "bg-danger/15 text-danger",
-      "bg-warning"   => "bg-warning/15 text-warning",
-      "bg-info"      => "bg-info/15 text-info",
-      "bg-secondary" => "bg-gray-100 text-gray-700",
-      "bg-dark"      => "bg-gray-700 text-white",
-      "bg-light"     => "bg-gray-100 text-gray-800"
-    }.freeze
+    BADGE_CLASS_MAP = BadgeComponent::STYLES.transform_keys { |type| "bg-#{type}" }.freeze
 
     def generate_label(label_class, message, pull_right = false, rounded = false)
         label_class = label_class&.to_s
