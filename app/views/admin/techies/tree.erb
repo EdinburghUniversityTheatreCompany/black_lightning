@@ -19,7 +19,7 @@
       <% end %>
     <% end %>
   <% end %>
-  <div class="position-relative"
+  <div class="relative"
        data-controller="techie-graph"
        data-techie-graph-nodes-value="<%= @graph_data[:nodes].to_json %>"
        data-techie-graph-edges-value="<%= @graph_data[:edges].to_json %>"
@@ -27,7 +27,7 @@
        data-techie-graph-cache-version-value="<%= @cache_version %>">
     <div data-techie-graph-target="canvas" style="height: calc(100vh - 260px);"></div>
     <div data-techie-graph-target="legend"
-         class="px-3 py-2 border-top flex flex-wrap gap-3"
+         class="px-3 py-2 border-t border-gray-200 flex flex-wrap gap-3"
          style="font-size: 11px;"></div>
   </div>
 <% end %>
