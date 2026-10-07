@@ -1,4 +1,4 @@
-<%# locals: (receipts:, key:, label:, group: nil, empty_message: "No receipts attached.", remove_url: nil) %>
+<%# locals: (expense:, key: expense.record_id, empty_message: "No receipts attached.", remove_url: nil) %>
 <%#
   The one in-page receipt viewer, for every screen that shows a receipt: a strip
   of thumbnail buttons plus one large pane opened on demand.
@@ -17,10 +17,12 @@
   starts hidden carries a display utility: an author `display:` outranks the UA's
   `[hidden] { display: none }` and leaves it on screen.
 
-  key must be unique per page (it namespaces DOM ids); label names the claim in
-  accessible names.
+  key must be unique per page (it namespaces DOM ids and the Fancybox group); the
+  expense names the claim in accessible names.
 %>
-<% group ||= "receipts-#{key}" %>
+<% receipts = expense.receipts %>
+<% label = "expense ##{expense.auto_number}" %>
+<% group = "receipts-#{key}" %>
 <% pane_id = "receipt-pane-#{key}" %>
 <div data-controller="fancybox receipt-viewer">
   <% if receipts.empty? %>

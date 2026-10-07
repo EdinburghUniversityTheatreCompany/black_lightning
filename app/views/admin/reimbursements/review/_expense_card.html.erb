@@ -319,9 +319,7 @@
     <p class="text-sm font-medium">Receipts</p>
     <div class="mt-1">
       <%= render "admin/reimbursements/shared/receipt_viewer",
-                 receipts: expense.receipts, key: expense.record_id,
-                 label: "expense ##{expense.auto_number}",
-                 group: "receipts-#{expense.record_id}" %>
+                 expense: expense %>
     </div>
     <% if has_receipts %>
       <ul class="mt-2 flex flex-col gap-1">

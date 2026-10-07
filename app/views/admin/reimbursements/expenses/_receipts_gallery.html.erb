@@ -18,9 +18,7 @@
   <% end %>
 
   <%= render "admin/reimbursements/shared/receipt_viewer",
-             receipts: expense.receipts,
-             key: expense.record_id,
-             label: "expense ##{expense.auto_number}",
+             expense: expense,
              empty_message: "No receipts attached#{draft_note}",
              remove_url: remove_url %>
 </div>
