@@ -5,62 +5,29 @@ import { Controller } from "@hotwired/stimulus"
 // until touched; nojsvalidation inputs and search forms are skipped.
 export default class extends Controller {
   connect() {
-    this.#markServerErrors()
-    this.#validateExistingInputs()
+    this.element.querySelectorAll("input").forEach((input) => {
+      if (!this.#shouldSkip(input) && !input.classList.contains("is-invalid")) this.#validate(input)
+    })
 
-    this.boundDelegatedInput = this.#handleDelegatedInput.bind(this)
-    this.element.addEventListener("input", this.boundDelegatedInput, true)
+    this.element.addEventListener("input", this.#onInput, true)
   }
 
   disconnect() {
-    if (this.boundDelegatedInput) {
-      this.element.removeEventListener("input", this.boundDelegatedInput, true)
-    }
+    this.element.removeEventListener("input", this.#onInput, true)
   }
 
-  #handleDelegatedInput(event) {
+  #onInput = (event) => {
     const input = event.target
-    if (!(input instanceof HTMLInputElement)) return
-    if (this.#shouldSkip(input)) return
-
-    this.#validate(input)
-  }
-
-  #markServerErrors() {
-    this.element.querySelectorAll("input.is-invalid").forEach((input) => {
-      input.setAttribute("data-server-error", "true")
-    })
-  }
-
-  #validateExistingInputs() {
-    this.element.querySelectorAll("input").forEach((input) => {
-      if (this.#shouldSkip(input)) return
-      if (input.hasAttribute("data-server-error")) return
-
-      this.#validate(input)
-    })
+    if (input instanceof HTMLInputElement && !this.#shouldSkip(input)) this.#validate(input)
   }
 
   #shouldSkip(input) {
-    if (input.hasAttribute("nojsvalidation")) return true
-
-    const form = input.closest("form")
-    if (form && form.classList.contains("search-form")) return true
-
-    return false
+    return input.hasAttribute("nojsvalidation") || Boolean(input.closest("form")?.classList.contains("search-form"))
   }
 
   #validate(input) {
-    if (input.hasAttribute("data-server-error")) {
-      input.removeAttribute("data-server-error")
-    }
-
-    if (input.checkValidity()) {
-      input.classList.remove("is-invalid")
-      input.classList.add("is-valid")
-    } else {
-      input.classList.remove("is-valid")
-      input.classList.add("is-invalid")
-    }
+    const valid = input.checkValidity()
+    input.classList.toggle("is-valid", valid)
+    input.classList.toggle("is-invalid", !valid)
   }
 }
