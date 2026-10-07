@@ -230,7 +230,7 @@ module Reimbursements
     end
 
     # This line's shares of split rows, counted beside the rows linked whole:
-    # apportion_actual! clears a split row's budget_id, so the sets are
+    # EusaActual#apportionable? refuses a row with a budget, so the sets are
     # disjoint. Reads the preload where budgets_with_actuals loaded it.
     def allocated_credit_total
       if actual_allocations.loaded?

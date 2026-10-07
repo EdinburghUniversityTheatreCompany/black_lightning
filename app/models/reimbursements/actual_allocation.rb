@@ -40,8 +40,8 @@ module Reimbursements
     private
 
     # Budget#credit_actual_total adds these shares to the rows attached whole, so the two sets must
-    # be disjoint or a row counts twice. apportion_actual! clears budget_id, but MySQL cannot check
-    # that across two tables.
+    # be disjoint or a row counts twice. apportion_actual! refuses a row that has a budget
+    # (#apportionable?), but MySQL cannot check that across two tables.
     def actual_is_not_attached_whole
       return if eusa_actual.nil? || eusa_actual[:budget_id].blank?
 
