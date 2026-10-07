@@ -17,10 +17,9 @@
       <% if @proposal.has_debtors %>
         <% confirm = "Approving #{ @proposal.show_title}" %>
         <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
-        <% type_confirm = 'Ignoring Debt' %>
       <% end %>
 
-      <%= get_link @proposal, :approve, confirm: confirm, detail: detail, type_confirm: type_confirm %>
+      <%= get_link @proposal, :approve, confirm: confirm, detail: detail %>
       <%= get_link @proposal, :reject %>
   <% end %>
 

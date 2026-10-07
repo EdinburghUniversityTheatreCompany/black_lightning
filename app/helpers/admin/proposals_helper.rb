@@ -9,7 +9,7 @@ module Admin::ProposalsHelper
         case proposal.status
         when :awaiting_approval
           approve_link = proposal.has_debtors ?
-            get_link(proposal, :approve, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
+            get_link(proposal, :approve, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm") :
             get_link(proposal, :approve)
 
           [ approve_link, get_link(proposal, :reject) ]

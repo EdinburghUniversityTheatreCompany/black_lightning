@@ -126,6 +126,14 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
+  test "get_link with confirm alone asks for confirmation" do
+    opportunity = FactoryBot.create(:opportunity, id: 1)
+
+    link = get_link(opportunity, :approve, confirm: "Approve this?")
+
+    assert_includes link, 'data-confirm-message-value="Approve this?"'
+  end
+
   test "get_link with custom action" do
     maintenance_debt = FactoryBot.create(:maintenance_debt, id: 1)
 
@@ -333,44 +341,21 @@ class LinkHelperTest < ActionView::TestCase
   test "get_confirm_data" do
     object = FactoryBot.create(:staffing_debt)
 
-    assert_nil get_confirm_data(object, :show, nil, nil, nil)
-
-    confirm_hash = {
-      title: "Hexagon",
-      turbo_confirm: nil,
-      verify: "Pineapple"
-    }
-
-    assert_equal confirm_hash, get_confirm_data(object, :edit, "Hexagon", nil, "Pineapple")
+    assert_nil get_confirm_data(object, :show, nil, nil)
+    assert_equal({ turbo_confirm: "Hexagon" }, get_confirm_data(object, :edit, "Hexagon", nil))
+    assert_equal({ turbo_confirm: "Pineapple" }, get_confirm_data(object, :edit, "Hexagon", "Pineapple"))
   end
 
   test "get_confirm_data for destroy" do
     object = FactoryBot.create(:draft_mass_mail, subject: "We are building a Hexagon again!")
 
-    default_destroy_hash_for_object_with_subject = {
-      title: 'Deleting the Mass Mail "We are building a Hexagon again!"',
-      turbo_confirm: 'Are you sure you want to delete the Mass Mail "We are building a Hexagon again!"?',
-      verify: nil
-    }
-
-    assert_equal default_destroy_hash_for_object_with_subject, get_confirm_data(object, :destroy, nil, nil, nil)
+    assert_equal({ turbo_confirm: 'Are you sure you want to delete the Mass Mail "We are building a Hexagon again!"?' },
+                 get_confirm_data(object, :destroy, nil, nil))
 
     object = FactoryBot.create(:staffing_debt)
 
-    default_destroy_hash = {
-      title: "Deleting the Staffing Debt",
-      turbo_confirm: "Are you sure you want to delete the Staffing Debt?",
-      verify: nil
-    }
-
-    assert_equal default_destroy_hash, get_confirm_data(object, :destroy, nil, nil, nil)
-
-    overridden_destroy_hash = {
-      title: "Deleting the Staffing Debt",
-      turbo_confirm: "Pineapple",
-      verify: nil
-    }
-    assert_equal overridden_destroy_hash, get_confirm_data(object, :destroy, nil, "Pineapple", nil)
+    assert_equal({ turbo_confirm: "Are you sure you want to delete the Staffing Debt?" }, get_confirm_data(object, :destroy, nil, nil))
+    assert_equal({ turbo_confirm: "Pineapple" }, get_confirm_data(object, :destroy, nil, "Pineapple"))
   end
 
   test "btn_classes returns string for danger sm" do

@@ -42,7 +42,7 @@ module LinkHelper
     generate_icon_prefix("trash", text_with_span)
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, variant: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, variant: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
     raise(ArgumentError, "The object is nil") if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -83,11 +83,7 @@ module LinkHelper
       end
     end
 
-    # You might notice that the names of the variables given do not match the parameter names defined in the function definition.
-    # We switched from data confirmation plugins, and they have a different naming convention.
-    # To prevent having to change all existing code that called this function (get_link). I left the names of the parameters of this function intact,
-    # and only changed it within the get_confirm_data function.
-    confirm_data = get_confirm_data(object, action, confirm, detail, type_confirm)
+    confirm_data = get_confirm_data(object, action, confirm, detail)
 
     namespace = get_namespace_for_link(object, admin)
 
@@ -212,22 +208,11 @@ module LinkHelper
     end
   end
 
-  def get_confirm_data(object, action, title, confirm, verify)
-    return unless action == :destroy || title.present? || confirm.present? || verify.present?
+  def get_confirm_data(object, action, confirm, detail)
+    message = detail || confirm
+    # Only destroy gets a default message: for other actions it could be misleading.
+    message ||= "Are you sure you want to delete #{get_object_name(object, include_class_name: true, include_the: true)}?" if action == :destroy
 
-    confirm_data = {
-      title: title,
-      turbo_confirm: confirm,
-      verify: verify
-    }
-
-    # Destroy has a default hash, that we don't want to use for other confirm dialogs because that could lead to confusion.
-    if action == :destroy
-      name = get_object_name(object, include_class_name: true, include_the: true)
-      confirm_data[:title] ||= "Deleting #{name}"
-      confirm_data[:turbo_confirm] ||= "Are you sure you want to delete #{name}?"
-    end
-
-    confirm_data
+    { turbo_confirm: message } if message
   end
 end
