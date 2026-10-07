@@ -11,6 +11,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
       get :new, params: { param => event.slug }
       assert_response :success
       assert_includes assigns(:title), event.name
+      assert_select "a[href=?]", Rails.application.routes.url_helpers.polymorphic_path([ :admin, event ])
     end
   end
 
@@ -151,6 +152,15 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     post :confirm, params: { show_id: @show.slug, cache_key:, existing_actions: { user.id.to_s => "skip" } }
 
     assert flash[:success].any? { |msg| msg.include?("positions updated, 1 skipped") }
+  end
+
+  test "confirm redirects to the workshop's own page" do
+    workshop = FactoryBot.create(:workshop)
+    cache_key = write_crew_cache(event_id: workshop.id)
+
+    post :confirm, params: { show_id: workshop.slug, cache_key: }
+
+    assert_redirected_to admin_workshop_path(workshop)
   end
 
   test "confirm clears cache after processing" do

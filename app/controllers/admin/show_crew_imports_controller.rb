@@ -91,7 +91,7 @@ class Admin::ShowCrewImportsController < AdminController
     end
 
     helpers.append_to_flash(:success, "Import complete: #{results[:created]} users created, #{results[:added]} added to crew, #{results[:updated]} positions updated, #{results[:skipped]} skipped")
-    redirect_to admin_show_path(@event)
+    redirect_to [ :admin, @event ]
   end
 
   private
