@@ -45,18 +45,12 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     assert_equal [ soon.id, later.id ], Display::EventPool.upcoming.map(&:id)
   end
 
-  test "a season is in the pool like any other event" do
-    festival = FactoryBot.create(:season, is_public: true,
-                                          start_date: Date.current + 1, end_date: Date.current + 4)
+  test "seasons and workshops are in the pool like any other event" do
+    %i[season workshop].each do |type|
+      event = FactoryBot.create(type, is_public: true, start_date: Date.current + 1, end_date: Date.current + 2)
 
-    assert_includes Display::EventPool.upcoming.map(&:id), festival.id
-  end
-
-  test "a workshop is in the pool" do
-    workshop = FactoryBot.create(:workshop, is_public: true,
-                                            start_date: Date.current + 1, end_date: Date.current + 2)
-
-    assert_includes Display::EventPool.upcoming.map(&:id), workshop.id
+      assert_includes Display::EventPool.upcoming.map(&:id), event.id, type.to_s
+    end
   end
 
   test "private and finished events are excluded" do
@@ -78,15 +72,6 @@ class Display::EventPoolTest < ActiveSupport::TestCase
     FactoryBot.create(:event_occurrence, event: partial, starts_at: (friday + 2).noon + 7.hours)
 
     assert_includes Display::EventPool.upcoming(on: friday + 4).map(&:id), partial.id
-  end
-
-  test "an event drops out only once its run has ended" do
-    friday = Date.current.next_occurring(:friday)
-    finished = FactoryBot.create(:show, is_public: true,
-                                        start_date: friday - 6, end_date: friday - 1)
-    FactoryBot.create(:event_occurrence, event: finished, starts_at: (friday - 5).noon + 7.hours)
-
-    assert_not_includes Display::EventPool.upcoming(on: friday).map(&:id), finished.id
   end
 
   test "slots wrap around when there are fewer events than slots" do

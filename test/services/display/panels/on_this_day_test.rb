@@ -35,22 +35,6 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
     assert_equal 12, panel.locals[:years_ago]
   end
 
-  test "the first render of the day is the oldest match" do
-    oldest = archive_show(years_ago: 20)
-    archive_show(years_ago: 5)
-
-    assert_equal oldest.id, rendered_event_id
-  end
-
-  # The screen comes back to this URL every few minutes, all day.
-  test "each render shows a different match" do
-    archive_show(years_ago: 20)
-    archive_show(years_ago: 12)
-    archive_show(years_ago: 5)
-
-    assert_equal 3, 3.times.map { rendered_event_id }.uniq.size
-  end
-
   test "the rotation walks every match in turn and then starts again" do
     oldest = archive_show(years_ago: 20)
     middle = archive_show(years_ago: 12)
@@ -58,12 +42,6 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
 
     assert_equal [ oldest.id, middle.id, newest.id, oldest.id ],
                  4.times.map { rendered_event_id }
-  end
-
-  test "one match is shown every time rather than nothing on the second render" do
-    show = archive_show(years_ago: 12)
-
-    assert_equal [ show.id, show.id ], 2.times.map { rendered_event_id }
   end
 
   test "a single render answers with one event however often it is asked" do
@@ -89,17 +67,11 @@ class Display::Panels::OnThisDayTest < ActiveSupport::TestCase
     assert_not Display::Panels::OnThisDay.new.available?
   end
 
-  test "excludes an event with no real artwork" do
+  test "excludes an event with no real artwork, placeholder or none" do
     archive_show(years_ago: 8, attach_image: false)
-
-    assert_not Display::Panels::OnThisDay.new.available?
-  end
-
-  test "excludes an event whose only artwork is a generated placeholder" do
     # fetch_image attaches a placeholder, so "has an attachment" means "has been
     # viewed", not "has a poster".
-    show = archive_show(years_ago: 8, attach_image: false)
-    show.fetch_image
+    archive_show(years_ago: 9, attach_image: false).fetch_image
 
     assert_not Display::Panels::OnThisDay.new.available?
   end

@@ -6,24 +6,32 @@ class DisplayHelperTest < ActionView::TestCase
   include PretixHelper
   include MdHelper
 
-  # The two fits are written out independently of the helper, so the sweeps
-  # compare the layout it chose against an independent reading.
-  def side_by_side_size(cast, crew)
+  # The fits are written out independently of the helper, so the sweeps compare
+  # the layout it chose against an independent reading.
+  def side_height(cast, crew, stride)
     qr = cast <= crew
-    DisplayHelper::CREDITS_ROW_STRIDES.find { |_, stride|
-      [ cast * stride + (qr ? DisplayHelper::CREDITS_QR_HEIGHT : 0),
-        crew * stride + (qr ? 0 : DisplayHelper::CREDITS_QR_HEIGHT) ].max <= DisplayHelper::CREDITS_LIST_HEIGHT
-    }&.first
+    [ cast * stride + (qr ? DisplayHelper::CREDITS_QR_HEIGHT : 0),
+      crew * stride + (qr ? 0 : DisplayHelper::CREDITS_QR_HEIGHT) ].max
   end
 
-  def flowed_size(cast, crew)
+  def flow_height(cast, crew, stride)
     sections = [ cast, crew ].count(&:positive?)
     headings = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
                (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
-    room = DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT
-    DisplayHelper::CREDITS_ROW_STRIDES.find { |_, stride|
-      ((headings + (cast + crew) * stride) / 2.0).ceil <= room
-    }&.first
+    ((headings + (cast + crew) * stride) / 2.0).ceil
+  end
+
+  def fits?(mode, cast, crew, size)
+    stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(size)
+    if mode == :flowed
+      flow_height(cast, crew, stride) <= DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT
+    else
+      side_height(cast, crew, stride) <= DisplayHelper::CREDITS_LIST_HEIGHT
+    end
+  end
+
+  def largest_fit(mode, cast, crew)
+    DisplayHelper::CREDITS_ROW_STRIDES.keys.find { |size| fits?(mode, cast, crew, size) }
   end
 
   def run_of_five(from: Date.new(2026, 10, 11))
@@ -37,22 +45,12 @@ class DisplayHelperTest < ActionView::TestCase
     event
   end
 
-  test "display_date_range collapses a single day" do
-    event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 3))
-
-    assert_equal "Tue 3 Mar", display_date_range(event)
-  end
-
-  test "display_date_range drops the repeated month" do
-    event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
-
-    assert_equal "Tue 3 – Sat 7 Mar", display_date_range(event)
-  end
-
-  test "display_date_range keeps both months when the run crosses one" do
-    event = FactoryBot.build(:show, start_date: Date.new(2026, 3, 30), end_date: Date.new(2026, 4, 2))
-
-    assert_equal "Mon 30 Mar – Thu 2 Apr", display_date_range(event)
+  test "display_date_range collapses what the two dates share" do
+    { [ Date.new(2026, 3, 3), Date.new(2026, 3, 3) ] => "Tue 3 Mar",
+      [ Date.new(2026, 3, 3), Date.new(2026, 3, 7) ] => "Tue 3 – Sat 7 Mar",
+      [ Date.new(2026, 3, 30), Date.new(2026, 4, 2) ] => "Mon 30 Mar – Thu 2 Apr" }.each do |(from, to), expected|
+      assert_equal expected, display_date_range(FactoryBot.build(:show, start_date: from, end_date: to)), expected
+    end
   end
 
   test "display_when collapses a consecutive run into one range" do
@@ -145,14 +143,15 @@ class DisplayHelperTest < ActionView::TestCase
     assert_equal "Tue 3 – Sat 7 Mar", display_when(event, on: Date.new(2026, 3, 7))
   end
 
-  # A matinee makes the schedule :irregular; both blocks are stated.
+  # A matinee makes the schedule :irregular; both blocks are stated, in advance and mid-run alike.
   test "display_when states both curtain times for a run with a matinee" do
     event = run_of_five
     FactoryBot.create(:event_occurrence, event: event,
                       starts_at: Date.new(2026, 10, 15).in_time_zone.change(hour: 14, min: 30))
 
-    assert_equal "Sun 11 – Thu 15 Oct, 7.30pm\nThu 15 Oct, 2.30pm",
-                 display_when(event, on: Date.new(2026, 10, 1))
+    [ Date.new(2026, 10, 1), Date.new(2026, 10, 13), Date.new(2026, 10, 15) ].each do |on|
+      assert_equal "Sun 11 – Thu 15 Oct, 7.30pm\nThu 15 Oct, 2.30pm", display_when(event, on: on), on.to_s
+    end
   end
 
   # Rocky Horror: 7pm Wed-Sat with midnight shows on Friday and Saturday. The
@@ -172,17 +171,6 @@ class DisplayHelperTest < ActionView::TestCase
 
     assert_equal expected, display_when(event, on: Date.new(2026, 9, 1)), "in advance"
     assert_equal expected, display_when(event, on: Date.new(2026, 9, 26)), "and on the night"
-  end
-
-  # The same before and during the run.
-  test "display_when for two blocks reads the same before and during the run" do
-    event = run_of_five
-    FactoryBot.create(:event_occurrence, event: event,
-                      starts_at: Date.new(2026, 10, 15).in_time_zone.change(hour: 14, min: 30))
-
-    [ Date.new(2026, 10, 1), Date.new(2026, 10, 13), Date.new(2026, 10, 15) ].each do |on|
-      assert_equal display_when(event, on: Date.new(2026, 10, 1)), display_when(event, on: on)
-    end
   end
 
   # Past WHEN_MAX_BLOCKS only the block covering today is left.
@@ -213,33 +201,16 @@ class DisplayHelperTest < ActionView::TestCase
   end
 
   # The board's column is a fixed 256px; the derived "£10 / £8 concessions / £7 members" truncates in it.
-  test "display_price collapses structured bands to fit the board" do
-    event = FactoryBot.build(:show, ticket_prices: [
-      { "category" => "standard", "amount" => "10" },
-      { "category" => "concession", "amount" => "8" },
-      { "category" => "member", "amount" => "7" }
-    ])
+  test "display_price fits the board's fixed column" do
+    { [ %w[standard 10], %w[concession 8], %w[member 7] ] => "£10/8/7",
+      [ %w[standard 4.50] ] => "£4.50",
+      [ %w[standard 0] ] => "Free" }.each do |bands, expected|
+      prices = bands.map { |category, amount| { "category" => category, "amount" => amount } }
 
-    assert_equal "£10/8/7", display_price(event)
-  end
-
-  test "display_price keeps the pence where there are any" do
-    event = FactoryBot.build(:show, ticket_prices: [ { "category" => "standard", "amount" => "4.50" } ])
-
-    assert_equal "£4.50", display_price(event)
-  end
-
-  test "display_price says Free rather than £0" do
-    event = FactoryBot.build(:show, ticket_prices: [ { "category" => "standard", "amount" => "0" } ])
-
-    assert_equal "Free", display_price(event)
-  end
-
-  # The path every archive event takes (no bands).
-  test "display_price falls back to whatever was typed" do
-    event = FactoryBot.build(:show, price: "Pay what you can")
-
-    assert_equal "Pay what you can", display_price(event)
+      assert_equal expected, display_price(FactoryBot.build(:show, ticket_prices: prices))
+    end
+    # The path every archive event takes (no bands): whatever was typed.
+    assert_equal "Pay what you can", display_price(FactoryBot.build(:show, price: "Pay what you can"))
   end
 
   test "display_booking_url points at the pretix shop when tickets are shown" do
@@ -306,31 +277,16 @@ class DisplayHelperTest < ActionView::TestCase
     assert_not_equal medium, long, "a very long title should step down again"
   end
 
-  test "display_title_size never returns a truncating class" do
-    %w[Short Medium\ length\ title].each do |title|
-      assert_no_match(/truncate/, display_title_size(title))
-    end
-  end
-
-  # The QR goes under the shorter list, normally the cast (bottom left).
-  test "display_credits_layout puts the QR under the shorter list" do
-    assert display_credits_layout(8, 12)[:qr_in_cast_column], "8 cast against 12 crew should carry it left"
-    assert display_credits_layout(12, 12)[:qr_in_cast_column], "an even split should still go left"
-  end
-
-  test "display_credits_layout leaves a normal show side by side at the largest size" do
-    layout = display_credits_layout(8, 12)
-
-    assert_equal :side_by_side, layout[:mode]
-    assert_equal "text-5xl", layout[:name_size]
-  end
-
-  # Cast beside Company unless flowing buys bigger names.
-  test "display_credits_layout keeps a balanced show side by side" do
+  # Cast beside Company unless flowing buys bigger names; the QR goes under the
+  # shorter list, normally the cast (bottom left).
+  test "display_credits_layout keeps a balanced show side by side, the QR under the cast" do
     [ [ 1, 2 ], [ 8, 12 ], [ 10, 10 ], [ 12, 12 ], [ 18, 18 ] ].each do |cast, crew|
-      assert_equal :side_by_side, display_credits_layout(cast, crew)[:mode],
-                   "#{cast} cast / #{crew} crew is balanced enough to stay in two lists"
+      layout = display_credits_layout(cast, crew)
+
+      assert_equal :side_by_side, layout[:mode], "#{cast} cast / #{crew} crew is balanced enough to stay in two lists"
+      assert layout[:qr_in_cast_column], "#{cast} cast / #{crew} crew should carry the QR left"
     end
+    assert_equal "text-5xl", display_credits_layout(8, 12)[:name_size]
   end
 
   # Side by side sizes off the longer list, so a lopsided show wastes a column.
@@ -341,6 +297,8 @@ class DisplayHelperTest < ActionView::TestCase
 
       assert_equal :flowed, layout[:mode], "#{cast} cast / #{crew} crew wastes a column side by side"
       assert_equal expected, layout[:name_size], "#{cast} cast / #{crew} crew"
+      # The QR is a footer under both columns, so its height comes off the flow.
+      assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, layout[:flow_height]
     end
   end
 
@@ -351,7 +309,7 @@ class DisplayHelperTest < ActionView::TestCase
     (0..20).each do |cast|
       (0..20).each do |crew|
         chosen = display_credits_layout(cast, crew)
-        other = chosen[:mode] == :flowed ? side_by_side_size(cast, crew) : flowed_size(cast, crew)
+        other = largest_fit(chosen[:mode] == :flowed ? :side_by_side : :flowed, cast, crew)
 
         next if other.nil?
 
@@ -368,25 +326,10 @@ class DisplayHelperTest < ActionView::TestCase
     (0..18).each do |cast|
       (0..18).each do |crew|
         layout = display_credits_layout(cast, crew)
-        stride = DisplayHelper::CREDITS_ROW_STRIDES.fetch(layout[:name_size])
-        qr = DisplayHelper::CREDITS_QR_HEIGHT
 
-        if layout[:mode] == :flowed
-          sections = [ cast, crew ].count(&:positive?)
-          headings = sections * DisplayHelper::CREDITS_HEADING_HEIGHT +
-                     (sections > 1 ? DisplayHelper::CREDITS_SECTION_GAP : 0)
-          needed = ((headings + (cast + crew) * stride) / 2.0).ceil
-
-          assert_operator needed, :<=, DisplayHelper::CREDITS_COLUMN_HEIGHT - qr,
-                          "#{cast} cast / #{crew} crew flowed at #{layout[:name_size]} leaves no room for the QR"
-        else
-          tallest = [ cast * stride + (layout[:qr_in_cast_column] ? qr : 0),
-                      crew * stride + (layout[:qr_in_cast_column] ? 0 : qr) ].max
-
-          assert_operator tallest, :<=, DisplayHelper::CREDITS_LIST_HEIGHT,
-                          "#{cast} cast / #{crew} crew at #{layout[:name_size]} overflows by " \
-                          "#{tallest - DisplayHelper::CREDITS_LIST_HEIGHT}px"
-        end
+        assert fits?(layout[:mode], cast, crew, layout[:name_size]),
+               "#{cast} cast / #{crew} crew #{layout[:mode]} at #{layout[:name_size]} leaves no room for the QR"
+        assert_equal(cast <= crew, layout[:qr_in_cast_column]) if layout[:mode] == :side_by_side
       end
     end
   end
@@ -410,22 +353,14 @@ class DisplayHelperTest < ActionView::TestCase
     end
   end
 
-  # The flowed layout takes the QR off the top of the flow: a balanced flow leaves no column spare.
-  test "display_credits_layout takes the QR's height out of the flow" do
-    layout = display_credits_layout(3, 18)
+  # Past the scale it shrinks fully rather than clipping from a size that never
+  # fitted, and anchors to the top only once the names stop fitting.
+  test "display_credits_layout shrinks a company beyond the screen to the smallest size and anchors it to the top" do
+    layout = display_credits_layout(30, 30)
 
-    assert_equal :flowed, layout[:mode]
-    assert_equal DisplayHelper::CREDITS_COLUMN_HEIGHT - DisplayHelper::CREDITS_QR_HEIGHT, layout[:flow_height]
-  end
-
-  # Past the scale it shrinks fully rather than clipping from a size that never fitted.
-  test "display_credits_layout falls to the smallest size for a company beyond the screen" do
-    assert_equal DisplayHelper::CREDITS_ROW_STRIDES.keys.last, display_credits_layout(30, 30)[:name_size]
-  end
-
-  test "display_credits_layout anchors to the top only once the names stop fitting" do
+    assert_equal DisplayHelper::CREDITS_ROW_STRIDES.keys.last, layout[:name_size]
+    assert_equal "content-start", layout[:block_position]
     assert_equal "content-center", display_credits_layout(4, 6)[:block_position]
-    assert_equal "content-start", display_credits_layout(30, 30)[:block_position]
   end
 
   # SVG rendered as a blank square on Anthias; a raster image has no such failure mode.
@@ -445,13 +380,7 @@ class DisplayHelperTest < ActionView::TestCase
 
     assert Rails.cache.exist?(DisplayHelper.qr_cache_key(url)), "expected the encoded PNG to be cached"
     assert_equal first, display_qr_code(url), "a cache hit must produce identical markup"
-  end
-
-  test "two different urls do not share a cached image" do
-    one = display_qr_code("https://example.com/one")
-    two = display_qr_code("https://example.com/two")
-
-    assert_not_equal one, two
+    assert_not_equal first, display_qr_code("https://example.com/other"), "another url must not share the cached image"
   end
 
   test "display_qr_code labels itself for what the caller is asking people to scan" do

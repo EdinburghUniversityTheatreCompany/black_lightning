@@ -12,10 +12,6 @@ class Display::RotationTest < ActiveSupport::TestCase
     assert_equal [ 0, 1, 2, 0 ], positions
   end
 
-  test "starts at the first entry" do
-    assert_equal 0, Display::Rotation.next_index("panel", size: 5)
-  end
-
   test "a single entry never moves" do
     3.times { assert_equal 0, Display::Rotation.next_index("panel", size: 1) }
   end
@@ -38,19 +34,17 @@ class Display::RotationTest < ActiveSupport::TestCase
   end
 
   test "a cache that cannot answer still moves the slide on" do
-    # Solid Cache's failsafe returns nil when its database is unreachable.
-    seen = with_null_cache { 20.times.map { Display::Rotation.next_index("panel", size: 4) } }
+    {
+      # Solid Cache's failsafe returns nil when its database is unreachable.
+      "nil" => ActiveSupport::Cache::NullStore.new,
+      # The failsafe swallows only its own errors; nothing else rescues.
+      "raise" => raising_store
+    }.each do |name, store|
+      seen = with_cache(store) { 20.times.map { Display::Rotation.next_index("panel", size: 4) } }
 
-    assert seen.all? { |index| (0...4).cover?(index) }, "fallback returned an out-of-range index: #{seen.inspect}"
-    assert seen.uniq.size > 1, "fallback never moved off one entry: #{seen.inspect}"
-  end
-
-  # The failsafe swallows only its own errors; nothing else rescues.
-  test "a cache that raises still moves the slide on" do
-    seen = with_cache(raising_store) { 20.times.map { Display::Rotation.next_index("panel", size: 4) } }
-
-    assert seen.all? { |index| (0...4).cover?(index) }, "fallback returned an out-of-range index: #{seen.inspect}"
-    assert seen.uniq.size > 1, "fallback never moved off one entry: #{seen.inspect}"
+      assert seen.all? { |index| (0...4).cover?(index) }, "#{name}: out-of-range index: #{seen.inspect}"
+      assert seen.uniq.size > 1, "#{name}: fallback never moved off one entry: #{seen.inspect}"
+    end
   end
 
   private
@@ -62,10 +56,6 @@ class Display::RotationTest < ActiveSupport::TestCase
     yield
   ensure
     Rails.cache = original
-  end
-
-  def with_null_cache(&)
-    with_cache(ActiveSupport::Cache::NullStore.new, &)
   end
 
   def raising_store
