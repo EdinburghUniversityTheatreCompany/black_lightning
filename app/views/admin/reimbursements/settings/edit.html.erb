@@ -67,7 +67,7 @@
   <% end %>
 <% end %>
 
-<%= render AlertComponent.new(type: :info, html_class: "mb-4") do %>
+<%= render AlertComponent.new(type: :info) do %>
   Setting this cost centre up for the first time?
   <%= link_to "What IT has to do in Microsoft 365",
               microsoft_setup_admin_reimbursements_setting_path(@cost_centre.key),
