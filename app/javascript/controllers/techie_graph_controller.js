@@ -172,7 +172,7 @@ export default class extends Controller {
       this.#cy.nodes().forEach(n => { positions[n.id()] = n.position() })
       localStorage.setItem(this.#positionKey(), JSON.stringify(positions))
     } catch {
-      console.warning("Techie Graph: Unable to save positions. Probably quota exceeded or private browsing.")
+      console.warn("Techie Graph: Unable to save positions. Probably quota exceeded or private browsing.")
     }
   }
 
