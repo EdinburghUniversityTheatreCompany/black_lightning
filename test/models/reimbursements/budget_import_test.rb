@@ -820,6 +820,17 @@ module Reimbursements
       assert_equal "one\ttwo", again.entries.sole.row[:notes]
     end
 
+    # #to_tsv escapes every cell, so apply must unescape every cell, the amounts included, or
+    # an unreadable figure changes each time the sheet makes the round trip.
+    test "an unreadable amount holding a backslash comes back from the round trip unchanged" do
+      first = build_import(tsv("Props\t4000\tExpense\t12\\ quid\t\t"))
+
+      again = build_import(first.to_tsv, input_type: :canonical_tsv)
+
+      assert_equal "12\\ quid", again.entries.sole.row[:raw_amount]
+      assert_equal first.to_tsv, again.to_tsv
+    end
+
     # In the operator's own paste a backslash is a backslash: only the preview's
     # hidden field is this class's own output. The name is the match key.
     test "a pasted backslash name still matches the budget it names" do

@@ -102,9 +102,6 @@ module Reimbursements
 
     OWNER_SEPARATOR = /[,;\s]+/
 
-    # Cells that may hold a tab or newline, so are unescaped in #to_tsv output.
-    TEXT_FIELDS = %i[name notes area].freeze
-
     attr_reader :entries, :financial_year, :cost_centre
 
     # +input_type+ is :paste, :xlsx, or :canonical_tsv (this class's own
@@ -456,13 +453,15 @@ module Reimbursements
       }
     end
 
+    # #to_tsv escapes every cell, so a sheet coming back from the preview is unescaped
+    # whole: an unreadable amount would otherwise change on each round trip.
     def cell(raw, field)
-      raw[header_for[field]]
+      value = raw[header_for[field]]
+      @escaped ? unescape_cell(value) : value
     end
 
     def text(raw, field)
-      value = cell(raw, field)
-      @escaped && TEXT_FIELDS.include?(field) ? unescape_cell(value) : value.to_s
+      cell(raw, field).to_s
     end
 
     # --- Which column is which -----------------------------------------------
