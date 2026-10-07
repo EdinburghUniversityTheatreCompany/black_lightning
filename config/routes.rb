@@ -533,11 +533,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    namespace "help" do
-      %w[venue_location].each do |action|
-        get action, action: action, as:  action, controller: "/admin/help"
-      end
-    end
+    get "help/venue_location", to: "help#venue_location", as: :help_venue_location
 
     get "committee", to: "static#committee", as: :committee
     # Catch all 404's on the admin site.
