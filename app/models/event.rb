@@ -469,9 +469,7 @@ class Event < ApplicationRecord
   end
 
   def assign_company_from_name
-    return if @company_name.nil?
-
-    self.company = @company_name.present? ? Company.find_or_build_by_name(@company_name) : nil
+    self.company = Company.find_or_build_by_name(@company_name) unless @company_name.nil?
   end
 
   # A JSON column has no association to cascade the bands' validations through.
