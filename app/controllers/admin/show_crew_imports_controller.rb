@@ -62,7 +62,7 @@ class Admin::ShowCrewImportsController < AdminController
         create_user_from_row(row).tap(&:send_welcome_email)
       when "link" then User.find_by(id: item["existing_user_id"])
       when /\Alink_(\d+)\z/ then User.find_by(id: $1.to_i)
-      when "skip", nil
+      when "skip"
         results[:skipped] += 1
         next
       else next

@@ -145,6 +145,14 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     end
   end
 
+  test "confirm counts an existing team member skipped once" do
+    user, _team_member, cache_key = setup_existing_team_member_cache(on_team_row: true)
+
+    post :confirm, params: { show_id: @show.slug, cache_key:, existing_actions: { user.id.to_s => "skip" } }
+
+    assert flash[:success].any? { |msg| msg.include?("positions updated, 1 skipped") }
+  end
+
   test "confirm clears cache after processing" do
     cache_key = write_crew_cache
 
@@ -188,11 +196,13 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   # A "Producer" on @show whose cached import row proposes "Director". Returns [user, team_member, cache_key].
-  def setup_existing_team_member_cache
+  # on_team_row also caches the exact-match row the preview leaves out for someone already on the team.
+  def setup_existing_team_member_cache(on_team_row: false)
     user = FactoryBot.create(:user, student_id: "s1234567")
     team_member = @show.team_members.create!(user: user, position: "Producer")
     existing = { user.id.to_s => { "user_name" => user.name_or_email, "current_position" => "Producer", "new_position" => "Director" } }
+    exact = on_team_row ? [ import_entry(index: 0, existing_user_id: user.id, student_id: "s1234567", position: "Director") ] : []
 
-    [ user, team_member, write_crew_cache(existing: existing) ]
+    [ user, team_member, write_crew_cache(existing:, exact_match_id: exact) ]
   end
 end
