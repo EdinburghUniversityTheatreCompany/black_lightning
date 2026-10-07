@@ -23,7 +23,6 @@ module Admin
       def index
         @title = "Areas"
         @areas = paginate(store.areas_for_year)
-        @people_by_id = store.people.index_by(&:record_id)
       end
 
       # Read-only for an owner; finance gets the same page with the actions and

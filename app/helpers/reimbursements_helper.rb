@@ -247,9 +247,10 @@ module ReimbursementsHelper
                 class: variance_colour(variance), title: variance_title(variance))
   end
 
-  # Comma-joined owner names, resolving owner_ids against a {record_id => Person} lookup.
-  def budget_owner_names(budget, people_by_id)
-    budget.owner_ids.filter_map { |id| people_by_id[id]&.name.presence }.join(", ")
+  # Comma-joined owner names of a budget or area, off its preloaded owners (a budget's resolve
+  # through its area).
+  def budget_owner_names(record)
+    record.owners.filter_map { |person| person.name.presence }.join(", ")
   end
 
   # An accessible disclosure badge (a button toggling a panel via popover_controller.js,

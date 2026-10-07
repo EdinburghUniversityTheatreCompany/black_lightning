@@ -23,7 +23,6 @@ module Admin
         @title = "Reimbursements Budgets"
         # budgets_with_actuals: this table and its CSV print each line's EUSA actual.
         sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
-        @people_by_id = store.people.index_by(&:record_id)
         # Area figures are read off these preloaded objects, never off
         # budget.area, whose unloaded #budgets would N+1.
         @areas_by_id = store.areas.index_by(&:record_id)

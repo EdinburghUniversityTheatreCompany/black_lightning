@@ -58,12 +58,12 @@ class ReimbursementsHelperTest < ActionView::TestCase
     end
   end
 
-  test "budget_owner_names comma-joins resolved owner names, skipping unknown ids" do
-    people_by_id = { "1" => person_with, "2" => Person.new(name: "Alex", email: "alex@example.com") }
+  test "budget_owner_names comma-joins the owners' names, skipping a blank one" do
     budget = Budget.new(name: "Props")
-    budget.define_singleton_method(:owner_ids) { %w[1 2 99] }
+    budget.own_owners = [ person_with, Person.new(name: "", email: "nameless@example.com"),
+                          Person.new(name: "Alex", email: "alex@example.com") ]
 
-    assert_equal "Pat Producer, Alex", budget_owner_names(budget, people_by_id)
+    assert_equal "Pat Producer, Alex", budget_owner_names(budget)
   end
 
   test "reimbursements_date is ISO 8601, or a dash when blank" do

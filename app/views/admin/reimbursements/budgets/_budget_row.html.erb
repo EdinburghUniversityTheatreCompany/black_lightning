@@ -1,4 +1,4 @@
-<%# locals: (budget:, people_by_id:) %>
+<%# locals: (budget:) %>
 <%
   # The name links to the edit form too: at 1366x768 the Edit button sits off
   # screen.
@@ -14,7 +14,7 @@
   ].compact, " ")
   # "No owner" warns only on a Visible line: hidden overheads (payroll, NI)
   # never have one.
-  owners = budget_owner_names(budget, people_by_id).presence ||
+  owners = budget_owner_names(budget).presence ||
            (if budget.active
               render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
             else

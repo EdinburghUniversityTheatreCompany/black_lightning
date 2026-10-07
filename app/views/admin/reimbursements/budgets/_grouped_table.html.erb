@@ -1,4 +1,4 @@
-<%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:, people_by_id:) %>
+<%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:) %>
 <div class="table-scroll">
   <%# table-pinned-actions: at 1366x768 the Edit column sat 87px off screen. %>
   <table class="table table-hover table-sticky-head table-pinned-actions"
@@ -57,7 +57,7 @@
           </th>
         </tr>
         <%= render partial: "admin/reimbursements/budgets/budget_row", collection: budgets_by_area_id[area_id],
-              as: :budget, locals: { people_by_id: people_by_id } %>
+              as: :budget %>
       </tbody>
     <% end %>
     <% if none_budgets.present? %>
@@ -68,7 +68,7 @@
           </th>
         </tr>
         <%= render partial: "admin/reimbursements/budgets/budget_row", collection: none_budgets,
-              as: :budget, locals: { people_by_id: people_by_id } %>
+              as: :budget %>
       </tbody>
     <% end %>
   </table>
