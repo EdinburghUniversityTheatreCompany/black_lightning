@@ -88,11 +88,13 @@ module Admin
       # The submitter's own expense at any status, for the read-only show page.
       def find_own_expense!(record_id)
         expense = store.find_expense!(record_id)
-        unless expense && current_person && expense.person&.record_id == current_person.record_id
-          raise ActiveRecord::RecordNotFound
-        end
+        raise ActiveRecord::RecordNotFound unless expense && own_expense?(expense)
 
         expense
+      end
+
+      def own_expense?(expense)
+        current_person.present? && expense.person&.record_id == current_person.record_id
       end
     end
   end

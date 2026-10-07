@@ -72,10 +72,6 @@ module Admin
 
         own_expense?(expense) || ::Reimbursements::OwnerReview.owned_by?(expense, current_person)
       end
-
-      def own_expense?(expense)
-        current_person.present? && expense.person&.record_id == current_person.record_id
-      end
     end
   end
 end
