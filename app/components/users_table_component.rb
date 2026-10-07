@@ -1,22 +1,21 @@
-# A searchable list of users, with an optional second column: a Remove button
-# per user (role membership) or their attendance count (maintenance sessions).
+# A searchable list of users, with an optional second column: a Remove button per user
+# (role membership; `remove_url` maps a user id to its path) or their attendance count
+# (maintenance sessions).
 class UsersTableComponent < ViewComponent::Base
   SEARCH_FIELDS = { full_name_cont: { slug: "defaults.name" } }.freeze
 
-  def initialize(users:, url:, q: nil, show_remove_buttons: false,
-                 remove_url_helper: nil, credit_counts: nil)
+  def initialize(users:, url:, q: nil, remove_url: nil, credit_counts: nil)
     @users = users
     @url = url
     @q = q
-    @show_remove_buttons = show_remove_buttons
-    @remove_url_helper = remove_url_helper
+    @remove_url = remove_url
     @credit_counts = credit_counts
   end
 
   private
 
   def headers
-    return [ :name, "Actions" ] if @show_remove_buttons
+    return [ :name, "Actions" ] if @remove_url
     return [ :name, "Credits" ] if @credit_counts
 
     [ :name ]
@@ -29,7 +28,7 @@ class UsersTableComponent < ViewComponent::Base
   end
 
   def extra_cells_for(user)
-    return [ remove_button_for(user) ] if @show_remove_buttons
+    return [ remove_button_for(user) ] if @remove_url
     return [ @credit_counts[user.id] || 1 ] if @credit_counts
 
     []
@@ -37,7 +36,7 @@ class UsersTableComponent < ViewComponent::Base
 
   def remove_button_for(user)
     helpers.button_to(
-      "Remove", @remove_url_helper.call(user.id), method: :delete,
+      "Remove", @remove_url.call(user.id), method: :delete,
       class: ButtonComponent.classes_for(variant: :danger, size: :sm),
       form: { style: "display:contents",
               data: { controller: "confirm", action: "submit->confirm#confirm",
