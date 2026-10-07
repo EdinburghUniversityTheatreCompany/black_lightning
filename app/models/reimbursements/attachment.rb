@@ -5,14 +5,13 @@ module Reimbursements
   # needing the content (the SharePoint offload) must call +bytes+: a remote
   # fetcher has no session.
   class Attachment
-    attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
+    attr_reader :attachment_id, :filename, :url, :content_type, :thumbnail_url
 
-    def initialize(attachment_id:, filename:, url:, size_bytes: 0, content_type: "",
+    def initialize(attachment_id:, filename:, url:, content_type: "",
                    thumbnail_url: nil, download_url: nil, blob: nil)
       @attachment_id = attachment_id
       @filename = filename
       @url = url
-      @size_bytes = size_bytes
       @content_type = content_type
       @thumbnail_url = thumbnail_url
       @download_url = download_url

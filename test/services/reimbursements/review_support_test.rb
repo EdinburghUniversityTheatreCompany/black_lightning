@@ -66,7 +66,7 @@ module Reimbursements
 
     def receipt
       Attachment.new(attachment_id: "att1", filename: "receipt.pdf",
-        url: "https://example.com/receipt.pdf", size_bytes: 1024)
+        url: "https://example.com/receipt.pdf")
     end
 
     def expense(payee:, budget:, amount_excl_vat: BigDecimal("50.00"), receipts: [], **extra)

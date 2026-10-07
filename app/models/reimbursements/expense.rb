@@ -208,7 +208,6 @@ module Reimbursements
         attachment_id: file.blob_id.to_s,
         filename: file.filename.to_s,
         url: helpers.inline_admin_reimbursements_expense_receipt_path(*ids),
-        size_bytes: file.byte_size,
         content_type: file.content_type.to_s,
         thumbnail_url: (helpers.thumbnail_admin_reimbursements_expense_receipt_path(*ids) if file.representable?),
         download_url: helpers.download_admin_reimbursements_expense_receipt_path(*ids),
