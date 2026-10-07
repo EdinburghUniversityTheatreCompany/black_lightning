@@ -93,7 +93,13 @@ export default class extends Controller {
         const input = inserted.querySelector(`[name$="[${field}]"]`)
         if (input) input.value = item[field] ?? ""
       }
-      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // nested-form keys each row by Date.getTime(): rows added in one clock tick
+      // share a key, and Rails keeps only one of them.
+      const stamp = Date.now()
+      do {
+        await new Promise((resolve) => setTimeout(resolve, 1))
+      } while (Date.now() <= stamp)
     }
   }
 }
