@@ -124,6 +124,10 @@ module Reimbursements
       budget&.cost_centre_id
     end
 
+    # The figure EUSA's ledger is matched against. An ex-VAT of 0 means "not yet known", so the
+    # gross is used.
+    def amount_for_matching = amount_excl_vat&.nonzero? || amount
+
     validates :status, inclusion: { in: Status.all }
     validates :expense_type, inclusion: { in: TYPES }
     validates :payment_method, inclusion: { in: PAYMENT_METHODS }
