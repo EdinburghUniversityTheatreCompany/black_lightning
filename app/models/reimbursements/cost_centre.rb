@@ -132,6 +132,12 @@ module Reimbursements
       notification_email.to_s.split(NOTIFICATION_EMAIL_SEPARATOR).map(&:strip).compact_blank.uniq
     end
 
+    # REIMBURSEMENTS_OPERATOR_EMAIL is whole-portal on purpose: it diverts every centre's operator mail to one inbox.
+    def operator_recipients
+      override = ENV["REIMBURSEMENTS_OPERATOR_EMAIL"].presence
+      override ? [ override ] : notification_emails
+    end
+
     # Presence-validated, so this only catches a row that predates the
     # validation or was written around it. The nightly then warns and does not
     # record the run-day.

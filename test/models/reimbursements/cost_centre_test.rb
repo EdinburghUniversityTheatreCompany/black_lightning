@@ -196,10 +196,36 @@ module Reimbursements
       assert_includes centre.errors.attribute_names, :notification_email
     end
 
+    test "operator_recipients is the centre's notification addresses" do
+      assert_equal [ "finance@b.co" ], CostCentre.new(notification_email: "finance@b.co").operator_recipients
+    end
+
+    test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the centre's addresses entirely" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ], CostCentre.new(notification_email: "finance@b.co").operator_recipients
+      end
+    end
+
+    test "the operator override applies even when the centre has no address" do
+      with_operator_email("ops@example.com") do
+        assert_equal [ "ops@example.com" ], CostCentre.new(notification_email: nil).operator_recipients
+      end
+    end
+
     test "picker_prefix is the short code, falling back to the eusa code" do
       assert_equal "BF", CostCentre.new(eusa_code: "F40", short_code: "BF").picker_prefix
       # The column is never backfilled, so most centres have none.
       assert_equal "F40", CostCentre.new(eusa_code: "F40", short_code: "").picker_prefix
+    end
+
+    private
+
+    def with_operator_email(value)
+      previous = ENV["REIMBURSEMENTS_OPERATOR_EMAIL"]
+      ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = value
+      yield
+    ensure
+      previous.nil? ? ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL") : ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = previous
     end
   end
 end

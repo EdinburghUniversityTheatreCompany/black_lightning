@@ -52,7 +52,7 @@ module Reimbursements
         return
       end
 
-      recipients = NotificationRecipients.for(cost_centre)
+      recipients = cost_centre.operator_recipients
       return warn_no_recipients(cost_centre) if recipients.empty?
 
       delivered = deliver_reminders(cost_centre, recipients, dry_run: dry_run, today: today)
