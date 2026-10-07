@@ -7,7 +7,7 @@ import { confirmDialog } from "../lib/confirm"
 // upload) via fetch, so the turbo-stream reply that replaces #receipts-gallery
 // is rendered by hand.
 export default class extends Controller {
-  static targets = ["input", "status"]
+  static targets = ["input", "status", "zone"]
   static values = { url: String }
 
   pick() {
@@ -20,11 +20,11 @@ export default class extends Controller {
 
   dragover(event) {
     event.preventDefault()
-    this.element.querySelector(".dropzone")?.classList.add("dz-drag-hover")
+    this.zoneTarget.classList.add("border-primary", "bg-primary/5")
   }
 
   dragleave() {
-    this.element.querySelector(".dropzone")?.classList.remove("dz-drag-hover")
+    this.zoneTarget.classList.remove("border-primary", "bg-primary/5")
   }
 
   drop(event) {
