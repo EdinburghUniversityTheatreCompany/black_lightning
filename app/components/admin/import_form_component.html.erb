@@ -8,9 +8,9 @@
     <%= render CardComponent.new(title: "Option 1: Paste Data") do %>
       <%= form_with url: @preview_path, method: :post, data: { turbo: false } do |f| %>
         <p class="text-gray-500">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
-        <span class="font-monospace block mb-3"><%= @columns_description %></span>
+        <span class="font-mono block mb-3"><%= @columns_description %></span>
 
-        <%= f.text_area :paste_data, rows: 15, class: "form-control font-monospace",
+        <%= f.text_area :paste_data, rows: 15, class: "form-control font-mono",
             placeholder: @placeholder_text %>
 
         <div class="mt-3">
