@@ -178,14 +178,13 @@ module ReimbursementsTestHelpers
     ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
   end
 
-  # Modulus verdict keyed by account number, so tests need no gitignored Pay.UK rule files.
+  # Modulus verdict keyed by account number.
   class FakeModulusChecker
     def initialize(by_account = {})
       @by_account = by_account
     end
 
-    # A blank pair reads INVALID, as the real checker does. OUTSIDE_SPEC here hid the
-    # "Modulus check failed" banner the live site drew over a payee with no bank details.
+    # A blank pair reads INVALID, as the real checker does.
     def check(sort_code, account_number)
       if sort_code.to_s.strip.empty? || account_number.to_s.strip.empty?
         return ::Reimbursements::ModulusCheck::INVALID

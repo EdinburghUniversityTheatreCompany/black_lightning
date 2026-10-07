@@ -23,7 +23,6 @@ require File.expand_path("../../config/environment", __FILE__)
 require "rails/test_help"
 require "etc"
 
-# FakeHttp first: reimbursements_test_helpers aliases it into its own namespace.
 require_relative "support/fake_http"
 require_relative "support/honeybadger_test_helpers"
 require_relative "support/import_cache_test_helpers"
