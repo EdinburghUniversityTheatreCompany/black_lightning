@@ -187,7 +187,7 @@ module ReimbursementsHelper
   end
 
   # The over-budget pill, or nothing. One derivation so the index and the overview cannot
-  # disagree; BudgetHealth owns the rules.
+  # disagree; Budget owns the rules.
   def reimbursements_budget_health_badge(budget)
     if budget.over_budget?
       reimbursements_pill(:danger, "Over budget")

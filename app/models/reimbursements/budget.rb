@@ -48,7 +48,6 @@ module Reimbursements
   # Each is memoized per instance; one store lives per request.
   class Budget < ApplicationRecord
     include RecordId
-    include BudgetHealth
     include PlannedAmount
     TYPES = %w[Expense Income].freeze
 
@@ -158,6 +157,24 @@ module Reimbursements
     # The plan: the latest forecast, else the initial budget.
     def projected_amount
       current_forecast || initial_budget
+    end
+
+    def income? = budget_type == "Income"
+
+    # The over-budget badge's rule lives here once, so no view re-derives it (the badge was
+    # once red beside a positive Remaining). A nil remaining is untracked; income is never
+    # over budget.
+    def over_budget?
+      return false if income?
+
+      !remaining.nil? && remaining.negative?
+    end
+
+    # Softer: spend passed the ORIGINAL initial figure, but a raised forecast still covers it.
+    def over_initial_budget?
+      return false if income? || over_budget? || initial_budget.nil?
+
+      committed_amount > initial_budget || paid_portal_amount > initial_budget
     end
 
     # Paid in the portal. Beside eusa_actual_amount, a gap between the two is a
