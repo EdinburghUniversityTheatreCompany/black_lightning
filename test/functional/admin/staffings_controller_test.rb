@@ -275,6 +275,16 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_equal Admin::StaffingJob.find(job.id).user_id, @user.id
   end
 
+  test "turbo_stream sign_up toasts the success message and leaves no flash for the next page" do
+    job = FactoryBot.create(:unstaffed_staffing_job)
+
+    put :sign_up, params: { id: job }, format: :turbo_stream
+
+    assert_equal @user, job.reload.user
+    assert_match "Thank you for choosing to staff", response.body
+    assert_nil session["flash"]
+  end
+
   test "sign_up should fail when job is already staffed by someone else" do
     job = FactoryBot.create(:staffed_staffing_job)
     job.staffable.start_time = Time.current.advance(days: -1)
