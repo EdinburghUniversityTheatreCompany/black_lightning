@@ -61,9 +61,8 @@ module DisplayHelper
   # the Pi re-fetches these pages forever, so the image is cached by URL.
   def display_qr_code(url, css_class: "h-64 w-64", label: "Scan to book")
     encoded = Rails.cache.fetch(DisplayHelper.qr_cache_key(url), expires_in: 1.week) do
-      qr = RQRCode::QRCode.new(url, level: :m)
       Base64.strict_encode64(
-        RQRCode::Renderers::PNG.render(qr, unit: QR_MODULE_SIZE * 2, offset: QR_MODULE_SIZE * 4)
+        RQRCode::QRCode.new(url, level: :m).as_png(module_px_size: QR_MODULE_SIZE * 2, border_modules: 2).to_s
       )
     end
 
