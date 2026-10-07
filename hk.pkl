@@ -87,10 +87,10 @@ local linters = new Mapping<String, Step> {
     }
     // --- Security + correctness -------------------------------------------------
     // bundler-audit: `update` refreshes the advisory DB when online (swallowed offline), then
-    // `check` gates. importmap-audit skips here (this Vite app has no bin/importmap). fasterer is
-    // advisory (exits non-zero on offenses, hence `|| true`). database_consistency needs a
-    // reachable DB, so a `rails runner` probe skips it (exit 0) when none is up. Keep every
-    // command loop-free: hk's internal `sh` aborts on `while read` inside `$(...)`.
+    // `check` gates. fasterer is advisory (exits non-zero on offenses, hence `|| true`).
+    // database_consistency needs a reachable DB, so a `rails runner` probe skips it (exit 0) when
+    // none is up. Keep every command loop-free: hk's internal `sh` aborts on `while read` inside
+    // `$(...)`.
     ["brakeman"] {
         glob = "**/*.rb"
         check = "bundle exec brakeman -q --no-pager --exit-on-warn"
@@ -98,10 +98,6 @@ local linters = new Mapping<String, Step> {
     ["bundler-audit"] {
         glob = "**/Gemfile.lock"
         check = "bundle exec bundle-audit update >/dev/null 2>&1 || true; bundle exec bundle-audit check"
-    }
-    ["importmap-audit"] {
-        glob = "**/importmap.rb"
-        check = "if [ -f bin/importmap ]; then bin/importmap audit; else echo 'no bin/importmap — skipping'; fi"
     }
     ["fasterer"] {
         glob = "**/*.rb"
