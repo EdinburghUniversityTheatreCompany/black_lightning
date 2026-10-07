@@ -794,7 +794,7 @@ module Reimbursements
     end
 
     test "to_tsv survives a tab or newline typed into an uploaded cell" do
-      file = xlsx_fixture(xlsx_sheet([ "Props", "4000", "Expense", "100", "", "one\ttwo\nthree" ]))
+      file = xlsx_upload(xlsx_sheet([ "Props", "4000", "Expense", "100", "", "one\ttwo\nthree" ]), sheet: "Budget")
       import = build_import(file, input_type: :xlsx)
 
       round_tripped = build_import(import.to_tsv, input_type: :canonical_tsv)
@@ -1330,21 +1330,6 @@ module Reimbursements
       assert_match(/matches more than one area/, import.entries.sole.error)
       assert_match(/no financial year or cost centre/, import.entries.sole.error)
       assert_empty import.re_homes, "a blocked row moves nothing"
-    end
-
-    private
-
-    def xlsx_fixture(rows)
-      require "caxlsx"
-      package = Axlsx::Package.new
-      package.workbook.add_worksheet(name: "Budget") do |sheet|
-        rows.each { |row| sheet.add_row row }
-      end
-      file = Tempfile.new([ "budget", ".xlsx" ])
-      file.binmode
-      file.write(package.to_stream.read)
-      file.flush
-      file
     end
   end
 end

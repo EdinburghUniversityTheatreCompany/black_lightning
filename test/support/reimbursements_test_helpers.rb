@@ -86,6 +86,20 @@ module ReimbursementsTestHelpers
     expense
   end
 
+  # A one-sheet .xlsx holding +rows+, as an upload: the importers read only its #path, so it
+  # serves a model test and a posted file alike.
+  def xlsx_upload(rows, sheet: "Sheet1")
+    require "caxlsx"
+    package = Axlsx::Package.new
+    package.workbook.add_worksheet(name: sheet) { |worksheet| rows.each { |row| worksheet.add_row row } }
+    file = Tempfile.new([ "upload", ".xlsx" ])
+    file.binmode
+    file.write(package.to_stream.read)
+    file.rewind
+    (@xlsx_tempfiles ||= []) << file # a collected Tempfile deletes its file
+    Rack::Test::UploadedFile.new(file.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+  end
+
   def create_reimbursements_batch(date_sent: Date.new(2026, 5, 13), **attrs)
     Reimbursements::Batch.create!(date_sent: date_sent, **attrs)
   end

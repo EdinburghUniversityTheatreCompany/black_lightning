@@ -702,18 +702,6 @@ module Admin
 
     # --- Uploading the sheet -------------------------------------------------
 
-    def actuals_xlsx(rows)
-      require "caxlsx"
-      package = Axlsx::Package.new
-      package.workbook.add_worksheet(name: "Actuals") { |sheet| rows.each { |row| sheet.add_row row } }
-      file = Tempfile.new([ "actuals", ".xlsx" ])
-      file.binmode
-      file.write(package.to_stream.read)
-      file.rewind
-      Rack::Test::UploadedFile.new(file.path,
-                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    end
-
     # The OLE2 signature every legacy .xls opens with, so +name+ can lie about the format like a renamed file.
     def actuals_legacy_xls(name: "actuals.xls")
       file = Tempfile.new([ "actuals", File.extname(name) ])
@@ -746,7 +734,7 @@ module Admin
     test "an uploaded xlsx previews like a paste and is carried on as text" do
       sign_in @user
 
-      post :preview, params: { actuals_file: actuals_xlsx([ ACTUALS_HEADER.split("\t"), debit_row.split("\t") ]) }
+      post :preview, params: { actuals_file: xlsx_upload([ ACTUALS_HEADER.split("\t"), debit_row.split("\t") ], sheet: "Actuals") }
 
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
       carriers = css_select("input[name=pasted_text][type=hidden]")
@@ -789,7 +777,7 @@ module Admin
 
       messages = [
         assert_raises(upload::UnreadableError) { upload.to_text(actuals_legacy_xls) }.message,
-        assert_raises(upload::UnreadableError) { upload.to_text(actuals_xlsx([ [] ])) }.message,
+        assert_raises(upload::UnreadableError) { upload.to_text(xlsx_upload([ [] ], sheet: "Actuals")) }.message,
         assert_raises(upload::UnreadableError) { upload.to_text(actuals_unreadable_xlsx) }.message
       ]
 
@@ -815,7 +803,7 @@ module Admin
       # The tab has to be INSIDE one cell, which a row built by splitting on tabs would never show.
       cells = debit_row.split("\t")
       cells[5] = "Alice\tProducer"
-      text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ ACTUALS_HEADER.split("\t"), cells ]))
+      text = ::Reimbursements::ActualsUpload.to_text(xlsx_upload([ ACTUALS_HEADER.split("\t"), cells ], sheet: "Actuals"))
 
       assert_equal ACTUALS_HEADER.split("\t").size, text.lines.last.split("\t").size
       assert_includes text, "Alice Producer", "the tab becomes a space rather than a column break"

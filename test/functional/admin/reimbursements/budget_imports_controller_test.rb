@@ -674,8 +674,8 @@ module Admin
 
       test "an uploaded xlsx survives preview into apply" do
         sign_in @user
-        file = fixture_file_upload_xlsx([ HEADERS.split("\t"),
-                                          [ "", "", "Props", "4000", "Expense", "1200", "", "" ] ])
+        file = xlsx_upload([ HEADERS.split("\t"), [ "", "", "Props", "4000", "Expense", "1200", "", "" ] ],
+                           sheet: "Budget")
 
         post :preview, params: { year: @year.key, cost_centre_id: @cost_centre.id,
                                  file: file }
@@ -738,19 +738,6 @@ module Admin
         assert_response :success
         assert_match(/Area total.*agreed total.*every row/m, response.body)
         assert_match(/Budget amount.*that line/m, response.body)
-      end
-
-      private
-
-      def fixture_file_upload_xlsx(rows)
-        require "caxlsx"
-        package = Axlsx::Package.new
-        package.workbook.add_worksheet(name: "Budget") { |sheet| rows.each { |row| sheet.add_row row } }
-        file = Tempfile.new([ "budget", ".xlsx" ])
-        file.binmode
-        file.write(package.to_stream.read)
-        file.rewind
-        Rack::Test::UploadedFile.new(file.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       end
     end
   end
