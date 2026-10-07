@@ -42,14 +42,15 @@ class RecurringEnqueueRetryTest < ActiveSupport::TestCase
     assert_equal 3, attempts, "should stop at max_attempts"
   end
 
-  # A validation failure or a dead connection is a real problem; retrying hides it.
+  # A validation failure or a dead connection is a real problem; retrying hides it. A message
+  # that merely mentions a deadlock is not one: the class is matched through the cause.
   test "an error that is not a deadlock is raised immediately" do
     attempts = 0
 
     assert_raises(SolidQueue::Job::EnqueueError) do
       RecurringEnqueueRetry.with_retries(task_key: "probe") do
         attempts += 1
-        raise SolidQueue::Job::EnqueueError, "ActiveRecord::RecordInvalid: something is wrong"
+        raise SolidQueue::Job::EnqueueError, "Deadlock found when trying to get lock"
       end
     end
 
@@ -67,20 +68,6 @@ class RecurringEnqueueRetryTest < ActiveSupport::TestCase
     end
 
     assert_equal 2, attempts
-  end
-
-  # The class is checked rather than the message, because Solid Queue flattens the original into
-  # a string; Ruby's implicit cause chaining is what keeps the real class reachable.
-  test "it identifies a deadlock through the EnqueueError wrapper by class, not message" do
-    assert RecurringEnqueueRetry.retryable?(deadlock_error)
-    assert_instance_of ActiveRecord::Deadlocked, deadlock_error.cause
-  end
-
-  test "it does not treat an unrelated error as retryable" do
-    error = StandardError.new("Deadlock found when trying to get lock")
-
-    assert_not RecurringEnqueueRetry.retryable?(error),
-               "a message that merely mentions a deadlock is not one"
   end
 
   test "the retry is wired into SolidQueue's recurring enqueue" do
