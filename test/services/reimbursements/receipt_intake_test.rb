@@ -81,6 +81,19 @@ module Reimbursements
       assert_equal PDF_MAGIC, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
     end
 
+    # A hand-crafted "receipts[]=x" post sends a String: it has #size but no #read,
+    # so it passes the size check and 500s on read. Same for a nested hash or array.
+    test "uploads_from drops receipts params that are not uploaded files" do
+      real = upload(PDF_MAGIC, "receipt.pdf", "application/pdf")
+
+      assert_equal [ real ], ReceiptIntake.uploads_from(
+        [ "not-a-file", real, %w[a b], StringIO.new(PDF_MAGIC), { "tempfile" => "x" } ]
+      )
+      assert_empty ReceiptIntake.uploads_from("not-a-file")
+      assert_empty ReceiptIntake.uploads_from(nil)
+      assert_empty ReceiptIntake.uploads_from([ "", nil ])
+    end
+
     GPS_LATITUDE = "55/1 56/1 44/1".freeze
 
     # Built rather than committed, so the precondition proves the GPS tag is there.

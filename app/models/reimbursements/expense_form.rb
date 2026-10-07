@@ -104,7 +104,7 @@ module Reimbursements
     # Drops anything that is not an uploaded file (a bare String answers #size
     # but not #read).
     def receipts
-      ReceiptContentType.uploads_from(@receipts)
+      ReceiptIntake.uploads_from(@receipts)
     end
 
     # Vetted once, so validation and the attach step agree on the same bytes.

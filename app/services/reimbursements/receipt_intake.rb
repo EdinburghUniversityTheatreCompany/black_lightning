@@ -2,10 +2,10 @@ module Reimbursements
   ##
   # The one gate every receipt passes through (producer form, finance and review
   # uploads, mailbox poll). Checks the size, verifies the ACTUAL bytes against the
-  # allow-list (see ReceiptContentType), converts HEIC to JPEG and strips the
-  # metadata from every raster image. Done here so the viewer, the SharePoint
-  # offload and the EUSA email never see HEIC, or the GPS position a phone photo
-  # carries (usually the producer's home).
+  # allow-list (sniffed with Marcel: the declared type is trivially spoofed),
+  # converts HEIC to JPEG and strips the metadata from every raster image. Done here
+  # so the viewer, the SharePoint offload and the EUSA email never see HEIC, or the
+  # GPS position a phone photo carries (usually the producer's home).
   #
   # Never raises at a caller: an unreadable photo comes back as a Receipt with a
   # friendly #error.
@@ -64,7 +64,19 @@ module Reimbursements
 
     class << self
       def from_params(value)
-        ReceiptContentType.uploads_from(value).map { |file| from_upload(file) }
+        uploads_from(value).map { |file| from_upload(file) }
+      end
+
+      # Drops anything in a `receipts[]` param that is not an uploaded file: a hand-crafted
+      # post can put a bare String there, which answers #size but not #read, so it would pass
+      # the size check and 500 on read.
+      def uploads_from(value)
+        Array(value).compact_blank.select { |file| uploaded_file?(file) }
+      end
+
+      # Deliberately does NOT demand #rewind: the oversized branch returns before anything is read.
+      def uploaded_file?(value)
+        %i[read size original_filename content_type].all? { |message| value.respond_to?(message) }
       end
 
       # Size is checked from #size before anything is read, so an oversized file
@@ -80,7 +92,8 @@ module Reimbursements
       def from_bytes(bytes:, filename:, declared_type:)
         return rejected(filename, too_large_message(filename)) if bytes.to_s.bytesize > max_bytes
 
-        type = ReceiptContentType.sniff(bytes: bytes, filename: filename, declared_type: declared_type)
+        type = Marcel::MimeType.for(StringIO.new(bytes.to_s), name: filename.to_s,
+                                                              declared_type: declared_type.to_s)
         if STRIPPED_SAVERS.key?(type)
           attempts = type == "image/png" ? LOSSLESS_STRIP_ATTEMPTS : LOSSY_STRIP_ATTEMPTS
           reencode(bytes, filename, name: filename.to_s, type: type, attempts: attempts)
