@@ -16,7 +16,7 @@
 
   <%= yield :head %>
 
-  <%= meta_tags(@meta).html_safe %><%# herb:disable erb-no-unsafe-raw %>
+  <%= meta_tags(@meta) %>
 
   <%# JSON-LD; see SchemaHelper for what each page carries. %>
   <% schema_documents.each do |document| %>

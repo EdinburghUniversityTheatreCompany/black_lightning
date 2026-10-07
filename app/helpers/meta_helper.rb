@@ -41,7 +41,7 @@ module MetaHelper
 
     apply_defaults(meta)
 
-    meta.flat_map { |name, content| Array(content).map { |item| meta_tag(name, item) } }.join("\n")
+    safe_join(meta.flat_map { |name, content| Array(content).map { |item| meta_tag(name, item) } }, "\n")
   end
 
   private
@@ -73,6 +73,7 @@ module MetaHelper
   def meta_tag(name, content)
     type = name.start_with?("og", "fb") ? "property" : "name"
 
-    "<meta #{type}='#{name}' content='#{ERB::Util.html_escape content}' />"
+    # The names are this helper's own keys and the content is escaped, so the tag is safe.
+    "<meta #{type}='#{name}' content='#{ERB::Util.html_escape content}' />".html_safe # rubocop:disable Rails/OutputSafety
   end
 end
