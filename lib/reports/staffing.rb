@@ -29,6 +29,9 @@ class Reports::Staffing
     members = User.with_role(:member).order(:last_name, :first_name).pluck(:id, :first_name, :last_name, :email)
     member_ids = members.map(&:first)
 
+    owes_staffing = wb.styles.add_style(fg_color: "FF0000", b: true, type: :dxf)
+    will_owe_staffing = wb.styles.add_style(fg_color: "FF9900", b: true, type: :dxf)
+
     while current_date.year <= @end_year
       next_date = current_date.months_since(6)
 
@@ -36,24 +39,8 @@ class Reports::Staffing
       wb.add_worksheet(name: sheet_name) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows" ])
 
-        # Manual join needed for polymorphic association
-        past_shows = TeamMember
-          .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
-          .where(user_id: member_ids)
-          .where("events.end_date < ? AND events.end_date >= ? AND events.end_date < ?",
-                 Date.current, current_date, next_date)
-          .reorder(nil)
-          .group(:user_id)
-          .count
-
-        upcoming_shows = TeamMember
-          .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
-          .where(user_id: member_ids)
-          .where("events.end_date >= ? AND events.end_date >= ? AND events.end_date < ?",
-                 Date.current, current_date, next_date)
-          .reorder(nil)
-          .group(:user_id)
-          .count
+        past_shows = show_counts(member_ids, current_date...[ next_date, Date.current ].min)
+        upcoming_shows = show_counts(member_ids, [ current_date, Date.current ].max...next_date)
 
         staffing_counts = Admin::StaffingJob
           .joins("INNER JOIN admin_staffings ON admin_staffings.id = admin_staffing_jobs.staffable_id AND admin_staffing_jobs.staffable_type = 'Admin::Staffing'")
@@ -74,8 +61,6 @@ class Reports::Staffing
           ])
         end
 
-        owes_staffing = wb.styles.add_style(fg_color: "FF0000", b: true, type: :dxf)
-        will_owe_staffing = wb.styles.add_style(fg_color: "FF9900", b: true, type: :dxf)
         sheet.add_conditional_formatting("D:D", type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0)', dxfId: owes_staffing, priority: 1)
         sheet.add_conditional_formatting("D:D", type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0) + INDIRECT("RC[2]",0)', dxfId: will_owe_staffing, priority: 2)
       end
@@ -84,5 +69,17 @@ class Reports::Staffing
     end
 
     package
+  end
+
+  private
+
+  # Manual join needed for polymorphic association
+  def show_counts(member_ids, end_dates)
+    TeamMember
+      .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
+      .where(user_id: member_ids, events: { end_date: end_dates })
+      .reorder(nil)
+      .group(:user_id)
+      .count
   end
 end
