@@ -94,10 +94,7 @@ module Reimbursements
     end
 
     def queue
-      @queue ||= begin
-        pending = claims.select(&:pending?)
-        ReviewSupport.split_queue(claims, OwnerReview.unmet_gate_expense_ids(pending))
-      end
+      @queue ||= OwnerReview.split_queue(claims)
     end
 
     def claim_total(expenses)

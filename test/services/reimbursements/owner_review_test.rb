@@ -91,5 +91,25 @@ module Reimbursements
       assert OwnerReview.owned_by?(exp, person(id: "recPer1"))
       assert_not OwnerReview.owned_by?(exp, person(id: "recPer2"))
     end
+
+    test "split_queue puts an unendorsed gated claim awaiting its owner and lists Approved apart" do
+      other = person(id: "recPerOther")
+      gated = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: other, id: "recGated")
+      ownerless = expense(budget: budget(owner_ids: []), submitter: other, id: "recOwnerless")
+      endorsed = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: other, id: "recEndorsed")
+      OwnerEndorsement.create!(expense_record_id: "recEndorsed", budget_record_id: "recBud1",
+                               endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
+                               endorsed_at: Time.current)
+      approved = expense(budget: budget, submitter: other, id: "recApproved")
+      approved.status = Status::APPROVED
+
+      queue = OwnerReview.split_queue([ gated, ownerless, endorsed, approved ])
+
+      assert_equal %w[recGated recOwnerless recEndorsed], queue[:pending].map(&:record_id)
+      assert_equal [ "recGated" ], queue[:awaiting_owner].map(&:record_id)
+      assert_equal %w[recOwnerless recEndorsed], queue[:to_approve].map(&:record_id)
+      assert_equal [ "recApproved" ], queue[:approved].map(&:record_id)
+      assert_equal Set.new([ "recGated" ]), queue[:unmet_ids]
+    end
   end
 end

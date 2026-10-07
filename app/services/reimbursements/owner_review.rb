@@ -44,6 +44,19 @@ module Reimbursements
            .map(&:record_id).to_set
     end
 
+    # The Review queue's tabs, and the finance home's counts: the Pending claims split by
+    # whether their owner gate is unmet, plus the Approved ones. +unmet_ids+ is returned too,
+    # since the cards mark a gated claim. One split, so the screens cannot disagree on whose
+    # queue a claim is in.
+    def split_queue(expenses)
+      pending = expenses.select(&:pending?)
+      unmet = unmet_gate_expense_ids(pending)
+      awaiting_owner, to_approve = pending.partition { |expense| unmet.include?(expense.record_id) }
+      { pending: pending, unmet_ids: unmet,
+        approved: expenses.select { |expense| expense.status == Status::APPROVED },
+        awaiting_owner: awaiting_owner, to_approve: to_approve }
+    end
+
     # A sign-off covers one budget and amount, so editing either re-opens the gate.
     def endorsement_covers?(endorsement, expense)
       return false if endorsement.nil?

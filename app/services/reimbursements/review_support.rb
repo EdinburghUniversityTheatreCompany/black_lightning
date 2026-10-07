@@ -25,17 +25,6 @@ module Reimbursements
       modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
     end
 
-    # The Review queue's tabs; +unmet_ids+ is OwnerReview.unmet_gate_expense_ids
-    # over the pending claims. The post-action anchor reads it too, so both agree.
-    def split_queue(expenses, unmet_ids)
-      pending = expenses.select(&:pending?)
-      awaiting_owner, to_approve = pending.partition { |e| unmet_ids.include?(e.record_id) }
-      { pending: pending,
-        approved: expenses.select { |e| e.status == Status::APPROVED },
-        awaiting_owner: awaiting_owner,
-        to_approve: to_approve }
-    end
-
     # The To-approve tab's two halves: clean claims, then those with a data
     # problem or a possible duplicate.
     def partition_ready(to_approve, budget_by_id, modulus_checker, duplicates)

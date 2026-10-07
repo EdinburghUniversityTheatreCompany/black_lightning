@@ -23,17 +23,13 @@ module Admin
 
         # One list feeds every tab, its count and its CSV. The split happens
         # before the format branch because the CSV follows the tab.
-        expenses = store.expenses_for_cost_centre
-        @pending = expenses.select(&:pending?)
-        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
-        queue = ::Reimbursements::ReviewSupport.split_queue(expenses, @owner_gate_unmet_ids)
-        @approved = queue[:approved]
-        @awaiting_owner = queue[:awaiting_owner]
-        @to_approve = queue[:to_approve]
+        queue = ::Reimbursements::OwnerReview.split_queue(store.expenses_for_cost_centre)
+        @pending, @owner_gate_unmet_ids, @approved, @awaiting_owner, @to_approve =
+          queue.values_at(:pending, :unmet_ids, :approved, :awaiting_owner, :to_approve)
 
         respond_to do |format|
           format.html { load_queue }
-          format.csv { send_export ::Reimbursements::Exports::Expenses, expenses_for_tab }
+          format.csv { send_export ::Reimbursements::Exports::Expenses, queue.fetch(@tab.to_sym) }
         end
       end
 
@@ -155,16 +151,11 @@ module Admin
       # attention). Read before and after an action, so the anchor follows the
       # queue as it now stands.
       def rendered_tab_order
-        expenses = store.expenses_for_cost_centre
-        pending = expenses.select(&:pending?)
-        unmet = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(pending)
-        queue = ::Reimbursements::ReviewSupport.split_queue(expenses, unmet)
+        queue = ::Reimbursements::OwnerReview.split_queue(store.expenses_for_cost_centre)
+        tab = resolve_tab
 
-        case resolve_tab
-        when "approved" then queue[:approved]
-        when "awaiting_owner" then queue[:awaiting_owner]
-        else ordered_to_approve(queue[:to_approve], pending)
-        end.map(&:record_id)
+        (tab == DEFAULT_TAB ? ordered_to_approve(queue[:to_approve], queue[:pending]) : queue.fetch(tab.to_sym))
+          .map(&:record_id)
       end
 
       def ordered_to_approve(to_approve, pending)
@@ -189,14 +180,6 @@ module Admin
             @anchor_successors.find { |id| remaining.include?(id) }
           end
         target && "expense-#{target}"
-      end
-
-      def expenses_for_tab
-        case @tab
-        when "approved" then @approved
-        when "awaiting_owner" then @awaiting_owner
-        else @to_approve
-        end
       end
 
       def resolve_tab
