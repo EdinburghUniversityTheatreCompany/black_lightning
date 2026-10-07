@@ -185,4 +185,4 @@ const itify_click_pineapple_button = function () {
 }
 
 export default itify_add
-export { itify_init, itify_add, itify_add_pineapple_button, itify_click_pineapple_button }
+export { itify_init }

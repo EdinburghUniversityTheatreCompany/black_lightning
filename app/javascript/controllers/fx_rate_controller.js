@@ -3,15 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 // The exchange rate implied by the GBP figure finance types for an international
 // claim. It knows no real rate, so it warns only at a factor of 100 either way:
 // a slipped decimal, or a foreign figure pasted into the pounds box.
+const MIN_RATE = 0.01
+const MAX_RATE = 100
+
 export default class extends Controller {
   static targets = ["amount", "output"]
-  static values = {
-    foreignAmount: Number,
-    currency: { type: String, default: "" },
-    // Outside this, the pair cannot be a real conversion in any market.
-    minRate: { type: Number, default: 0.01 },
-    maxRate: { type: Number, default: 100 }
-  }
+  static values = { foreignAmount: Number, currency: { type: String, default: "" } }
 
   connect() {
     this.render()
@@ -30,7 +27,7 @@ export default class extends Controller {
     }
 
     const rate = foreign / gbp
-    const implausible = rate < this.minRateValue || rate > this.maxRateValue
+    const implausible = rate < MIN_RATE || rate > MAX_RATE
     const unit = this.currencyValue || "unit"
 
     this.outputTarget.textContent = implausible

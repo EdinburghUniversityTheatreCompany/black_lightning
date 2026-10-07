@@ -3,30 +3,25 @@ import { Controller } from "@hotwired/stimulus"
 // Fills the slug from the name as the user types, until they edit the slug.
 export default class extends Controller {
   static targets = ["name", "slug"]
-  static values = { manuallyEdited: Boolean }
+
+  #manuallyEdited = false
 
   connect() {
-    this.manuallyEditedValue = false
+    this.#manuallyEdited = false
     if (this.slugTarget.value === "" && this.nameTarget.value !== "") {
       this.#updateSlug()
     }
   }
 
   nameChanged() {
-    if (!this.manuallyEditedValue) {
+    if (!this.#manuallyEdited) {
       this.#updateSlug()
     }
   }
 
   slugChanged() {
-    const generatedSlug = this.#generateSlug(this.nameTarget.value)
-    const currentSlug = this.slugTarget.value
-
-    if (currentSlug !== generatedSlug && currentSlug !== "") {
-      this.manuallyEditedValue = true
-    } else if (currentSlug === generatedSlug || currentSlug === "") {
-      this.manuallyEditedValue = false
-    }
+    const slug = this.slugTarget.value
+    this.#manuallyEdited = slug !== "" && slug !== this.#generateSlug(this.nameTarget.value)
   }
 
   #updateSlug() {

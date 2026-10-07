@@ -1,10 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
+const PASSTHROUGH_BUTTONS = ["RANDOM", "ON THIS DAY"]
+
 export default class extends Controller {
-  static values = {
-    delay: { type: Number, default: 1000 },
-    randomButtonNames: { type: Array, default: ["RANDOM", "ON THIS DAY"] }
-  }
+  static values = { delay: { type: Number, default: 1000 } }
 
   #timer = null
 
@@ -30,7 +29,7 @@ export default class extends Controller {
     const submitter = event.submitter
     if (!submitter) return false
     const label = (submitter.value || submitter.textContent || "").trim().toUpperCase()
-    return this.randomButtonNamesValue.some(name => name.toUpperCase() === label)
+    return PASSTHROUGH_BUTTONS.includes(label)
   }
 
   #clearTimer() {

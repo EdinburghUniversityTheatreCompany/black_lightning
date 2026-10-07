@@ -4,12 +4,10 @@ import { Controller } from "@hotwired/stimulus"
 // below it. A constant cannot do: how many lines the header wraps to depends on
 // the viewport.
 export default class extends Controller {
-  static targets = ["head"]
-
   connect() {
     this.#measure()
     this.observer = new ResizeObserver(() => this.#measure())
-    this.observer.observe(this.hasHeadTarget ? this.headTarget : this.element)
+    this.observer.observe(this.element)
   }
 
   disconnect() {
@@ -17,7 +15,7 @@ export default class extends Controller {
   }
 
   #measure() {
-    const head = this.hasHeadTarget ? this.headTarget : this.element.querySelector("thead")
+    const head = this.element.querySelector("thead")
     if (!head) return
 
     this.element.style.setProperty("--sticky-head-height", `${Math.round(head.getBoundingClientRect().height)}px`)
