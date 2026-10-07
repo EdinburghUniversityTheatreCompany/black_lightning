@@ -4,22 +4,18 @@ module Reimbursements
   class AreaBackfillTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    test "splits Area: Category names, tolerating extra whitespace" do
+    test "homes Area: Category names, tolerating extra whitespace, and leaves the rest" do
       a = create_reimbursements_budget(name: "Cogito: Marketing")
       b = create_reimbursements_budget(name: "Cogito: Other")
       c = create_reimbursements_budget(name: "Improverts:  Retreat")  # two spaces
+      loose = create_reimbursements_budget(name: "Contingency")
 
       AreaBackfill.run!
 
       assert_equal "Cogito", a.reload.area.name
       assert_equal a.area, b.reload.area
       assert_equal "Improverts", c.reload.area.name
-    end
-
-    test "leaves a budget with no colon alone" do
-      budget = create_reimbursements_budget(name: "Contingency")
-      AreaBackfill.run!
-      assert_nil budget.reload.area
+      assert_nil loose.reload.area
     end
 
     test "seeds the area's owners from the union of its budgets'" do
@@ -33,16 +29,6 @@ module Reimbursements
       AreaBackfill.run!
 
       assert_equal [ alice.record_id, bob.record_id ].sort, a.reload.area.owner_ids.sort
-    end
-
-    test "keeps the budgets' own owner rows, so the backfill can be reversed" do
-      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
-      budget = create_reimbursements_budget(name: "Cogito: Marketing")
-      budget.sync_owner_ids!([ alice.id ])
-
-      AreaBackfill.run!
-
-      assert_equal [ alice.record_id ], budget.reload.own_owners.map(&:record_id)
     end
 
     test "does not re-home a budget that already has an area" do

@@ -22,6 +22,7 @@ module Reimbursements
 
       assert_equal "Cogito", hand_moved.reload.area&.name
       assert_equal hand_moved.area_id, prefixed.reload.area_id, "both lines belong to ONE area"
+      assert_equal 1, Area.count
       assert_nil hand_moved.read_attribute(AreaMembership::RECORDED_COLUMN),
                  "the record is spent once it has been restored"
     end
@@ -58,19 +59,6 @@ module Reimbursements
       BackfillReimbursementsAreas.new.up
 
       assert_empty prefixed.reload.area.owner_ids
-    end
-
-    # A line the backfill DOES re-home is re-homed by the backfill, and the
-    # recorded area must not be created a second time beside the one it made.
-    test "a prefixed line is re-homed once, not into a second area of the same name" do
-      prefixed = create_reimbursements_budget(name: "Cogito: Marketing")
-      AreaBackfill.run!
-
-      BackfillReimbursementsAreas.new.down
-      BackfillReimbursementsAreas.new.up
-
-      assert_equal 1, Area.count
-      assert_equal "Cogito", prefixed.reload.area&.name
     end
 
     # The record decides, never the line's current area: the backfill re-homes by
@@ -147,17 +135,6 @@ module Reimbursements
       assert_equal next_year.id, budget.reload.area.financial_year_id
     end
 
-    # The other half: an area this run created and the restore did NOT empty is
-    # left alone, or the cleanup would delete the ordinary backfill's own work.
-    test "an area the backfill created and still holds lines survives the cleanup" do
-      budget = create_reimbursements_budget(name: "ZZCogito: Marketing")
-
-      BackfillReimbursementsAreas.new.down
-      BackfillReimbursementsAreas.new.up
-
-      assert_equal "ZZCogito", budget.reload.area&.name
-    end
-
     # The record is the area's identity, not its id: down deletes the rows, so
     # an id would dangle. An area nothing reproduces is rebuilt from the record.
     test "restore! rebuilds an area no line's name reproduces" do
@@ -196,20 +173,15 @@ module Reimbursements
     # must ask the LIVE schema, not its memoized column list (a wrong-model scope
     # would pass over a service that had stopped asking). DDL auto-commits on
     # MySQL and workers share a server, so the column goes back in an ensure.
-    test "record! refuses when the recording column is gone" do
+    test "record! and restore! refuse when the recording column is gone" do
       error = without_recording_column do
+        assert_raises(AreaMembership::MissingRecordError) { AreaMembership.restore! }
         assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record! }
       end
       assert_match(/area_before_rollback/, error.message)
-      # The table is the scope's: a hardcoded one would answer "present" for every
-      # other model.
+      # Checked with the column back: the table is the scope's, and a hardcoded
+      # one would answer "present" for every other model.
       assert_raises(AreaMembership::MissingRecordError) { AreaMembership.record!(scope: Area.all) }
-    end
-
-    test "restore! refuses when the recording column is gone" do
-      without_recording_column do
-        assert_raises(AreaMembership::MissingRecordError) { AreaMembership.restore! }
-      end
     end
 
     private

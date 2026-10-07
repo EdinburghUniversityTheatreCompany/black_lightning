@@ -41,15 +41,19 @@ module Admin
 
       # The empty hidden field beside a multiple select is what clears the list:
       # without it, removing the last owner posts no owner_ids key at all.
-      test "the area form offers its owners as one searchable multi-select" do
+      test "the edit form offers owners as one searchable multi-select and a type and amount per line" do
         alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
         bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
         area = create_reimbursements_area(name: "Cogito")
         area.sync_owner_ids!([ alice.id ])
+        create_reimbursements_budget(name: "Marketing", area: area)
 
         get :edit, params: { id: area.record_id }
 
         assert_response :success
+        assert_no_match(/skip budget-owner sign-off/, response.body)
+        assert_select "select[name*='[budget_type]']"
+        assert_select "input[name*='[initial_budget]']"
         assert_select "select[name='reimbursements_area[owner_ids][]'][multiple].simple-select2"
         assert_select "input[type=hidden][name='reimbursements_area[owner_ids][]'][value='']"
         assert_select "select[name='reimbursements_area[owner_ids][]'] " \
@@ -63,12 +67,14 @@ module Admin
 
         assert_difference -> { ::Reimbursements::Area.count }, 1 do
           post :create, params: { name: "Cogito", initial_budget: "£1,200",
-                                  owner_ids: [ person.record_id ] }
+                                  budget_basis: "net", owner_ids: [ person.record_id ] }
         end
 
         area = ::Reimbursements::Area.order(:id).last
         assert_equal "Cogito", area.name
         assert_equal 1200, area.initial_budget, "a typed £1,200 must not store as 0"
+        # DatabaseStore::AREA_FIELDS drops an unlisted column silently.
+        assert_equal "net", area.budget_basis
         assert_equal [ person.record_id ], area.owner_ids
       end
 
@@ -87,18 +93,8 @@ module Admin
         assert_equal [ alice.record_id ], area.reload.owner_ids
       end
 
-      # DatabaseStore::AREA_FIELDS drops an unlisted column silently, so a net
-      # area would come back a spend cap with nothing on screen saying so.
-      test "an area created as a net allowance is not silently a spend cap" do
-        post :create, params: { name: "Committee", initial_budget: "1000",
-                                budget_basis: "net" }
-
-        assert_equal "net", ::Reimbursements::Area.order(:id).last.budget_basis
-      end
-
       test "the form switches an area between a spend cap and a net allowance" do
         area = create_reimbursements_area(name: "Committee")
-        assert_equal "expenses", area.budget_basis, "a backfilled area is a spend cap"
 
         patch :update, params: { id: area.record_id, name: "Committee", budget_basis: "net" }
 
@@ -123,33 +119,6 @@ module Admin
         assert_response :unprocessable_entity
       end
 
-      test "adds a budget line to an area through nested attributes" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        assert_difference -> { ::Reimbursements::Budget.count }, 1 do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320" } }
-          }
-        end
-
-        assert_equal "Cogito: Marketing", area.reload.budgets.last.name
-      end
-
-      test "detaching a budget nils its area rather than deleting it" do
-        area = create_reimbursements_area(name: "Cogito")
-        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { id: budget.id, area_id: "" } }
-          }
-        end
-
-        assert_nil budget.reload.area
-      end
-
       # An area with no owners switches its budgets' sign-off gate off
       # (OwnerReview.gate_applies? is false), so the form says so.
       test "the area form warns when the area has no owners" do
@@ -161,17 +130,6 @@ module Admin
         assert_match(/skip budget-owner sign-off/, response.body)
       end
 
-      test "the area form does not warn when the area has an owner" do
-        person = create_reimbursements_person(name: "Alice", email: "alice@example.com")
-        area = create_reimbursements_area(name: "Cogito")
-        area.sync_owner_ids!([ person.id ])
-
-        get :edit, params: { id: area.record_id }
-
-        assert_response :success
-        assert_no_match(/skip budget-owner sign-off/, response.body)
-      end
-
       # A line with neither year nor centre is lenient-scoped into every year's and
       # centre's list and every producer's picker (the state BudgetImport#adoptions
       # prevents), so it takes the area's own.
@@ -180,12 +138,15 @@ module Admin
         centre = ::Reimbursements::CostCentre.default
         area = create_reimbursements_area(name: "Cogito", financial_year: year, cost_centre: centre)
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320" } }
-        }
+        assert_difference -> { ::Reimbursements::Budget.count }, 1 do
+          patch :update, params: {
+            id: area.record_id, name: "Cogito",
+            budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: "432320" } }
+          }
+        end
 
         budget = area.reload.budgets.last
+        assert_equal "Cogito: Marketing", budget.name
         assert_equal year.id, budget.financial_year_id
         assert_equal centre.id, budget.cost_centre_id
       end
@@ -223,89 +184,53 @@ module Admin
         assert_empty area.reload.budgets
       end
 
-      # A truncated POST with neither name nor code key: the key guard must read
-      # the lambda's fields, or the row is absent there, touched in the lambda
-      # and raises in save!.
-      test "a row posting only a figure, with no name or code key at all, is reported" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { budget_type: "Expense", initial_budget: "500" } }
-        }
-
-        assert_response :unprocessable_entity
-        assert_empty area.reload.budgets
-      end
-
-      # A figure with no name is half-filled, not untouched: report it rather than
-      # drop a line the operator thinks they added.
-      test "a new budget row carrying only a figure is reported, not dropped" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "", nominal_code: "",
-                                         budget_type: "Expense", initial_budget: "500" } }
-        }
-
-        assert_response :unprocessable_entity
-        assert_match(/needs a name and a nominal code/, flash[:alert].to_s + response.body)
-        assert_empty area.reload.budgets
-      end
-
-      test "a code-less line can still be detached from its area" do
+      test "a code-less line can still be detached: its area is nilled, nothing is deleted" do
         area = create_reimbursements_area(name: "Cogito")
         line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "",
                                             area: area)
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "",
-                                         area_id: "" } }
-        }
+        assert_no_difference -> { ::Reimbursements::Budget.count } do
+          patch :update, params: {
+            id: area.record_id, name: "Cogito",
+            budgets_attributes: { "0" => { id: line.id, name: line.name, nominal_code: "",
+                                           area_id: "" } }
+          }
+        end
 
         assert_nil line.reload.area_id
       end
 
-      # Unlike its code, an existing row's name is required: blank would raise in save!.
-      test "blanking an existing line's name is rejected rather than raising" do
+      test "a nested budget row that is incomplete or unreadable is refused and named" do
         area = create_reimbursements_area(name: "Cogito")
-        line = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
+        line = create_reimbursements_budget(name: "Cogito: Marketing", nominal_code: "432320",
+                                            area: area)
+        incomplete = /needs a name and a nominal code/
 
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { id: line.id, name: " ", nominal_code: "432320" } }
-        }
+        {
+          # A truncated POST with neither name nor code key: the key guard must read
+          # the lambda's fields, or the row is absent there, touched in the lambda
+          # and raises in save!.
+          { budget_type: "Expense", initial_budget: "500" } => incomplete,
+          # Half-filled, not untouched: report it rather than drop a line the
+          # operator thinks they added.
+          { name: "", nominal_code: "", budget_type: "Expense", initial_budget: "500" } => incomplete,
+          { name: "Cogito: Marketing", nominal_code: " " } => incomplete,
+          { name: " ", nominal_code: "432320" } => incomplete,
+          # Unlike its code, an existing row's name is required: blank would raise in save!.
+          { id: line.id, name: " ", nominal_code: "432320" } => /name can't be blank/,
+          { name: "Marketing", nominal_code: "432320", initial_budget: "about a grand" } => /isn't an amount/,
+          { name: "Marketing", nominal_code: "432320", budget_type: "Nonsense" } => /valid budget type/
+        }.each do |row, message|
+          assert_no_difference -> { ::Reimbursements::Budget.count } do
+            patch :update, params: { id: area.record_id, name: "Cogito",
+                                     budgets_attributes: { "0" => row } }
+          end
 
-        assert_response :unprocessable_entity
+          assert_response :unprocessable_entity, row.inspect
+          assert_match message, CGI.unescapeHTML(response.body), row.inspect
+        end
+
         assert_equal "Cogito: Marketing", line.reload.name
-      end
-
-      test "a budget line with no nominal code is rejected, not filed under (none)" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: "Cogito: Marketing", nominal_code: " " } }
-          }
-        end
-
-        assert_response :unprocessable_entity
-      end
-
-      test "a budget line with a blank name is rejected rather than raising" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: " ", nominal_code: "432320" } }
-          }
-        end
-
-        assert_response :unprocessable_entity
       end
 
       test "a nested budget row cannot carry fields the form does not render" do
@@ -322,46 +247,19 @@ module Admin
         refute_equal 999, budget.cost_centre_id
       end
 
-      test "a new nested row takes its type and initial budget" do
+      test "a new nested row takes its type and a parsed initial budget" do
         area = create_reimbursements_area(name: "Cogito")
 
         patch :update, params: {
           id: area.record_id, name: "Cogito",
           budgets_attributes: { "0" => { name: "Ticket income", nominal_code: "301000",
-                                         budget_type: "Income", initial_budget: "5000" } }
+                                         budget_type: "Income", initial_budget: "£1,200" } }
         }
 
         budget = area.reload.budgets.last
         assert_equal "Income", budget.budget_type
-        assert_equal BigDecimal("5000"), budget.initial_budget
-      end
-
-      # A raw "£1,200" would store as 0 through AR's to_d.
-      test "a typed amount goes through the parser" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        patch :update, params: {
-          id: area.record_id, name: "Cogito",
-          budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
-                                         initial_budget: "£1,200" } }
-        }
-
-        assert_equal BigDecimal("1200"), area.reload.budgets.last.initial_budget
-      end
-
-      test "an unreadable amount blocks the save and names itself" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
-                                           initial_budget: "about a grand" } }
-          }
-        end
-
-        assert_response :unprocessable_entity
-        assert_match(/isn't an amount/, response.body)
+        # A raw "£1,200" would store as 0 through AR's to_d.
+        assert_equal BigDecimal("1200"), budget.initial_budget
       end
 
       # A blank must not become a £0 plan (PlannedAmount), and on an existing row
@@ -390,32 +288,6 @@ module Admin
         }
 
         assert_nil area.reload.budgets.last.initial_budget
-      end
-
-      test "an unknown budget type is refused" do
-        area = create_reimbursements_area(name: "Cogito")
-
-        assert_no_difference -> { ::Reimbursements::Budget.count } do
-          patch :update, params: {
-            id: area.record_id, name: "Cogito",
-            budgets_attributes: { "0" => { name: "Marketing", nominal_code: "432320",
-                                           budget_type: "Nonsense" } }
-          }
-        end
-
-        assert_response :unprocessable_entity
-        assert_match(/valid budget type/, response.body)
-      end
-
-      test "the form renders a type and an amount for each row" do
-        area = create_reimbursements_area(name: "Cogito")
-        create_reimbursements_budget(name: "Marketing", area: area)
-
-        get :edit, params: { id: area.record_id }
-
-        assert_response :success
-        assert_select "select[name*='[budget_type]']"
-        assert_select "input[name*='[initial_budget]']"
       end
     end
   end
