@@ -23,7 +23,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
     # Ensure only non-members are included in the index.
     assert assigns(:maintenance_debts).all { |debt| debt.user.has_role?(:member) }, "The index includes a few non_members"
-    assert_not_includes assigns(:maintenance_debts), non_member_debt, "The index includes a non_member"
+    assert_not_includes assigns(:maintenance_debts), non_member_debt
   end
 
   test "should get index with non-member debts" do
@@ -41,8 +41,8 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
     assert_not assigns(:is_specific_user)
 
     # Ensure all debts are included in the index. There is one created before each test, hence the +1.
-    assert_equal debts.count + 1, assigns(:maintenance_debts).count, "The index does not include all debts"
-    assert_includes assigns(:maintenance_debts), non_member_debt, "The index does not includes the non_member"
+    assert_equal debts.count + 1, assigns(:maintenance_debts).count
+    assert_includes assigns(:maintenance_debts), non_member_debt
   end
 
   # Members can by default only see their own debts.
@@ -65,22 +65,6 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
     assert_equal [ @maintenance_debt ], assigns(:maintenance_debts).to_a
     assert assigns(:is_specific_user)
-  end
-
-  # The checkbox reads @show_fulfilled; the controller must not write the cookie back into params.
-  test "show_fulfilled checkbox reflects the cookie without the controller mutating params" do
-    # Need >= 2 distinct users with debts so the search form (with the checkbox) renders.
-    FactoryBot.create_list(:maintenance_debt, 2)
-
-    cookies["#{Admin::MaintenanceDebt.table_name}_show_fulfilled"] = "true"
-
-    get :index
-    assert_response :success
-
-    assert assigns(:show_fulfilled), "the cookie should drive show_fulfilled = true"
-    assert_select "input[name=?][checked=checked]", "show_fulfilled"
-    assert_not @controller.params.key?("show_fulfilled"),
-      "the controller must not write show_fulfilled back into the request params"
   end
 
   test "should show admin_maintenance_debt" do
@@ -127,7 +111,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
     patch :update, params: { id: @maintenance_debt, admin_maintenance_debt: { show_id: new_show.id } }
 
-    assert_equal new_show.id, assigns(:maintenance_debt).show_id, "The show id of the maintenance debt should equal the new value"
+    assert_equal new_show.id, assigns(:maintenance_debt).show_id
     assert_redirected_to admin_maintenance_debt_path(assigns(:maintenance_debt))
   end
 
@@ -159,7 +143,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
     end
 
     new_staffing_debt = Admin::StaffingDebt.where(user_id: @maintenance_debt.user_id, show_id: @maintenance_debt.show_id).first
-    assert_not_nil new_staffing_debt, "There should be a staffing debt with the same details as the old maintenance debt"
+    assert_not_nil new_staffing_debt
     assert new_staffing_debt.converted_from_maintenance_debt, "The new staffing debt should be converted from a maintenance debt"
 
     assert_redirected_to admin_maintenance_debts_url

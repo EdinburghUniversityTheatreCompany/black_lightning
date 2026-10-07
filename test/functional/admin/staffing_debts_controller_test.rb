@@ -21,6 +21,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
 
   # The checkbox reads @show_fulfilled; the controller must not write the cookie back into params.
   test "show_fulfilled checkbox reflects the cookie without the controller mutating params" do
+    # Need >= 2 distinct users with debts so the search form (with the checkbox) renders.
     FactoryBot.create_list(:staffing_debt, 3)
 
     cookies["#{Admin::StaffingDebt.table_name}_show_fulfilled"] = "true"
@@ -110,7 +111,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
       patch :update, params: { id: @staffing_debt, admin_staffing_debt: attributes }
     end
 
-    assert_equal attributes[:show_id], assigns(:staffing_debt).show_id, "The show id of the staffing debt should equal the new value"
+    assert_equal attributes[:show_id], assigns(:staffing_debt).show_id
     assert_redirected_to admin_staffing_debt_path(assigns(:staffing_debt))
   end
 
@@ -142,7 +143,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     end
 
     new_maintenance_debt = Admin::MaintenanceDebt.where(user_id: @staffing_debt.user_id, show_id: @staffing_debt.show_id).first
-    assert_not_nil new_maintenance_debt, "There should be a new maintenance debtwith the same details as the old staffing debt"
+    assert_not_nil new_maintenance_debt
     assert new_maintenance_debt.converted_from_staffing_debt, "The new maintenance debt should be converted from a staffing debt"
 
     assert_redirected_to admin_staffing_debts_url

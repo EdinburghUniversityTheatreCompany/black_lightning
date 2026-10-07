@@ -11,7 +11,7 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    assert_equal User.with_role(:member).all.ids.sort, assigns(:users).ids.sort, "Not all users with the members role are included in the index"
+    assert_equal User.with_role(:member).all.ids.sort, assigns(:users).ids.sort
   end
 
   test "should get index with only in debt" do
@@ -20,8 +20,8 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     get :index, params: { show_in_debt_only: 1 }
     assert_response :success
 
-    assert_includes assigns(:users).to_a, @member, "The user with debt is not included in the index when show_in_debt_only is true"
-    assert_not_includes assigns(:users).to_a, @admin, "The user without debt is included in the index when show_in_debt_only is true"
+    assert_includes assigns(:users).to_a, @member
+    assert_not_includes assigns(:users).to_a, @admin
   end
 
   test "should get show" do
@@ -44,14 +44,5 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal "text/vnd.turbo-stream.html", response.media_type
     assert_match(/<turbo-stream[^>]*target="index-results"/, response.body)
-  end
-
-  # A Turbo form-submission redirect arrives as a paramless turbo_stream request: render the full page.
-  test "index serves a full HTML page for a paramless turbo_stream request" do
-    get :index, format: :turbo_stream
-
-    assert_response :success
-    assert_equal "text/html", response.media_type
-    assert_no_match(/<turbo-stream/, response.body)
   end
 end

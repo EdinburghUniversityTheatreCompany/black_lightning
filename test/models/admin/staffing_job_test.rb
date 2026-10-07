@@ -68,10 +68,10 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
 
     test_jobs = Admin::StaffingJob.unassociated_staffing_jobs_that_count_towards_debt
 
-    assert_includes test_jobs, unassociated_job_that_counts_towards_debt, "The staffing jobs do not contain the unasociated job that counts"
-    assert_not_includes test_jobs, associated_job_that_counts_towards_debt, "The staffing jobs contain the asociated job that counts"
-    assert_not_includes test_jobs, committee_rep_job, "The staffing jobs contain the committee rep job"
-    assert_not_includes test_jobs, job_that_does_not_count_towards_debt, "The staffing jobs contain the job that does not count towards debt"
+    assert_includes test_jobs, unassociated_job_that_counts_towards_debt
+    assert_not_includes test_jobs, associated_job_that_counts_towards_debt
+    assert_not_includes test_jobs, committee_rep_job
+    assert_not_includes test_jobs, job_that_does_not_count_towards_debt
   end
 
   ##
@@ -89,9 +89,9 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
     # This job should have associated with the earliest debt (staffing_debt)
-    assert_not_nil staffing_job.reload.staffing_debt, "The staffing_job has no staffing_debt associated with it"
-    assert_not_nil staffing_debt.reload.admin_staffing_job, "The staffing_debt has no staffing_job associated with it"
-    assert_nil later_staffing_debt.reload.admin_staffing_job, "The newer_staffing_debt has a staffing_job associated with it"
+    assert_not_nil staffing_job.reload.staffing_debt
+    assert_not_nil staffing_debt.reload.admin_staffing_job
+    assert_nil later_staffing_debt.reload.admin_staffing_job
 
     assert_equal staffing_debt.admin_staffing_job.id, staffing_job.id, "The id of the staffing_debt associated with the staffing_job is #{staffing_job.id} instead of the expected value #{staffing_debt.admin_staffing_job.id}"
   end
@@ -102,7 +102,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
     # Check that the staffing job associates with the staffing debt.
-    assert_equal staffing_job, staffing_debt.reload.admin_staffing_job, "The staffing_job is not associated with the staffing_debt"
+    assert_equal staffing_job, staffing_debt.reload.admin_staffing_job
 
     # Change the user on the job to a new user.
     other_user = FactoryBot.create(:user)
@@ -110,8 +110,8 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_job.update(user: other_user)
 
     # Check that the job and debt have dissassociated.
-    assert_nil staffing_job.reload.staffing_debt, "The staffing job has associated with a staffing debt, even though the user is not in debt"
-    assert_nil staffing_debt.reload.admin_staffing_job, "The staffing_debt has a staffing_job associated with it, even though the user on the job has just changed."
+    assert_nil staffing_job.reload.staffing_debt
+    assert_nil staffing_debt.reload.admin_staffing_job
   end
 
   test "removes staffing_job from staffing_debt when removing the user from the staffing_job" do
@@ -119,14 +119,14 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_debt = FactoryBot.create(:staffing_debt, user: user)
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
-    assert_not_nil staffing_job.reload.staffing_debt, "The staffing_job has no staffing_debt associated after associating the staffing_debt with the same staffing_job"
+    assert_not_nil staffing_job.reload.staffing_debt
 
     # Remove the user from the staffing job.
     staffing_job.update(user: nil)
 
     # Assert that the job and debt are no longer linked even after removing the user from the job.
-    assert_nil staffing_job.reload.staffing_debt, "The staffing_debt is not removed from the staffing_job after removing the user"
-    assert_nil staffing_debt.reload.admin_staffing_job, "The staffing_job is not removed from the staffing_debt after removing the user"
+    assert_nil staffing_job.reload.staffing_debt
+    assert_nil staffing_debt.reload.admin_staffing_job
   end
 
   test "does not associate with staffing_debt that is already staffed" do
@@ -134,14 +134,14 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_debt = FactoryBot.create(:staffing_debt, user: user)
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
-    assert_equal staffing_job.reload.staffing_debt, staffing_debt, "The staffing_job is not associated with the staffing_debt"
+    assert_equal staffing_job.reload.staffing_debt, staffing_debt
 
     # Create a staffing job that happens later. This means it should not override the linking.
     later_staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, start_time: staffing_job.staffable.start_time.advance(hours: 1), end_time: staffing_job.staffable.end_time.advance(hours: 1))
     later_staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
-    assert_equal staffing_job.reload.staffing_debt, staffing_debt, "The staffing_job is not associated with the staffing_debt"
-    assert_nil later_staffing_job.reload.staffing_debt, "The later_staffing_job associated with the staffing_debt"
+    assert_equal staffing_job.reload.staffing_debt, staffing_debt
+    assert_nil later_staffing_job.reload.staffing_debt
   end
 
   test "associates with different staffing_debt when changing the user" do
@@ -149,7 +149,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     staffing_debt = FactoryBot.create(:staffing_debt, user: user)
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: user)
 
-    assert_equal staffing_job.reload.staffing_debt, staffing_debt, "The staffing_job is not associated with the staffing_debt"
+    assert_equal staffing_job.reload.staffing_debt, staffing_debt
 
     # Create a new user with a debt
     new_staffing_debt = FactoryBot.create(:staffing_debt)
@@ -157,10 +157,10 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     # Change the staffing_job user to the new user, so the job should associate with new_staffing_debt
     staffing_job.update(user: new_staffing_debt.user)
 
-    assert_nil staffing_debt.reload.admin_staffing_job, "The staffing_job is not removed from the staffing_debt after changing the user"
+    assert_nil staffing_debt.reload.admin_staffing_job
 
-    assert_not_nil staffing_job.reload.staffing_debt, "The staffing job has no staffing debt associated with it after changing the user"
-    assert_not_nil new_staffing_debt.reload.admin_staffing_job, "The staffing_debt has no staffing_job associated with it after changing the user"
+    assert_not_nil staffing_job.reload.staffing_debt
+    assert_not_nil new_staffing_debt.reload.admin_staffing_job
 
     assert_equal new_staffing_debt.admin_staffing_job, staffing_job, "The id of the staffing_debt associated with the staffing_job is #{new_staffing_debt.admin_staffing_job.id} instead of the expected value #{staffing_job.id}"
   end

@@ -16,9 +16,6 @@
 require "test_helper"
 
 class Admin::StaffingTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper
-
-
   test "filled_jobs" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5)
 
@@ -30,17 +27,6 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     assert_equal 1, staffing.reload.filled_jobs
   end
 
-  test "update_reminder runs on creation and sets scheduled_job_id" do
-    # Very far in the future, because it has to be bigger than the current time
-    start_time = DateTime.current.advance(days: 10)
-    start_time = start_time.change(hour: 18, min: 0)
-
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: start_time)
-
-    refute staffing.reminder_job_executed, "Reminder job should not be executed yet"
-    assert_not_nil staffing.scheduled_job_id, "Staffing should have a scheduled job ID"
-  end
-
   test "update_reminder with past staffing does nothing" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: -1))
 
@@ -48,25 +34,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
     staffing.send(:update_reminder)
 
-    assert_equal original_executed_state, staffing.reminder_job_executed, "Should not change executed state for past staffing"
-  end
-
-  test "send_reminder with ActiveJob" do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.current.advance(days: 1))
-
-    refute staffing.reload.reminder_job_executed, "Reminder job should not be executed initially"
-    user = FactoryBot.create(:user)
-
-    staffing.staffing_jobs.first.update_attribute(:user, user)
-
-    StaffingReminderJob.new.perform(staffing.id)
-
-    assert staffing.reload.reminder_job_executed, "The reminder job should be marked as executed"
-
-    # A second run returns early.
-    assert_nothing_raised do
-      StaffingReminderJob.new.perform(staffing.id)
-    end
+    assert_equal original_executed_state, staffing.reminder_job_executed
   end
 
   test "reminder job tracks individual recipients with reminder_sent_at" do
@@ -77,14 +45,14 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     staffing.staffing_jobs.first.update!(user: user1)
     staffing.staffing_jobs.second.update!(user: user2)
 
-    assert_nil staffing.staffing_jobs.first.reminder_sent_at
-    assert_nil staffing.staffing_jobs.second.reminder_sent_at
-
     StaffingReminderJob.new.perform(staffing.id)
 
     assert_not_nil staffing.staffing_jobs.first.reload.reminder_sent_at
     assert_not_nil staffing.staffing_jobs.second.reload.reminder_sent_at
     assert staffing.reload.reminder_job_executed
+
+    # A second run returns early.
+    assert_nothing_raised { StaffingReminderJob.new.perform(staffing.id) }
   end
 
   test "reminder_sent_at is reset when staffing is rescheduled" do
@@ -104,28 +72,13 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   ##
   # Calendar invite cascade
   ##
-  test "sends calendar updates to all assigned users when show_title changes" do
-    staffing = FactoryBot.create(:staffing, staffed_job_count: 2, unstaffed_job_count: 1)
+  test "sends calendar updates to all assigned users when the title or times change" do
+    [ ->(_) { { show_title: "New Show Title" } },
+      ->(s) { { start_time: s.start_time.advance(hours: 1), end_time: s.end_time.advance(hours: 1) } },
+      ->(s) { { end_time: s.end_time.advance(minutes: 30) } } ].each do |change|
+      staffing = FactoryBot.create(:staffing, staffed_job_count: 2, unstaffed_job_count: 1)
 
-    assert_enqueued_emails(2) do
-      staffing.update!(show_title: "New Show Title")
-    end
-  end
-
-  test "sends calendar updates to all assigned users when start_time changes" do
-    staffing = FactoryBot.create(:staffing, staffed_job_count: 2)
-
-    assert_enqueued_emails(2) do
-      staffing.update!(start_time: staffing.start_time.advance(hours: 1),
-                       end_time: staffing.end_time.advance(hours: 1))
-    end
-  end
-
-  test "sends calendar updates to all assigned users when end_time changes" do
-    staffing = FactoryBot.create(:staffing, staffed_job_count: 1)
-
-    assert_enqueued_emails(1) do
-      staffing.update!(end_time: staffing.end_time.advance(minutes: 30))
+      assert_enqueued_emails(2) { staffing.update!(change.(staffing)) }
     end
   end
 
@@ -141,18 +94,19 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: 1))
 
     original_job_id = staffing.scheduled_job_id
-    assert_not_nil original_job_id, "Should have a scheduled job ID"
+    assert_not_nil original_job_id
+    assert_not staffing.reminder_job_executed
 
     staffing.update!(show_title: "Updated Show Title")
 
     new_job_id = staffing.reload.scheduled_job_id
-    assert_not_nil new_job_id, "Should still have a scheduled job ID after update"
-    assert_not_equal original_job_id, new_job_id, "Should have a new job ID after rescheduling"
+    assert_not_nil new_job_id
+    assert_not_equal original_job_id, new_job_id
     assert_not staffing.reminder_job_executed, "Job executed flag should be reset after rescheduling"
 
     # The job marking itself executed must not reschedule.
     staffing.update!(reminder_job_executed: true)
     assert staffing.reload.reminder_job_executed, "Flag should stay true when job marks itself as executed"
-    assert_equal new_job_id, staffing.scheduled_job_id, "Job ID should not change when only marking as executed"
+    assert_equal new_job_id, staffing.scheduled_job_id
   end
 end

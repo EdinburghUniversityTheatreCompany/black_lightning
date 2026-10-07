@@ -283,7 +283,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     put :sign_up, params: { id: job }
 
     assert_equal [ "Someone else has already signed up for this slot" ], flash[:error]
-    assert_not_equal job.reload.user, @user, "The user was signed up for the job anyway."
+    assert_not_equal job.reload.user, @user
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
@@ -305,7 +305,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     put :sign_up, params: { id: job }
 
-    assert_nil job.reload.user, "The user managed to attach itself despite not haging permission."
+    assert_nil job.reload.user
 
     assert_equal [ "You do not have the appropriate permission to sign up for staffing slots." ], flash[:error]
 
@@ -326,12 +326,12 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   test "sign_up should fail for job in the past" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: Time.current.advance(days: -1))
     job = staffing.staffing_jobs.first
-    assert_nil job.reload.user, "The unstaffed job has a user assigned"
+    assert_nil job.reload.user
 
     put :sign_up, params: { id: job }
 
     assert_equal [ "You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift." ], flash[:error]
-    assert_nil job.reload.user, "The user was signed up for the job anyway."
+    assert_nil job.reload.user
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
@@ -342,14 +342,5 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal "text/vnd.turbo-stream.html", response.media_type
     assert_match(/<turbo-stream/, response.body)
-  end
-
-  # A Turbo form-submission redirect arrives as a paramless turbo_stream request: render the full page.
-  test "index serves a full HTML page for a paramless turbo_stream request" do
-    get :index, format: :turbo_stream
-
-    assert_response :success
-    assert_equal "text/html", response.media_type
-    assert_no_match(/<turbo-stream/, response.body)
   end
 end

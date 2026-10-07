@@ -51,9 +51,9 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     unfulfilled_debt = FactoryBot.create(:staffing_debt)
 
-    assert_includes Admin::StaffingDebt.unfulfilled, unfulfilled_debt, "The list of unfulfilled debt does not include the unfulfilled debt"
-    assert_not_includes Admin::StaffingDebt.unfulfilled, fulfilled_debt, "The list of unfulfilled debt includes the fulfilled debt"
-    assert_not_includes Admin::StaffingDebt.unfulfilled, forgiven_debt, "The list of unfulfilled dbet includes the forgiven debt"
+    assert_includes Admin::StaffingDebt.unfulfilled, unfulfilled_debt
+    assert_not_includes Admin::StaffingDebt.unfulfilled, fulfilled_debt
+    assert_not_includes Admin::StaffingDebt.unfulfilled, forgiven_debt
 
     assert Admin::StaffingDebt.unfulfilled.none?(&:fulfilled)
   end
@@ -144,15 +144,15 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
   test "associates with existing staffing_job that counts towards staffing" do
     staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: @user)
 
-    assert_nil staffing_job.staffing_debt, "The staffing_job has a staffing_debt associated with it before one was created"
+    assert_nil staffing_job.staffing_debt
 
     staffing_debt = FactoryBot.create(:staffing_debt, user: @user)
 
     staffing_job.reload
     staffing_debt.reload
 
-    assert_not_nil staffing_debt.admin_staffing_job, "The staffing_debt has no staffing_job associated with it"
-    assert_not_nil staffing_job.staffing_debt, "The staffing_job has no staffing_debt associated with it"
+    assert_not_nil staffing_debt.admin_staffing_job
+    assert_not_nil staffing_job.staffing_debt
 
     assert_equal staffing_debt.admin_staffing_job.id, staffing_job.id,
                  "The id of the staffing_job associated with the staffing_debt is #{staffing_debt.admin_staffing_job.id} instead of the expected value #{staffing_job.id}"
@@ -164,7 +164,7 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     other_user = FactoryBot.create(:user)
     staffing_debt = FactoryBot.create(:staffing_debt, user: other_user)
 
-    assert_nil staffing_debt.admin_staffing_job, "The staffing_debt has associated with a staffing_job, even though this user has none"
+    assert_nil staffing_debt.admin_staffing_job
   end
 
   test "does not associate with existing staffing_job by another user" do
@@ -173,8 +173,8 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     staffing_debt = FactoryBot.create(:staffing_debt, user: @user)
 
-    assert_nil staffing_debt.admin_staffing_job, "The staffing_debt is associated with a staffing_job"
-    assert_nil staffing_job.staffing_debt, "The staffing_job is associated with a staffing_job"
+    assert_nil staffing_debt.admin_staffing_job
+    assert_nil staffing_job.staffing_debt
   end
 
   test "does not associate with existing staffing_job that already has a staffing_debt associated" do
@@ -185,8 +185,8 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     new_staffing_debt = FactoryBot.create(:staffing_debt, user: @user, due_by: existing_staffing_debt.due_by.advance(days: 1))
 
-    assert_equal existing_staffing_debt.id, staffing_job.staffing_debt.id, "The staffing_job is not associated with the existing_staffing_job anymore"
-    assert_nil new_staffing_debt.admin_staffing_job, "The new_staffing_debt is associated with a staffing_job"
+    assert_equal existing_staffing_debt.id, staffing_job.staffing_debt.id
+    assert_nil new_staffing_debt.admin_staffing_job
   end
 
   test "does not associate with existing staffing_job that does not count toward staffing" do
@@ -195,8 +195,8 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     staffing_debt = FactoryBot.create(:staffing_debt, user: @user)
 
-    assert_nil staffing_debt.admin_staffing_job, "The staffing_debt is associated with a staffing_job"
-    assert_nil staffing_job.staffing_debt, "The staffing_job is associated with a staffing_job"
+    assert_nil staffing_debt.admin_staffing_job
+    assert_nil staffing_job.staffing_debt
   end
 
   test "does not associate with existing staffing_job that is a committee rep slot" do
@@ -205,7 +205,7 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     staffing_debt = FactoryBot.create(:staffing_debt, user: @user)
 
-    assert_nil staffing_debt.admin_staffing_job, "The staffing_debt is associated with a staffing_job"
-    assert_nil staffing_job.staffing_debt, "The staffing_job is associated with a staffing_job"
+    assert_nil staffing_debt.admin_staffing_job
+    assert_nil staffing_job.staffing_debt
   end
 end

@@ -18,40 +18,20 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
-  test "producer on a future show can access debt checker" do
-    sign_out users(:admin)
+  { "producer on a future show" => [ 1.week, "Producer", :success ],
+    "producer on a past show" => [ -2.months, "Producer", :forbidden ],
+    "non-producer on a future show" => [ 1.week, "Director", :forbidden ] }.each do |who, (offset, position, status)|
+    test "#{who} gets #{status} from debt checker" do
+      sign_out users(:admin)
+      start = Date.current + offset
+      show = FactoryBot.create(:show, start_date: start, end_date: start + 1.week)
+      user = FactoryBot.create(:member)
+      FactoryBot.create(:team_member, user: user, teamwork: show, position: position)
 
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:member)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    sign_in user
-    get :new
-    assert_response :success
-  end
-
-  test "producer on a past show cannot access debt checker" do
-    sign_out users(:admin)
-
-    show = FactoryBot.create(:show, start_date: 2.months.ago, end_date: 1.month.ago)
-    user = FactoryBot.create(:member)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    sign_in user
-    get :new
-    assert_response :forbidden
-  end
-
-  test "non-producer on a future show cannot access debt checker" do
-    sign_out users(:admin)
-
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:member)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director")
-
-    sign_in user
-    get :new
-    assert_response :forbidden
+      sign_in user
+      get :new
+      assert_response status
+    end
   end
 
   test "preview with valid paste data shows results" do
@@ -80,13 +60,15 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     tsv = <<~TSV
       Name\tStudent ID\tEmail
       Nobody Here\ts0000000\tnobody@example.com
+      Person Two\t\t
     TSV
 
     post :preview, params: { paste_data: tsv }
 
     assert_response :success
-    assert_equal 1, assigns(:unmatched).size
+    assert_equal 2, assigns(:unmatched).size
     assert_equal 0, assigns(:exact_matches).size
+    assert_match "Checked 2 row(s)", response.body
   end
 
   test "preview shows debt status for matched users" do
@@ -144,19 +126,5 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal 1, assigns(:exact_matches).size
     assert_equal "Email", assigns(:exact_matches).first[:match_type]
-  end
-
-  test "preview reports total rows" do
-    tsv = <<~TSV
-      Name\tStudent ID\tEmail
-      Person One\t\t
-      Person Two\t\t
-      Person Three\t\t
-    TSV
-
-    post :preview, params: { paste_data: tsv }
-
-    assert_response :success
-    assert_equal 3, assigns(:total_rows)
   end
 end

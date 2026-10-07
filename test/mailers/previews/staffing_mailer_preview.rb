@@ -1,18 +1,14 @@
 class StaffingMailerPreview < ActionMailer::Preview
   def staffing_reminder
-    job = Admin::StaffingJob.where.not(user: nil).sample || FactoryBot.create(:staffed_staffing_job)
-
-    StaffingMailer.staffing_reminder(job)
+    StaffingMailer.staffing_reminder(staffed_job)
   end
 
   def calendar_invite_request
-    job = Admin::StaffingJob.where.not(user: nil).sample || FactoryBot.create(:staffed_staffing_job)
-
-    StaffingMailer.calendar_invite(job, method: :request)
+    StaffingMailer.calendar_invite(staffed_job, method: :request)
   end
 
   def calendar_cancellation
-    job = Admin::StaffingJob.where.not(user: nil).sample || FactoryBot.create(:staffed_staffing_job)
+    job = staffed_job
 
     StaffingMailer.calendar_cancellation(
       recipient: job.user,
@@ -20,5 +16,11 @@ class StaffingMailerPreview < ActionMailer::Preview
       job_name: job.name,
       ics_data: job.ical_calendar(method: :cancel).to_ical
     )
+  end
+
+  private
+
+  def staffed_job
+    Admin::StaffingJob.where.not(user: nil).sample || FactoryBot.create(:staffed_staffing_job)
   end
 end

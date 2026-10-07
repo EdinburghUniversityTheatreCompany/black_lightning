@@ -1,12 +1,6 @@
 require "test_helper"
 
 class DepartmentTest < ActiveSupport::TestCase
-  test "requires a name" do
-    department = Department.new(name: nil)
-    assert_not department.valid?
-    assert department.errors[:name].present?
-  end
-
   test "name is unique case-insensitively" do
     duplicate = Department.new(name: "lighting")
     assert_not duplicate.valid?

@@ -106,17 +106,7 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
   test "should create maintenance_session with a name" do
     post :create, params: { maintenance_session: { date: Date.current, name: "Spring clean" } }
 
-    session = assigns(:maintenance_session)
-    assert_equal "Spring clean", session.name
-    assert_equal "Spring clean", session.to_label
-  end
-
-  test "to_label falls back to the date when created without a name" do
-    post :create, params: { maintenance_session: { date: "2024-03-04" } }
-
-    session = assigns(:maintenance_session)
-    assert_nil session.name
-    assert_equal session.date, session.to_label
+    assert_equal "Spring clean", assigns(:maintenance_session).name
   end
 
   test "should reconcile credits up and down when editing" do

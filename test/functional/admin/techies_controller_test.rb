@@ -151,14 +151,6 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "should get by_entry_year" do
-    get :by_entry_year
-    assert_response :success
-    assert_not_nil assigns(:title)
-    assert_not_nil assigns(:grouped_data)
-    assert_not_nil assigns(:grouped_no_year)
-  end
-
   test "by_entry_year groups techies correctly by parents" do
     parent1 = Techie.create!(name: "Alice", entry_year: 2020)
     parent2 = Techie.create!(name: "Bob", entry_year: 2019)
