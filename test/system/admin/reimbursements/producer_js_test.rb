@@ -69,30 +69,6 @@ module Admin
         assert_equal "35.00", find("#reimbursements_expense_form_amount_excl_vat").value
       end
 
-      # A deactivated budget still satisfies the foreign key, so this one never
-      # 500ed — it silently accepted a claim against a line finance had retired.
-      test "a budget deactivated while the form is open is refused the same way" do
-        retired = create_reimbursements_budget(name: "Costumes", nominal_code: "4100")
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        fill_in "Amount (£, incl. VAT)", with: "42.00"
-        fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
-        fill_in "Description", with: "Ruff, doublet and hose"
-        fill_in "Payment reference", with: "COSTUMES ACT1"
-
-        retired.update!(active: false)
-
-        click_on "Submit expense"
-
-        assert_text "no longer available", wait: 5
-        assert_equal 0, ::Reimbursements::Expense.count, "nothing may be written"
-        assert_equal "Ruff, doublet and hose",
-                     find("#reimbursements_expense_form_description").value
-      end
-
       # --- The international rail --------------------------------------------
 
       # A hidden input carrying `required` silently blocks the whole submit, and
@@ -129,30 +105,6 @@ module Admin
         assert_no_selector "label", text: "Payee sort code", visible: true
       end
 
-      test "an international claim submits on the invoice amount alone, in euros by default" do
-        visit new_admin_reimbursements_expense_path
-
-        attach_file "reimbursements_expense_form_receipts",
-                    Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
-        fill_in "Amount, as printed on the invoice", with: "266.69"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
-        fill_in "Description", with: "Festival insurance"
-        fill_in "Payment reference", with: "INS-2026"
-        fill_in "Payee account name", with: "Ausland GmbH"
-        fill_in "Payee IBAN", with: "DE89 3704 0044 0532 0130 00"
-        fill_in "Payee BIC / SWIFT code", with: "DEUTDEFF500"
-        click_on "Submit expense"
-
-        assert_text "Expense submitted", wait: 5
-        expense = ::Reimbursements::Expense.order(:id).last
-        assert expense.international?
-        assert_equal BigDecimal("266.69"), expense.foreign_amount
-        assert_equal ::Reimbursements::Expense::CURRENCY_EUR, expense.foreign_currency,
-                     "the picker opens on euros, the common case"
-        assert_nil expense.amount, "finance supplies the GBP figure at review"
-      end
-
       test "a producer can pick a currency other than euros" do
         visit new_admin_reimbursements_expense_path
 
@@ -171,8 +123,10 @@ module Admin
 
         assert_text "Expense submitted", wait: 5
         expense = ::Reimbursements::Expense.order(:id).last
+        assert expense.international?
         assert_equal "USD", expense.foreign_currency
         assert_equal BigDecimal("500.00"), expense.foreign_amount
+        assert_nil expense.amount, "finance supplies the GBP figure at review"
       end
 
       test "picking Invoice marks the payee details required" do

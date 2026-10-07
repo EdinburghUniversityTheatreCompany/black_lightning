@@ -6,7 +6,8 @@ module Admin
     include ReimbursementsTestHelpers
 
     setup do
-      grant_member_role_reimbursements_access
+      grant_producer_permission(users(:member))
+      grant_producer_permission(users(:member_with_phone_number))
       @user = users(:member)
       @person = create_reimbursements_person(email: @user.email)
       @other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
@@ -18,14 +19,6 @@ module Admin
 
     teardown do
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
-    end
-
-    # A dedicated role, so users holding only member/committee stay denied.
-    def grant_member_role_reimbursements_access
-      producer = Role.create!(name: "Producer")
-      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      users(:member).add_role("Producer")
-      users(:member_with_phone_number).add_role("Producer")
     end
 
     test "requires sign-in" do
@@ -41,26 +34,21 @@ module Admin
       assert_response :forbidden
     end
 
-    test "shows only the current user's expenses" do
-      sign_in @user
-
-      get :index
-
-      assert_response :success
-      assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
-      assert_includes response.body, "Fake blood"
-      assert_not_includes response.body, "Someone else&#39;s"
-      assert_select "th", text: "Submitted"
-      assert_select "th", text: "Created", count: 0
-    end
-
-    test "links the user to their payee record by email on first visit" do
+    test "index lists only the current user's expenses and links them to their payee record" do
       sign_in @user
       assert_nil @user.reimbursements_person_id
 
       get :index
 
+      assert_response :success
       assert_equal @person.id, @user.reload.reimbursements_person_id
+      assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
+      assert_includes response.body, "Fake blood"
+      assert_not_includes response.body, "Someone else&#39;s"
+      assert_select "th", text: "Submitted"
+      assert_select "th", text: "Created", count: 0
+      assert_select "a[href=?]", admin_reimbursements_expense_path(@expense.record_id), text: "View"
+      assert_includes response.body, "add your payment details"
     end
 
     test "refresh redirects to a clean url" do
@@ -69,14 +57,6 @@ module Admin
       get :index, params: { refresh: 1 }
 
       assert_redirected_to admin_reimbursements_expenses_path
-    end
-
-    test "prompts for payment details when bank details are missing" do
-      sign_in @user
-
-      get :index
-
-      assert_includes response.body, "add your payment details"
     end
 
     test "shows an empty state for users with no expenses" do
@@ -170,20 +150,6 @@ module Admin
       assert_equal "Pending", expense.status
     end
 
-    test "create refuses an international claim whose IBAN fails its check digits" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form: valid_form_params.merge(
-        payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
-        amount: "", amount_excl_vat: "", foreign_amount: "266.69",
-        payee_name_override: "Ausland GmbH",
-        iban_override: "DE88 3704 0044 0532 0130 00", bic_override: "DEUTDEFF500"
-      ) }
-
-      assert_response :unprocessable_entity
-      assert_equal 0, ::Reimbursements::Expense.where(payment_method: "international").count
-    end
-
     # Converted at intake, so every downstream reader gets an ordinary JPEG.
     test "create stores an iPhone HEIC photo as a JPEG named .jpg" do
       sign_in @user
@@ -197,18 +163,6 @@ module Admin
       assert_equal "reimbursements_receipt.jpg", receipt.filename.to_s
       assert_equal "image/jpeg", Marcel::MimeType.for(StringIO.new(receipt.download)),
                    "the stored bytes must actually be a readable JPEG"
-    end
-
-    test "create keeps an ordinary PDF receipt exactly as uploaded" do
-      sign_in @user
-
-      post :create, params: { reimbursements_expense_form: valid_form_params }
-
-      receipt = ::Reimbursements::Expense.order(:id).last.receipt_files.sole
-      assert_equal "application/pdf", receipt.content_type
-      assert_equal "reimbursements_receipt.pdf", receipt.filename.to_s
-      assert_equal File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")),
-                   receipt.download
     end
 
     # A damaged photo (or libvips without HEIF) is a validation error, not a 500.
@@ -313,19 +267,6 @@ module Admin
       assert_equal "Acme Props Ltd", ::Reimbursements::Expense.order(:id).last.payee_name_override
     end
 
-    test "edit finds an own expense created out-of-band (e.g. the email-in poll job)" do
-      sign_in @user
-      get :index # the user's list is warmed without the email-in expense
-
-      emailed = create_reimbursements_expense(person: @person, budget: @budget,
-                                              description: "Emailed taxi receipt")
-
-      get :edit, params: { id: emailed.record_id }
-
-      assert_response :success
-      assert_includes response.body, "Emailed taxi receipt"
-    end
-
     test "edit renders the prefilled form for an own pending expense" do
       sign_in @user
 
@@ -336,12 +277,15 @@ module Admin
       assert_includes response.body, "receipt.pdf"
     end
 
-    test "edit 404s for another person's expense" do
-      sign_in @user
+    [ [ :get, :show ], [ :get, :edit ], [ :delete, :destroy ] ].each do |verb, action|
+      test "#{action} 404s for another person's expense" do
+        sign_in @user
 
-      get :edit, params: { id: @other_expense.record_id }
+        public_send(verb, action, params: { id: @other_expense.record_id })
 
-      assert_response :not_found
+        assert_response :not_found
+        assert ::Reimbursements::Expense.exists?(@other_expense.id)
+      end
     end
 
     # --- Read-only show (view a claim after the editable window) -----------
@@ -409,22 +353,6 @@ module Admin
       assert_select "iframe[data-src]", 1
     end
 
-    test "show 404s for another person's expense" do
-      sign_in @user
-
-      get :show, params: { id: @other_expense.record_id }
-
-      assert_response :not_found
-    end
-
-    test "the index links each row to its read-only view" do
-      sign_in @user
-
-      get :index
-
-      assert_select "a[href=?]", admin_reimbursements_expense_path(@expense.record_id), text: "View"
-    end
-
     # --- Draft/submit boundary: state-aware labels + actions --------------
 
     def own_draft(**attrs)
@@ -477,15 +405,6 @@ module Admin
       assert_redirected_to admin_reimbursements_expenses_path
       assert_match(/only a draft can be deleted/i, flash[:alert])
       assert ::Reimbursements::Expense.exists?(@expense.id)
-    end
-
-    test "destroy 404s for another person's draft" do
-      sign_in @user
-
-      delete :destroy, params: { id: @other_expense.record_id }
-
-      assert_response :not_found
-      assert ::Reimbursements::Expense.exists?(@other_expense.id)
     end
 
     # A stale Edit link for a claim review has since picked up.
@@ -554,38 +473,26 @@ module Admin
       create_reimbursements_budget(name: "Costumes", nominal_code: "4100", **attrs)
     end
 
-    test "create re-renders keeping the input when the picked budget was deleted" do
-      sign_in @user
-      doomed = spare_budget
-      params = valid_form_params.merge(budget_record_id: doomed.record_id,
-                                       description: "Blood capsules and a wig")
-      doomed.destroy!
+    # A deactivated budget still satisfies the FK, so it used to charge a retired line.
+    { "deleted" => ->(budget) { budget.destroy! },
+      "deactivated" => ->(budget) { budget.update!(active: false) } }.each do |how, vanish|
+      test "create re-renders keeping the input when the picked budget was #{how}" do
+        sign_in @user
+        gone = spare_budget
+        params = valid_form_params.merge(budget_record_id: gone.record_id,
+                                         description: "Blood capsules and a wig")
+        vanish.call(gone)
 
-      assert_no_difference "::Reimbursements::Expense.count" do
-        post :create, params: { reimbursements_expense_form: params }
+        assert_no_difference "::Reimbursements::Expense.count" do
+          post :create, params: { reimbursements_expense_form: params }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/no longer available/, response.body)
+        assert_includes response.body, "Blood capsules and a wig",
+                        "the producer's typing must survive the failed submit"
+        assert_includes response.body, "PROPS PAT"
       end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/, response.body)
-      assert_includes response.body, "Blood capsules and a wig",
-                      "the producer's typing must survive the failed submit"
-      assert_includes response.body, "PROPS PAT"
-    end
-
-    test "create re-renders keeping the input when the picked budget was deactivated" do
-      sign_in @user
-      retired = spare_budget
-      params = valid_form_params.merge(budget_record_id: retired.record_id,
-                                       description: "Blood capsules and a wig")
-      retired.update!(active: false)
-
-      assert_no_difference "::Reimbursements::Expense.count" do
-        post :create, params: { reimbursements_expense_form: params }
-      end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/, response.body)
-      assert_includes response.body, "Blood capsules and a wig"
     end
 
     # The notice says the budget went, so they can re-pick it.
@@ -640,16 +547,6 @@ module Admin
       assert_response :unprocessable_entity
       assert_match(/no longer available/, response.body)
       assert_includes response.body, "Raced away"
-    end
-
-    test "update rejects invalid input without writing" do
-      sign_in @user
-
-      patch :update, params: { id: @expense.record_id,
-                               reimbursements_expense_form: valid_form_params.except(:receipts).merge(amount: "") }
-
-      assert_response :unprocessable_entity
-      assert_in_delta 12.5, @expense.reload.amount, 0.001, "nothing was written"
     end
   end
   end

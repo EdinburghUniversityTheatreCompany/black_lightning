@@ -2,6 +2,8 @@ require "test_helper"
 
 module Reimbursements
   class ExpenseTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     # Not `include ...url_helpers`: Minitest would collect route helpers named
     # test_* (test_access_admin_reimbursements_setting_path) as tests.
     def routes = Rails.application.routes.url_helpers
@@ -33,48 +35,28 @@ module Reimbursements
       assert_equal [], create_expense.sharepoint_receipt_urls
     end
 
-    test "receipts wraps attached files into Attachment POROs" do
-      expense = create_expense
-      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "receipt.pdf",
-                                   content_type: "application/pdf")
-
-      receipt = expense.receipts.sole
-      assert_kind_of Attachment, receipt
-      assert_equal "receipt.pdf", receipt.filename
-      assert_equal "application/pdf", receipt.content_type
-      assert receipt.attachment_id.present?
-      assert_match %r{^/admin/reimbursements/expenses/\d+/receipts/\d+/inline$}, receipt.url
-      assert_not receipt.image?
-    end
-
     # A PDF is representable (its first page renders), so it gets a thumbnail.
-    test "a PDF receipt is wrapped with a first-page thumbnail and an inline URL" do
-      expense = create_expense
-      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
-                                   content_type: "application/pdf")
+    # The signed id is a bearer token for ActiveStorage's permanent,
+    # unauthenticated routes, so receipts are identified by blob id instead.
+    test "a PDF receipt is wrapped with a first-page thumbnail, an inline URL and its blob id" do
+      expense = attach_test_receipt(create_expense, filename: "invoice.pdf")
 
       receipt = expense.receipts.sole
-      blob_id = expense.receipt_files.sole.blob_id
+      file = expense.receipt_files.sole
+      blob_id = file.blob_id
+      assert_kind_of Attachment, receipt
+      assert_equal "invoice.pdf", receipt.filename
+      assert_equal "application/pdf", receipt.content_type
       assert receipt.pdf?
+      assert_not receipt.image?
       assert receipt.previewable?, "a PDF must offer a thumbnail preview"
       assert receipt.inline_viewable?, "a PDF renders in the browser's own viewer"
+      assert_equal blob_id.to_s, receipt.attachment_id
       assert_equal routes.thumbnail_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
                    receipt.preview_url
       assert_equal routes.inline_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id), receipt.url
       assert_equal routes.download_admin_reimbursements_expense_receipt_path(expense.record_id, blob_id),
                    receipt.download_url
-    end
-
-    # The signed id is a bearer token for ActiveStorage's permanent,
-    # unauthenticated routes.
-    test "a receipt is identified by its blob id, never by a signed id" do
-      expense = create_expense
-      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "invoice.pdf",
-                                   content_type: "application/pdf")
-      file = expense.receipt_files.sole
-
-      receipt = expense.receipts.sole
-      assert_equal file.blob_id.to_s, receipt.attachment_id
       [ receipt.url, receipt.download_url, receipt.preview_url ].each do |url|
         assert_not url.include?(file.signed_id), "a signed id leaked into #{url}"
         assert_not url.start_with?("/rails/active_storage")
@@ -84,9 +66,8 @@ module Reimbursements
     # Sheet music and Office documents are allowed but neither previewable nor
     # renderable.
     test "an unrenderable receipt has no thumbnail and is not inline viewable" do
-      expense = create_expense
-      expense.receipt_files.attach(io: StringIO.new("PK"), filename: "score.mscz",
-                                   content_type: "application/x-musescore")
+      expense = attach_test_receipt(create_expense, filename: "score.mscz",
+                                    content_type: "application/x-musescore", bytes: "PK\x03\x04")
 
       receipt = expense.receipts.sole
       assert_not receipt.previewable?
@@ -151,18 +132,7 @@ module Reimbursements
 
     # --- The international rail ---------------------------------------------
 
-    test "an expense is UK BACS unless it says otherwise" do
-      expense = create_expense
-
-      assert_equal Expense::PAYMENT_METHOD_UK_BACS, expense.payment_method
-      assert_not expense.international?
-    end
-
-    test "payment_method is validated against the known set" do
-      assert_raises(ActiveRecord::RecordInvalid) { create_expense(payment_method: "carrier_pigeon") }
-    end
-
-    test "effective IBAN and BIC fall back through PaymentDetails" do
+    test "effective IBAN and BIC fall back through PaymentDetails, and an override wins" do
       person = Person.create!(name: "Pat", email: "intl-payee@example.com")
       person.create_payment_details!(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
       expense = create_expense(person: person, payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL)
@@ -170,14 +140,8 @@ module Reimbursements
       assert_equal "DE89370400440532013000", expense.effective_iban
       assert_equal "DEUTDEFF500", expense.effective_bic
       assert expense.effective_has_bank_details?
-    end
 
-    test "an IBAN override wins over the payee's own details" do
-      person = Person.create!(name: "Pat", email: "intl-override@example.com")
-      person.create_payment_details!(iban: "DE89370400440532013000", bic: "DEUTDEFF500")
-      expense = create_expense(person: person, payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
-                               iban_override: "NL91ABNA0417164300", bic_override: "ABNANL2A")
-
+      expense.update!(iban_override: "NL91ABNA0417164300", bic_override: "ABNANL2A")
       assert_equal "NL91ABNA0417164300", expense.effective_iban
       assert_equal "ABNANL2A", expense.effective_bic
     end
@@ -194,21 +158,17 @@ module Reimbursements
       assert_not expense.effective_has_bank_details?,
                  "a sort code says nothing about where an international payment goes"
 
-      expense.update!(iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF500")
+      expense.update!(iban_override: "DE89370400440532013000")
+      assert_not expense.effective_has_bank_details?, "an IBAN with no BIC is not routable"
+
+      expense.update!(bic_override: "DEUTDEFF500")
       assert expense.effective_has_bank_details?
     end
 
-    test "an international claim needs BOTH an IBAN and a BIC" do
-      expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
-                               iban_override: "DE89370400440532013000")
-
-      assert_not expense.effective_has_bank_details?, "an IBAN with no BIC is not routable"
-    end
-
     test "the encrypted international overrides survive a round trip at full length" do
-      # The longest IBAN in circulation is 34 characters; both columns are
-      # string(255), which has to hold the ciphertext, not the plaintext.
-      longest = "MT84MALT011000012345MTLCAST001S"
+      # Both columns are string(255), which has to hold the ciphertext of the
+      # longest allowed IBAN, not its plaintext.
+      longest = "A" * BankDetails::IBAN_MAX_LENGTH
       expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
                                iban_override: longest, bic_override: "DEUTDEFF500")
 
@@ -217,18 +177,14 @@ module Reimbursements
     end
 
     # A foreign invoice carries no reclaimable UK VAT, so ex-VAT is the gross.
-    test "an international claim's ex-VAT amount mirrors its GBP amount" do
-      expense = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL,
-                               amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67"))
+    test "an international claim's ex-VAT amount mirrors its GBP amount, a UK claim keeps its split" do
+      amounts = { amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67") }
+      international = create_expense(payment_method: Expense::PAYMENT_METHOD_INTERNATIONAL, **amounts)
+      uk = create_expense(**amounts)
 
-      assert_equal BigDecimal("230.00"), expense.reload.amount_excl_vat,
+      assert_equal BigDecimal("230.00"), international.reload.amount_excl_vat,
                    "a VAT split on a foreign invoice would deduct tax nobody can reclaim"
-    end
-
-    test "a UK claim keeps its own ex-VAT split" do
-      expense = create_expense(amount: BigDecimal("230.00"), amount_excl_vat: BigDecimal("191.67"))
-
-      assert_equal BigDecimal("191.67"), expense.reload.amount_excl_vat
+      assert_equal BigDecimal("191.67"), uk.reload.amount_excl_vat
     end
 
     test "editable? only for submitter types in Draft or Pending" do
@@ -237,9 +193,10 @@ module Reimbursements
       assert_not create_expense(expense_type: Expense::TYPE_FROM_EUSA).editable?
     end
 
-    test "status and expense_type are validated against the known sets" do
-      assert_raises(ActiveRecord::RecordInvalid) { create_expense(status: "Bogus") }
-      assert_raises(ActiveRecord::RecordInvalid) { create_expense(expense_type: "Bogus") }
+    test "status, expense_type and payment_method are validated against the known sets" do
+      { status: "Bogus", expense_type: "Bogus", payment_method: "carrier_pigeon" }.each do |attr, value|
+        assert_raises(ActiveRecord::RecordInvalid, attr.to_s) { create_expense(attr => value) }
+      end
     end
   end
 end

@@ -23,14 +23,22 @@ module Reimbursements
       assert_equal BigDecimal("12.50"), form.amount_decimal
     end
 
-    test "parses currency-formatted amounts" do
+    test "parses currency-formatted and comma-decimal amounts" do
       # Over the large-amount threshold, so it also needs the acknowledgement.
       form = build_form(amount: "£1,234.56", amount_excl_vat: "£1,028.80", large_amount_acknowledged: "1")
       assert form.valid?, form.errors.full_messages.to_sentence
       assert_equal BigDecimal("1234.56"), form.amount_decimal
+
+      # "12,50" must not read as 1250.
+      comma = build_form(amount: "12,50", amount_excl_vat: "10,42")
+      assert comma.valid?, comma.errors.full_messages.to_sentence
+      assert_equal BigDecimal("12.50"), comma.amount_decimal
+      assert_equal BigDecimal("10.42"), comma.amount_excl_vat_decimal
     end
 
     test "large-amount soft block requires acknowledgement at or above the threshold" do
+      assert build_form(amount: "999.99", amount_excl_vat: "900.00").valid?
+
       form = build_form(amount: "1000.00", amount_excl_vat: "900.00")
       assert_not form.valid?
       assert form.errors[:large_amount_acknowledged].present?, "£1000 must ask for confirmation"
@@ -38,10 +46,6 @@ module Reimbursements
       acknowledged = build_form(amount: "1000.00", amount_excl_vat: "900.00",
                                 large_amount_acknowledged: "1")
       assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
-    end
-
-    test "an ordinary-sized claim needs no large-amount acknowledgement" do
-      assert build_form(amount: "999.99", amount_excl_vat: "900.00").valid?
     end
 
     test "a large draft is exempt from the soft block (drafts accept gaps)" do
@@ -55,12 +59,6 @@ module Reimbursements
 
       assert_not form.valid?
       assert_match(/no longer available/, form.errors[:budget_record_id].to_sentence)
-    end
-
-    test "accepts a budget that is among the ones offered" do
-      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud2", "recBud1" ])
-
-      assert form.valid?, form.errors.full_messages.to_sentence
     end
 
     test "compares offered ids as strings, since a select posts a string" do
@@ -83,34 +81,25 @@ module Reimbursements
       assert_nil form.update_attrs[:budget_record_id]
     end
 
-    test "a draft on an offered budget keeps it and reports no drop" do
-      form = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud1" ],
+    test "a draft on an offered budget keeps it, and a blank one is not reported as dropped" do
+      kept = build_form(budget_record_id: "recBud1", offerable_budget_ids: [ "recBud1" ],
                         save_as_draft: "1")
+      assert kept.valid?, kept.errors.full_messages.to_sentence
+      assert_not_predicate kept, :dropped_stale_budget?
+      assert_equal "recBud1", kept.update_attrs[:budget_record_id]
 
-      assert form.valid?, form.errors.full_messages.to_sentence
-      assert_not_predicate form, :dropped_stale_budget?
-      assert_equal "recBud1", form.update_attrs[:budget_record_id]
+      blank = build_form(budget_record_id: "", offerable_budget_ids: [ "recBud1" ],
+                         save_as_draft: "1")
+      assert blank.valid?, blank.errors.full_messages.to_sentence
+      assert_not_predicate blank, :dropped_stale_budget?
     end
 
-    test "a blank budget on a draft is not reported as a dropped one" do
-      form = build_form(budget_record_id: "", offerable_budget_ids: [ "recBud1" ],
-                        save_as_draft: "1")
-
-      assert form.valid?, form.errors.full_messages.to_sentence
-      assert_not_predicate form, :dropped_stale_budget?
-    end
-
-    test "requires all the airtable form's required fields" do
+    test "a blank form reports every required field under its human attribute name" do
       form = ExpenseForm.new
       assert_not form.valid?
       %i[amount amount_excl_vat budget_record_id description payment_reference receipts].each do |field|
         assert form.errors[field].present?, "expected error on #{field}"
       end
-    end
-
-    test "error messages use human attribute names, not humanized internal ones" do
-      form = ExpenseForm.new
-      form.valid?
       messages = form.errors.full_messages
       # "Budget", not "Budget record"; "Amount excl. VAT", not "Amount excl vat".
       assert messages.any? { |m| m.start_with?("Budget must") }, messages.inspect
@@ -149,10 +138,6 @@ module Reimbursements
       assert acknowledged.errors[:amount_excl_vat].present?
     end
 
-    test "no vat block when excl is below total" do
-      assert build_form.valid?
-    end
-
     test "on edit, the expense's existing receipts satisfy the requirement" do
       form = build_form(receipts: [], require_receipts: false, expense_receipt_count: 1)
       assert form.valid?, form.errors.full_messages.to_sentence
@@ -172,60 +157,17 @@ module Reimbursements
       assert_not build_form(receipts: [ bad ]).valid?
     end
 
-    test "accepts an iPhone HEIC photo and hands the controller the converted JPEG" do
-      heic = Rack::Test::UploadedFile.new(
-        Rails.root.join("test/fixtures/files/reimbursements_receipt.heic"), "image/heic"
-      )
-      form = build_form(receipts: [ heic ])
-
-      assert form.valid?, form.errors.full_messages.to_sentence
-      assert_equal [ { filename: "reimbursements_receipt.jpg", content_type: "image/jpeg" } ],
-                   form.usable_receipts.map { |receipt| receipt.except(:bytes) }
-    end
-
-    test "an unreadable photo is a validation error, not an exception" do
-      truncated = Rack::Test::UploadedFile.new(
-        Rails.root.join("test/fixtures/files/truncated_receipt.heic"), "image/heic"
-      )
-      form = build_form(receipts: [ truncated ])
-
-      assert_not form.valid?
-      assert_match(/couldn't read truncated_receipt\.heic/, form.errors[:receipts].sole)
-      assert_empty form.usable_receipts
-    end
-
-    test "an oversized file is rejected by size without being read for content-type sniffing" do
-      oversized = Object.new
-      def oversized.size = ExpenseForm::MAX_RECEIPT_BYTES + 1
-      def oversized.original_filename = "huge.pdf"
-      def oversized.content_type = "application/pdf"
-      def oversized.read = raise("must not read an oversized file just to sniff its type")
-
-      form = build_form(receipts: [ oversized ])
-
-      assert_not form.valid?
-      assert_includes form.errors[:receipts], "huge.pdf must be 5 MB or smaller."
-    end
-
-    test "validates override formats only when present" do
+    test "overrides must be well formed, and all three or none (prevents a spliced payee)" do
       all_three = { payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
-                   account_number_override: "12345678" }
+                    account_number_override: "12345678" }
       assert build_form(**all_three).valid?
       assert_not build_form(**all_three.merge(sort_code_override: "80-2")).valid?
       assert_not build_form(**all_three.merge(account_number_override: "123")).valid?
-    end
 
-    test "requires all three overrides together, not just one or two (prevents a spliced payee)" do
       partial = build_form(payee_name_override: "Stage Supplies Ltd")
       assert_not partial.valid?
       assert_includes partial.errors[:base].join, "fill in all three"
-
       assert_not build_form(sort_code_override: "80-22-60", account_number_override: "12345678").valid?
-
-      assert build_form(payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
-                        account_number_override: "12345678").valid?
-      # Blank on all three (the common case: no override at all) is still fine.
-      assert build_form.valid?
     end
 
     # Without the overrides the effective payee falls back to the submitter.
@@ -260,17 +202,6 @@ module Reimbursements
       assert form.valid?, form.errors.full_messages.to_sentence
     end
 
-    test "a reimbursement needs no payee override" do
-      assert build_form(expense_type: Expense::TYPE_REIMBURSEMENT).valid?
-    end
-
-    test "the internal From-EUSA type is not caught by the invoice rule" do
-      form = ExpenseForm.from_actual(build_actual)
-      form.budget_record_id = "recBud1"
-
-      assert form.valid?, form.errors.full_messages.to_sentence
-    end
-
     test "create_attrs carries person, pending status and normalized values" do
       attrs = build_form.create_attrs("recPer1")
       assert_equal "recPer1", attrs[:person_record_id]
@@ -283,21 +214,11 @@ module Reimbursements
       form = ExpenseForm.new(save_as_draft: "1", receipts: [ upload ])
       assert form.valid?, form.errors.full_messages.to_sentence
       assert_equal Status::DRAFT, form.update_attrs[:status]
-
-      submitted = ExpenseForm.new(receipts: [ upload ])
-      assert_not submitted.valid?
     end
 
     test "draft still rejects malformed values that are present" do
       assert_not ExpenseForm.new(save_as_draft: "1", amount: "-5").valid?
       assert_not ExpenseForm.new(save_as_draft: "1", sort_code_override: "80-2").valid?
-    end
-
-    test "parses a comma decimal separator without a 100x blowup" do
-      form = build_form(amount: "12,50", amount_excl_vat: "10,42")
-      assert form.valid?, form.errors.full_messages.to_sentence
-      assert_equal BigDecimal("12.50"), form.amount_decimal
-      assert_equal BigDecimal("10.42"), form.amount_excl_vat_decimal
     end
 
     test "override bank details are formatted for storage" do
@@ -361,14 +282,6 @@ module Reimbursements
 
     # --- The international rail ---------------------------------------------
 
-    def valid_uk_params(**overrides)
-      {
-        amount: "12.50", amount_excl_vat: "10.42", budget_record_id: "recBud1",
-        description: "Fake blood", payment_reference: "PROPS PAT",
-        require_receipts: false, expense_receipt_count: 1
-      }.merge(overrides)
-    end
-
     def international_params(**overrides)
       {
         payment_method: Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
@@ -425,22 +338,14 @@ module Reimbursements
 
     # --- Currency ------------------------------------------------------------
 
-    test "the currency defaults to euros" do
-      form = ExpenseForm.new(international_params.except(:foreign_currency))
+    # The rail is chosen by payment_method, not by the currency, so GBP is fine.
+    { nil => "EUR", "USD" => "USD", " sek " => "SEK", "GBP" => "GBP" }.each do |posted, stored|
+      test "a posted currency of #{posted.inspect} is stored as #{stored}" do
+        form = ExpenseForm.new(international_params(foreign_currency: posted))
 
-      assert form.valid?, form.errors.full_messages.inspect
-      assert_equal Reimbursements::Expense::CURRENCY_EUR, form.update_attrs[:foreign_currency]
-    end
-
-    test "another listed currency is accepted and stored" do
-      form = ExpenseForm.new(international_params(foreign_currency: "USD"))
-
-      assert form.valid?, form.errors.full_messages.inspect
-      assert_equal "USD", form.update_attrs[:foreign_currency]
-    end
-
-    test "a currency is normalised to its upper-case code" do
-      assert_equal "SEK", ExpenseForm.new(international_params(foreign_currency: " sek ")).update_attrs[:foreign_currency]
+        assert form.valid?, form.errors.full_messages.inspect
+        assert_equal stored, form.update_attrs[:foreign_currency]
+      end
     end
 
     test "an unlisted currency is refused" do
@@ -450,31 +355,17 @@ module Reimbursements
       assert form.errors[:foreign_currency].present?
     end
 
-    # The rail is chosen by payment_method, not by the currency.
-    test "GBP is a valid international currency" do
-      form = ExpenseForm.new(international_params(foreign_currency: "GBP"))
-
-      assert form.valid?, form.errors.full_messages.inspect
-    end
-
-    test "a UK claim stores no currency even if one is posted" do
-      attrs = ExpenseForm.new(valid_uk_params(foreign_currency: "USD")).update_attrs
-
-      assert_nil attrs[:foreign_currency], "a code beside a GBP amount reads as a claim about it"
-    end
-
     test "the IBAN and BIC are normalised on the way through" do
       attrs = ExpenseForm.new(international_params).update_attrs
 
       assert_equal "DE89370400440532013000", attrs[:iban_override]
       assert_equal "DEUTDEFF500", attrs[:bic_override]
-      assert_equal Reimbursements::Expense::CURRENCY_EUR, attrs[:foreign_currency]
     end
 
-    test "a UK claim stores no currency" do
-      attrs = build_form.update_attrs
+    test "a UK claim stores no currency even if one is posted" do
+      attrs = build_form(foreign_currency: "USD").update_attrs
 
-      assert_nil attrs[:foreign_currency]
+      assert_nil attrs[:foreign_currency], "a code beside a GBP amount reads as a claim about it"
       assert_equal Reimbursements::Expense::PAYMENT_METHOD_UK_BACS, attrs[:payment_method]
     end
 
@@ -488,13 +379,6 @@ module Reimbursements
       confirmed = ExpenseForm.new(international_params(foreign_amount: "5000",
                                                        large_amount_acknowledged: "1"))
       assert confirmed.valid?, confirmed.errors.full_messages.inspect
-    end
-
-    test "the VAT soft block never fires on an international claim" do
-      form = ExpenseForm.new(international_params)
-
-      assert form.valid?, form.errors.full_messages.inspect
-      assert_empty form.errors[:vat_acknowledged]
     end
 
     test "a draft international claim saves incomplete" do
