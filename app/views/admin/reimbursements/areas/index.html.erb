@@ -27,7 +27,7 @@
        agreed = if area.no_budget_set?
                   reimbursements_money(nil)
                 else
-                  "#{reimbursements_money(area.projected_amount)} (#{area.basis_qualifier})"
+                  "#{reimbursements_money(area.projected_amount)} (#{area.budget_basis})"
                 end
        owners = budget_owner_names(area, @people_by_id).presence ||
                 content_tag(:span, reimbursements_value(nil), class: "text-gray-400")

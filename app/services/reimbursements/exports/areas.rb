@@ -21,7 +21,7 @@ module Reimbursements
           area.name,
           area.no_budget_set? ? nil : area.projected_amount,
           # The words the form and every card use: a spend cap or a net allowance.
-          area.basis_qualifier,
+          area.budget_basis,
           area.allocated,
           area.unallocated,
           area.budgets.size,

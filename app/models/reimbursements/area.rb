@@ -29,7 +29,7 @@ module Reimbursements
   ##
   # A show, project or heading that several budget lines belong to. It holds the
   # AGREED TOTAL and the owners; its budgets hold the nominal code and an
-  # optional allocation. See docs/superpowers/specs/2026-09-10-area-grouping-design.md.
+  # optional allocation. See CLAUDE.md, Reimbursements portal, "Areas".
   class Area < ApplicationRecord
     include RecordId
     include PlannedAmount
@@ -44,21 +44,14 @@ module Reimbursements
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast", dependent: :destroy,
                          inverse_of: :area
 
-    # What the agreed total is a total OF. A show's is a SPEND CAP (income it
-    # raises buys no more room); a committee's is a NET allowance (income raises
-    # what it may spend). The lines cannot say which, so the area declares it.
-    BASIS_EXPENSES = "expenses".freeze
+    # What the agreed total is a total OF: a show's is a SPEND CAP (income it raises buys no
+    # more room), a committee's a NET allowance (income raises what it may spend). The lines
+    # cannot say which, so the area declares it. The form's radios and every card label share
+    # one vocabulary, so a finance user reads back the words they picked.
     BASIS_NET = "net".freeze
-
-    # The basis qualifies "Agreed total" ("Total expenses" alone reads as money
-    # already spent). Every card label, both radios and the areas index's
-    # qualifier come from here, so a finance user reads back the words they
-    # picked and no two screens name a basis differently.
-    BASIS_QUALIFIERS = { BASIS_EXPENSES => "expenses", BASIS_NET => "net" }.freeze
-    BASIS_LABELS = BASIS_QUALIFIERS.transform_values { |word| "Agreed total (#{word})" }.freeze
-    BASES = BASIS_LABELS.keys.freeze
-    # simple_form wants [text, value] pairs.
-    BASIS_OPTIONS = BASIS_LABELS.map { |value, text| [ text, value ] }.freeze
+    BASES = [ "expenses", BASIS_NET ].freeze
+    # [text, value] pairs for the form's radios; the text is what every card prints back.
+    BASIS_OPTIONS = BASES.map { |basis| [ "Agreed total (#{basis})", basis ] }.freeze
 
     validates :name, presence: true
     # has_attribute?, because on a re-migrate after a rollback the backfill
@@ -154,9 +147,7 @@ module Reimbursements
 
     def net_basis? = budget_basis == BASIS_NET
 
-    def basis_label = BASIS_LABELS[budget_basis]
-
-    def basis_qualifier = BASIS_QUALIFIERS[budget_basis]
+    def basis_label = "Agreed total (#{budget_basis})"
 
     private
 

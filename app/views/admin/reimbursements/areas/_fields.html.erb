@@ -5,7 +5,7 @@
 <%= form.input :initial_budget, label: "Agreed total (£)",
       input_html: { step: "0.01", value: reimbursements_amount_value(form.object.initial_budget) } %>
 
-<%# These are the words the card prints beside the figure (Area::BASIS_LABELS),
+<%# These are the words the card prints beside the figure (Area#basis_label),
     so a finance user picks what they read back. %>
 <%= form.input :budget_basis, as: :radio_buttons,
       collection: ::Reimbursements::Area::BASIS_OPTIONS,

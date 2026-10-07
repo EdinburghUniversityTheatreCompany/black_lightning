@@ -13,7 +13,7 @@
       <% if @area.financial_year && @area.cost_centre&.name != @area.financial_year.label %>
         · <%= @area.financial_year.label %>
       <% end %>
-      <%# Not BASIS_LABELS: that is the form's field label and reads as a stray
+      <%# Not basis_label: that is the form's field label and reads as a stray
           caption in a subtitle. %>
       <% if finance %>· <%= @area.net_basis? ? "net allowance" : "spend cap" %><% end %>
     </p>
