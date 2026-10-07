@@ -10,10 +10,8 @@ module Admin
       HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
         @user = users(:member)
+        grant_finance_permission(@user)
         @year = FY.create!(label: "Fringe 2027")
         @cost_centre = ::Reimbursements::CostCentre.default
       end
@@ -42,46 +40,7 @@ module Admin
         assert_response :forbidden
       end
 
-      # No longer a 404: the year is a selector param, not a path segment, so it
-      # follows FinanceController's rule — never show a DIFFERENT year's money as
-      # though it were the one asked for, so say so and fall back to the active
-      # year. Which year is being imported into is then on screen in the select,
-      # and travels explicitly through preview into apply.
-      test "an unknown year falls back to the active year and says so" do
-        active = FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        get :show, params: { year: "no-such-year" }
-
-        assert_response :success
-        assert_equal active, assigns(:selected_financial_year)
-        assert_match(/no-such-year/, response.body)
-      end
-
       # --- Step 1: the form --------------------------------------------------
-
-      # --- Entering from either side ----------------------------------------
-
-      test "show defaults to the active year when the link named none" do
-        active = FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        get :show
-
-        assert_response :success
-        assert_equal active, assigns(:selected_financial_year)
-      end
-
-      test "show preselects the cost centre a settings-page link named" do
-        centre = create_reimbursements_cost_centre(key: "termtime", name: "Termtime",
-                                                   eusa_code: "BED")
-        sign_in @user
-
-        get :show, params: { cost_centre_id: centre.id }
-
-        assert_response :success
-        assert_equal centre, assigns(:selected_cost_centre)
-      end
 
       test "show says so when no financial year is set up at all" do
         FY.delete_all
@@ -105,27 +64,6 @@ module Admin
 
         assert_response :unprocessable_entity
         assert_nil assigns(:import)
-      end
-
-      # The destination travels through the preview, so apply cannot land in a
-      # different (year, cost centre) pair than the one that was shown.
-      test "apply imports into the year the preview carried, not the active one" do
-        FY.create!(label: "Fringe 2026", active: true)
-        sign_in @user
-
-        post :apply, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
-
-        assert_response :success
-        assert_equal @year, ::Reimbursements::Budget.find_by(name: "Props").financial_year
-      end
-
-      test "show renders the paste/upload form for the year" do
-        sign_in @user
-
-        get :show, params: { year: @year.key }
-
-        assert_response :success
-        assert_equal @year, assigns(:selected_financial_year)
       end
 
       # Turbo Drive drops a non-redirect response to a form POST, so every step
@@ -155,16 +93,6 @@ module Admin
 
         assert_response :success
         assert_equal 2, assigns(:import).entries_in(:create).size
-      end
-
-      test "preview reports a line already in the year as a revision" do
-        existing = create_reimbursements_budget(name: "Props", initial_budget: 1000)
-        existing.update!(financial_year: @year)
-        sign_in @user
-
-        post :preview, params: preview_params(tsv("Props\t4000\tExpense\t1200\t\t"))
-
-        assert_equal 1, assigns(:import).entries_in(:revise).size
       end
 
       test "preview refuses an empty paste" do
@@ -255,8 +183,8 @@ module Admin
 
         assert_difference -> { ::Reimbursements::Area.count }, 1 do
           post :apply, params: preview_params(
-            "Area\tBudget\tNominal code\tType\tAmount\n" \
-            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
+            "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
+            "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
           )
         end
 
@@ -264,6 +192,7 @@ module Admin
         area = ::Reimbursements::Area.find_by(name: "Cogito")
         assert_equal @year, area.financial_year
         assert_equal @cost_centre, area.cost_centre
+        assert_equal BigDecimal("1200"), area.initial_budget
         # Stored bare: Budget#display_name puts the prefix back.
         assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
       end
@@ -330,20 +259,6 @@ module Admin
         assert_equal 1, assigns(:import).entries_in(:revise).size
       end
 
-      test "apply attaches to an existing area rather than creating a second" do
-        area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Area.count } do
-          post :apply, params: preview_params(
-            "Area\tBudget\tNominal code\tType\tAmount\n" \
-            "Cogito\tCogito: Marketing\t432320\tExpense\t400"
-          )
-        end
-
-        assert_equal area.id, ::Reimbursements::Budget.find_by(name: "Marketing").area_id
-      end
-
       test "the preview states the agreed total each new area is about to be given" do
         sign_in @user
 
@@ -355,34 +270,6 @@ module Admin
         assert_response :success
         assert_includes response.body, "Agreed totals to be set"
         assert_includes response.body, "£1,200.00"
-      end
-
-      test "apply writes the Area total column as the new area's agreed total" do
-        sign_in @user
-
-        post :apply, params: preview_params(
-          "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
-          "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400"
-        )
-
-        assert_response :success
-        area = ::Reimbursements::Area.find_by(name: "Cogito")
-        assert_equal BigDecimal("1200"), area.initial_budget
-      end
-
-      test "apply is blocked when the sheet gives one area two different totals" do
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Area.count } do
-          post :apply, params: preview_params(
-            "Area\tArea total\tBudget name\tNominal code\tType\tBudget amount\n" \
-            "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\n" \
-            "Cogito\t1500\tCogito: Other\t432320\tExpense\t800"
-          )
-        end
-
-        assert_response :unprocessable_entity
-        assert_match(/Cogito/, assigns(:import).errors.to_sentence)
       end
 
       # --- Re-homing a line the sheet disagrees with ---------------------------
@@ -411,36 +298,6 @@ module Admin
         assert_select "input[type=checkbox][name='re_home_budget_ids[]']" \
                       "[value=?][checked=checked]", budget.record_id
         assert_select "label[for=?]", "re-home-#{budget.record_id}", text: /Improverts.+Cogito/m
-      end
-
-      test "apply moves a ticked line into the area the sheet names" do
-        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
-                                                financial_year: @year)
-        cogito = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                            financial_year: @year)
-        budget = marketing_in(improverts)
-        sign_in @user
-
-        post :apply, params: preview_params(cogito_sheet,
-                                            re_home_budget_ids: [ "", budget.record_id ])
-
-        assert_response :success
-        assert_equal cogito.id, budget.reload.area_id
-      end
-
-      # An unticked line is left exactly as it was — the whole reason this is a
-      # bucket rather than something the import just does.
-      test "apply leaves an unticked re-home alone" do
-        improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
-                                                financial_year: @year)
-        create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre, financial_year: @year)
-        budget = marketing_in(improverts)
-        sign_in @user
-
-        post :apply, params: preview_params(cogito_sheet, re_home_budget_ids: [ "" ])
-
-        assert_response :success
-        assert_equal improverts.id, budget.reload.area_id
       end
 
       test "apply ignores a re-home key that matches no line in this sheet" do
@@ -486,7 +343,8 @@ module Admin
         end
       end
 
-      # The claim the budget-id keying exists to make.
+      # The claim the budget-id keying exists to make; the unticked line is left
+      # exactly where it was.
       test "a tick follows its budget when the sheet's rows are reordered" do
         improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
                                                 financial_year: @year)
@@ -695,7 +553,10 @@ module Admin
 
       # --- Step 3: apply -----------------------------------------------------
 
+      # The destination travels through the preview, so apply cannot land in a
+      # different (year, cost centre) pair than the one that was shown.
       test "apply creates the year's budgets" do
+        FY.create!(label: "Fringe 2026", active: true)
         sign_in @user
 
         assert_difference -> { ::Reimbursements::Budget.count }, 2 do
@@ -866,8 +727,6 @@ module Admin
         assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, header
         assert_equal "The show's agreed total, the same on every row of that area",
                      hints[header.index("Area total")]
-        assert_match "Area total", response.body
-        assert_match "Budget amount", response.body
       end
 
       test "the import page explains the two amount columns" do

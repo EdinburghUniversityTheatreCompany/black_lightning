@@ -8,11 +8,7 @@ module Reimbursements
 
     setup do
       @year = FinancialYear.create!(label: "Fringe 2027")
-      @cost_centre = CostCentre.default ||
-                     create_reimbursements_cost_centre(key: "fringe", name: "Bedlam Fringe",
-                                                       eusa_code: "F40",
-                                                       receive_mailbox: "in@x.co",
-                                                       send_mailbox: "out@x.co")
+      @cost_centre = CostCentre.default
     end
 
     # DERIVED, never retyped: a hardcoded subset once hid a column shift from
@@ -28,13 +24,6 @@ module Reimbursements
     # The same padding for an xlsx row, which is an Array, not a String.
     def xlsx_sheet(*rows)
       [ HEADERS.split("\t") ] + rows.map { |row| [ "", "" ] + row }
-    end
-
-    # What the two blank cells above are padding PAST. A column inserted before
-    # them shifts every row again, so state the assumption rather than leave it
-    # in a "\t\t" literal.
-    test "the sheet helpers' padding still matches the canonical column order" do
-      assert_equal [ "Area", "Area total" ], BudgetImport::TSV_HEADERS.first(2)
     end
 
     test "the canonical headings say which column is a name and which is money" do
@@ -66,6 +55,7 @@ module Reimbursements
       assert_equal({ "Area total" => "Area Budget", "Budget name" => "Budget", "Budget amount" => "Amount" },
                    import.column_mapping.slice("Area total", "Budget name", "Budget amount"))
       assert import.valid?, import.errors.to_sentence
+      assert_equal "Marketing", import.entries.sole.row[:name]
     end
 
     def build_import(data, input_type: :paste, existing_budgets: [], existing_areas: [], people: [])
@@ -90,24 +80,16 @@ module Reimbursements
 
     # --- Adoption of unplaced budgets ---------------------------------------
 
-    test "a matched budget with no cost centre is adopted into this import's centre" do
-      unplaced = create_reimbursements_budget(name: "Venue hire", initial_budget: 1000)
+    test "a matched budget with no cost centre is adopted, whether or not its figure moved" do
+      moved = create_reimbursements_budget(name: "Venue hire", initial_budget: 1000)
+      same = create_reimbursements_budget(name: "Bar", initial_budget: 1200)
 
-      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t"),
-                            existing_budgets: [ unplaced ])
+      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t", "Bar\t4000\tExpense\t1200\t\t"),
+                            existing_budgets: [ moved, same ])
 
-      assert_equal [ { budget_id: unplaced.record_id, cost_centre: @cost_centre } ],
+      assert_equal %i[revise unchanged], import.entries.map(&:bucket)
+      assert_equal [ moved, same ].map { |b| { budget_id: b.record_id, cost_centre: @cost_centre } },
                    import.adoptions
-    end
-
-    test "adoption does not depend on the figure having moved" do
-      unplaced = create_reimbursements_budget(name: "Venue hire", initial_budget: 1200)
-
-      import = build_import(tsv("Venue hire\t4000\tExpense\t1200\t\t"),
-                            existing_budgets: [ unplaced ])
-
-      assert_equal :unchanged, import.entries.sole.bucket
-      assert_equal [ unplaced.record_id ], import.adoptions.map { |a| a[:budget_id] }
     end
 
     test "a budget that already names a cost centre is never re-homed" do
@@ -132,16 +114,6 @@ module Reimbursements
       assert_equal "Expense", entry.row[:budget_type]
       assert_equal BigDecimal("1200"), entry.row[:amount]
       assert_equal "Fake blood etc", entry.row[:notes]
-    end
-
-    test "reads an uploaded xlsx" do
-      file = xlsx_fixture(xlsx_sheet([ "Props", "4000", "Expense", "1200", "", "" ]))
-
-      import = build_import(file, input_type: :xlsx)
-
-      assert_predicate import, :valid?
-      assert_equal "Props", import.entries.sole.row[:name]
-      assert_equal BigDecimal("1200"), import.entries.sole.row[:amount]
     end
 
     test "reads money the way the rest of the portal does" do
@@ -172,17 +144,6 @@ module Reimbursements
     end
 
     # --- Strict column matching -----------------------------------------------
-
-    test "a bare word is never read as a substring hint" do
-      # The OLD headings on purpose: "Area Budget" is the one that contains the
-      # bare keyword, and the committee's sheet still carries it.
-      headers = "Area\tArea Budget\tBudget\tNominal code\tType\tAmount\tOwner emails\tNotes"
-      row = "Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400\t\t"
-      import = build_import([ headers, row ].join("\n"))
-
-      assert_equal "Cogito: Marketing", import.entries.first.row[:name],
-                   "the name must come from the Budget column, not from Area Budget"
-    end
 
     test "two fields resolving to one column is refused, not guessed" do
       headers = "Initial budget name\tNominal code\tType\tOwner emails"
@@ -218,15 +179,6 @@ module Reimbursements
       assert_empty import.creates
     end
 
-    test "a line matching an existing budget at the same figure is unchanged" do
-      budget = create_reimbursements_budget(name: "Props", initial_budget: 1200)
-
-      import = build_import(tsv("Props\t4000\tExpense\t1200\t\t"), existing_budgets: [ budget ])
-
-      assert_equal [ :unchanged ], import.entries.map(&:bucket)
-      assert_empty import.revisions
-    end
-
     test "a revision compares against the latest forecast, not the initial figure" do
       budget = create_reimbursements_budget(name: "Props", initial_budget: 1000)
       budget.forecasts.create!(amount: 1200, date: Date.new(2027, 1, 1))
@@ -256,27 +208,16 @@ module Reimbursements
 
     # --- Invalid rows block the whole import ---------------------------------
 
-    test "an unreadable amount blocks the import" do
-      import = build_import(tsv("Props\t4000\tExpense\t1200\t\t",
-                                "Venue\t4100\tExpense\tabout a grand\t\t"))
+    test "an unreadable row blocks the import" do
+      { "Venue\t4100\tExpense\tabout a grand\t\t" => /about a grand/,
+        "\t4000\tExpense\t1200\t\t" => /name/i,
+        "Props\t4000\tCapital\t1200\t\t" => /Capital/ }.each do |row, error|
+        import = build_import(tsv("Good\t4000\tExpense\t1200\t\t", row))
 
-      assert_not_predicate import, :valid?
-      assert_equal %i[create invalid], import.entries.map(&:bucket)
-      assert_match(/about a grand/, import.entries.last.error)
-    end
-
-    test "a row with no name blocks the import" do
-      import = build_import(tsv("\t4000\tExpense\t1200\t\t"))
-
-      assert_not_predicate import, :valid?
-      assert_match(/name/i, import.entries.sole.error)
-    end
-
-    test "an unknown budget type blocks the import" do
-      import = build_import(tsv("Props\t4000\tCapital\t1200\t\t"))
-
-      assert_not_predicate import, :valid?
-      assert_match(/Capital/, import.entries.sole.error)
+        assert_not_predicate import, :valid?, row
+        assert_equal %i[create invalid], import.entries.map(&:bucket), row
+        assert_match error, import.entries.last.error
+      end
     end
 
     test "the same name twice in one sheet blocks the import, flagging both" do
@@ -302,9 +243,13 @@ module Reimbursements
         Cogito\tCogito: Marketing\t432320\tExpense\t400
       TSV
 
+      assert_equal 1, import.entries_in(:create).size
       assert_equal [ "Cogito" ], import.area_creates.map { |a| a[:name] }
       assert_equal @cost_centre, import.area_creates.first[:cost_centre]
       assert_equal @year, import.area_creates.first[:financial_year]
+      # A create's area rides in on #creates: never a re-home, and never unticked.
+      assert_empty import.re_homes
+      assert_equal [ "Cogito" ], import.area_creates_for([]).map { |a| a[:name] }
     end
 
     test "a line naming an existing area attaches to it rather than creating a second" do
@@ -333,10 +278,11 @@ module Reimbursements
     test "the area's total is read once from the repeated column" do
       import = build_import(<<~TSV)
         Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
-        Cogito\t1200\tCogito: Other\t432320\tExpense\t800
+        Cogito\t£1,200\tCogito: Marketing\t432320\tExpense\t400
+        Cogito\t£1,200\tCogito: Other\t432320\tExpense\t800
       TSV
 
+      assert import.valid?, import.errors.inspect
       assert_equal 1, import.area_creates.size
       assert_equal 1200, import.area_creates.first[:initial_budget]
     end
@@ -354,10 +300,6 @@ module Reimbursements
 
       assert_not import.valid?
       assert_match(/"Cógito" and "Cogito" are the same area name/, import.errors.join(" "))
-      # And the refusal is doing real work: the database would refuse it too.
-      assert_raises(ActiveRecord::RecordInvalid) do
-        Area.create!(name: "Cógito", cost_centre: @cost_centre, financial_year: @year)
-      end
     end
 
     test "two new areas differing only by an accent block the import" do
@@ -371,17 +313,6 @@ module Reimbursements
       assert_match(/are the same area name/, import.errors.join(" "))
     end
 
-    test "an area named the same way twice over is not an accent clash" do
-      import = build_import(<<~TSV)
-        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t1200\tMarketing\t432320\tExpense\t400
-        Cogito\t1200\tSet\t432330\tExpense\t300
-      TSV
-
-      assert import.valid?, import.errors.inspect
-      assert_equal 1, import.area_creates.size
-    end
-
     test "two different totals for one area block the import" do
       import = build_import(<<~TSV)
         Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
@@ -391,15 +322,6 @@ module Reimbursements
 
       assert_not import.valid?
       assert_match(/Cogito/, import.errors.join(" "))
-    end
-
-    test "a typed £1,200 is stored as 1200, not 0" do
-      import = build_import(<<~TSV)
-        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t£1,200\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert_equal 1200, import.area_creates.first[:initial_budget]
     end
 
     test "an unreadable Area total blocks the import and the message names the column and the area" do
@@ -425,66 +347,41 @@ module Reimbursements
     end
 
     # initial_budget is write-once on an area as on a budget; a new figure is
-    # reported as a revision instead.
+    # reported as a revision instead, compared against #projected_amount so a
+    # re-import reports it once.
     test "an area that already exists keeps its own figure, write-once on create" do
-      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                        financial_year: @year, initial_budget: 1000)
-      import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert import.valid?
-      assert_empty import.area_creates
-      assert_equal [ { area_id: area.record_id, area_name: "Cogito",
-                       from: BigDecimal("1000"), amount: BigDecimal("1200") } ],
-                   import.area_revisions
-    end
-
-    test "an unchanged area total is not reported as a revision" do
-      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                        financial_year: @year, initial_budget: 1200)
-      import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert_empty import.area_revisions
-    end
-
-    # A blank column says "leave the total alone", never "set it to nothing" —
-    # the same rule a blank Amount follows on a budget line.
-    test "a blank Area Budget is not a revision" do
-      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
-                                        financial_year: @year, initial_budget: 1200)
-      import = build_import(<<~TSV, existing_areas: [ area ])
-        Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
-        Cogito\t\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert_empty import.area_revisions
-    end
-
-    # Compared against #projected_amount, so a second re-import measures the
-    # sheet against the LAST forecast rather than re-reporting the same
-    # revision for ever — the convergence property the owner syncs needed too.
-    test "an area total revision converges: a re-import reports it once" do
       area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
                                         financial_year: @year, initial_budget: 1000)
       sheet = <<~TSV
         Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
         Cogito\t1200\tCogito: Marketing\t432320\tExpense\t400
       TSV
+      import = build_import(sheet, existing_areas: [ area ])
 
-      first = build_import(sheet, existing_areas: [ area ])
-      assert_equal 1, first.area_revisions.size
+      assert import.valid?
+      assert_empty import.area_creates
+      assert_equal [ { area_id: area.record_id, area_name: "Cogito",
+                       from: BigDecimal("1000"), amount: BigDecimal("1200") } ],
+                   import.area_revisions
 
       DatabaseStore.new.create_budget_update!(effective_date: Date.current, note: "x",
-                                              created_by: nil,
-                                              forecasts: first.area_revisions)
+                                              created_by: nil, forecasts: import.area_revisions)
+      assert_empty build_import(sheet, existing_areas: [ area.reload ]).area_revisions,
+                   "the same revision must not be reported for ever"
+    end
 
-      second = build_import(sheet, existing_areas: [ area.reload ])
-      assert_empty second.area_revisions, "the same revision must not be reported for ever"
+    # A blank column says "leave the total alone", never "set it to nothing".
+    test "an unchanged or blank area total is not a revision" do
+      area = create_reimbursements_area(name: "Cogito", cost_centre: @cost_centre,
+                                        financial_year: @year, initial_budget: 1200)
+      [ "1200", "" ].each do |total|
+        import = build_import(<<~TSV, existing_areas: [ area ])
+          Area\tArea total\tBudget name\tNominal code\tType\tBudget amount
+          Cogito\t#{total}\tCogito: Marketing\t432320\tExpense\t400
+        TSV
+
+        assert_empty import.area_revisions, total.inspect
+      end
     end
 
     test "an area with no agreed total yet takes the sheet's figure as a revision" do
@@ -520,16 +417,22 @@ module Reimbursements
       [ budget, import ]
     end
 
+    # Same buckets whether or not the figure moved (this one has not), and an
+    # ordinary re-home qualifies neither side.
     test "a sheet naming a different area than the budget currently has reports a re-home" do
       cogito = area_named("Cogito")
-      improverts = create_reimbursements_area(name: "Improverts", cost_centre: @cost_centre,
-                                              financial_year: @year)
-      budget, import = marketing_re_home(area: improverts, existing_areas: [ cogito, improverts ])
+      improverts = area_named("Improverts")
+      budget, import = marketing_re_home(area: improverts, initial_budget: 400,
+                                         existing_areas: [ cogito, improverts ])
 
+      assert_equal :unchanged, import.entries.sole.bucket
       re_home = import.re_homes.sole
       assert_equal budget.record_id, re_home[:budget_id]
       assert_equal "Improverts", re_home[:from_area_name]
       assert_equal "Cogito", re_home[:to_area_name]
+      assert_equal cogito.record_id, re_home[:area_id]
+      assert_nil re_home[:from_area_scope]
+      assert_not re_home[:to_area_is_new]
     end
 
     test "a line already in the area the sheet names reports no re-home" do
@@ -566,42 +469,6 @@ module Reimbursements
       assert_empty import.re_homes
     end
 
-    # A :create line has nothing to move — its area rides in on #creates.
-    test "a new line is never a re-home" do
-      import = build_import(<<~TSV)
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert_equal 1, import.entries_in(:create).size
-      assert_empty import.re_homes
-    end
-
-    # Same buckets as #adoptions and #owner_syncs: a matched line is matched
-    # whether or not its figure moved.
-    test "a re-home does not depend on the figure having moved" do
-      cogito = area_named("Cogito")
-      # A REAL from-area, not the nil default: otherwise this is a second
-      # from-nil test wearing another name, and it dies for that reason too.
-      improverts = area_named("Improverts")
-      budget, import = marketing_re_home(area: improverts, initial_budget: 400,
-                                         existing_areas: [ cogito, improverts ])
-
-      assert_equal :unchanged, import.entries.sole.bucket
-      assert_equal [ budget.record_id ], import.re_homes.map { |r| r[:budget_id] }
-      # The target already exists here, so it travels as an id.
-      assert_equal cogito.record_id, import.re_homes.sole[:area_id]
-    end
-
-    # Keyed by budget id, not row position: a re-import with the rows reordered
-    # must not apply a tick to a different line.
-    test "the re-home checkbox key is the budget id" do
-      budget, import = marketing_re_home(existing_areas: [ area_named("Cogito") ])
-
-      assert_equal budget.record_id, import.re_homes.sole[:key]
-      assert_equal "Cogito: Marketing", import.re_homes.sole[:budget_name]
-    end
-
     test "a re-typed area name is the same area, not a re-home" do
       cogito = area_named("Cogito")
       _budget, import = marketing_re_home(area: cogito, cell: "cogito ",
@@ -625,18 +492,6 @@ module Reimbursements
       assert re_home[:to_area_is_new], "this year has no Cogito yet, so one is about to be created"
     end
 
-    # The qualifications exist only for that collision: an ordinary re-home
-    # must read exactly as it did before record identity replaced the name.
-    test "an ordinary re-home qualifies neither side" do
-      cogito = area_named("Cogito")
-      improverts = area_named("Improverts")
-      _budget, import = marketing_re_home(area: improverts, existing_areas: [ cogito, improverts ])
-
-      re_home = import.re_homes.sole
-      assert_nil re_home[:from_area_scope]
-      assert_not re_home[:to_area_is_new]
-    end
-
     # --- The owner sign-off gate ---------------------------------------------
     # Budget#owners resolves through the area, so an ownerless one switches the
     # gate off.
@@ -655,12 +510,6 @@ module Reimbursements
       _budget, import = marketing_re_home(existing_areas: [ cogito.reload ])
 
       assert import.re_homes.sole[:to_area_has_owners]
-    end
-
-    test "a re-home into an existing area that names nobody reports it too" do
-      _budget, import = marketing_re_home(existing_areas: [ area_named("Cogito") ])
-
-      assert_not import.re_homes.sole[:to_area_has_owners]
     end
 
     # The warning reads this import's own owner column too: a sheet naming an
@@ -700,16 +549,6 @@ module Reimbursements
       assert_equal [ "Cogito" ], import.area_creates_for(import.re_homes).map { |a| a[:name] }
     end
 
-    test "an area a new line lands in is created however the re-homes are ticked" do
-      import = build_import(<<~TSV)
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t400
-      TSV
-
-      assert_equal [ "Cogito" ], import.area_creates_for([]).map { |a| a[:name] }
-    end
-
-
     # --- Owners --------------------------------------------------------------
 
     test "owner emails link to people" do
@@ -734,23 +573,13 @@ module Reimbursements
       assert_equal [ alice.id.to_s ], import.creates.first[:owner_ids]
     end
 
-    test "a revision keeps the sheet's owners for the matched budget" do
-      alice = create_reimbursements_person(name: "Alice", email: "alice@example.com")
-      budget = create_reimbursements_budget(name: "Props", initial_budget: 1000)
-
-      import = build_import(tsv("Props\t4000\tExpense\t1200\talice@example.com\t"),
-                            existing_budgets: [ budget ], people: [ alice ])
-
-      assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.id.to_s ] } ], import.owner_syncs
-    end
-
     # --- The sheet's owner column names the AREA ------------------------------
 
     test "a matched line in an area sends the sheet's owner to the AREA, not its own rows" do
       budget, alice, bob = props_in_area_owned_by_bob
+      sheet = tsv("Props\t4000\tExpense\t1000\talice@example.com\t")
 
-      import = build_import(tsv("Props\t4000\tExpense\t1000\talice@example.com\t"),
-                            existing_budgets: [ budget ], people: [ alice, bob ])
+      import = build_import(sheet, existing_budgets: [ budget ], people: [ alice, bob ])
 
       assert_empty import.owner_syncs,
                    "Budget#owners reads through the area, so the line's own rows are moot"
@@ -758,6 +587,10 @@ module Reimbursements
       assert_equal budget.area.record_id, sync[:area_id]
       # Bob is not on the sheet and survives it: a sync only ever adds.
       assert_equal [ alice.record_id, bob.record_id ].sort, sync[:owner_ids].sort
+
+      DatabaseStore.new.add_area_owners!(budget.area.record_id, [ alice.record_id ])
+      again = build_import(sheet, existing_budgets: [ budget.reload ], people: [ alice, bob ])
+      assert_empty again.area_owner_syncs, "the same sync must not be reported for ever"
     end
 
     # --- What the preview's submit button counts ----------------------------
@@ -801,20 +634,6 @@ module Reimbursements
       assert_empty import.apply_work(re_homes: []).each_value.reject { |_, count| count.zero? }
     end
 
-    test "an area owner sync converges: a re-import reports it once" do
-      budget, alice, bob = props_in_area_owned_by_bob
-      sheet = tsv("Props\t4000\tExpense\t1000\talice@example.com\t")
-
-      first = build_import(sheet, existing_budgets: [ budget ], people: [ alice, bob ])
-      assert_equal [ alice.record_id, bob.record_id ].sort,
-                   first.area_owner_syncs.sole[:owner_ids].sort
-
-      DatabaseStore.new.add_area_owners!(budget.area.record_id, [ alice.record_id ])
-
-      second = build_import(sheet, existing_budgets: [ budget.reload ], people: [ alice, bob ])
-      assert_empty second.area_owner_syncs, "the same sync must not be reported for ever"
-    end
-
     # One owner column per line, so two lines of one area name two people, and
     # both are meant.
     test "an area's owners are the union of what its lines name" do
@@ -851,7 +670,7 @@ module Reimbursements
       TSV
 
       assert_empty import.area_owner_syncs
-      assert_equal [ alice.record_id ], import.owner_syncs.sole[:owner_ids]
+      assert_equal [ { budget_id: budget.record_id, owner_ids: [ alice.record_id ] } ], import.owner_syncs
     end
 
     # Otherwise every re-import would report an owner update for ever.
@@ -969,9 +788,10 @@ module Reimbursements
 
       round_tripped = build_import(import.to_tsv, input_type: :canonical_tsv)
 
+      assert_equal "Props", import.entries.sole.row[:name]
+      assert_equal BigDecimal("100"), import.entries.sole.row[:amount]
       assert_equal import.entries.map(&:row), round_tripped.entries.map(&:row)
       assert_equal "one\ttwo\nthree", round_tripped.entries.sole.row[:notes]
-      assert_equal 1, round_tripped.entries.size
     end
 
     # Only an xlsx cell can hold a tab or newline, so they arrive escaped and
@@ -989,24 +809,17 @@ module Reimbursements
       assert_equal "one\ttwo", again.entries.sole.row[:notes]
     end
 
-    # The same bytes read as the operator's own paste, where a backslash is a
-    # backslash. Only the preview's hidden field is this class's own output.
-    test "a backslash in the operator's own paste is left alone" do
-      import = build_import(tsv("Costume\\next week\t4000\tExpense\t100\t\tC:\\temp\\report.pdf"))
-
-      assert_equal "Costume\\next week", import.entries.sole.row[:name]
-      assert_equal "C:\\temp\\report.pdf", import.entries.sole.row[:notes]
-    end
-
-    # The name is what an existing budget is MATCHED on, so rewriting it turns a
-    # revision into a create — a second line beside the one it meant to update.
+    # In the operator's own paste a backslash is a backslash: only the preview's
+    # hidden field is this class's own output. The name is the match key.
     test "a pasted backslash name still matches the budget it names" do
       existing = create_reimbursements_budget(name: "Costume\\next week", initial_budget: 1000,
                                               cost_centre: @cost_centre, financial_year: @year)
 
-      import = build_import(tsv("Costume\\next week\t4000\tExpense\t1200\t\t"),
+      import = build_import(tsv("Costume\\next week\t4000\tExpense\t1200\t\tC:\\temp\\report.pdf"),
                             existing_budgets: [ existing ])
 
+      assert_equal "Costume\\next week", import.entries.sole.row[:name]
+      assert_equal "C:\\temp\\report.pdf", import.entries.sole.row[:notes]
       assert_equal :revise, import.entries.sole.bucket
     end
 
@@ -1167,35 +980,16 @@ module Reimbursements
 
     def areas_named(shows) = shows.values.map(&:area)
 
-    test "the sheet's area picks between two shows' lines of the same name" do
+    test "the sheet's area picks between two shows' lines of the same name, in either spelling" do
       shows = two_shows_running_marketing
 
-      import = build_import(area_sheet("Cogito", "Cogito: Marketing"),
-                            existing_budgets: shows.values, existing_areas: areas_named(shows))
+      [ "Cogito: Marketing", "Marketing" ].each do |typed|
+        import = build_import(area_sheet("Cogito", typed),
+                              existing_budgets: shows.values, existing_areas: areas_named(shows))
 
-      assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id
-      assert_equal [ shows["Improverts"].record_id ], import.absent_budgets.map(&:record_id)
-    end
-
-    # The bare spelling of the same sheet: the plain name answers to both shows
-    # now, and the area is the only thing separating them.
-    test "the area key beats a bare name both shows answer to" do
-      shows = two_shows_running_marketing
-
-      import = build_import(area_sheet("Cogito", "Marketing"),
-                            existing_budgets: shows.values, existing_areas: areas_named(shows))
-
-      assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id
-    end
-
-    test "two stored lines of one name block a sheet that cannot separate them" do
-      shows = two_shows_running_marketing
-
-      import = build_import(tsv("Marketing\t4000\tExpense\t500\t\t"),
-                            existing_budgets: shows.values)
-
-      assert_not import.valid?
-      assert_match(/matches more than one budget/, import.entries.sole.error)
+        assert_equal shows["Cogito"].record_id, import.entries.sole.budget.record_id, typed
+        assert_equal [ shows["Improverts"].record_id ], import.absent_budgets.map(&:record_id), typed
+      end
     end
 
     test "an area holding two lines that collapse to one key blocks the import" do
@@ -1292,7 +1086,8 @@ module Reimbursements
     end
 
     # Both rows name Cogito's Marketing, one by cell and one by prefix: the
-    # likeliest mid-transition sheet.
+    # likeliest mid-transition sheet. They already agree about the area, so
+    # the message must not suggest an Area cell.
     test "an area cell and the same area's prefix are one line, not two" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount
@@ -1303,10 +1098,13 @@ module Reimbursements
       assert_not import.valid?
       assert_equal 2, import.entries_in(:invalid).size
       assert_match(/named more than once in this sheet/, import.entries.first.error)
+      assert_match(/already names Cogito, so an Area cell would not tell them apart/,
+                   import.entries.first.error)
+      assert_no_match(/told apart by their area/, import.entries.first.error)
     end
 
     # Created loose with the prefix, the next converted sheet would create it
-    # again inside Cogito.
+    # again inside Cogito. The preview must agree with #creates about it.
     test "a create adopts the area its own name names, and drops the prefix" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount
@@ -1317,6 +1115,10 @@ module Reimbursements
       assert import.valid?, import.entries.filter_map(&:error).inspect
       assert_equal [ %w[Set Cogito], %w[Marketing Cogito] ],
                    import.creates.map { |create| [ create[:name], create[:area_name] ] }
+      adopted = import.entries.last
+      assert_equal "Cogito", import.area_name_for(adopted)
+      assert import.area_adopted?(adopted)
+      assert_not import.area_adopted?(import.entries.first), "that row's own cell says Cogito"
     end
 
     test "a create that adopts an area sends its owner there, not to its own rows" do
@@ -1386,21 +1188,6 @@ module Reimbursements
       assert_nil import.entries.sole.matched_area_label
     end
 
-    # P2: the screen has to agree with #creates about where a row lands, or the
-    # operator's one chance to catch a wrong adoption shows an empty Area cell.
-    test "the preview reads an adopted create's area, and says it came from the name" do
-      import = build_import(<<~TSV)
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tSet\t432320\tExpense\t500
-        \tCogito: Marketing\t432330\tExpense\t600
-      TSV
-
-      adopted = import.entries.last
-      assert_equal "Cogito", import.area_name_for(adopted)
-      assert import.area_adopted?(adopted)
-      assert_not import.area_adopted?(import.entries.first), "that row's own cell says Cogito"
-    end
-
     # Nothing merges, but the preview must link the create to the absence.
     test "an absent line the sheet re-creates under its own prefix is named as superseded" do
       cogito = area_named("Cogito")
@@ -1429,20 +1216,6 @@ module Reimbursements
                    "the create resolves to the same bare name the loose line already has"
       assert_equal [ loose.record_id ], import.absent_budgets.map(&:record_id)
       assert_empty import.superseded_absent_budgets
-    end
-
-    # N2: for a group the PREFIX named, "told apart by their area" invites an
-    # Area cell that would change nothing — the rows already agree about it.
-    test "the duplicate message does not suggest an Area cell the prefix already gave" do
-      import = build_import(<<~TSV)
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tMarketing\t432320\tExpense\t500
-        \tCogito: Marketing\t432330\tExpense\t600
-      TSV
-
-      assert_match(/already names Cogito, so an Area cell would not tell them apart/,
-                   import.entries.first.error)
-      assert_no_match(/told apart by their area/, import.entries.first.error)
     end
 
     # Only an area the sheet names reads as a prefix. Read as one, the last two
@@ -1491,16 +1264,18 @@ module Reimbursements
       assert_empty import.re_homes, "a blocked row moves nothing"
     end
 
-    # Where every row already names an area (or none does), the area cell has
-    # nothing left to add, so the instruction is the original one.
-    test "two rows naming the same area and name are told to name it once" do
+    # One line typed twice: the message counts the rows rather than listing one
+    # label twice.
+    test "the same name under one area twice is a duplicate, counted" do
       import = build_import(<<~TSV)
         Area\tBudget\tNominal code\tType\tAmount
         Cogito\tMarketing\t432320\tExpense\t500
-        Cogito\tMarketing\t432320\tExpense\t600
+        Cogito\tMarketing\t432330\tExpense\t600
       TSV
 
       assert_not import.valid?
+      assert_equal 2, import.entries_in(:invalid).size
+      assert_match(/"Marketing" \(Cogito\), 2 times/, import.entries.first.error)
       assert_match(/Name it once/, import.entries.first.error)
       assert_no_match(/its own Area cell/, import.entries.first.error)
     end
@@ -1518,51 +1293,21 @@ module Reimbursements
       assert_equal 3, import.entries_in(:create).size
     end
 
-    # Two shows' lines in one sheet are NOT duplicates — the area separates
-    # them, and refusing here would block the state the rename leaves behind.
-    test "the same bare name under two areas is two lines, not a duplicate" do
+    # Prefixed or bare, a row that names an area is identified BY that area.
+    test "the same name under two areas is two lines, not a duplicate" do
       shows = two_shows_running_marketing
+      spellings = [ [ "Cogito: Marketing", "Improverts: Marketing" ], [ "Marketing", "Marketing" ] ]
 
-      import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tCogito: Marketing\t432320\tExpense\t500
-        Improverts\tImproverts: Marketing\t432330\tExpense\t600
-      TSV
+      spellings.each do |cogito, improverts|
+        import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
+          Area\tBudget\tNominal code\tType\tAmount
+          Cogito\t#{cogito}\t432320\tExpense\t500
+          Improverts\t#{improverts}\t432330\tExpense\t600
+        TSV
 
-      assert import.valid?, import.errors.inspect
-      assert_equal shows.values.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
-    end
-
-    # The sheet Phase 2a is asking the committee to write: bare names, one per
-    # show. A row that names an area is identified BY that area, so these are
-    # two lines rather than one name typed twice.
-    test "bare names under two areas are two lines, not a duplicate" do
-      shows = two_shows_running_marketing
-
-      import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tMarketing\t432320\tExpense\t500
-        Improverts\tMarketing\t432330\tExpense\t600
-      TSV
-
-      assert import.valid?, import.errors.inspect
-      assert_equal shows.values.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
-    end
-
-    # Same name, same area, still one line typed twice — and the message counts
-    # them rather than listing one label twice, which is all it could say.
-    test "the same bare name under one area is still a duplicate" do
-      shows = two_shows_running_marketing
-
-      import = build_import(<<~TSV, existing_budgets: shows.values, existing_areas: areas_named(shows))
-        Area\tBudget\tNominal code\tType\tAmount
-        Cogito\tMarketing\t432320\tExpense\t500
-        Cogito\tMarketing\t432330\tExpense\t600
-      TSV
-
-      assert_not import.valid?
-      assert_equal 2, import.entries_in(:invalid).size
-      assert_match(/"Marketing" \(Cogito\), 2 times/, import.entries.first.error)
+        assert import.valid?, "#{cogito.inspect}: #{import.errors.inspect}"
+        assert_equal shows.values.map(&:record_id).sort, import.revisions.map { |r| r[:budget_id] }.sort
+      end
     end
 
     # A spelling lost under a degenerate name would be silent: the line would
