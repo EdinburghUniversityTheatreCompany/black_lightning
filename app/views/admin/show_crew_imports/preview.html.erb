@@ -31,8 +31,8 @@
           <% @existing_team_members.each do |user_id, data| %>
             <tr>
               <td><%= data["user_name"] %></td>
-              <td><span class="font-monospace"><%= data["current_position"] %></span></td>
-              <td><span class="font-monospace"><%= data["new_position"] %></span></td>
+              <td><span class="font-mono"><%= data["current_position"] %></span></td>
+              <td><span class="font-mono"><%= data["new_position"] %></span></td>
               <td>
                 <% { "skip" => "Skip (keep current)", "merge" => "Merge positions", "replace" => "Replace with new" }.each do |value, label| %>
                   <div class="form-check">
@@ -76,7 +76,7 @@
                   <br><small class="text-gray-500">Matched by <%= UserImport::MATCH_TYPE_LABELS[item[:match_type]] %></small>
                 <% end %>
               </td>
-              <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+              <td><span class="font-mono"><%= item[:row][:position] %></span></td>
               <td>
                 <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
                 <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
@@ -126,7 +126,7 @@
                     <% end %>
                   <% end %>
                 </td>
-                <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                <td><span class="font-mono"><%= item[:row][:position] %></span></td>
                 <td>
                   <% item[:existing_users].each_with_index do |user, i| %>
                     <%= import_choice(item[:index], "link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(@import.years_active_cache[user.id])})", checked: i.zero?) %>
@@ -164,7 +164,7 @@
               <td><%= item[:row][:original_name] %></td>
               <td>
                 <% if item[:row][:email].present? %>
-                  <span class="font-monospace"><%= item[:row][:email] %></span>
+                  <span class="font-mono"><%= item[:row][:email] %></span>
                   <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
                     <br><small class="text-gray-500">(auto-generated)</small>
                   <% end %>
@@ -172,7 +172,7 @@
                   <em class="text-gray-500">(will generate placeholder)</em>
                 <% end %>
               </td>
-              <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+              <td><span class="font-mono"><%= item[:row][:position] %></span></td>
               <td>
                 <%= import_choice(item[:index], "create", "Create & Add", checked: true) %>
                 <%= import_choice(item[:index], "skip", "Skip") %>

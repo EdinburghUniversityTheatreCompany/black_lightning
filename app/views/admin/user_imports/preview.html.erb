@@ -33,7 +33,7 @@
               <td><%= item[:row][:original_name] %></td>
               <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
               <td>
-                <span class="font-monospace"><%= import_match_label(item) %></span>
+                <span class="font-mono"><%= import_match_label(item) %></span>
               </td>
               <td>
                 <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
@@ -67,7 +67,7 @@
             <tr class="table-success">
               <td><%= item[:row][:original_name] %></td>
               <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
-              <td><span class="font-monospace"><%= item[:row][:email] %></span></td>
+              <td><span class="font-mono"><%= item[:row][:email] %></span></td>
               <td>
                 <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
                 <%= render(BadgeComponent.new(type: :success)) { "Already Exists" } %>
@@ -156,7 +156,7 @@
               <td><%= item[:row][:original_name] %></td>
               <td>
                 <% if item[:row][:email].present? %>
-                  <span class="font-monospace"><%= item[:row][:email] %></span>
+                  <span class="font-mono"><%= item[:row][:email] %></span>
                   <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
                     <br><small class="text-gray-500">(auto-generated)</small>
                   <% end %>
@@ -166,7 +166,7 @@
               </td>
               <td>
                 <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                  <span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
+                  <span class="font-mono"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
                 <% else %>
                   <em class="text-gray-500">-</em>
                 <% end %>
