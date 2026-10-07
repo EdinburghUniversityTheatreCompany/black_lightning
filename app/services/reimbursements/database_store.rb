@@ -453,16 +453,12 @@ module Reimbursements
       BudgetUpdate.includes(:created_by, forecasts: %i[budget area]).find_by(id: record_id)
     end
 
-    # Undoes a revision: the forecasts it logged go, then the update row. The forecasts are
-    # DESTROYED, not detached: `dependent: :nullify` would leave every revision in place and
-    # merely unlabelled. Each line falls back to its previous forecast (current_forecast is the
-    # latest by date and id). One transaction, or some lines revert and some not, under a
-    # heading that no longer exists to say which.
+    # Undoes a revision: destroying the update destroys the forecasts it logged (dependent:
+    # :destroy), so each line falls back to the forecast before it. One transaction, so no line
+    # reverts alone.
     def delete_budget_update!(record_id)
       BudgetUpdate.transaction do
-        update = BudgetUpdate.lock.find(record_id)
-        update.forecasts.destroy_all
-        update.destroy!
+        BudgetUpdate.lock.find(record_id).destroy!
       end
       bust_budgets!
     end

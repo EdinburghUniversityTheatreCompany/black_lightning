@@ -32,7 +32,7 @@ module Reimbursements
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
     belongs_to :created_by, class_name: "User", optional: true
     has_many :forecasts, class_name: "Reimbursements::BudgetForecast",
-                         dependent: :nullify, inverse_of: :budget_update
+                         dependent: :destroy, inverse_of: :budget_update
 
     validates :effective_date, presence: true
   end
