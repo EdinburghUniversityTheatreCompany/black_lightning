@@ -11,34 +11,11 @@ module ClimateHelper
     "#{number_with_precision(value, precision: 0)} %"
   end
 
-  def climate_margin(value)
-    return "—" if value.blank?
-
-    "#{number_with_precision(value, precision: 1)} °C"
-  end
-
   def climate_condensation_risk?(margin)
     margin.present? && margin < Climate::CONDENSATION_RISK_MARGIN
   end
 
-  def climate_last_seen(sensor)
-    return "no readings yet" if sensor.latest_reading.nil?
-
-    "#{time_ago_in_words(sensor.latest_reading.recorded_at)} ago"
-  end
-
-  def climate_tile_state(sensor)
-    sensor.stale? ? :stale : :ok
-  end
-
-  CLIMATE_TILE_CLASSES = {
-    stale: "border-amber-300 bg-amber-50/50",
-    ok: "border-gray-200 bg-white"
-  }.freeze
-
-  def climate_tile_classes(state)
-    CLIMATE_TILE_CLASSES.fetch(state, CLIMATE_TILE_CLASSES[:ok])
-  end
+  def climate_tile_classes(sensor) = sensor.stale? ? "border-amber-300 bg-amber-50/50" : "border-gray-200 bg-white"
 
   # Explicit dates rather than a relative token, so a copied link means the same
   # tomorrow.
