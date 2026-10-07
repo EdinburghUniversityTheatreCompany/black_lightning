@@ -50,6 +50,7 @@ module Reimbursements
       exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: alice)
       assert_not OwnerReview.gate_applies?(exp)
       assert OwnerReview.submitter_owns_budget?(exp)
+      assert OwnerReview.gate_satisfied?(exp)
     end
 
     test "gate does not apply to an ownerless budget" do
@@ -83,11 +84,6 @@ module Reimbursements
       moved = expense(budget: budget(id: "recBudNew", owner_ids: [ "recPer1" ]),
                       submitter: person(id: "recPerOther"), id: "recExp1")
       assert_not OwnerReview.gate_satisfied?(moved)
-    end
-
-    test "gate_satisfied? is true for a bypassed expense with no endorsement row" do
-      exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: person(id: "recPer1"))
-      assert OwnerReview.gate_satisfied?(exp)
     end
 
     test "owned_by? checks the expense's budget owners" do

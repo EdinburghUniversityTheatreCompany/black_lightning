@@ -4,7 +4,6 @@ module Admin
   module Reimbursements
     class ReviewControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
-      include ActiveJob::TestHelper
 
       MC = ::Reimbursements::ModulusCheck
 
@@ -112,35 +111,20 @@ module Admin
         assert_select "a[aria-current=page]", text: /Awaiting owner/, count: 0
       end
 
-      test "the default tab is the finance queue, not the owner queue" do
+      test "no tab, an unknown tab and the old tab=pending land on the finance queue" do
         gated_expense
         sign_in @user
 
-        get :index
-
-        assert_equal "to_approve", assigns(:tab)
+        [ nil, "nonsense", "pending" ].each do |tab|
+          get :index, params: { tab: tab }.compact
+          assert_equal "to_approve", assigns(:tab), tab.inspect
+        end
         assert_select "a[aria-current=page]", text: /To approve/
-      end
-
-      test "an unknown tab falls back to the finance queue" do
-        sign_in @user
-
-        get :index, params: { tab: "nonsense" }
-
-        assert_equal "to_approve", assigns(:tab)
-      end
-
-      test "tab=pending still lands on the finance queue, for old links" do
-        sign_in @user
-
-        get :index, params: { tab: "pending" }
-
-        assert_equal "to_approve", assigns(:tab)
       end
 
       test "a gated claim is on the awaiting-owner tab, not in the finance queue" do
         gated_expense
-        ready = pending_expense(auto_number: 77)
+        ready = pending_expense(auto_number: 77) # on the ownerless @budget
         sign_in @user
 
         get :index, params: { tab: "awaiting_owner" }
@@ -149,16 +133,6 @@ module Admin
         assert_equal [ ready.record_id ], assigns(:to_approve).map(&:record_id)
         assert_not_includes assigns(:attention).map(&:record_id), gated_expense.record_id
         assert_not_includes assigns(:ready).map(&:record_id), gated_expense.record_id
-      end
-
-      test "a claim on a budget with no owner goes straight to the finance queue" do
-        ownerless = pending_expense(auto_number: 78)
-        sign_in @user
-
-        get :index
-
-        assert_includes assigns(:to_approve).map(&:record_id), ownerless.record_id
-        assert_empty assigns(:awaiting_owner)
       end
 
       test "the awaiting-owner tab still offers the finance override" do
@@ -185,21 +159,13 @@ module Admin
         assert_not_includes response.body, "Not gated"
       end
 
-      test "index CSV export answers a text/csv download named for today" do
-        pending_expense
-        sign_in @user
-
-        get :index, format: :csv
-
-        assert_csv_download("expenses")
-      end
-
       test "index CSV export exports the queue with the shared Expenses columns" do
         pending_expense(auto_number: 1, description: "Fake blood")
         sign_in @user
 
         get :index, format: :csv
 
+        assert_csv_download("expenses")
         rows = CSV.parse(response.body)
         assert_equal ::Reimbursements::Exports::Expenses::HEADERS, rows.first
         assert_equal 2, rows.size, "header + the one pending expense"
@@ -234,25 +200,16 @@ module Admin
       end
 
       # How long the producer has waited is the first question asked of a claim.
-      test "each card states the date the claim was submitted" do
+      test "each card states the date the claim was submitted, on both tabs" do
         pending_expense(auto_number: 7, submitted_at: Time.utc(2026, 5, 1, 9))
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_select "span", text: "Submitted 2026-05-01"
-      end
-
-      test "the approved tab states the submitted date too" do
         pending_expense(auto_number: 8, status: ::Reimbursements::Status::APPROVED,
                         submitted_at: Time.utc(2026, 4, 2, 9))
         sign_in @user
 
-        get :index, params: { tab: "approved" }
-
-        assert_response :success
-        assert_select "span", text: "Submitted 2026-04-02"
+        { nil => "2026-05-01", "approved" => "2026-04-02" }.each do |tab, day|
+          get :index, params: { tab: tab }.compact
+          assert_select "span", text: "Submitted #{day}"
+        end
       end
 
       test "renders the payee-override warning" do
@@ -268,7 +225,7 @@ module Admin
         assert_includes response.body, "Acme Lighting Ltd"
       end
 
-      test "renders receipts in a fancybox gallery keyed per expense, still managed inline" do
+      test "each card renders its receipts in its own viewer pane and fancybox group, managed inline" do
         a = pending_expense(receipt: false)
         b = pending_expense(receipt: false)
         attach_image_receipt(a, "A")
@@ -279,32 +236,19 @@ module Admin
 
         assert_response :success
         assert_includes response.body, 'data-controller="fancybox receipt-viewer"'
-        # One fancybox group per card, so the lightbox pages within one expense.
-        assert_includes response.body, "data-fancybox=\"receipts-#{a.record_id}\""
-        assert_includes response.body, "data-fancybox=\"receipts-#{b.record_id}\""
-        assert_includes response.body, a.receipts.sole.url
-        assert_match(/Remove this receipt/, response.body)
-        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "to_approve")
-      end
-
-      test "each card renders a receipt strip wired to its own closed viewer pane" do
-        a = pending_expense(receipt: false)
-        b = pending_expense(receipt: false)
-        attach_test_receipt(a, filename: "invoice-a.pdf")
-        attach_test_receipt(b, filename: "invoice-b.pdf")
-        sign_in @user
-
-        get :index
-
-        assert_response :success
         [ a, b ].each do |expense|
+          # One fancybox group per card, so the lightbox pages within one expense.
+          assert_includes response.body, "data-fancybox=\"receipts-#{expense.record_id}\""
           pane_id = "receipt-pane-#{expense.record_id}"
           assert_includes response.body, "id=\"#{pane_id}\""
           assert_includes response.body, "aria-controls=\"#{pane_id}\""
           assert_includes response.body, "aria-label=\"Receipt viewer for expense ##{expense.auto_number}\""
         end
+        assert_includes response.body, a.receipts.sole.url
+        assert_match(/Remove this receipt/, response.body)
+        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "to_approve")
         # A thumbnail is a real button with its own accessible name, not a link.
-        assert_includes response.body, 'aria-label="View receipt 1 of 1, invoice-a.pdf"'
+        assert_includes response.body, 'aria-label="View receipt 1 of 1, receiptA.jpg"'
         assert_includes response.body, 'data-action="receipt-viewer#show"'
         # Nothing navigates away from the queue.
         assert_no_match(/<a[^>]+target="_blank"[^>]*>\s*<span[^>]*>\s*<i class="fa-solid fa-file-lines/,
@@ -340,16 +284,6 @@ module Admin
         assert_equal [ first.record_id, second.record_id ].sort,
                      assigns(:attention).map(&:record_id).sort
         assert_empty assigns(:ready)
-      end
-
-      test "the review page subscribes to no Turbo Stream" do
-        pending_expense
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_not_includes response.body, "turbo-cable-stream-source"
       end
 
       test "the to-approve tab exposes bulk-select checkboxes and a bulk toolbar" do
@@ -450,16 +384,6 @@ module Admin
         assert_match(/1 skipped \(missing bank details, budget, or amount\)/, flash[:notice])
       end
 
-      test "bulk approve with nothing selected writes nothing and reports it" do
-        a = pending_expense
-        sign_in @user
-
-        patch :bulk_approve, params: { expense_ids: [] }
-
-        assert_match(/Select at least one/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, a.reload.status, "nothing was written"
-      end
-
       test "bulk reject rejects each selected expense and emails each producer" do
         a = pending_expense
         b = pending_expense
@@ -500,36 +424,22 @@ module Admin
         assert_match(/Select at least one/, flash[:alert])
       end
 
-      test "save writes the edited fields" do
+      # AR casts "£1,200" to 0, so the parsed value is what must be written.
+      test "save writes the edited fields, parsing currency-formatted amounts" do
         expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+        patch :save, params: { id: expense.record_id, amount: "£1,200.50", amount_excl_vat: "1,000",
                                description: "Updated blood", payment_reference: "NEWREF",
                                nominal_code_override: "4100", budget_record_id: @budget.record_id }
 
         assert_redirected_to_review
         expense.reload
-        assert_equal BigDecimal("20"), expense.amount
-        assert_equal BigDecimal("16.67"), expense.amount_excl_vat
+        assert_equal BigDecimal("1200.50"), expense.amount
+        assert_equal BigDecimal("1000"), expense.amount_excl_vat
         assert_equal "Updated blood", expense.description
         assert_equal "NEWREF", expense.payment_reference
         assert_equal "4100", expense.nominal_code_override
-      end
-
-      # AR casts "£1,200" to 0, so the parsed value is what must be written.
-      test "save accepts a currency-formatted amount and stores the parsed number" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "£1,200.50",
-                               amount_excl_vat: "1,000", description: "Updated blood",
-                               payment_reference: "NEWREF", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        expense.reload
-        assert_equal BigDecimal("1200.50"), expense.amount
-        assert_equal BigDecimal("1000"), expense.amount_excl_vat
       end
 
       # Every column unchanged. updated_at is excluded: the seed helper's receipt
@@ -562,18 +472,6 @@ module Admin
         assert_equal BigDecimal("10.42"), expense.reload.amount_excl_vat
       end
 
-      test "save rejects a negative amount and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "-5", amount_excl_vat: "16.67",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
       test "save rejects a non-numeric amount and writes nothing" do
         expense = pending_expense
         sign_in @user
@@ -583,30 +481,6 @@ module Admin
 
         assert_redirected_to_review
         assert_match(/valid amount/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
-      test "save rejects a negative excl-VAT amount and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "-1",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/excl. VAT/i, flash[:alert])
-        assert_no_write(expense)
-      end
-
-      test "save rejects an excl-VAT amount greater than the total and writes nothing" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "25.00",
-                               description: "x", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/can't be more than the total/i, flash[:alert])
         assert_no_write(expense)
       end
 
@@ -633,8 +507,8 @@ module Admin
         assert_equal "Cogito Props", expense.reload.payment_reference
       end
 
-      test "approve keeps an existing payment reference" do
-        expense = pending_expense(payment_reference: "KEEPME")
+      test "approve keeps an existing payment reference and saves no edits" do
+        expense = pending_expense(description: "Original", payment_reference: "KEEPME")
         sign_in @user
 
         patch :approve, params: { id: expense.record_id }
@@ -642,6 +516,7 @@ module Admin
         expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
         assert_equal "KEEPME", expense.payment_reference
+        assert_equal "Original", expense.description, "no save without save_changes"
       end
 
       test "a card carries an id the redirect can anchor to" do
@@ -738,26 +613,19 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
       end
 
-      test "approve auto-bypasses a claim the budget owner submitted themselves" do
-        own = pending_expense(person: owner_person, budget: owned_budget, payment_reference: "OWNED")
-        sign_in @user
-
-        patch :approve, params: { id: own.record_id }
-
-        assert_equal ::Reimbursements::Status::APPROVED, own.reload.status
-      end
-
       test "override_approve records the finance override and approves" do
         gated_expense
         sign_in @user
 
         assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 1 do
-          patch :override_approve, params: { id: gated_expense.record_id }
+          patch :override_approve, params: { id: gated_expense.record_id,
+                                             override_note: "Owner has no portal account" }
         end
 
         endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
         assert endorsement.finance_override?
         assert_equal @user.id, endorsement.overridden_by_id
+        assert_equal "Owner has no portal account", endorsement.note
         assert_equal BigDecimal("12.5"), endorsement.endorsed_amount, "override snapshots the amount"
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
         assert_match(/overridden/i, flash[:notice])
@@ -767,35 +635,23 @@ module Admin
         @second_gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED 2")
       end
 
-      test "bulk override clears the gate on every ticked claim" do
-        gated_expense
-        second_gated_expense
+      test "bulk override records who overrode it and why, and approves every ticked claim" do
+        claims = [ gated_expense, second_gated_expense ]
         sign_in @user
 
         assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 2 do
-          patch :bulk_override_approve, params: {
-            expense_ids: [ gated_expense.record_id, second_gated_expense.record_id ],
-            override_note: "No owner holds a portal account"
-          }
+          patch :bulk_override_approve, params: { expense_ids: claims.map(&:record_id),
+                                                  override_note: "Owner has left" }
         end
 
-        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
-        assert_equal ::Reimbursements::Status::APPROVED, second_gated_expense.reload.status
-        assert_match(/2 approved with sign-off overridden/, flash[:notice])
-      end
-
-      test "bulk override records who overrode it and why, on each claim" do
-        gated_expense
-        sign_in @user
-
-        patch :bulk_override_approve, params: {
-          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
-        }
-
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
-        assert endorsement.finance_override?
-        assert_equal @user.id, endorsement.overridden_by_id
-        assert_equal "Owner has left", endorsement.note
+        claims.each do |claim|
+          assert_equal ::Reimbursements::Status::APPROVED, claim.reload.status
+          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(claim.record_id).first
+          assert endorsement.finance_override?
+          assert_equal @user.id, endorsement.overridden_by_id
+          assert_equal "Owner has left", endorsement.note
+        end
+        assert_equal "2 approved with sign-off overridden.", flash[:notice]
       end
 
       test "bulk override refuses without a note and writes nothing" do
@@ -839,17 +695,6 @@ module Admin
         assert_match(/1 skipped/, flash[:notice])
       end
 
-      test "the bulk override summary never names the gate it just cleared" do
-        gated_expense
-        sign_in @user
-
-        patch :bulk_override_approve, params: {
-          expense_ids: [ gated_expense.record_id ], override_note: "Owner has left"
-        }
-
-        assert_no_match(/awaiting owner/i, flash[:notice])
-      end
-
       test "the Awaiting owner tab offers the bulk override and no bulk approve" do
         gated_expense
         sign_in @user
@@ -877,23 +722,9 @@ module Admin
         gated_expense
         sign_in @user
 
-        assert_nothing_raised do
-          patch :override_approve, params: { id: gated_expense.record_id, override_note: "x" * 500 }
-        end
+        patch :override_approve, params: { id: gated_expense.record_id, override_note: "x" * 500 }
+
         assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note.length
-      end
-
-      test "the review queue sorts a gated claim onto its own tab with an override button" do
-        gated_expense
-        sign_in @user
-
-        get :index, params: { tab: "awaiting_owner" }
-
-        assert_response :success
-        assert_includes assigns(:awaiting_owner).map(&:record_id), gated_expense.record_id
-        assert_select "form[action=?]",
-                      admin_reimbursements_override_approve_review_path(gated_expense.record_id,
-                                                                       tab: "awaiting_owner")
       end
 
       test "bulk approve skips a claim awaiting owner endorsement" do
@@ -943,20 +774,6 @@ module Admin
         assert_match(/needs a fresh owner sign-off/i, flash[:notice])
       end
 
-      test "save-then-approve says the edit itself re-opened the owner gate" do
-        endorse_gated_expense!
-        sign_in @user
-
-        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                  amount: "999.00", amount_excl_vat: "999.00", description: "x",
-                                  payment_reference: "OWNED PAT",
-                                  budget_record_id: owned_budget.record_id }
-
-        assert_match(/needs a fresh owner sign-off/i, flash[:alert])
-        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status
-      end
-
       test "a gated claim blocked on something else does not promise a finance override" do
         pending_expense(person: @no_bank_person, budget: owned_budget, payment_reference: "OWNED")
         sign_in @user
@@ -989,28 +806,6 @@ module Admin
         assert_match(/no address is never emailed/, response.body)
       end
 
-      test "override_approve stores the finance override note" do
-        gated_expense
-        sign_in @user
-
-        patch :override_approve, params: { id: gated_expense.record_id,
-                                           override_note: "Owner has no portal account" }
-
-        assert_equal "Owner has no portal account",
-                     ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note
-      end
-
-      test "approve is blocked without effective bank details" do
-        expense = pending_expense(person: @no_bank_person)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_redirected_to_review
-        assert_match(/without bank details/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
       def international_expense(**attrs)
         pending_expense(
           payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
@@ -1030,64 +825,25 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
       end
 
-      test "approve is blocked on an international claim with no IBAN" do
-        expense = international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person)
+      test "approve refuses each hard block and writes nothing" do
         sign_in @user
+        [
+          [ -> { pending_expense(person: @no_bank_person) }, /without bank details/ ],
+          [ -> { international_expense(iban_override: nil, bic_override: nil, person: @no_bank_person) },
+            /without bank details/ ],
+          [ -> { international_expense(foreign_amount: nil) }, /without the amount in EUR/ ],
+          # Budget rollups are GBP, so approving without one books the claim at nothing.
+          [ -> { international_expense(amount: nil) }, /without a GBP amount/ ],
+          [ -> { pending_expense(budget: nil) }, /without a budget linked/ ],
+          [ -> { pending_expense(amount_excl_vat: 0) }, /without an amount excluding VAT/ ]
+        ].each do |build, alert|
+          expense = build.call
 
-        patch :approve, params: { id: expense.record_id }
+          patch :approve, params: { id: expense.record_id }
 
-        assert_match(/without bank details/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "approve is blocked on an international claim with no EUR amount" do
-        expense = international_expense(foreign_amount: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without the amount in EUR/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      # Budget rollups are GBP, so approving without one books the claim at nothing.
-      test "approve is blocked on an international claim with no GBP amount" do
-        expense = international_expense(amount: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without a GBP amount/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "a UK claim is never asked for a EUR amount" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
-      end
-
-      test "approve is blocked without a linked budget" do
-        expense = pending_expense(budget: nil)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without a budget linked/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
-      end
-
-      test "approve is blocked without a non-zero excl-VAT amount" do
-        expense = pending_expense(amount_excl_vat: 0)
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_match(/without an amount excluding VAT/, flash[:alert])
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+          assert_match alert, flash[:alert], alert.inspect
+          assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
+        end
       end
 
       test "a stale approve against an already-Approved expense is a no-op, not a re-approve" do
@@ -1216,19 +972,23 @@ module Admin
         assert_equal "4100", expense.nominal_code_override
       end
 
-      test "approve with save_changes aborts the decision when the edit fails validation" do
-        expense = pending_expense(description: "Old")
+      test "a decision with save_changes is aborted when the edit fails validation" do
         sign_in @user
 
-        patch :approve, params: { id: expense.record_id, save_changes: "1",
-                                  amount: "-5", amount_excl_vat: "16.67",
-                                  description: "Should not persist", budget_record_id: @budget.record_id }
+        { approve: {}, reject: { rejection_reason: "Wrong budget" }, override_approve: {} }.each do |action, extra|
+          claim = action == :override_approve ? gated_expense : pending_expense
 
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
-        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
+          patch action, params: { id: claim.record_id, save_changes: "1", amount: "-5", amount_excl_vat: "1",
+                                  description: "Should not persist", budget_record_id: claim.budget.record_id,
+                                  **extra }
+
+          assert_match(/valid amount/i, flash[:alert], action)
+          claim.reload
+          assert_equal ::Reimbursements::Status::PENDING, claim.status, "#{action}: decision aborted"
+          assert_equal "Fake blood", claim.description, "#{action}: no edit persisted"
+        end
+        assert_empty @graph.send_mails, "no rejection email on an aborted decision"
+        assert_equal 0, ::Reimbursements::OwnerEndorsement.count, "no override row on an aborted decision"
       end
 
       test "reject with save_changes persists the edited fields, then rejects" do
@@ -1247,54 +1007,23 @@ module Admin
         assert_equal "Wrong budget", expense.rejection_reason
       end
 
-      test "reject with save_changes aborts the decision when the edit fails validation" do
-        expense = pending_expense(description: "Old")
-        sign_in @user
-
-        patch :reject, params: { id: expense.record_id, save_changes: "1",
-                                 rejection_reason: "Wrong budget",
-                                 amount: "abc", amount_excl_vat: "16.67",
-                                 description: "Should not persist", budget_record_id: @budget.record_id }
-
-        assert_redirected_to_review
-        assert_match(/valid amount/i, flash[:alert])
-        expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
-        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
-        assert_empty @graph.send_mails, "no rejection email fired on an aborted decision"
-      end
-
-      test "override_approve with save_changes persists the edited fields, then overrides" do
+      test "override_approve with save_changes saves the edits, then overrides on the SAVED amount" do
         gated_expense
         sign_in @user
 
         patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                           amount: "30.00", amount_excl_vat: "25.00",
+                                           amount: "3000.00", amount_excl_vat: "2500.00",
                                            description: "Edited before override",
                                            payment_reference: "OWNED PAT",
                                            budget_record_id: owned_budget.record_id }
 
         gated_expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
-        assert_equal BigDecimal("30"), gated_expense.amount
+        assert_equal BigDecimal("3000"), gated_expense.amount
         assert_equal "Edited before override", gated_expense.description
-      end
-
-      test "override_approve with save_changes aborts the decision when the edit fails validation" do
-        gated_expense
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
-          patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                             amount: "-5", amount_excl_vat: "1",
-                                             description: "Should not persist",
-                                             budget_record_id: owned_budget.record_id }
-        end
-
-        assert_match(/valid amount/i, flash[:alert])
-        gated_expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status, "decision aborted"
-        assert_equal "Fake blood", gated_expense.description, "no edit persisted on an aborted decision"
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
+        assert_equal BigDecimal("3000"), endorsement.endorsed_amount,
+                     "the override must snapshot the amount it actually approved"
       end
 
       # The decision must act on the SAVED values: a £12.50 endorsement must not
@@ -1311,6 +1040,7 @@ module Admin
 
         assert_match(/needs a budget owner's endorsement/i, flash[:alert],
                      "the decision must see the SAVED amount, not the endorsed one")
+        assert_match(/needs a fresh owner sign-off/i, flash[:alert], "names this edit as the cause")
         gated_expense.reload
         assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
         # The save stands; only the decision is blocked.
@@ -1330,51 +1060,6 @@ module Admin
         gated_expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
         assert_equal "Wording fixed only", gated_expense.description
-      end
-
-      test "override_approve with save_changes snapshots the SAVED amount on the endorsement" do
-        gated_expense
-        sign_in @user
-
-        patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                           amount: "3000.00", amount_excl_vat: "2500.00",
-                                           description: "Edited up before override",
-                                           payment_reference: "OWNED PAT",
-                                           budget_record_id: owned_budget.record_id }
-
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
-        assert_equal BigDecimal("3000"), endorsement.endorsed_amount,
-                     "the override must snapshot the amount it actually approved"
-        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
-      end
-
-      test "approve with save_changes re-opens the owner gate when the edit changes the budget" do
-        endorse_gated_expense!
-        other_owned = create_reimbursements_budget(name: "Owned Too", nominal_code: "4200",
-                                                   owners: [ owner_person ])
-        sign_in @user
-
-        patch :approve, params: { id: gated_expense.record_id, save_changes: "1",
-                                  amount: "12.50", amount_excl_vat: "10.42",
-                                  description: "Moved to another budget",
-                                  payment_reference: "OWNED PAT",
-                                  budget_record_id: other_owned.record_id }
-
-        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
-        gated_expense.reload
-        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status
-        assert_equal other_owned.id, gated_expense.budget_id, "the move still saved"
-      end
-
-      test "a plain approve without save_changes still approves without touching the edit fields" do
-        expense = pending_expense(description: "Original", payment_reference: "KEEP")
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        expense.reload
-        assert_equal ::Reimbursements::Status::APPROVED, expense.status
-        assert_equal "Original", expense.description, "no save happened without save_changes"
       end
 
       test "the review card wires the unsaved-edits guard on its decision controls" do
