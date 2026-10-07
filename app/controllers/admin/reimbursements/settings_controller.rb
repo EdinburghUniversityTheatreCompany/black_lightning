@@ -17,9 +17,6 @@ module Admin
                     drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
       }.freeze
 
-      # One row of the "Run access check" results.
-      Check = Struct.new(:label, :status, :detail, keyword_init: true)
-
       def index
         @title = "Reimbursements Settings"
         @cost_centres = ::Reimbursements::CostCentre.order(:name)

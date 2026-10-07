@@ -22,6 +22,9 @@ module Admin
 
       PAGE_SIZE = 50
 
+      # One row of an integration or access probe's results.
+      Check = Struct.new(:label, :status, :detail, keyword_init: true)
+
       private
 
       attr_reader :selected_financial_year, :selected_cost_centre

@@ -60,7 +60,7 @@
                   method: :post, class: btn_classes(:secondary, :sm),
                   data: { turbo_submits_with: "Checking…" } %>
     <div id="integration_check_results" data-busy-dim-target="dimmable">
-      <%= render "checks", checks: @checks %>
+      <%= render "admin/reimbursements/shared/checks", checks: @checks %>
     </div>
   </div>
 <% end %>

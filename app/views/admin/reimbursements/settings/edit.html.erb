@@ -85,7 +85,7 @@
                 method: :post, class: btn_classes(:secondary, :sm),
                 data: { turbo_submits_with: "Testing…" } %>
   <div id="access_check_results" aria-live="polite">
-    <%= render "access_checks", checks: @access_checks %>
+    <%= render "admin/reimbursements/shared/checks", checks: @access_checks %>
   </div>
 <% end %>
 

@@ -5,9 +5,6 @@ module Admin
     # per cost centre, the send log, and a Microsoft Graph probe that runs on
     # demand (#run), never on page load.
     class StatusController < FinanceController
-      # One row of the integration-check results.
-      Check = Struct.new(:label, :status, :detail, keyword_init: true)
-
       before_action :load_cost_centres
 
       def show
