@@ -1,0 +1,10 @@
+<% groups.each do |parent_group, techies| %>
+  <div class="ml-3 mb-3">
+    <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
+    <ul class="ml-3">
+      <% techies.each do |techie| %>
+        <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

@@ -70,20 +70,9 @@ class Admin::TechiesController < AdminController
 
     @title = "Techies by Entry Year and Parents"
 
-    @techies_by_year = Techie.includes(:parents, :children)
-                            .where.not(entry_year: nil)
-                            .group_by(&:entry_year)
-                            .sort.reverse.to_h
-
-    @techies_without_year = Techie.includes(:parents, :children)
-                                 .without_entry_year
-
-    @grouped_data = {}
-    @techies_by_year.each do |year, techies|
-      @grouped_data[year] = group_techies_by_parents(techies)
-    end
-
-    @grouped_no_year = group_techies_by_parents(@techies_without_year)
+    by_year = Techie.includes(:parents).group_by(&:entry_year)
+    @grouped_no_year = group_techies_by_parents(by_year.delete(nil) || [])
+    @grouped_data = by_year.sort.reverse.to_h.transform_values { group_techies_by_parents(_1) }
   end
 
   private
@@ -105,18 +94,6 @@ class Admin::TechiesController < AdminController
   end
 
   def group_techies_by_parents(techies)
-    grouped = {}
-
-    techies.each do |techie|
-      parent_names_with_years = techie.parents.map(&:name_with_entry_year).sort
-      parent_key = parent_names_with_years.empty? ? "No Parents" : parent_names_with_years.join(" & ")
-
-      grouped[parent_key] ||= []
-      grouped[parent_key] << techie
-    end
-
-    grouped.sort.map do |parent_key, group_techies|
-      [ parent_key, group_techies.sort_by(&:name) ]
-    end.to_h
+    techies.group_by { |t| t.parents.map(&:name_with_entry_year).sort.join(" & ").presence || "No Parents" }.sort.to_h
   end
 end
