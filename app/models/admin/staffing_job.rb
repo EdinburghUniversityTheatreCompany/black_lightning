@@ -131,10 +131,10 @@ class Admin::StaffingJob < ApplicationRecord
       old_user_id, new_user_id = saved_change_to_user_id
 
       send_cancellation_to(User.find(old_user_id)) if old_user_id.present?
-      StaffingMailer.calendar_invite(self, method: :request).deliver_later if new_user_id.present?
+      StaffingMailer.calendar_invite(self).deliver_later if new_user_id.present?
     elsif saved_change_to_name? && user.present?
       bump_calendar_sequence
-      StaffingMailer.calendar_invite(self, method: :request).deliver_later
+      StaffingMailer.calendar_invite(self).deliver_later
     end
   end
 

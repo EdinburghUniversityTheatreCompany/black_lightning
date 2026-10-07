@@ -113,7 +113,7 @@ class Admin::Staffing < ApplicationRecord
   def send_calendar_update_emails
     staffing_jobs.where.not(user_id: nil).each do |job|
       job.bump_calendar_sequence
-      StaffingMailer.calendar_invite(job, method: :request).deliver_later
+      StaffingMailer.calendar_invite(job).deliver_later
     end
   end
 

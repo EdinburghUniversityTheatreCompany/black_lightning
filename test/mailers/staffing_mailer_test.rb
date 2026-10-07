@@ -4,7 +4,7 @@ class StaffingMailerTest < ActionMailer::TestCase
   test "calendar_invite emails the assigned user an ics REQUEST for the job" do
     job = FactoryBot.create(:staffed_staffing_job)
 
-    email = StaffingMailer.calendar_invite(job, method: :request)
+    email = StaffingMailer.calendar_invite(job)
     # Unfold RFC 5545 line continuations (CRLF+space or LF+space) before asserting
     ics = email.attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s.gsub(/\r?\n[ \t]/, "")
 
@@ -21,7 +21,7 @@ class StaffingMailerTest < ActionMailer::TestCase
     job = FactoryBot.create(:staffed_staffing_job)
     job.user.update!(calendar_email: "override@example.com")
 
-    email = StaffingMailer.calendar_invite(job, method: :request)
+    email = StaffingMailer.calendar_invite(job)
 
     assert_equal [ "override@example.com" ], email.to
   end
@@ -30,7 +30,7 @@ class StaffingMailerTest < ActionMailer::TestCase
     job = FactoryBot.create(:staffing_job) # unassigned, user_id is nil
 
     assert_no_emails do
-      StaffingMailer.calendar_invite(job, method: :request).deliver_now
+      StaffingMailer.calendar_invite(job).deliver_now
     end
   end
 

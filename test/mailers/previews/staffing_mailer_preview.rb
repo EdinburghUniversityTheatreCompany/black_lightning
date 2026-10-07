@@ -4,7 +4,7 @@ class StaffingMailerPreview < ActionMailer::Preview
   end
 
   def calendar_invite_request
-    StaffingMailer.calendar_invite(staffed_job, method: :request)
+    StaffingMailer.calendar_invite(staffed_job)
   end
 
   def calendar_cancellation
