@@ -10,15 +10,10 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     @csp = directives(response.headers["Content-Security-Policy"])
   end
 
-  test "the ticket shop may serve stylesheets" do
-    assert_includes @csp.fetch("style-src"), SHOP_ORIGIN
-    assert_includes @csp.fetch("style-src-elem"), SHOP_ORIGIN
-  end
-
-  test "the ticket shop may serve the widget script and be framed for checkout" do
-    assert_includes @csp.fetch("script-src"), SHOP_ORIGIN
-    assert_includes @csp.fetch("frame-src"), SHOP_ORIGIN
-    assert_includes @csp.fetch("connect-src"), SHOP_ORIGIN
+  test "the ticket shop may serve stylesheets and the widget script, and be framed for checkout" do
+    %w[style-src style-src-elem script-src frame-src connect-src].each do |directive|
+      assert_includes @csp.fetch(directive), SHOP_ORIGIN, directive
+    end
   end
 
   private

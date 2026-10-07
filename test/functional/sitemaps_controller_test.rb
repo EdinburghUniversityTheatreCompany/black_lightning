@@ -36,8 +36,6 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
   test "the pages section lists the hubs and the static pages" do
     get section_sitemap_path("pages")
 
-    locs = Nokogiri::XML(response.body).css("url > loc").map(&:text)
-
     assert_includes locs, root_url
     assert_includes locs, shows_url
     assert_includes locs, static_url("accessibility")
@@ -49,9 +47,9 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
 
     get section_sitemap_path("events")
 
-    locs = Nokogiri::XML(response.body).css("url > loc").map(&:text)
     assert_includes locs, show_url(public_show)
     assert_not_includes locs, show_url(private_show)
+    assert_select "url > lastmod", minimum: 1
   end
 
   # A sitemap URL that 403s the crawler is worse than an omitted one.
@@ -59,7 +57,6 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
     FactoryBot.create(:show, is_public: true)
 
     get section_sitemap_path("events")
-    locs = Nokogiri::XML(response.body).css("url > loc").map(&:text)
 
     locs.first(5).each do |loc|
       get URI.parse(loc).path
@@ -67,42 +64,19 @@ class SitemapsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "members who kept their profile public are listed" do
+  test "a member is listed only with a public profile" do
     public_member = FactoryBot.create(:user, public_profile: true)
-
-    get section_sitemap_path("members")
-
-    locs = Nokogiri::XML(response.body).css("url > loc").map(&:text)
-    assert_includes locs, user_url(public_member)
-  end
-
-  test "a member who opted out of a public profile is not listed" do
     private_member = FactoryBot.create(:user, public_profile: false)
 
     get section_sitemap_path("members")
 
-    locs = Nokogiri::XML(response.body).css("url > loc").map(&:text)
+    assert_includes locs, user_url(public_member)
     assert_not_includes locs, user_url(private_member)
   end
 
-  test "entries carry a lastmod so a crawler can skip what has not changed" do
-    FactoryBot.create(:show, is_public: true)
+  private
 
-    get section_sitemap_path("events")
-
-    assert_select "url > lastmod", minimum: 1
-  end
-
-  test "robots.txt points at the sitemap" do
-    get "/robots.txt"
-
-    assert_response :success
-    assert_match %r{^Sitemap: https?://\S+/sitemap\.xml$}, response.body
-  end
-
-  test "robots.txt keeps crawlers out of the unbounded ransack filter space" do
-    get "/robots.txt"
-
-    assert_match(/Disallow: \/\*\?\*q\[/, response.body)
+  def locs
+    Nokogiri::XML(response.body).css("url > loc").map(&:text)
   end
 end

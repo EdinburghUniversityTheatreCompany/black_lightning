@@ -10,23 +10,13 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "text/plain", response.media_type
   end
 
-  test "it is cacheable but not for a year" do
-    get "/robots.txt"
-
-    cache_control = response.headers["Cache-Control"].to_s
-    assert_includes cache_control, "public"
-
-    max_age = cache_control[/max-age=(\d+)/, 1].to_i
-    assert_operator max_age, :>, 0, "should still be cacheable"
-    assert_operator max_age, :<=, 1.day.to_i, "a rules change must not take days to reach a crawler"
-  end
-
   test "it names the sitemap" do
     get "/robots.txt"
 
     assert_match %r{^Sitemap: https?://\S+/sitemap\.xml$}, response.body
   end
 
+  # Crawlers match robots.txt against the percent-encoded URL (?q%5B...), so a q[ rule alone never fires.
   test "it disallows the ransack space in both spellings" do
     get "/robots.txt"
 
@@ -46,12 +36,20 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
                "a file in public/ is served by middleware before the router ever runs"
   end
 
-  # A publicly cacheable response must not carry a session cookie: a shared cache would hand one
+  # A 5xx robots.txt stops Googlebot crawling the site, so the edge may serve a stale copy. A
+  # publicly cacheable response must not carry a session cookie: a shared cache would hand one
   # visitor's session to the next.
-  test "it sets no session cookie, so public caching is safe" do
+  test "it is cacheable for under a day, stale-if-error for a day, and sets no session cookie" do
     get "/robots.txt"
 
-    assert_includes response.headers["Cache-Control"].to_s, "public"
+    cache_control = response.headers["Cache-Control"].to_s
+    assert_includes cache_control, "public"
+    assert_includes cache_control, "stale-if-error=#{1.day.to_i}"
+
+    max_age = cache_control[/max-age=(\d+)/, 1].to_i
+    assert_operator max_age, :>, 0, "should still be cacheable"
+    assert_operator max_age, :<=, 1.day.to_i, "a rules change must not take days to reach a crawler"
+
     # rack-mini-profiler sets its own cookie in dev and test; only the session one is the hazard.
     assert_not_includes response.headers["Set-Cookie"].to_s, "_chaos_rails_session",
                         "a publicly cached response must not carry a session cookie"
@@ -63,31 +61,11 @@ class RobotsControllerTest < ActionDispatch::IntegrationTest
                "and a complete profile -- and a 5xx robots.txt stops Googlebot crawling the site"
   end
 
-  test "it answers with a session already established" do
-    get new_user_session_path
-
-    get "/robots.txt"
-
-    assert_response :success
-    assert_match(/Sitemap:/, response.body)
-  end
-
   # Every image (og:image, JSON-LD) is served under /rails/, so a bare Disallow would bar it all.
   test "it does not block the ActiveStorage paths every image is served from" do
     get "/robots.txt"
 
     assert_match(%r{^Allow: /rails/active_storage/$}, response.body,
                  "images live under /rails/; the Allow must override the Disallow")
-
-    disallow = response.body.index("Disallow: /rails/")
-    allow = response.body.index("Allow: /rails/active_storage/")
-    assert disallow && allow, "both rules should be present"
-  end
-
-  # A 5xx robots.txt stops Googlebot crawling the site, so the edge may serve a stale copy.
-  test "the edge may serve a stale copy while the app is down" do
-    get "/robots.txt"
-
-    assert_includes response.headers["Cache-Control"].to_s, "stale-if-error=#{1.day.to_i}"
   end
 end

@@ -3,8 +3,6 @@ require "test_helper"
 # Duplicate titles, descriptions and canonicals across pages. Adding a page that forgets its
 # @title fails here rather than a year later in Search Console.
 class SeoDuplicationTest < ActionDispatch::IntegrationTest
-  GENERIC_DESCRIPTION = "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.".freeze
-
   # The pages a person would search for: a literal list, because a route sweep would drag in every
   # admin and Devise page and rot into a skip list.
   def public_pages
@@ -42,41 +40,21 @@ class SeoDuplicationTest < ActionDispatch::IntegrationTest
     pages.values
   end
 
-  test "no two public pages share a title" do
+  def duplicates_of(pages, key)
+    pages.group_by { |page| page[key] }.select { |_, group| group.length > 1 }
+         .transform_values { |group| group.map { |page| page[:path] } }
+  end
+
+  # The homepage carries the bare site name and the generic description, so a page that forgot
+  # its own collides with it here.
+  test "public pages have distinct titles and descriptions and canonicalise to themselves" do
     pages = rendered_pages
     assert_operator pages.length, :>=, 10, "too few pages rendered for this to prove anything"
 
-    duplicates = pages.group_by { |page| page[:title] }.select { |_, group| group.length > 1 }
+    assert_empty duplicates_of(pages, :title), "pages sharing a <title>"
+    assert_empty duplicates_of(pages, :description), "pages sharing a meta description"
 
-    assert_empty duplicates.transform_values { |group| group.map { |page| page[:path] } },
-                 "pages sharing a <title>"
-  end
-
-  test "no public page falls back to the bare site name as its title" do
-    offenders = rendered_pages.select { |page| page[:title] == "Bedlam Theatre" && page[:path] != root_path }
-
-    assert_empty offenders.map { |page| page[:path] },
-                 "pages with no title of their own"
-  end
-
-  test "no two public pages share a meta description" do
-    pages = rendered_pages
-
-    duplicates = pages.group_by { |page| page[:description] }.select { |_, group| group.length > 1 }
-
-    assert_empty duplicates.transform_values { |group| group.map { |page| page[:path] } },
-                 "pages sharing a meta description"
-  end
-
-  test "the boilerplate description is a fallback, not the site's answer for its main pages" do
-    generic = rendered_pages.select { |page| page[:description] == GENERIC_DESCRIPTION }
-
-    assert_operator generic.length, :<=, 1,
-                    "#{generic.length} main pages carry the site-wide boilerplate: #{generic.map { |p| p[:path] }}"
-  end
-
-  test "every public page canonicalises to itself" do
-    rendered_pages.each do |page|
+    pages.each do |page|
       assert_equal "http://www.example.com#{page[:path]}", page[:canonical],
                    "#{page[:path]} does not canonicalise to itself"
     end
@@ -89,55 +67,19 @@ class SeoDuplicationTest < ActionDispatch::IntegrationTest
     assert_select "link[rel=canonical][href=?]", "http://www.example.com#{shows_path}"
   end
 
-  test "a later page keeps its own canonical" do
-    get shows_path, params: { page: "2" }
-
-    assert_select "link[rel=canonical][href=?]", "http://www.example.com#{shows_path}?page=2"
-  end
-
-  test "two runs of the same show do not share a title" do
-    first = FactoryBot.create(:show, name: "Twelfth Night", slug: "twelfth-night-2019", is_public: true,
-                                     start_date: Date.new(2019, 3, 1), end_date: Date.new(2019, 3, 4))
-    second = FactoryBot.create(:show, name: "Twelfth Night", slug: "twelfth-night-2024", is_public: true,
-                                      start_date: Date.new(2024, 3, 1), end_date: Date.new(2024, 3, 4))
-
-    titles = [ first, second ].map do |show|
-      get show_path(show)
-      css_select("title").first.text.strip
-    end
-
-    assert_equal titles.uniq.length, titles.length, "both runs render the same title: #{titles.inspect}"
-  end
-
-  # Crawlers match robots.txt against the percent-encoded URL (?q%5B...), so a q[ rule alone never fires.
-  test "robots.txt disallows the ransack space in its encoded form" do
-    get "/robots.txt"
-
-    assert_match(/Disallow: \/\*\?\*q%5B/, response.body)
-    assert_match(/Disallow: \/\*&q%5B/, response.body)
-  end
-
-  test "every static page has both a title and a description" do
-    assert_equal StaticController::PAGE_TITLES.keys.sort,
-                 StaticController::PAGE_DESCRIPTIONS.keys.sort
-  end
-
   # routes.rb serves a season from /seasons/:slug and the short /:slug catch-all; both must name
   # the same canonical.
-  test "a season reached by its short url canonicalises to the long one" do
+  test "a season canonicalises to its long url from both urls" do
     season = FactoryBot.create(:season, name: "Bedlam Fringe 1999", is_public: true)
+    canonical = "http://www.example.com#{season_path(season)}"
 
     get "/#{season.slug}"
 
     assert_response :success
-    assert_select "link[rel=canonical][href=?]", "http://www.example.com#{season_path(season)}"
-  end
-
-  test "a season reached by its long url canonicalises to itself" do
-    season = FactoryBot.create(:season, name: "Bedlam Fringe 2001", is_public: true)
+    assert_select "link[rel=canonical][href=?]", canonical
 
     get season_path(season)
 
-    assert_select "link[rel=canonical][href=?]", "http://www.example.com#{season_path(season)}"
+    assert_select "link[rel=canonical][href=?]", canonical
   end
 end

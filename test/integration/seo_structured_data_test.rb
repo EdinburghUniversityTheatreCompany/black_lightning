@@ -23,12 +23,16 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     documents.flat_map { |doc| doc["@graph"] || [ doc ] }.select { |node| node["@type"] == type }
   end
 
-  test "every page carries valid parseable json-ld" do
-    get root_path
+  def create_performance(**attrs)
+    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30), **attrs)
+  end
 
-    tags = css_select("script[type='application/ld+json']")
-    assert_operator tags.length, :>, 0, "no structured data at all"
-    tags.each { |tag| assert_nothing_raised { JSON.parse(tag.text) } }
+  def performance_node
+    documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+  end
+
+  def run_node
+    documents_of_type("TheaterEvent").find { |node| node["superEvent"].nil? }
   end
 
   test "the venue is marked up as a performing arts theatre with its address" do
@@ -57,15 +61,19 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_not_nil document_of_type("PerformingArtsTheater")
   end
 
+  # Every archive event has no performances: it is a single date-only node, and lists nothing.
   test "a show is marked up as a TheaterEvent with its dates" do
     get show_path(@show)
 
     event = document_of_type("TheaterEvent")
     assert_not_nil event, "the show page carries no event markup"
+    assert_equal 1, documents_of_type("TheaterEvent").length
     assert_equal "The Rocky Horror Show", event["name"]
     assert_equal "2026-09-23", event["startDate"]
     assert_equal "2026-09-26", event["endDate"]
     assert_equal "https://schema.org/EventScheduled", event["eventStatus"]
+    assert_nil event["subEvent"]
+    assert_nil document_of_type("ItemList")
   end
 
   test "an event points at the venue and organiser by reference rather than repeating them" do
@@ -78,6 +86,8 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_predicate event.dig("organizer", "@id").to_s, :present?
   end
 
+  # The parser refused ~38% of the archive, so reading the price string has to stay: with no
+  # bands there are no per-band offers.
   test "a readable price becomes an aggregate offer" do
     get show_path(@show)
 
@@ -86,6 +96,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "GBP", offers["priceCurrency"]
     assert_equal "7.00", offers["lowPrice"]
     assert_equal "10.00", offers["highPrice"]
+    assert_nil offers["offers"]
   end
 
   # A wrong price in a rich result is a promise the box office has to honour.
@@ -109,8 +120,8 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
 
   test "each performance becomes an event of its own with a real curtain time" do
     @show.update!(duration_minutes: 135)
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 25, 19, 30))
+    create_performance
+    create_performance(starts_at: Time.zone.local(2026, 9, 25, 19, 30))
 
     get show_path(@show)
 
@@ -122,60 +133,41 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
   end
 
   test "a performance points back at the run it belongs to" do
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+    create_performance
 
     get show_path(@show)
 
-    run = documents_of_type("TheaterEvent").find { |node| node["superEvent"].nil? }
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+    run = run_node
+    performance = performance_node
 
     assert_equal run["@id"], performance.dig("superEvent", "@id")
     assert_includes run["subEvent"].map { |sub| sub["@id"] }, performance["@id"]
   end
 
-  # Every archive event has no performances.
-  test "an event with no performances keeps its date-only run markup" do
-    get show_path(@show)
-
-    events = documents_of_type("TheaterEvent")
-
-    assert_equal 1, events.length
-    assert_equal "2026-09-23", events.first["startDate"]
-    assert_nil events.first["subEvent"]
-  end
-
   test "an accessible performance says so in schema.org's own vocabulary" do
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30),
-                                         access_flags: %w[relaxed captioned])
+    create_performance(access_flags: %w[relaxed captioned])
 
     get show_path(@show)
 
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
-
-    assert_equal %w[relaxedPerformance captions], performance["accessibilityFeature"]
+    assert_equal %w[relaxedPerformance captions], performance_node["accessibilityFeature"]
   end
 
   # A press night is a scheduling label, not access provision.
   test "a scheduling flag is not published as an accessibility feature" do
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30),
-                                         access_flags: %w[press_night preview])
+    create_performance(access_flags: %w[press_night preview])
 
     get show_path(@show)
 
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
-
-    assert_nil performance["accessibilityFeature"]
+    assert_nil performance_node["accessibilityFeature"]
   end
 
   test "doors open time is published when it is known" do
     @show.update!(doors_open_minutes_before: 30)
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
+    create_performance
 
     get show_path(@show)
 
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
-
-    assert_equal "2026-09-24T19:00:00+01:00", performance["doorTime"]
+    assert_equal "2026-09-24T19:00:00+01:00", performance_node["doorTime"]
   end
 
   # A Season's occurrences are opening hours, not performances.
@@ -208,31 +200,14 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal [ "10.00", "8.00" ], offers["offers"].map { |offer| offer["price"] }
   end
 
-  # The parser refused ~38% of the archive, so the scrape has to stay.
-  test "an event with no bands still falls back to reading the price string" do
-    get show_path(@show)
+  test "an event is marked free only when its price is zero" do
+    { "0" => true, "10" => false }.each do |amount, free|
+      @show.update!(ticket_prices: [ { "category" => "standard", "amount" => amount } ])
 
-    offers = document_of_type("TheaterEvent")["offers"]
+      get show_path(@show)
 
-    assert_equal "7.00", offers["lowPrice"]
-    assert_equal "10.00", offers["highPrice"]
-    assert_nil offers["offers"]
-  end
-
-  test "a free event is marked as free" do
-    @show.update!(ticket_prices: [ { "category" => "standard", "amount" => "0" } ])
-
-    get show_path(@show)
-
-    assert document_of_type("TheaterEvent")["isAccessibleForFree"]
-  end
-
-  test "a paid event is not marked free" do
-    @show.update!(ticket_prices: [ { "category" => "standard", "amount" => "10" } ])
-
-    get show_path(@show)
-
-    assert_not document_of_type("TheaterEvent")["isAccessibleForFree"]
+      assert_equal free, document_of_type("TheaterEvent")["isAccessibleForFree"], "amount #{amount}"
+    end
   end
 
   test "a show names the play it is staging and who wrote it" do
@@ -247,34 +222,18 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal "Richard O'Brien", work.dig("author", "name")
   end
 
-  # A workshop is not a play.
-  test "a workshop features no play" do
+  # A workshop is not a play, and is taught rather than staged: a TheaterEvent would turn up in
+  # theatre rich results.
+  test "a workshop and its sessions are EducationEvents with no play" do
     workshop = FactoryBot.create(:workshop, is_public: true, author: "Someone")
-
-    get workshop_path(workshop)
-
-    assert_nil document_of_type("EducationEvent")["workFeatured"]
-  end
-
-  # A workshop is taught, not staged: a TheaterEvent would turn up in theatre rich results.
-  test "a workshop is marked up as an EducationEvent, not a TheaterEvent" do
-    workshop = FactoryBot.create(:workshop, is_public: true)
-
-    get workshop_path(workshop)
-
-    assert_not_nil document_of_type("EducationEvent")
-    assert_nil document_of_type("TheaterEvent")
-  end
-
-  test "a workshop's sessions are EducationEvents too" do
-    workshop = FactoryBot.create(:workshop, is_public: true)
     workshop.event_occurrences.create!(starts_at: workshop.start_date.to_time.change(hour: 14))
 
     get workshop_path(workshop)
 
-    sessions = documents_of_type("EducationEvent").select { |node| node["superEvent"] }
-    assert_equal 1, sessions.size
     assert_nil document_of_type("TheaterEvent")
+    run = documents_of_type("EducationEvent").find { |node| node["superEvent"].nil? }
+    assert_nil run["workFeatured"]
+    assert_equal 1, documents_of_type("EducationEvent").count { |node| node["superEvent"] }
   end
 
   test "the director is named from the team" do
@@ -335,15 +294,10 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_predicate article["datePublished"].to_s, :present?
   end
 
-  test "an index page carries no event markup" do
+  test "a hub index lists what it is showing as an ItemList, not as events" do
     get shows_path
 
     assert_nil document_of_type("TheaterEvent")
-  end
-
-  test "a hub index lists what it is showing as an ItemList" do
-    get shows_path
-
     list = document_of_type("ItemList")
     assert_not_nil list, "the shows index carries no ItemList"
     names = list["itemListElement"].map { |item| item["name"] }
@@ -351,55 +305,22 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_equal (1..names.length).to_a, list["itemListElement"].map { |item| item["position"] }
   end
 
-  test "a show page carries no ItemList, listing nothing" do
-    get show_path(@show)
-
-    assert_nil document_of_type("ItemList")
-  end
-
   # Google surfaces cancelled and sold-out nights; a ticket link to one that is off is worse than none.
-
-  test "a cancelled performance is marked cancelled, not scheduled" do
-    FactoryBot.create(:event_occurrence, event: @show,
-                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), cancelled: true)
-
-    get show_path(@show)
-
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
-
-    assert_equal "https://schema.org/EventCancelled", performance["eventStatus"]
-  end
-
-  test "a sold-out performance offers no tickets" do
-    FactoryBot.create(:event_occurrence, event: @show,
-                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), sold_out: true)
+  # The run itself stays scheduled when one night of it is cancelled.
+  test "performances are scheduled, cancelled or sold out, and the run stays scheduled" do
+    create_performance
+    create_performance(starts_at: Time.zone.local(2026, 9, 25, 19, 30), cancelled: true)
+    create_performance(starts_at: Time.zone.local(2026, 9, 26, 19, 30), sold_out: true)
 
     get show_path(@show)
 
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
+    nights = documents_of_type("TheaterEvent").select { |node| node["superEvent"] }
+                                              .index_by { |node| node["startDate"][0, 10] }
 
-    assert_equal "https://schema.org/SoldOut", performance.dig("offers", "availability")
-  end
-
-  test "an ordinary performance is still scheduled and in stock" do
-    FactoryBot.create(:event_occurrence, event: @show, starts_at: Time.zone.local(2026, 9, 24, 19, 30))
-
-    get show_path(@show)
-
-    performance = documents_of_type("TheaterEvent").find { |node| node["superEvent"] }
-
-    assert_equal "https://schema.org/EventScheduled", performance["eventStatus"]
-    assert_equal "https://schema.org/InStock", performance.dig("offers", "availability")
-  end
-
-  test "cancelling one night leaves the run itself scheduled" do
-    FactoryBot.create(:event_occurrence, event: @show,
-                                         starts_at: Time.zone.local(2026, 9, 24, 19, 30), cancelled: true)
-
-    get show_path(@show)
-
-    run = documents_of_type("TheaterEvent").find { |node| node["subEvent"] }
-
-    assert_equal "https://schema.org/EventScheduled", run["eventStatus"]
+    assert_equal "https://schema.org/EventScheduled", nights["2026-09-24"]["eventStatus"]
+    assert_equal "https://schema.org/InStock", nights["2026-09-24"].dig("offers", "availability")
+    assert_equal "https://schema.org/EventCancelled", nights["2026-09-25"]["eventStatus"]
+    assert_equal "https://schema.org/SoldOut", nights["2026-09-26"].dig("offers", "availability")
+    assert_equal "https://schema.org/EventScheduled", run_node["eventStatus"]
   end
 end

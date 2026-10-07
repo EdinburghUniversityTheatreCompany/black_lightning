@@ -20,9 +20,7 @@ class ImageComponentTest < ViewComponent::TestCase
     render_inline(ImageComponent.new(image: image, variant: thumb))
 
     assert_selector "img[alt='']"
-  end
 
-  test "renders the alt it is given" do
     render_inline(ImageComponent.new(image: image, variant: thumb, alt: "A poster"))
 
     assert_selector "img[alt='A poster']"
