@@ -11,19 +11,22 @@ module Admin
       private
 
       # Returns [attached_count, error_messages]: a two-photo upload with one
-      # unreadable keeps the good one.
+      # unreadable keeps the good one, and a post with no file at all reads NOTHING_USABLE.
       def attach_posted_receipts(expense)
-        usable, rejected = ::Reimbursements::ReceiptIntake.from_params(params[:receipts]).partition(&:ok?)
+        intakes = ::Reimbursements::ReceiptIntake.from_params(params[:receipts])
+        return [ 0, [ NOTHING_USABLE ] ] if intakes.empty?
+
+        usable, rejected = intakes.partition(&:ok?)
         usable.each { |receipt| store.attach_receipt!(expense.record_id, **receipt.to_attachment) }
         [ usable.size, rejected.map(&:error) ]
       end
 
       # Answers with a turbo stream replacing #receipts-gallery, or a redirect for
       # a plain post. `finance` points the remove buttons at the finance routes.
-      def respond_with_receipts_gallery(record_id, redirect_path:, upload_errors: [], notice: nil,
-                                        finance: false, expense: nil)
+      def respond_with_receipts_gallery(expense, redirect_path:, upload_errors: [], notice: nil,
+                                        finance: false)
         # Expense#reload resets its receipts, so the gallery shows what is attached now.
-        expense = expense&.reload || store.find_expense!(record_id)
+        expense = expense.reload
         respond_to do |format|
           format.turbo_stream do
             render turbo_stream: turbo_stream.replace(

@@ -113,8 +113,7 @@ module Admin
         expense = find_queue_expense!
         attached, upload_errors = attach_posted_receipts(expense)
         if attached.zero?
-          redirect_to_review(alert: upload_errors.presence&.to_sentence ||
-                                    NOTHING_USABLE)
+          redirect_to_review(alert: upload_errors.to_sentence)
           return
         end
 

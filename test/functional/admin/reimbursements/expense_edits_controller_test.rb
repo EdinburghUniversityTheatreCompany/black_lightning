@@ -983,6 +983,18 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
       end
 
+      test "add_receipts with no file attaches nothing and says so" do
+        expense = expense_at("Paid")
+        sign_in @user
+
+        assert_no_difference -> { expense.receipt_files.count } do
+          post :add_receipts, params: { id: expense.record_id }
+        end
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
+        assert_equal AttachesReceipts::NOTHING_USABLE, flash[:alert]
+      end
+
       # The checker returns INVALID for a blank pair, which drew "likely a typo"
       # under "no bank details".
       test "no modulus banner for a claim with no bank details" do

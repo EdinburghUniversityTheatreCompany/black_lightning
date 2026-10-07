@@ -85,9 +85,6 @@ module Admin
       def add_receipts
         expense = find_expense!
         attached, upload_errors = attach_posted_receipts(expense)
-        if attached.zero? && upload_errors.empty?
-          upload_errors = [ NOTHING_USABLE ]
-        end
         notice = "Attached #{attached} receipt(s) to ##{expense.auto_number}." if attached.positive?
         respond_with_finance_gallery(expense, upload_errors: upload_errors, notice: notice)
       rescue StandardError => e # AR/ActiveStorage failures
@@ -345,7 +342,7 @@ module Admin
       end
 
       def respond_with_finance_gallery(expense, upload_errors: [], notice: nil)
-        respond_with_receipts_gallery(expense.record_id, expense: expense, upload_errors: upload_errors,
+        respond_with_receipts_gallery(expense, upload_errors: upload_errors,
                                       notice: notice, finance: true,
                                       redirect_path: edit_admin_reimbursements_expense_edit_path(expense.record_id))
       end
