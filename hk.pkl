@@ -55,18 +55,15 @@ local linters = new Mapping<String, Step> {
         glob = List("mise/config.toml", ".ruby-version", ".node-version", "Dockerfile", "package.json", "config/deploy.yml", ".devcontainer/compose.yaml", ".github/workflows/*.yml")
         check = "bash scripts/check_version_sync.sh"
     }
-    // The Dockerfile derives the Node major at build time (`setup_$(cut -d. -f1 < .node-version)`),
-    // so the `versions` gate has no static pin to compare. This keeps it that way: no hardcoded
-    // major, no `ARG NODE_VERSION`.
+    // The Dockerfile derives the Node major from .node-version, so `versions` has no static pin to
+    // compare; this keeps it that way.
     ["dockerfile-node-style"] {
         glob = List("Dockerfile", ".node-version")
-        check = "fail=0; grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo 'prod Dockerfile must derive the Node major from .node-version, not hardcode it'; fail=1; }; ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo 'remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version'; fail=1; }; exit $fail"
+        check = "bash scripts/check_repo_rules.sh dockerfile-node"
     }
-    // A shebang script must be mode 100755 in the git index: with core.fileMode=false a local
-    // chmod +x never reaches git, and clones get binstubs that die with exit 126. One awk on
-    // purpose: hk's internal `sh` dies on a while/read loop inside $(), even when it exits 0.
+    // A shebang script must be mode 100755 in the git index, or clones get binstubs that exit 126.
     ["exec-bit-scripts"] {
-        check = "bad=$(git ls-files -s | awk -F'\\t' '$1 ~ /^100644/ { if ((getline line < $2) > 0 && line ~ /^#!/) print $2; close($2) }'); if [ -n \"$bad\" ]; then echo 'Shebang scripts missing the executable bit in the git index. Fix: git update-index --chmod=+x <file>'; echo \"$bad\"; exit 1; fi"
+        check = "bash scripts/check_repo_rules.sh exec-bits"
     }
     // --- Audits (dead-code + duplication) ---------------------------------------
     // flay (Ruby structural, advisory, finds renamed clones) and jscpd (token-based, polyglot, the

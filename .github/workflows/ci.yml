@@ -66,15 +66,7 @@ jobs:
         run: npx --yes @herb-tools/linter@0.10.4 app/ --github
 
       - name: Executable bits on shipped scripts
-        # A tracked shebang file must be mode 100755 in the index: with core.fileMode=false a local
-        # chmod never reaches git, and a 100644 script dies with exit 126 on every fresh clone.
-        run: |
-          bad=$(git ls-files -s | awk -F'\t' '$1 ~ /^100644/ { if ((getline line < $2) > 0 && line ~ /^#!/) print $2; close($2) }')
-          if [ -n "$bad" ]; then
-            echo "Shebang scripts missing the executable bit in the git index. Fix: git update-index --chmod=+x <file>"
-            echo "$bad"
-            exit 1
-          fi
+        run: bash scripts/check_repo_rules.sh exec-bits
 
   lint_js:
     runs-on: ubuntu-latest
@@ -121,13 +113,7 @@ jobs:
         run: bash scripts/check_version_sync.sh
 
       - name: Prod Dockerfile still derives the Node major from .node-version
-        # The Dockerfile derives the Node major at build time, so the version gate has no static
-        # pin to compare. Keep it that way.
-        run: |
-          fail=0
-          grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo "::error::prod Dockerfile must derive the Node major from .node-version, not hardcode it"; fail=1; }
-          ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo "::error::remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version"; fail=1; }
-          exit $fail
+        run: bash scripts/check_repo_rules.sh dockerfile-node
 
   test:
     runs-on: ubuntu-latest
