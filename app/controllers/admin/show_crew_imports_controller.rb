@@ -51,15 +51,17 @@ class Admin::ShowCrewImportsController < AdminController
 
     actions = params[:actions] || {}
     existing_actions = params[:existing_actions] || {}
-    results = { created: 0, added: 0, updated: 0, skipped: 0 }
+    results = { created: 0, added: 0, updated: 0, skipped: 0, errors: [] }
 
     import_data["categorized"].values.flatten.each do |item|
       row = item["row"].with_indifferent_access
 
       user = case actions[item["index"].to_s]
       when "create"
-        results[:created] += 1
-        create_user_from_row(row).tap(&:send_welcome_email)
+        create_user_from_row(row).tap do |created|
+          results[:created] += 1
+          created.send_welcome_email
+        end
       when "link" then User.find_by(id: item["existing_user_id"])
       when /\Alink_(\d+)\z/ then User.find_by(id: $1.to_i)
       when "skip"
@@ -71,6 +73,8 @@ class Admin::ShowCrewImportsController < AdminController
 
       @event.team_members.find_or_initialize_by(user: user).update!(position: row[:position])
       results[:added] += 1
+    rescue ActiveRecord::RecordInvalid => e
+      results[:errors] << "#{row[:original_name]}: #{e.record.errors.full_messages.to_sentence}"
     end
 
     (import_data["existing_team_members"] || {}).each do |user_id, data|
@@ -90,7 +94,9 @@ class Admin::ShowCrewImportsController < AdminController
       results[:updated] += 1
     end
 
-    helpers.append_to_flash(:success, "Import complete: #{results[:created]} users created, #{results[:added]} added to crew, #{results[:updated]} positions updated, #{results[:skipped]} skipped")
+    message = "Import complete: #{results[:created]} users created, #{results[:added]} added to crew, #{results[:updated]} positions updated, #{results[:skipped]} skipped"
+    message += ". Errors: #{results[:errors].join('; ')}" if results[:errors].any?
+    helpers.append_to_flash(:success, message)
     redirect_to [ :admin, @event ]
   end
 

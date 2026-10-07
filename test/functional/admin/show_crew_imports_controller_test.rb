@@ -106,6 +106,23 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert flash[:success].any? { |msg| msg.include?("created") }
   end
 
+  test "confirm names a row that cannot be created and still processes the others" do
+    FactoryBot.create(:user, email: "taken@example.com")
+    cache_key = write_crew_cache(create_new: [
+      import_entry(index: 0, original_name: "Good Person", first_name: "Good", last_name: "Person", student_id: "s9999999", email: "good@example.com", position: "Director"),
+      import_entry(index: 1, original_name: "Clash Person", first_name: "Clash", last_name: "Person", student_id: "s8888888", email: "taken@example.com", position: "Producer"),
+      import_entry(index: 2, original_name: "Last Person", first_name: "Last", last_name: "Person", student_id: "s7777777", email: "last@example.com", position: "Designer")
+    ])
+
+    assert_difference "User.count", 2 do
+      post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "create", "1" => "create", "2" => "create" } }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    assert_equal %w[Designer Director], @show.team_members.pluck(:position).sort
+    assert flash[:success].any? { |msg| msg.include?("2 users created") && msg.include?("Errors: Clash Person:") }
+  end
+
   test "confirm adds existing user to crew" do
     user = FactoryBot.create(:user, student_id: "s1234567")
     cache_key = write_crew_cache(exact_match_id: [
