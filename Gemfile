@@ -48,7 +48,6 @@ gem "aws-sdk-s3", require: false
 gem "image_processing"
 gem "ruby-vips"
 
-gem "chronic"
 gem "ransack"
 
 gem "nokogiri"
