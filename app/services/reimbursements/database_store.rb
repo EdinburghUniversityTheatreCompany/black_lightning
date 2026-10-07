@@ -69,8 +69,8 @@ module Reimbursements
     # THE RULE: a read-only filter may be lenient, but anything that moves money assigns each
     # claim to exactly one centre. BuildBatchJob's limits_concurrency key is per centre, so a
     # claim visible to two centres reaches two live EUSA drafts and EUSA pays twice. An unplaced
-    # claim falls to the DEFAULT centre, as NightlyBatchJob#claims_by_cost_centre_id does for
-    # reminders (the centre told about a claim is the one that can pay it).
+    # claim falls to the DEFAULT centre. NightlyBatchJob reads this too, so the centre reminded
+    # about a claim is the centre that can pay it.
     #
     # Raises on a nil centre: "no centre" cannot mean "every centre" here, and [] would
     # silently build an empty batch.

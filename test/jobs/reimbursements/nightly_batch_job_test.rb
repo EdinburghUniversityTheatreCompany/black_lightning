@@ -14,7 +14,7 @@ module Reimbursements
 
     # A data-layer outage, driving the job's top-level rescue.
     class BoomStore
-      def expenses = raise(StandardError, "backend down")
+      def expenses_owned_by_cost_centre(_centre) = raise(StandardError, "backend down")
     end
 
     FakeNotifier = ReimbursementsTestHelpers::FakeNotifier

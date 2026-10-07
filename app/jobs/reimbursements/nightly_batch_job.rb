@@ -86,18 +86,10 @@ module Reimbursements
 
     # --- Which claims belong to which cost centre --------------------------
 
+    # The store's rule, shared with Build Batch. An unplaced claim falls to the default
+    # centre rather than to nobody: a wrong reminder is correctable, silence is not.
     def claims_for(cost_centre)
-      claims_by_cost_centre_id.fetch(cost_centre.id, [])
-    end
-
-    # A claim whose budget names no cost centre falls to the DEFAULT centre: a
-    # reminder to the wrong centre is visible and correctable, one to nobody
-    # leaves a producer waiting. Prefer the wrong reminder over silence.
-    def claims_by_cost_centre_id
-      @claims_by_cost_centre_id ||= begin
-        default_id = CostCentre.default&.id
-        store.expenses.group_by { |expense| expense.budget&.cost_centre_id || default_id }
-      end
+      store.expenses_owned_by_cost_centre(cost_centre)
     end
 
     # --- Stale pending reminder -------------------------------------------
