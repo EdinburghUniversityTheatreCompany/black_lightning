@@ -12,6 +12,5 @@ search_fields = {
 }
 %>
 
-<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls,
-  content: render('archives/proposals/index_results'),
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, content: render('archives/proposals/index_results'),
   show_new_button: false, search_fields: search_fields %>

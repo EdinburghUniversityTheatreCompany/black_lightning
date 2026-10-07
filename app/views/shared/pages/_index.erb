@@ -1,4 +1,4 @@
-<%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, show_new_button: true, search_fields: nil, include_edit_button: true, include_link_to_item: true, quick_actions: [], content:, include_pagination: true) %>
+<%# locals: (resource_class:, show_new_button: true, search_fields: nil, quick_actions: [], content:) %>
 <%# KEEP %>
 <% if show_new_button && can?(:new, resource_class) %>
   <% quick_actions << get_link(resource_class, :new) %>

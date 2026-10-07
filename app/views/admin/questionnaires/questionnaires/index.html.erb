@@ -6,5 +6,5 @@
     date_range:       { type: :date_range, options: { start_year: 2012, start_date_attribute: 'event_start_date', end_date_attribute: 'event_end_date'} }
 } %>
 
-<%= render 'shared/pages/index', resource_class: Admin::Questionnaires::Questionnaire, resources: @questionnaires, content: render('index_results'), search_fields: search_fields,
-  quick_actions: quick_actions, include_pagination: false %>
+<%= render 'shared/pages/index', resource_class: Admin::Questionnaires::Questionnaire, content: render('index_results'), search_fields: search_fields,
+  quick_actions: quick_actions %>
