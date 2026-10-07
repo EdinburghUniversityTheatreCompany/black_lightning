@@ -18,9 +18,7 @@
 #  index_video_links_on_item_type_and_item_id  (item_type,item_id)
 #
 class VideoLink < ApplicationRecord
-  validates :name, length: { maximum: 255 }
-  validates :link, length: { maximum: 255 }
-  validates :item_type, length: { maximum: 255 }
+  validates :name, :link, :item_type, length: { maximum: 255 }
   belongs_to :item, polymorphic: true
 
   validate :link_is_valid

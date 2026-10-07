@@ -20,8 +20,7 @@
 class CarouselItem < ApplicationRecord
   validates :title, length: { maximum: 255 }
   validates :tagline, length: { maximum: 16777215 }
-  validates :carousel_name, length: { maximum: 255 }
-  validates :url, length: { maximum: 255 }
+  validates :carousel_name, :url, length: { maximum: 255 }
   CAROUSEL_NAMES = [ "Home" ].freeze
 
   CAROUSEL_CONFIG = {

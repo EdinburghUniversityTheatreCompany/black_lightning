@@ -24,8 +24,7 @@
 #
 class Admin::Question < ApplicationRecord
   validates :question_text, length: { maximum: 16777215 }
-  validates :response_type, length: { maximum: 255 }
-  validates :questionable_type, length: { maximum: 255 }
+  validates :response_type, :questionable_type, length: { maximum: 255 }
   validates :question_text, :response_type, presence: true
 
   belongs_to :questionable, polymorphic: true

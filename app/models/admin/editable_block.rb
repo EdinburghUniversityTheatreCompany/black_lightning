@@ -27,8 +27,7 @@
 class Admin::EditableBlock < ApplicationRecord
   validates :name, length: { maximum: 255 }
   validates :content, length: { maximum: 16777215 }
-  validates :group, length: { maximum: 255 }
-  validates :url, length: { maximum: 255 }
+  validates :group, :url, length: { maximum: 255 }
   include MdHelper
 
   resourcify

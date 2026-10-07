@@ -27,8 +27,7 @@
 #  index_team_members_on_user_id               (user_id)
 #
 class TeamMember < ActiveRecord::Base
-  validates :position, length: { maximum: 255 }
-  validates :teamwork_type, length: { maximum: 255 }
+  validates :position, :teamwork_type, length: { maximum: 255 }
   validates :position, :user, presence: true
   validates_uniqueness_of :user_id, scope: [ :teamwork_type, :teamwork_id ]
   validate :uniqueness_in_parent_collection

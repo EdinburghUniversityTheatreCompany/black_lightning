@@ -22,8 +22,7 @@
 #
 class Role < ApplicationRecord
   # Length validations enforcing database column limits
-  validates :name, length: { maximum: 255 }
-  validates :resource_type, length: { maximum: 255 }
+  validates :name, :resource_type, length: { maximum: 255 }
   # Roles the code names directly (`has_role?` / `with_role`), so they cannot be renamed.
   # Matched case-insensitively: the code asks for :member and "Member" alike. Archiving is
   # unaffected, as it creates a suffixed sibling.

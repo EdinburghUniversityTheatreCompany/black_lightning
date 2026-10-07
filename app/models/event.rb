@@ -83,22 +83,13 @@ class Event < ApplicationRecord
   # The schema.org type of the run and its performance nodes.
   SCHEMA_TYPE = "TheaterEvent".freeze
 
-  validates :name, length: { maximum: 255 }
-  validates :tagline, length: { maximum: 255 }
-  validates :slug, length: { maximum: 255 }
+  validates :name, :tagline, :slug, length: { maximum: 255 }
   validates :publicity_text, length: { maximum: 16777215 }
-  validates :image_file_name, length: { maximum: 255 }
-  validates :image_content_type, length: { maximum: 255 }
-  validates :author, length: { maximum: 255 }
-  validates :type, length: { maximum: 255 }
-  validates :price, length: { maximum: 255 }
-  validates :spark_seat_slug, length: { maximum: 255 }
+  validates :image_file_name, :image_content_type, :author, :type, :price, :spark_seat_slug, length: { maximum: 255 }
   validates :members_only_text, length: { maximum: 16777215 }
-  validates :pretix_slug_override, length: { maximum: 255 }
-  validates :pretix_view, length: { maximum: 255 }
+  validates :pretix_slug_override, :pretix_view, length: { maximum: 255 }
   validates :content_warnings, length: { maximum: 16777215 }
-  validates :digital_programme_url, length: { maximum: 255 }
-  validates :age_guidance, length: { maximum: 255 }
+  validates :digital_programme_url, :age_guidance, length: { maximum: 255 }
   # The upper bounds are fat-finger backstops.
   validates :duration_minutes, numericality: {
     only_integer: true, greater_than: 0, less_than_or_equal_to: 1440

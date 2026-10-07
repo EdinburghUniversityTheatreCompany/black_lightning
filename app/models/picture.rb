@@ -26,9 +26,7 @@
 #
 class Picture < ApplicationRecord
   validates :description, length: { maximum: 16777215 }
-  validates :gallery_type, length: { maximum: 255 }
-  validates :image_file_name, length: { maximum: 255 }
-  validates :image_content_type, length: { maximum: 255 }
+  validates :gallery_type, :image_file_name, :image_content_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :gallery, polymorphic: true

@@ -25,9 +25,7 @@
 class Review < ApplicationRecord
   validates :reviewer, length: { maximum: 255 }
   validates :body, length: { maximum: 16777215 }
-  validates :organisation, length: { maximum: 255 }
-  validates :title, length: { maximum: 255 }
-  validates :url, length: { maximum: 255 }
+  validates :organisation, :title, :url, length: { maximum: 255 }
   validates :body, :reviewer, :review_date, :title, presence: true
   validates :rating, numericality: { greater_than: 0, allow_blank: true }
 

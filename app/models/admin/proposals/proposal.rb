@@ -26,8 +26,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   include TeamMemberOrdering
 
   validates :show_title, length: { maximum: 255 }
-  validates :publicity_text, length: { maximum: 16777215 }
-  validates :proposal_text, length: { maximum: 16777215 }
+  validates :publicity_text, :proposal_text, length: { maximum: 16777215 }
   has_paper_trail
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true

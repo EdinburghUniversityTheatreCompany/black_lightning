@@ -28,9 +28,7 @@
 #
 class Admin::Answer < ApplicationRecord
   validates :answer, length: { maximum: 16777215 }
-  validates :answerable_type, length: { maximum: 255 }
-  validates :file_file_name, length: { maximum: 255 }
-  validates :file_content_type, length: { maximum: 255 }
+  validates :answerable_type, :file_file_name, :file_content_type, length: { maximum: 255 }
   validates :question_id, presence: true
 
   belongs_to :question, class_name: "Admin::Question"

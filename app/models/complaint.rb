@@ -13,8 +13,7 @@
 #
 class Complaint < ApplicationRecord
   validates :subject, length: { maximum: 255 }
-  validates :description, length: { maximum: 16777215 }
-  validates :comments, length: { maximum: 16777215 }
+  validates :description, :comments, length: { maximum: 16777215 }
   has_paper_trail
 
   validates :subject, :description, presence: true
