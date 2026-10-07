@@ -54,7 +54,7 @@ module Admin
       end
 
       def authorize_receipt!
-        expense = store.find_expense!(params[:expense_id])
+        expense = store.find_expense(params[:expense_id])
         raise ActiveRecord::RecordNotFound unless expense && visible_to_current_user?(expense)
 
         # Resolved WITHIN the claim, never globally: a claim you may read paired with

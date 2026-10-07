@@ -92,7 +92,6 @@ module Reimbursements
     def find_expense(record_id)
       Expense.includes(:person, :batch, budget: :area).find_by(id: record_id)
     end
-    alias find_expense! find_expense
 
     def find_person(record_id)
       Person.includes(:payment_details).find_by(id: record_id)

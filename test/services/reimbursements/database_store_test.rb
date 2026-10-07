@@ -23,7 +23,6 @@ module Reimbursements
       expense = Expense.create!(status: Status::PENDING)
 
       assert_equal expense.id, store.find_expense(expense.record_id).id
-      assert_equal expense.id, store.find_expense!(expense.record_id).id
       assert_nil store.find_expense("999999")
     end
 

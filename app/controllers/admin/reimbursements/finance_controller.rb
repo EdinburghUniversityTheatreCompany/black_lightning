@@ -107,7 +107,7 @@ module Admin
       end
 
       def find_expense!
-        find_or_404(:find_expense!)
+        find_or_404(:find_expense)
       end
 
       def paginate(collection, per: PAGE_SIZE)

@@ -72,7 +72,7 @@ module Admin
       # Redirects and returns nil unless the signed-in owner owns the claim's budget and it is
       # still Pending.
       def owned_pending_expense
-        expense = store.find_expense!(params[:expense_id])
+        expense = store.find_expense(params[:expense_id])
         unless ::Reimbursements::OwnerReview.owned_by?(expense, current_person)
           redirect_to_my_budgets(alert: "You can only act on claims charged to budgets you own.")
           return nil
