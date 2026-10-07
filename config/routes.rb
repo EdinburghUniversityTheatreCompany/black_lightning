@@ -437,7 +437,6 @@ ChaosRails::Application.routes.draw do
     resources :techies do
       collection do
         get "tree"
-        get "tree_data"
         get "mass_new"
         post "mass_create"
         get "by_entry_year"

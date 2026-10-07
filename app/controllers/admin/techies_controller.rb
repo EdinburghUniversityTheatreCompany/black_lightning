@@ -1,7 +1,6 @@
 ##
 # Responsible for the techie family tree.
 ##
-# Source for some of the tree: https://gist.github.com/markjlorenz/3744338
 class Admin::TechiesController < AdminController
   include GenericController
 
@@ -13,16 +12,6 @@ class Admin::TechiesController < AdminController
     @coparents = @techie.children.flat_map(&:parents).uniq - [ @techie ]
   end
 
-  def tree_data
-    nodes = @techies.select(:id, :name)
-    edges = @techies.includes(:children).flat_map { |techie| techie.children.ids.uniq.map { |child_id| [ techie.id, child_id ] } }
-
-    json = { edges: edges, nodes: nodes }.to_json
-
-    render json: json
-  end
-
-  # Remember to remove Dracula and stuff when you finally get rid of this one.
   def tree
     authorize! :index, Techie
 
