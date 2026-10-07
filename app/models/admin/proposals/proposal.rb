@@ -194,10 +194,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
     Rails.logger.info "Created Show: #{@show.name} (#{@show.slug})"
   end
 
-  def convert_to_show_async
-    ProposalConversionJob.perform_later(id)
-  end
-
   private
 
   def set_default_proposal_text
