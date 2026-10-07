@@ -49,15 +49,7 @@
               </td>
               <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.spent) %></td>
               <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(figures.waiting) %></td>
-              <td class="px-3 py-2 text-right tabular-nums">
-                <% if figures.no_budget_set? %>
-                  <span class="text-gray-500">no budget set</span>
-                <% elsif figures.over? %>
-                  <span class="text-danger"><%= reimbursements_money(figures.over_by) %> over</span>
-                <% else %>
-                  <%= reimbursements_money(figures.left) %>
-                <% end %>
-              </td>
+              <td class="px-3 py-2 text-right tabular-nums"><%= helpers.reimbursements_spend_left(figures) %></td>
               <% if finance? %>
                 <td class="px-3 py-2 text-right whitespace-nowrap">
                   <%= link_to "Edit", edit_admin_reimbursements_budget_path(line.record_id),

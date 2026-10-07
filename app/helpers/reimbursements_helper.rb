@@ -70,6 +70,14 @@ module ReimbursementsHelper
     number_to_currency(amount, unit: "£")
   end
 
+  # The Left figure of a SpendSummary: unset, overspent or what is left.
+  def reimbursements_spend_left(summary)
+    return tag.span("no budget set", class: "text-gray-500") if summary.no_budget_set?
+    return tag.span("#{reimbursements_money(summary.over_by)} over", class: "text-danger") if summary.over?
+
+    reimbursements_money(summary.left)
+  end
+
   # How much of an area's agreed total its lines use. A net basis that netted income off
   # prints its two halves, never the bare negative Area#allocated returns: a negative
   # means bad news elsewhere here, and the not-yet-allocated figure beside it would
