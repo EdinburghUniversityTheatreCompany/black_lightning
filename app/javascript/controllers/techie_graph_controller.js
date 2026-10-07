@@ -149,7 +149,7 @@ export default class extends Controller {
     const hasUnknown = this.nodesValue.some(n => n.entry_year == null)
 
     const swatch = (color, label) =>
-      `<span class="d-flex align-items-center gap-1">` +
+      `<span class="flex items-center gap-1">` +
       `<span style="width:12px;height:12px;background:${color};border-radius:2px;flex-shrink:0"></span>` +
       `${label}</span>`
 
