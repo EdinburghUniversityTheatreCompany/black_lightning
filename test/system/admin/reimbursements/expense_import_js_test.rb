@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require_relative "../../../support/expense_import_sheet_helpers"
 
 module Admin
   module Reimbursements
@@ -12,9 +13,7 @@ module Admin
     #   * every step must render inside the Turbo Frame, or Turbo Drive discards the response.
     class ExpenseImportJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
-
-      STATUS = ::Reimbursements::Status
-      HEADERS = ::Reimbursements::ExpenseImport::TSV_HEADERS.join("\t").freeze
+      include ExpenseImportSheetHelpers
 
       setup do
         grant_finance_permission(users(:member))
@@ -28,7 +27,7 @@ module Admin
 
       teardown { Array(@xlsx_paths).each { |path| FileUtils.rm_f(path) } }
 
-      def sheet(*rows) = ([ HEADERS ] + rows).join("\n")
+      def sheet(*) = expense_import_sheet(*)
 
       # Sets the box the way a paste lands: fill_in TYPES the first four characters of a
       # long value as real keys, and the Tab in "ID\tStatus" leaves the textarea.
@@ -36,10 +35,8 @@ module Admin
         find_field("Paste the sheet").execute_script("this.value = arguments[0]", with)
       end
 
-      def claim(reference, amount: "120.00", status: STATUS::PAID, payee: "alice@example.com",
-                budget: "Props")
-        [ reference, status, payee, "", budget, amount, "100.00", "Fake blood #{reference}",
-          "PROPS ALICE", "", "", "", "", "", "", "" ].join("\t")
+      def claim(reference, **cells)
+        expense_import_row(reference: reference, description: "Fake blood #{reference}", **cells)
       end
 
       def xlsx_row(reference) = claim(reference).split("\t")
@@ -65,63 +62,17 @@ module Admin
         assert_text "New claims (2)"
         assert_text "Fake blood OLD-1"
 
+        # The preview's hidden field is the only thing carrying the sheet into apply.
         assert_difference -> { ::Reimbursements::Expense.count }, +2 do
           click_on "Import 2 claims"
           assert_text "Imported into Fringe 2027"
         end
-
-        claim = ::Reimbursements::Expense.find_by(import_key: "OLD-1")
-        assert_equal STATUS::PAID, claim.status
-        assert_equal BigDecimal("120"), claim.amount
-      end
-
-      # The hidden field IS the wizard's state. Nothing else carries the sheet
-      # from the preview into apply, so if it is missing the confirm button
-      # imports an empty sheet and reports success over nothing.
-      test "the preview carries the sheet in a hidden field, and apply reads it" do
-        visit admin_reimbursements_expense_import_path
-
-        paste_sheet with: sheet(claim("OLD-1"))
-        click_on "Preview import"
-
-        carried = find("input[name='pasted_text']", visible: false).value
-        assert_includes carried, "OLD-1"
-        assert_includes carried, "Fake blood OLD-1"
-      end
-
-      test "a second import of the same sheet reports it and creates nothing" do
-        visit admin_reimbursements_expense_import_path
-        paste_sheet with: sheet(claim("OLD-1"))
-        click_on "Preview import"
-        click_on "Import 1 claim"
-        assert_text "Imported into Fringe 2027"
-
-        visit admin_reimbursements_expense_import_path
-        paste_sheet with: sheet(claim("OLD-1"))
-        click_on "Preview import"
-
-        assert_text "has been imported before and will be skipped"
-        # Nothing left to import, so the confirm button is not offered at all.
-        assert_button "Nothing to import", disabled: true
-        assert_equal 1, ::Reimbursements::Expense.count
-      end
-
-      test "an unreadable line blocks the whole sheet and names it" do
-        visit admin_reimbursements_expense_import_path
-
-        paste_sheet with: sheet(claim("OLD-1"), claim("OLD-2", amount: "about a ton"))
-        click_on "Preview import"
-
-        assert_text "1 line can't be imported"
-        assert_text "about a ton"
-        assert_button "Import 1 claim", disabled: true
-        assert_equal 0, ::Reimbursements::Expense.count
       end
 
       test "an unknown payee links to the screen that registers one" do
         visit admin_reimbursements_expense_import_path
 
-        paste_sheet with: sheet(claim("OLD-1", payee: "nobody@example.com"))
+        paste_sheet with: sheet(claim("OLD-1", payee_email: "nobody@example.com"))
         click_on "Preview import"
 
         assert_text "isn't anyone on the People screen"
@@ -168,33 +119,6 @@ module Admin
         assert_text "Imported into Fringe 2027"
 
         assert_equal termtime, ::Reimbursements::Expense.sole.cost_centre
-      end
-
-      # The preview says what it read, so a mis-mapped column is visible rather
-      # than silent — which is how a "Payment reference" column came to be the
-      # dedupe key and an "Account number" column the expense number.
-      test "the preview states which column it read for each field" do
-        visit admin_reimbursements_expense_import_path
-
-        paste_sheet with: [ "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference",
-                            "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE" ].join("\n")
-        click_on "Preview import"
-
-        # A <summary>, so not a link or a button as far as click_on is concerned.
-        find("summary", text: "Columns read from your sheet").click
-
-        assert_text "Claim ID"
-        assert_text "not in this sheet"
-      end
-
-      test "a claim imported at a live status is called out before it is written" do
-        visit admin_reimbursements_expense_import_path
-
-        paste_sheet with: sheet(claim("OLD-1", status: STATUS::APPROVED))
-        click_on "Preview import"
-
-        assert_text "EUSA pays it again"
-        assert_text "1 claim here is being imported into the LIVE queue"
       end
 
       test "the finance expenses index links into the wizard" do

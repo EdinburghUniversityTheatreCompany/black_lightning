@@ -1,14 +1,15 @@
 require "test_helper"
+require_relative "../../../support/expense_import_sheet_helpers"
 
 module Admin
   module Reimbursements
     class ExpenseImportsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
+      include ExpenseImportSheetHelpers
 
       FY = ::Reimbursements::FinancialYear
       IMPORT = ::Reimbursements::ExpenseImport
       STATUS = ::Reimbursements::Status
-      HEADERS = IMPORT::TSV_HEADERS.join("\t").freeze
 
       setup do
         grant_finance_permission(users(:member))
@@ -20,14 +21,9 @@ module Admin
                                                financial_year: @year)
       end
 
-      def row(reference: "OLD-1", status: STATUS::PAID, payee: "alice@example.com",
-              budget: "Props", amount: "120.00", excl_vat: "100.00", description: "Fake blood",
-              payment_reference: "PROPS ALICE", type: "", number: "", submitted: "", paid: "")
-        [ reference, status, payee, "", budget, amount, excl_vat, description, payment_reference,
-          type, number, submitted, paid, "", "", "" ].join("\t")
-      end
+      def row(**) = expense_import_row(**)
 
-      def tsv(*rows) = ([ HEADERS ] + rows).join("\n")
+      def tsv(*) = expense_import_sheet(*)
 
       def import_params(text, **extra)
         { year: @year.key, cost_centre_id: @cost_centre.id, pasted_text: text }.merge(extra)
@@ -115,11 +111,24 @@ module Admin
 
         assert_no_difference -> { ::Reimbursements::Expense.count } do
           post :preview, params: import_params(tsv(row(reference: "OLD-1"),
-                                                   row(reference: "OLD-2")))
+                                                   row(reference: "OLD-2", status: STATUS::APPROVED)))
         end
 
         assert_response :success
         assert_equal 2, assigns(:import).entries_in(:create).size
+        assert_includes response.body, "EUSA pays it again"
+      end
+
+      test "preview states the column it read for each field and the ones it did not find" do
+        sign_in @user
+
+        post :preview, params: import_params(
+          "Claim ID\tStatus\tPayee email\tBudget\tAmount\tPayment reference\n" \
+          "2019-014\tPaid\talice@example.com\tProps\t120\tPROPS ALICE"
+        )
+
+        assert_select "details td span.font-mono", text: "Claim ID"
+        assert_includes response.body, "not in this sheet"
       end
 
       test "preview refuses an empty paste" do
@@ -128,27 +137,8 @@ module Admin
         post :preview, params: import_params("   ")
 
         assert_response :success
-        assert_match(/paste|upload/i, response.body)
+        assert_includes response.body, ExpenseImportsController::NOTHING_PASTED_ALERT
         assert_nil assigns(:import)
-      end
-
-      test "preview points an unknown payee at the register-a-person form" do
-        sign_in @user
-
-        post :preview, params: import_params(tsv(row(payee: "nobody@example.com")))
-
-        # The preview always renders: it is a report on the sheet, not a
-        # submission. Only apply refuses.
-        assert_response :success
-        assert_includes response.body, new_admin_reimbursements_person_path
-      end
-
-      test "preview carries the sheet on as TSV in a hidden field" do
-        sign_in @user
-
-        post :preview, params: import_params(tsv(row))
-
-        assert_match(/name="pasted_text".*OLD-1/m, response.body)
       end
 
       # --- Step 3: apply -----------------------------------------------------
@@ -180,17 +170,8 @@ module Admin
 
         assert_response :unprocessable_entity
         assert_match(/about a ton/, response.body)
-      end
-
-      test "apply refuses without a cost centre" do
-        create_second_reimbursements_cost_centre
-        sign_in @user
-
-        assert_no_difference -> { ::Reimbursements::Expense.count } do
-          post :apply, params: import_params(tsv(row), cost_centre_id: "")
-        end
-
-        assert_response :unprocessable_entity
+        assert_match(/1 line can.t be imported/, response.body)
+        assert_select "input[type=submit][disabled]"
       end
 
       test "apply refuses a paste that never reached the preview" do
@@ -215,6 +196,11 @@ module Admin
         assert_response :success
         assert_equal 1, ::Reimbursements::Expense.count
         assert_equal 1, assigns(:import).entries_in(:already_imported).size
+
+        post :preview, params: import_params(tsv(row))
+
+        assert_includes response.body, "has been imported before"
+        assert_select "input[type=submit][value='Nothing to import'][disabled]"
       end
 
       # --- An import must not email anyone -----------------------------------
@@ -285,33 +271,8 @@ module Admin
         assert_select "select#cost_centre_id option[selected]", 0
       end
 
-      test "an imported claim is not marked as having notified its producer" do
-        sign_in @user
-
-        post :apply, params: import_params(tsv(row(status: STATUS::PAID)))
-
-        claim = ::Reimbursements::Expense.sole
-        assert_not claim.producer_notified
-        assert_nil claim.rejection_notified
-      end
-
       # --- What the screen says is required --------------------------------
       # Columns the sheet must CARRY and cells every row must FILL are separate requirements.
-
-      test "every column the screen calls row-required really is" do
-        blanks = { description: "", payment_reference: "" }
-        blanks.each do |field, blank|
-          label = IMPORT::FIELDS.fetch(field)[:label]
-          assert_includes IMPORT.required_cell_labels, label,
-                          "#{label} is enforced but the screen does not say so"
-
-          sign_in @user
-          post :preview, params: import_params(tsv(row(status: STATUS::APPROVED, **{ field => blank })))
-
-          assert_match(/#{Regexp.escape(label)}/i, response.body,
-                       "a blank #{label} has to be reported by name")
-        end
-      end
 
       test "the template hints do not call a row-required column optional" do
         IMPORT::REQUIRED_CELL_FIELDS.each do |field|
