@@ -3,10 +3,10 @@ class SearchFormComponentPreview < ViewComponent::Preview
     first_name_cont: { label: "First name" },
     last_name_cont: { label: "Last name" },
     email_cont: {},
-    phone_cont: { label: "Phone" },
-    address_cont: { label: "Address" },
-    city_cont: { label: "City" },
-    postal_code_cont: { label: "Postal code" }
+    phone_number_cont: { label: "Phone" },
+    username_cont: { label: "Username" },
+    student_id_cont: { label: "Student ID" },
+    member_id_cont: { label: "Member ID" }
   }.freeze
 
   def default = form(3, 1)
@@ -16,6 +16,7 @@ class SearchFormComponentPreview < ViewComponent::Preview
   private
 
   def form(count, columns)
-    render SearchFormComponent.new(q: User.ransack, input_fields: FIELDS.first(count).to_h, columns:)
+    q = User.ransack({}, auth_object: Ability.new(User.first))
+    render SearchFormComponent.new(q:, input_fields: FIELDS.first(count).to_h, columns:)
   end
 end
