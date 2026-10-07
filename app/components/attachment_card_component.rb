@@ -39,7 +39,7 @@ class AttachmentCardComponent < ViewComponent::Base
   def thumbnail
     file = @attachment.file
     file.previewable? ? file.preview(helpers.thumb_variant) : file.variant(helpers.thumb_variant)
-  rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable
+  rescue ActiveStorage::InvariableError
     nil
   end
 
