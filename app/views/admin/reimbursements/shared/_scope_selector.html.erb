@@ -1,0 +1,14 @@
+<%# locals: (label:, options:) %>
+<%# One link per [text, query, selected] option, each keeping the page's other params. %>
+<div class="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="<%= label %>">
+  <span class="text-sm text-gray-600"><%= label %>:</span>
+  <% options.each do |text, query, selected| %>
+    <%= link_to text, url_for(request.query_parameters.merge(query).merge(page: nil)),
+                "aria-current": (selected ? "true" : nil),
+                class: class_names(
+                  "rounded border px-2 py-1 text-sm",
+                  "border-blue-600 bg-blue-50 font-medium text-blue-800" => selected,
+                  "border-gray-300 text-gray-700 hover:bg-gray-50" => !selected
+                ) %>
+  <% end %>
+</div>

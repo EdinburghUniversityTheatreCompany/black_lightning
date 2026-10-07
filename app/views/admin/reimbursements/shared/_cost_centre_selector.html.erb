@@ -1,19 +1,8 @@
 <%# Each centre is a link keeping the page's other params. "All" (no param) is
     the default because CostCentre.default is arbitrary. Hidden with one centre. %>
 <% if selectable_cost_centres.size > 1 %>
-  <div class="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Cost centre">
-    <span class="text-sm text-gray-600">Cost centre:</span>
-    <% [ nil, *selectable_cost_centres ].each do |centre| %>
-      <% selected = centre == selected_cost_centre %>
-      <%= link_to centre&.name || "All",
-                  url_for(request.query_parameters.merge(cost_centre: centre&.key,
-                                                         cost_centre_id: nil, page: nil)),
-                  "aria-current": (selected ? "true" : nil),
-                  class: class_names(
-                    "rounded border px-2 py-1 text-sm",
-                    "border-blue-600 bg-blue-50 font-medium text-blue-800" => selected,
-                    "border-gray-300 text-gray-700 hover:bg-gray-50" => !selected
-                  ) %>
-    <% end %>
-  </div>
+  <%= render "admin/reimbursements/shared/scope_selector", label: "Cost centre",
+             options: [ nil, *selectable_cost_centres ].map { |centre|
+               [ centre&.name || "All", { cost_centre: centre&.key, cost_centre_id: nil }, centre == selected_cost_centre ]
+             } %>
 <% end %>
