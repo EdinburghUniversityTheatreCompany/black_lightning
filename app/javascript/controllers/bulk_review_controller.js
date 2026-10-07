@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`
+
 // The Review queue's bulk toolbar. Card checkboxes join the toolbar form through
 // their `form` attribute, so no card form is nested inside it.
 export default class extends Controller {
@@ -27,13 +29,17 @@ export default class extends Controller {
   refresh() {
     const selected = this.selectedCount
     const none = selected === 0
+    // The reason box is shared with Approve, so it cannot carry `required`. Gating
+    // Reject and Override on it stops the confirm firing over a decision the
+    // server will refuse.
+    const reasonGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
 
     if (this.hasApproveButtonTarget) {
       this.approveButtonTarget.disabled = none
       // Select-all ticks flagged cards just like clean ones, so the confirm
       // carries the flagged count.
       const flagged = this.flaggedSelectedCount
-      const base = `Approve ${selected} expense${selected === 1 ? "" : "s"}?`
+      const base = `Approve ${plural(selected, "expense")}?`
       this.approveButtonTarget.dataset.turboConfirm =
         flagged === 0
           ? base
@@ -44,28 +50,18 @@ export default class extends Controller {
             } before continuing.`
     }
     if (this.hasRejectButtonTarget) {
-      // The reason box is shared with Approve, so it cannot carry `required`.
-      // Gating here stops the irreversible confirm firing over a reject the
-      // server will refuse.
-      const reasonGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
       this.rejectButtonTarget.disabled = none || !reasonGiven
       this.rejectButtonTarget.title = reasonGiven
         ? ""
         : "Type a reason above: it is emailed to the producer."
-      this.rejectButtonTarget.dataset.turboConfirm = `Reject ${selected} expense${
-        selected === 1 ? "" : "s"
-      } and email each producer?`
+      this.rejectButtonTarget.dataset.turboConfirm = `Reject ${plural(selected, "expense")} and email each producer?`
     }
     if (this.hasOverrideButtonTarget) {
-      // Gated like Reject: the server refuses a blank note.
-      const noteGiven = !this.hasReasonTarget || this.reasonTarget.value.trim().length > 0
-      this.overrideButtonTarget.disabled = none || !noteGiven
-      this.overrideButtonTarget.title = noteGiven
+      this.overrideButtonTarget.disabled = none || !reasonGiven
+      this.overrideButtonTarget.title = reasonGiven
         ? ""
         : "Say why above: it is the only record of the decision."
-      this.overrideButtonTarget.dataset.turboConfirm = `Approve ${selected} claim${
-        selected === 1 ? "" : "s"
-      } without their budget owner's sign-off? Your name and reason are recorded against each one.`
+      this.overrideButtonTarget.dataset.turboConfirm = `Approve ${plural(selected, "claim")} without their budget owner's sign-off? Your name and reason are recorded against each one.`
     }
     if (this.hasCounterTarget) {
       this.counterTarget.textContent = `${selected} selected`
