@@ -152,11 +152,6 @@ module ReimbursementsHelper
     safe_join(links, " or ".html_safe) if links.any?
   end
 
-  # Debits less credits, offsetting legs dropped: the netting the budget rollups use.
-  def reimbursements_actuals_net(actuals)
-    Reimbursements::EusaActual.net(actuals)
-  end
-
   # The fx-rate controller's wiring for a claim's GBP amount field; none on the UK rail.
   def reimbursements_fx_rate_data(expense)
     return {} unless expense.international? && expense.foreign_amount.to_f.positive?

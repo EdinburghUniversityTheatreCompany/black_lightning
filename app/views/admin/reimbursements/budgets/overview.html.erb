@@ -141,7 +141,7 @@
               <th scope="rowgroup" colspan="5" class="text-left font-semibold py-2">
                 Nominal code <%= code %>
                 <span class="font-normal text-gray-600">
-                  (net <%= reimbursements_money(reimbursements_actuals_net(actuals)) %>)
+                  (net <%= reimbursements_money(::Reimbursements::EusaActual.net(actuals)) %>)
                 </span>
               </th>
             </tr>
