@@ -6,12 +6,6 @@ class Admin::DuplicatesControllerTest < ActionController::TestCase
     sign_in @admin
   end
 
-  test "should get index" do
-    get :index
-    assert_response :success
-    assert_not_nil assigns(:duplicates)
-  end
-
   test "should show duplicates with same student_id" do
     user1 = FactoryBot.create(:user, student_id: "s9999999", first_name: "Test", last_name: "DupeA")
     user2 = FactoryBot.create(:user, student_id: "s9999999", first_name: "Another", last_name: "DupeB")

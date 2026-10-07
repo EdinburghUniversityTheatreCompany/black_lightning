@@ -10,15 +10,26 @@ class AttachmentsControllerTest < ActionController::TestCase
     @editable_block = admin_editable_blocks(:public)
   end
 
-  test "should get file" do
-    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+  # The PDF is the factory's own file; the others are attached over it.
+  SERVED_FILES = [
+    [ "test.pdf", "application/pdf", "inline", nil ],
+    [ "test.png", "image/png", "inline", -> { File.open(Rails.root.join("test", "test.png")) } ],
+    [ "document.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "attachment", -> { StringIO.new("fake docx") } ],
+    [ "document.txt", "text/plain", "attachment", -> { StringIO.new("hello world") } ]
+  ].freeze
 
-    get :file, params: { slug: attachment.name }
+  SERVED_FILES.each do |filename, content_type, disposition, io|
+    test "serves #{filename} #{disposition} under a sandbox CSP" do
+      attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+      attachment.file.attach(io: io.call, filename:, content_type:) if io
 
-    assert_response :success
+      get :file, params: { slug: attachment.name }
 
-    assert_equal "application/pdf", response.headers["Content-Type"]
-    assert_equal "inline; test.pdf", response.headers["Content-Disposition"]
+      assert_response :success
+      assert_equal content_type, response.headers["Content-Type"]
+      assert_equal "#{disposition}; #{filename}", response.headers["Content-Disposition"]
+      assert_equal "sandbox", response.headers["Content-Security-Policy"]
+    end
   end
 
   # Should not return a thumbnail, but just a file link.
@@ -72,80 +83,21 @@ class AttachmentsControllerTest < ActionController::TestCase
   # attachments after they can see the proposal (so when they are approved and past the editing deadline)
   test "someone not on the proposal should NOT be able to view an attachment on not approved proposal after the editing deadline" do
     sign_in users(:member)
-
     proposal = FactoryBot.create(:proposal, status: :awaiting_approval, submission_deadline: -1.days.from_now)
 
-    question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: "File")
-    attachment = question.answers.first.attachments.first
-    attachment.update(access_level: 1)
-
-    assert_not_nil attachment
-
-    get :file, params: { slug: attachment.name }
+    get :file, params: { slug: proposal_attachment(proposal).name }
 
     assert_response :forbidden
   end
 
   test "someone not on the proposal should be able to view an attachment on an approved proposal after the editing deadline" do
     sign_in users(:member)
-
     proposal = FactoryBot.create(:proposal, status: :approved, submission_deadline: -1.days.from_now)
     proposal.call.update(editing_deadline: proposal.call.submission_deadline.advance(hours: 1))
 
-    question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: "File")
-    attachment = question.answers.first.attachments.first
-    attachment.update(access_level: 1)
-
-    assert_not_nil attachment
-
-    assert_equal 1, attachment.access_level, "The attachment does not have attachment level 1, so the user will not be able to see it."
-
-    get :file, params: { slug: attachment.name }
+    get :file, params: { slug: proposal_attachment(proposal).name }
 
     assert_response :success
-  end
-
-  test "pdf files serve with inline disposition" do
-    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
-
-    get :file, params: { slug: attachment.name }
-
-    assert_response :success
-    assert_equal "inline; test.pdf", response.headers["Content-Disposition"]
-    assert_equal "sandbox", response.headers["Content-Security-Policy"]
-  end
-
-  test "images serve with inline disposition" do
-    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
-    attachment.file.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
-
-    get :file, params: { slug: attachment.name }
-
-    assert_response :success
-    assert_equal "inline; test.png", response.headers["Content-Disposition"]
-    assert_equal "sandbox", response.headers["Content-Security-Policy"]
-  end
-
-  test "office documents serve with attachment disposition" do
-    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
-    attachment.file.attach(io: StringIO.new("fake docx"), filename: "document.docx", content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
-    get :file, params: { slug: attachment.name }
-
-    assert_response :success
-    assert_equal "attachment; document.docx", response.headers["Content-Disposition"]
-    assert_equal "sandbox", response.headers["Content-Security-Policy"]
-  end
-
-  test "text files serve with attachment disposition" do
-    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
-    attachment.file.attach(io: StringIO.new("hello world"), filename: "document.txt", content_type: "text/plain")
-
-    get :file, params: { slug: attachment.name }
-
-    assert_response :success
-    assert_equal "attachment; document.txt", response.headers["Content-Disposition"]
-    assert_equal "sandbox", response.headers["Content-Security-Policy"]
   end
 
   test "renders the 404 page when the attachment has no file" do
@@ -187,6 +139,11 @@ class AttachmentsControllerTest < ActionController::TestCase
   end
 
   private
+
+  def proposal_attachment(proposal)
+    question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: "File")
+    question.answers.first.attachments.first.tap { |attachment| attachment.update!(access_level: 1) }
+  end
 
   # Fails the streamed download part-way through, as S3 does when the connection drops between ranged GETs.
   def with_truncated_download(service)

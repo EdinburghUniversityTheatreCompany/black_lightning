@@ -64,54 +64,13 @@ class AttachmentTest < ActionView::TestCase
     assert_equal get_object_name(attachment.item.answerable), attachment.item_name
   end
 
-  test "rejects svg files" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: File.open(Rails.root.join("test", "test.svg")), filename: "evil.svg", content_type: "image/svg+xml")
-
-    assert_not attachment.valid?
-    assert_not attachment.errors[:file].empty?
-  end
-
-  test "rejects html files" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: StringIO.new("<html><script>alert(1)</script></html>"), filename: "evil.html", content_type: "text/html")
-
-    assert_not attachment.valid?
-    assert_not attachment.errors[:file].empty?
-  end
-
-  test "allows pdf files" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.create(:attachment, item: editable_block, file: Rack::Test::UploadedFile.new(Rails.root.join("test", "test.pdf"), "application/pdf"))
-    assert attachment.valid?
-    assert_equal "application/pdf", attachment.file.content_type
-  end
-
-  test "allows image files" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "image.png", content_type: "image/png")
-    assert attachment.valid?
-  end
-
-  test "allows text files" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: StringIO.new("hello world"), filename: "document.txt", content_type: "text/plain")
-    assert attachment.valid?
-  end
-
-  test "allows office documents" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: StringIO.new("fake docx"), filename: "document.docx", content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-    assert attachment.valid?
-  end
-
-  # Filename plus the content type a browser declares on upload (zip/xml/octet-stream for container formats).
-  SHEET_MUSIC_UPLOADS = [
+  # Filename plus the content type a browser declares on upload (zip/xml/octet-stream for container
+  # formats). Rows Marcel sniffs by content (images, PDF, SVG) carry real bytes in the third column.
+  ALLOWED_UPLOADS = [
+    [ "test.pdf",        "application/pdf", -> { File.open(Rails.root.join("test", "test.pdf")) } ],
+    [ "image.png",       "image/png", -> { File.open(Rails.root.join("test", "test.png")) } ],
+    [ "document.txt",    "text/plain" ],
+    [ "document.docx",   "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ],
     [ "score.mscz",      "application/zip" ],
     [ "score.mscx",      "application/xml" ],
     [ "score.musicxml",  "application/xml" ],
@@ -123,29 +82,28 @@ class AttachmentTest < ActionView::TestCase
     [ "score.abc",       "text/plain" ]
   ].freeze
 
-  SHEET_MUSIC_UPLOADS.each do |filename, content_type|
-    test "allows sheet music file #{filename}" do
-      editable_block = admin_editable_blocks(:public)
-      attachment = FactoryBot.build(:attachment, item: editable_block)
-      attachment.file.attach(io: StringIO.new("fake sheet music"), filename: filename, content_type: content_type)
+  REJECTED_UPLOADS = [
+    [ "evil.svg",    "image/svg+xml", -> { File.open(Rails.root.join("test", "test.svg")) } ],
+    [ "evil.html",   "text/html", -> { StringIO.new("<html><script>alert(1)</script></html>") } ],
+    [ "archive.zip", "application/zip" ],
+    [ "data.xml",    "application/xml" ]
+  ].freeze
+
+  ALLOWED_UPLOADS.each do |filename, content_type, io|
+    test "allows #{filename} uploaded as #{content_type}" do
+      attachment = upload(filename, content_type, io)
+
       assert attachment.valid?, "expected #{filename} (#{content_type}) to be allowed, got: #{attachment.errors[:file].to_sentence}"
     end
   end
 
-  test "still rejects a plain zip upload" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: StringIO.new("fake zip"), filename: "archive.zip", content_type: "application/zip")
-    assert_not attachment.valid?
-    assert_not attachment.errors[:file].empty?
-  end
+  REJECTED_UPLOADS.each do |filename, content_type, io|
+    test "rejects #{filename} uploaded as #{content_type}" do
+      attachment = upload(filename, content_type, io)
 
-  test "still rejects a plain xml upload" do
-    editable_block = admin_editable_blocks(:public)
-    attachment = FactoryBot.build(:attachment, item: editable_block)
-    attachment.file.attach(io: StringIO.new("<root/>"), filename: "data.xml", content_type: "application/xml")
-    assert_not attachment.valid?
-    assert_not attachment.errors[:file].empty?
+      assert_not attachment.valid?
+      assert attachment.errors[:file].any?
+    end
   end
 
   # Catches an upgrade re-enabling active_storage_validations' derived `accept`, which greys
@@ -156,5 +114,13 @@ class AttachmentTest < ActionView::TestCase
     )
 
     assert_no_match(/accept=/, builder.file_field(:file))
+  end
+
+  private
+
+  def upload(filename, content_type, io)
+    FactoryBot.build(:attachment, item: admin_editable_blocks(:public)).tap do |attachment|
+      attachment.file.attach(io: io ? io.call : StringIO.new("content"), filename:, content_type:)
+    end
   end
 end

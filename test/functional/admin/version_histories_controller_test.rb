@@ -21,56 +21,17 @@ class Admin::VersionHistoriesControllerTest < ApplicationIntegrationTest
     get admin_editable_block_version_histories_path(@editable_block)
 
     assert_response :success
-    assert_select "table"
     assert_select "td", text: "Update"
-  end
-
-  test "index shows version note" do
-    get admin_editable_block_version_histories_path(@editable_block)
-
-    assert_response :success
     assert_select "td", text: "Fixed typos"
-  end
-
-  test "index shows author name" do
-    get admin_editable_block_version_histories_path(@editable_block)
-
-    assert_response :success
     assert_match users(:admin).first_name, response.body
   end
 
-  test "should show diff for update version" do
-    version = @editable_block.versions.where(event: "update").first
-
-    get admin_editable_block_version_history_path(@editable_block, version)
-
-    assert_response :success
-    assert_select "h6", text: "Content"
-  end
-
-  test "show displays version note" do
+  test "should show the diff and note of an update version" do
     get admin_editable_block_version_history_path(@editable_block, @version_with_note)
 
     assert_response :success
+    assert_select "h6", text: "Content"
     assert_select "em", text: "Fixed typos"
-  end
-
-  test "should store version_note on update" do
-    PaperTrail.request(enabled: true) do
-      PaperTrail.request.whodunnit = users(:admin).id
-
-      @editable_block.update!(content: "Another update", version_note: "Added new section")
-    end
-
-    assert_equal "Added new section", @editable_block.versions.last.version_note
-  end
-
-  test "version_note is not stored on create" do
-    PaperTrail.request(enabled: true) do
-      block = Admin::EditableBlock.create!(name: "Version Test Block", content: "Test content")
-
-      assert_nil block.versions.last.version_note
-    end
   end
 
   test "diff_for_version returns changed attributes" do

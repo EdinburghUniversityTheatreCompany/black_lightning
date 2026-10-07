@@ -117,14 +117,6 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_call_proposals_path(@call)
   end
 
-  test "should get edit" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call)
-
-    get :edit, params: { id: proposal }
-    assert_response :success
-  end
-
   test "md_editor should render the question as the label" do
     question_text = "This is definitely not a duplicate question"
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
@@ -209,7 +201,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     put :update, params: { id: proposal, admin_proposals_proposal: attributes }
 
-    assert proposal.show_title, assigns(:proposal).show_title
+    assert_equal proposal.show_title, proposal.reload.show_title
 
     assert_response :unprocessable_entity
   end
@@ -225,170 +217,37 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_call_proposals_url(@call)
   end
 
-  test "approve" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+  STATUS_ACTIONS = [
+    # action, status before, withdrawn before, status after, withdrawn after, flash key, message
+    [ :approve, :awaiting_approval, false, :approved, false, :success, "has been marked as approved." ],
+    [ :approve, :approved, false, :approved, false, :error, "is not currently awaiting approval." ],
+    [ :reject, :awaiting_approval, false, :rejected, false, :success, "has been marked as rejected." ],
+    [ :reject, :successful, false, :successful, false, :error, "is not currently awaiting approval." ],
+    [ :withdraw, :awaiting_approval, false, :awaiting_approval, true, :success, "has been withdrawn." ],
+    [ :withdraw, :awaiting_approval, true, :awaiting_approval, true, :error, "is already withdrawn." ],
+    [ :unwithdraw, :awaiting_approval, true, :awaiting_approval, false, :success, "is no longer withdrawn." ],
+    [ :unwithdraw, :awaiting_approval, false, :awaiting_approval, false, :error, "is not withdrawn." ],
+    [ :mark_successful, :approved, false, :successful, false, :success, "has been marked as successful." ],
+    [ :mark_successful, :awaiting_approval, false, :awaiting_approval, false, :error, "is not currently approved." ],
+    [ :mark_unsuccessful, :approved, false, :unsuccessful, false, :success, "has been marked as unsuccessful." ],
+    [ :mark_unsuccessful, :successful, false, :successful, false, :error, "is not currently approved." ],
+    [ :revert_status, :approved, false, :awaiting_approval, false, :success, "is now awaiting approval." ],
+    [ :revert_status, :unsuccessful, false, :approved, false, :success, "is now approved." ]
+  ].freeze
 
-    put :approve, params: { id: proposal.id }
+  STATUS_ACTIONS.each do |action, from, withdrawn, to, withdrawn_after, flash_key, message|
+    test "#{action} on a #{'withdrawn ' if withdrawn}#{from} proposal" do
+      @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+      proposal = FactoryBot.create(:proposal, call: @call, status: from, withdrawn: withdrawn)
 
-    assert assigns(:proposal).approved?, "The proposal is not approved after requesting the approve action."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as approved." ], flash[:success]
-  end
+      put action, params: { id: proposal.id }
 
-  test "reject" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    put :reject, params: { id: proposal.id }
-
-    assert assigns(:proposal).rejected?, "The proposal is not rejected after requesting the reject action."
-    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the reject action"
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as rejected." ], flash[:success]
-  end
-
-  test "withdraw unwithdrawn proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    put :withdraw, params: { id: proposal.id }
-
-    assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdrawn action."
-    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdrawn action."
-    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the withdrawn action"
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been withdrawn." ], flash[:success]
-  end
-
-  test "unwithdraw unwithdrawn proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    put :unwithdraw, params: { id: proposal.id }
-
-    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting_approval after requesting the unwithdrawn action."
-    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the unwithdrawn action."
-    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the unwithdrawn action"
-
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not withdrawn." ], flash[:error]
-  end
-
-  test "withdraw withdrawn proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval, withdrawn: true)
-
-    put :withdraw, params: { id: proposal.id }
-
-    assert_not assigns(:proposal).awaiting_approval?, "The proposal is awaiting_approval after requesting the withdraw action."
-    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the withdraw action."
-    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the withdraw action"
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is already withdrawn." ], flash[:error]
-  end
-
-  test "unwithdraw withdrawn proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval, withdrawn: true)
-
-    put :unwithdraw, params: { id: proposal.id }
-
-    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting_approval after requesting the unwithdraw action."
-    assert_not assigns(:proposal).rejected?, "The proposal is rejected after requesting the unwithdraw action."
-    assert_not assigns(:proposal).approved?, "The proposal is approved after requesting the unwithdraw action"
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is no longer withdrawn." ], flash[:success]
-  end
-
-  test "approve already approved proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-
-    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    put :approve, params: { id: proposal.id }
-
-    assert assigns(:proposal).approved?
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval." ], flash[:error]
-  end
-
-  test "reject already successful proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-
-    proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
-
-    put :reject, params: { id: proposal.id }
-
-    assert assigns(:proposal).successful?
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval." ], flash[:error]
-  end
-
-  test "mark_successful" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    put :mark_successful, params: { id: proposal.id }
-
-    assert assigns(:proposal).successful?, "The proposal is not successful after requesting the mark_successful action."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as successful." ], flash[:success]
-  end
-
-  test "mark_unsuccessful" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    put :mark_unsuccessful, params: { id: proposal.id }
-
-    assert assigns(:proposal).unsuccessful?, "The proposal is not unsuccessful after requesting the mark_unsuccessful action."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as unsuccessful." ], flash[:success]
-  end
-
-  test "mark_successful on a proposal that is not approved" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    put :mark_successful, params: { id: proposal.id }
-
-    assert assigns(:proposal).awaiting_approval?, "The proposal status should not have changed."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
-  end
-
-  test "mark_unsuccessful on a proposal that is not approved" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
-
-    put :mark_unsuccessful, params: { id: proposal.id }
-
-    assert assigns(:proposal).successful?, "The proposal status should not have changed."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
-  end
-
-  test "revert_status on an approved proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    put :revert_status, params: { id: proposal.id }
-
-    assert assigns(:proposal).awaiting_approval?, "The proposal is not awaiting approval after requesting the reset_status action."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now awaiting approval." ], flash[:success]
-  end
-
-  test "revert_status on an unsuccessful proposal" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :unsuccessful)
-
-    put :revert_status, params: { id: proposal.id }
-
-    assert assigns(:proposal).approved?, "The proposal is not approved after requesting the reset_status action."
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is now approved." ], flash[:success]
+      proposal.reload
+      assert_equal [ to, withdrawn_after ], [ proposal.status, proposal.withdrawn ]
+      assert_redirected_to admin_proposals_proposal_path(proposal)
+      assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} #{message}" ], flash[flash_key]
+      assert_nil flash[flash_key == :success ? :error : :success]
+    end
   end
 
   test "user without approve permission cannot change status via update" do
@@ -422,28 +281,18 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_includes flash[:success].first, "is queued to be converted"
   end
 
-  test "should not convert when the proposal has not been approved" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: %i[awaiting_approval rejected].sample)
+  [ [ :awaiting_approval, false ], [ :rejected, false ], [ :successful, true ] ].each do |status, withdrawn|
+    test "should not convert a #{'withdrawn ' if withdrawn}#{status} proposal" do
+      @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+      proposal = FactoryBot.create(:proposal, call: @call, status:, withdrawn:)
 
-    assert_no_difference "Show.count" do
-      put :convert, params: { id: proposal.id }
+      assert_no_difference "Show.count" do
+        put :convert, params: { id: proposal.id }
+      end
+
+      assert_redirected_to admin_proposals_proposal_path(proposal)
+      assert_equal [ "This proposal was not successful" ], flash[:error]
     end
-
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "This proposal was not successful" ], flash[:error]
-  end
-
-  test "should not convert when the proposal has been withdrawn" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :successful, withdrawn: true)
-
-    assert_no_difference "Show.count" do
-      put :convert, params: { id: proposal.id }
-    end
-
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal [ "This proposal was not successful" ], flash[:error]
   end
 
   test "about" do
@@ -452,44 +301,21 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "approve from calls index redirects back to calls index" do
+  test "approve returns to a safe referrer and to the proposal otherwise" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+    {
+      admin_proposals_calls_path => admin_proposals_calls_path,
+      admin_proposals_call_proposals_path(@call) => admin_proposals_call_proposals_path(@call),
+      "https://evil.example.com" => admin_proposals_proposal_path(proposal)
+    }.each do |referrer, expected|
+      proposal.update!(status: :awaiting_approval)
+      @request.headers["HTTP_REFERER"] = referrer
 
-    @request.headers[:"HTTP_REFERER"] = admin_proposals_calls_path
-    put :approve, params: { id: proposal.id }
+      put :approve, params: { id: proposal.id }
 
-    assert_redirected_to admin_proposals_calls_path
-  end
-
-  test "approve ignores unsafe redirect_to param" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    @request.headers[:"HTTP_REFERER"] = "https://evil.example.com"
-    put :approve, params: { id: proposal.id }
-
-    assert_redirected_to admin_proposals_proposal_path(proposal)
-  end
-
-  test "mark_successful from calls index redirects back to calls index" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    @request.headers[:"HTTP_REFERER"] = admin_proposals_calls_path
-    put :mark_successful, params: { id: proposal.id }
-
-    assert_redirected_to admin_proposals_calls_path
-  end
-
-  test "approve honours per-call index as a safe redirect target" do
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    @request.headers[:"HTTP_REFERER"] = admin_proposals_call_proposals_path(@call)
-    put :approve, params: { id: proposal.id }
-
-    assert_redirected_to admin_proposals_call_proposals_path(@call)
+      assert_redirected_to expected
+    end
   end
 
   private

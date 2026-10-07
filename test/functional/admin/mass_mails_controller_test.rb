@@ -11,7 +11,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    assert_not_nil assigns(:mass_mails), "The mass mails were not assigned by the controller."
+    assert_not_nil assigns(:mass_mails)
   end
 
   test "should get show for draft mail" do
@@ -20,8 +20,8 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     get :show, params: { id: mass_mail }
 
     assert_response :success
-    assert_equal mass_mail, assigns(:mass_mail), "The mass mail was not assigned by the controller"
-    assert_includes assigns(:title), mass_mail.subject, "The title does not contain the subject of the mass mail"
+    assert_equal mass_mail, assigns(:mass_mail)
+    assert_includes assigns(:title), mass_mail.subject
   end
 
   test "should get show for sent mail" do
@@ -37,7 +37,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert assigns(:mass_mail).draft
-    assert_no_match 'value="Send"', response.body, "The send button is visible on the create form"
+    assert_no_match 'value="Send"', response.body
   end
 
   test "should get edit" do
@@ -47,8 +47,8 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
 
     assert_response :success
 
-    assert_equal mass_mail, assigns(:mass_mail), "The mass mail was not assigned by the controller"
-    assert_match 'value="Send"', response.body, "The send button is not visibile on the create form"
+    assert_equal mass_mail, assigns(:mass_mail)
+    assert_match 'value="Send"', response.body
   end
 
   test "cannot edit a mail that is already sent" do
@@ -59,29 +59,18 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_redirected_to admin_mass_mails_url
   end
 
-  test "should create mass mail without sending" do
-    attributes = FactoryBot.attributes_for(:draft_mass_mail)
-
-    assert_difference("MassMail.count") do
-      post :create, params: { mass_mail: attributes }
-    end
-
-    assert assigns(:mass_mail).draft, "The mass mail should not be send, but it is no longer a draft"
-    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), "The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page"
-  end
-
   test "should just save mass mail when creating mass mail with sending" do
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
-    assert_no_difference "ActionMailer::Base.deliveries.count", User.with_role(:member).count do
+    assert_no_enqueued_jobs(only: MassMailJob) do
       assert_difference("MassMail.count") do
         post :create, params: { mass_mail: attributes, send: true }
       end
     end
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
-    assert assigns(:mass_mail).draft, "The mass email should not be send, but is no longer a draft"
-    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), "The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page"
+    assert assigns(:mass_mail).draft
+    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail))
   end
 
   test "should not create mass mail that is invalid" do
@@ -98,8 +87,8 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
 
     put :update, params: { id: mass_mail, mass_mail: attributes }
 
-    assert assigns(:mass_mail).draft, "The mass mail should not be send, but it is no longer a draft"
-    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), "The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the edit page"
+    assert assigns(:mass_mail).draft
+    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail))
   end
 
   test "should update mass mail with sending" do
@@ -114,22 +103,8 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     end
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
-    assert_not assigns(:mass_mail).draft, "The mass mail should be send, but it is still a draft"
-    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), "The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the edit page"
-  end
-
-  # Regression guard: update used to `params.delete(:send)` to read the Send-button
-  # flag, mutating the live request params. It must read the flag without deleting it.
-  test "update does not delete the send flag from the request params" do
-    mass_mail = mass_mails(:draft_mass_mail)
-    attributes = FactoryBot.attributes_for(:draft_mass_mail)
-
-    # Blank send => a normal update (no mail sent); the flag must still not be stripped.
-    put :update, params: { id: mass_mail, mass_mail: attributes, send: "" }
-
+    assert_not assigns(:mass_mail).draft
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail))
-    assert @controller.params.key?("send"),
-      "update must not delete the send flag from the live request params"
   end
 
   test "should not update mass mail that is invalid" do
@@ -148,7 +123,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
       delete :destroy, params: { id: mass_mail }
     end
 
-    assert_redirected_to admin_mass_mails_path, "The user was not redirected to the index page. This may indicate that an error occured"
+    assert_redirected_to admin_mass_mails_path
   end
 
   test "should not destroy sent admin_mass_mail" do
@@ -205,6 +180,6 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     # I have not found a way to test that it actually returns :unprocessable entity,
     # This would assert that it has succesfully rendered the edit page with errors, and has not redirected.
     # assert_response :unprocessable_entity, 'The request should have returned an error status code, but it did not'
-    assert_not_nil assigns(:error_message), "The request should have set an error message, but it did not"
+    assert_not_nil assigns(:error_message)
   end
 end

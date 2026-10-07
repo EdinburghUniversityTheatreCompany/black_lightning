@@ -192,7 +192,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
 
     put :update, params: { id: @profile, marketing_creatives_profile: attributes }
 
-    assert attributes[:name], assigns(:profile).name
+    assert_equal attributes[:name], @profile.reload.name
     assert_redirected_to admin_marketing_creatives_profile_path(@profile)
   end
 
