@@ -933,6 +933,16 @@ module Reimbursements
       assert_equal [ 1, 2 ], Expense.order(:auto_number).pluck(:auto_number)
     end
 
+    # nil means "assign one"; a number somebody handed over is never retried past a collision.
+    test "create_expense! numbers a claim given a nil auto_number and raises on a handed number that is taken" do
+      first = store.create_expense!(status: Status::PAID, auto_number: nil)
+      assert_predicate first.auto_number, :present?
+
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        store.create_expense!(status: Status::PAID, auto_number: first.auto_number)
+      end
+    end
+
     def expense_row(person, budget, key:)
       { person_record_id: person.record_id, budget_record_id: budget.record_id,
         status: Status::PAID, amount: BigDecimal("12.50"),

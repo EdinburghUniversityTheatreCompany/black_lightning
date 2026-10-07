@@ -464,15 +464,15 @@ module Reimbursements
 
     # Retries the auto_number MAX+1 race: two concurrent creates (portal vs poll job) can pick
     # the same number; the unique index rejects the loser, which re-reads MAX on the retry.
-    # Explicit auto_numbers (the importer) are never retried: a collision there is real data
-    # corruption.
+    # An explicit (non-nil) auto_number, as the importer hands over, is never retried: a collision
+    # there is real data corruption.
     def create_expense!(attrs)
       attempts = 0
       begin
         expense = Expense.create!(expense_columns(attrs)
                                     .reverse_merge(financial_year: FinancialYear.current))
       rescue ActiveRecord::RecordNotUnique
-        raise if attrs.key?(:auto_number) || (attempts += 1) >= 3
+        raise if attrs[:auto_number] || (attempts += 1) >= 3
 
         retry
       rescue ActiveRecord::InvalidForeignKey

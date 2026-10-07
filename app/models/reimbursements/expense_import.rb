@@ -495,17 +495,15 @@ module Reimbursements
     # "£1,200" passed through would store 0. The status is merged over the form's own
     # (only ever Draft or Pending), as the actuals conversion merges Paid.
     def attrs_for(row, form, person)
-      attrs = form.create_attrs(person.record_id).merge(
+      # compact: a blank expense-number cell leaves auto_number out, so the store numbers the claim.
+      form.create_attrs(person.record_id).merge(
         status: row[:status],
         import_key: row[:reference],
+        auto_number: row[:auto_number],
         financial_year: financial_year,
         payment_confirmed_date: row[:paid_on],
         submitted_at: row[:submitted_on]&.beginning_of_day
-      )
-      # Only when the sheet gave one: create_expense! reads `attrs.key?(:auto_number)` to
-      # decide whether to retry a collision, so a nil under that key disables the retry.
-      attrs[:auto_number] = row[:auto_number] if row[:auto_number]
-      attrs
+      ).compact
     end
   end
 end
