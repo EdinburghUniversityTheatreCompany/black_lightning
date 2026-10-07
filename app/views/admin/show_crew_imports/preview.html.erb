@@ -73,7 +73,7 @@
               <td>
                 <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
                 <% if item[:match_type] %>
-                  <br><small class="text-gray-500">Matched by <%= { user_id: "User ID", student_id: "Student ID", associate_id: "Associate ID" }[item[:match_type]] %></small>
+                  <br><small class="text-gray-500">Matched by <%= UserImport::MATCH_TYPE_LABELS[item[:match_type]] %></small>
                 <% end %>
               </td>
               <td><span class="font-monospace"><%= item[:row][:position] %></span></td>

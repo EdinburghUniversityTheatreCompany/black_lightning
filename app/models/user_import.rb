@@ -8,6 +8,9 @@ class UserImport
 
   BUCKETS = %i[exact_match_id exact_match_email fuzzy_match create_new].freeze
 
+  # What the previews call each id an exact_match_id row matched on.
+  MATCH_TYPE_LABELS = { user_id: "User ID", student_id: "Student ID", associate_id: "Associate ID" }.freeze
+
   def initialize(data, input_type:, import_mode: :user)
     @errors = []
     @import_mode = import_mode

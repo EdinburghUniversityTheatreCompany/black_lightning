@@ -5,8 +5,6 @@
 class Admin::DebtCheckersController < AdminController
   include Importable
 
-  MATCH_TYPE_LABELS = { user_id: "User ID", student_id: "Student ID", associate_id: "Associate ID" }.freeze
-
   before_action { authorize! :check_debt, Admin::Debt }
 
   def new
@@ -53,7 +51,7 @@ class Admin::DebtCheckersController < AdminController
 
   def build_results(import)
     categorized = import.categorized
-    @exact_matches = categorized[:exact_match_id].map { |item| exact_match(item, MATCH_TYPE_LABELS.fetch(item[:match_type])) } +
+    @exact_matches = categorized[:exact_match_id].map { |item| exact_match(item, UserImport::MATCH_TYPE_LABELS.fetch(item[:match_type])) } +
                      categorized[:exact_match_email].map { |item| exact_match(item, "Email") }
     @fuzzy_matches = categorized[:fuzzy_match]
     @unmatched = categorized[:create_new].pluck(:row)
