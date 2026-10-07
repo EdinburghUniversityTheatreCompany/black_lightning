@@ -29,29 +29,24 @@ module Admin
         fill_in "share_#{row}_amount", with: amount
       end
 
-      test "the running total updates as amounts are typed and gates the submit" do
+      # Clicking the REAL button is what proves it sits inside the <form>.
+      test "the running total gates the submit, and the real button writes the shares" do
         assert_button "Save the split", disabled: true
 
         type_share(0, "Show A", "2500")
-
         assert_text "£1,500.00 left to allocate"
         assert_button "Save the split", disabled: true
 
         type_share(1, "Show B", "1500")
-
         assert_text "The parts add up"
         assert_button "Save the split", disabled: false
 
+        # Over again after balancing must take the button away again.
         fill_in "share_1_amount", with: "2500"
-
         assert_text "£1,000.00 over"
         assert_button "Save the split", disabled: true
-      end
 
-      # Clicking the REAL button is what proves it sits inside the <form>.
-      test "clicking the real submit writes the shares" do
-        type_share(0, "Show A", "2500")
-        type_share(1, "Show B", "1500")
+        fill_in "share_1_amount", with: "1500"
         click_on "Save the split"
 
         assert_text "Split across 2 budgets"
