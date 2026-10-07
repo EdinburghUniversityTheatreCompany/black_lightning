@@ -2,7 +2,9 @@
     stylesheet's unlayered h1-h6 rules beat the Tailwind sizing a visible one would need. %>
 <h1 class="sr-only">Bedlam Theatre &mdash; student theatre in the heart of Edinburgh</h1>
 
-<div class="flex flex-col md:flex-row gap-4" data-controller="pretix-modal">
+<div class="flex flex-col md:flex-row gap-4"
+     data-controller="pretix-modal"
+     data-pretix-modal-base-url-value="<%= pretix_shop_url %>">
   <div class="w-full md:w-1/2 xl:w-2/3">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
     <% cache [ @carousel_events, @standard_carousel_items ] do %>

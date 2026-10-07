@@ -1,14 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 import { buildWidget } from "../lib/pretix"
 
-// Opens the pretix ticket widget in a dialog, loading pretix's assets on first use.
-//
-// The base URL must stay in step with PretixHelper::SHOP_URL: pretix.eu serves no widget
-// stylesheet, so script and CSS both come from the shop.
+// Opens the pretix ticket widget in a dialog, loading pretix's assets on first use. The
+// base URL is the shop's (PretixHelper): pretix.eu serves no widget stylesheet, so script
+// and CSS both come from the shop.
 export default class extends Controller {
   static targets = ["dialog", "widgetContainer", "title"]
   static values = {
-    baseUrl: { type: String, default: "https://tickets.bedlamtheatre.co.uk/" },
+    baseUrl: String,
     listType: { type: String, default: "list" }
   }
 
