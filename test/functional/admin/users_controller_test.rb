@@ -277,17 +277,19 @@ class Admin::UsersControllerTest < ActionController::TestCase
     target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
     source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
     source_id = source_user.id
+    target_email = target_user.email
 
     post :absorb, params: {
       id: target_user.id,
       source_user_id: source_user.id,
-      keep_from_source: [ "name" ]
+      field_choice: { name: "source", email: "target" }
     }
 
     assert_redirected_to admin_user_path(target_user)
     target_user.reload
     assert_equal "Jane", target_user.first_name
     assert_equal "Source", target_user.last_name
+    assert_equal target_email, target_user.email
     assert_not User.exists?(source_id), "Source user should be deleted"
   end
 

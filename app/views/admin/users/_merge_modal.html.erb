@@ -1,24 +1,5 @@
 <%# Merge preview modal showing field comparison and association stats %>
 <%
-  # Helper to determine default selection for a field
-  # Returns :source if source should be selected by default
-  #   - Target empty + source present: prefer source
-  #   - Both equal: prefer source (arbitrary but consistent)
-  #   - Otherwise (target has a differing value, or source empty): prefer target
-  def default_selection(target_value, source_value)
-    prefer_source = (target_value.blank? && source_value.present?) ||
-                    (target_value.present? && target_value == source_value)
-    # Assigned to a local (rather than returned bare) so herb's erb-no-unused-literals rule —
-    # which can't tell a bare symbol literal is this inline-ERB def's return value — sees it used.
-    selection = prefer_source ? :source : :target
-    selection
-  end
-
-  # Helper to check if values are effectively the same (both blank or equal)
-  def values_same?(target_value, source_value)
-    (target_value.blank? && source_value.blank?) || target_value == source_value
-  end
-
   # Field definitions: [field_key, label, target_value, source_value]
   fields = [
     ["name", "Name", "#{target.first_name} #{target.last_name}".strip, "#{source.first_name} #{source.last_name}".strip],
@@ -26,6 +7,7 @@
     ["phone_number", "Phone", target.phone_number, source.phone_number],
     ["student_id", "Student ID", target.student_id, source.student_id],
     ["associate_id", "Associate ID", target.associate_id, source.associate_id],
+    ["avatar", "Avatar", target.avatar.blob&.id, source.avatar.blob&.id],
   ]
 
   stats = source.merge_stats_as_source(target)
@@ -33,7 +15,7 @@
 
 <%= render CardComponent.new(title: "Merge Preview", flush: true) do %>
   <%= form_with url: absorb_admin_user_path(target), method: :post,
-              data: { controller: "field-choice", turbo: local_assigns[:in_modal] ? nil : false } do |f| %>
+              data: { turbo: local_assigns[:in_modal] ? nil : false } do |f| %>
     <%= hidden_field_tag :source_user_id, source.id %>
 
     <div class="p-4">
@@ -59,88 +41,36 @@
         </thead>
         <tbody>
           <% fields.each do |field_key, label, target_val, source_val| %>
-            <% select_source = default_selection(target_val, source_val) == :source %>
-            <% same_values = values_same?(target_val, source_val) %>
+            <%# Defaults to the source when the target is empty and the source is not, or when both agree. %>
+            <% select_source = target_val.blank? ? source_val.present? : target_val == source_val %>
+            <% same_values = (target_val.blank? && source_val.blank?) || target_val == source_val %>
             <tr class="<%= 'table-secondary text-gray-500' if same_values %>">
               <td><strong><%= label %></strong></td>
-              <td>
-                <div class="form-check">
-                  <%= tag.input(type: "radio",
-                         class: "form-check-input",
-                         name: "field_choice[#{field_key}]",
-                         id: "keep_target_#{field_key}",
-                         value: "target",
-                         checked: !select_source,
-                         data: { action: "change->field-choice#toggle" }) %>
-                  <label class="form-check-label" for="keep_target_<%= field_key %>">
-                    <%= target_val.presence || tag.em("(empty)", class: "text-gray-500") %>
-                  </label>
-                </div>
-              </td>
-              <td>
-                <div class="form-check">
-                  <%= tag.input(type: "radio",
-                         class: "form-check-input",
-                         name: "field_choice[#{field_key}]",
-                         id: "keep_source_#{field_key}",
-                         value: "source",
-                         checked: select_source,
-                         data: { action: "change->field-choice#toggle" }) %>
-                  <label class="form-check-label" for="keep_source_<%= field_key %>">
-                    <%= source_val.presence || tag.em("(empty)", class: "text-gray-500") %>
-                  </label>
-                  <% if select_source %>
-                    <input type="hidden" name="keep_from_source[]" value="<%= field_key %>" id="hidden_<%= field_key %>">
-                  <% end %>
-                </div>
-              </td>
+              <% { "target" => [target, target_val, !select_source], "source" => [source, source_val, select_source] }.each do |side, (user, value, checked)| %>
+                <td>
+                  <div class="form-check">
+                    <%= tag.input(type: "radio",
+                           class: "form-check-input",
+                           name: "field_choice[#{field_key}]",
+                           id: "keep_#{side}_#{field_key}",
+                           value: side,
+                           checked: checked) %>
+                    <label class="form-check-label" for="keep_<%= side %>_<%= field_key %>">
+                      <% if field_key == "avatar" %>
+                        <% if user.avatar.attached? %>
+                          <%= render ImageComponent.new(image: user.avatar, variant: square_thumb_variant(50), full_width: false, image_options: { class: "rounded" }) %>
+                        <% else %>
+                          <em class="text-gray-500">(no avatar)</em>
+                        <% end %>
+                      <% else %>
+                        <%= value.presence || tag.em("(empty)", class: "text-gray-500") %>
+                      <% end %>
+                    </label>
+                  </div>
+                </td>
+              <% end %>
             </tr>
           <% end %>
-
-          <% avatar_select_source = default_selection(target.avatar.blob&.id, source.avatar.blob&.id) == :source %>
-          <% avatar_same = target.avatar.blob&.id == source.avatar.blob&.id %>
-          <tr class="<%= 'table-secondary text-gray-500' if avatar_same %>">
-            <td><strong>Avatar</strong></td>
-            <td>
-              <div class="form-check">
-                <%= tag.input(type: "radio",
-                       class: "form-check-input",
-                       name: "field_choice[avatar]",
-                       id: "keep_target_avatar",
-                       value: "target",
-                       checked: !avatar_select_source,
-                       data: { action: "change->field-choice#toggle" }) %>
-                <label class="form-check-label" for="keep_target_avatar">
-                  <% if target.avatar.attached? %>
-                    <%= render ImageComponent.new(image: target.avatar, variant: square_thumb_variant(50), full_width: false, image_options: { class: "rounded" }) %>
-                  <% else %>
-                    <em class="text-gray-500">(no avatar)</em>
-                  <% end %>
-                </label>
-              </div>
-            </td>
-            <td>
-              <div class="form-check">
-                <%= tag.input(type: "radio",
-                       class: "form-check-input",
-                       name: "field_choice[avatar]",
-                       id: "keep_source_avatar",
-                       value: "source",
-                       checked: avatar_select_source,
-                       data: { action: "change->field-choice#toggle" }) %>
-                <label class="form-check-label" for="keep_source_avatar">
-                  <% if source.avatar.attached? %>
-                    <%= render ImageComponent.new(image: source.avatar, variant: square_thumb_variant(50), full_width: false, image_options: { class: "rounded" }) %>
-                  <% else %>
-                    <em class="text-gray-500">(no avatar)</em>
-                  <% end %>
-                </label>
-                <% if avatar_select_source %>
-                  <input type="hidden" name="keep_from_source[]" value="avatar" id="hidden_avatar">
-                <% end %>
-              </div>
-            </td>
-          </tr>
         </tbody>
       </table>
 
@@ -155,42 +85,18 @@
             <% end %>
           </span>
         </li>
-        <li class="list-row flex justify-between items-center">
-          Staffing jobs
-          <span>
-            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_jobs][:total].to_s } %>
-            <% if stats[:staffing_jobs][:unlinked] > 0 %>
-              <small class="text-warning">(<%= stats[:staffing_jobs][:unlinked] %> unlinked)</small>
-            <% end %>
-          </span>
-        </li>
-        <li class="list-row flex justify-between items-center">
-          Staffing debts
-          <span>
-            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_debts][:total].to_s } %>
-            <% if stats[:staffing_debts][:unlinked] > 0 %>
-              <small class="text-warning">(<%= stats[:staffing_debts][:unlinked] %> unlinked)</small>
-            <% end %>
-          </span>
-        </li>
-        <li class="list-row flex justify-between items-center">
-          Maintenance debts
-          <span>
-            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_debts][:total].to_s } %>
-            <% if stats[:maintenance_debts][:unlinked] > 0 %>
-              <small class="text-warning">(<%= stats[:maintenance_debts][:unlinked] %> unlinked)</small>
-            <% end %>
-          </span>
-        </li>
-        <li class="list-row flex justify-between items-center">
-          Maintenance credits
-          <span>
-            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_credits][:total].to_s } %>
-            <% if stats[:maintenance_credits][:unlinked] > 0 %>
-              <small class="text-warning">(<%= stats[:maintenance_credits][:unlinked] %> unlinked)</small>
-            <% end %>
-          </span>
-        </li>
+        <% { "Staffing jobs" => :staffing_jobs, "Staffing debts" => :staffing_debts,
+             "Maintenance debts" => :maintenance_debts, "Maintenance credits" => :maintenance_credits }.each do |label, key| %>
+          <li class="list-row flex justify-between items-center">
+            <%= label %>
+            <span>
+              <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[key][:total].to_s } %>
+              <% if stats[key][:unlinked] > 0 %>
+                <small class="text-warning">(<%= stats[key][:unlinked] %> unlinked)</small>
+              <% end %>
+            </span>
+          </li>
+        <% end %>
         <% if stats[:roles].any? %>
           <li class="list-row flex justify-between items-center">
             Roles

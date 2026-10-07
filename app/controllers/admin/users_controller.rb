@@ -55,7 +55,7 @@ class Admin::UsersController < AdminController
 
   def absorb
     @source_user = User.find(params[:source_user_id])
-    keep_from_source = params[:keep_from_source] || []
+    keep_from_source = params.fetch(:field_choice, {}).to_unsafe_h.filter_map { |field, side| field if side == "source" }
     result = @user.absorb(@source_user, keep_from_source: keep_from_source)
 
     if result[:success]
