@@ -13,13 +13,6 @@ module Admin
         login_as users(:member)
       end
 
-      # Tom Select hides the <select>, so Capybara's #select can't reach it.
-      def tom_select(option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
-      end
-
       # A file input cannot be repopulated by the server, so the controller
       # restores it through a DataTransfer.
       test "an attached receipt survives a failed submit" do
@@ -51,7 +44,7 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         fill_in "Amount (£, incl. VAT)", with: "42.00"
         fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Costumes", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "Ruff, doublet and hose"
         fill_in "Payment reference", with: "COSTUMES ACT1"
 
@@ -85,7 +78,7 @@ module Admin
         assert required.call("amount"), "the UK amount is required on the UK rail"
         assert_not required.call("foreign_amount"), "a hidden required input blocks the whole form"
 
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
 
         assert required.call("foreign_amount")
         assert_not required.call("amount"), "the UK amount is hidden now, so it must not be required"
@@ -97,7 +90,7 @@ module Admin
         visit new_admin_reimbursements_expense_path
         assert_text "Pay someone else (optional)"
 
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
 
         assert_text "Pay someone else (required)"
         assert_text "there is nothing on file to fall back to"
@@ -110,10 +103,10 @@ module Admin
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
-        tom_select "USD", select_id: "reimbursements_expense_form_foreign_currency"
+        tom_select_click "International (IBAN)", select_id: "reimbursements_expense_form_payment_method"
+        tom_select_click "USD", select_id: "reimbursements_expense_form_foreign_currency"
         fill_in "Amount, as printed on the invoice", with: "500.00"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Props", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "US touring insurance"
         fill_in "Payment reference", with: "INS-USD"
         fill_in "Payee account name", with: "Stateside Insurance Inc"
@@ -135,13 +128,13 @@ module Admin
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", text: "(optional)"
         assert_selector "[data-reimbursements-receipt-target='payeeRequired']", visible: :hidden
 
-        tom_select "Invoice", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Invoice", select_id: "reimbursements_expense_form_expense_type"
 
         assert_selector "[data-reimbursements-receipt-target='payeeRequired']",
                         text: "(required for an invoice)"
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", visible: :hidden
 
-        tom_select "Reimbursement", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Reimbursement", select_id: "reimbursements_expense_form_expense_type"
 
         assert_selector "[data-reimbursements-receipt-target='payeeOptional']", text: "(optional)"
       end
@@ -152,10 +145,10 @@ module Admin
 
         attach_file "reimbursements_expense_form_receipts",
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
-        tom_select "Invoice", select_id: "reimbursements_expense_form_expense_type"
+        tom_select_click "Invoice", select_id: "reimbursements_expense_form_expense_type"
         fill_in "Amount (£, incl. VAT)", with: "42.00"
         fill_in "Amount excl. VAT (£)", with: "35.00"
-        tom_select "Props", select_id: "reimbursements_expense_form_budget_record_id"
+        tom_select_click "Props", select_id: "reimbursements_expense_form_budget_record_id"
         fill_in "Description", with: "Set timber from Acme"
         fill_in "Payment reference", with: "INV-1001"
         click_on "Submit expense"

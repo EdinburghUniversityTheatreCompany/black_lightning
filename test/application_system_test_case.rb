@@ -28,6 +28,15 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # For multiple selects: setValue replaces every choice, addItem adds one.
   def tom_select_add(text, from:) = tom_select_call("addItem", text, from)
 
+  # Clicks through the widget as a person does; Tom Select fires a native change, so Stimulus
+  # actions on the <select> run. +search+ types into a remote select's dropdown first.
+  def tom_select_click(option_text, select_id:, search: nil)
+    wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
+    wrapper.find(".ts-control").click
+    wrapper.find(".ts-dropdown input").set(search) if search
+    wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first, wait: 5).click
+  end
+
   private
 
   # Tom Select rewrites the label's `for` to its own "-ts-control" element.

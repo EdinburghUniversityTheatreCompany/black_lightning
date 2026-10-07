@@ -17,15 +17,8 @@ module Admin
         visit apportion_admin_reimbursements_actual_path(@payout.record_id)
       end
 
-      # Tom Select hides the original <select>; drive the widget as an operator does.
-      def tom_select(option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
-      end
-
       def type_share(row, budget_name, amount)
-        tom_select(budget_name, select_id: "share_#{row}_budget_id")
+        tom_select_click(budget_name, select_id: "share_#{row}_budget_id")
         fill_in "share_#{row}_amount", with: amount
       end
 

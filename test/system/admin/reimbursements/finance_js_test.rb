@@ -326,16 +326,6 @@ module Admin
         assert_selector ".swal2-container", text: "Receive mailbox is invalid", wait: 5
       end
 
-      # Capybara's `select` cannot drive a Tom Select (select_controller.js hides the
-      # <select>), and a remote one loads nothing until typed into, with its search box
-      # inside the dropdown: open it, type, then click the option the AJAX round trip returned.
-      def tom_select_remote(query, option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown input").set(query)
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first, wait: 5).click
-      end
-
       # Plain fill + submit is safe here: no markdown editor.
       test "creating a cost centre from the form lands on its settings page" do
         visit admin_reimbursements_settings_path
@@ -561,7 +551,7 @@ module Admin
         visit admin_reimbursements_people_path
         click_on "Register a person"
 
-        tom_select_remote "Cyclops", "Cyclops Cat", select_id: "user_id"
+        tom_select_click "Cyclops Cat", select_id: "user_id", search: "Cyclops"
         click_on "Add to the registry"
 
         assert_current_path admin_reimbursements_people_path, wait: 5
