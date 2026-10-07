@@ -31,8 +31,7 @@ class Admin::ShowCrewImportsController < AdminController
     @existing_team_members = categorize_existing_team_members(@import)
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = generate_import_cache_key("crew_import")
-    write_import_cache(@cache_key, {
+    @cache_key = cache_import("crew_import", {
       event_id: @event.id,
       categorized: serialize_import(@import.categorized),
       existing_team_members: @existing_team_members

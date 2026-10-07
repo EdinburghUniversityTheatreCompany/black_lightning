@@ -41,20 +41,15 @@ module Importable
     data
   end
 
-  def generate_import_cache_key(prefix)
-    "#{prefix}_#{SecureRandom.uuid}"
-  end
-
-  def write_import_cache(cache_key, data)
-    Rails.cache.write(cache_key, data.with_indifferent_access, expires_in: 1.hour)
-  end
-
-  def generate_placeholder_email
-    "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk"
+  # Caches a preview under a fresh key for the confirm step to read back, and returns the key.
+  def cache_import(prefix, data)
+    key = "#{prefix}_#{SecureRandom.uuid}"
+    Rails.cache.write(key, data.with_indifferent_access, expires_in: 1.hour)
+    key
   end
 
   def create_user_from_row(row)
-    email = row[:email].presence || generate_placeholder_email
+    email = row[:email].presence || "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk"
 
     User.create!(
       email: email,

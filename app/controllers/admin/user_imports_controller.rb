@@ -28,8 +28,7 @@ class Admin::UserImportsController < AdminController
     end
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = generate_import_cache_key("user_import")
-    write_import_cache(@cache_key, serialize_import(@import.categorized))
+    @cache_key = cache_import("user_import", serialize_import(@import.categorized))
     @title = "Review User Import"
   end
 

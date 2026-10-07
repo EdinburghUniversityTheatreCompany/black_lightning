@@ -29,8 +29,7 @@ class Admin::MembershipImportsController < AdminController
     end
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = generate_import_cache_key("membership_import")
-    write_import_cache(@cache_key, serialize_import(@import.categorized))
+    @cache_key = cache_import("membership_import", serialize_import(@import.categorized))
   end
 
   def confirm
