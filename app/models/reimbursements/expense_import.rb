@@ -220,28 +220,7 @@ module Reimbursements
       entries_in(:create).reject { |entry| SETTLED_STATUSES.include?(entry.row[:status]) }
     end
 
-    # Canonical heading => the sheet's own heading it was read from (nil when absent).
-    # The preview prints it: keyword matching can only be nearly right.
-    def column_mapping
-      FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
-    end
-
-    # The sheet as canonical TSV, carrying an upload through the preview's hidden field.
-    # Tabs and newlines in a cell are escaped, not dropped: an xlsx cell can hold them,
-    # and a stray tab would shift every later column on re-parse.
-    def to_tsv
-      ([ TSV_HEADERS.join("\t") ] + @rows.map { |row| tsv_row(row) }).join("\n")
-    end
-
     private
-
-    def header_for
-      @header_for ||= {}
-    end
-
-    def tsv_row(row)
-      FIELDS.each_key.map { |field| escape_cell(cell_for(row, field)) }.join("\t")
-    end
 
     # An unreadable value is carried on verbatim: the preview re-renders from this text
     # after a blocked apply, and a blank would hide the cell the operator has to fix.
@@ -282,23 +261,6 @@ module Reimbursements
     end
 
     # --- Which column is which -----------------------------------------------
-
-    def resolve_headers(headers)
-      FIELDS.transform_values { |spec| match_header(headers, spec) }
-    end
-
-    # Two fields on one column are refused, not resolved: picking one writes a wrong value
-    # into a money or identity field with nothing on screen to say so.
-    def ambiguous_columns
-      header_for.compact.group_by { |_field, header| header }
-                .select { |_header, pairs| pairs.size > 1 }
-    end
-
-    def parse_amount(raw)
-      AmountParser.parse!(raw)
-    rescue AmountParser::Error
-      :unreadable
-    end
 
     def parse_number(raw)
       Integer(raw, 10) if raw.present?
@@ -342,15 +304,6 @@ module Reimbursements
 
       duplicated = duplicated_values
       @rows.map { |row| entry_for(row, duplicated) }
-    end
-
-    def report_ambiguous_columns
-      ambiguous_columns.each do |header, pairs|
-        labels = pairs.map { |field, _| FIELDS.fetch(field)[:label] }
-        @errors << "The column #{header.inspect} would be read as both " \
-                   "#{labels.to_sentence(last_word_connector: ' and ')}. Rename one of them, " \
-                   "or start from the template."
-      end
     end
 
     def report_missing_columns

@@ -414,28 +414,7 @@ module Reimbursements
       @entries.select { |entry| entry.bucket != :invalid && entry.row[:nominal_code].blank? }
     end
 
-    # Canonical TSV for the preview's hidden field. Tabs and newlines in a cell
-    # are escaped: an xlsx cell can hold them, and one stray tab would shift
-    # every later column when apply re-parses.
-    def to_tsv
-      ([ TSV_HEADERS.join("\t") ] + @rows.map { |row| tsv_row(row) }).join("\n")
-    end
-
-    # Canonical heading => the sheet's heading it was read from (nil if none),
-    # stated on the preview so a mis-mapping is visible.
-    def column_mapping
-      FIELDS.to_h { |field, spec| [ spec[:label], header_for[field] ] }
-    end
-
     private
-
-    def header_for
-      @header_for ||= {}
-    end
-
-    def tsv_row(row)
-      FIELDS.each_key.map { |field| escape_cell(cell_for(row, field)) }.join("\t")
-    end
 
     # An unreadable amount is carried on VERBATIM: the blocked preview
     # re-renders from this text and must still show the cell to fix.
@@ -488,25 +467,6 @@ module Reimbursements
 
     # --- Which column is which -----------------------------------------------
 
-    def resolve_headers(headers)
-      FIELDS.transform_values { |spec| match_header(headers, spec) }
-    end
-
-    # Refused rather than resolved: a guess writes the wrong value into a name
-    # or a figure with nothing on screen to say so.
-    def ambiguous_columns
-      header_for.compact.group_by { |_field, header| header }
-                .select { |_header, pairs| pairs.size > 1 }
-    end
-
-    # Blank stays nil ("no figure given"); anything unreadable becomes
-    # :unreadable so the row is flagged rather than imported as nil.
-    def parse_amount(raw)
-      AmountParser.parse!(raw)
-    rescue AmountParser::Error
-      :unreadable
-    end
-
     def normalize_type(raw)
       return "Expense" if raw.blank?
 
@@ -554,15 +514,6 @@ module Reimbursements
                     .map(&:row)
       "#{self.class.budget_label(entry.budget)} is named more than once in this sheet " \
         "(#{rows_phrase(rows)}), in more than one way. Name it once."
-    end
-
-    def report_ambiguous_columns
-      ambiguous_columns.each do |header, pairs|
-        labels = pairs.map { |field, _| FIELDS.fetch(field)[:label] }
-        @errors << "The column #{header.inspect} would be read as both " \
-                   "#{labels.to_sentence(last_word_connector: ' and ')}. Rename one of them, " \
-                   "or start from the template."
-      end
     end
 
     # Judged on the HEADERS, not the values: a sheet with a Budget column and
