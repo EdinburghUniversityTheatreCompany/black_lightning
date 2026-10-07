@@ -3,7 +3,7 @@ export function confirmDialog(message) {
   return window.Swal.fire({
     icon: "warning",
     title: "Are you sure?",
-    html: message,
+    text: message,
     showCancelButton: true,
     confirmButtonText: "Yes",
     cancelButtonText: "Cancel",

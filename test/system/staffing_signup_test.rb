@@ -24,6 +24,8 @@ class StaffingSignupTest < ApplicationSystemTestCase
 
     assert_no_selector "button.staffing-sign-up", wait: 5
     assert_text "#{@user.first_name} #{@user.last_name}"
+    # The sign-up toast opts in to HTML, so its calendar link must render as a link.
+    assert_selector ".swal2-container a[href^='http://www.google.com/calendar']", text: "Add to Google Calendar"
 
     assert_equal @user.id, @job.reload.user_id
   end
