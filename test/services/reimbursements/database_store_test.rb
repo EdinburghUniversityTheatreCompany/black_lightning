@@ -1026,7 +1026,7 @@ module Reimbursements
       assert_predicate line.association(:forecasts), :loaded?
     end
 
-    test "create_area! writes the permitted columns and busts the memoized lists" do
+    test "create_area! writes the given columns and busts the memoized lists" do
       year = FinancialYear.create!(label: "Fringe 2027")
       cost_centre = CostCentre.default
       store.areas # memoize both lists, so a same-request relist must see the new area

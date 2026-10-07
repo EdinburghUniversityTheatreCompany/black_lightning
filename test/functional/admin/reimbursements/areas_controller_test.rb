@@ -79,7 +79,7 @@ module Admin
         area = ::Reimbursements::Area.order(:id).last
         assert_equal "Cogito", area.name
         assert_equal 1200, area.initial_budget, "a typed £1,200 must not store as 0"
-        # DatabaseStore::AREA_FIELDS drops an unlisted column silently.
+        # budget_basis must reach the row: a net allowance saved as a spend cap shows nothing on screen.
         assert_equal "net", area.budget_basis
         assert_equal [ person.record_id ], area.owner_ids
       end

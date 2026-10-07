@@ -254,7 +254,7 @@ module Reimbursements
     end
 
     def create_area!(attrs)
-      area = Area.create!(area_columns(attrs))
+      area = Area.create!(attrs.compact)
       bust_areas!
       area
     end
@@ -953,12 +953,6 @@ module Reimbursements
         value = Array(value).join("\n") if key == :sharepoint_receipt_urls
         [ EXPENSE_KEY_MAP.fetch(key, key), value ]
       end
-    end
-
-    AREA_FIELDS = %i[name initial_budget budget_basis notes active cost_centre financial_year].freeze
-
-    def area_columns(attrs)
-      attrs.slice(*AREA_FIELDS).compact
     end
   end
 end
