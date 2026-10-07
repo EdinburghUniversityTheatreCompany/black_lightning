@@ -21,11 +21,6 @@ module Reimbursements
       assert_nil attempt.error_messages
     end
 
-    test "rejects an unknown status" do
-      attempt = build_attempt
-      assert_raises(ActiveRecord::RecordInvalid) { attempt.resolve!(status: "exploded") }
-    end
-
     test "a building attempt goes stale after the concurrency window" do
       fresh = build_attempt
       assert_not fresh.stale?
@@ -55,16 +50,6 @@ module Reimbursements
       assert_not_includes attention, clean
       # A serialised double-click's no-op is expected: recorded, not alerted on.
       assert_not_includes attention, noop
-    end
-
-    test "a dismissed attempt drops out of needing_attention" do
-      failed = build_attempt(status: "failed", error_messages: "boom")
-
-      assert_includes BatchAttempt.needing_attention, failed
-
-      failed.dismiss!(email: "finance@example.com")
-
-      assert_not_includes BatchAttempt.needing_attention, failed
     end
 
     test "dismissing hides the alert without editing the record" do

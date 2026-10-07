@@ -40,7 +40,7 @@ module Reimbursements
       @bob = create_reimbursements_person(name: "Bob", email: "bob@example.com",
                                           sort_code: "20-20-20", account_number: "50502366")
       @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
-      expenses.respond_to?(:call) ? expenses.call : (expenses || default_expenses)
+      (expenses || method(:default_expenses)).call
       store = FlakyStore.new
       # The real Notifier sends producer emails through this fake (graph.send_mails).
       graph = FakeGraphClient.new
@@ -83,7 +83,7 @@ module Reimbursements
       graph.drafts.first[:attachments]
     end
 
-    test "a mixed batch attaches the BACS sheet plus one form per international claim" do
+    test "a mixed batch attaches and backs up the BACS sheet plus one form per international claim" do
       processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
       result = run_batch(processor, store)
 
@@ -91,6 +91,10 @@ module Reimbursements
       names = attached_filenames(graph)
       assert_includes names, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
       assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
+
+      uploaded = graph.uploaded.map { |u| u[:filename] }
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
+      assert_includes uploaded, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
     end
 
     test "two international claims get a form each, told apart by claim number" do
@@ -105,51 +109,26 @@ module Reimbursements
       assert_includes names, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#22.xlsx"
     end
 
-    test "an all-international batch attaches NO BACS spreadsheet" do
+    # The rail changes the paperwork, not the bookkeeping.
+    test "an all-international batch attaches one form and no BACS sheet, and goes through the same post-draft path" do
       processor, store, graph = build_scenario(expenses: -> { international_expense })
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_not(attached_filenames(graph).any? { |name| name.include?("BACS-request") },
-                 "an empty BACS sheet would ask EUSA to pay nobody")
-      assert_equal 1, attached_filenames(graph).count { |name| name.include?("international-payment") }
-    end
-
-    test "every payment document is backed up to SharePoint" do
-      processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
-      run_batch(processor, store)
-
-      uploaded = graph.uploaded.map { |u| u[:filename] }
-      assert_includes uploaded, "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
-      assert_includes uploaded, "2026-05-13-bedlam-fringe-international-payment-Ausland GmbH-#21.xlsx"
-    end
-
-    # The rail changes the paperwork, not the bookkeeping.
-    test "an international claim goes through the same post-draft path as a UK one" do
-      processor, store, _graph = build_scenario(expenses: -> { international_expense })
-      result = run_batch(processor, store)
+      names = attached_filenames(graph)
+      # An empty BACS sheet would ask EUSA to pay nobody.
+      assert_not(names.any? { |name| name.include?("BACS-request") })
+      assert_equal 1, names.count { |name| name.include?("international-payment") }
 
       expense = store.expenses.first
       assert_equal Status::SUBMITTED, expense.status
       assert_equal result.batch_id, expense.batch_id
-      assert_equal 1, result.producer_notifications_sent
-    end
+      assert_equal 1, graph.send_mails.size
 
-    # EUSA's bank pays in euros; GBP beside a form saying EUR reads as a discrepancy.
-    test "the EUSA email states the foreign amount for an international row" do
-      processor, store, graph = build_scenario(expenses: -> { international_expense })
-      run_batch(processor, store)
+      # EUSA's bank pays in euros; GBP beside a form saying EUR reads as a discrepancy.
       body = graph.drafts.first[:html]
-
       assert_includes body, "€266.69"
       assert_includes body, "international payment request form"
-    end
-
-    test "a UK-only batch says nothing about international payments" do
-      processor, store, graph = build_scenario
-      run_batch(processor, store)
-
-      assert_not_includes graph.drafts.first[:html], "international payment request form"
     end
 
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
@@ -164,6 +143,7 @@ module Reimbursements
       assert_equal "send@bedlamfringe.co.uk", draft[:mailbox]
       assert_equal [ "finance@eusa.ed.ac.uk" ], draft[:to]
       assert_includes draft[:subject], "F40"
+      assert_not_includes draft[:html], "international payment request form", "a UK-only batch says nothing about it"
       xlsx = draft[:attachments].find { |name| name.end_with?(".xlsx") }
       assert_equal "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx", xlsx
       assert_equal 3, draft[:attachments].size, "xlsx + one receipt per expense"
@@ -349,7 +329,7 @@ module Reimbursements
     end
 
     test "a single failed receipt upload doesn't corrupt the URL map for that expense or affect others" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       @multi = create_reimbursements_expense(person: @alice, budget: @budget,
                                              status: Status::APPROVED, auto_number: 11, receipt: false)
       attach_test_receipt(@multi, filename: "receipt1.pdf")
@@ -382,20 +362,21 @@ module Reimbursements
              "the other expense's single receipt uploaded fine and must be unaffected"
     end
 
-    test "producer_notifications_sent flag is only set when at least one send succeeded" do
+    test "a producer notification failure is collected, doesn't fail the batch and leaves it unflagged" do
       processor, store, graph = build_scenario
       graph.fail_send = true # the draft succeeds; every producer send fails
 
       result = run_batch(processor, store)
 
-      assert result.success, result.errors.inspect
-      assert_equal 0, result.producer_notifications_sent
+      assert result.success, "the batch (draft + submit) still succeeds when a notification send fails"
+      assert_empty graph.send_mails
+      assert(result.errors.any? { |e| e.include?("Producer notification failed") })
       assert_not Batch.sole.producer_notifications_sent,
                  "must not claim notifications were sent when every send failed"
     end
 
     test "producer_notifications_sent flag is set when there was nothing left to notify" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                     auto_number: 11, producer_notified: true)
       create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
@@ -521,7 +502,7 @@ module Reimbursements
     end
 
     test "skips producers already notified for this (reopened) batch" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                     auto_number: 11, producer_notified: true)
       create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
@@ -535,7 +516,7 @@ module Reimbursements
     end
 
     test "several expenses for the same payee are grouped into one notification email" do
-      processor, store, graph = build_scenario(expenses: :custom)
+      processor, store, graph = build_scenario(expenses: -> { })
       alice1 = create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
                                              auto_number: 11, amount: BigDecimal("12.50"),
                                              description: "Fake blood")
@@ -564,19 +545,6 @@ module Reimbursements
       assert alice1.reload.producer_notified
       assert alice2.reload.producer_notified,
              "both of Alice's expenses are stamped, not just one per notification"
-    end
-
-    test "a producer notification Graph failure is collected but doesn't fail the batch" do
-      processor, store, graph = build_scenario
-      graph.fail_send = true # the draft still succeeds; only sends fail
-
-      result = run_batch(processor, store)
-
-      assert result.success, "the batch (draft + submit) still succeeds when a notification send fails"
-      assert_empty graph.send_mails
-      assert_equal 0, result.producer_notifications_sent
-      assert(result.errors.any? { |e| e.include?("Producer notification failed") })
-      assert_equal 1, Batch.count
     end
 
     test "a payee whose notification send fails is not stamped producer_notified" do

@@ -7,10 +7,8 @@ module Admin
       include ActiveJob::TestHelper
 
       setup do
-        finance = Role.create!(name: "Business Manager")
-        finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
         @user = users(:member)
+        grant_finance_permission(@user)
 
         # Build Batch needs the default cost centre's SharePoint folders configured.
         ::Reimbursements::CostCentre.default.update!(
@@ -75,25 +73,6 @@ module Admin
                         "default EUSA subject is prefilled"
       end
 
-      test "new greets the cost centre's configured EUSA contact" do
-        ::Reimbursements::CostCentre.default.update!(eusa_contact_name: "Craig")
-        one_approved
-        sign_in @user
-
-        get :new
-
-        assert_includes response.body, "Hi Craig,"
-      end
-
-      test "new falls back to a generic greeting with no contact configured" do
-        one_approved
-        sign_in @user
-
-        get :new
-
-        assert_includes response.body, "Hi Finance Team,"
-      end
-
       # Otherwise every account number is on screen the moment the page loads.
       test "new masks bank details, keeping the full pair only behind the reveal" do
         one_approved
@@ -125,11 +104,12 @@ module Admin
         sign_in @user
 
         assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
-          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "finance@eusa.ed.ac.uk",
-                                  sender_name: "Fringe Finance" }
+          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "", sender_name: "Fringe Finance" }
         end
 
         assert_redirected_to admin_reimbursements_batches_path
+        assert_equal ::Reimbursements::CostCentre.default.eusa_recipient_or_default,
+                     enqueued_jobs.last["arguments"].first["eusa_recipient"], "a blank recipient falls back"
         assert_match(/building/i, flash[:notice])
         # Nothing is processed inline.
         assert_equal 0, ::Reimbursements::Batch.count
@@ -140,12 +120,12 @@ module Admin
         assert_equal @user.email, attempt.triggered_by_email
       end
 
-      test "index shows an in-flight build and a failed build's errors" do
-        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
-                                               bacs_date: Date.new(2026, 5, 13))
-        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
-                                               bacs_date: Date.new(2026, 5, 12), status: "failed",
-                                               error_messages: "EUSA draft creation failed: boom")
+      test "index shows an in-flight build and a failed build's errors, dismissing only the failed one" do
+        building = ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                                          bacs_date: Date.new(2026, 5, 13))
+        failed = ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                                        bacs_date: Date.new(2026, 5, 12), status: "failed",
+                                                        error_messages: "EUSA draft creation failed: boom")
         sign_in @user
 
         get :index
@@ -154,6 +134,8 @@ module Admin
         assert_includes response.body, "A batch is building"
         assert_includes response.body, "failed"
         assert_includes response.body, "EUSA draft creation failed: boom"
+        assert_select "form[action=?]", dismiss_admin_reimbursements_batch_attempt_path(failed)
+        assert_select "form[action=?]", dismiss_admin_reimbursements_batch_attempt_path(building), count: 0
       end
 
       test "index flags a stale build that never reported back" do
@@ -169,28 +151,18 @@ module Admin
         assert_includes response.body, "hasn't finished"
       end
 
-      test "create with a malformed BACS date re-renders new with an error and enqueues nothing" do
+      test "create with a blank or malformed BACS date re-renders new and enqueues nothing" do
         one_approved
         sign_in @user
 
-        assert_no_enqueued_jobs do
-          post :create, params: { bacs_date: "not-a-date", eusa_recipient: "finance@eusa.ed.ac.uk" }
+        [ "not-a-date", "" ].each do |value|
+          assert_no_enqueued_jobs do
+            post :create, params: { bacs_date: value, eusa_recipient: "finance@eusa.ed.ac.uk" }
+          end
+
+          assert_response :unprocessable_entity
+          assert_match(/valid BACS date/i, response.body)
         end
-
-        assert_response :unprocessable_entity
-        assert_match(/valid BACS date/i, response.body)
-      end
-
-      test "create with a blank BACS date re-renders new with an error and enqueues nothing" do
-        one_approved
-        sign_in @user
-
-        assert_no_enqueued_jobs do
-          post :create, params: { bacs_date: "", eusa_recipient: "finance@eusa.ed.ac.uk" }
-        end
-
-        assert_response :unprocessable_entity
-        assert_match(/valid BACS date/i, response.body)
       end
 
       test "create with a malformed EUSA recipient re-renders new with an error and enqueues nothing" do
@@ -205,20 +177,10 @@ module Admin
         assert_match(/valid EUSA recipient/i, response.body)
       end
 
-      test "create with a blank EUSA recipient falls back to the cost centre's default" do
-        one_approved
-        sign_in @user
-
-        assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
-          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "" }
-        end
-
-        assert_redirected_to admin_reimbursements_batches_path
-      end
-
       # --- History (index / show) -------------------------------------------
 
-      test "index lists past batches with their totals" do
+      test "History lists a batch by its BACS date, with its total, reopen and CSV links" do
+        # Nothing records whether the draft was sent: date_sent is the typed date.
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
@@ -226,22 +188,17 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "2026-05-13"
+        assert_match(/BACS 20\d\d-\d\d-\d\d/, response.body)
+        assert_no_match(/Sent 20\d\d-\d\d-\d\d/, response.body)
         assert_includes response.body, "Reopen for rebuild"
         assert_includes response.body, "£12.50", "the batch's total (its one expense's amount) must render"
+        assert_includes response.body, "Download CSV"
+        assert_includes response.body, "/admin/reimbursements/batches?format=csv"
       end
 
       # --- CSV export --------------------------------------------------------
 
-      test "index CSV export answers a text/csv download named for today" do
-        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
-        sign_in @user
-
-        get :index, format: :csv
-
-        assert_csv_download("batches")
-      end
-
-      test "index CSV export writes one row per batch, summarising its expenses" do
+      test "index CSV export is a text/csv download with one row per batch" do
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
                            draft_message_id: "msg-1",
                            sharepoint_backup_url: "https://sp.example/batch")
@@ -250,44 +207,28 @@ module Admin
                                       batch: @batch, auto_number: 12,
                                       status: ::Reimbursements::Status::PAID,
                                       amount: BigDecimal("20"), amount_excl_vat: BigDecimal("16.67"))
-        sign_in @user
-
-        get :index, format: :csv
-
-        rows = CSV.parse(response.body)
-        assert_equal [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
-                       "EUSA draft", "SharePoint backup", "Cost centre" ], rows.first
-        assert_equal 2, rows.size, "header + the single batch"
-
-        batch = rows[1]
-        assert_equal "2026-05-13", batch[0]
-        assert_equal "2", batch[2], "two expenses on the batch"
-        assert_equal "32.5", batch[3], "12.50 + 20.00 gross"
-        assert_equal "27.09", batch[4], "10.42 + 16.67 ex VAT"
-        assert_equal "Yes", batch[5]
-        assert_equal "https://sp.example/batch", batch[6]
-      end
-
-      test "index CSV export flags a batch with no EUSA draft" do
         create_reimbursements_batch(name: "Broken batch", date_sent: nil, draft_message_id: nil)
         sign_in @user
 
         get :index, format: :csv
 
-        row = CSV.parse(response.body).find { |r| r[1] == "Broken batch" }
-        assert_nil row[0], "no send date"
-        assert_equal "0", row[2]
-        assert_equal "No", row[5]
-      end
+        assert_csv_download("batches")
+        rows = CSV.parse(response.body)
+        assert_equal [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
+                       "EUSA draft", "SharePoint backup", "Cost centre" ], rows.first
+        assert_equal 3, rows.size, "header + one row per batch"
 
-      test "index offers a Download CSV link" do
-        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
-        sign_in @user
+        batch = rows.find { |r| r[0] == "2026-05-13" }
+        assert_equal "2", batch[2], "two expenses on the batch"
+        assert_equal "32.5", batch[3], "12.50 + 20.00 gross"
+        assert_equal "27.09", batch[4], "10.42 + 16.67 ex VAT"
+        assert_equal "Yes", batch[5]
+        assert_equal "https://sp.example/batch", batch[6]
 
-        get :index
-
-        assert_includes response.body, "Download CSV"
-        assert_includes response.body, "/admin/reimbursements/batches?format=csv"
+        broken = rows.find { |r| r[1] == "Broken batch" }
+        assert_nil broken[0], "no send date"
+        assert_equal "0", broken[2]
+        assert_equal "No", broken[5]
       end
 
       test "index badges a batch whose EUSA draft is missing vs one that succeeded" do
@@ -304,16 +245,6 @@ module Admin
         assert_includes response.body, "No EUSA draft: needs a look"
       end
 
-      test "show renders one batch and its linked expenses" do
-        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
-        sign_in @user
-
-        get :show, params: { id: @batch.record_id }
-
-        assert_response :success
-        assert_includes response.body, "Submitted"
-      end
-
       test "show badges the draft and producer-notification states, warning on a missing one" do
         batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
                            draft_message_id: "AAMkdraft==", producer_notifications_sent: false)
@@ -326,23 +257,17 @@ module Admin
         assert_includes response.body, "Not sent: needs a look"
       end
 
-      test "show 404s for an unknown batch id" do
+      test "show and reopen 404 for an unknown batch id" do
         sign_in @user
 
         get :show, params: { id: "999999" }
+        assert_response :not_found
 
+        post :reopen, params: { id: "999999" }
         assert_response :not_found
       end
 
       # --- Reopen ------------------------------------------------------------
-
-      test "reopen 404s for an unknown batch id" do
-        sign_in @user
-
-        post :reopen, params: { id: "999999" }
-
-        assert_response :not_found
-      end
 
       test "reopen reverts the linked expenses and deletes the batch" do
         # No stored draft id: nothing to confirm, so only the manual warning.
@@ -417,40 +342,7 @@ module Admin
         assert ::Reimbursements::Batch.exists?(@batch.id)
       end
 
-      test "History offers a Dismiss button on a failed build" do
-        sign_in @user
-        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
-                                               status: "failed", error_messages: "boom")
-
-        get :index
-
-        assert_response :success
-        assert_match(/Dismiss/, response.body)
-      end
-
-      test "History offers no Dismiss on a build still running" do
-        sign_in @user
-        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default)
-
-        get :index
-
-        assert_response :success
-        assert_no_match(/Dismiss/, response.body)
-      end
-
       # --- Saying only what is actually known --------------------------------
-
-      test "History heads a batch by its BACS date, not by 'Sent'" do
-        # Nothing records whether the draft was sent: date_sent is the typed date.
-        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
-        sign_in @user
-
-        get :index
-
-        assert_response :success
-        assert_match(/BACS 20\d\d-\d\d-\d\d/, response.body)
-        assert_no_match(/Sent 20\d\d-\d\d-\d\d/, response.body)
-      end
 
       test "Detail labels the typed date 'BACS date' and does not claim delivery" do
         batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
@@ -460,6 +352,7 @@ module Admin
         get :show, params: { id: batch.record_id }
 
         assert_response :success
+        assert_includes response.body, "Submitted"
         assert_match(/BACS date/, response.body)
         assert_no_match(/Date sent/, response.body)
         assert_match(/delivery is not tracked/, response.body)
@@ -573,6 +466,9 @@ module Admin
 
         assert_match(/Couldn't confirm/, flash[:alert])
         assert_no_match(/has been sent/, flash[:alert])
+        assert ::Reimbursements::Batch.exists?(batch.id), "the probe must not delete the batch"
+        assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
+        assert_empty graph.deleted_messages
       end
 
       test "a batch with no recorded draft has nothing to check" do
@@ -582,19 +478,6 @@ module Admin
         post :check_draft, params: { id: batch.record_id }
 
         assert_match(/nothing to check/, flash[:alert])
-      end
-
-      test "checking a draft changes nothing" do
-        graph = use_graph
-        graph.draft_still_exists = false
-        batch = batch_with_expense(status: ::Reimbursements::Status::SUBMITTED, draft_message_id: "msg-1")
-        sign_in @user
-
-        post :check_draft, params: { id: batch.record_id }
-
-        assert ::Reimbursements::Batch.exists?(batch.id), "the probe must not delete the batch"
-        assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status
-        assert_empty graph.deleted_messages
       end
     end
   end

@@ -39,32 +39,10 @@ module Reimbursements
 
     # --- Currency ------------------------------------------------------------
 
-    test "the currency is written as text" do
-      # C11 arrives with a "£" number format copied from an amount cell.
-      sheet = parsed(InternationalXlsx.new.generate(payment))
-
-      assert_equal "@", cell(sheet, "C11").number_format.format_code
-    end
-
-    test "a non-euro currency is carried through" do
-      sheet = parsed(InternationalXlsx.new.generate(payment(currency: "USD", amount: BigDecimal("500"))))
-
-      assert_equal "USD", cell(sheet, "C11").value
-      assert_in_delta 500.0, cell(sheet, "C10").value, 0.001
-    end
-
     test "the currency is normalised to an upper-case code" do
       sheet = parsed(InternationalXlsx.new.generate(payment(currency: " usd ")))
 
       assert_equal "USD", cell(sheet, "C11").value
-    end
-
-    test "refuses a blank currency" do
-      # The amount label names no currency, so a blank leaves no unit at all.
-      error = assert_raises(InternationalXlsx::TemplateError) do
-        InternationalXlsx.new.generate(payment(currency: ""))
-      end
-      assert_match(/currency/i, error.message)
     end
 
     # The template's "£" would print a EUR payment as "£266.69" above a cell reading EUR.
@@ -81,15 +59,6 @@ module Reimbursements
       assert_equal '"£"#,##0.00', cell(sheet, "C10").number_format.format_code
     end
 
-    test "the date required is written as a real date" do
-      sheet = parsed(InternationalXlsx.new.generate(payment))
-      value = cell(sheet, "E10").value
-
-      # rubyXL returns a Date or a DateTime; either way not the ISO string.
-      assert_kind_of Date, value.respond_to?(:to_date) ? value.to_date : value
-      assert_equal Date.new(2026, 10, 1), value.to_date
-    end
-
     # The authorisation formulas read C10 as a NUMBER: a string breaks all three.
     test "the amount is numeric so the authorisation formulas still resolve" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
@@ -101,18 +70,13 @@ module Reimbursements
     end
 
     # add_cell would drop the template's style: the date would show as a serial number.
-    test "writing preserves the template's own cell formatting" do
+    test "cells keep the template's types and formats" do
       sheet = parsed(InternationalXlsx.new.generate(payment))
 
+      # The template leaves a "£" format on C11 and sort-code/account-number formats on BIC and IBAN.
+      %w[C11 C13 E13].each { |ref| assert_equal "@", cell(sheet, ref).number_format.format_code, ref }
       assert_equal "m/d/yyyy", cell(sheet, "E10").number_format.format_code
-    end
-
-    test "BIC and IBAN are written as text" do
-      # The template leaves sort-code and account-number formats on these cells.
-      sheet = parsed(InternationalXlsx.new.generate(payment))
-
-      assert_equal "@", cell(sheet, "C13").number_format.format_code
-      assert_equal "@", cell(sheet, "E13").number_format.format_code
+      assert_equal Date.new(2026, 10, 1), cell(sheet, "E10").value.to_date
     end
 
     test "the IBAN is written grouped, as a human checks it" do
@@ -170,29 +134,21 @@ module Reimbursements
 
     # --- Refusals: each a form EUSA could not act on -------------------------
 
-    test "refuses a blank cost centre" do
-      # Defaulting to F40 would book a termtime payment to the Fringe.
-      error = assert_raises(InternationalXlsx::TemplateError) do
-        InternationalXlsx.new.generate(payment(cost_centre: " "))
+    test "refuses a form EUSA could not act on" do
+      [
+        [ { currency: "" }, /currency/i ], # the amount label names no currency, so a blank leaves no unit
+        [ { cost_centre: " " }, /cost.centre/i ], # defaulting to F40 would book a termtime payment to the Fringe
+        [ { iban: "" }, nil ],
+        [ { bic: nil }, nil ],
+        [ { iban: "DE88370400440532013000" }, /IBAN/i ], # fails its check digits
+        [ { amount: nil }, nil ],
+        [ { amount: 0 }, nil ]
+      ].each do |overrides, pattern|
+        error = assert_raises(InternationalXlsx::TemplateError, overrides.inspect) do
+          InternationalXlsx.new.generate(payment(**overrides))
+        end
+        assert_match(pattern, error.message) if pattern
       end
-      assert_match(/cost.centre/i, error.message)
-    end
-
-    test "refuses a blank IBAN or BIC" do
-      assert_raises(InternationalXlsx::TemplateError) { InternationalXlsx.new.generate(payment(iban: "")) }
-      assert_raises(InternationalXlsx::TemplateError) { InternationalXlsx.new.generate(payment(bic: nil)) }
-    end
-
-    test "refuses an IBAN that fails its check digits" do
-      error = assert_raises(InternationalXlsx::TemplateError) do
-        InternationalXlsx.new.generate(payment(iban: "DE88370400440532013000"))
-      end
-      assert_match(/IBAN/i, error.message)
-    end
-
-    test "refuses a missing or zero amount" do
-      assert_raises(InternationalXlsx::TemplateError) { InternationalXlsx.new.generate(payment(amount: nil)) }
-      assert_raises(InternationalXlsx::TemplateError) { InternationalXlsx.new.generate(payment(amount: 0)) }
     end
 
     test "refuses a missing template" do

@@ -20,33 +20,15 @@ module Admin
         )
       end
 
-      test "dismissing clears the alert" do
+      test "dismissing clears the alert and records who did it" do
         attempt = build_attempt(status: "failed", error_messages: "Graph rejected the token (403)")
 
         post :dismiss, params: { id: attempt.id }
 
         assert_redirected_to admin_reimbursements_batches_path
-        assert_predicate attempt.reload, :dismissed?
+        assert_not_nil attempt.reload.dismissed_at
         assert_not_includes ::Reimbursements::BatchAttempt.needing_attention, attempt
-      end
-
-      test "records who dismissed it" do
-        attempt = build_attempt(status: "failed", error_messages: "boom")
-
-        post :dismiss, params: { id: attempt.id }
-
-        assert_equal @user.email, attempt.reload.dismissed_by_email
-      end
-
-      test "the failure itself is left on the record" do
-        attempt = build_attempt(status: "failed", error_messages: "boom", batch_record_id: "recBat9")
-
-        post :dismiss, params: { id: attempt.id }
-        attempt.reload
-
-        assert_predicate attempt, :failed?
-        assert_equal "boom", attempt.error_messages
-        assert_equal "recBat9", attempt.batch_record_id
+        assert_equal @user.email, attempt.dismissed_by_email
       end
 
       test "refuses to dismiss a build that is still running" do

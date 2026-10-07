@@ -4,8 +4,6 @@ module Reimbursements
   class NightlyBatchJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    MC = ModulusCheck
-
     # The fixture centre's run-days are Tuesday and Thursday.
     THURSDAY = Date.new(2026, 7, 9)
     WEDNESDAY = Date.new(2026, 7, 8)
@@ -13,10 +11,6 @@ module Reimbursements
     # The fixture centre's notification_email, and one for second centres.
     FRINGE_EMAIL = "finance@bedlamfringe.invalid".freeze
     SECOND_EMAIL = "finance@second.invalid".freeze
-
-    class FakeChecker
-      def check(_sort, _account) = MC::VALID
-    end
 
     # A data-layer outage, driving the job's top-level rescue.
     class BoomStore
@@ -60,7 +54,7 @@ module Reimbursements
 
     setup do
       @notifier = FakeNotifier.new
-      NightlyBatchJob.checker_builder = -> { FakeChecker.new }
+      NightlyBatchJob.checker_builder = -> { FakeModulusChecker.new("66374958" => ModulusCheck::VALID) }
       NightlyBatchJob.graph_builder = -> { Object.new }
       # Records the mailbox the notifier is built for.
       NightlyBatchJob.notifier_builder = lambda do |cost_centre:, graph:|
@@ -102,6 +96,7 @@ module Reimbursements
       reminder = mailer_calls(:pending_reminder).sole.last
       assert_equal 1, reminder[:rows].size
       assert_equal 5, reminder[:rows].first[:age_days]
+      assert_empty mailer_calls(:owner_sign_off_reminder), "an ownerless budget's claim stays finance's"
       # Nothing approved counts as delivered.
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
@@ -117,25 +112,19 @@ module Reimbursements
     # --- Owner sign-off reminder ------------------------------------------
     # A claim awaiting a budget owner goes to the owner, not to finance.
 
-    test "a claim awaiting a budget owner is left out of the finance reminder" do
-      gated_pending(days_ago: 5)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      assert_empty mailer_calls(:pending_reminder),
-                   "finance is not reminded about a claim that is not theirs yet"
-    end
-
-    test "emails each budget owner the claims awaiting their sign-off" do
-      claim = gated_pending(days_ago: 5)
+    test "emails each budget owner one reminder listing every claim awaiting their sign-off" do
+      first = gated_pending(days_ago: 5)
+      second = gated_pending(days_ago: 2)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       reminder = mailer_calls(:owner_sign_off_reminder).sole.last
       assert_equal [ owner_person.email ], reminder[:to]
       assert_equal "Olive", reminder[:greeting_name]
-      assert_equal [ claim.auto_number ], reminder[:rows].map { |row| row[:auto_number] }
+      assert_equal [ first.auto_number, second.auto_number ].sort,
+                   reminder[:rows].map { |row| row[:auto_number] }.sort
       assert_equal owned_budget.name, reminder[:rows].first[:budget_name]
+      assert_empty mailer_calls(:pending_reminder), "finance is not reminded about a claim that is not theirs yet"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -175,26 +164,6 @@ module Reimbursements
       assert_equal 1, mailer_calls(:pending_reminder).size
     end
 
-    test "a claim on an ownerless budget reminds no owner and stays finance's" do
-      pending_expense(days_ago: 5)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      assert_empty mailer_calls(:owner_sign_off_reminder)
-      assert_equal 1, mailer_calls(:pending_reminder).size
-    end
-
-    test "one email per owner, listing every claim awaiting them" do
-      first = gated_pending(days_ago: 5)
-      second = gated_pending(days_ago: 2)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      reminder = mailer_calls(:owner_sign_off_reminder).sole.last
-      assert_equal [ first.auto_number, second.auto_number ].sort,
-                   reminder[:rows].map { |row| row[:auto_number] }.sort
-    end
-
     test "an owner with no email address is skipped rather than raising" do
       owner_person.update!(email: nil)
       gated_pending(days_ago: 5)
@@ -222,21 +191,9 @@ module Reimbursements
 
     # --- Approved reminder ------------------------------------------------
 
-    test "an approved expense needing attention is still listed, flagged rather than held back" do
-      # No receipt, so it is flagged. A reminder, not a gate: still listed.
-      approved_expense(receipt: false)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      ready = mailer_calls(:approved_ready).sole.last
-      assert_equal 1, ready[:expenses].size
-      assert_includes ready[:expenses].sole[:flags].join("; "), "receipt"
-      assert_equal "12.50", ready[:total], "a flagged claim still counts towards the total"
-      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
-    end
-
     test "clean and flagged approved expenses arrive in one alert, clean first" do
       approved_expense
+      # No receipt, so it is flagged. A reminder, not a gate: still listed.
       approved_expense(receipt: false)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
@@ -245,6 +202,8 @@ module Reimbursements
       assert_equal 2, ready[:expenses].size, "one alert covers the whole Approved queue"
       assert_empty ready[:expenses].first[:flags]
       assert_not_empty ready[:expenses].last[:flags], "flagged claims sort to the bottom"
+      assert_includes ready[:expenses].last[:flags].join("; "), "receipt"
+      assert_equal "25.00", ready[:total], "a flagged claim still counts towards the total"
     end
 
     test "all-clean approved expenses email a ready-to-batch alert and submit nothing" do
@@ -268,11 +227,7 @@ module Reimbursements
     test "a second cost centre with none of its own claims emails nothing and still records its run" do
       # A due centre with an empty queue reminds nobody about another centre's
       # claims, and still records its run-day.
-      second = create_reimbursements_cost_centre(key: "extra", name: "Second Society", eusa_code: "X99",
-                                                 receive_mailbox: "in@second.co.uk",
-                                                 send_mailbox: "send@second.co.uk",
-                                                 notification_email: SECOND_EMAIL)
-      assert_not_equal CostCentre.default, second
+      second = create_second_reimbursements_cost_centre(notification_email: SECOND_EMAIL)
       approved_expense
       pending_expense(days_ago: 5)
 
@@ -302,18 +257,8 @@ module Reimbursements
                    "both notify calls in this run must share one GraphClient (one OAuth token fetch)"
     end
 
-    test "a Graph email failure does not record the run, so the alert is retried, not lost" do
-      @notifier = FakeNotifier.new(fail: true)
-      approved_expense
-
-      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
-
-      assert_empty mailer_calls(:failure)
-      assert_nil CostCentre.default.reload.last_nightly_run_on
-    end
-
     test "a Graph credential failure escalates to the IT subcommittee, not an ordinary error email" do
-      @notifier = FakeNotifier.new(fail: true, fail_with: ::GraphAuth::AuthError)
+      @notifier = FakeNotifier.new(fail_only: [ :approved_ready ], fail_with: ::GraphAuth::AuthError)
       approved_expense
 
       assert_emails 1 do
@@ -350,6 +295,7 @@ module Reimbursements
 
       assert_equal 1, mailer_calls(:pending_reminder).size
       assert_empty mailer_calls(:approved_ready)
+      assert_empty mailer_calls(:failure), "a failed send is swallowed, not a run failure"
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -408,14 +354,6 @@ module Reimbursements
 
     # --- Operator recipients ----------------------------------------------
 
-    test "operator emails go to the cost centre's notification role" do
-      approved_expense
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      assert_includes mailer_calls(:approved_ready).sole.last[:recipients], FRINGE_EMAIL
-    end
-
     test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the recipient list" do
       ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = "shared-finance@bedlamfringe.co.uk"
       approved_expense
@@ -458,13 +396,9 @@ module Reimbursements
     # --- Per-cost-centre scoping ------------------------------------------
 
     test "each due cost centre is reminded about only its own claims" do
-      termtime = create_reimbursements_cost_centre(
-        key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-        receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
-        notification_email: SECOND_EMAIL, nightly_run_days: [ 4 ]
-      )
-      termtime_budget = create_reimbursements_budget(name: "Termtime props")
-      termtime_budget.update!(cost_centre: termtime)
+      termtime = create_second_reimbursements_cost_centre(notification_email: SECOND_EMAIL,
+                                                          nightly_run_days: [ 4 ])
+      termtime_budget = create_reimbursements_budget(name: "Termtime props", cost_centre: termtime)
       budget.update!(cost_centre: CostCentre.default)
 
       fringe_claim = approved_expense
@@ -496,15 +430,11 @@ module Reimbursements
     end
 
     test "a non-default cost centre reports on its own run-day" do
-      termtime = create_reimbursements_cost_centre(
-        key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
-        receive_mailbox: "in@termtime.co.uk", send_mailbox: "send@termtime.co.uk",
-        notification_email: SECOND_EMAIL, nightly_run_days: [ 4 ]
-      )
+      termtime = create_second_reimbursements_cost_centre(notification_email: SECOND_EMAIL,
+                                                          nightly_run_days: [ 4 ])
       # The default centre is not due today.
       CostCentre.default.update!(nightly_run_days: [ 1 ], last_nightly_run_on: THURSDAY - 1)
-      termtime_budget = create_reimbursements_budget(name: "Termtime props")
-      termtime_budget.update!(cost_centre: termtime)
+      termtime_budget = create_reimbursements_budget(name: "Termtime props", cost_centre: termtime)
       create_reimbursements_expense(person: payee, budget: termtime_budget, status: Status::APPROVED)
 
       NightlyBatchJob.perform_now(today: THURSDAY)

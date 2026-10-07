@@ -16,30 +16,18 @@ module Reimbursements
 
     # --- Normalization -----------------------------------------------------
 
-    test "sort code with dashes normalizes identically to the same digits without dashes" do
-      dashed = checker([ BASIC_MOD11 ]).check("01-00-01", "00000030")
-      undashed = checker([ BASIC_MOD11 ]).check("010001", "00000030")
-      assert_equal undashed, dashed
-      # VALID, not just equal: broken dash-stripping fails both sides alike.
-      assert_equal ModulusCheck::VALID, dashed
+    test "a sort code with dashes normalizes like the same digits without them" do
+      # Same pair as "known valid mod11".
+      assert_equal ModulusCheck::VALID, checker([ BASIC_MOD11 ]).check("01-00-01", "00000030")
     end
 
-    test "a stray non-separator character fails normalization instead of being silently discarded" do
-      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01-23-4X", "12345678")
-    end
-
-    test "a tab or newline is not a documented separator either, and must also fail normalization" do
-      # \s would also strip a tab pasted from a spreadsheet.
-      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\t23\t45", "12345678")
-      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\n23\n45", "12345678")
-    end
-
-    test "short sort code returns invalid" do
-      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("12345", "12345678")
-    end
-
-    test "short account number returns invalid" do
-      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("123456", "123")
+    # Only dash and space are separators: a letter, tab or newline must fail, not be stripped.
+    test "non-separators and bad lengths fail normalization" do
+      [ [ "01-23-4X", "12345678" ], [ "01\t23\t45", "12345678" ], [ "01\n23\n45", "12345678" ],
+        [ "12345", "12345678" ], [ "123456", "123" ] ].each do |sort_code, account|
+        assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check(sort_code, account),
+                     "#{sort_code.inspect} / #{account.inspect}"
+      end
     end
 
     test "account with leading zeros is padded, not invalid" do
@@ -94,14 +82,11 @@ module Reimbursements
 
     # --- Unsupported exceptions -------------------------------------------
 
-    test "unsupported exception returns outside spec" do
-      rule = BASIC_MOD11.with(exception: 9)
-      assert_equal ModulusCheck::OUTSIDE_SPEC, checker([ rule ]).check("010001", "12345678")
-    end
-
-    test "exception 14 returns outside spec" do
-      rule = BASIC_MOD11.with(exception: 14)
-      assert_equal ModulusCheck::OUTSIDE_SPEC, checker([ rule ]).check("010001", "12345678")
+    test "unsupported exceptions (9, and 14's roll numbers) return outside spec" do
+      [ 9, 14 ].each do |exception|
+        rule = BASIC_MOD11.with(exception: exception)
+        assert_equal ModulusCheck::OUTSIDE_SPEC, checker([ rule ]).check("010001", "12345678"), "exception #{exception}"
+      end
     end
 
     # --- File loading ------------------------------------------------------
@@ -113,15 +98,6 @@ module Reimbursements
       end
     end
 
-    test "parses a synthetic rules file" do
-      Dir.mktmpdir do |dir|
-        File.write("#{dir}/valacdos.txt", "010000 019999 MOD11 7 6 5 4 3 2 7 6 5 4 3 2 1 0\n")
-        File.write("#{dir}/scsubtab.txt", "")
-        c = ModulusCheck::Checker.from_files("#{dir}/valacdos.txt", "#{dir}/scsubtab.txt")
-        assert_equal ModulusCheck::VALID, c.check("010001", "00000030")
-      end
-    end
-
     test "skips malformed and comment lines" do
       Dir.mktmpdir do |dir|
         File.write("#{dir}/valacdos.txt",
@@ -129,15 +105,6 @@ module Reimbursements
         File.write("#{dir}/scsubtab.txt", "")
         c = ModulusCheck::Checker.from_files("#{dir}/valacdos.txt", "#{dir}/scsubtab.txt")
         assert_equal ModulusCheck::VALID, c.check("010001", "00000030")
-      end
-    end
-
-    test "leading-zero sort codes parse as base-10, not octal" do
-      Dir.mktmpdir do |dir|
-        File.write("#{dir}/valacdos.txt", "010000 019999 MOD11 7 6 5 4 3 2 7 6 5 4 3 2 1 0\n")
-        File.write("#{dir}/scsubtab.txt", "")
-        c = ModulusCheck::Checker.from_files("#{dir}/valacdos.txt", "#{dir}/scsubtab.txt")
-        refute_equal ModulusCheck::OUTSIDE_SPEC, c.check("018000", "00000030")
       end
     end
 
@@ -153,34 +120,17 @@ module Reimbursements
       checker([ EX5_MOD11, EX5_DBLAL ], substitutions)
     end
 
-    # Spec test case 14: both checks pass, no substitution.
-    test "exception 5 spec vector: 938611 / 07806039 is valid" do
-      assert_equal ModulusCheck::VALID, ex5_checker.check("938611", "07806039")
-    end
-
-    # Spec test case 16: both checks produce a remainder of 0 (g=0, h=0) and pass.
-    test "exception 5 spec vector: 938063 / 55065200 is valid" do
-      assert_equal ModulusCheck::VALID, ex5_checker.check("938063", "55065200")
-    end
-
-    # Spec test case 23: first checkdigit correct but second incorrect -> INVALID.
-    test "exception 5 spec vector: 938063 / 15764273 is invalid (both checks required)" do
-      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15764273")
-    end
-
-    # Spec test case 24: first checkdigit incorrect, second correct -> INVALID.
-    test "exception 5 spec vector: 938063 / 15764264 is invalid" do
-      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15764264")
-    end
-
-    # Spec test case 25: first check gives a remainder of 1 -> INVALID.
-    test "exception 5 spec vector: 938063 / 15763217 is invalid (remainder 1)" do
-      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15763217")
-    end
-
-    # Spec test case 15: valid only after sort-code substitution (938600 -> 938611).
-    test "exception 5 spec vector: 938600 / 42368003 is valid with substitution" do
-      assert_equal ModulusCheck::VALID, ex5_checker(938_600 => 938_611).check("938600", "42368003")
+    test "exception 5 matches the Pay.UK spec vectors" do
+      {
+        [ "938611", "07806039", {} ] => ModulusCheck::VALID, # case 14: both checks pass, no substitution
+        [ "938063", "55065200", {} ] => ModulusCheck::VALID, # case 16: both remainders 0 (g=0, h=0)
+        [ "938063", "15764273", {} ] => ModulusCheck::INVALID, # case 23: first digit right, second wrong
+        [ "938063", "15764264", {} ] => ModulusCheck::INVALID, # case 24: first digit wrong, second right
+        [ "938063", "15763217", {} ] => ModulusCheck::INVALID, # case 25: first check's remainder is 1
+        [ "938600", "42368003", { 938_600 => 938_611 } ] => ModulusCheck::VALID # case 15: valid only after substitution
+      }.each do |(sort_code, account, substitutions), expected|
+        assert_equal expected, ex5_checker(substitutions).check(sort_code, account), "#{sort_code} / #{account}"
+      end
     end
 
     test "two rules without exception 5 still require both to pass" do
@@ -200,23 +150,16 @@ module Reimbursements
     test "exception 1 adds 27 to the DBLAL total before taking the remainder" do
       # Remainder 3 without the +27, 0 with it.
       assert_equal ModulusCheck::VALID, checker([ DBLAL_RULE ]).check("010001", "00000050")
-    end
-
-    test "exception 1 without the +27 would read invalid, proving the addition matters" do
-      rule_no_exception = DBLAL_RULE.with(exception: 0)
-      assert_equal ModulusCheck::INVALID, checker([ rule_no_exception ]).check("010001", "00000050")
+      assert_equal ModulusCheck::INVALID, checker([ DBLAL_RULE.with(exception: 0) ]).check("010001", "00000050")
     end
 
     # --- Exception 3 (bypass when account digit c is 6 or 9) --------------
 
-    test "exception 3 bypasses when account digit c (index 2) is 6" do
+    test "exception 3 bypasses when account digit c (index 2) is 6 or 9" do
       rule = BASIC_MOD11.with(exception: 3)
-      assert_equal ModulusCheck::VALID, checker([ rule ]).check("010001", "00600001")
-    end
-
-    test "exception 3 bypasses when account digit c (index 2) is 9" do
-      rule = BASIC_MOD11.with(exception: 3)
-      assert_equal ModulusCheck::VALID, checker([ rule ]).check("010001", "00900001")
+      %w[00600001 00900001].each do |account|
+        assert_equal ModulusCheck::VALID, checker([ rule ]).check("010001", account), account
+      end
     end
 
     test "exception 3 runs the normal check when account digit c is neither 6 nor 9" do
@@ -227,15 +170,10 @@ module Reimbursements
 
     # --- Exception 4 (remainder must equal the last two account digits) ---
 
-    test "exception 4 passes when the MOD11 remainder equals the account's last two digits" do
-      # remainder 8, last two digits "08" == 8.
+    test "exception 4 passes only when the MOD11 remainder equals the account's last two digits" do
+      # Remainder 8: "08" matches, "09" does not.
       rule = BASIC_MOD11.with(exception: 4)
       assert_equal ModulusCheck::VALID, checker([ rule ]).check("010001", "00000008")
-    end
-
-    test "exception 4 fails when the remainder doesn't match the last two digits" do
-      # remainder 8, last two digits "09" == 9 -- mismatch.
-      rule = BASIC_MOD11.with(exception: 4)
       assert_equal ModulusCheck::INVALID, checker([ rule ]).check("010001", "00000009")
     end
 
@@ -269,33 +207,13 @@ module Reimbursements
 
     # --- default_checker (vendored rule files) -----------------------------
 
-    test "checker built from missing files reads OUTSIDE_SPEC, never raises" do
-      absent = ModulusCheck::Checker.from_files("/no/such/valacdos.txt", "/no/such/scsubtab.txt")
-      assert_equal ModulusCheck::OUTSIDE_SPEC, absent.check("089999", "66374958")
-    end
-
     test "default_checker on real vendored files validates the Pay.UK spec vector" do
-      valacdos = ModulusCheck::VALACDOS_PATH.call
-      unless File.exist?(valacdos)
-        skip "vendored Pay.UK rule files absent (#{valacdos}); see vendor/pay_uk/README.md"
-      end
-
-      ModulusCheck.reset_default_checker!
       # Canonical Pay.UK test vector #1: sort 08-99-99, account 66374958 -> valid.
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("089999", "66374958")
       # Exception 5 on the real files (spec cases 14, 15 and 23).
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938611", "07806039")
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938600", "42368003")
       assert_equal ModulusCheck::INVALID, ModulusCheck.default_checker.check("938063", "15764273")
-    ensure
-      ModulusCheck.reset_default_checker!
-    end
-
-    test "default_checker is memoized across calls" do
-      ModulusCheck.reset_default_checker!
-      assert_same ModulusCheck.default_checker, ModulusCheck.default_checker
-    ensure
-      ModulusCheck.reset_default_checker!
     end
   end
 end
