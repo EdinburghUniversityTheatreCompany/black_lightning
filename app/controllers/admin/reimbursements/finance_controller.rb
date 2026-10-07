@@ -113,8 +113,8 @@ module Admin
         find_or_404(:find_expense)
       end
 
-      def paginate(collection, per: PAGE_SIZE)
-        Kaminari.paginate_array(collection).page(params[:page]).per(per)
+      def paginate(collection, per: PAGE_SIZE, page: params[:page])
+        Kaminari.paginate_array(collection).page(page).per(per)
       end
 
       def parse_date(value)

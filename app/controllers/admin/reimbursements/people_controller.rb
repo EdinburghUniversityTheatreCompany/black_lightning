@@ -68,7 +68,7 @@ module Admin
         # The row to open: the one just saved, or linked to from a Review card.
         @open_person_id = @edit_person_id || params[:person].to_s.presence
         filtered = filtered_people(people)
-        @people = Kaminari.paginate_array(filtered).page(registry_page(filtered)).per(PAGE_SIZE)
+        @people = paginate(filtered, page: registry_page(filtered))
       end
 
       # The page holding the open row, so it is on screen when it sits past the
