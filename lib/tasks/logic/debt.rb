@@ -22,34 +22,27 @@ class Tasks::Logic::Debt
 
     # Debtors who weren't in debt yesterday.
     new_debtors = debtors - User.in_debt(Date.current.advance(days: -1))
-    failed_notifications = []
-    new_debtors.each do |user|
-      Rails.logger.info "Notifying #{user.name_or_email} of debt"
-      begin
-        DebtMailer.mail_debtor(user, true).deliver_now
-      rescue Net::SMTPServerBusy, Net::SMTPError, Net::SMTPFatalError => e
-        Rails.logger.error "Failed to send debt notification to #{user.name_or_email} (ID: #{user.id}): #{e.class} - #{e.message}"
-        failed_notifications << { user: user, error: e.message, type: "initial" }
-      end
-    end
+    failures = new_debtors.count { |user| !deliver_debt_mail(user, true) }
 
     # Finds long time debtors after notifications have been added for all the new debtors.
     long_time_debtors = debtors - User.notified_since(Date.current.advance(days: -14))
-    long_time_debtors.each do |user|
-      Rails.logger.info "Reminding #{user.name_or_email} of debt"
-      begin
-        DebtMailer.mail_debtor(user, false).deliver_now
-      rescue Net::SMTPServerBusy, Net::SMTPError, Net::SMTPFatalError => e
-        Rails.logger.error "Failed to send debt reminder to #{user.name_or_email} (ID: #{user.id}): #{e.class} - #{e.message}"
-        failed_notifications << { user: user, error: e.message, type: "reminder" }
-      end
-    end
+    failures += long_time_debtors.count { |user| !deliver_debt_mail(user, false) }
 
-    # Log summary of any failures
-    if failed_notifications.any?
-      Rails.logger.warn "Debt notification summary: #{failed_notifications.size} email(s) failed to deliver out of #{new_debtors.size + long_time_debtors.size} total attempts"
+    if failures.positive?
+      Rails.logger.warn "Debt notification summary: #{failures} email(s) failed to deliver out of #{new_debtors.size + long_time_debtors.size} total attempts"
     end
   end
+
+  # True when sent, false when SMTP refused it (logged), so one bad address can't stop the rest.
+  def self.deliver_debt_mail(user, initial)
+    Rails.logger.info "#{initial ? 'Notifying' : 'Reminding'} #{user.name_or_email} of debt"
+    DebtMailer.mail_debtor(user, initial).deliver_now
+    true
+  rescue Net::SMTPError => e
+    Rails.logger.error "Failed to send debt #{initial ? 'notification' : 'reminder'} to #{user.name_or_email} (ID: #{user.id}): #{e.class} - #{e.message}"
+    false
+  end
+  private_class_method :deliver_debt_mail
 
   def self.clear_all_debts
     Admin::MaintenanceDebt.destroy_all
