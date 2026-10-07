@@ -134,33 +134,8 @@ SimpleForm.setup do |config|
     b.use :hint, wrap_with: { tag: "small", class: hint_class }
   end
 
-  config.wrappers :vertical_range,
-      tag: "div", class: "mb-4",
-      error_class: "has-error", valid_class: "has-success" do |b|
-    b.use :html5
-    b.use :placeholder
-    b.optional :readonly
-    b.optional :step
-    b.use :label, class: label_class
-    b.use :input, class: "w-full accent-primary", error_class: invalid_class, valid_class: valid_class_f
-    b.use :full_error, wrap_with: { tag: "div", class: error_class }
-    b.use :hint, wrap_with: { tag: "small", class: hint_class }
-  end
-
   # === Public horizontal wrappers (simple_horizontal_form_for on non-admin controllers) ===
   # These keep Bootstrap class names, which bootstrap_compat.css styles.
-
-  # Body shared by the horizontal collection wrappers; they differ only in item_wrapper_class.
-  horizontal_collection_body = lambda do |b|
-    b.use :html5
-    b.optional :readonly
-    b.use :label, class: "col-sm-3 col-form-label pt-0"
-    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
-      ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
-      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
-    end
-  end
 
   config.wrappers :horizontal_form, tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
     b.use :html5
@@ -193,9 +168,16 @@ SimpleForm.setup do |config|
     end
   end
 
-  config.wrappers :horizontal_collection, item_wrapper_class: "form-check", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid", &horizontal_collection_body
-
-  config.wrappers :horizontal_collection_inline, item_wrapper_class: "form-check form-check-inline", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid", &horizontal_collection_body
+  config.wrappers :horizontal_collection, item_wrapper_class: "form-check", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
+    b.use :html5
+    b.optional :readonly
+    b.use :label, class: "col-sm-3 col-form-label pt-0"
+    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
+      ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
+      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
+    end
+  end
 
   config.wrappers :horizontal_file, tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
     b.use :html5
@@ -224,36 +206,12 @@ SimpleForm.setup do |config|
     end
   end
 
-  config.wrappers :horizontal_range, tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
-    b.use :html5
-    b.use :placeholder
-    b.optional :readonly
-    b.optional :step
-    b.use :label, class: "col-sm-3 col-form-label"
-    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
-      ba.use :input, class: "form-control-range", error_class: "is-invalid", valid_class: "is-valid"
-      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text" }
-    end
-  end
-
   # === Admin horizontal wrappers (simple_horizontal_form_for on admin controllers) ===
   # Chosen by FormHelper#horizontal_form_options.
 
   adm_label_class   = "w-full md:w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700"
   adm_grid_class    = "w-full md:w-9/12 px-2"
   adm_row_class     = "flex flex-wrap mb-4 items-start"
-
-  # Label + input grid shared by tailwind_horizontal_form and tailwind_horizontal_range, which
-  # differ only in their preceding optionals.
-  adm_label_and_input_grid = lambda do |b|
-    b.use :label, class: adm_label_class
-    b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
-      ba.use :input, class: input_class, error_class: invalid_class, valid_class: valid_class_f
-      ba.use :full_error, wrap_with: { tag: "div", class: error_class }
-      ba.use :hint, wrap_with: { tag: "small", class: hint_class }
-    end
-  end
 
   config.wrappers :tailwind_horizontal_form,
       tag: "div", class: adm_row_class,
@@ -265,7 +223,12 @@ SimpleForm.setup do |config|
     b.optional :pattern
     b.optional :min_max
     b.optional :readonly
-    adm_label_and_input_grid.call(b)
+    b.use :label, class: adm_label_class
+    b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
+      ba.use :input, class: input_class, error_class: invalid_class, valid_class: valid_class_f
+      ba.use :full_error, wrap_with: { tag: "div", class: error_class }
+      ba.use :hint, wrap_with: { tag: "small", class: hint_class }
+    end
   end
 
   config.wrappers :tailwind_horizontal_boolean,
@@ -330,16 +293,6 @@ SimpleForm.setup do |config|
     end
   end
 
-  config.wrappers :tailwind_horizontal_range,
-      tag: "div", class: adm_row_class,
-      error_class: "has-error", valid_class: "has-success" do |b|
-    b.use :html5
-    b.use :placeholder
-    b.optional :readonly
-    b.optional :step
-    adm_label_and_input_grid.call(b)
-  end
-
   # Inline wrapper for admin nested form fields
   config.wrappers :inline_form,
       tag: "span",
@@ -366,7 +319,6 @@ SimpleForm.setup do |config|
     datetime:      :vertical_multi_select,
     file:          :vertical_file,
     radio_buttons: :vertical_collection,
-    range:         :vertical_range,
     time:          :vertical_multi_select
   }
 end

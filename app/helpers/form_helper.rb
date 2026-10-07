@@ -11,7 +11,6 @@ module FormHelper
           datetime:      :tailwind_horizontal_multi_select,
           file:          :tailwind_horizontal_file,
           radio_buttons: :tailwind_horizontal_collection,
-          range:         :tailwind_horizontal_range,
           time:          :tailwind_horizontal_multi_select
         }
       }
@@ -25,7 +24,6 @@ module FormHelper
           datetime:      :horizontal_multi_select,
           file:          :horizontal_file,
           radio_buttons: :horizontal_collection,
-          range:         :horizontal_range,
           time:          :horizontal_multi_select
         }
       }
