@@ -274,19 +274,14 @@ module Admin
       # Overrides the gate and approves. Writes the override row only while the
       # gate is the one blocker: a hard block would let a later plain approve sail
       # past it, and a satisfied gate (the owner endorsed since the page loaded)
-      # holds a real endorsement the override must not replace. Upserted, so a
-      # re-override after an edit refreshes the snapshot.
+      # holds a real endorsement the override must not replace.
       def override_one(expense, note)
         blocker = approve_blocker(expense)
         return blocker || approve_expense(expense) unless blocker == :skipped_awaiting_endorsement
 
-        ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize.update!(
-          budget_record_id: expense.budget.record_id,
-          endorsed_by_person_id: nil,
-          overridden_by: current_user,
-          note: note.to_s.truncate(255).presence,
-          endorsed_amount: expense.amount,
-          endorsed_at: Time.current
+        ::Reimbursements::OwnerEndorsement.record!(
+          expense, endorsed_by_person_id: nil, overridden_by: current_user,
+                   note: note.to_s.truncate(255).presence
         )
         @override_written = true
         approve_expense(expense)

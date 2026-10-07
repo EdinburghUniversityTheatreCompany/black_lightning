@@ -39,6 +39,15 @@ module Reimbursements
 
     scope :for_expense, ->(expense_record_id) { where(expense_record_id: expense_record_id) }
 
+    # Upserted, so a stale row from a since-edited claim is refreshed to the CURRENT terms.
+    # +who+ is the endorsing person or the overriding user (and a note).
+    def self.record!(expense, **who)
+      for_expense(expense.record_id).first_or_initialize.tap do |endorsement|
+        endorsement.update!(budget_record_id: expense.budget.record_id, endorsed_amount: expense.amount,
+                            endorsed_at: Time.current, **who)
+      end
+    end
+
     def owner_endorsement?
       endorsed_by_person_id.present?
     end

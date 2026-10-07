@@ -27,17 +27,9 @@ module Admin
         expense = owned_pending_expense
         return unless expense
 
-        # Upsert, not find_or_create: a stale row from a since-edited claim is refreshed so the
-        # sign-off covers the CURRENT terms.
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
-        endorsement.assign_attributes(
-          budget_record_id: expense.budget.record_id,
-          endorsed_by_person_id: current_person.record_id,
-          overridden_by: nil,
-          endorsed_amount: expense.amount,
-          endorsed_at: Time.current
+        ::Reimbursements::OwnerEndorsement.record!(
+          expense, endorsed_by_person_id: current_person.record_id, overridden_by: nil
         )
-        endorsement.save!
         redirect_to_my_budgets(notice: "Thanks, you've endorsed this claim for the finance team.")
       rescue ActiveRecord::RecordNotUnique
         # Another owner endorsed a moment ago; the gate is satisfied either way.
