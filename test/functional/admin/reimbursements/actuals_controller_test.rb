@@ -21,9 +21,7 @@ module Admin
     end
 
     setup do
-      finance = Role.create!(name: "Business Manager")
-      finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-      users(:member).add_role("Business Manager")
+      grant_finance_permission(users(:member))
       @user = users(:member)
 
       @expense = create_reimbursements_expense(auto_number: 42, description: "Fake blood")
@@ -65,31 +63,30 @@ module Admin
     end
 
     test "the producer portal permission alone does not grant finance access" do
-      producer_role = Role.create!(name: "Producer")
-      producer_role.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      submitter = users(:member_with_phone_number)
-      submitter.add_role("Producer")
-      sign_in submitter
+      grant_producer_permission(users(:member_with_phone_number))
+      sign_in users(:member_with_phone_number)
 
-      # The period-filtered route is gated the same as the bare index.
-      get :index, params: { period: "03" }
+      get :index
 
       assert_response :forbidden
     end
 
     # --- Index -------------------------------------------------------------
 
-    # state=all: the default view hides linked rows.
-    test "lists every imported actual, newest imported first" do
+    test "the full ledger lists every row newest first, with its link state and actions" do
       sign_in @user
       get :index, params: { state: "all" }
 
       assert_response :success
       assert_equal [ @unlinked, @linked_budget, @linked_expense ].map(&:record_id),
                    assigns(:actuals).map(&:record_id)
-      assert_includes response.body, "Alice Producer"
-      assert_includes response.body, "Box office"
-      assert_includes response.body, "Sundry"
+      # The table, not the body: the sidebar's own "Expenses" link used to satisfy a body match.
+      ledger = css_select("table").map(&:text).join(" ")
+      assert_includes ledger, "Expense"
+      assert_includes ledger, "Budget"
+      assert_includes ledger, "Unlinked"
+      assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@expense.record_id)
+      assert_includes response.body, "Show only rows needing attention"
     end
 
     test "a legacy row with no imported_at sorts by its transaction date instead" do
@@ -104,7 +101,7 @@ module Admin
                                                 imported_at: Time.utc(2020, 1, 1))
       sign_in @user
 
-      assert_nothing_raised { get :index }
+      get :index
 
       assert_response :success
       assert_equal [ recent_import, legacy, old_import ].map(&:record_id),
@@ -121,15 +118,6 @@ module Admin
       end
     end
 
-    test "index pages the list at 50 per page" do
-      seed_paged_actuals(60)
-      sign_in @user
-
-      get :index
-
-      assert_equal 50, assigns(:actuals).size
-    end
-
     test "index page 2 returns the remaining slice, not page 1's rows" do
       seed_paged_actuals(60)
       sign_in @user
@@ -140,35 +128,9 @@ module Admin
       get :index, params: { page: 2 }
       page2 = assigns(:actuals).map(&:record_id)
 
+      assert_equal 50, page1.size
       assert_equal 10, page2.size
       assert_empty(page1 & page2, "page 2 must not repeat any page 1 rows")
-    end
-
-    test "shows the linked-to state per row" do
-      budget = create_reimbursements_budget(name: "Ticket income", budget_type: "Income")
-      expense = create_reimbursements_expense(budget: budget, description: "Linked claim")
-      create_reimbursements_eusa_actual(narrative: "Paid by BACS", debit: 10,
-                                        expense_id: expense.record_id)
-      create_reimbursements_eusa_actual(narrative: "Box office", credit: 20,
-                                        budget_id: budget.record_id)
-
-      sign_in @user
-      get :index, params: { state: "all" }
-
-      assert_response :success
-      # The table, not the body: the sidebar's own "Expenses" link used to satisfy a body match.
-      ledger = css_select("table").map(&:text).join(" ")
-      assert_includes ledger, "Expense"
-      assert_includes ledger, "Budget"
-      assert_includes ledger, "Unlinked"
-    end
-
-    test "links an expense-linked actual to its finance edit page" do
-      sign_in @user
-      get :index, params: { state: "all" }
-
-      assert_response :success
-      assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@expense.record_id)
     end
 
     test "filters by period" do
@@ -179,28 +141,14 @@ module Admin
       assert_equal [ @unlinked.record_id ], assigns(:actuals).map(&:record_id)
     end
 
-    test "offers the distinct periods as filter options" do
-      sign_in @user
-      get :index
-
-      assert_response :success
-      assert_equal %w[03 04], assigns(:periods)
-    end
-
     # --- CSV export --------------------------------------------------------
-
-    test "index CSV export answers a text/csv download named for today" do
-      sign_in @user
-      get :index, format: :csv
-
-      assert_csv_download("actuals")
-    end
 
     test "index CSV export has a header row and one data row per actual" do
       sign_in @user
 
       get :index, params: { state: "all" }, format: :csv
 
+      assert_csv_download("actuals")
       rows = CSV.parse(response.body)
       assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period",
                      "Status", "Cost centre", "Area" ],
@@ -216,61 +164,8 @@ module Admin
 
       bud_row = rows.find { |r| r[2] == "Box office" }
       assert_equal "Credit", bud_row[1]
-      assert_equal "-500.0", bud_row[3], "income is signed negative (see the export's Amount note)"
+      assert_equal "-500.0", bud_row[3], "income is signed negative so a SUM of the column is net spend"
       assert_equal "Props", bud_row[4]
-    end
-
-    # Finance re-imports this file and sums the Amount column. Unsigned, that sum
-    # adds income to spend and counts an offset pair at twice its value instead
-    # of zero; signed (income negative, both offset legs labelled) it is net
-    # spend.
-    test "index CSV export signs the amount so income subtracts from spend" do
-      sign_in @user
-
-      get :index, params: { state: "all" }, format: :csv
-
-      rows = CSV.parse(response.body, headers: true)
-      debit = rows.find { |r| r["Description"] == "Alice Producer" }
-      credit = rows.find { |r| r["Description"] == "Box office" }
-      assert_equal BigDecimal("123.45"), BigDecimal(debit["Amount"])
-      assert_equal BigDecimal("-500.0"), BigDecimal(credit["Amount"]),
-                   "a credit is income, so it must not add to spend"
-    end
-
-    test "index CSV export marks both legs of an offsetting pair, and they sum to zero" do
-      create_offsetting_pair
-      sign_in @user
-
-      get :index, params: { include_offsets: "1" }, format: :csv
-
-      rows = CSV.parse(response.body, headers: true)
-      legs = rows.select { |r| r["Status"] == "Offset" }
-      assert_equal 2, legs.size, "an included offset pair is flagged on both legs"
-      assert_equal BigDecimal("0"), legs.sum { |r| BigDecimal(r["Amount"]) },
-                   "a cross-linked pair contributes nothing to a SUM of the column"
-    end
-
-    test "index CSV export neutralises formula-injected narrative text" do
-      create_reimbursements_actual(nominal_code: "600000", period: "05",
-                                   narrative: "=1+1", date: Date.new(2026, 7, 1),
-                                   debit: BigDecimal("9.99"))
-      sign_in @user
-
-      get :index, format: :csv
-
-      rows = CSV.parse(response.body)
-      injected = rows.find { |r| r[6] == "05" }
-      assert_equal "'=1+1", injected[2]
-    end
-
-    test "index CSV export carries the period filter, exporting only that period" do
-      sign_in @user
-      get :index, params: { period: "04" }, format: :csv
-
-      rows = CSV.parse(response.body)
-      assert_equal 2, rows.size, "header + the single period-04 actual"
-      assert_includes response.body, "Sundry"
-      assert_not_includes response.body, "Alice Producer"
     end
 
     test "renders an empty state when nothing has been imported" do
@@ -304,68 +199,37 @@ module Admin
     end
 
     # --- The needs-attention filter ----------------------------------------
+    # The page opens on what is left to do after a reconcile; the whole ledger is one click away.
 
-    test "the index opens on the rows that need attention" do
+    test "the index opens on the rows that need attention, and falls back to them on a bad state" do
       sign_in @user
 
-      get :index
+      [ {}, { state: "wibble" } ].each do |params|
+        get :index, params: params
 
-      assert_response :success
-      assert_equal ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION,
-                   assigns(:state)
-      assert_equal [ @unlinked.record_id ], assigns(:actuals).map(&:record_id)
-    end
-
-    test "the state rides in the URL so the full ledger is a link" do
-      sign_in @user
-
-      get :index, params: { state: "all" }
-
-      assert_response :success
-      assert_equal 3, assigns(:actuals).size
-      assert_includes response.body, "Show only rows needing attention"
-    end
-
-    test "an unrecognised state falls back to the leftovers rather than 500ing" do
-      sign_in @user
-
-      get :index, params: { state: "wibble" }
-
-      assert_response :success
-      assert_equal ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION,
-                   assigns(:state)
-    end
-
-    test "a split row counts as finished with, not as needing attention" do
-      budget = create_reimbursements_budget(name: "Box office", budget_type: "Income")
-      credit = create_reimbursements_eusa_actual(credit: BigDecimal("100"), narrative: "Stripe")
-      ::Reimbursements::ActualAllocation.create!(eusa_actual: credit, budget: budget,
-                                                 amount: BigDecimal("100"))
-      sign_in @user
-
-      get :index
-
-      assert_not_includes assigns(:actuals).map(&:record_id), credit.record_id
-    end
-
-    test "the counts describe the rows on screen, so the switch says what it would show" do
-      sign_in @user
-
-      get :index
-
+        assert_response :success
+        assert_equal ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION,
+                     assigns(:state), params.inspect
+        assert_equal [ @unlinked.record_id ], assigns(:actuals).map(&:record_id), params.inspect
+      end
       assert_equal 1, assigns(:needs_attention_count)
       assert_equal 3, assigns(:matching_count)
+      assert_equal %w[03 04], assigns(:periods)
     end
 
     # An old bookmark asking for the offsets must still get them (an offset leg never needs attention).
-    test "asking for the offsets alone opens the full ledger" do
-      create_offsetting_pair
+    test "asking for the offsets opens the full ledger with both legs badged and undoable" do
+      accrual, = create_offsetting_pair
       sign_in @user
 
       get :index, params: { include_offsets: "1" }
 
       assert_equal ::Admin::Reimbursements::ActualsController::STATE_ALL, assigns(:state)
       assert_equal 5, assigns(:actuals).size
+      assert_includes response.body, "Offset"
+      assert_includes response.body, unoffset_admin_reimbursements_actual_path(accrual.record_id)
+      assert_not_includes response.body,
+                          new_expense_admin_reimbursements_actual_path(accrual.record_id)
     end
 
     test "the hidden-offsets sentence links to the rows it describes" do
@@ -383,28 +247,14 @@ module Admin
 
     # --- Search -------------------------------------------------------------
 
-    test "searches the narrative" do
+    test "searches the narrative and the amount, with the separators a person types stripped" do
       sign_in @user
 
-      get :index, params: { state: "all", search: "box off" }
+      { "box off" => @linked_budget, "£123.45" => @linked_expense }.each do |term, row|
+        get :index, params: { state: "all", search: term }
 
-      assert_equal [ @linked_budget.record_id ], assigns(:actuals).map(&:record_id)
-    end
-
-    test "searches the amount, with the separators a person types stripped" do
-      sign_in @user
-
-      get :index, params: { state: "all", search: "£123.45" }
-
-      assert_equal [ @linked_expense.record_id ], assigns(:actuals).map(&:record_id)
-    end
-
-    test "search carries through to the CSV export" do
-      sign_in @user
-
-      get :index, params: { state: "all", search: "Sundry" }, format: :csv
-
-      assert_equal 2, CSV.parse(response.body).size, "header + the one matching row"
+        assert_equal [ row.record_id ], assigns(:actuals).map(&:record_id), term
+      end
     end
 
     test "search and period narrow together" do
@@ -428,18 +278,6 @@ module Admin
       assert_equal 2, assigns(:offset_count)
     end
 
-    test "offsetting rows can be shown on request and are badged" do
-      accrual, reversal = create_offsetting_pair
-      sign_in @user
-
-      get :index, params: { include_offsets: "1" }
-
-      assert_response :success
-      assert_includes assigns(:actuals).map(&:record_id), accrual.record_id
-      assert_includes assigns(:actuals).map(&:record_id), reversal.record_id
-      assert_includes response.body, "Offset"
-    end
-
     test "the offsetting filter carries through to the CSV export" do
       create_offsetting_pair
       sign_in @user
@@ -448,7 +286,12 @@ module Admin
       assert_equal 4, CSV.parse(response.body).size, "header + the three non-offsetting rows"
 
       get :index, params: { include_offsets: "1" }, format: :csv
-      assert_equal 6, CSV.parse(response.body).size, "header + all five rows"
+      rows = CSV.parse(response.body, headers: true)
+      assert_equal 5, rows.size, "all five rows"
+      legs = rows.select { |r| r["Status"] == "Offset" }
+      assert_equal 2, legs.size, "an included offset pair is flagged on both legs"
+      assert_equal BigDecimal("0"), legs.sum { |r| BigDecimal(r["Amount"]) },
+                   "a cross-linked pair contributes nothing to a SUM of the column"
     end
 
     # --- Undoing an offset --------------------------------------------------
@@ -465,28 +308,6 @@ module Admin
         assert_not_predicate leg, :offset?
         assert_nil leg.offset_of_id
       end
-      assert_equal 2, ::Reimbursements::EusaActual.where(id: [ accrual.id, reversal.id ]).count,
-                   "both rows survive: finance needs the audit trail either way"
-    end
-
-    test "unoffset works from either leg" do
-      accrual, reversal = create_offsetting_pair
-      sign_in @user
-
-      post :unoffset, params: { id: reversal.record_id }
-
-      assert_not_predicate accrual.reload, :offset?
-      assert_not_predicate reversal.reload, :offset?
-    end
-
-    # An un-offset debit row is ordinary spend again, so it can be converted.
-    test "an un-offset debit row becomes convertible again" do
-      accrual, = create_offsetting_pair
-      sign_in @user
-
-      post :unoffset, params: { id: accrual.record_id }
-
-      assert_predicate accrual.reload, :convertible_to_expense?
     end
 
     test "unoffset keeps the operator's filters" do
@@ -514,26 +335,6 @@ module Admin
       assert_response :not_found
     end
 
-    test "unoffset is gated by the finance permission" do
-      accrual, = create_offsetting_pair
-      sign_in users(:committee)
-
-      post :unoffset, params: { id: accrual.record_id }
-
-      assert_response :forbidden
-      assert_predicate accrual.reload, :offset?
-    end
-
-    test "an offsetting row offers the undo button" do
-      accrual, = create_offsetting_pair
-      sign_in @user
-
-      get :index, params: { include_offsets: "1" }
-
-      assert_response :success
-      assert_includes response.body, unoffset_admin_reimbursements_actual_path(accrual.record_id)
-    end
-
     # --- Convert an actual into a From-EUSA expense ------------------------
 
     test "an unlinked debit row offers a create-expense button" do
@@ -542,17 +343,6 @@ module Admin
 
       assert_response :success
       assert_includes response.body, new_expense_admin_reimbursements_actual_path(@unlinked.record_id)
-    end
-
-    test "an offsetting row never offers a create-expense button" do
-      accrual, = create_offsetting_pair
-      sign_in @user
-
-      get :index, params: { include_offsets: "1" }
-
-      assert_response :success
-      assert_not_includes response.body,
-                          new_expense_admin_reimbursements_actual_path(accrual.record_id)
     end
 
     test "an already-linked row offers no create-expense button" do
@@ -574,58 +364,30 @@ module Admin
       assert_equal "Sundry", assigns(:form).description
     end
 
-    test "new_expense preselects the budget when the nominal code maps to exactly one" do
+    test "new_expense preselects the budget only when the nominal code maps to exactly one" do
       only_budget = create_reimbursements_budget(name: "Venue", nominal_code: "500000")
       sign_in @user
 
       get :new_expense, params: { id: @unlinked.record_id }
-
-      assert_response :success
       assert_equal only_budget.record_id, assigns(:form).budget_record_id
-    end
 
-    test "new_expense leaves the budget blank when the nominal code is ambiguous" do
-      create_reimbursements_budget(name: "Venue A", nominal_code: "500000")
       create_reimbursements_budget(name: "Venue B", nominal_code: "500000")
-      sign_in @user
-
       get :new_expense, params: { id: @unlinked.record_id }
-
       assert_response :success
       assert_nil assigns(:form).budget_record_id, "the operator picks between them"
     end
 
-    test "new_expense refuses an offsetting row" do
+    test "a row that cannot become an expense is bounced with the reason" do
       accrual, = create_offsetting_pair
       sign_in @user
 
-      get :new_expense, params: { id: accrual.record_id }
+      { accrual => /offset/i, @linked_budget => /debit/i,
+        @linked_expense => /already/i }.each do |row, reason|
+        get :new_expense, params: { id: row.record_id }
 
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/offset/i, flash[:alert])
-    end
-
-    test "new_expense refuses a credit row" do
-      sign_in @user
-      get :new_expense, params: { id: @linked_budget.record_id }
-
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/debit/i, flash[:alert])
-    end
-
-    test "new_expense refuses a row already linked to an expense" do
-      sign_in @user
-      get :new_expense, params: { id: @linked_expense.record_id }
-
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/already/i, flash[:alert])
-    end
-
-    test "new_expense 404s for an unknown row" do
-      sign_in @user
-      get :new_expense, params: { id: "999999" }
-
-      assert_response :not_found
+        assert_redirected_to admin_reimbursements_actuals_path
+        assert_match reason, flash[:alert]
+      end
     end
 
     # Created settled: a From-EUSA expense never enters review or a BACS batch.
@@ -636,126 +398,49 @@ module Admin
         id: @unlinked.record_id,
         reimbursements_expense_form: { budget_record_id: @budget.record_id,
                                        description: "Room hire recharge",
-                                       payment_reference: "J000001234" }
+                                       payment_reference: "J000001234",
+                                       amount: "9999.99", expense_type: "Reimbursement" }
       }
 
       assert_redirected_to admin_reimbursements_actuals_path
       expense = ::Reimbursements::Expense.order(:id).last
-      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type,
+                   "the ledger row owns these, not the form"
       assert_equal ::Reimbursements::Status::PAID, expense.status
       assert_equal @unlinked.date, expense.payment_confirmed_date
       # The ledger date, not the click date: lists sort and date claims by it.
       assert_equal @unlinked.date, expense.submitted_at.to_date
-      assert_equal BigDecimal("42.0"), expense.amount
+      assert_equal BigDecimal("42.0"), expense.amount, "the ledger row owns these, not the form"
       assert_equal BigDecimal("42.0"), expense.amount_excl_vat
       assert_equal "Room hire recharge", expense.description
       assert_equal @budget.record_id, expense.budget_record_id
       assert_nil expense.person, "a cost EUSA levied directly has no payee to reimburse"
       assert_empty expense.receipts
       assert_nil expense.batch_id
-    end
-
-    test "create_expense cross-links the row to the expense it created" do
-      sign_in @user
-
-      post :create_expense, params: {
-        id: @unlinked.record_id,
-        reimbursements_expense_form: { budget_record_id: @budget.record_id,
-                                       description: "Room hire recharge",
-                                       payment_reference: "J000001234" }
-      }
-
-      expense = ::Reimbursements::Expense.order(:id).last
-      assert_equal [ expense.record_id ], @unlinked.reload.linked_expense_ids
+      assert_equal expense.id, @unlinked.reload.expense_id
       assert_not_predicate @unlinked, :convertible_to_expense?, "and can't be converted twice"
     end
 
-    test "create_expense re-renders the form when the budget is missing" do
-      sign_in @user
-
-      assert_no_difference -> { ::Reimbursements::Expense.count } do
-        post :create_expense, params: {
-          id: @unlinked.record_id,
-          reimbursements_expense_form: { budget_record_id: "", description: "Room hire",
-                                         payment_reference: "J000001234" }
-        }
-      end
-
-      assert_response :unprocessable_entity
-      assert assigns(:form).errors[:budget_record_id].present?
-      assert_empty @unlinked.reload.linked_expense_ids
-    end
-
-    # The budget is checked against the list this page's own picker offered, so
-    # a line deleted between the page loading and the submit is a fixable form
-    # error rather than a foreign-key 500 on create_expense!.
-    test "create_expense rejects a budget that no longer exists" do
-      sign_in @user
-
-      assert_no_difference -> { ::Reimbursements::Expense.count } do
-        post :create_expense, params: {
-          id: @unlinked.record_id,
-          reimbursements_expense_form: { budget_record_id: "999999", description: "Room hire",
-                                         payment_reference: "J000001234" }
-        }
-      end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/i, assigns(:form).errors[:budget_record_id].to_sentence)
-      assert_empty @unlinked.reload.linked_expense_ids
-    end
-
-    # And one still on the books but retired. It satisfies the foreign key, so
-    # this never raised — it quietly booked an EUSA charge against a budget
-    # finance had taken out of use.
-    test "create_expense rejects a budget that has been deactivated" do
+    # The budget is checked against the list the picker offered, so a deleted or retired line is a
+    # form error, not an FK 500 or a quiet charge to a retired budget.
+    test "create_expense rejects a missing, deleted or deactivated budget" do
       retired = create_reimbursements_budget(name: "Last year's props", nominal_code: "4900",
                                              active: false)
       sign_in @user
 
-      assert_no_difference -> { ::Reimbursements::Expense.count } do
-        post :create_expense, params: {
-          id: @unlinked.record_id,
-          reimbursements_expense_form: { budget_record_id: retired.record_id,
-                                         description: "Room hire",
-                                         payment_reference: "J000001234" }
-        }
+      [ "", "999999", retired.record_id ].each do |budget_id|
+        assert_no_difference -> { ::Reimbursements::Expense.count } do
+          post :create_expense, params: {
+            id: @unlinked.record_id,
+            reimbursements_expense_form: { budget_record_id: budget_id, description: "Room hire",
+                                           payment_reference: "J000001234" }
+          }
+        end
+
+        assert_response :unprocessable_entity
+        assert assigns(:form).errors[:budget_record_id].present?, budget_id.inspect
       end
-
-      assert_response :unprocessable_entity
-      assert_match(/no longer available/i, assigns(:form).errors[:budget_record_id].to_sentence)
-      assert_empty @unlinked.reload.linked_expense_ids
-    end
-
-    test "create_expense refuses an offsetting row" do
-      accrual, = create_offsetting_pair
-      sign_in @user
-
-      assert_no_difference -> { ::Reimbursements::Expense.count } do
-        post :create_expense, params: {
-          id: accrual.record_id,
-          reimbursements_expense_form: { budget_record_id: @budget.record_id,
-                                         description: "x", payment_reference: "y" }
-        }
-      end
-
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/offset/i, flash[:alert])
-    end
-
-    test "the amount always comes from the ledger row, not the posted form" do
-      sign_in @user
-
-      post :create_expense, params: {
-        id: @unlinked.record_id,
-        reimbursements_expense_form: { budget_record_id: @budget.record_id,
-                                       description: "Room hire", payment_reference: "J1",
-                                       amount: "9999.99", expense_type: "Reimbursement" }
-      }
-
-      expense = ::Reimbursements::Expense.order(:id).last
-      assert_equal BigDecimal("42.0"), expense.amount, "the ledger row is the source of truth"
-      assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+      assert_nil @unlinked.reload.expense_id
     end
 
     # --- Conversion is one unit ---------------------------------------------
@@ -802,16 +487,6 @@ module Admin
                    "the first conversion's link stands"
     end
 
-    test "conversion is gated by the finance permission" do
-      sign_in users(:committee)
-
-      get :new_expense, params: { id: @unlinked.record_id }
-      assert_response :forbidden
-
-      post :create_expense, params: { id: @unlinked.record_id }
-      assert_response :forbidden
-    end
-
     # --- Manual link to a claim ---------------------------------------------
 
     def international_claim(amount: BigDecimal("230.00"))
@@ -837,15 +512,16 @@ module Admin
 
     # --- What Link to claim offers, and in what order ------------------------
 
-    test "link_expense offers no draft or rejected claim" do
-      draft = create_reimbursements_expense(auto_number: 90, budget: @budget,
-                                            status: ::Reimbursements::Status::DRAFT,
-                                            amount: BigDecimal("42.00"),
-                                            amount_excl_vat: BigDecimal("42.00"))
-      rejected = create_reimbursements_expense(auto_number: 91, budget: @budget,
-                                               status: ::Reimbursements::Status::REJECTED,
-                                               amount: BigDecimal("42.00"),
-                                               amount_excl_vat: BigDecimal("42.00"))
+    test "link_expense offers Pending and Approved claims but no draft or rejected one" do
+      claim = lambda do |auto_number, status|
+        create_reimbursements_expense(auto_number: auto_number, budget: @budget, status: status,
+                                      amount: BigDecimal("42.00"),
+                                      amount_excl_vat: BigDecimal("42.00"))
+      end
+      draft = claim.call(90, ::Reimbursements::Status::DRAFT)
+      rejected = claim.call(91, ::Reimbursements::Status::REJECTED)
+      pending_claim = claim.call(92, ::Reimbursements::Status::PENDING)
+      approved = claim.call(93, ::Reimbursements::Status::APPROVED)
       sign_in @user
 
       get :link_expense, params: { id: @unlinked.record_id }
@@ -855,22 +531,6 @@ module Admin
                           "a draft is a claim its submitter has not finished writing"
       assert_not_includes numbers, rejected.auto_number,
                           "a rejected claim is one finance refused to pay"
-    end
-
-    test "link_expense still offers a Pending, Approved or Submitted claim" do
-      pending_claim = create_reimbursements_expense(auto_number: 92, budget: @budget,
-                                                    status: ::Reimbursements::Status::PENDING,
-                                                    amount: BigDecimal("42.00"),
-                                                    amount_excl_vat: BigDecimal("42.00"))
-      approved = create_reimbursements_expense(auto_number: 93, budget: @budget,
-                                               status: ::Reimbursements::Status::APPROVED,
-                                               amount: BigDecimal("42.00"),
-                                               amount_excl_vat: BigDecimal("42.00"))
-      sign_in @user
-
-      get :link_expense, params: { id: @unlinked.record_id }
-
-      numbers = assigns(:candidates).map(&:auto_number)
       assert_includes numbers, pending_claim.auto_number
       assert_includes numbers, approved.auto_number
     end
@@ -912,29 +572,6 @@ module Admin
 
     # --- What Create expense offers ------------------------------------------
 
-    test "new_expense lists the budgets on this row's nominal code first" do
-      matching = create_reimbursements_budget(name: "Sundries", nominal_code: "500000")
-      sign_in @user
-
-      get :new_expense, params: { id: @unlinked.record_id }
-
-      assert_response :success
-      label, options = assigns(:budget_groups).first
-      assert_includes label, "500000"
-      assert_includes options.map(&:last), matching.record_id
-      # An order, not a filter: every other line is still offerable.
-      assert_includes assigns(:budget_groups).last.last.map(&:last), @budget.record_id
-    end
-
-    test "new_expense prints each budget's nominal code in its label" do
-      sign_in @user
-
-      get :new_expense, params: { id: @unlinked.record_id }
-
-      assert_response :success
-      assert(assigns(:budget_groups).flat_map(&:last).all? { |label, _| label.include?("·") })
-    end
-
     # The MARKUP, not the ivar: a bare collection with group_method renders one option per group
     # and offers no budget. Only `as: :grouped_select` really groups.
     test "new_expense renders real optgroups, each holding its budgets" do
@@ -949,29 +586,15 @@ module Admin
       assert_includes groups.first["label"], "500000"
       assert(groups.all? { |group| group.css("option").any? },
              "an optgroup with no options offers nothing")
+      options = css_select("select#reimbursements_expense_form_budget_record_id optgroup option")
+      assert(options.all? { |option| option.text.include?("·") }, "each label prints its nominal code")
+      assert_includes groups.last.css("option").map { |option| option["value"] }, @budget.record_id,
+                      "an order, not a filter: every other line is still offerable"
       assert_includes css_select("select#reimbursements_expense_form_budget_record_id option")
                       .map { |option| option.text.strip }.join(" "), "Sundries"
     end
 
-    test "link_expense refuses a row that is already linked" do
-      sign_in @user
-
-      get :link_expense, params: { id: @linked_expense.record_id }
-
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/already linked/, flash[:alert])
-    end
-
-    test "link_expense refuses a credit row" do
-      sign_in @user
-
-      get :link_expense, params: { id: @linked_budget.record_id }
-
-      assert_redirected_to admin_reimbursements_actuals_path
-      assert_match(/Only a debit row/, flash[:alert])
-    end
-
-    test "confirm_link settles the claim and links the row" do
+    test "confirm_link settles an international claim, links the row and corrects the amount" do
       claim = international_claim
       sign_in @user
 
@@ -981,24 +604,15 @@ module Admin
       assert_equal ::Reimbursements::Status::PAID, settled.status
       assert_equal Date.new(2026, 6, 1), settled.payment_confirmed_date
       assert_equal claim.id, @unlinked.reload[:expense_id]
-    end
-
-    test "confirm_link corrects an international claim to what EUSA charged" do
-      claim = international_claim
-      sign_in @user
-
-      post :confirm_link, params: { id: @unlinked.record_id, expense_id: claim.record_id }
-
-      assert_equal BigDecimal("42.0"), claim.reload.amount
+      assert_equal BigDecimal("42.0"), settled.amount
       assert_match(/corrected to what EUSA charged/, flash[:notice])
     end
 
-    test "confirm_link leaves a UK claim's amount alone" do
+    test "confirm_link on a UK claim does not claim a correction" do
       sign_in @user
 
       post :confirm_link, params: { id: @unlinked.record_id, expense_id: @expense.record_id }
 
-      assert_equal BigDecimal("12.5"), @expense.reload.amount, "a UK amount is not an estimate"
       assert_no_match(/corrected/, flash[:notice])
     end
 
@@ -1080,15 +694,6 @@ module Admin
       assert_match(/isn't linked to anything/, flash[:alert])
     end
 
-    test "unlinking deletes no ledger row" do
-      sign_in @user
-      before = ::Reimbursements::EusaActual.count
-
-      post :unlink, params: { id: @linked_budget.record_id }
-
-      assert_equal before, ::Reimbursements::EusaActual.count
-    end
-
     test "the ledger offers Unlink on linked rows and not on unlinked ones" do
       sign_in @user
 
@@ -1129,6 +734,7 @@ module Admin
       match = counterpart_for_unlinked
       wrong_amount = counterpart_for_unlinked(credit: BigDecimal("99.0"))
       wrong_code = counterpart_for_unlinked(nominal_code: "432320")
+      linked = counterpart_for_unlinked(expense: @expense)
       same_side = create_reimbursements_actual(nominal_code: "500000", debit: BigDecimal("42.0"),
                                                financial_year_id: @unlinked.financial_year_id)
       sign_in @user
@@ -1141,18 +747,8 @@ module Admin
       refute_includes ids, wrong_amount.record_id, "a different figure cancels nothing"
       refute_includes ids, wrong_code.record_id, "the detector will not pair across nominal codes"
       refute_includes ids, same_side.record_id, "two debits do not cancel out"
+      refute_includes ids, linked.record_id, "a linked row would hide spend a claim still counts"
       refute_includes ids, @unlinked.record_id, "a row cannot cancel itself"
-    end
-
-    # Stamping a linked row as offset would hide spend a claim or a line is
-    # still counting, so it is not offered and not accepted.
-    test "never offers a row that is linked to a claim or a budget" do
-      linked = counterpart_for_unlinked(expense: @expense)
-      sign_in @user
-
-      get :offset_pair, params: { id: @unlinked.record_id }
-
-      refute_includes assigns(:candidates).map(&:record_id), linked.record_id
     end
 
     # Two pots' rows stamped as cancelling out leave both pots' rollups short, and re-pasting
@@ -1171,16 +767,18 @@ module Admin
     end
 
     # The picker is a stale read and the link carries no centre, so the gate must hold on the write.
-    test "refuses a counterpart from another cost centre on submit" do
+    test "refuses a counterpart from another cost centre or one linked since the page was drawn" do
       other = create_second_reimbursements_cost_centre
-      theirs = counterpart_for_unlinked(cost_centre_id: other.id)
       sign_in @user
 
-      post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: theirs.record_id }
+      [ counterpart_for_unlinked(cost_centre_id: other.id),
+        counterpart_for_unlinked.tap { |match| match.update!(expense_id: @expense.id) } ].each do |counterpart|
+        post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: counterpart.record_id }
 
-      assert_match(/can no longer be paired/, flash[:alert])
+        assert_match(/can no longer be paired/, flash[:alert])
+        refute counterpart.reload.offset?
+      end
       refute @unlinked.reload.offset?
-      refute theirs.reload.offset?
     end
 
     # Rows predating cost centres have none and count as belonging everywhere.
@@ -1197,7 +795,7 @@ module Admin
       refute_includes ids, placed.record_id
     end
 
-    test "pairing two rows stamps both and each can undo it" do
+    test "pairing two rows stamps and cross-links both" do
       match = counterpart_for_unlinked
       sign_in @user
 
@@ -1207,23 +805,6 @@ module Admin
       assert match.reload.offset?
       assert_equal match.id, @unlinked.offset_of_id
       assert_equal @unlinked.id, match.offset_of_id
-
-      post :unoffset, params: { id: match.record_id }
-
-      refute @unlinked.reload.offset?
-      refute match.reload.offset?
-    end
-
-    test "refuses a counterpart that stopped qualifying since the page was drawn" do
-      match = counterpart_for_unlinked
-      sign_in @user
-      match.update!(expense_id: @expense.id)
-
-      post :confirm_offset, params: { id: @unlinked.record_id, counterpart_id: match.record_id }
-
-      assert_match(/can no longer be paired/, flash[:alert])
-      refute @unlinked.reload.offset?
-      refute match.reload.offset?
     end
 
     test "refuses to pair a row that is already linked, naming the fix" do

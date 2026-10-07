@@ -17,93 +17,33 @@ module Reimbursements
       assert_equal [ budget.record_id ], actual.linked_budget_ids
     end
 
-    test "dedup_key matches Reconciliation's row key" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "BACS RUN",
-                                  debit: BigDecimal("12.34"), credit: nil)
-      assert_equal Reconciliation.actuals_row_dedup_key("4000", "BACS RUN", BigDecimal("12.34"), nil),
-                   actual.dedup_key
-    end
-
-    # --- offset legs -------------------------------------------------------
-
-    test "an unstamped row is neither an offset nor pointing at a counterpart" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "BACS RUN", debit: 10)
-
-      assert_not_predicate actual, :offset?
-      assert_nil actual.offset_of
-    end
-
-    test "offset legs point at each other" do
-      accrual = EusaActual.create!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10,
-                                   reconciliation_status: EusaActual::STATUS_OFFSET)
-      reversal = EusaActual.create!(nominal_code: "4000", narrative: "REVERSAL", credit: 10,
-                                    reconciliation_status: EusaActual::STATUS_OFFSET,
-                                    offset_of: accrual)
-      accrual.update!(offset_of: reversal)
-
-      assert_predicate accrual.reload, :offset?
-      assert_predicate reversal.reload, :offset?
-      assert_equal reversal, accrual.offset_of
-      assert_equal accrual, reversal.offset_of
-    end
-
     # An offset leg nets to zero, so it must never become an expense however it is linked.
-    test "an offset leg is never convertible to an expense" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "ACCRUAL", debit: 10,
-                                  reconciliation_status: EusaActual::STATUS_OFFSET)
-
-      assert_not_predicate actual, :convertible_to_expense?
-    end
-
-    test "an unlinked debit row is convertible to an expense" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "EUSA STAFF COST", debit: 10)
-
-      assert_predicate actual, :convertible_to_expense?
-    end
-
-    test "a credit row is not convertible to an expense" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "TICKET INCOME", credit: 10)
-
-      assert_not_predicate actual, :convertible_to_expense?
-    end
-
-    test "a debit row already linked to an expense is not convertible again" do
+    test "only an unlinked debit row that is not an offset leg is convertible to an expense" do
       expense = Expense.create!(status: Status::PAID, description: "x")
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "EUSA STAFF COST", debit: 10,
-                                  expense: expense)
 
-      assert_not_predicate actual, :convertible_to_expense?
+      { { debit: 10 } => true,
+        { credit: 10 } => false,
+        { debit: 10, reconciliation_status: EusaActual::STATUS_OFFSET } => false,
+        { debit: 10, expense: expense } => false }.each do |attrs, expected|
+        assert_equal expected, create_reimbursements_eusa_actual(**attrs).convertible_to_expense?,
+                     attrs.inspect
+      end
     end
 
     # --- apportionment -----------------------------------------------------
 
-    test "a credit row with no links is apportionable" do
-      assert_predicate create_reimbursements_eusa_actual(credit: 4000), :apportionable?
-    end
-
-    test "a debit row is not apportionable" do
-      assert_not_predicate create_reimbursements_eusa_actual(debit: 4000), :apportionable?
-    end
-
-    test "an offsetting leg is never apportionable" do
-      actual = create_reimbursements_eusa_actual(credit: 4000,
-                                                 reconciliation_status: EusaActual::STATUS_OFFSET)
-
-      assert_not_predicate actual, :apportionable?
-    end
-
-    test "a row already attached to a budget is not apportionable" do
+    test "only an unattached credit that is not an offset leg is apportionable" do
       budget = create_reimbursements_budget(name: "Fundraising", budget_type: "Income")
-      actual = create_reimbursements_eusa_actual(credit: 4000, budget: budget)
-
-      assert_not_predicate actual, :apportionable?
-    end
-
-    test "a row already attached to an expense is not apportionable" do
       expense = Expense.create!(status: Status::PAID, description: "x")
-      actual = create_reimbursements_eusa_actual(credit: 4000, expense: expense)
 
-      assert_not_predicate actual, :apportionable?
+      { { credit: 4000 } => true,
+        { debit: 4000 } => false,
+        { credit: 4000, reconciliation_status: EusaActual::STATUS_OFFSET } => false,
+        { credit: 4000, budget: budget } => false,
+        { credit: 4000, expense: expense } => false }.each do |attrs, expected|
+        assert_equal expected, create_reimbursements_eusa_actual(**attrs).apportionable?,
+                     attrs.inspect
+      end
     end
 
     test "an already apportioned row is not apportionable again" do

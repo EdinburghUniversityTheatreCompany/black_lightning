@@ -20,11 +20,15 @@ module Reimbursements
       assert_equal 2, @actual.reload.allocations.count
       assert_nil @actual[:budget_id]
       assert_predicate @actual, :apportioned?
+      assert_equal EusaActual::STATUS_APPORTIONED, @actual.reconciliation_status
+      assert_not_predicate @actual, :offset?
     end
 
-    test "refuses shares that do not sum to the row" do
-      assert_raises(DatabaseStore::ApportionmentMismatchError) do
-        @store.apportion_actual!(@actual.id, [ { budget_id: @a.id, amount: BigDecimal("3880") } ])
+    test "refuses shares that do not sum to the row, an empty split included" do
+      [ [ { budget_id: @a.id, amount: BigDecimal("3880") } ], [] ].each do |shares|
+        assert_raises(DatabaseStore::ApportionmentMismatchError) do
+          @store.apportion_actual!(@actual.id, shares)
+        end
       end
 
       assert_empty @actual.reload.allocations
@@ -40,14 +44,6 @@ module Reimbursements
       assert_empty debit.reload.allocations
     end
 
-    test "refuses an empty split rather than detaching the row from everything" do
-      assert_raises(DatabaseStore::ApportionmentMismatchError) do
-        @store.apportion_actual!(@actual.id, [])
-      end
-
-      assert_empty @actual.reload.allocations
-    end
-
     test "removing an apportionment restores the row to unlinked" do
       @store.apportion_actual!(@actual.id, [ { budget_id: @a.id, amount: BigDecimal("4000") } ])
       @store.remove_apportionment!(@actual.id)
@@ -55,14 +51,6 @@ module Reimbursements
       assert_empty @actual.reload.allocations
       assert_predicate @actual, :apportionable?
       assert_nil @actual.reconciliation_status
-    end
-
-    test "a split row is stamped apportioned and carries no budget of its own" do
-      @store.apportion_actual!(@actual.id, [ { budget_id: @a.id, amount: BigDecimal("4000") } ])
-
-      assert_equal EusaActual::STATUS_APPORTIONED, @actual.reload.reconciliation_status
-      assert_nil @actual[:budget_id]
-      assert_not_predicate @actual, :offset?
     end
 
     # The parts add up to what the rollups read (credits less debits), not the stored net column.
@@ -73,16 +61,6 @@ module Reimbursements
       @store.apportion_actual!(row.id, [ { budget_id: @a.id, amount: BigDecimal("900") } ])
 
       assert_equal 1, row.reload.allocations.count
-    end
-
-    # An offsetting leg nets to zero, so a split of one would invent income.
-    test "refuses an offsetting leg" do
-      leg = create_reimbursements_eusa_actual(credit: 900,
-                                              reconciliation_status: EusaActual::STATUS_OFFSET)
-
-      assert_raises(DatabaseStore::NotApportionableError) do
-        @store.apportion_actual!(leg.id, [ { budget_id: @a.id, amount: BigDecimal("900") } ])
-      end
     end
 
     # A second split would double the income. The guard is re-taken inside the transaction under a

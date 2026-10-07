@@ -41,11 +41,8 @@ module Admin
 
         assert_text "The parts add up"
         assert_button "Save the split", disabled: false
-      end
 
-      test "over-allocating disables the submit again" do
-        type_share(0, "Show A", "2500")
-        type_share(1, "Show B", "2500")
+        fill_in "share_1_amount", with: "2500"
 
         assert_text "£1,000.00 over"
         assert_button "Save the split", disabled: true

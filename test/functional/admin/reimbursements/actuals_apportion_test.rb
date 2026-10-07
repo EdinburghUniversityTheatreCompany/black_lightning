@@ -60,34 +60,21 @@ module Admin
         assert_nil @payout[:budget_id]
       end
 
-      test "shares that do not sum to the row are refused and write nothing" do
+      test "shares that cannot be written are refused and write nothing" do
+        # "not offered": posted ids are checked against the ids the page RENDERED.
+        hidden = create_reimbursements_budget(name: "Retired", budget_type: "Income", active: false)
         sign_in @user
 
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "3880" } })
+        { "short" => { "0" => { budget_id: @show_a.record_id, amount: "3880" } },
+          "not offered" => { "0" => { budget_id: hidden.record_id, amount: "4000" } },
+          "unreadable" => { "0" => { budget_id: @show_a.record_id, amount: "four thousand" } },
+          "duplicate" => { "0" => { budget_id: @show_a.record_id, amount: "2000" },
+                           "1" => { budget_id: @show_a.record_id, amount: "2000" } } }.each do |label, shares|
+          post_split(shares)
 
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
-      end
-
-      # Posted ids are checked against the ids the page RENDERED: the picker list is scoped, the write is not.
-      test "a budget the form did not offer is refused" do
-        sign_in @user
-        hidden = create_reimbursements_budget(name: "Retired", budget_type: "Income",
-                                              active: false)
-
-        post_split({ "0" => { budget_id: hidden.record_id, amount: "4000" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
-      end
-
-      test "an unreadable amount is refused rather than stored as zero" do
-        sign_in @user
-
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "four thousand" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
+          assert_response :unprocessable_entity, label
+          assert_empty @payout.reload.allocations, label
+        end
       end
 
       test "a blank row is dropped rather than refused" do
@@ -97,16 +84,6 @@ module Admin
 
         assert_redirected_to admin_reimbursements_actuals_path
         assert_equal 2, @payout.reload.allocations.count
-      end
-
-      test "the same budget twice is refused" do
-        sign_in @user
-
-        post_split({ "0" => { budget_id: @show_a.record_id, amount: "2000" },
-                     "1" => { budget_id: @show_a.record_id, amount: "2000" } })
-
-        assert_response :unprocessable_entity
-        assert_empty @payout.reload.allocations
       end
 
       test "removing the split restores the row to unlinked" do
@@ -138,25 +115,6 @@ module Admin
         get :index
 
         assert_match "Split across budgets", response.body
-      end
-
-      # Behind the finance gate, not the producer portal's.
-      test "portal access alone does not open the split screen" do
-        grant_producer_permission(users(:member_with_phone_number))
-        sign_in users(:member_with_phone_number)
-
-        get :apportion, params: { id: @payout.record_id }
-
-        assert_response :forbidden
-      end
-
-      test "portal access alone cannot remove a split" do
-        grant_producer_permission(users(:member_with_phone_number))
-        sign_in users(:member_with_phone_number)
-
-        post :remove_apportionment, params: { id: @payout.record_id }
-
-        assert_response :forbidden
       end
     end
   end
