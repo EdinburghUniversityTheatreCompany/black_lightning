@@ -993,15 +993,6 @@ module Reimbursements
       assert_equal 3, store.areas_for_year.size, "an unscoped store sees every area"
     end
 
-    # Names only, so it must not pay #areas' preloads (the 10->36 query shape).
-    test "area_names_by_id costs one query" do
-      3.times { |n| Area.create!(name: "Area #{n}") }
-
-      assert_queries_count(1) { store.area_names_by_id }
-      assert_equal 3, store.area_names_by_id.size
-      assert_equal "Area 0", store.area_names_by_id[Area.order(:id).first.record_id]
-    end
-
     test "find_area reads the row directly, unaffected by a stale memoized list" do
       store.areas # memoize empty
       area = create_reimbursements_area(name: "Cogito")

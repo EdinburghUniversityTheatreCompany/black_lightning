@@ -13,10 +13,6 @@ module Admin
       def index
         @title = "Budget updates"
         @budget_updates = store.budget_updates
-        @budgets_by_id = store.budgets.index_by(&:record_id)
-        # Names only, so skip store.areas' preloads. Unscoped, so last year's line or area is
-        # still named.
-        @area_names_by_id = store.area_names_by_id
       end
 
       def show

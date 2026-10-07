@@ -44,8 +44,7 @@ module Reimbursements
     validates :amount, presence: true
     validate :belongs_to_exactly_one_owner
 
-    # A String, to match Budget#record_id keys (e.g. the budget_updates index's
-    # @budgets_by_id).
+    # A String, matching Budget#record_id.
     def budget_id = self[:budget_id]&.to_s
 
     private

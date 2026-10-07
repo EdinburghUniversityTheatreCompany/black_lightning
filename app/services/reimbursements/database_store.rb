@@ -207,12 +207,6 @@ module Reimbursements
                                budgets: %i[expenses forecasts actual_allocations]).to_a
     end
 
-    # record_id => name for every area, in one query with no preloads, for screens that only
-    # print a name (#areas' preloads cost 10->36 queries). Unscoped like #areas.
-    def area_names_by_id
-      @area_names_by_id ||= Area.pluck(:id, :name).to_h { |id, name| [ id.to_s, name ] }
-    end
-
     # The areas the budget screens list.
     def areas_for_year
       @areas_for_year ||= scoped(areas)
@@ -437,7 +431,7 @@ module Reimbursements
 
     # The selected year's budget revisions, newest first.
     def budget_updates
-      in_year(BudgetUpdate.includes(:created_by, :forecasts)
+      in_year(BudgetUpdate.includes(:created_by, forecasts: [ :area, { budget: :area } ])
                           .order(effective_date: :desc, id: :desc).to_a, financial_year)
     end
 

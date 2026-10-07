@@ -35,10 +35,9 @@
                 <%# An update groups both levels, so an area forecast (budget_id nil) must be named and marked. %>
                 <% names = update.forecasts.filter_map do |forecast|
                      if forecast.budget_id
-                       @budgets_by_id[forecast.budget_id]&.display_name
+                       forecast.budget&.display_name
                      else
-                       area_name = @area_names_by_id[forecast.area_id.to_s]
-                       "#{area_name} (area total)" if area_name
+                       (area_name = forecast.area&.name) && "#{area_name} (area total)"
                      end
                    end %>
                 <%= names.any? ? names.sort.join(", ") : pluralize(update.forecasts.size, "line") %>
