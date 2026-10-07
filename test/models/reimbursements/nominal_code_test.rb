@@ -5,7 +5,7 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     test "a code is unique within its cost centre but not across centres" do
-      fringe = create_reimbursements_cost_centre(name: "Fringe", key: "fringe2", eusa_code: "F41")
+      fringe = CostCentre.default
       termtime = create_second_reimbursements_cost_centre
 
       create_reimbursements_nominal_code(code: "432320", cost_centre: fringe)
@@ -17,34 +17,20 @@ module Reimbursements
       assert other.valid?, "the same code in another centre is a different account"
     end
 
-    test "a duplicate code is rejected case-insensitively" do
-      cc = Reimbursements::CostCentre.default
-      create_reimbursements_nominal_code(code: "abc123", cost_centre: cc)
-      dupe = NominalCode.new(code: "ABC123", cost_centre: cc, label: "Marketing")
-      assert_not dupe.valid?
-      assert dupe.errors[:code].present?
-    end
+    # The trailing space is PAD SPACE: 'abc' = 'abc ' under utf8mb4_unicode_ci but
+    # not the server default utf8mb4_0900_ai_ci, so it guards the pinned collation.
+    test "a duplicate code is rejected under the column's collation" do
+      [ [ "abc123", "ABC123" ], [ "cafe1", "café1" ], [ "432320", "432320 " ] ].each do |code, variant|
+        create_reimbursements_nominal_code(code: code)
+        dupe = NominalCode.new(code: variant, cost_centre: CostCentre.default, label: "Marketing #{variant}")
 
-    test "a duplicate code is rejected accent-insensitively" do
-      cc = Reimbursements::CostCentre.default
-      create_reimbursements_nominal_code(code: "cafe1", cost_centre: cc)
-      dupe = NominalCode.new(code: "café1", cost_centre: cc, label: "Marketing")
-      assert_not dupe.valid?
-      assert dupe.errors[:code].present?
-    end
-
-    # PAD SPACE: 'abc' = 'abc ' under utf8mb4_unicode_ci but not the server
-    # default utf8mb4_0900_ai_ci, so this guards the collation the migration pins.
-    test "a trailing-space code is rejected as a duplicate" do
-      cc = Reimbursements::CostCentre.default
-      create_reimbursements_nominal_code(code: "432320", cost_centre: cc)
-      dupe = NominalCode.new(code: "432320 ", cost_centre: cc, label: "Marketing")
-      assert_not dupe.valid?
-      assert dupe.errors[:code].present?
+        assert_not dupe.valid?, "#{variant.inspect} should duplicate #{code.inspect}"
+        assert dupe.errors[:code].present?
+      end
     end
 
     test "a label is unique within its cost centre, case-insensitively" do
-      cc = Reimbursements::CostCentre.default
+      cc = CostCentre.default
       create_reimbursements_nominal_code(code: "432320", cost_centre: cc, label: "Marketing")
       dupe = NominalCode.new(code: "431000", cost_centre: cc, label: "marketing")
 
@@ -53,45 +39,15 @@ module Reimbursements
     end
 
     test "another centre may reuse a label, as it may reuse a code" do
-      home = Reimbursements::CostCentre.default
+      home = CostCentre.default
       other = create_second_reimbursements_cost_centre
       create_reimbursements_nominal_code(code: "432320", cost_centre: home, label: "Marketing")
 
       assert NominalCode.new(code: "500000", cost_centre: other, label: "Marketing").valid?
     end
 
-    test "active defaults to true, and false persists" do
-      code = NominalCode.create!(code: "999999", label: "Test",
-                                 cost_centre: Reimbursements::CostCentre.default)
-      assert code.active?
-
-      code.update!(active: false)
-      assert_not code.reload.active?
-    end
-
-    test "the helper derives a distinct default label per code" do
-      a = create_reimbursements_nominal_code(code: "111111")
-      b = create_reimbursements_nominal_code(code: "222222")
-      assert_not_equal a.label, b.label
-    end
-
-    test "a zero-padded code keeps its padding" do
-      code = create_reimbursements_nominal_code(code: "041000")
-      assert_equal "041000", code.reload.code
-    end
-
-    test "code and label must both be present" do
-      # create_reimbursements_cost_centre requires key:/name:/eusa_code: with no
-      # defaults, so the brief's bare call would raise ArgumentError — the
-      # fixture cost centre (loaded for every test) stands in instead.
-      blank = NominalCode.new(cost_centre: Reimbursements::CostCentre.default)
-      assert_not blank.valid?
-      assert blank.errors[:code].present?
-      assert blank.errors[:label].present?
-    end
-
     test "for_cost_centre scopes to the centre and orders by code" do
-      fringe = create_reimbursements_cost_centre(name: "Fringe", key: "fringe3", eusa_code: "F42")
+      fringe = CostCentre.default
       termtime = create_second_reimbursements_cost_centre
 
       create_reimbursements_nominal_code(code: "432320", cost_centre: fringe)

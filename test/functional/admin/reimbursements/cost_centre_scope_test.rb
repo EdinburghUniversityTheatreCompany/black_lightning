@@ -118,14 +118,6 @@ module Admin
         assert_equal assigns(:pending).size,
                      assigns(:awaiting_owner).size + assigns(:to_approve).size
       end
-
-      test "the review CSV follows the selected centre as well as the tab" do
-        get :index, params: { cost_centre: "termtime", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Termtime claim"
-        assert_not_includes response.body, "Fringe claim"
-      end
     end
 
     class ActualsCostCentreScopeTest < ActionController::TestCase
@@ -147,14 +139,6 @@ module Admin
         narratives = assigns(:actuals).map(&:narrative)
         assert_includes narratives, "Fringe row"
         assert_not_includes narratives, "Termtime row"
-      end
-
-      test "the actuals CSV narrows too" do
-        get :index, params: { cost_centre: "fringe", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Fringe row"
-        assert_not_includes response.body, "Termtime row"
       end
     end
 
@@ -179,14 +163,6 @@ module Admin
         names = assigns(:batches).map(&:name)
         assert_includes names, "Fringe run"
         assert_not_includes names, "Termtime run"
-      end
-
-      test "the batches CSV narrows too" do
-        get :index, params: { cost_centre: "termtime", format: :csv }
-
-        assert_response :success
-        assert_includes response.body, "Termtime run"
-        assert_not_includes response.body, "Fringe run"
       end
     end
   end

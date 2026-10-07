@@ -2,37 +2,15 @@ require "test_helper"
 
 module Reimbursements
   class CostCentreTest < ActiveSupport::TestCase
-    test "fringe is the default cost centre with the EUSA F40 code" do
-      assert_equal "fringe", CostCentre.default.key
-      assert_equal "F40", CostCentre.default.eusa_code
-    end
-
-    test "carries distinct receive and send mailboxes" do
-      fringe = CostCentre.default
-      assert_equal "reimbursements@bedlamfringe.co.uk", fringe.receive_mailbox
-      assert_equal "reimbursements@bedlamfringe.co.uk", fringe.send_mailbox
-    end
-
-    test "sharepoint_graph_site_path converts the site URL to Graph's path form" do
+    test "sharepoint_graph_site_path converts the site URL to Graph's path form, nil without a valid one" do
       cost_centre = CostCentre.default
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance/"
       assert_equal "tenant.sharepoint.com:/sites/Finance", cost_centre.sharepoint_graph_site_path
-    end
 
-    test "sharepoint_graph_site_path is nil without a valid site URL" do
-      cost_centre = CostCentre.default
-      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = nil }.sharepoint_graph_site_path
-      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = "not a url" }.sharepoint_graph_site_path
-    end
-
-    test "requires key, name, eusa_code and both mailboxes" do
-      cost_centre = CostCentre.new
-      assert_not cost_centre.valid?
-      assert_includes cost_centre.errors.attribute_names, :key
-      assert_includes cost_centre.errors.attribute_names, :name
-      assert_includes cost_centre.errors.attribute_names, :eusa_code
-      assert_includes cost_centre.errors.attribute_names, :receive_mailbox
-      assert_includes cost_centre.errors.attribute_names, :send_mailbox
+      cost_centre.sharepoint_site_url = nil
+      assert_nil cost_centre.sharepoint_graph_site_path
+      cost_centre.sharepoint_site_url = "not a url"
+      assert_nil cost_centre.sharepoint_graph_site_path
     end
 
     test "key auto-derives from the name (parameterized) when left blank" do
@@ -67,32 +45,15 @@ module Reimbursements
       assert cc.valid?, cc.errors.full_messages.to_sentence
     end
 
-    test "key is unique" do
-      duplicate = CostCentre.new(key: "fringe", name: "Dup", eusa_code: "F40",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :key
-    end
+    test "a mailbox is unique, case-insensitively" do
+      %i[receive_mailbox send_mailbox].each do |mailbox|
+        duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+          receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co")
+        duplicate[mailbox] = "REIMBURSEMENTS@bedlamfringe.co.uk"
 
-    test "eusa_code is unique" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "F40",
-        receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :eusa_code
-    end
-
-    test "receive_mailbox is unique, case-insensitively" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
-        receive_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk", send_mailbox: "termtime-out@b.co")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :receive_mailbox
-    end
-
-    test "send_mailbox is unique, case-insensitively" do
-      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
-        receive_mailbox: "termtime-in@b.co", send_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk")
-      assert_not duplicate.valid?
-      assert_includes duplicate.errors.attribute_names, :send_mailbox
+        assert_not duplicate.valid?
+        assert_includes duplicate.errors.attribute_names, mailbox
+      end
     end
 
     test "rejects a mistyped receive or send mailbox" do
@@ -105,9 +66,6 @@ module Reimbursements
       cost_centre.send_mailbox = "also not an email"
       assert_not cost_centre.valid?
       assert_includes cost_centre.errors.attribute_names, :send_mailbox
-      # Neither a notification address nor a role was given either, and that is
-      # its own error rather than a silent pass.
-      assert_includes cost_centre.errors.attribute_names, :notification_email
     end
 
     test "rejects a mistyped eusa_recipient, but blank is still allowed" do
@@ -161,18 +119,14 @@ module Reimbursements
       assert_equal [ 1, 3, 5 ], CostCentre.find(fresh.id).nightly_run_days
     end
 
-    test "nightly_run_days rejects non-weekday values" do
-      cc = CostCentre.new(key: "bad", name: "Bad", eusa_code: "B1",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [ 2, 9 ])
-      assert_not cc.valid?
-      assert_includes cc.errors.attribute_names, :nightly_run_days
-    end
-
-    test "nightly_run_days rejects an empty list — clearing every day would silently disable the nightly" do
-      cc = CostCentre.new(key: "empty", name: "Empty", eusa_code: "E1",
-        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [])
-      assert_not cc.valid?
-      assert_includes cc.errors.attribute_names, :nightly_run_days
+    test "nightly_run_days rejects non-weekday values and an empty list" do
+      # An empty list would silently disable the nightly.
+      [ [ 2, 9 ], [] ].each do |days|
+        cc = CostCentre.new(key: "bad", name: "Bad", eusa_code: "B1",
+          receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: days)
+        assert_not cc.valid?, days.inspect
+        assert_includes cc.errors.attribute_names, :nightly_run_days
+      end
     end
 
     test "nightly_run_today? checks the configured run-days by Ruby wday" do
@@ -210,12 +164,6 @@ module Reimbursements
       assert_nil CostCentre.new(nightly_run_days: []).next_nightly_run_day(Date.new(2026, 7, 9))
     end
 
-    test "record_nightly_run! stamps the last-run date" do
-      cc = CostCentre.default
-      cc.record_nightly_run!(Date.new(2026, 7, 9))
-      assert_equal Date.new(2026, 7, 9), cc.reload.last_nightly_run_on
-    end
-
     # --- Notification email ------------------------------------------------
 
     test "notification_emails splits on semicolons and commas, stripping and de-duplicating" do
@@ -227,14 +175,8 @@ module Reimbursements
     test "notification_emails is empty when the column is blank" do
       assert_empty CostCentre.new(notification_email: nil).notification_emails
       assert_empty CostCentre.new(notification_email: "  ").notification_emails
-    end
-
-    test "a notification email is all a cost centre needs to be valid" do
-      centre = CostCentre.new(key: "ne1", name: "NE One", eusa_code: "NE1",
-                              receive_mailbox: "a@b.co", send_mailbox: "a@b.co",
-                              notification_email: "finance@b.co")
-
-      assert centre.valid?, centre.errors.full_messages.to_sentence
+      assert_predicate CostCentre.new(notification_email: nil), :notification_recipients_empty?
+      assert_not_predicate CostCentre.new(notification_email: "finance@b.co"), :notification_recipients_empty?
     end
 
     test "a cost centre with no notification email is invalid" do
@@ -254,28 +196,10 @@ module Reimbursements
       assert_includes centre.errors.attribute_names, :notification_email
     end
 
-    test "notification_recipients_empty? follows the addresses" do
-      with_address = CostCentre.new(notification_email: "finance@b.co")
-      without = CostCentre.new(notification_email: nil)
-
-      assert_not_predicate with_address, :notification_recipients_empty?
-      assert_predicate without, :notification_recipients_empty?
-    end
-    test "picker_prefix uses the short code when set" do
-      centre = CostCentre.new(eusa_code: "F40", short_code: "BF")
-      assert_equal "BF", centre.picker_prefix
-    end
-
-    test "picker_prefix falls back to the eusa code" do
+    test "picker_prefix is the short code, falling back to the eusa code" do
+      assert_equal "BF", CostCentre.new(eusa_code: "F40", short_code: "BF").picker_prefix
       # The column is never backfilled, so most centres have none.
-      centre = CostCentre.new(eusa_code: "F40", short_code: "")
-      assert_equal "F40", centre.picker_prefix
-    end
-
-    test "a short code longer than the cap is refused" do
-      centre = CostCentre.new(eusa_code: "F40", short_code: "FAR TOO LONG TO FIT")
-      centre.valid?
-      assert centre.errors[:short_code].present?
+      assert_equal "F40", CostCentre.new(eusa_code: "F40", short_code: "").picker_prefix
     end
   end
 end

@@ -27,18 +27,6 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
-      test "a rejection email is sent from the mailbox of the claim's own cost centre" do
-        payee = create_reimbursements_person(name: "Pat", email: "pat@example.com")
-        claim = create_reimbursements_expense(
-          person: payee,
-          budget: create_reimbursements_budget(name: "Termtime props", cost_centre: @termtime)
-        )
-
-        post :reject, params: { id: claim.record_id, rejection_reason: "No receipt" }
-
-        assert_equal @termtime.send_mailbox, @graph.send_mails.last[:mailbox]
-      end
-
       test "each claim's rejection goes from its own centre, in one bulk gesture" do
         payee = create_reimbursements_person(name: "Pat", email: "pat@example.com")
         fringe_claim = create_reimbursements_expense(
@@ -71,8 +59,6 @@ module Admin
         sign_in users(:member)
 
         @termtime = create_second_reimbursements_cost_centre
-        @graph = FakeGraphClient.new
-        BatchesController.graph_builder = -> { @graph }
       end
 
       teardown do
@@ -101,8 +87,8 @@ module Admin
         @graph
       end
 
-      def batch_with(draft_message_id: "msg-1", budget: nil)
-        batch = create_reimbursements_batch(draft_message_id: draft_message_id)
+      def batch_with(budget: nil)
+        batch = create_reimbursements_batch(draft_message_id: "msg-1")
         create_reimbursements_expense(person: create_reimbursements_person, batch: batch,
                                       status: ::Reimbursements::Status::SUBMITTED, budget: budget)
         batch

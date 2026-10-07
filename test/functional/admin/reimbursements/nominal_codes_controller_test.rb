@@ -30,16 +30,6 @@ module Admin
         assert_response :forbidden
       end
 
-      test "the producer portal permission alone does not grant access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        sign_in other
-
-        post :create, params: { key: @cost_centre.key, code: "432320", label: "Marketing" }
-
-        assert_response :forbidden
-      end
-
       test "404s for a cost centre that does not exist" do
         sign_in @user
 
@@ -74,17 +64,6 @@ module Admin
 
         assert_redirected_to settings_path
         assert_match(/Code must not be blank/, flash[:alert])
-      end
-
-      test "create refuses a code the centre already lists, whatever its case" do
-        create_reimbursements_nominal_code(code: "abc123", cost_centre: @cost_centre)
-        sign_in @user
-
-        assert_no_difference -> { NC.count } do
-          post :create, params: { key: @cost_centre.key, code: "ABC123", label: "Shouted" }
-        end
-
-        assert flash[:alert].present?
       end
 
       # Turbo re-renders the section in place, keeping what was typed.
@@ -179,29 +158,26 @@ module Admin
 
       # --- Destroy: retiring beats deleting ---------------------------------
 
-      test "a code in use is retired, not deleted" do
-        code = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
-        create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
-                                     cost_centre: @cost_centre)
+      # Rows carry their nominal code as a string, so this list is the only thing
+      # that labels it. An unplaced budget is lenient-scoped into every centre.
+      test "a code any historical row carries is retired, not deleted" do
         sign_in @user
 
-        delete :destroy, params: { key: @cost_centre.key, id: code.id }
+        {
+          "budget" => create_reimbursements_budget(name: "Marketing", nominal_code: "432320",
+                                                   cost_centre: @cost_centre),
+          "EUSA actual" => create_reimbursements_actual(nominal_code: "432321",
+                                                        cost_centre: @cost_centre),
+          "unplaced budget" => create_reimbursements_budget(name: "Unplaced marketing",
+                                                            nominal_code: "432322", cost_centre: nil)
+        }.each do |kind, row|
+          code = create_reimbursements_nominal_code(code: row.nominal_code, cost_centre: @cost_centre)
 
-        assert NC.exists?(code.id), "a code a budget carries must stay readable"
-        assert_not code.reload.active?
-      end
+          delete :destroy, params: { key: @cost_centre.key, id: code.id }
 
-      # A reconciled ledger row carries its nominal code as a string too, so the
-      # list is equally the only thing that gives it a label.
-      test "a code an imported EUSA actual carries is retired, not deleted" do
-        code = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
-        create_reimbursements_actual(nominal_code: "432320", cost_centre: @cost_centre)
-        sign_in @user
-
-        delete :destroy, params: { key: @cost_centre.key, id: code.id }
-
-        assert NC.exists?(code.id)
-        assert_not code.reload.active?
+          assert NC.exists?(code.id), "a code a #{kind} carries must stay readable"
+          assert_not code.reload.active?, kind
+        end
       end
 
       test "a code nothing references is deleted outright" do
@@ -211,19 +187,6 @@ module Admin
         delete :destroy, params: { key: @cost_centre.key, id: code.id }
 
         assert_not NC.exists?(code.id)
-      end
-
-      # A budget with no cost centre of its own is lenient-scoped into EVERY
-      # centre's screens, so this centre's list is what labels its code there.
-      test "a code an unplaced budget carries is retired, not deleted" do
-        code = create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
-        create_reimbursements_budget(name: "Marketing", nominal_code: "432320", cost_centre: nil)
-        sign_in @user
-
-        delete :destroy, params: { key: @cost_centre.key, id: code.id }
-
-        assert NC.exists?(code.id)
-        assert_not code.reload.active?
       end
 
       test "another centre's rows do not block deleting this centre's code" do

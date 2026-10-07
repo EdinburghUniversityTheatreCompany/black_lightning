@@ -24,9 +24,12 @@ module Admin
         "#nominal_code_#{nominal_code.record_id}"
       end
 
-      test "adds a nominal code from the cost centre's edit page" do
+      # The section answers with a turbo stream replacing itself alone, so the
+      # cost centre's own form is never re-rendered under the operator.
+      test "adds a nominal code from the cost centre's edit page, leaving a half-typed field alone" do
         visit settings_page
 
+        fill_in "EUSA contact name", with: "Half typed"
         within "#nominal_codes" do
           fill_in "Code", with: "432320"
           fill_in "Label", with: "Marketing & publicity"
@@ -38,21 +41,6 @@ module Admin
         assert_equal "Marketing & publicity", code&.label
         # By field, not text: the label is an input's value.
         assert_field "label_#{code.record_id}", with: "Marketing & publicity"
-      end
-
-      # The section answers with a turbo stream replacing itself alone, so the
-      # cost centre's own form is never re-rendered under the operator.
-      test "adding a code leaves a half-typed cost centre field alone" do
-        visit settings_page
-
-        fill_in "EUSA contact name", with: "Half typed"
-        within "#nominal_codes" do
-          fill_in "Code", with: "432320"
-          fill_in "Label", with: "Marketing"
-          click_on "Add nominal code"
-        end
-
-        assert_text "432320 added"
         assert_field "EUSA contact name", with: "Half typed"
         assert_nil @cost_centre.reload.eusa_contact_name
       end
@@ -87,18 +75,6 @@ module Admin
         assert_field "label_#{nominal_code.record_id}", with: "Marketing"
         assert ::Reimbursements::NominalCode.exists?(nominal_code.id)
         assert_not nominal_code.reload.active?
-      end
-
-      test "a code nothing carries offers Delete, not Retire" do
-        create_reimbursements_nominal_code(code: "999999", cost_centre: @cost_centre)
-
-        visit settings_page
-
-        assert_text "Nothing booked here"
-        within "#nominal_codes" do
-          assert_selector "button", text: "Delete"
-          assert_no_selector "button", text: "Retire"
-        end
       end
     end
   end

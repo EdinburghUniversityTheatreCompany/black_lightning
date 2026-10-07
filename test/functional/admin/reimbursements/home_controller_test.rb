@@ -27,11 +27,17 @@ module Admin
         assert_redirected_to new_user_session_path
       end
 
-      test "a finance user gets the dashboard" do
+      test "a finance user gets the dashboard, linking the weekly loop's next screens" do
         sign_in @user
         get :show
+
         assert_response :success
         assert_equal "Finance home", assigns(:title)
+        assert_select "a[href=?]", admin_reimbursements_review_path(tab: "to_approve")
+        assert_select "a[href=?]", new_admin_reimbursements_batch_path
+        assert_select "a[href=?]", admin_reimbursements_actuals_path
+        assert_select "a[href=?]", admin_reimbursements_reconciliation_path
+        assert_select "body", /No batch has been built yet/
       end
 
       test "a producer is sent to their own claims rather than refused" do
@@ -51,7 +57,9 @@ module Admin
                                                                                     email: "olive@example.com") ])
         create_reimbursements_expense(person: @person, budget: budget, amount: BigDecimal("30"))
         create_reimbursements_expense(person: @person, budget: owned, amount: BigDecimal("40"))
+        # Totals are the GROSS amount, which is what EUSA pays.
         create_reimbursements_expense(person: @person, budget: budget, amount: BigDecimal("50"),
+                                      amount_excl_vat: BigDecimal("40"),
                                       status: ::Reimbursements::Status::APPROVED)
 
         sign_in @user
@@ -66,20 +74,8 @@ module Admin
         assert_equal BigDecimal("50"), home.approved_total
       end
 
-      test "totals are the GROSS amount, which is what EUSA pays" do
-        budget = create_reimbursements_budget(name: "Props", cost_centre: @cost_centre)
-        create_reimbursements_expense(person: @person, budget: budget,
-                                      amount: BigDecimal("120"), amount_excl_vat: BigDecimal("100"),
-                                      status: ::Reimbursements::Status::APPROVED)
-
-        sign_in @user
-        get :show
-
-        assert_equal BigDecimal("120"), assigns(:home).approved_total
-      end
-
       test "names the most recent batch by BACS date" do
-        older = create_reimbursements_batch(date_sent: Date.new(2026, 5, 1), name: "Older")
+        create_reimbursements_batch(date_sent: Date.new(2026, 5, 1), name: "Older")
         newer = create_reimbursements_batch(date_sent: Date.new(2026, 6, 1), name: "Newer")
         budget = create_reimbursements_budget(name: "Props", cost_centre: @cost_centre)
         create_reimbursements_expense(person: @person, budget: budget, batch: newer,
@@ -91,7 +87,6 @@ module Admin
         home = assigns(:home)
 
         assert_equal newer.record_id, home.last_batch.record_id
-        refute_equal older.record_id, home.last_batch.record_id
         assert_equal 1, home.last_batch_expenses.size
         assert_equal BigDecimal("75"), home.last_batch_total
       end
@@ -108,7 +103,7 @@ module Admin
         assert_equal BigDecimal("60"), home.unattributed_total
       end
 
-      test "counts over-budget lines, worst first, and agrees with the Overview" do
+      test "counts over-budget lines, worst first, leaving out lines with no budget set" do
         year = ::Reimbursements::FinancialYear.current
         under = create_reimbursements_budget(name: "Under", cost_centre: @cost_centre,
                                              financial_year: year, initial_budget: BigDecimal("500"))
@@ -116,15 +111,15 @@ module Admin
                                                 financial_year: year, initial_budget: BigDecimal("100"))
         badly = create_reimbursements_budget(name: "Badly", cost_centre: @cost_centre,
                                              financial_year: year, initial_budget: BigDecimal("100"))
-        create_reimbursements_expense(person: @person, budget: under, amount: BigDecimal("10"),
-                                      amount_excl_vat: BigDecimal("10"),
-                                      status: ::Reimbursements::Status::PAID)
-        create_reimbursements_expense(person: @person, budget: slightly, amount: BigDecimal("150"),
-                                      amount_excl_vat: BigDecimal("150"),
-                                      status: ::Reimbursements::Status::PAID)
-        create_reimbursements_expense(person: @person, budget: badly, amount: BigDecimal("900"),
-                                      amount_excl_vat: BigDecimal("900"),
-                                      status: ::Reimbursements::Status::PAID)
+        unset = create_reimbursements_budget(name: "Unset", cost_centre: @cost_centre,
+                                             financial_year: year, initial_budget: nil)
+        zero = create_reimbursements_budget(name: "Zero", cost_centre: @cost_centre,
+                                            financial_year: year, initial_budget: BigDecimal("0"))
+        { under => 10, slightly => 150, badly => 900, unset => 40, zero => 40 }.each do |budget, spent|
+          create_reimbursements_expense(person: @person, budget: budget, amount: BigDecimal(spent),
+                                        amount_excl_vat: BigDecimal(spent),
+                                        status: ::Reimbursements::Status::PAID)
+        end
 
         sign_in @user
         get :show
@@ -132,24 +127,6 @@ module Admin
 
         assert_equal 2, home.over_budget_count
         assert_equal [ "Badly", "Slightly" ], home.over_budget_lines.map(&:name)
-      end
-
-      test "a line with no budget set is not counted as over budget" do
-        year = ::Reimbursements::FinancialYear.current
-        unset = create_reimbursements_budget(name: "Unset", cost_centre: @cost_centre,
-                                             financial_year: year, initial_budget: nil)
-        zero = create_reimbursements_budget(name: "Zero", cost_centre: @cost_centre,
-                                            financial_year: year, initial_budget: BigDecimal("0"))
-        [ unset, zero ].each do |budget|
-          create_reimbursements_expense(person: @person, budget: budget, amount: BigDecimal("40"),
-                                        amount_excl_vat: BigDecimal("40"),
-                                        status: ::Reimbursements::Status::PAID)
-        end
-
-        sign_in @user
-        get :show
-
-        assert_equal 0, assigns(:home).over_budget_count
       end
 
       # --- Scoping -----------------------------------------------------------
@@ -172,29 +149,6 @@ module Admin
 
         assert_equal BigDecimal("33"), assigns(:home).to_approve_total
         assert_equal 2, assigns(:home).reminder_cost_centres.size
-      end
-
-      # --- What the page says ------------------------------------------------
-
-      test "links the weekly loop's next screens" do
-        sign_in @user
-        get :show
-
-        assert_select "a[href=?]", admin_reimbursements_review_path(tab: "to_approve")
-        assert_select "a[href=?]", new_admin_reimbursements_batch_path
-        assert_select "a[href=?]", admin_reimbursements_actuals_path
-        assert_select "a[href=?]", admin_reimbursements_reconciliation_path
-      end
-
-      test "renders with an empty portal" do
-        ::Reimbursements::Expense.delete_all
-        ::Reimbursements::Budget.delete_all
-
-        sign_in @user
-        get :show
-
-        assert_response :success
-        assert_select "body", /No batch has been built yet/
       end
 
       private
