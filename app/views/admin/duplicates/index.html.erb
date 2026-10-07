@@ -99,11 +99,9 @@
 <% end %>
 
 <dialog id="merge-modal-dialog"
-        data-controller="merge-modal"
-        data-action="click->merge-modal#backdropClose"
+        data-controller="modal"
+        data-action="click->modal#backdropClose"
         class="bg-transparent border-0 p-0 w-full max-w-5xl m-auto max-h-screen overflow-y-auto backdrop:bg-black/50">
-  <turbo-frame id="merge-modal"
-               data-merge-modal-target="frame"
-               data-action="turbo:frame-load->merge-modal#frameLoaded">
+  <turbo-frame id="merge-modal" data-action="turbo:frame-load->modal#open">
   </turbo-frame>
 </dialog>
