@@ -1,22 +1,21 @@
 module Reimbursements
   ##
-  # Resolves a user to their payee (People) record: stored link, then email match
-  # (remembered), else creates one. Which users column holds the link is the
-  # STORE's knowledge, so a PersonLink can never pair a store with the wrong one.
+  # Resolves a user to their payee (People) record: the stored link
+  # (users.reimbursements_person_id), then email match (remembered), else creates one.
   class PersonLink
     def initialize(store:)
       @store = store
     end
 
     def person_for(user)
-      stored = @store.stored_person_link(user)
+      stored = user.reimbursements_person_id
       if stored.present?
         person = @store.find_person(stored)
         return person if person
       end
 
       match = @store.person_by_email(user.email)
-      @store.remember_person_link!(user, match) if match
+      remember!(user, match) if match
       match
     end
 
@@ -28,8 +27,13 @@ module Reimbursements
 
     def create_person(user)
       person = @store.create_person!(name: user.full_name.presence || user.email, email: user.email)
-      @store.remember_person_link!(user, person)
+      remember!(user, person)
       person
+    end
+
+    # update_column: a legacy user that no longer validates must still reach the portal.
+    def remember!(user, person)
+      user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

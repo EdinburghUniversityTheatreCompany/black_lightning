@@ -588,17 +588,6 @@ module Reimbursements
       Batch.find_by(draft_message_id: message_id)
     end
 
-    # PersonLink's stored user->payee link: the real FK.
-    def stored_person_link(user)
-      user.reimbursements_person_id&.to_s
-    end
-
-    # update_column skips validations and callbacks so legacy users that no longer validate can
-    # still use the portal.
-    def remember_person_link!(user, person)
-      user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
-    end
-
     def expense_for_source_message(message_id)
       return nil if message_id.blank?
 
