@@ -19,14 +19,6 @@ module Admin
         @sensor = create_climate_sensor(display_name: "Crypt north")
       end
 
-      def grant_backend(user)
-        role = ::Role.find_by(name: "Backend") || ::Role.create!(name: "Backend").tap do |r|
-          r.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
-        end
-        user.add_role("Backend")
-        role
-      end
-
       def upload(text, filename: "export.csv")
         Rack::Test::UploadedFile.new(StringIO.new(text), "text/csv", original_filename: filename)
       end

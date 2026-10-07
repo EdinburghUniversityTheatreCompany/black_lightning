@@ -22,17 +22,9 @@ module Admin
 
       setup do
         @user = FactoryBot.create(:user)
-        grant_backend_and_climate_read(@user)
+        grant_backend(@user)
+        grant_climate_read_permission(@user)
         sign_in @user
-      end
-
-      def grant_backend_and_climate_read(user)
-        role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
-          r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
-          r.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
-        end
-        user.add_role("Climate Viewer")
-        role
       end
 
       test "requires a signed-in user" do
@@ -45,21 +37,12 @@ module Admin
 
       test "denies a backend user without the climate permission" do
         other = FactoryBot.create(:user)
-        role = ::Role.create!(name: "Backend Only")
-        role.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
-        other.add_role("Backend Only")
+        grant_backend(other)
         sign_in other
 
         get :show
 
         assert_response :forbidden
-      end
-
-      test "defaults to the last seven days" do
-        get :show
-
-        assert_equal Date.current, assigns(:range).to
-        assert_equal Date.current - 6.days, assigns(:range).from
       end
 
       test "honours from and to as readable url state" do

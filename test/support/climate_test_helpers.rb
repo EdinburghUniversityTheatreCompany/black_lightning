@@ -23,21 +23,21 @@ module ClimateTestHelpers
     )
   end
 
-  def grant_climate_read_permission(user)
-    role = ::Role.find_by(name: "Climate Viewer") || ::Role.create!(name: "Climate Viewer").tap do |r|
-      r.permissions << Admin::Permission.create(action: "read", subject_class: "climate")
-    end
-    user.add_role("Climate Viewer")
-    role
-  end
+  def grant_climate_read_permission(user) = grant_permission(user, "Climate Viewer", "read", "climate")
 
   # CanCan's :manage matches any action, so this implies :read; tests assert
   # that rather than granting both.
-  def grant_climate_manage_permission(user)
-    role = ::Role.find_by(name: "Climate Manager") || ::Role.create!(name: "Climate Manager").tap do |r|
-      r.permissions << Admin::Permission.create(action: "manage", subject_class: "climate")
+  def grant_climate_manage_permission(user) = grant_permission(user, "Climate Manager", "manage", "climate")
+
+  def grant_backend(user) = grant_permission(user, "Backend", "access", "backend")
+
+  private
+
+  def grant_permission(user, role_name, action, subject)
+    role = ::Role.find_by(name: role_name) || ::Role.create!(name: role_name).tap do |r|
+      r.permissions << Admin::Permission.create(action: action, subject_class: subject)
     end
-    user.add_role("Climate Manager")
+    user.add_role(role_name)
     role
   end
 end

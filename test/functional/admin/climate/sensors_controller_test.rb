@@ -14,14 +14,6 @@ module Admin
         sign_in @user
       end
 
-      def grant_backend(user)
-        role = ::Role.find_by(name: "Backend") || ::Role.create!(name: "Backend").tap do |r|
-          r.permissions << Admin::Permission.create(action: "access", subject_class: "backend")
-        end
-        user.add_role("Backend")
-        role
-      end
-
       def sign_in_read_only
         viewer = FactoryBot.create(:user)
         grant_backend(viewer)
