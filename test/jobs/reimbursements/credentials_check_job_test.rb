@@ -12,13 +12,10 @@ module Reimbursements
       ENV.delete("REIMBURSEMENTS_ALERT_EMAIL")
     end
 
-    test "does nothing when no expiry date is configured" do
+    test "does nothing without an expiry date or with one far in the future" do
       assert_no_emails { CredentialsCheckJob.perform_now }
-    end
 
-    test "does nothing when the secret expires far in the future" do
       ENV["REIMBURSEMENTS_AZURE_SECRET_EXPIRES_ON"] = 90.days.from_now.to_date.iso8601
-
       assert_no_emails { CredentialsCheckJob.perform_now }
     end
 

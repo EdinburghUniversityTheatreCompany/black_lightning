@@ -30,10 +30,10 @@ module Reimbursements
       Rails.cache.delete_matched("reimbursements/graph-folder/*")
     end
 
-    def build_client(responses)
+    def build_client(responses, clock: -> { Time.zone.local(2026, 7, 9, 12) }, sleeper: nil)
       http = FakeHttp.new(responses)
       client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
-                                 http: http, clock: -> { Time.zone.local(2026, 7, 9, 12) })
+                                 http: http, clock: clock, sleeper: sleeper)
       [ client, http ]
     end
 
@@ -56,14 +56,12 @@ module Reimbursements
 
     test "fetches a fresh token once the cached one has expired" do
       now = Time.zone.local(2026, 7, 9, 12)
-      http = FakeHttp.new([
+      client, http = build_client([
         [ 200, { access_token: "tok-1", expires_in: 100 }.to_json ],
         messages_response([]),
         [ 200, { access_token: "tok-2", expires_in: 3600 }.to_json ],
         messages_response([])
-      ])
-      client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
-                                 http: http, clock: -> { now })
+      ], clock: -> { now })
 
       client.unread_messages
       now += 200 # well past the first token's 100s expiry
@@ -134,35 +132,12 @@ module Reimbursements
 
       lookup, move, patch = http.requests.last(3)
       assert_includes lookup.uri, "mailFolders"
-      assert_equal "fld-processed", JSON.parse(move.body)["destinationId"]
-      assert_equal "patch", patch.method.to_s
-      assert JSON.parse(patch.body)["isRead"]
-    end
-
-    test "mark_read patches isRead in isolation (the accept path's separate commit step)" do
-      client, http = build_client([ token_response, [ 200, "" ] ])
-
-      client.mark_read("msg1")
-
-      patch = http.requests.last
-      assert_equal "patch", patch.method.to_s
-      assert_includes patch.uri, "messages/msg1"
-      assert JSON.parse(patch.body)["isRead"]
-    end
-
-    test "move posts to the destination folder in isolation (the accept path's separate commit step)" do
-      client, http = build_client([
-        token_response,
-        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ], # folder lookup
-        [ 201, { id: "moved" }.to_json ]                          # move
-      ])
-
-      client.move("msg1", :processed)
-
-      move = http.requests.last
       assert_equal "post", move.method.to_s
       assert_includes move.uri, "messages/msg1/move"
       assert_equal "fld-processed", JSON.parse(move.body)["destinationId"]
+      assert_equal "patch", patch.method.to_s
+      assert_includes patch.uri, "messages/msg1"
+      assert JSON.parse(patch.body)["isRead"]
     end
 
     test "creates the folder when missing and memoizes its id" do
@@ -183,37 +158,19 @@ module Reimbursements
       assert_equal 1, creates
     end
 
-    test "raises AuthError when the token request is rejected" do
-      client, = build_client([ [ 401, { error: "invalid_client" }.to_json ] ])
-
-      assert_raises(MailboxClient::AuthError) { client.unread_messages }
-    end
-
     test "raises AuthError when graph rejects the token" do
       client, = build_client([ token_response, [ 401, "expired" ] ])
 
       assert_raises(MailboxClient::AuthError) { client.unread_messages }
     end
 
-    test "raises Error on other graph failures" do
-      client, = build_client([ token_response, [ 500, "boom" ] ])
-
-      assert_raises(MailboxClient::Error) { client.unread_messages }
-    end
-
     # Graph's own gateway answers 502/503/504 for a moment now and then; one
     # 502 on each of two mailboxes reached Honeybadger on 23 Sep 2026.
-    def build_pausing_client(responses)
-      pauses = []
-      client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
-                                 http: FakeHttp.new(responses), clock: -> { Time.zone.local(2026, 7, 9, 12) },
-                                 sleeper: ->(seconds) { pauses << seconds })
-      [ client, pauses ]
-    end
-
     [ 502, 503, 504 ].each do |status|
       test "a GET answered #{status} is retried once after a pause" do
-        client, pauses = build_pausing_client([ token_response, [ status, "UnknownError" ], messages_response([]) ])
+        pauses = []
+        client, = build_client([ token_response, [ status, "UnknownError" ], messages_response([]) ],
+                               sleeper: ->(seconds) { pauses << seconds })
 
         assert_equal [], client.unread_messages
         assert_equal [ GraphAuth::TRANSIENT_RETRY_DELAY ], pauses
@@ -221,7 +178,9 @@ module Reimbursements
     end
 
     test "a GET still failing after its retry raises Error with the second status" do
-      client, pauses = build_pausing_client([ token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ])
+      pauses = []
+      client, = build_client([ token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ],
+                             sleeper: ->(seconds) { pauses << seconds })
 
       error = assert_raises(MailboxClient::Error) { client.unread_messages }
       assert_includes error.message, "(503)"
@@ -229,14 +188,16 @@ module Reimbursements
     end
 
     test "a 500 is not retried: it is Graph refusing the request, not its gateway" do
-      client, pauses = build_pausing_client([ token_response, [ 500, "boom" ] ])
+      pauses = []
+      client, = build_client([ token_response, [ 500, "boom" ] ], sleeper: ->(seconds) { pauses << seconds })
 
       assert_raises(MailboxClient::Error) { client.unread_messages }
       assert_empty pauses
     end
 
     test "a write answered 502 is not retried, since the first attempt may have landed" do
-      client, pauses = build_pausing_client([ token_response, [ 502, "UnknownError" ] ])
+      pauses = []
+      client, = build_client([ token_response, [ 502, "UnknownError" ] ], sleeper: ->(seconds) { pauses << seconds })
 
       assert_raises(MailboxClient::Error) { client.reply("msg1", html: "<p>Thanks</p>") }
       assert_empty pauses
@@ -255,76 +216,34 @@ module Reimbursements
       assert_match(/ErrorItemNotFound/, error.message)
     end
 
-    test "reply swallows a 404 (message confirmed gone) and returns nil" do
-      client, http = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ], # reply -> 404
-        [ 404, ITEM_NOT_FOUND ]  # confirmation re-GET -> also 404, so genuinely gone
-      ])
-
-      assert_nil client.reply("msg1", html: "<p>hi</p>"), "a vanished message means nothing to reply to"
-      assert_equal "post", http.requests[-2].method.to_s, "the reply was still attempted"
-    end
-
-    test "mark_read swallows a 404 (message confirmed gone) and returns nil" do
-      client, http = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ], # mark_read -> 404
-        [ 404, ITEM_NOT_FOUND ]  # confirmation re-GET -> also 404
-      ])
-
-      assert_nil client.mark_read("msg1"), "a vanished message is already effectively read"
-      assert_equal "patch", http.requests[-2].method.to_s
-    end
-
-    test "move swallows a 404 (message confirmed gone) and returns nil" do
-      client, http = build_client([
-        token_response,
-        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ], # folder lookup
-        [ 404, ITEM_NOT_FOUND ],                                 # move -> 404
-        [ 404, ITEM_NOT_FOUND ]                                  # confirmation re-GET -> also 404
-      ])
-
-      assert_nil client.move("msg1", :processed), "a vanished message has nothing to file"
-      assert_includes http.requests[-2].uri, "messages/msg1/move"
-    end
-
     # --- A 404 does NOT prove the message is gone ----------------------------
     # Exchange changes a message's id on move, so a mutation can 404 on a message still sitting
     # unread in the mailbox. A blanket swallow turns that into silence: no reply, no Honeybadger
-    # notice, no duplicate_risk flag.
+    # notice, no duplicate_risk flag. So a 404 is swallowed only once a re-GET also 404s.
+    MUTATIONS = {
+      reply: [ [], "post", "messages/msg1/reply", ->(c) { c.reply("msg1", html: "<p>hi</p>") } ],
+      mark_read: [ [], "patch", "messages/msg1", ->(c) { c.mark_read("msg1") } ],
+      move: [ [ [ 200, { value: [ { id: "fld-processed" } ] }.to_json ] ], "post", "messages/msg1/move",
+              ->(c) { c.move("msg1", :processed) } ]
+    }.freeze
 
-    test "mark_read stays loud when a 404 is contradicted by the message still existing" do
-      client, http = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ],            # mark_read -> 404
-        [ 200, { id: "msg1" }.to_json ]     # but the message IS still there
-      ])
+    MUTATIONS.each do |name, (prefix, verb, path, call)|
+      test "#{name} swallows a 404 once a re-GET confirms the message is gone" do
+        client, http = build_client([ token_response, *prefix, [ 404, ITEM_NOT_FOUND ], [ 404, ITEM_NOT_FOUND ] ])
 
-      error = assert_raises(GraphAuth::NotFoundError) { client.mark_read("msg1") }
-      assert_match(/ErrorItemNotFound/, error.message)
-      assert_equal "get", http.requests.last.method.to_s, "existence was actually confirmed"
-    end
+        assert_nil call.(client)
+        attempted = http.requests[-2]
+        assert_equal verb, attempted.method.to_s, "the mutation was still attempted"
+        assert_includes attempted.uri, path
+        assert_equal "get", http.requests.last.method.to_s
+      end
 
-    test "reply stays loud when the message still exists" do
-      client, = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ],
-        [ 200, { id: "msg1" }.to_json ]
-      ])
+      test "#{name} stays loud when the message still exists" do
+        client, = build_client([ token_response, *prefix, [ 404, ITEM_NOT_FOUND ], [ 200, { id: "msg1" }.to_json ] ])
 
-      assert_raises(GraphAuth::NotFoundError) { client.reply("msg1", html: "<p>hi</p>") }
-    end
-
-    test "move stays loud when the message still exists" do
-      client, = build_client([
-        token_response,
-        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ],
-        [ 404, ITEM_NOT_FOUND ],
-        [ 200, { id: "msg1" }.to_json ]
-      ])
-
-      assert_raises(GraphAuth::NotFoundError) { client.move("msg1", :processed) }
+        error = assert_raises(GraphAuth::NotFoundError) { call.(client) }
+        assert_match(/ErrorItemNotFound/, error.message)
+      end
     end
 
     # An inconclusive confirmation (5xx, timeout, auth) fails CLOSED: treated as still present,

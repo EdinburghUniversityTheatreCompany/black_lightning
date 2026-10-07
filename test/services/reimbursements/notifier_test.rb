@@ -31,6 +31,10 @@ module Reimbursements
       assert_match "Receipt is missing the VAT breakdown.", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "Props", mail[:html]
+      assert_match(/\A<!DOCTYPE html>/, mail[:html], "a complete document, not a bare fragment")
+      assert_includes mail[:html], "<html"
+      assert_includes mail[:html], '<meta charset="utf-8">'
+      assert_includes mail[:html], "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
     end
 
     test "producer_notification lists the payee's expenses and totals" do
@@ -127,20 +131,6 @@ module Reimbursements
 
       assert_includes graph.send_mails.sole[:subject], "9 July 2026"
       assert_not_includes graph.send_mails.sole[:subject], "2026-07-11"
-    end
-
-    test "the rendered email is a complete HTML document, not a bare fragment" do
-      notifier, graph = build
-
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7,
-                         amount: 12.5, budget_name: "Props", description: "Fake blood",
-                         reason: "Missing VAT breakdown.")
-
-      html = graph.send_mails.sole[:html]
-      assert_match(/\A<!DOCTYPE html>/, html)
-      assert_includes html, "<html"
-      assert_includes html, '<meta charset="utf-8">'
-      assert_includes html, "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
     end
 
     # No subject or sign-off may hardcode "Bedlam Fringe": a termtime claimant must never be

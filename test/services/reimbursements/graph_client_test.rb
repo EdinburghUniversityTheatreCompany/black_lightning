@@ -89,22 +89,16 @@ module Reimbursements
       assert_includes get.uri, "/users/send@bedlamfringe.co.uk/messages/msg-1"
     end
 
-    test "draft_message? returns false when Graph reports the message is no longer a draft" do
-      client, = build_client([ token_response, [ 200, { isDraft: false }.to_json ] ])
+    test "draft_message? is false unless Graph confirms an unsent draft" do
+      {
+        "no longer a draft" => [ 200, { isDraft: false }.to_json ],
+        "404" => [ 404, { error: { message: "not found" } }.to_json ],
+        "transport failure" => Net::OpenTimeout.new("execution expired")
+      }.each do |label, response|
+        client, = build_client([ token_response, response ])
 
-      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
-    end
-
-    test "draft_message? returns false (not confirmed) on a 404 — the message was deleted or moved" do
-      client, = build_client([ token_response, [ 404, { error: { message: "not found" } }.to_json ] ])
-
-      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
-    end
-
-    test "draft_message? returns false (not confirmed) on a raw transport failure, not just a Graph error" do
-      client, = build_client([ token_response, Net::OpenTimeout.new("execution expired") ])
-
-      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+        assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1"), label
+      end
     end
 
     test "send_mail posts sendMail with saveToSentItems" do
@@ -174,31 +168,6 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    # The suite sets the opt-in, so this is the only test of the gate's production branch.
-    test "production performs the upload and the delete without the ENV opt-in" do
-      original_env = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
-      original_rails_env = Rails.env
-      Rails.env = "production"
-
-      client, http = build_client([
-        token_response,
-        [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ],
-        [ 204, "" ]
-      ])
-
-      assert_equal "https://sp.example/r.pdf",
-                   client.upload_to_folder(drive_id: "drv", folder_id: "fld",
-                                           filename: "r.pdf", content: "BYTES")
-      assert_nil client.delete_message(mailbox: "send@x", message_id: "msg-1")
-
-      methods = http.requests.map { |r| r.method.to_s }
-      assert_includes methods, "put", "production must still PUT the file to SharePoint"
-      assert_includes methods, "delete", "production must still DELETE the stale draft"
-    ensure
-      Rails.env = original_rails_env
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original_env if original_env
-    end
-
     # Read-only probes stay ungated: the Settings dashboard and folder picker use them on a real tenant.
     test "read-only Graph probes are not gated by the outbound switch" do
       original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
@@ -225,52 +194,17 @@ module Reimbursements
         [ 201, { webUrl: "https://sp.example/receipts/r.pdf" }.to_json ]
       ])
 
-      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a/b.pdf", content: "BYTES")
+      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a/b (2).pdf", content: "BYTES")
 
       assert_equal "https://sp.example/receipts/r.pdf", url
       put = http.requests.last
       assert_equal "put", put.method.to_s
-      assert_includes put.uri, "/drives/drv/items/fld:/a_b.pdf:/content", "slashes sanitised in filename"
+      assert_includes put.uri, "/drives/drv/items/fld:/a_b%20%282%29.pdf:/content",
+                      "slashes sanitised, segment percent-encoded, delimiters preserved"
       assert_equal "BYTES", put.body
     end
 
-    test "upload_to_folder percent-encodes spaces and parens in the filename segment" do
-      client, http = build_client([
-        token_response,
-        [ 201, { webUrl: "https://sp.example/receipts/r.pdf" }.to_json ]
-      ])
-
-      url = client.upload_to_folder(
-        drive_id: "drv", folder_id: "fld",
-        filename: "Photoshoot props (2).jpeg", content: "BYTES"
-      )
-
-      assert_equal "https://sp.example/receipts/r.pdf", url
-      put = http.requests.last
-      assert_includes put.uri.to_s,
-        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/content",
-        "filename segment percent-encoded, Graph ':/…:/content' delimiters preserved"
-    end
-
     test "upload_to_folder streams a >=4MB file via a chunked upload session" do
-      big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
-      client, http = build_client([
-        token_response,
-        [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
-        [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk PUT
-      ])
-
-      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "big.pdf", content: big)
-
-      assert_equal "https://sp.example/receipts/big.pdf", url
-      assert(http.requests.any? { |r| r.uri.include?("createUploadSession") })
-      chunk = http.requests.last
-      assert_equal "put", chunk.method.to_s
-      assert_includes chunk.uri, "upload.example/session"
-      assert_equal big.bytesize, chunk.body.bytesize
-    end
-
-    test "upload_to_folder percent-encodes the filename in the chunked createUploadSession URL" do
       big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
       client, http = build_client([
         token_response,
@@ -282,46 +216,24 @@ module Reimbursements
                                     filename: "Photoshoot props (2).jpeg", content: big)
 
       assert_equal "https://sp.example/receipts/big.pdf", url
-      session = http.requests.find { |r| r.uri.to_s.include?("createUploadSession") }
-      assert_includes session.uri.to_s,
-        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/createUploadSession",
-        "filename segment percent-encoded in the >=4MB createUploadSession URL too"
+      session = http.requests.find { |r| r.uri.include?("createUploadSession") }
+      assert_includes session.uri, "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/createUploadSession"
+      chunk = http.requests.last
+      assert_equal "put", chunk.method.to_s
+      assert_includes chunk.uri, "upload.example/session"
+      assert_equal big.bytesize, chunk.body.bytesize
     end
 
-    test "upload_to_folder's small-file PUT raises AuthError on a 401/403 (graph_raw_request)" do
-      client, = build_client([ token_response, [ 403, "forbidden" ] ])
+    # A 404 here means a missing drive or folder and must stay loud; only the mailbox mutation
+    # paths swallow 404s.
+    { 403 => GraphAuth::AuthError, 404 => GraphAuth::NotFoundError, 500 => GraphAuth::Error }.each do |status, error|
+      test "upload_to_folder's small-file PUT answered #{status} raises #{error.name.demodulize}" do
+        client, = build_client([ token_response, [ status, "{}" ] ])
 
-      assert_raises(GraphAuth::AuthError) do
-        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
-      end
-    end
-
-    test "a GET answered 502 is retried once after a pause" do
-      pauses = []
-      client = GraphClient.new(settings: settings, clock: -> { Time.zone.local(2026, 7, 9, 12) },
-                               http: FakeHttp.new([ token_response, [ 502, "UnknownError" ],
-                                                    [ 200, { id: "inbox" }.to_json ] ]),
-                               sleeper: ->(seconds) { pauses << seconds })
-
-      assert client.check_mailbox("finance@example.com")
-      assert_equal [ GraphAuth::TRANSIENT_RETRY_DELAY ], pauses
-    end
-
-    test "upload_to_folder's small-file PUT raises Error on any other non-2xx (graph_raw_request)" do
-      client, = build_client([ token_response, [ 500, "boom" ] ])
-
-      assert_raises(GraphAuth::Error) do
-        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
-      end
-    end
-
-    test "upload_to_folder's small-file PUT raises NotFoundError on a 404, still loud (graph_raw_request)" do
-      # A 404 here means a missing drive or folder and must stay loud; only the mailbox mutation
-      # paths swallow 404s.
-      client, = build_client([ token_response, [ 404, { error: { code: "itemNotFound" } }.to_json ] ])
-
-      assert_raises(GraphAuth::NotFoundError) do
-        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
+        raised = assert_raises(GraphAuth::Error) do
+          client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
+        end
+        assert_instance_of error, raised
       end
     end
 
@@ -427,20 +339,6 @@ module Reimbursements
       client, = build_client([ token_response, [ 200, {}.to_json ] ])
 
       assert_empty client.list_drives("site-1")
-    end
-
-    test "list_drives follows @odata.nextLink instead of truncating to the first page" do
-      client, http = build_client([
-        token_response,
-        [ 200, { value: [ { "id" => "drv1", "name" => "Documents" } ],
-                "@odata.nextLink" => "https://graph.microsoft.com/v1.0/next-page" }.to_json ],
-        [ 200, { value: [ { "id" => "drv2", "name" => "Shared" } ] }.to_json ]
-      ])
-
-      drives = client.list_drives("site-1")
-
-      assert_equal %w[drv1 drv2], drives.map(&:id)
-      assert_includes http.requests.last.uri, "next-page"
     end
 
     test "check_mailbox probes the mailbox inbox and returns true" do

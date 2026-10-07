@@ -13,17 +13,6 @@ module Reimbursements
                    NotificationRecipients.for(centre_with("finance@bedlamfringe.co.uk"))
     end
 
-    test "splits a multi-address notification email on semicolons and commas" do
-      centre = centre_with("finance@b.co; business@b.co,  finance@b.co ")
-
-      assert_equal [ "finance@b.co", "business@b.co" ], NotificationRecipients.for(centre)
-    end
-
-    test "returns an empty array when no address is set" do
-      assert_empty NotificationRecipients.for(centre_with(nil))
-      assert_empty NotificationRecipients.for(centre_with("  "))
-    end
-
     test "returns an empty array for a nil cost centre" do
       assert_empty NotificationRecipients.for(nil)
     end

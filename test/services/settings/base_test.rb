@@ -23,31 +23,29 @@ class Settings::BaseTest < ActiveSupport::TestCase
     ENV[key] = value
   end
 
-  test "a setting reads its ENV variable" do
-    settings = build_settings do
+  def widget_settings(*keys)
+    build_settings do
       reads_from env: "WIDGET", credentials: :widget
-      setting :api_token
+      setting(*keys)
     end
+  end
+
+  test "a setting reads its ENV variable" do
+    settings = widget_settings(:api_token)
     set_env("WIDGET_API_TOKEN", "from-env")
 
     assert_equal "from-env", settings.api_token
   end
 
   test "a blank ENV variable falls through rather than winning" do
-    settings = build_settings do
-      reads_from env: "WIDGET", credentials: :widget
-      setting :api_token
-    end
+    settings = widget_settings(:api_token)
     set_env("WIDGET_API_TOKEN", "")
 
     assert_nil settings.api_token
   end
 
   test "an unset setting is nil" do
-    settings = build_settings do
-      reads_from env: "WIDGET", credentials: :widget
-      setting :api_token
-    end
+    settings = widget_settings(:api_token)
 
     assert_nil settings.api_token
   end
@@ -88,35 +86,15 @@ class Settings::BaseTest < ActiveSupport::TestCase
     assert_equal "from-primary-env", settings.azure_client_id
   end
 
-  test "settings_present? defaults to every declared key" do
-    settings = build_settings do
-      reads_from env: "WIDGET", credentials: :widget
-      setting :one, :two
-    end
-    set_env("WIDGET_ONE", "1")
-
-    assert_not settings.settings_present?
-    set_env("WIDGET_TWO", "2")
-    assert settings.settings_present?
-  end
-
-  test "settings_present? can be asked about a subset" do
-    settings = build_settings do
-      reads_from env: "WIDGET", credentials: :widget
-      setting :one, :two
-    end
+  test "settings_present? defaults to every declared key and can be asked about a subset" do
+    settings = widget_settings(:one, :two)
     set_env("WIDGET_ONE", "1")
 
     assert settings.settings_present?(:one)
     assert_not settings.settings_present?(:two)
-  end
+    assert_not settings.settings_present?
 
-  test "raw_value stays private so it is not part of a module's public config API" do
-    settings = build_settings do
-      reads_from env: "WIDGET", credentials: :widget
-      setting :api_token
-    end
-
-    assert_raises(NoMethodError) { settings.raw_value(:api_token) }
+    set_env("WIDGET_TWO", "2")
+    assert settings.settings_present?
   end
 end

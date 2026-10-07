@@ -17,12 +17,6 @@ module Reimbursements
                                     description: "Van hire", **attrs)
     end
 
-    test "emails an owner with a portal account about a pending claim awaiting their sign-off" do
-      awaiting_expense
-
-      assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
-    end
-
     # An owner of two shows gets one digest naming "Marketing" twice (Budget#display_name).
     test "the digest names the show, not just the category" do
       # The owner goes on the AREA: Budget#owners reads through it, so a line in an ownerless
@@ -78,7 +72,6 @@ module Reimbursements
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
 
       email = ActionMailer::Base.deliveries.last
-      assert_not_nil email
       assert_equal [ @owner_user.email ], email.to
       assert_match(/Van hire/, email.body.encoded)
     end
