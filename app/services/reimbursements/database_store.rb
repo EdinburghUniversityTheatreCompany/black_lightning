@@ -647,7 +647,6 @@ module Reimbursements
     def bust_expenses!
       @expenses = nil
     end
-    alias refresh_expenses! bust_expenses!
 
     # --- EUSA Actuals (reconciliation) ------------------------------------
 

@@ -7,11 +7,6 @@ module Admin
       rescue_from ExpenseNoLongerEditable, with: :expense_no_longer_editable
 
       def index
-        if params[:refresh].present?
-          store.refresh_expenses!
-          redirect_to admin_reimbursements_expenses_path and return
-        end
-
         @title = "My Claims"
         @expenses = current_person ? store.expenses_for(current_person.record_id) : []
       end

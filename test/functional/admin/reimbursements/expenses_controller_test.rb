@@ -46,14 +46,6 @@ module Admin
       assert_includes response.body, "add your payment details"
     end
 
-    test "refresh redirects to a clean url" do
-      sign_in @user
-
-      get :index, params: { refresh: 1 }
-
-      assert_redirected_to admin_reimbursements_expenses_path
-    end
-
     test "shows an empty state for users with no expenses" do
       other = users(:member_with_phone_number)
       sign_in other
