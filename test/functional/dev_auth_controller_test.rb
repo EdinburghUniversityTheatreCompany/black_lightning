@@ -22,14 +22,11 @@ class DevAuthControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/admin/shows"
   end
 
-  test "rejects invalid token" do
-    get dev_auth_login_path, params: { token: "wrong" }
-    assert_response :unauthorized
-  end
-
-  test "rejects missing token" do
-    get dev_auth_login_path
-    assert_response :unauthorized
+  test "rejects a wrong or missing token" do
+    [ { token: "wrong" }, {} ].each do |params|
+      get dev_auth_login_path, params: params
+      assert_response :unauthorized
+    end
   end
 
   test "returns 404 when dev user missing" do

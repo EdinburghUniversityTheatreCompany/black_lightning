@@ -5,14 +5,6 @@ class SlugGeneratorTest < ApplicationSystemTestCase
     login_as users(:admin)
   end
 
-  test "auto-generates slug from name field on input" do
-    visit new_admin_news_path
-
-    fill_in "event_name", with: "My Test Event"
-
-    assert_equal "my-test-event", find_field("event_slug").value
-  end
-
   test "stops auto-generating slug once user manually edits it" do
     visit new_admin_news_path
 

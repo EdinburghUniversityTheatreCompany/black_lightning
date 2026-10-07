@@ -4,7 +4,7 @@ class NavigationHelperTest < ActionView::TestCase
   include ReimbursementsTestHelpers
 
   def current_ability
-    @current_user.ability
+    @current_ability ||= Ability.new(@current_user)
   end
 
   # ActionView::TestCase skips CanCanCan's Railtie, so delegate can?/cannot? as User does.
@@ -35,7 +35,6 @@ class NavigationHelperTest < ActionView::TestCase
 
   test "every finance-gated link appears with the finance permission" do
     grant_finance_permission(@current_user)
-    @current_user.instance_variable_set(:@ability, nil) # ability is memoized; force a rebuild
 
     gated_titles = [ "Finance home", "Review claims", "All claims", "Build batch", "Batches", "Budgets",
                      "Overview", "Areas", "Forecast revisions", "Reconcile", "Ledger",
@@ -50,7 +49,6 @@ class NavigationHelperTest < ActionView::TestCase
   # Every link below Finance home needs a group, or it renders under whichever heading precedes it.
   test "the finance links are grouped by the job they belong to, weekly work first" do
     grant_finance_permission(@current_user)
-    @current_user.instance_variable_set(:@ability, nil)
 
     children = finance_category[:children]
 
@@ -67,7 +65,6 @@ class NavigationHelperTest < ActionView::TestCase
   # The namespace root is a prefix of every finance path, so it needs exact: true.
   test "Finance home matches its own page only" do
     grant_finance_permission(@current_user)
-    @current_user.instance_variable_set(:@ability, nil)
 
     home = finance_category[:children].find { |child| child[:title] == "Finance home" }
 
@@ -77,7 +74,6 @@ class NavigationHelperTest < ActionView::TestCase
 
   test "the producer portal permission alone does not reveal the finance-gated links" do
     grant_producer_permission(@current_user)
-    @current_user.instance_variable_set(:@ability, nil)
 
     assert_nil finance_category
 

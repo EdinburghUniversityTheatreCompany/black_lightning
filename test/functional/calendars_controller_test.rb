@@ -13,23 +13,18 @@ class CalendarsControllerTest < ActionController::TestCase
     @job = FactoryBot.create(:staffing_job, staffable: future_staffing, user: @user)
   end
 
-  test "returns 200 with text/calendar content type for valid token" do
+  test "returns a text/calendar feed with a UID for each upcoming job for a valid token" do
     get :staffing, params: { token: @user.calendar_token }
 
     assert_response :success
     assert_equal "text/calendar", response.media_type
+    assert_includes response.body, "staffing-job-#{@job.id}@bedlamtheatre.co.uk"
   end
 
   test "returns 404 for unknown token" do
     get :staffing, params: { token: "notarealtoken" }
 
     assert_response :not_found
-  end
-
-  test "response body contains UID for each upcoming job" do
-    get :staffing, params: { token: @user.calendar_token }
-
-    assert_includes response.body, "staffing-job-#{@job.id}@bedlamtheatre.co.uk"
   end
 
   test "omits past jobs" do

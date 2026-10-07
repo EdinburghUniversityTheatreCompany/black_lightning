@@ -6,78 +6,45 @@ class ActiveStorage::Representations::RedirectControllerTest < ActionDispatch::I
   end
 
   test "redirects successfully for valid image blob" do
-    @picture.image.attach(
-      io: File.open(Rails.root.join("test", "test.png")),
-      filename: "valid.png",
-      content_type: "image/png"
-    )
+    attach_image(File.open(Rails.root.join("test", "test.png")))
 
-    variant = @picture.image.variant(resize_to_fill: [ 100, 100 ])
-    representation_url = rails_blob_representation_path(
-      @picture.image.blob.signed_id,
-      variant.variation.key,
-      @picture.image.filename
-    )
-
-    get representation_url
+    get_representation(@picture.image.variant(resize_to_fill: [ 100, 100 ]).variation.key)
 
     assert_response :redirect
   end
 
   test "returns 404 instead of 500 when variant processing fails" do
     # Bytes claiming to be a PNG, so vips raises a real processing error (Honeybadger #131577736).
-    @picture.image.attach(
-      io: StringIO.new("this is not a valid image"),
-      filename: "broken.png",
-      content_type: "image/png"
-    )
+    attach_image(StringIO.new("this is not a valid image"), "broken.png")
 
-    variant = @picture.image.variant(resize_to_fill: [ 100, 100 ])
-    representation_url = rails_blob_representation_path(
-      @picture.image.blob.signed_id,
-      variant.variation.key,
-      @picture.image.filename
-    )
-
-    get representation_url
+    get_representation(@picture.image.variant(resize_to_fill: [ 100, 100 ]).variation.key)
 
     assert_response :not_found
   end
 
-  test "returns 404 instead of 500 for an unsigned variation key" do
-    # A scanner replaying the variation key without its signature (Honeybadger #133797247).
-    @picture.image.attach(
-      io: File.open(Rails.root.join("test", "test.png")),
-      filename: "valid.png",
-      content_type: "image/png"
-    )
+  # A scanner replays the variation key without its signature (Honeybadger #133797247), and also
+  # in the pre-Rails-5.2 Marshal encoding, a deserialisation attack's shape, which must be rejected
+  # on its missing signature before anything unwraps it.
+  test "returns 404 instead of 500 for an unsigned JSON or Marshal variation key" do
+    attach_image(File.open(Rails.root.join("test", "test.png")))
 
-    forged_key = Base64.urlsafe_encode64(
-      { format: "png", resize_to_limit: [ 1920, 1080 ] }.to_json, padding: false
-    )
+    [
+      { format: "png", resize_to_limit: [ 1920, 1080 ] }.to_json,
+      Marshal.dump({ format: "png" })
+    ].each do |payload|
+      get_representation(Base64.urlsafe_encode64(payload, padding: false))
 
-    get rails_blob_representation_path(
-      @picture.image.blob.signed_id, forged_key, @picture.image.filename
-    )
-
-    assert_response :not_found
+      assert_response :not_found
+    end
   end
 
-  test "returns 404 for a Marshal-encoded variation key" do
-    # The pre-Rails-5.2 Marshal encoding, a deserialisation attack's shape: it must be rejected on
-    # its missing signature before anything unwraps it.
-    @picture.image.attach(
-      io: File.open(Rails.root.join("test", "test.png")),
-      filename: "valid.png",
-      content_type: "image/png"
-    )
+  private
 
-    marshal_key = Base64.urlsafe_encode64(Marshal.dump({ format: "png" }), padding: false)
+  def attach_image(io, filename = "valid.png")
+    @picture.image.attach(io:, filename:, content_type: "image/png")
+  end
 
-    get rails_blob_representation_path(
-      @picture.image.blob.signed_id, marshal_key, @picture.image.filename
-    )
-
-    assert_response :not_found
+  def get_representation(variation_key)
+    get rails_blob_representation_path(@picture.image.blob.signed_id, variation_key, @picture.image.filename)
   end
 end

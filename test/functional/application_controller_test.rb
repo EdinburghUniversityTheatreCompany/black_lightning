@@ -15,16 +15,11 @@ class ApplicationControllerTest < ActionController::TestCase
   test "set globals" do
     get :index
 
+    assert_response :success, "unauthenticated users must not be blocked by profile completion"
     assert_equal "it@bedlamtheatre.co.uk", assigns(:support_email)
     assert_equal "http://test.host", assigns(:base_url)
     assert_equal [ :description, "og:image", "viewport" ], assigns(:meta).keys
     assert_nil assigns(:meta)["og:title"], "og:title must be derived at render time, not here"
-  end
-
-  test "unauthenticated users are not blocked by profile completion" do
-    get :index
-
-    assert_response :success
   end
 
   test "authenticated users with complete profiles are not blocked" do

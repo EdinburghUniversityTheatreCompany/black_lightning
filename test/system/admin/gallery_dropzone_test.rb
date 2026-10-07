@@ -17,6 +17,13 @@ class Admin::GalleryDropzoneTest < ApplicationSystemTestCase
 
     assert_selector ".dropzone[data-controller='dropzone']"
 
+    # Dropzone sets `element.dropzone` on attach. The dz-* classes are in the markup regardless,
+    # so they prove nothing.
+    assert page.evaluate_script(
+      "!!document.querySelector('[data-controller=\"dropzone\"]').dropzone"
+    ), "the dropzone widget was never constructed on the drop target"
+    assert_no_selector "input[type='file'][name='#{FIELD_NAME}']", visible: true
+
     # The blob comes from the direct upload, so this separates a drawn preview from a received file.
     assert_difference -> { ActiveStorage::Blob.count }, 1 do
       drop_file("test.png", "image/png")
@@ -29,19 +36,6 @@ class Admin::GalleryDropzoneTest < ApplicationSystemTestCase
 
     assert_equal [ ActiveStorage::Blob.order(:id).last.signed_id ], signed_ids,
                  "the direct upload's signed id never reached the form"
-  end
-
-  test "the drop target is live rather than relying on the library's own discovery" do
-    show = FactoryBot.create(:show)
-    visit edit_admin_show_url(show)
-
-    # Dropzone sets `element.dropzone` on attach. The dz-* classes are in the markup regardless,
-    # so they prove nothing.
-    assert page.evaluate_script(
-      "!!document.querySelector('[data-controller=\"dropzone\"]').dropzone"
-    ), "the dropzone widget was never constructed on the drop target"
-
-    assert_no_selector "input[type='file'][name='#{FIELD_NAME}']", visible: true
   end
 
   private

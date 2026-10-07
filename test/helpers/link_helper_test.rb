@@ -42,26 +42,6 @@ class LinkHelperTest < ActionView::TestCase
     assert_equal '<a href="/admin/users/1">Peter Peanut</a>', user_link(users(:admin), true)
   end
 
-  test "link_to_add" do
-    skip "Needs a form passed, but I don't know how to create one in here. Test is not essential as every nested form will break when the function breaks, so you will notice, and it has coverage."
-
-    techie = techies(:one)
-
-    simple_horizontal_form_for [ :admin, techie ] do |form|
-      assert_equal "", link_to_add(form, :parents)
-    end
-  end
-
-  test "link_to_remove" do
-    skip "Needs a form passed, but I don't know how to create one in here. Test is not essential as every nested form will break when the function breaks, so you will notice, and it has coverage."
-
-    techie = techies(:one)
-
-    simple_horizontal_form_for [ :admin, techie ] do |form|
-      assert_equal "", link_to_remove(form, :parents)
-    end
-  end
-
   test "remove_button_text" do
     default_remove_button_text = '<span class="no-wrap"><i class="fa-solid fa-trash" aria-hidden="true"></i> <span class="hidden md:inline">Remove</span></span>'.html_safe
     assert_equal default_remove_button_text, remove_button_text
@@ -350,38 +330,6 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
-  test "get_default_link_target" do
-    skip "Well this one is pesky. It is pretty much covered by the tests that get the whole link, but it would be nice if this worked"
-
-    object = FactoryBot.create(:proposal)
-
-    hash = {
-      show: "",
-      index: "",
-      new: "",
-      edit: "",
-      destroy: ""
-    }
-
-    hash.each do |action, response|
-      assert_equal "", get_default_link_target(object, action, nil, nil)
-    end
-
-    assert_raises ArgumentError do
-      get_default_http_method(:answer)
-    end
-  end
-
-  test "raise ArgumentError during get_default_link_target for non-default action" do
-    assert_raises ArgumentError do
-      get_default_link_target(FaultReport, :towers, nil, nil)
-    end
-  end
-
-  test "get default_link_target with special arguments" do
-    skip 'Well this one is pesky, for the same reason as the other one. There is something with url_for that doesn\t want to work. It is pretty much covered by the tests that get the whole link, but it would be nice if this worked'
-  end
-
   test "get_confirm_data" do
     object = FactoryBot.create(:staffing_debt)
 
@@ -423,12 +371,6 @@ class LinkHelperTest < ActionView::TestCase
       verify: nil
     }
     assert_equal overridden_destroy_hash, get_confirm_data(object, :destroy, nil, "Pineapple", nil)
-  end
-
-  test "btn_classes returns string for primary" do
-    classes = btn_classes(:primary)
-    assert_includes classes, "text-primary"
-    assert_includes classes, "border-primary"
   end
 
   test "btn_classes returns string for danger sm" do

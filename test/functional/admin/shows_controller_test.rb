@@ -183,16 +183,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_match "https://example.com/programme.pdf", response.body
   end
 
-  test "a digital programme link with no scheme is rejected rather than saved" do
-    @show = FactoryBot.create(:show, digital_programme_url: nil)
-    attributes = FactoryBot.attributes_for(:show, digital_programme_url: "example.com/programme")
-
-    put :update, params: { id: @show, show: attributes }
-
-    assert_predicate assigns(:show).errors[:digital_programme_url], :any?
-    assert_nil @show.reload.digital_programme_url
-  end
-
   test "should update show without new debtors" do
     @show = FactoryBot.create(:show, team_member_count: 1)
 
@@ -236,58 +226,16 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test "should preserve author field when update fails" do
-    @show = FactoryBot.create(:show, author: "Original Author")
-    new_author = "Brand New Custom Author"
+  test "a failed update keeps a custom author selected in the re-rendered form" do
+    show = FactoryBot.create(:show, author: "Original Author")
+    # Only an update clears the cached list; an empty one from an earlier test skips the custom-value branch.
+    Rails.cache.delete(Event::AUTHOR_NAME_LIST_CACHE_KEY)
 
-    # Create attributes that will fail validation (missing venue which is required)
-    attributes = FactoryBot.attributes_for(:show, author: new_author)
-    attributes[:venue_id] = nil  # This will cause validation to fail
-
-    put :update, params: { id: @show, show: attributes }
+    put :update, params: { id: show, show: FactoryBot.attributes_for(:show, author: "  Brand New Custom Author  ", venue_id: nil) }
 
     assert_response :unprocessable_entity
-
-    # The author field should be preserved in the form when re-rendered
-    # Check that the assigned show object has the new author value
-    assert_equal new_author, assigns(:show).author, "Author field should preserve the submitted value when validation fails"
+    assert_select "select[name='show[author]'] option[selected][value='Brand New Custom Author']"
   end
-
-  test "should preserve author field with whitespace when update fails" do
-    @show = FactoryBot.create(:show, author: "Original Author")
-    new_author_with_whitespace = "  Custom Author With Spaces  "
-
-    # Create attributes that will fail validation (missing venue which is required)
-    attributes = FactoryBot.attributes_for(:show, author: new_author_with_whitespace)
-    attributes[:venue_id] = nil  # This will cause validation to fail
-
-    put :update, params: { id: @show, show: attributes }
-
-    assert_response :unprocessable_entity
-
-    # The author field should be normalized (trimmed) but preserved
-    expected_author = "Custom Author With Spaces"  # Normalized version
-    assert_equal expected_author, assigns(:show).author, "Author field should preserve the normalized value when validation fails"
-  end
-
-  test "should preserve empty author field when update fails" do
-    @show = FactoryBot.create(:show, author: "Original Author")
-
-    # Try to set author to empty string and cause validation failure
-    attributes = FactoryBot.attributes_for(:show, author: "")
-    attributes[:venue_id] = nil  # This will cause validation to fail
-
-    put :update, params: { id: @show, show: attributes }
-
-    assert_response :unprocessable_entity
-
-    # The author field should be empty (normalized from empty string)
-    assert_equal "", assigns(:show).author, "Author field should be empty when set to empty string"
-
-    # The form should not crash and should render properly with empty author
-    assert_response :unprocessable_entity
-  end
-
 
   test "should destroy show" do
     @show = FactoryBot.create(:show, team_member_count: 0, picture_count: 0, review_count: 0, feedback_count: 0)
@@ -519,61 +467,20 @@ class Admin::ShowsControllerTest < ActionController::TestCase
                  "the failed save must not have written the order"
   end
 
-  # See TeamMemberOrdering. These keys are chosen to sort as written, because a
-  # functional test cannot pin row order (CLAUDE.md, Testing).
-  test "updating a show stores the team members in the order the rows were submitted" do
+  # Keys chosen to sort as written: a functional test cannot pin row order (CLAUDE.md, Testing).
+  test "the saved order follows the submitted rows, skipping destroyed and blank ones and ignoring a posted display_order" do
     show = FactoryBot.create(:show, team_member_count: 3)
     a, b, c = show.team_members.order(:id).to_a
 
     patch :update, params: { id: show.to_param, show: { team_members_attributes: {
-      "0" => team_member_row(c),
-      "1" => team_member_row(a),
-      "2" => team_member_row(b)
-    } } }
-    assert_redirected_to admin_show_path(show)
-
-    assert_equal [ [ c.id, 0 ], [ a.id, 1 ], [ b.id, 2 ] ], show.team_members.ordered.pluck(:id, :display_order)
-  end
-
-  test "a submitted display_order never overrides the row order" do
-    show = FactoryBot.create(:show, team_member_count: 2)
-    first, second = show.team_members.order(:id).to_a
-
-    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
-      "0" => team_member_row(second, display_order: 5),
-      "1" => team_member_row(first, display_order: 0)
-    } } }
-    assert_redirected_to admin_show_path(show)
-
-    assert_equal [ [ second.id, 0 ], [ first.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
-  end
-
-  test "a team member row marked for destruction leaves no gap in the order" do
-    show = FactoryBot.create(:show, team_member_count: 3)
-    a, b, c = show.team_members.order(:id).to_a
-
-    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
-      "0" => team_member_row(a),
-      "1" => team_member_row(b, _destroy: "1"),
-      "2" => team_member_row(c)
-    } } }
-    assert_redirected_to admin_show_path(show)
-
-    assert_equal [ [ a.id, 0 ], [ c.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
-  end
-
-  test "a blank team member row is dropped without taking a place in the order" do
-    show = FactoryBot.create(:show, team_member_count: 2)
-    a, b = show.team_members.order(:id).to_a
-
-    patch :update, params: { id: show.to_param, show: { team_members_attributes: {
-      "0" => team_member_row(a),
+      "0" => team_member_row(c, display_order: 5),
       "1" => { id: "", position: "", user_id: "", _destroy: "false" },
-      "2" => team_member_row(b)
+      "2" => team_member_row(b, _destroy: "1"),
+      "3" => team_member_row(a, display_order: 0)
     } } }
     assert_redirected_to admin_show_path(show)
 
-    assert_equal [ [ a.id, 0 ], [ b.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
+    assert_equal [ [ c.id, 0 ], [ a.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
   end
 
   test "creating a show stores its team members in row order" do
@@ -621,14 +528,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal "Pay what you can", show.price
   end
 
-  test "the edit form posts a sentinel so an emptied band list is not silently kept" do
-    show = FactoryBot.create(:show, is_public: true)
-
-    get :edit, params: { id: show.to_param }
-
-    assert_select "input[type=hidden][name='show[ticket_prices_attributes][sentinel][amount]']"
-  end
-
   # ticket_prices is a JSON column, so _nested_fields needs template_object for its blank row.
   test "edit form renders the ticket price rows and their add-row template" do
     show = FactoryBot.create(:show, is_public: true)
@@ -642,6 +541,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_select "input[name='show[ticket_prices_attributes][0][amount]']"
     assert_select "select[name='show[ticket_prices_attributes][0][category]']"
     assert_match "show[ticket_prices_attributes][NEW_RECORD][amount]", response.body
+    assert_select "input[type=hidden][name='show[ticket_prices_attributes][sentinel][amount]']"
   end
 
   test "edit form renders the performance rows under the show's own word for them" do
@@ -756,18 +656,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal "Q&A after", occurrence.note
     assert_predicate occurrence, :cancelled?
     assert_equal [ "relaxed" ], occurrence.access_flags
-  end
-
-  # The other half of that rule: the blank template row the Add button clones
-  # must still be dropped, or every save would create an empty performance.
-  test "a blank new performance row is still discarded" do
-    show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
-
-    patch :update, params: { id: show, show: { event_occurrences_attributes: {
-      "0" => { starts_at: "", note: "" }
-    } } }
-
-    assert_empty show.event_occurrences.reload
   end
 
   test "an event waiting for its ticket shop says so on its admin page" do

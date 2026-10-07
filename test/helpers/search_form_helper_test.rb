@@ -17,13 +17,15 @@ class SearchFormHelperTest < ActionView::TestCase
 
   # :type and :slug are ours, not simple_form's. `except!` takes varargs, so the old
   # `except!([ :type, :slug ])` deleted the key [:type, :slug], which never exists, and stripped nothing.
-  test "does not pass the config-only :type and :slug keys to the input" do
+  test "does not pass the config-only :type and :slug keys to the input, or change the caller's hash" do
     builder = RecordingBuilder.new
+    config = { type: :text, slug: "defaults.name" }
 
-    render_search_form_field(builder, :name_cont, { type: :text, slug: "defaults.name" })
+    render_search_form_field(builder, :name_cont, config)
 
     assert_not_includes builder.options.keys, :type
     assert_not_includes builder.options.keys, :slug
+    assert_equal({ type: :text, slug: "defaults.name" }, config.slice(:type, :slug))
   end
 
   test "keeps the options the input does need" do
@@ -33,17 +35,6 @@ class SearchFormHelperTest < ActionView::TestCase
 
     assert_equal I18n.t("simple_form.labels.defaults.name"), builder.options[:label]
     refute builder.options[:required], "search fields are never required"
-  end
-
-  # `except` (unlike `except!`) leaves the caller's config hash alone. The configs are
-  # rebuilt per render today, so this is insurance rather than a live bug.
-  test "leaves the caller's field config hash intact" do
-    config = { type: :text, slug: "defaults.name" }
-
-    render_search_form_field(RecordingBuilder.new, :name_cont, config)
-
-    assert_equal :text, config[:type]
-    assert_equal "defaults.name", config[:slug]
   end
 
   # And the real simple_form path still renders: a :select config renders a <select>.

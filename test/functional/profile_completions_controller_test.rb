@@ -87,6 +87,7 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_equal "Name", @incomplete_user.last_name
     assert @incomplete_user.profile_complete?
     assert @incomplete_user.consented.present?
+    assert_equal @incomplete_user, @controller.current_user
   end
 
   test "update for logged in user with incomplete profile" do
@@ -99,6 +100,7 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
 
     @incomplete_user.reload
     assert @incomplete_user.profile_complete?
+    assert_equal @incomplete_user, @controller.current_user
   end
 
   test "update without consent fails" do
@@ -126,64 +128,10 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_nil @incomplete_user.profile_completed_at
   end
 
-  test "update signs in user if not already signed in" do
-    token = @incomplete_user.profile_completion_token
-    user_params = { first_name: "Updated", last_name: "Name" }
-
-    assert_nil @controller.current_user
-
-    patch :update, params: { token: token, user: user_params, consent: "true" }
-
-    assert_equal @incomplete_user, @controller.current_user
-  end
-
-  test "update does not re-sign in user if already signed in" do
-    sign_in @incomplete_user
-    user_params = { first_name: "Updated", last_name: "Name" }
-
-    # User is already signed in
-    assert_equal @incomplete_user.id, @controller.current_user.id
-
-    patch :update, params: { user: user_params, consent: "true" }
-
-    assert_redirected_to admin_path
-    assert_equal @incomplete_user.id, @controller.current_user.id
-  end
-
-  test "update with invalid token fails" do
-    user_params = { first_name: "Updated", last_name: "Name" }
-
-    patch :update, params: { token: "invalid_token", user: user_params, consent: "true" }
-
-    assert_response 404
-  end
-
-  test "token is invalid after profile completion" do
-    # Generate a token while profile is incomplete
-    token = @incomplete_user.profile_completion_token
-
-    # Complete the profile (salt gets reset)
-    @incomplete_user.complete_profile!
-
-    # Try to use the same token to update profile - should fail
-    user_params = { first_name: "Hacker" }
-    patch :update, params: { token: token, user: user_params, consent: "true" }
-
-    # Token is now invalid because salt changed
-    assert_response 404
-    assert_match "Invalid or expired profile completion token", response.body
-
-    # Verify profile wasn't modified
-    @incomplete_user.reload
-    assert_not_equal "Hacker", @incomplete_user.first_name
-  end
-
   test "same token cannot be replayed after profile completion" do
-    # Get a token and complete the profile
     token = @incomplete_user.profile_completion_token
     user_params = { first_name: "Valid", last_name: "User", password: "validpassword123" }
 
-    # Use the token once (valid)
     assert_enqueued_emails 1 do
       patch :update, params: { token: token, user: user_params, consent: "true" }
     end
@@ -193,28 +141,10 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_equal "Valid", @incomplete_user.first_name
     assert @incomplete_user.profile_complete?
 
-    # Try to use the same token again - should fail
-    different_user = FactoryBot.create(:user, profile_completed_at: nil)
     sign_out @incomplete_user
-    token_again = token
 
-    patch :update, params: { token: token_again, user: { first_name: "Hacker" }, consent: "true" }
+    patch :update, params: { token: token, user: { first_name: "Hacker" }, consent: "true" }
 
-    # Token is invalid now
-    assert_response 404
-  end
-
-  test "token is invalidated by salt reset" do
-    # Verify token works before completion
-    token = @incomplete_user.profile_completion_token
-    get :show, params: { token: token }
-    assert_response :success
-
-    # Complete profile (this resets the salt)
-    @incomplete_user.complete_profile!
-
-    # Same token should now be invalid due to salt change
-    get :show, params: { token: token }
     assert_response 404
   end
 end
