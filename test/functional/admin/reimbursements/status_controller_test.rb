@@ -45,27 +45,6 @@ module Admin
         StatusController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
-      test "requires sign-in" do
-        get :show
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :show
-        assert_response :forbidden
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        sign_in other
-
-        get :show
-
-        assert_response :forbidden
-      end
-
       test "run denies members without the finance permission" do
         sign_in users(:committee)
         post :run

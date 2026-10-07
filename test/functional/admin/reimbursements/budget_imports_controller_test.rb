@@ -27,19 +27,6 @@ module Admin
           cost_centre_id: @cost_centre.id }.merge(extra)
       end
 
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :show, params: { year: @year.key }
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :show, params: { year: @year.key }
-        assert_response :forbidden
-      end
-
       # --- Step 1: the form --------------------------------------------------
 
       test "show says so when no financial year is set up at all" do

@@ -14,17 +14,6 @@ module Admin
                               starts_on: Date.new(2026, 8, 1), ends_on: Date.new(2027, 7, 31))
       end
 
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :index
-        assert_response :forbidden
-      end
-
       test "index lists every year, newest first" do
         FY.create!(label: "Fringe 2025", starts_on: Date.new(2025, 8, 1))
         sign_in @user

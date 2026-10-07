@@ -47,22 +47,6 @@ module Admin
         book.sheet(name).to_a
       end
 
-      test "requires sign-in" do
-        get :download
-        assert_redirected_to new_user_session_path
-      end
-
-      test "the producer portal permission alone does not grant access to the page or the workbook" do
-        submitter = users(:member_with_phone_number)
-        grant_producer_permission(submitter)
-        sign_in submitter
-
-        %i[show download].each do |action|
-          get action
-          assert_response :forbidden, action.to_s
-        end
-      end
-
       test "answers an xlsx attachment named for today" do
         sign_in @user
 

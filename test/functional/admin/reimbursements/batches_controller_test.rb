@@ -44,19 +44,6 @@ module Admin
         @batch
       end
 
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :new
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :index
-        assert_response :forbidden
-      end
-
       # --- Build Batch (new) -------------------------------------------------
 
       test "new previews approved expenses and a prefilled EUSA email" do

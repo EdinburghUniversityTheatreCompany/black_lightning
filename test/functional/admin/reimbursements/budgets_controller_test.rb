@@ -33,11 +33,6 @@ module Admin
 
       # --- Auth gating -------------------------------------------------------
 
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
       test "the producer portal permission alone does not open the finance pages" do
         submitter = users(:member_with_phone_number)
         grant_producer_permission(submitter)

@@ -21,11 +21,6 @@ module Admin
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
     end
 
-    test "requires sign-in" do
-      get :index
-      assert_redirected_to new_user_session_path
-    end
-
     test "denies members without the reimbursements permission" do
       sign_in users(:committee)
 

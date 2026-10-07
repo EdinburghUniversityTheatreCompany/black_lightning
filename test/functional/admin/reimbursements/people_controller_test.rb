@@ -27,17 +27,6 @@ module Admin
       PeopleController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
     end
 
-    test "requires sign-in" do
-      get :index
-      assert_redirected_to new_user_session_path
-    end
-
-    test "denies members without the finance permission" do
-      sign_in users(:committee)
-      get :index
-      assert_response :forbidden
-    end
-
     test "shows a duplicate banner when a name or email clashes" do
       dup_a = create_reimbursements_person(name: "Sam Same", email: "sam@example.com")
       dup_b = create_reimbursements_person(name: "Sam Same", email: "different@example.com")

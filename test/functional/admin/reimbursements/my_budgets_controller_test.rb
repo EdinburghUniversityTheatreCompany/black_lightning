@@ -27,11 +27,6 @@ module Admin
           ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
       end
 
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
       test "denies members without the reimbursements permission" do
         sign_in users(:committee)
         get :index

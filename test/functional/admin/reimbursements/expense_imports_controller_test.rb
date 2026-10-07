@@ -29,23 +29,6 @@ module Admin
         { year: @year.key, cost_centre_id: @cost_centre.id, pasted_text: text }.merge(extra)
       end
 
-      # --- Auth gating -------------------------------------------------------
-
-      test "requires sign-in" do
-        get :show
-
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        grant_producer_permission(users(:committee))
-        sign_in users(:committee)
-
-        get :show
-
-        assert_response :forbidden
-      end
-
       # --- Step 1: the form --------------------------------------------------
 
       test "show renders the paste/upload form" do

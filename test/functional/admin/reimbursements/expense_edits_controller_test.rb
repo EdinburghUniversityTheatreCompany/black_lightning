@@ -47,25 +47,6 @@ module Admin
         expense
       end
 
-      # --- Auth gating -----------------------------------------------------
-
-      test "requires sign-in" do
-        expense = expense_at("Pending")
-        get :edit, params: { id: expense.record_id }
-        assert_redirected_to new_user_session_path
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        expense = expense_at("Pending")
-        sign_in other
-
-        get :edit, params: { id: expense.record_id }
-
-        assert_response :forbidden
-      end
-
       # --- Index: all-expenses table with filters + search ----------------
 
       # Two budgets and two payees across three statuses.

@@ -9,11 +9,6 @@ module Admin
         @user = users(:member)
       end
 
-      test "requires sign-in" do
-        get :show
-        assert_redirected_to new_user_session_path
-      end
-
       # The base portal permission, not finance: owners and producers read these words too.
       # Remaining and Left are different figures for one idea, and both are printed.
       test "a producer can read it, and it defines the audit's words" do

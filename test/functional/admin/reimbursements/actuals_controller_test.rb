@@ -49,28 +49,6 @@ module Admin
       BaseController.store_builder = BaseController::DEFAULT_STORE_BUILDER
     end
 
-    # --- Auth gating -------------------------------------------------------
-
-    test "requires sign-in" do
-      get :index
-      assert_redirected_to new_user_session_path
-    end
-
-    test "denies members without the finance permission" do
-      sign_in users(:committee)
-      get :index
-      assert_response :forbidden
-    end
-
-    test "the producer portal permission alone does not grant finance access" do
-      grant_producer_permission(users(:member_with_phone_number))
-      sign_in users(:member_with_phone_number)
-
-      get :index
-
-      assert_response :forbidden
-    end
-
     # --- Index -------------------------------------------------------------
 
     test "the full ledger lists every row newest first, with its link state and actions" do

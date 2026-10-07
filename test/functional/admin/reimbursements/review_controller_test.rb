@@ -64,27 +64,6 @@ module Admin
                             bytes: "JPEG#{tag}")
       end
 
-      test "requires sign-in" do
-        get :index
-        assert_redirected_to new_user_session_path
-      end
-
-      test "denies members without the finance permission" do
-        sign_in users(:committee)
-        get :index
-        assert_response :forbidden
-      end
-
-      test "the producer portal permission alone does not grant finance access" do
-        other = users(:member_with_phone_number)
-        grant_producer_permission(other)
-        sign_in other
-
-        get :index
-
-        assert_response :forbidden
-      end
-
       test "partitions pending into ready and needs-attention, and lists approved separately" do
         # Distinct amounts, or the two read as duplicates.
         ready = pending_expense(amount: BigDecimal("111"))

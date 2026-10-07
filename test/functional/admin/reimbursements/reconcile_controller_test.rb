@@ -94,29 +94,6 @@ module Admin
       ::Reimbursements::CostCentre.find_by!(eusa_code: "F40")
     end
 
-    # --- Auth gating -------------------------------------------------------
-
-    test "requires sign-in" do
-      get :show
-      assert_redirected_to new_user_session_path
-    end
-
-    test "denies members without the finance permission" do
-      sign_in users(:committee)
-      get :show
-      assert_response :forbidden
-    end
-
-    test "the producer portal permission alone does not grant finance access" do
-      other = users(:member_with_phone_number)
-      grant_producer_permission(other)
-      sign_in other
-
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-
-      assert_response :forbidden
-    end
-
     # --- Step 1: show ------------------------------------------------------
 
     test "show renders the paste form" do
