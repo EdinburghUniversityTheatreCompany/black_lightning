@@ -121,38 +121,17 @@ class Admin::UsersController < AdminController
   def create_activation
     authorize! :create, User
 
-    if params[:user_id].present?
-      user = User.find(params[:user_id])
-      user.send_welcome_email
+    @user = User.new_user(activation_user_params)
+    @user.add_role(:member) if params[:user][:is_member] == "1"
 
-      helpers.append_to_flash(:success, "Profile completion email resent to #{user.email}")
+    if @user.save
+      @user.send_welcome_email
+      helpers.append_to_flash(:success, "User created and profile completion email sent to #{@user.email}")
       redirect_to activate_admin_users_path
     else
-      @user = User.new_user(activation_user_params)
-      @user.add_role(:member) if params[:user][:is_member] == "1"
-
-      if @user.save
-        @user.send_welcome_email
-        helpers.append_to_flash(:success, "User created and profile completion email sent to #{@user.email}")
-        redirect_to activate_admin_users_path
-      else
-        @title = "Activate Members"
-        render :activate, status: :unprocessable_entity
-      end
+      @title = "Activate Members"
+      render :activate, status: :unprocessable_entity
     end
-  end
-
-  ##
-  # POST /admin/users/resend_activation
-  ##
-  def resend_activation
-    authorize! :create, User
-
-    user = User.find(params[:user_id])
-    user.send_welcome_email
-
-    helpers.append_to_flash(:success, "Profile completion email resent to #{user.email}")
-    redirect_to activate_admin_users_path
   end
 
   private

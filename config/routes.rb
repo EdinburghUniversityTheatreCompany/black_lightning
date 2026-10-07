@@ -394,7 +394,6 @@ ChaosRails::Application.routes.draw do
       collection do
         get  "activate", to: "users#activate"
         post "activate", to: "users#create_activation"
-        post "resend_activation", to: "users#resend_activation"
         get  "autocomplete_list", constraints: { format: :json }
       end
     end

@@ -85,6 +85,27 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "activation creates a member and sends the profile completion email" do
+    assert_difference "ActionMailer::Base.deliveries.count" do
+      perform_enqueued_jobs do
+        assert_difference("User.count") do
+          post :create_activation, params: { user: { email: "newbie@example.com", first_name: "New", last_name: "Member", is_member: "1" } }
+        end
+      end
+    end
+
+    assert_redirected_to activate_admin_users_path
+    assert User.with_role(:member).exists?(email: "newbie@example.com")
+  end
+
+  test "activation re-renders the form for an invalid user" do
+    assert_no_difference("User.count") do
+      post :create_activation, params: { user: { email: "", first_name: "New", last_name: "Member" } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "should get edit" do
     get :edit, params: { id: @user }
     assert_response :success
