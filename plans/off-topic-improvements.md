@@ -163,19 +163,6 @@ and switching back to UK BACS on the finance edit form does not restore the spli
 (production has no international claims yet) and visible on the form. Fix: keep the UK figure
 while the rail is international, or warn on the switch.
 
-### The BACS spreadsheet's amount column loses its currency format
-
-`BacsXlsx#write_row` writes the amount with `sheet.add_cell(...)`, and rubyXL's `add_cell`
-**replaces** the cell, dropping the style the template gave that row. Verified 2026-09-06 by
-reading back a generated workbook: the template's row is
-`_-"£"* #,##0.00_-;\-"£"* #,##0.00_-;_-"£"* "-"??_-;_-@`, the written one is `General`. So EUSA
-sees `1234.56` where the template meant `£1,234.56`. Cosmetic: the value is a true number, so the
-GRAND TOTAL is right.
-
-**Fix:** `sheet[row][col].change_contents(value)`, which keeps the style (confirmed on the
-international template), plus a test that the written amount cell carries the template's format.
-The text cells are fine: `text_cell` sets `@` straight after `add_cell`.
-
 ### `ExpenseForm#settled` is an invariant stated in prose, not enforced
 
 It holds because nothing returns an unbatched claim to Approved: `revert_expense_to_approved!` is
