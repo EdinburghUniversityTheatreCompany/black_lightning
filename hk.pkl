@@ -52,7 +52,7 @@ local linters = new Mapping<String, Step> {
     // files that exist and prints what it skipped; CI's `versions` job runs it too. Extend the
     // glob if a version is pinned somewhere else.
     ["versions"] {
-        glob = List("mise.toml", ".ruby-version", ".node-version", "Dockerfile", "package.json", "config/deploy.yml", ".devcontainer/compose.yaml", ".github/workflows/*.yml")
+        glob = List("mise/config.toml", ".ruby-version", ".node-version", "Dockerfile", "package.json", "config/deploy.yml", ".devcontainer/compose.yaml", ".github/workflows/*.yml")
         check = "bash scripts/check_version_sync.sh"
     }
     // The Dockerfile derives the Node major at build time (`setup_$(cut -d. -f1 < .node-version)`),

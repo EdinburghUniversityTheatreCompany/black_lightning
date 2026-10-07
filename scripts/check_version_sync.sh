@@ -36,7 +36,7 @@ trap 'rm -f "$TMP"' EXIT
 
 # ── Toolchain pins ────────────────────────────────────────────────────────────────────
 MISE=""
-for f in mise.toml .mise.toml; do
+for f in mise.toml .mise.toml mise/config.toml; do
 	if [ -f "$f" ]; then
 		MISE=$f
 		break
@@ -51,12 +51,18 @@ for f in Dockerfile Containerfile; do
 	fi
 done
 
-# A mise `[tools]` value. Handles `node = "22.4.1"` and the inline table
-# `ruby = { version = "4.0.2", compile = false }` by taking the first quoted string after `=`.
+# A mise `[tools]` value. Handles `node = "22.4.1"`, the inline table
+# `ruby = { version = "4.0.2", compile = false }` (first quoted string after `=`) and the table
+# form `[tools.ruby]` + `version = "4.0.2"`.
 read_mise() {
 	[ -n "$MISE" ] || return 0
 	awk -v key="$1" '
-    /^[[:space:]]*\[/ { intools = ($0 ~ /^[[:space:]]*\[tools\][[:space:]]*$/); next }
+    /^[[:space:]]*\[/ {
+      intools = ($0 ~ /^[[:space:]]*\[tools\][[:space:]]*$/)
+      insub = ($0 ~ "^[[:space:]]*\\[tools\\." key "\\][[:space:]]*$")
+      next
+    }
+    insub && /^[[:space:]]*version[[:space:]]*=/ { if (match($0, /"[^"]*"/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }
     !intools { next }
     {
       line = $0
@@ -113,7 +119,7 @@ add_source() { # $1 label, $2 version
 }
 
 echo "Toolchain:"
-[ -n "$MISE" ] || skip "no mise.toml, so no mise pins to cross-check"
+[ -n "$MISE" ] || skip "no mise config, so no mise pins to cross-check"
 [ -n "$DOCKERFILE" ] || skip "no Dockerfile, so no image-build ARGs to cross-check"
 
 # tool | version file (empty = no conventional one) | Dockerfile ARG
