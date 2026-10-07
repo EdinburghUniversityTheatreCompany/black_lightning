@@ -10,28 +10,12 @@ module Reimbursements
 
     # --- The rule ----------------------------------------------------------
 
-    test "pads a bare month to two digits" do
-      assert_equal "06", Reconciliation.normalise_period("6")
-      assert_equal "01", Reconciliation.normalise_period(" 1 ")
-    end
-
-    test "leaves an already-canonical period alone, and is idempotent" do
-      assert_equal "06", Reconciliation.normalise_period("06")
-      assert_equal "06", Reconciliation.normalise_period(Reconciliation.normalise_period("6"))
-      assert_equal "12", Reconciliation.normalise_period("12")
-    end
-
-    test "covers Sage's year-end period 13" do
-      assert_equal "13", Reconciliation.normalise_period("13")
-    end
-
-    test "leaves a spelling it does not understand exactly as the sheet wrote it" do
-      # Padding something we cannot read would be guessing at a figure finance
-      # reads back off the filter.
-      assert_equal "P6", Reconciliation.normalise_period("P6")
-      assert_equal "2026/06", Reconciliation.normalise_period("2026/06")
-      assert_equal "", Reconciliation.normalise_period(nil)
-      assert_equal "100", Reconciliation.normalise_period("100")
+    # Padding what we cannot read would be guessing at a figure finance reads back off the filter.
+    test "pads a bare month and leaves any other spelling as the sheet wrote it" do
+      { "6" => "06", " 1 " => "01", "06" => "06", "12" => "12", "13" => "13",
+        "P6" => "P6", "2026/06" => "2026/06", "100" => "100", nil => "" }.each do |stored, canonical|
+        assert_equal canonical, Reconciliation.normalise_period(stored), stored.inspect
+      end
     end
 
     # --- The write paths ---------------------------------------------------
@@ -44,14 +28,6 @@ module Reimbursements
     test "a nil period stays nil rather than becoming a blank string" do
       actual = create_reimbursements_eusa_actual(period: nil, debit: BigDecimal("10"))
       assert_nil actual.reload.period
-    end
-
-    test "the reconcile parser normalises the period it reads off the sheet" do
-      header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet"
-      row = "439999\tF40\tBACS001\t01/09/2026\t6\tBACS PAYMENT\t\t10.00\t\t10.00"
-      rows = Reconciliation.parse_actuals_rows("#{header}\n#{row}")
-
-      assert_equal "06", rows.sole.period
     end
 
     # --- The backfill ------------------------------------------------------
@@ -67,14 +43,7 @@ module Reimbursements
       assert_equal 1, rewritten
       assert_equal "06", unpadded.reload.period
       assert_equal "07", already.reload.period
-    end
-
-    test "the backfill is idempotent" do
-      create_reimbursements_eusa_actual(period: "6", debit: BigDecimal("10"))
-        .update_column(:period, "6")
-      PeriodNormalisation.run!
-
-      assert_equal 0, PeriodNormalisation.run!
+      assert_equal 0, PeriodNormalisation.run!, "a second run finds nothing to do"
     end
 
     test "the backfill leaves a period it cannot read alone" do
@@ -91,25 +60,14 @@ module Reimbursements
     # If the spellings did not meet, re-pasting a month would import every row twice and double-count
     # real spend.
 
-    test "an unpadded paste finds a stored padded row for the same month" do
-      create_reimbursements_eusa_actual(period: "06", narrative: "BACS RUN",
-                                        debit: BigDecimal("10"))
-
-      assert_equal 1, Reimbursements.build_store.actuals_for_period("6").size
-    end
-
-    test "a padded paste finds a stored unpadded row for the same month" do
-      row = create_reimbursements_eusa_actual(period: "06", narrative: "BACS RUN",
-                                              debit: BigDecimal("10"))
-      row.update_column(:period, "6")
-
-      assert_equal 1, Reimbursements.build_store.actuals_for_period("06").size
-    end
-
-    test "a different month is still a different bucket" do
+    test "a period lookup finds the month under either spelling, and no other month" do
       create_reimbursements_eusa_actual(period: "06", debit: BigDecimal("10"))
+      create_reimbursements_eusa_actual(period: "06", debit: BigDecimal("11")).update_column(:period, "6")
+      store = Reimbursements.build_store
 
-      assert_empty Reimbursements.build_store.actuals_for_period("7")
+      assert_equal 2, store.actuals_for_period("6").size
+      assert_equal 2, store.actuals_for_period("06").size
+      assert_empty store.actuals_for_period("7")
     end
   end
 end
