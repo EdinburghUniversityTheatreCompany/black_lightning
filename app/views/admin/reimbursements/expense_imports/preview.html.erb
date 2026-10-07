@@ -119,36 +119,7 @@
     </div>
   <% end %>
 
-  <%# What the matcher read, stated: a column read as the wrong field is otherwise invisible. %>
-  <details class="mt-4 text-sm">
-    <summary class="cursor-pointer text-gray-600">
-      Columns read from your sheet (check these before importing)
-    </summary>
-    <div class="mt-2 overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="text-left text-gray-600">
-            <th class="py-1 pr-4">Field</th>
-            <th class="py-1 pr-4">Read from</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @import.column_mapping.each do |label, header| %>
-            <tr class="border-t border-gray-200">
-              <td class="py-1 pr-4"><%= label %></td>
-              <td class="py-1 pr-4">
-                <% if header %>
-                  <span class="font-mono"><%= header %></span>
-                <% else %>
-                  <span class="text-gray-500">not in this sheet</span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </details>
+  <%= render "admin/reimbursements/shared/column_mapping", mapping: @import.column_mapping %>
 
   <%= form_with url: apply_admin_reimbursements_expense_import_path,
                 method: :post, class: "mt-6 flex flex-wrap items-center gap-3" do %>
