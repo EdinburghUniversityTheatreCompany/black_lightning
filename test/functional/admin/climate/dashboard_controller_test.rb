@@ -7,6 +7,19 @@ module Admin
 
       tests Admin::Climate::DashboardController
 
+      # Graph::Settings reads GRAPH_* before the REIMBURSEMENTS_AZURE_* fallback; both are named so
+      # that clearing them leaves nothing configured.
+      GRAPH_ENV = %w[GRAPH REIMBURSEMENTS].product(%w[TENANT_ID CLIENT_ID CLIENT_SECRET])
+                                          .to_h { |prefix, key| [ "#{prefix}_AZURE_#{key}", "x" ] }.freeze
+
+      def with_env(vars)
+        original = vars.keys.index_with { |key| ENV.fetch(key, nil) }
+        vars.each { |key, value| ENV[key] = value }
+        yield
+      ensure
+        original.each { |key, value| ENV[key] = value }
+      end
+
       setup do
         @user = FactoryBot.create(:user)
         grant_backend_and_climate_read(@user)
@@ -123,23 +136,29 @@ module Admin
         assert_match(/Open-Meteo/, response.body)
       end
 
-      test "mentions the daily email only when a climate mailbox is configured" do
-        # With no mailbox set the copy would promise a report and print a blank address.
-        original = ENV.fetch("CLIMATE_MAILBOX", nil)
-        ENV["CLIMATE_MAILBOX"] = "climatesensors@example.com"
+      test "mentions the daily email only when the poll job would actually run" do
+        # The job needs the mailbox AND Graph credentials; copy promising an import it will
+        # skip, or printing a blank address, is worse than saying nothing.
+        with_env({ "CLIMATE_MAILBOX" => "climatesensors@example.com" }.merge(GRAPH_ENV)) do
+          get :show
 
-        get :show
+          assert_match "climatesensors@example.com", response.body
+          assert_match(/daily report/i, response.body)
+        end
 
-        assert_match "climatesensors@example.com", response.body
-        assert_match(/daily report/i, response.body)
+        with_env({ "CLIMATE_MAILBOX" => "climatesensors@example.com" }.merge(GRAPH_ENV.transform_values { nil })) do
+          get :show
 
-        ENV.delete("CLIMATE_MAILBOX")
-        get :show
+          assert_no_match(/daily (report|email)/i, response.body)
+          assert_match(/dressing room access point/i, response.body)
+        end
 
-        assert_no_match(/daily report/i, response.body)
-        assert_match(/dressing room access point/i, response.body)
-      ensure
-        original.nil? ? ENV.delete("CLIMATE_MAILBOX") : ENV["CLIMATE_MAILBOX"] = original
+        with_env({ "CLIMATE_MAILBOX" => nil }.merge(GRAPH_ENV)) do
+          get :show
+
+          assert_no_match(/daily (report|email)/i, response.body)
+          assert_match(/dressing room access point/i, response.body)
+        end
       end
 
       test "explains that the margin is measured against the air, not the walls" do

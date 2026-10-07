@@ -61,7 +61,7 @@
   <% if @series.none? { |series| series[:points].any? } %>
     <p class="text-gray-600">
       No readings in this range yet. Outside conditions are fetched hourly; sensor readings
-      appear once a CSV export covering this period has been imported<%= ", either by you or by the daily email" if Climate::Settings.mailbox.present? %>.
+      appear once a CSV export covering this period has been imported<%= ", either by you or by the daily email" if Climate::Settings.mailbox_configured? %>.
     </p>
   <% else %>
     <div data-controller="climate-charts"
@@ -79,7 +79,7 @@
     <li>
       <strong>How readings get here.</strong> Sensor readings arrive as a CSV export from the Govee
       app.
-      <% if Climate::Settings.mailbox.present? %>
+      <% if Climate::Settings.mailbox_configured? %>
         A scheduled daily report goes to <code><%= Climate::Settings.mailbox %></code> and this
         site imports it on its own.
       <% end %>

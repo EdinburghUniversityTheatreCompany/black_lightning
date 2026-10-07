@@ -23,7 +23,7 @@
       </p>
 
       <p class="text-gray-600 mb-4">
-        <% if Climate::Settings.mailbox.present? %>
+        <% if Climate::Settings.mailbox_configured? %>
           A daily report already goes to <code><%= Climate::Settings.mailbox %></code> and imports
           itself, so you only need this page to backfill a gap or to pull something in sooner. Either
           way, importing
