@@ -48,7 +48,6 @@ FactoryBot.define do
 
     transient do
       team_member_count { 0 }
-      video_link_count { 0 }
       picture_count { 0 }
       attach_image { false }
       attach_proposal { false }
@@ -56,21 +55,10 @@ FactoryBot.define do
       review_count { 0 }
     end
 
-    trait :with_associations do
-      team_member_count { 5 }
-      video_link_count { rand(3) }
-      picture_count { rand(3) }
-      attach_image { true }
-      attach_proposal { [ true, false ].sample }
-      tag_count { 1 }
-      review_count { 3 }
-    end
-
     image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") if attach_image }
 
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event) if evaluator.team_member_count > 0
-      create_list(:video_link, evaluator.video_link_count, item: event) if evaluator.video_link_count > 0
       create_list(:picture, evaluator.picture_count, gallery: event) if evaluator.picture_count > 0
       create_list(:review, evaluator.review_count, event: event) if evaluator.review_count > 0
 
