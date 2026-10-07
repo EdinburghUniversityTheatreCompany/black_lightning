@@ -5,16 +5,7 @@
   enters the review queue or a BACS batch, and nobody is emailed.
 </p>
 
-<%= render CardComponent.new(title: "The EUSA row") do %>
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-    <span>Nominal: <strong class="font-mono"><%= @actual.nominal_code.presence || "-" %></strong></span>
-    <span>Period: <strong class="font-mono"><%= @actual.period.presence || "-" %></strong></span>
-    <span>Date: <strong><%= reimbursements_date(@actual.date) %></strong></span>
-    <span>Amount: <strong><%= reimbursements_money(@actual.debit) %></strong></span>
-    <span>Reference: <strong class="font-mono"><%= @actual.ref.presence || "-" %></strong></span>
-  </div>
-  <p class="mt-2 mb-0 text-sm text-gray-600"><%= @actual.narrative.presence || "(no narrative)" %></p>
-<% end %>
+<%= render "row_summary", actual: @actual, amount: reimbursements_money(@actual.debit) %>
 
 <%= simple_horizontal_form_for @form,
       url: create_expense_admin_reimbursements_actual_path(@actual.record_id),
