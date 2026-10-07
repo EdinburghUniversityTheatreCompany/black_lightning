@@ -24,7 +24,6 @@ export default class extends Controller {
   connect() {
     this.updateCounter()
     this.#restoreOrClearStash()
-    this.typeChanged()
     this.paymentMethodChanged()
   }
 
@@ -69,13 +68,9 @@ export default class extends Controller {
 
     this.payeeOptionalTarget.classList.toggle("hidden", invoice || international)
     this.payeeRequiredTarget.classList.toggle("hidden", !invoice)
-    if (this.hasPayeeInternationalTarget) {
-      this.payeeInternationalTarget.classList.toggle("hidden", !international)
-    }
-    if (this.hasUkPayeeCopyTarget) {
-      this.ukPayeeCopyTarget.classList.toggle("hidden", international)
-      this.internationalPayeeCopyTarget.classList.toggle("hidden", !international)
-    }
+    this.payeeInternationalTarget.classList.toggle("hidden", !international)
+    this.ukPayeeCopyTarget.classList.toggle("hidden", international)
+    this.internationalPayeeCopyTarget.classList.toggle("hidden", !international)
   }
 
   #isInternational() {
@@ -106,7 +101,7 @@ export default class extends Controller {
     for (const file of stashedFiles) data.items.add(file)
     this.filesTarget.files = data.files
     if (this.hasReattachNoticeTarget) this.reattachNoticeTarget.classList.add("hidden")
-    this.#setStatus("Kept the receipt you attached. Check the errors above and submit again.")
+    this.statusTarget.textContent = "Kept the receipt you attached. Check the errors above and submit again."
   }
 
   checkAmount() {
@@ -142,9 +137,5 @@ export default class extends Controller {
     const max = this.referenceTarget.maxLength
     const used = this.referenceTarget.value.length
     this.referenceCounterTarget.textContent = `${max - used} of ${max} characters left (EUSA cuts off anything longer)`
-  }
-
-  #setStatus(message) {
-    this.statusTarget.textContent = message
   }
 }
