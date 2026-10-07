@@ -10,23 +10,6 @@ module ImportParsing
 
   private
 
-  # One list per BUCKETS entry, filled by the includer's determine_bucket(row). A row in
-  # multi_match_bucket carries candidate users under :existing_users, any other one :existing_user.
-  def build_categorized_result(multi_match_bucket:)
-    result = self.class::BUCKETS.index_with { |_| [] }
-
-    @rows.each_with_index do |row, index|
-      bucket, match, match_type = determine_bucket(row)
-      if bucket == multi_match_bucket
-        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
-      else
-        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
-      end
-    end
-
-    result
-  end
-
   # Canonical TSV for the stateless wizards, which carry an upload to apply in a hidden field. A
   # tab or newline inside a cell is escaped, or it shifts every later column when apply re-parses.
 

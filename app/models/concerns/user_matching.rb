@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# What the user and membership imports share: finding the existing users a row matches and the
-# years-active lookup their previews show for the candidates. Works on the @rows, @errors and
-# @categorized of an ImportParsing class.
+# What the user and membership imports share: finding the existing users a row matches, bucketing
+# the rows by that match, and the years-active lookup their previews show for the candidates. Works
+# on the @rows, @errors and @categorized of an ImportParsing class.
 module UserMatching
   extend ActiveSupport::Concern
 
@@ -17,6 +17,23 @@ module UserMatching
   end
 
   private
+
+  # One list per BUCKETS entry, filled by the includer's determine_bucket(row). A row in
+  # multi_match_bucket carries candidate users under :existing_users, any other one :existing_user.
+  def build_categorized_result(multi_match_bucket:)
+    result = self.class::BUCKETS.index_with { |_| [] }
+
+    @rows.each_with_index do |row, index|
+      bucket, match, match_type = determine_bucket(row)
+      if bucket == multi_match_bucket
+        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
+      else
+        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
+      end
+    end
+
+    result
+  end
 
   # [user, match_type] for the first exact match, trying database id, student id, associate id,
   # then email (match_type is nil for email). Nil when nothing matches.
