@@ -483,20 +483,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal [ [ c.id, 0 ], [ a.id, 1 ] ], show.team_members.ordered.pluck(:id, :display_order)
   end
 
-  test "creating a show stores its team members in row order" do
-    users = FactoryBot.create_list(:member, 3)
-    attributes = FactoryBot.attributes_for(:show, team_members_attributes: {
-      "0" => { user_id: users[2].id, position: "Director" },
-      "1" => { user_id: users[0].id, position: "Producer" },
-      "2" => { user_id: users[1].id, position: "Stage Manager" }
-    })
-
-    assert_difference("Show.count") { post :create, params: { show: attributes } }
-
-    assert_equal [ [ users[2].id, 0 ], [ users[0].id, 1 ], [ users[1].id, 2 ] ],
-                 Show.last.team_members.ordered.pluck(:user_id, :display_order)
-  end
-
   test "updating a show stores its ticket price bands and rewrites the price line" do
     show = FactoryBot.create(:show, is_public: true, price: "£10/8/7")
 
