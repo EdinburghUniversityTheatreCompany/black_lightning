@@ -6,14 +6,6 @@ const ajaxCache = {
   timestamps: {},
   maxAge: 60000,
 
-  generateKey(url, params) {
-    const sortedParams = Object.keys(params)
-      .sort()
-      .map(k => `${k}=${params[k]}`)
-      .join("&")
-    return `${url}?${sortedParams}`
-  },
-
   get(key) {
     const timestamp = this.timestamps[key]
     if (timestamp && (Date.now() - timestamp) < this.maxAge) {
@@ -93,10 +85,7 @@ export default class extends Controller {
     // Without it, a chip can only be removed with the keyboard.
     if (el.multiple) { plugins.push("remove_button") }
 
-    const theme = "default";
-
     const options = {
-      theme,
       allowEmptyOption: allowClear,
       placeholder,
       plugins,
@@ -179,21 +168,12 @@ export default class extends Controller {
   }
 
   #ajaxLoad(el, query, callback) {
-    const remoteUrl = el.dataset.remoteSource
-    const queryField = el.dataset.queryField || "q"
-    const showNonMembers = el.dataset.showNonMembers
+    // A URL object, because the source may already carry a query string (merge's ?exclude_id=).
+    const url = new URL(el.dataset.remoteSource, window.location.origin)
+    url.searchParams.set(el.dataset.queryField || "q", query)
+    if (el.dataset.showNonMembers) url.searchParams.set("show_non_members", el.dataset.showNonMembers)
 
-    const params = {
-      page: 1,
-      _type: "query",
-      [queryField]: query
-    }
-
-    if (showNonMembers) {
-      params.show_non_members = showNonMembers
-    }
-
-    const cacheKey = ajaxCache.generateKey(remoteUrl, params)
+    const cacheKey = url.toString()
     const cached = ajaxCache.get(cacheKey)
 
     if (cached) {
@@ -202,9 +182,7 @@ export default class extends Controller {
       return
     }
 
-    const url = `${remoteUrl}?${new URLSearchParams(params).toString()}`
-
-    fetch(url, {
+    fetch(cacheKey, {
       headers: { Accept: "application/json" },
       credentials: "same-origin"
     })
