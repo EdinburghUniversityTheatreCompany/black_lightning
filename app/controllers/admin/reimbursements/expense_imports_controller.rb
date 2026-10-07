@@ -38,23 +38,9 @@ module Admin
       # another year would leave it disagreeing with the card. Each step's own heading names its year.
       before_action -> { @title = "Import expenses" }
 
-      def show
-        destination_available?
-      end
-
-      def preview
-        return render(:show) unless source_present?
-        return render(:show, status: :unprocessable_entity) unless destination_available?
-        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
-
-        build_import
-        render :preview
-      end
-
       def apply
         return redirect_to(import_path, alert: NOTHING_PASTED_ALERT) if params[:pasted_text].blank?
-        return render(:show, status: :unprocessable_entity) unless destination_available?
-        return render(:show, status: :unprocessable_entity) unless cost_centre_chosen?
+        return render(:show, status: :unprocessable_entity) unless destination_chosen?
 
         build_import
 
@@ -67,13 +53,9 @@ module Admin
         render_blocked_preview(RACED_ALERT)
       end
 
-      def template
-        import = ::Reimbursements::ExpenseImport
-        send_data import::TSV_HEADERS.to_csv + import::TEMPLATE_HINTS.to_csv,
-                  type: "text/csv", filename: "expense-import-template.csv"
-      end
-
       private
+
+      def import_class = ::Reimbursements::ExpenseImport
 
       def build_import
         @import = ::Reimbursements::ExpenseImport.new(
@@ -84,26 +66,6 @@ module Admin
           budgets: store.budgets_for_year, people: store.people,
           existing_expenses: store.expenses
         )
-      end
-
-      # False when no financial year or cost centre is set up, so the form's selects
-      # would be empty.
-      def destination_available?
-        if selected_financial_year.nil?
-          flash.now[:alert] = NO_FINANCIAL_YEAR_ALERT
-        elsif selectable_cost_centres.empty?
-          flash.now[:alert] = NO_COST_CENTRE_ALERT
-        else
-          return true
-        end
-
-        false
-      end
-
-      # Re-render the preview rather than redirecting: a forty-line paste must survive.
-      def render_blocked_preview(alert = "Nothing was imported. Fix the lines flagged below and try again.")
-        flash.now[:alert] = alert
-        render :preview, status: :unprocessable_entity
       end
 
       # Both coordinates carry through "Start again" and "Cancel".

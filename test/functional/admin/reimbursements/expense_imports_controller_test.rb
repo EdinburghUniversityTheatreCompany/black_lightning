@@ -81,6 +81,7 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
+        assert_match(/filename="expense-import-template\.csv"/, response.headers["Content-Disposition"])
         header, hints = CSV.parse(response.body)
         assert_equal IMPORT::TSV_HEADERS, header
         assert_equal IMPORT::TEMPLATE_HINTS, hints

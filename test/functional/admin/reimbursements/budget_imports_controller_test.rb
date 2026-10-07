@@ -723,6 +723,7 @@ module Admin
         get :template, params: { format: :csv }
 
         assert_response :success
+        assert_match(/filename="budget-import-template\.csv"/, response.headers["Content-Disposition"])
         header, hints = CSV.parse(response.body)
         assert_equal ::Reimbursements::BudgetImport::TSV_HEADERS, header
         assert_equal "The show's agreed total, the same on every row of that area",
