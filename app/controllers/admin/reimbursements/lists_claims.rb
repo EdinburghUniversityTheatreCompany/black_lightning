@@ -22,6 +22,17 @@ module Admin
              .reverse
       end
 
+      # An owner sees their own line or area; finance sees all. 404, not 403, so a stranger
+      # cannot tell the record exists.
+      def owner_page_record(finder)
+        record = store.public_send(finder, params[:id])
+        visible = record && (can?(:manage, :reimbursements_finance) ||
+                             (current_person.present? && record.owner_ids.include?(current_person.record_id)))
+        raise ActiveRecord::RecordNotFound unless visible
+
+        record
+      end
+
       # Tab counts come from the whole list, before filtering.
       def load_claims(lines)
         claims = claims_for_lines(lines)

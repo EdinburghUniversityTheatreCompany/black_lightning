@@ -174,16 +174,8 @@ module Admin
         nil
       end
 
-      # Finance, or one of the line's owners; anyone else gets a 404.
       def authorize_budget_page!
-        @budget = store.find_budget(params[:id])
-        raise ActiveRecord::RecordNotFound if @budget.nil? || !budget_page_visible?(@budget)
-      end
-
-      def budget_page_visible?(budget)
-        return true if can?(:manage, :reimbursements_finance)
-
-        current_person.present? && budget.owner_ids.include?(current_person.record_id)
+        @budget = owner_page_record(:find_budget)
       end
 
       def set_budget
@@ -293,14 +285,6 @@ module Admin
       # reads it); with one there is nothing to choose.
       def chosen_cost_centre
         selected_cost_centre || ::Reimbursements::CostCentre.default
-      end
-
-      def parse_date(value)
-        return nil if value.blank?
-
-        Date.parse(value.to_s)
-      rescue Date::Error
-        nil
       end
     end
   end

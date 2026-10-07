@@ -114,6 +114,14 @@ module Admin
         Kaminari.paginate_array(collection).page(params[:page]).per(per)
       end
 
+      def parse_date(value)
+        return nil if value.blank?
+
+        Date.parse(value.to_s)
+      rescue Date::Error
+        nil
+      end
+
       # The "Download CSV" response behind every finance list. Pass the FULL filtered
       # set: an export is never paged. The exporter owns the columns and filename.
       def send_export(exporter_class, collection)

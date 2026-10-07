@@ -86,17 +86,8 @@ module Admin
 
       def posted_owner_ids = Array(area_form_params[:owner_ids]).compact_blank
 
-      # Finance, or a person the area's owners name. Anyone else gets a 404, not
-      # a 403, which would tell a stranger the area exists.
       def authorize_area_page!
-        @area = store.find_area(params[:id])
-        raise ActiveRecord::RecordNotFound if @area.nil? || !area_page_visible?(@area)
-      end
-
-      def area_page_visible?(area)
-        return true if can?(:manage, :reimbursements_finance)
-
-        current_person.present? && area.owner_ids.include?(current_person.record_id)
+        @area = owner_page_record(:find_area)
       end
 
       def set_area

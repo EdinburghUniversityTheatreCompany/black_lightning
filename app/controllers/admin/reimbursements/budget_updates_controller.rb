@@ -151,14 +151,6 @@ module Admin
       def pluralize_forecasts(count)
         helpers.pluralize(count, "forecast")
       end
-
-      def parse_date(value)
-        return nil if value.blank?
-
-        Date.parse(value.to_s)
-      rescue Date::Error
-        nil
-      end
     end
   end
 end
