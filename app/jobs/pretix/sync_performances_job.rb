@@ -7,7 +7,7 @@ module Pretix
   # Every 15 minutes because a house can sell out in an afternoon; the one read per
   # on-sale show is trivial against pretix's 300/minute budget.
   #
-  # See docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md.
+  # See CLAUDE.md, "Pretix performance sync".
   class SyncPerformancesJob < ::ApplicationJob
     include ::ErrorReporting
 

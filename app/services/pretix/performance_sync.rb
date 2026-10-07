@@ -17,7 +17,7 @@ module Pretix
   # +access_flags+, +note+ and +cancelled+ are the producer's on BOTH kinds of row
   # and are never written here.
   #
-  # See docs/superpowers/specs/2026-08-31-pretix-performance-sync-design.md.
+  # See CLAUDE.md, "Pretix performance sync".
   class PerformanceSync
     # pretix: 100 is "tickets available", below that "sold out or reserved", null
     # "status unknown". Null is deliberately NOT sold out: telling someone they
