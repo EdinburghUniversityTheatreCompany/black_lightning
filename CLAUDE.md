@@ -100,8 +100,8 @@ view.
   `select_controller` dispatches; never assume `el.tomselect` exists on connect.
 - **Receipt add/remove on both expense edit pages answers a turbo stream** replacing
   `#receipts-gallery` (`AttachesReceipts#respond_with_receipts_gallery`, `finance: true` on the
-  finance routes), and a redirect for a plain post. Both render `shared/_receipts_dropzone` inside
-  the `receipts-upload` controller element.
+  finance routes), and a redirect for a plain post. Both render
+  `admin/reimbursements/shared/_receipts_dropzone` inside the `receipts-upload` controller element.
 
 ## Link Helper
 
@@ -165,17 +165,20 @@ run `mise install && hk install` once.
   the reason.
 - **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint`, `herb`, `annotate-models`, `brakeman`,
   `bundler-audit`, `fasterer`, `database_consistency`, `debride`/`flay`/`jscpd`, `gitleaks`,
-  `actionlint` + `zizmor`, exec-bit and large-file guards, `versions` (keep in sync by hand with
-  the CI `versions` job), and `bin/rails test`.
+  `actionlint` + `zizmor`, exec-bit and large-file guards, `versions`, and `bin/rails test`. The
+  exec-bit and `versions` steps run the same `scripts/check_*.sh` as CI: change the script, not
+  its two callers.
 - **`annotate-models` is fix-only** (never a CI gate): committing a model or `db/schema.rb` runs
   `annotaterb models`, skipping when no DB is reachable. **It reads your dev database, so a pending
   migration strips real columns from models you never touched.** Run `bin/rails db:migrate` before
   committing after a pull; the tell is an unrelated model in `git diff --stat`.
 - **Gate status** ([plans/off-topic-improvements.md](plans/off-topic-improvements.md)): `herb-lint`
   and `jscpd` (threshold 0) gate. `herb-analyze` is advisory (`|| true`) only for the two
-  HTML-email fragment partials it cannot parse standalone. `database_consistency` is advisory: legacy integer-PK checkers are
-  scoped in `.database_consistency.yml`; the NOT-NULL / FK / unique-index findings need data-aware
-  backfill migrations. Two herb rules are disabled in `.herb.yml`.
+  HTML-email fragment partials it cannot parse standalone. `database_consistency` is advisory
+  (`|| true`): legacy integer-PK checkers are disabled in `.database_consistency.yml`; about 330
+  findings remain, 76 of them missing length validators (mostly `reimbursements_*`), most others
+  NOT NULL / FK / unique-index gaps needing data-aware backfill migrations. Two herb rules are
+  disabled in `.herb.yml`.
 - **Secrets:** `gitleaks` scans the tree, with gitignored secret paths allowlisted in
   `.gitleaks.toml`. Real plaintext secrets still sit in `config/` (move them to production
   credentials). The hk step scans only the working tree; the CI `gitleaks git` job scans full
@@ -408,10 +411,11 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - **Area names are unique per (financial year, cost centre) by model validation**; a unique
     index cannot do it, since MySQL lets NULLs through and a new area may have NULL year and
     centre.
-  - **`areas.budget_basis` declares what the agreed total is a total of** (`Area::BASIS_LABELS`,
-    the same words on form and cards): `expenses` (a show's spend cap; income lines left out of
-    `Area#allocated`) or `net` (a committee's allowance; income subtracted). Default `expenses`,
-    no backfill: every existing area came from show-shaped lines, and a cap never overstates room.
+  - **`areas.budget_basis` declares what the agreed total is a total of** (`Area::BASIS_OPTIONS`
+    and `#basis_label`, the same words on form and cards): `expenses` (a show's spend cap; income
+    lines left out of `Area#allocated`) or `net` (a committee's allowance; income subtracted).
+    Default `expenses`, no backfill: every existing area came from show-shaped lines, and a cap
+    never overstates room.
     - **The basis governs only the agreed-total arithmetic.** `AreaRollup#by_type` keeps separate
       Expense and Income subtotals on both bases, which are never totalled together.
     - **`Area#remaining` deliberately ignores the basis**: `committed_amount` counts claims, and
@@ -489,7 +493,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     matches (`financial_year=` contains `year=`; `cost_centre_id=` is the same coordinate). Producer
     items are unscoped, as their own claims are.
   - **No `?cost_centre=` means every centre**, never `CostCentre.default`, which would empty the
-    second centre's screens. `?cost_centre_id=<id>` still works (budget-import links); the key wins.
+    second centre's screens. `?cost_centre_id=<id>` still works (the import wizards' and budget
+    form's selects post it); the key wins.
   - **`CostCentre.default` (`order(:id).first`) is an arbitrary pot once a second row exists.**
     Never use it where the answer is knowable (the claim's, the batch's, the selector's centre), or
     on a path that moves money or emails a producer. `.sole_configured` is the "nothing to choose"
@@ -542,7 +547,7 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     anything else is `:paste`, kept literal: unescaping a typed `Costume\next week` stores and
     matches a real newline (a revision becomes a create), and `C:\temp\report.pdf` is a path.
   - **Both coordinates are query params on one top-level route**
-    (`/admin/reimbursements/budget_import?year=&cost_centre_id=`), never a path segment: years and
+    (`/admin/reimbursements/budget_import?year=&cost_centre=`), never a path segment: years and
     centres are orthogonal. `?year=` is FinanceController's selector, so the store arrives
     year-scoped. Entry points prefill what they know (a financial year, the budgets
     index's year, a centre's settings page).
@@ -564,16 +569,17 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     area's row** (`#prefix_area_for`): `Cogito | Marketing` beside `(blank) | Cogito: Marketing` is
     one line twice. It normalises only the row's own key; several keys per row would make the
     duplicate relation asymmetric and non-transitive.
-  - **A create adopts that area and is stored under the bare remainder** (`#create_area_name`,
-    read by `#creates` and owner routing), or the next converted sheet creates it again in the area.
-    `Budget#display_name` adds the prefix back, so a stored prefix renders twice. **A matched row
-    keeps its Area cell as typed** (`#re_homes` and owner targets read it): a prefix is not enough
-    to move a stored line.
+  - **A create adopts that area and is stored under the bare remainder** (`#area_name_for`,
+    read by `#creates`, owner routing and the preview), or the next converted sheet creates it
+    again in the area. `Budget#display_name` adds the prefix back, so a stored prefix renders
+    twice. **A matched row keeps its Area cell as typed** (`#re_homes` and owner targets read it):
+    a prefix is not enough to move a stored line.
   - **The preview states the line each row matched** (`Entry#matched_area_label`, `#matched_note`
     where the loose reading decided) wherever it differs from the typed cell. **An unmatched row
     says nothing**, or a first import claims every row matched a line in no area.
-  - **The preview's Area column reads `#area_name_for`**, the area a row lands in, marked
-    `(from its name)` when read off the prefix. It must agree with `#creates`.
+  - **The preview's Area column shows the area a row lands in** (`#area_name_for` again), marked
+    `(from its name)` when read off the prefix: the operator's only chance to catch a wrong
+    adoption.
   - **`#superseded_absent_budgets` links a create to the absent line** whose name is the create's
     area prefix plus its bare name. Nothing is merged; the link only lets the operator see the
     pair. The prefix must really be there, or it fires on the legitimate pair.
@@ -669,18 +675,18 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   it a dev shell with real Azure credentials would email producers and PUT the BACS spreadsheet into
   production SharePoint. So email-in does nothing locally, by design: `MailboxPollJob#perform`
   returns at once, `send_mail`/`create_draft` log and return a stub,
-  `MailboxClient#reply/#move/#mark_read` no-op. `upload_to_folder` and `delete_message` **raise**
-  `OutboundSuppressedError`: a plausible return would stamp `receipts_offloaded` (telling a producer
-  to delete their only copy) on receipts never backed up. Read-only probes stay live, so the
-  Settings integration dashboard works in dev.
+  `Graph::MailboxClient#reply/#move/#mark_read` no-op. `upload_to_folder` and `delete_message`
+  **raise** `OutboundSuppressedError`: a plausible return would stamp `receipts_offloaded` (telling
+  a producer to delete their only copy) on receipts never backed up. Read-only probes stay live,
+  so the Settings integration dashboard works in dev.
 - **Bank details are encrypted at rest** (non-deterministic, so never query them by value):
   `sort_code`/`account_number`/`iban`/`bic`/`notes` on `Reimbursements::PaymentDetails`;
   `sort_code_override`/`account_number_override`/`payee_name_override`/`iban_override`/
   `bic_override` on `Reimbursements::Expense`. Keys: production credentials under
   `active_record_encryption:`; development reads `REIMBURSEMENTS_AR_ENCRYPTION_*`, falling back to
-  throwaway literals in `config/application.rb` (a write needs a key even when blank); test uses
-  literals in `config/environments/test.rb`. `development.key` is committed, so real key material
-  must never go in `development.yml.enc`.
+  throwaway literals in `config/environments/development.rb` (a write needs a key even when blank);
+  test uses literals in `config/environments/test.rb`. `development.key` is committed, so real key
+  material must never go in `development.yml.enc`.
   - **`support_unencrypted_data = false`**, so stray plaintext raises. **There is no rollback**:
     removing `encrypts` makes the data unreadable; losing the production keys loses it outright.
     Production was backfilled 2026-07-26 with 0 failures; the all-rows sweep in
@@ -755,14 +761,15 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     `reimbursements.nightly_no_recipients` Honeybadger event and retries tomorrow; Integration
     Status badges it.
   - **A claim whose budget names no cost centre goes to the DEFAULT centre**
-    (`claims_by_cost_centre_id`), never to nobody: a wrong recipient is visible and correctable, no
-    recipient leaves a producer waiting. Build Batch's emails stay clicker-only.
+    (`expenses_owned_by_cost_centre`, Build Batch's rule), never to nobody: a wrong recipient is
+    visible and correctable, no recipient leaves a producer waiting. Build Batch's emails stay
+    clicker-only.
   - **Never make the second cost centre a fixture**: `CostCentre.default` (`order(:id).first`) would
     depend on `FixtureSet.identify` hashing, and the reconcile tests pin a one-centre world. Use
     `create_reimbursements_cost_centre`.
 - **Email-in**: `Reimbursements::MailboxPollJob` (every 5 min) polls the shared mailbox via
-  `MailboxClient` (Graph app-only). Each inbound receipt becomes a **blank DRAFT** (subject as
-  description) plus a "complete it in the portal" reply. Reply-then-move is the commit point;
+  `Graph::MailboxClient` (Graph app-only). Each inbound receipt becomes a **blank DRAFT** (subject
+  as description) plus a "complete it in the portal" reply. Reply-then-move is the commit point;
   unread means it will retry.
   - **The app holds no Entra mail permission**: Exchange grants named mailboxes through RBAC for
     Applications, and the "Reimbursements App Access" group gates nothing. Authorise a mailbox by
@@ -802,6 +809,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - `lib/reimbursements/templates/EUSA_BACS_template.xlsx` caps a batch at `BacsXlsx::MAX_ROWS`
     (200), the range its GRAND TOTAL and the Authorisation Form's total cover; a bigger batch raises
     `TemplateError` rather than corrupting the total.
+  - Both xlsx builders write through `Reimbursements::XlsxTemplate#write` (`change_contents`;
+    `add_cell` drops the template's styling).
   - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
     `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
     double-draft danger the orphan-draft guard prevents.
@@ -906,8 +915,8 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   - **Credit rows only.** Split a debit by converting it into several expenses (debit budgets total
     through expenses, which allocations never reach). Offsetting legs are refused: they net to
     zero, so splitting one invents income.
-  - **Apportioning clears the row's `budget_id`**, or its full value counts on the old line as well
-    as its shares.
+  - **Apportioning is refused on a row with a `budget_id`** (`EusaActual#apportionable?`), or its
+    full value would count on that line as well as its shares.
   - **`unattributed_actuals` must exclude apportioned rows explicitly**: its usual filter rejects
     rows that have a `budget_id` and an apportioned row has none, so each would sit on the
     overview's unlinked-spend card as a permanent false alarm.
@@ -953,8 +962,7 @@ form per international claim, all on the same draft.
   reclaimable UK VAT.
 - **The template caches formula values; clear them.** The cache held EUSA's sample answers and
   named the wrong authoriser. `force_recalculation` sets `fullCalcOnLoad` AND drops the cache,
-  since LibreOffice ignores the flag. Write with `change_contents`, never `add_cell` (drops
-  styling).
+  since LibreOffice ignores the flag.
   - Authorisation rows 19-20 are left to `fullCalcOnLoad` (the thresholds are EUSA's to change),
     so they fill in Excel and render blank in LibreOffice. Open question for EUSA: do they
     populate when EUSA opens the form? One sample settles it.
@@ -972,8 +980,8 @@ form per international claim, all on the same draft.
   never overwritten**: it is what the producer spent.
 - **A hidden input with HTML `required` silently blocks the whole form.** `required:` follows the
   active rail at render time and the Stimulus controller moves it (`data-rail-required`) on change.
-  **`input_html: { required: false }` does NOT suppress it**: simple_form's `required:` option
-  wins, so other fields using it work only because they are never hidden.
+  **`input_html: { required: false }` does NOT suppress it**: simple_form's own `required:` option
+  wins, so pass that (`f.input :x, required: false`).
 
 ## Crypt climate monitor
 
@@ -997,8 +1005,8 @@ Temperature, humidity and dew point charts at `/admin/climate`
   A file goes to the sole sensor; anything ambiguous is left unread and logged, never guessed.
 - **Graph plumbing is shared**: `GraphAuth`, `Graph::MailboxClient`, `Graph::Settings` (reads
   `GRAPH_*`, falling back to `REIMBURSEMENTS_AZURE_*`: one Entra app for the org, and renaming would
-  break existing credentials). `Reimbursements::MailboxClient` is a thin subclass pinning the
-  cost-centre default and its error-constant names.
+  break existing credentials). Reimbursements uses `Graph::MailboxClient` directly and rescues
+  `GraphAuth::*` errors.
 - **Outdoor data is Open-Meteo, which self-heals**: `OutdoorPollJob` upserts a rolling `past_days`
   window hourly, so an outage fills its own gap. Its CC BY 4.0 attribution must stay on the
   dashboard; the free tier is non-commercial only. `Climate::OUTDOOR_SOURCES` is the swap point
@@ -1090,12 +1098,12 @@ roles by `Pretix::MembershipSync`. Full detail in
 ## Box office display (Anthias)
 
 Public unauthenticated pages under `/display` for the box office screen; `/display` itself lists
-the playlist for whoever sets up the Pi. `Display::PagesController` resolves one panel per URL
-through `Display::Chain`; panels live in `app/services/display/panels/`.
+the playlist for whoever sets up the Pi. `Display::PagesController#render_chain` shows the first
+panel with content; panels live in `app/services/display/panels/`.
 
 - **Anthias plays these URLs forever, unattended, so a page must never render nothing**: that is a
-  blank box office screen until someone reconfigures the Pi. `Chain` appends the query-less
-  `Panels::Identity` itself; **the empty-database test in
+  blank box office screen until someone reconfigures the Pi. `render_chain` falls back to the
+  query-less `Panels::Identity`; **the empty-database test in
   `test/functional/display/pages_controller_test.rb` is the feature**; anything that can raise
   mid-render is rescued (`display_image_url` returns nil for a blob missing from storage).
 - **Run dates decide what is on the board, not the performance list.** `Display::EventPool` filters
@@ -1128,7 +1136,7 @@ through `Display::Chain`; panels live in `app/services/display/panels/`.
   `ActiveStorageHelper::PREFIX`) to any event whose page was opened. `eager_load` must sit beside
   that join, never replace it: alone it outer-joins and drops the guard.
 - **Curtain times come from `EventOccurrence` only when entered.** `display_when` prints
-  "Fri 2 Oct, 7.30pm" from `Event#next_occurrence_at`, else the bare date range.
+  "Fri 2 Oct, 7.30pm" from `Event::Schedule`'s blocks, else the bare date range.
 - **The archive slide advances one place per render** (`Display::Rotation`, a cached cursor keyed
   by date), or Anthias shows one frame all day. A cache that cannot answer falls back to a random
   pick.
@@ -1264,7 +1272,7 @@ from `Pretix::SyncPerformancesJob` every 15 minutes.
 An `Opportunity` is a posting (a "project"). It `belongs_to :company` (optional), `has_many :roles` (`OpportunityRole`: a position + `category` enum), and carries `project`/`author`, the `compensation_type`/`experience_level` enums, `apply_url` and `email_visibility`/`contact_email`. `title` is optional: `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
 
 - **Submission is public** (`GetInvolvedController#new/#create`, honeypot + reCAPTCHA). A logged-out submitter gives `submitter_name`/`submitter_email` and has no creator (`external?`); a member is the creator. On the admin form a manager may pick another creator, or enter an external submitter, which records the manager as creator (`on_behalf_of?`: both present). `attribution_label` renders all three cases; `creator_or_submitter` requires one of the two. Every submission starts `approved: false`.
-- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company, compensation, experience) + a `?category=` tab, EUTC first. `active` is `listable` ordered internal-first. Per-society share links use `?q[company_slug_eq]=…`.
+- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company, compensation, experience) + a `?category=` tab, EUTC first. `active` is `listable` ordered internal-first. Per-society share links use `?q[company_slug_eq]=…`. **`ransackable_attributes` on Opportunity and Company list only what the searches and sort headers use**: a wider list let `q[contact_email_start]` read out an email `email_visibility` hides, letter by letter.
 - **`OpportunityCardComponent`** renders the project and its roles on the public list and the home/dashboard widgets.
 - **Review** is the `Opportunity Reviewer` role, who also gets the `OpportunityDigestJob` digest. Approve/reject emails `notification_email` via `OpportunityMailer`, with an optional note: the creator when present (so an on-behalf decision goes to the internal user), else the external submitter. The `close` member action (aliased to `:update` in Ability) expires a posting at once.
 - `Company` (name, `acts_as_url` slug, `internal` EUTC flag) is managed in `Admin::CompaniesController`.
@@ -1314,7 +1322,9 @@ the sitemap in `SitemapsController`.
 Start the test database using `docker start /mysql8` before running any tests.
 
 - **After touching a Stimulus controller or a stylesheet, run `RAILS_ENV=test bin/vite build`**, or
-  about four tests fail with "Vite Ruby can't find entrypoints/admin.js", looking unrelated.
+  about four tests fail with "Vite Ruby can't find entrypoints/admin.js", looking unrelated. In a
+  worktree keep `public/vite-test` a real directory, never a symlink to another checkout's: once
+  the JS differs the auto-build fails and every request test errors, or tests run the other JS.
 - **A functional test cannot pin the order of nested-attribute rows.** `ActionController::TestCase`
   encodes params with `Hash#to_query`, which sorts the keys (`"10"` lands between `"1"` and `"2"`).
   Anything reading row position (`TeamMemberOrdering`) needs an `ActionDispatch::IntegrationTest`,
@@ -1324,9 +1334,9 @@ Start the test database using `docker start /mysql8` before running any tests.
   System tests are pinned to 1 worker (`application_system_test_case.rb`): in parallel they are
   flaky and no faster.
   - Rails splits only the database per worker, so **any new shared filesystem or process state
-    must be split in `parallelize_setup`**, as the ActiveStorage disk root, `tmp/generators` and
-    SimpleCov's `command_name` are. A teardown removes `ActiveStorage::Blob.service.root`, never a
-    hardcoded `tmp/storage` (another worker's data).
+    must be split in `parallelize_setup`**, as the ActiveStorage disk root and `tmp/generators`
+    are (SimpleCov names each worker through its own fork hook). A teardown removes
+    `ActiveStorage::Blob.service.root`, never a hardcoded `tmp/storage` (another worker's data).
   - Relaxing MySQL durability on the `mysql8` container (`innodb_flush_log_at_trx_commit=2`,
     `sync_binlog=0`, `--skip-log-bin`) moves the optimum to 12 workers, about 10% faster. Not done:
     it also affects the dev database. Use `PARALLEL_WORKERS=12` if you set it.
@@ -1345,8 +1355,8 @@ Start the test database using `docker start /mysql8` before running any tests.
 - **Validation messages are i18n-customised** ("must not be blank."). Assert
   `errors[:field].present?`, not Rails' default string.
 - **A new admin table header or search field needs a key under `simple_form.labels.defaults` in
-  `config/locales/simple_form.en.yml`**, or the page raises "Translation missing" (`SearchFormHelper`
-  and `shared/_table.erb` translate symbol headers).
+  `config/locales/simple_form.en.yml`**, or the page raises "Translation missing" (`TableComponent`
+  translates symbol headers, `SearchFormHelper` a field's `slug:`).
 - **A ViewComponent gets no `paginate` helper.** A component that paginates 500s, and only a test
   rendering it with enough rows sees it.
 - **Fixtures with an explicit `id:` break association-by-label.** `test/fixtures/users.yml`'s
@@ -1358,9 +1368,9 @@ Start the test database using `docker start /mysql8` before running any tests.
   `nested-form` Add/Remove) still test fine in the browser.
 - **Capybara's `select` cannot drive a `.simple-select2` select**: `select_controller.js` hides it
   behind Tom Select, so it raises `ElementNotFound`. Click `.ts-control`, then the
-  `.ts-dropdown-content .option` (`tom_select` in
-  `test/application_system_test_case.rb`). Tom Select fires a native `change`, so
-  bound Stimulus actions still run.
+  `.ts-dropdown-content .option` (`tom_select_click`), or set it through the widget's API
+  (`tom_select`, `tom_select_add`), all in `test/application_system_test_case.rb`. Tom Select
+  fires a native `change`, so bound Stimulus actions still run.
 - **Capybara's `fill_in` types the first four characters of a value over 30 characters** and sets
   the rest by JavaScript, so a Tab among them leaves a textarea (`ID\tStatus` became `IDtatus`).
   Set a TSV outright (`paste_sheet` in `expense_import_js_test.rb`).
