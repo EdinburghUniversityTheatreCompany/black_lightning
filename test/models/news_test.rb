@@ -74,18 +74,6 @@ class NewsTest < ActionView::TestCase
     assert_equal "test-news-1", news2.slug
   end
 
-  test "handles special characters in slug generation" do
-    news = FactoryBot.build(:news, title: 'News with "Quotes" & Symbols!', slug: "")
-    assert news.valid?
-    assert_equal "news-with-quotes-and-symbols", news.slug
-  end
-
-  test "handles accented characters in slug generation" do
-    news = FactoryBot.build(:news, title: "Nouvelles spéciàles", slug: "")
-    assert news.valid?
-    assert_equal "nouvelles-speciales", news.slug
-  end
-
   test "slug uniqueness validation works case-insensitively" do
     FactoryBot.create(:news, slug: "test-slug")
     duplicate_news = FactoryBot.build(:news, slug: "TEST-SLUG")

@@ -51,7 +51,7 @@ class News < ApplicationRecord
   # News should always be ordered by publish_date DESC
   default_scope -> { order("publish_date DESC") }
 
-  before_validation :generate_slug_from_title
+  slug_from :title
 
   scope :current, -> { where([ "publish_date <= ?", Time.current ]) }
 
@@ -80,36 +80,6 @@ class News < ApplicationRecord
 
     image
   end
-
-  private
-
-  def generate_slug_from_title
-    return unless title.present?
-
-    return if slug.present? && !title_changed?
-
-    base_slug = title.to_url
-
-    if title_changed? && slug.present?
-      old_title = title_was&.to_url
-      # For new records title_was is nil, so treat any pre-set slug as manually set
-      return if old_title.nil?
-      # A slug that doesn't derive from the old title was set by hand: keep it.
-      return unless slug == old_title || slug.start_with?("#{old_title}-")
-    end
-
-    candidate_slug = base_slug
-    counter = 1
-
-    while News.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
-      candidate_slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
-
-    self.slug = candidate_slug
-  end
-
-  public
 
   # Display the body up to the first line break after 140 characters.
   def preview

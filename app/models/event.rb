@@ -207,7 +207,8 @@ class Event < ApplicationRecord
   default_scope -> { order("end_date DESC") }
 
   # Callbacks
-  before_validation :generate_slug_from_name, :assign_company_from_name
+  slug_from :name
+  before_validation :assign_company_from_name
   after_initialize :set_default_members_only_text
   before_validation :derive_price_from_ticket_prices, if: :will_save_change_to_ticket_prices?
   after_update :recache_author_list_if_changed
@@ -451,36 +452,6 @@ class Event < ApplicationRecord
   end
 
   private
-
-  def generate_slug_from_name
-    return unless name.present?
-
-    should_generate = slug.blank? || name_changed?
-
-    return if slug.present? && !name_changed?
-
-    base_slug = name.to_url
-
-    # A renamed event keeps a hand-set slug: only one still matching the old name
-    # (or its -N suffix) was generated. A new record's pre-set slug is hand-set.
-    if name_changed? && slug.present?
-      old_name = name_was&.to_url
-      return if old_name.nil?
-      unless slug == old_name || slug.start_with?("#{old_name}-")
-        return
-      end
-    end
-
-    candidate_slug = base_slug
-    counter = 1
-
-    while Event.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
-      candidate_slug = "#{base_slug}-#{counter}"
-      counter += 1
-    end
-
-    self.slug = candidate_slug
-  end
 
   def recache_author_list_if_changed
     if saved_change_to_author?
