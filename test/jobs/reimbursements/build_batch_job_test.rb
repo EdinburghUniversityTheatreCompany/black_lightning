@@ -7,9 +7,6 @@ module Reimbursements
     BACS_DATE = "2026-05-13".freeze
     OPERATOR = [ "operator@bedlamfringe.co.uk" ].freeze
 
-    FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
-    FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
-
     def payee
       @payee ||= create_reimbursements_person(sort_code: "08-99-99", account_number: "66374958")
     end
@@ -30,7 +27,7 @@ module Reimbursements
     end
 
     setup do
-      @processor = FakeProcessor.new
+      @processor = FakeBatchProcessor.new
       @notifier = FakeNotifier.new
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       BuildBatchJob.graph_builder = -> { Object.new }
@@ -128,7 +125,7 @@ module Reimbursements
     end
 
     test "a failed build emails the operator the failure and fails its attempt with the errors" do
-      @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
+      @processor = FakeBatchProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
       attempt = click_time_attempt
       approved_expense
 
@@ -174,7 +171,7 @@ module Reimbursements
     # --- BatchAttempt lifecycle: History's in-app trace of each build ------
 
     test "a successful build with best-effort failures keeps them as warnings on the attempt" do
-      @processor = FakeProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
+      @processor = FakeBatchProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
       attempt = click_time_attempt
       approved_expense
 

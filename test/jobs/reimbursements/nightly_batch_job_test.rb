@@ -17,8 +17,6 @@ module Reimbursements
       def expenses_owned_by_cost_centre(_centre) = raise(StandardError, "backend down")
     end
 
-    FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
-
     def payee
       @payee ||= create_reimbursements_person(sort_code: "08-99-99", account_number: "66374958")
     end

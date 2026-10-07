@@ -7,8 +7,6 @@ module Admin
 
       MC = ::Reimbursements::ModulusCheck
 
-      FakeChecker = ReimbursementsTestHelpers::FakeModulusChecker
-
       setup do
         grant_finance_permission(users(:member))
         @user = users(:member)
@@ -18,7 +16,7 @@ module Admin
         @no_bank_person = create_reimbursements_person(name: "Nora NoBank", email: "nora@example.com")
         @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
 
-        @checker = FakeChecker.new("66374958" => MC::VALID)
+        @checker = FakeModulusChecker.new("66374958" => MC::VALID)
         ReviewController.checker_builder = -> { @checker }
 
         # A real Notifier over a recording FakeGraphClient, so tests assert the send.

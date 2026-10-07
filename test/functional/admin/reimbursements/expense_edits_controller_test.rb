@@ -10,8 +10,6 @@ module Admin
       EDITABLE_STATUSES = %w[Pending Approved Submitted Paid].freeze
       MC = ::Reimbursements::ModulusCheck
 
-      FakeChecker = ReimbursementsTestHelpers::FakeModulusChecker
-
       setup do
         grant_finance_permission(users(:member))
         @user = users(:member)
@@ -20,7 +18,7 @@ module Admin
                                                sort_code: "08-99-99", account_number: "66374958")
         @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
 
-        @checker = FakeChecker.new("66374958" => MC::VALID)
+        @checker = FakeModulusChecker.new("66374958" => MC::VALID)
         ExpenseEditsController.checker_builder = -> { @checker }
       end
 
