@@ -19,8 +19,8 @@ module Reimbursements
       def row(actual)
         debit = actual.debit&.positive?
         credit = actual.credit
-        budget = budget_by_id[actual.linked_budget_ids.first]
-        expense = expense_by_id[actual.linked_expense_ids.first]
+        budget = budget_by_id[actual.budget_id&.to_s]
+        expense = expense_by_id[actual.expense_id&.to_s]
         [
           iso_date(actual.date),
           debit ? "Debit" : (credit&.positive? ? "Credit" : ""),

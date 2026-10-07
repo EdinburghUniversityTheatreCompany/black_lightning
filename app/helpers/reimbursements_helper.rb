@@ -176,7 +176,7 @@ module ReimbursementsHelper
   # also reverses the settlement and returns it to Submitted. An international claim keeps
   # the corrected amount, as the estimate it replaced is not recorded.
   def reimbursements_unlink_confirm(actual)
-    if actual.linked_expense_ids.any?
+    if actual.expense_id?
       "Unlink this row from its claim? The row stays on the ledger and goes back to needing " \
         "attention. If the claim was marked Paid by this match it returns to Submitted, and an " \
         "international claim keeps the amount EUSA actually charged."

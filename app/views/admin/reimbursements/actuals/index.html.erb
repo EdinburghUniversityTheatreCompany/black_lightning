@@ -116,8 +116,8 @@
        linked =
          if actual.offset?
            render(BadgeComponent.new(type: :warning, pill: true).with_content("Offset"))
-         elsif actual.linked_expense_ids.any?
-           link_to(edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first), class: "no-underline") do
+         elsif actual.expense_id?
+           link_to(edit_admin_reimbursements_expense_edit_path(actual.expense_id), class: "no-underline") do
              render(BadgeComponent.new(type: :primary, pill: true).with_content("Expense"))
            end
          elsif actual.apportioned?
@@ -127,7 +127,7 @@
              content_tag(:span, actual.allocation_summary,
                          class: "block text-xs text-gray-600")
            ], " ")
-         elsif actual.linked_budget_ids.any?
+         elsif actual.budget_id?
            render(BadgeComponent.new(type: :info, pill: true).with_content("Budget"))
          else
            render(BadgeComponent.new(type: :secondary, pill: true).with_content("Unlinked"))
@@ -182,7 +182,7 @@
             end),
            # Additive, not an elsif: a budget-linked debit is still convertible, and a linked
            # offset leg must keep "Not offsetting".
-           (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+           (if actual.expense_id? || actual.budget_id?
               button_to("Unlink",
                         unlink_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm), form_class: "inline-block",

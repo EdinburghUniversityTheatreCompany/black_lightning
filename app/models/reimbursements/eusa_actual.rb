@@ -93,10 +93,6 @@ module Reimbursements
       actuals.reject(&:offset?).sum { |a| (a.debit || 0) - (a.credit || 0) }
     end
 
-    # Array interface kept from the old PORO; a row links at most one of each.
-    def linked_expense_ids = [ self[:expense_id]&.to_s ].compact
-    def linked_budget_ids = [ self[:budget_id]&.to_s ].compact
-
     # Comparable with a freshly parsed ActualsRow, to skip re-importing.
     def dedup_key
       Reconciliation.actuals_row_dedup_key(nominal_code, narrative, debit, credit)
@@ -108,15 +104,15 @@ module Reimbursements
 
     # An unlinked debit. An offsetting leg nets to zero, so converting it would invent spend.
     def convertible_to_expense?
-      debit.present? && debit.positive? && self[:expense_id].blank? && !offset?
+      debit.present? && debit.positive? && expense_id.blank? && !offset?
     end
 
     # An unattached credit that is not an offsetting leg (splitting one would invent income).
     # Debits are out on purpose: they are split by converting to several expenses, and a debit
     # budget's figure totals through its expenses, which allocations would not reach.
     def apportionable?
-      credit.present? && credit.positive? && self[:budget_id].blank? &&
-        self[:expense_id].blank? && !offset? && !apportioned?
+      credit.present? && credit.positive? && budget_id.blank? &&
+        expense_id.blank? && !offset? && !apportioned?
     end
 
     def apportioned? = allocations.any?
@@ -125,7 +121,7 @@ module Reimbursements
     # ledger's default filter and DatabaseStore#unattributed_actuals both read it, or a row the
     # ledger hid but the overview counted would be money with no screen to resolve it on.
     def needs_attention?
-      !offset? && self[:expense_id].blank? && self[:budget_id].blank? && !apportioned?
+      !offset? && expense_id.blank? && budget_id.blank? && !apportioned?
     end
 
     # #needs_attention? plus a figure. Only unfinished rows: offsetting a row linked to a claim

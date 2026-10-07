@@ -234,7 +234,7 @@ module Admin
 
       assert_response :success
       actual = ::Reimbursements::EusaActual.sole
-      assert_equal [ @expense.record_id ], actual.linked_expense_ids
+      assert_equal @expense.id, actual.expense_id
       @expense.reload
       assert_equal ::Reimbursements::Status::PAID, @expense.status
       assert_equal Date.new(2026, 5, 13), @expense.payment_confirmed_date
@@ -248,7 +248,7 @@ module Admin
       post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
 
       assert_response :success
-      assert_equal [ @income.record_id ], ::Reimbursements::EusaActual.sole.linked_budget_ids
+      assert_equal @income.id, ::Reimbursements::EusaActual.sole.budget_id
       assert_equal 1, assigns(:credits_linked)
     end
 

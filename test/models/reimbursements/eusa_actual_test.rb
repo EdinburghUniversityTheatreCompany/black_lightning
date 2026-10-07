@@ -4,19 +4,6 @@ module Reimbursements
   class EusaActualTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    test "linked ids wrap the single FKs as record-id string arrays" do
-      actual = EusaActual.create!(nominal_code: "4000", narrative: "BACS RUN", debit: 10)
-      assert_empty actual.linked_expense_ids
-      assert_empty actual.linked_budget_ids
-
-      expense = Expense.create!(status: Status::PAID, description: "x")
-      budget = Budget.create!(name: "Props")
-      actual.update!(expense: expense, budget: budget)
-
-      assert_equal [ expense.record_id ], actual.linked_expense_ids
-      assert_equal [ budget.record_id ], actual.linked_budget_ids
-    end
-
     # An offset leg nets to zero, so it must never become an expense however it is linked.
     test "only an unlinked debit row that is not an offset leg is convertible to an expense" do
       expense = Expense.create!(status: Status::PAID, description: "x")

@@ -440,7 +440,7 @@ module Admin
         end
       end
 
-      assert_empty @unlinked.reload.linked_expense_ids
+      assert_nil @unlinked.reload.expense_id
     end
 
     # The convertibility check is re-taken inside the writing transaction: a second click's
@@ -461,7 +461,7 @@ module Admin
 
       assert_redirected_to admin_reimbursements_actuals_path
       assert_match(/already/i, flash[:alert])
-      assert_equal [ @expense.record_id ], @unlinked.reload.linked_expense_ids,
+      assert_equal @expense.id, @unlinked.reload.expense_id,
                    "the first conversion's link stands"
     end
 

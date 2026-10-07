@@ -252,7 +252,7 @@ module Admin
       # imported actual nor payment-confirmed: dedup only catches an identical row, so a near-duplicate
       # would otherwise pay a claim twice.
       def matchable_expenses
-        reconciled = store.eusa_actuals.flat_map(&:linked_expense_ids).to_set
+        reconciled = store.eusa_actuals.filter_map { |actual| actual.expense_id&.to_s }.to_set
         store.expenses.select do |e|
           e.status.in?([ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]) &&
             e.payment_confirmed_date.blank? && !reconciled.include?(e.record_id)

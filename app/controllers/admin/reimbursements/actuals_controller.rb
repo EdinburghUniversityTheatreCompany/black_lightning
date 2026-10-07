@@ -225,9 +225,9 @@ module Admin
       def unlink
         actual = find_or_404(:find_actual)
 
-        if actual.linked_expense_ids.any?
+        if actual.expense_id?
           unlink_from_claim(actual)
-        elsif actual.linked_budget_ids.any?
+        elsif actual.budget_id?
           store.unlink_actual_from_budget!(actual.record_id)
           redirect_to actuals_path_with_filters,
                       notice: "Unlinked from that income line. The row is unplaced again, and can " \
@@ -286,7 +286,7 @@ module Admin
       def not_pairable_reason(actual)
         return "That row is already part of an offsetting pair." if actual.offset?
         return "That row is split across budgets, so unpick the split first." if actual.apportioned?
-        if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+        if actual.expense_id? || actual.budget_id?
           return "That row is linked to a claim or a budget. Unlink it first: marking it " \
                  "offsetting would hide spend that a claim or a line is still counting."
         end
@@ -314,7 +314,7 @@ module Admin
             "invent income that never arrived."
         elsif actual.apportioned?
           "That row is already split across budgets. Remove the split first to change it."
-        elsif actual.linked_expense_ids.any? || actual.linked_budget_ids.any?
+        elsif actual.expense_id? || actual.budget_id?
           "That row is already attached to a claim or a budget, so splitting it as well would " \
             "count its money twice."
         else
@@ -384,7 +384,7 @@ module Admin
         if actual.offset?
           "That row offsets another one, so together they net to zero. It isn't real spend and " \
             "can't become an expense."
-        elsif actual.linked_expense_ids.any?
+        elsif actual.expense_id?
           "That row is already linked to an expense, so converting it again would double-count it."
         else
           "Only a debit row can become an expense: a credit is income, and belongs to a budget."

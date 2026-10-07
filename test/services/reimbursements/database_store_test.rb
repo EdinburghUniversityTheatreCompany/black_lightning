@@ -208,14 +208,14 @@ module Reimbursements
 
       actual = store.create_actual!(nominal_code: "4000", narrative: "BACS", debit: 10,
                                     period: "P1", expense_id: expense.id)
-      assert_equal [ expense.record_id ], actual.linked_expense_ids
-      assert_empty actual.linked_budget_ids
+      assert_equal expense.id, actual.expense_id
+      assert_nil actual.budget_id
 
       assert_equal [ actual.id ], store.actuals_for_period("P1").map(&:id)
       assert_empty store.actuals_for_period("P2")
 
       store.link_actual_to_budget!(actual.record_id, budget.record_id)
-      assert_equal [ budget.record_id ], EusaActual.find(actual.id).linked_budget_ids
+      assert_equal budget.id, EusaActual.find(actual.id).budget_id
     end
 
     test "link_offsetting_pair! stamps both legs and points them at each other" do
@@ -238,7 +238,7 @@ module Reimbursements
       actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
 
       expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
-      assert_equal [ expense.record_id ], actual.reload.linked_expense_ids
+      assert_equal expense.id, actual.reload.expense_id
 
       assert_raises(DatabaseStore::NotConvertibleError) do
         store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
