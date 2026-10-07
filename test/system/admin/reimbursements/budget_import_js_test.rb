@@ -9,8 +9,6 @@ module Admin
     class BudgetImportJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
-      HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
-
       setup do
         grant_finance_permission(users(:member))
         @year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2027", active: true)
@@ -18,8 +16,7 @@ module Admin
         login_as users(:member)
       end
 
-      # Leaves the two leading Area columns blank, or every cell shifts left.
-      def sheet(*rows) = ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
+      alias sheet budget_import_sheet
 
       def area_sheet(*rows)
         ([ "Area\tBudget name\tNominal code\tType\tBudget amount" ] + rows).join("\n")

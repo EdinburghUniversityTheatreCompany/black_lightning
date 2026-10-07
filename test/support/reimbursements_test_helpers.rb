@@ -86,6 +86,15 @@ module ReimbursementsTestHelpers
     expense
   end
 
+  # A budget-import paste: the header row, then each of +rows+ behind the two leading Area
+  # columns, which it leaves blank (the area tests write their own headers). The header is
+  # DERIVED from TSV_HEADERS, never retyped, so an added column fails loudly: a hardcoded
+  # subset once hid a column shift from every test but the system one, which `bin/rails test`
+  # never runs.
+  def budget_import_sheet(*rows)
+    ([ ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t") ] + rows.map { |row| "\t\t#{row}" }).join("\n")
+  end
+
   # A one-sheet .xlsx holding +rows+, as an upload: the importers read only its #path, so it
   # serves a model test and a posted file alike.
   def xlsx_upload(rows, sheet: "Sheet1")

@@ -6,7 +6,7 @@ module Admin
       include ReimbursementsTestHelpers
 
       FY = ::Reimbursements::FinancialYear
-      # Derived, never retyped: see budget_import_test.rb.
+      # Derived, never retyped: see ReimbursementsTestHelpers#budget_import_sheet.
       HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
       setup do
@@ -16,11 +16,7 @@ module Admin
         @cost_centre = ::Reimbursements::CostCentre.default
       end
 
-      # The two leading Area columns are left blank; the area tests write their
-      # own headers.
-      def tsv(*rows)
-        ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
-      end
+      alias tsv budget_import_sheet
 
       def preview_params(text, **extra)
         { year: @year.key, pasted_text: text,

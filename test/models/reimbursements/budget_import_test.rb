@@ -11,15 +11,10 @@ module Reimbursements
       @cost_centre = CostCentre.default
     end
 
-    # DERIVED, never retyped: a hardcoded subset once hid a column shift from
-    # every test but the system one, which `bin/rails test` never runs.
+    # Derived, never retyped: see ReimbursementsTestHelpers#budget_import_sheet.
     HEADERS = ::Reimbursements::BudgetImport::TSV_HEADERS.join("\t").freeze
 
-    # Leaves the two leading Area columns blank; the area tests write their
-    # own headers.
-    def tsv(*rows)
-      ([ HEADERS ] + rows.map { |row| "\t\t#{row}" }).join("\n")
-    end
+    alias tsv budget_import_sheet
 
     # The same padding for an xlsx row, which is an Array, not a String.
     def xlsx_sheet(*rows)
