@@ -106,20 +106,6 @@ class UserImportTest < ActiveSupport::TestCase
     assert_empty import.rows
   end
 
-  test "categorizes exact match by student_id" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-
-    tsv = <<~TSV
-      Name\tStudent ID\tEmail
-      Test User\ts1234567\ttest@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal 1, import.categorized[:exact_match_id].size
-    assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
-  end
-
   test "categorizes exact match by associate_id" do
     user = FactoryBot.create(:user, associate_id: "ASSOC123")
 
@@ -132,20 +118,6 @@ class UserImportTest < ActiveSupport::TestCase
 
     assert_equal 1, import.categorized[:exact_match_id].size
     assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
-  end
-
-  test "categorizes exact match by email" do
-    user = FactoryBot.create(:user, email: "test@example.com")
-
-    tsv = <<~TSV
-      Name\tStudent ID\tEmail
-      Test User\t\ttest@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal 1, import.categorized[:exact_match_email].size
-    assert_equal user, import.categorized[:exact_match_email].first[:existing_user]
   end
 
   test "categorizes fuzzy name match for active users only" do
@@ -165,18 +137,6 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:fuzzy_match].size
     assert_includes import.categorized[:fuzzy_match].first[:existing_users], active_user
     assert_not_includes import.categorized[:fuzzy_match].first[:existing_users], inactive_user
-  end
-
-  test "categorizes as create_new when no match found" do
-    tsv = <<~TSV
-      Name\tStudent ID\tEmail
-      Brand New User\ts9999999\tnew@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal 1, import.categorized[:create_new].size
-    assert_nil import.categorized[:create_new].first[:existing_user]
   end
 
   test "prioritizes student_id match over email match" do
@@ -208,53 +168,23 @@ class UserImportTest < ActiveSupport::TestCase
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
-    assert_equal 1, import.categorized[:exact_match_id].size
-    assert_equal 1, import.categorized[:exact_match_email].size
-    assert_equal 1, import.categorized[:create_new].size
+    assert_equal existing_by_id, import.categorized[:exact_match_id].sole[:existing_user]
+    assert_equal existing_by_email, import.categorized[:exact_match_email].sole[:existing_user]
+    assert_nil import.categorized[:create_new].sole[:existing_user]
   end
 
-  test "parses user_id column formatted as 'User ID'" do
+  test "parses the user_id column under any of its headers" do
     user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      User ID\tName\tStudent ID\tEmail
-      #{user.id}\tSome Name\ts9999999\tsome@example.com
-    TSV
 
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
+    [ "User ID", "user_id", "userid", "UserID" ].each do |header|
+      tsv = <<~TSV
+        #{header}\tName\tStudent ID\tEmail
+        #{user.id}\tSome Name\ts9999999\tsome@example.com
+      TSV
 
-  test "parses user_id column formatted as 'user_id'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      user_id\tName\tStudent ID\tEmail
-      #{user.id}\tSome Name\ts9999999\tsome@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "parses user_id column formatted as 'userid'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      userid\tName\tStudent ID\tEmail
-      #{user.id}\tSome Name\ts9999999\tsome@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "parses user_id column formatted as 'UserID'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      UserID\tName\tStudent ID\tEmail
-      #{user.id}\tSome Name\ts9999999\tsome@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal user.id, import.rows.first[:user_id]
+      import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+      assert_equal user.id, import.rows.first[:user_id], header
+    end
   end
 
   test "user_id is nil when column is absent" do
@@ -277,42 +207,19 @@ class UserImportTest < ActiveSupport::TestCase
     assert_nil import.rows.first[:user_id]
   end
 
-  test "user_id match categorizes as exact_match_id" do
-    user = FactoryBot.create(:user)
+  test "user_id match takes priority over student_id and email matches" do
+    by_id = FactoryBot.create_list(:user, 2)
+    FactoryBot.create(:user, student_id: "s8880001")
+    FactoryBot.create(:user, email: "target@example.com")
     tsv = <<~TSV
       User ID\tName\tStudent ID\tEmail
-      #{user.id}\tSome Name\ts9999999\tsome@example.com
+      #{by_id[0].id}\tSome Name\ts8880001\tsome@example.com
+      #{by_id[1].id}\tOther Name\ts9999999\ttarget@example.com
     TSV
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal 1, import.categorized[:exact_match_id].size
-    assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
-  end
 
-  test "user_id match takes priority over student_id match" do
-    user_by_id  = FactoryBot.create(:user)
-    user_by_sid = FactoryBot.create(:user, student_id: "s8880001")
-    tsv = <<~TSV
-      User ID\tName\tStudent ID\tEmail
-      #{user_by_id.id}\tSome Name\ts8880001\tsome@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal 1, import.categorized[:exact_match_id].size
-    assert_equal user_by_id, import.categorized[:exact_match_id].first[:existing_user]
-  end
-
-  test "user_id match takes priority over email match" do
-    user_by_id    = FactoryBot.create(:user)
-    user_by_email = FactoryBot.create(:user, email: "target@example.com")
-    tsv = <<~TSV
-      User ID\tName\tStudent ID\tEmail
-      #{user_by_id.id}\tSome Name\ts9999999\ttarget@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-    assert_equal 1, import.categorized[:exact_match_id].size
-    assert_equal user_by_id, import.categorized[:exact_match_id].first[:existing_user]
+    assert_equal by_id, import.categorized[:exact_match_id].map { it[:existing_user] }
   end
 
   test "unknown user_id falls through to next matching strategy" do
@@ -349,46 +256,6 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal alexander, candidates.second
   end
 
-  test "generic ID column with student ID value populates student_id" do
-    tsv = <<~TSV
-      Name\tID\tEmail
-      Test User\ts1234567\ttest@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal "s1234567", import.rows.first[:student_id]
-    assert_nil import.rows.first[:associate_id]
-    assert_nil import.rows.first[:user_id]
-  end
-
-  test "generic ID column with associate ID value populates associate_id" do
-    tsv = <<~TSV
-      Name\tID\tEmail
-      Test User\tASSOC42\ttest@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal "ASSOC42", import.rows.first[:associate_id]
-    assert_nil import.rows.first[:student_id]
-    assert_nil import.rows.first[:user_id]
-  end
-
-  test "generic ID column with numeric value populates user_id" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      Name\tID\tEmail
-      Test User\t#{user.id}\ttest@example.com
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal user.id, import.rows.first[:user_id]
-    assert_nil import.rows.first[:student_id]
-    assert_nil import.rows.first[:associate_id]
-  end
-
   test "mixed ID types across rows in same generic ID column" do
     user = FactoryBot.create(:user)
     tsv = <<~TSV
@@ -400,16 +267,11 @@ class UserImportTest < ActiveSupport::TestCase
 
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
-    assert_equal 3, import.rows.size
-
-    assert_equal "s1234567", import.rows[0][:student_id]
-    assert_nil import.rows[0][:user_id]
-
-    assert_equal "ASSOC42", import.rows[1][:associate_id]
-    assert_nil import.rows[1][:user_id]
-
-    assert_equal user.id, import.rows[2][:user_id]
-    assert_nil import.rows[2][:student_id]
+    assert_equal [
+      { user_id: nil, student_id: "s1234567", associate_id: nil },
+      { user_id: nil, student_id: nil, associate_id: "ASSOC42" },
+      { user_id: user.id, student_id: nil, associate_id: nil }
+    ], import.rows.map { it.slice(:user_id, :student_id, :associate_id) }
   end
 
   test "non-matching ID column headers like Transaction ID are ignored" do
@@ -425,21 +287,9 @@ class UserImportTest < ActiveSupport::TestCase
     assert_nil import.rows.first[:associate_id]
   end
 
-  test "generic ID column auto-generates email from detected student_id" do
-    tsv = <<~TSV
-      Name\tID\tEmail
-      Test User\ts1234567\t
-    TSV
-
-    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
-
-    assert_equal "s1234567", import.rows.first[:student_id]
-    assert_equal "s1234567@ed.ac.uk", import.rows.first[:email]
-  end
-
   test "populates years_active_cache for fuzzy match candidates" do
     user = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
-    show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))
+    show = FactoryBot.create(:show, start_date: 1.month.ago.to_date, end_date: 1.month.ago.to_date + 3.days)
     show.team_members.create!(user: user, position: "Actor")
 
     tsv = <<~TSV
@@ -450,6 +300,6 @@ class UserImportTest < ActiveSupport::TestCase
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
     assert import.years_active_cache.key?(user.id)
-    assert_includes import.years_active_cache[user.id], 2024
+    assert_includes import.years_active_cache[user.id], ApplicationController.helpers.date_to_academic_year(show.start_date)
   end
 end

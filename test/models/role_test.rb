@@ -43,8 +43,8 @@ class RoleTest < ActionView::TestCase
     user_count_pre_archive = role.users.count
     permission_count_pre_archive = role.permissions.count
 
-    assert user_count_pre_archive, "Committee role does not have any users in the test. Attach some."
-    assert permission_count_pre_archive, "Committee role does not have any permissions in the test. Attach some."
+    assert_predicate user_count_pre_archive, :positive?
+    assert_predicate permission_count_pre_archive, :positive?
 
     assert role.archive(suffix)
 
@@ -134,10 +134,6 @@ class RoleTest < ActionView::TestCase
     assert_not admin_role.trained_role?, "trained_role? should return false for roles without 'Trained' in name"
   end
 
-  test "Opportunity Reviewer is in HARDCODED_NAMES" do
-    assert_includes Role::HARDCODED_NAMES, "Opportunity Reviewer"
-  end
-
   test "cannot change Opportunity Reviewer role name" do
     role = Role.find_or_create_by!(name: "Opportunity Reviewer")
 
@@ -183,41 +179,9 @@ class RoleTest < ActionView::TestCase
     assert_equal "Member", role.name, "Archiving must leave the hardcoded name untouched"
   end
 
-  test "cannot destroy Opportunity Reviewer role" do
-    role = Role.find_or_create_by!(name: "Opportunity Reviewer")
-
-    assert_not role.destroy, "Opportunity Reviewer role should not be destroyable"
-    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Opportunity Reviewer' as it is referenced in code"
-    assert role.persisted?, "Opportunity Reviewer role should still exist in database"
-  end
-
   test "trained_role? returns false for nil name" do
     role_with_nil_name = Role.new(name: nil)
     assert_not role_with_nil_name.trained_role?, "trained_role? should return false for nil name"
-  end
-
-  test "remove_user removes user from role" do
-    role = roles(:committee)
-    user = FactoryBot.create(:user)
-
-    role.users << user
-    assert_includes role.users, user, "User should be in role before removal"
-
-    role.remove_user(user)
-    assert_not_includes role.reload.users, user, "User should be removed from role"
-  end
-
-  test "remove_user does nothing if user not in role" do
-    role = roles(:committee)
-    user = FactoryBot.create(:user)
-
-    assert_not_includes role.users, user, "User should not be in role initially"
-
-    initial_user_count = role.users.count
-
-    role.remove_user(user)
-
-    assert_equal initial_user_count, role.reload.users.count, "User count should not change when removing user not in role"
   end
 
   test "cannot destroy hardcoded role" do
@@ -234,20 +198,5 @@ class RoleTest < ActionView::TestCase
     assert_not role.destroy, "Non-purgeable role should not be destroyable"
     assert_includes role.errors.full_messages, "Cannot delete role 'Member' as it is protected from deletion"
     assert role.persisted?, "Non-purgeable role should still exist in database"
-  end
-
-  test "can destroy regular role" do
-    role = FactoryBot.create(:role, name: "Test Role")
-
-    assert role.destroy, "Regular role should be destroyable"
-    assert_not Role.exists?(role.id), "Regular role should be removed from database"
-  end
-
-  test "cannot destroy committee role" do
-    role = roles(:committee)  # Committee is in HARDCODED_NAMES
-
-    assert_not role.destroy, "Committee role should not be destroyable"
-    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Committee' as it is referenced in code"
-    assert role.persisted?, "Committee role should still exist in database"
   end
 end

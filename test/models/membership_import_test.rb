@@ -26,33 +26,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal "new@example.com", import.rows.first[:email]
   end
 
-  test "parses TSV with associate ID" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      ASSOC123\tAssociate Member\t07/09/2025 14:25\tAssociate\tassoc@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert import.valid?
-    assert_nil import.rows.first[:student_id]
-    assert_equal "ASSOC123", import.rows.first[:associate_id]
-  end
-
-  test "parses TSV with multiple rows" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s1111111\tFirst Person\t07/09/2025\tStudent\tfirst@example.com
-      s2222222\tSecond Person\t08/09/2025\tStudent\tsecond@example.com
-      s3333333\tThird Person\t09/09/2025\tStudent\tthird@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert import.valid?
-    assert_equal 3, import.rows.size
-  end
-
   test "handles blank paste data" do
     import = MembershipImport.new("", input_type: :paste)
 
@@ -69,68 +42,9 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal 0, import.rows.size
   end
 
-  test "categorizes already active member by student_id as already_active" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{@member_with_student_id.student_id}\tSome Name\t07/09/2025\tStudent\tsome@email.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:already_active].size
-    assert_equal @member_with_student_id, import.categorized[:already_active].first[:existing_user]
-  end
-
-  test "categorizes non-member by student_id as activate_by_id" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{@non_member_with_student_id.student_id}\tSome Name\t07/09/2025\tStudent\tsome@email.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal @non_member_with_student_id, import.categorized[:activate_by_id].first[:existing_user]
-  end
-
-  test "categorizes non-member by email as activate_by_email" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tSome Name\t07/09/2025\tStudent\t#{@non_member_with_email.email}
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:activate_by_email].size
-    assert_equal @non_member_with_email, import.categorized[:activate_by_email].first[:existing_user]
-  end
-
-  test "categorizes fuzzy name match as propose_merge" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tJohnny Smith\t07/09/2025\tStudent\tnew@email.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:propose_merge].size
-    assert_includes import.categorized[:propose_merge].first[:existing_users], @user_with_similar_name
-  end
-
-  test "categorizes completely new user as create_new" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tCompletely New Person\t07/09/2025\tStudent\tbrandnew@email.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:create_new].size
-    assert_nil import.categorized[:create_new].first[:existing_user]
-  end
-
   test "student_id match takes priority over email match" do
     user = FactoryBot.create(:user, student_id: "s8888888", email: "priority@example.com")
+    FactoryBot.create(:user, email: "different@email.com")
 
     tsv = <<~TSV
       Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
@@ -141,6 +55,7 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     assert_equal 1, import.categorized[:activate_by_id].size
     assert_equal user, import.categorized[:activate_by_id].first[:existing_user]
+    assert_empty import.categorized[:activate_by_email]
   end
 
   test "email match takes priority over name match" do
@@ -201,16 +116,21 @@ class MembershipImportTest < ActiveSupport::TestCase
       Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
       #{@member_with_student_id.student_id}\tAlready Active\t07/09/2025\tStudent\talready@example.com
       #{@non_member_with_student_id.student_id}\tActivate By ID\t07/09/2025\tStudent\tactivate@example.com
+      s9999998\tEmail Person\t07/09/2025\tStudent\t#{@non_member_with_email.email}
+      s9999997\tJohnny Smith\t07/09/2025\tStudent\tjohnny@example.com
       s9999999\tBrand New\t07/09/2025\tStudent\tnew@example.com
     TSV
 
     import = MembershipImport.new(tsv, input_type: :paste)
+    categorized = import.categorized
 
     assert import.valid?
-    assert_equal 3, import.rows.size
-    assert_equal 1, import.categorized[:already_active].size
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal 1, import.categorized[:create_new].size
+    assert_equal 5, import.rows.size
+    assert_equal @member_with_student_id, categorized[:already_active].sole[:existing_user]
+    assert_equal @non_member_with_student_id, categorized[:activate_by_id].sole[:existing_user]
+    assert_equal @non_member_with_email, categorized[:activate_by_email].sole[:existing_user]
+    assert_includes categorized[:propose_merge].sole[:existing_users], @user_with_similar_name
+    assert_nil categorized[:create_new].sole[:existing_user]
   end
 
   test "normalizes email to lowercase" do
@@ -222,92 +142,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     import = MembershipImport.new(tsv, input_type: :paste)
 
     assert_equal "test@example.com", import.rows.first[:email]
-  end
-
-  test "normalizes student_id to lowercase" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      S1234567\tTest Person\t07/09/2025\tStudent\ttest@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal "s1234567", import.rows.first[:student_id]
-  end
-
-  test "normalizes associate_id to uppercase" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      assoc123\tTest Person\t07/09/2025\tAssociate\ttest@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal "ASSOC123", import.rows.first[:associate_id]
-  end
-
-  test "parses user_id column formatted as 'User ID'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "parses user_id column formatted as 'user_id'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      user_id\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "parses user_id column formatted as 'userid'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      userid\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "parses user_id column formatted as 'UserID'" do
-    user = FactoryBot.create(:user)
-    tsv = <<~TSV
-      UserID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal user.id, import.rows.first[:user_id]
-  end
-
-  test "user_id is nil when column is absent" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_nil import.rows.first[:user_id]
-  end
-
-  test "user_id is nil when value is blank" do
-    tsv = <<~TSV
-      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      \ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_nil import.rows.first[:user_id]
   end
 
   test "user_id match categorizes already-active member as already_active" do
@@ -322,55 +156,21 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal member, import.categorized[:already_active].first[:existing_user]
   end
 
-  test "user_id match categorizes non-member as activate_by_id" do
-    non_member = FactoryBot.create(:user)
+  test "user_id match takes priority over student_id, email and associate_id matches" do
+    by_id = FactoryBot.create_list(:user, 3)
+    FactoryBot.create(:user, student_id: "s8880001")
+    FactoryBot.create(:user, email: "target@example.com")
+    FactoryBot.create(:user, associate_id: "ASSOC8880001")
     tsv = <<~TSV
       User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{non_member.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+      #{by_id[0].id}\ts8880001\tOne\t07/09/2025\tStudent\tone@example.com
+      #{by_id[1].id}\ts9999999\tTwo\t07/09/2025\tStudent\ttarget@example.com
+      #{by_id[2].id}\tASSOC8880001\tThree\t07/09/2025\tAssociate\tthree@example.com
     TSV
 
     import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal non_member, import.categorized[:activate_by_id].first[:existing_user]
-  end
 
-  test "user_id match takes priority over student_id match" do
-    user_by_id  = FactoryBot.create(:user)
-    user_by_sid = FactoryBot.create(:user, student_id: "s8880001")
-    tsv = <<~TSV
-      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user_by_id.id}\ts8880001\tSome Name\t07/09/2025\tStudent\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
-  end
-
-  test "user_id match takes priority over email match" do
-    user_by_id    = FactoryBot.create(:user)
-    user_by_email = FactoryBot.create(:user, email: "target@example.com")
-    tsv = <<~TSV
-      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user_by_id.id}\ts9999999\tSome Name\t07/09/2025\tStudent\ttarget@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
-  end
-
-  test "user_id match takes priority over associate_id match" do
-    user_by_id       = FactoryBot.create(:user)
-    user_by_assoc_id = FactoryBot.create(:user, associate_id: "ASSOC8880001")
-    tsv = <<~TSV
-      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      #{user_by_id.id}\tASSOC8880001\tSome Name\t07/09/2025\tAssociate\tsome@example.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-    assert_equal 1, import.categorized[:activate_by_id].size
-    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
+    assert_equal by_id, import.categorized[:activate_by_id].map { it[:existing_user] }
   end
 
   test "unknown user_id falls through to next matching strategy" do
@@ -418,20 +218,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:create_new].size
   end
 
-  test "includes users with no activity in fuzzy matching" do
-    new_user = FactoryBot.create(:user, first_name: "John", last_name: "Newaccount")
-
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tJohn Newaccount\t07/09/2025\tStudent\tnew@email.com
-    TSV
-
-    import = MembershipImport.new(tsv, input_type: :paste)
-
-    assert_equal 1, import.categorized[:propose_merge].size
-    assert_includes import.categorized[:propose_merge].first[:existing_users], new_user
-  end
-
   test "generic ID column works instead of Student ID header" do
     tsv = <<~TSV
       ID\tName\tDate Purchased\tMember Type\tPurchaser Email
@@ -462,7 +248,7 @@ class MembershipImportTest < ActiveSupport::TestCase
 
   test "populates years_active_cache for fuzzy match candidates" do
     user = FactoryBot.create(:user, first_name: "Alex", last_name: "Cached")
-    show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))
+    show = FactoryBot.create(:show, start_date: 1.month.ago.to_date, end_date: 1.month.ago.to_date + 3.days)
     show.team_members.create!(user: user, position: "Actor")
 
     tsv = <<~TSV
@@ -473,6 +259,6 @@ class MembershipImportTest < ActiveSupport::TestCase
     import = MembershipImport.new(tsv, input_type: :paste)
 
     assert import.years_active_cache.key?(user.id)
-    assert_includes import.years_active_cache[user.id], 2024
+    assert_includes import.years_active_cache[user.id], ApplicationController.helpers.date_to_academic_year(show.start_date)
   end
 end

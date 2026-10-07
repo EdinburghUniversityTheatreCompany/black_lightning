@@ -3,13 +3,6 @@ require "test_helper"
 class Admin::UserImportsControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
-    ActionController::Base.perform_caching = true
-    Rails.cache.clear
-  end
-
-  teardown do
-    ActionController::Base.perform_caching = false
-    Rails.cache.clear
   end
 
   test "should get new" do
@@ -25,8 +18,8 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
-  test "preview with valid paste data shows categorized results" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
+  test "preview renders the categorized rows and caches them" do
+    matched = FactoryBot.create(:user, student_id: "s1234567")
 
     tsv = <<~TSV
       Name\tStudent ID\tEmail
@@ -37,8 +30,10 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     post :preview, params: { paste_data: tsv }
 
     assert_response :success
-    assert assigns(:import)
     assert_equal 2, assigns(:import).rows.size
+    assert_select "a[href=?]", admin_user_path(matched)
+    assert assigns(:cache_key).present?
+    assert Rails.cache.read(assigns(:cache_key)).present?
   end
 
   test "preview with empty data redirects back with error" do
@@ -48,76 +43,11 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     assert flash[:error].present?
   end
 
-  test "preview stores import data in cache and sets cache_key" do
-    tsv = <<~TSV
-      Name\tStudent ID\tEmail
-      New User\ts9999999\tnew@example.com
-    TSV
-
-    post :preview, params: { paste_data: tsv }
-
-    assert assigns(:cache_key).present?
-    assert Rails.cache.read(assigns(:cache_key)).present?
-  end
-
   test "confirm without cache data redirects with error" do
     post :confirm, params: { cache_key: "nonexistent_key" }
 
     assert_redirected_to new_admin_user_import_path
     assert flash[:error].present?
-  end
-
-  test "confirm creates new user" do
-    cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
-      create_new: [
-        import_entry(index: 0, original_name: "Brand New User", first_name: "Brand", last_name: "New User", student_id: "s9999999", email: "brandnew@example.com")
-      ]
-    ))
-
-    assert_difference "User.count", 1 do
-      post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
-    end
-
-    assert_redirected_to admin_users_path
-    new_user = User.find_by(email: "brandnew@example.com")
-    assert new_user.present?
-    assert_equal "s9999999", new_user.student_id
-    assert flash[:success].any? { |msg| msg.include?("created") }
-  end
-
-  test "confirm skips when action is skip" do
-    cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
-      create_new: [
-        import_entry(index: 0, original_name: "Skip User", first_name: "Skip", last_name: "User", student_id: "s8888888", email: "skip@example.com")
-      ]
-    ))
-
-    assert_no_difference "User.count" do
-      post :confirm, params: { cache_key: cache_key, actions: { "0" => "skip" } }
-    end
-
-    assert_redirected_to admin_users_path
-    assert flash[:success].any? { |msg| msg.include?("skipped") }
-  end
-
-  test "confirm links existing user when action is link" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-
-    cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
-      exact_match_id: [
-        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", first_name: "Test", last_name: "User", student_id: "s1234567", email: "test@example.com")
-      ]
-    ))
-
-    assert_no_difference "User.count" do
-      post :confirm, params: { cache_key: cache_key, actions: { "0" => "link" } }
-    end
-
-    assert_redirected_to admin_users_path
-    assert flash[:success].any? { |msg| msg.include?("linked") }
   end
 
   test "confirm generates placeholder email for new user without email" do
@@ -159,7 +89,9 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
       }
     end
 
-    assert User.find_by(email: "create@example.com").present?
+    assert_redirected_to admin_users_path
+    assert_equal [ "Import complete: 1 created, 1 linked to existing, 1 skipped" ], flash[:success]
+    assert_equal "s2222222", User.find_by(email: "create@example.com").student_id
     assert_nil User.find_by(email: "skip@example.com")
   end
 

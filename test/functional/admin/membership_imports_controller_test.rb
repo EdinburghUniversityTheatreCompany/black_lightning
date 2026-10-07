@@ -18,8 +18,8 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
-  test "preview with valid paste data shows categorized results" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
+  test "preview renders the categorized rows and caches them" do
+    matched = FactoryBot.create(:user, student_id: "s1234567")
 
     tsv = <<~TSV
       Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
@@ -30,8 +30,10 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     post :preview, params: { paste_data: tsv }
 
     assert_response :success
-    assert assigns(:import)
     assert_equal 2, assigns(:import).rows.size
+    assert_select "a[href=?]", admin_user_path(matched)
+    assert assigns(:cache_key).present?
+    assert Rails.cache.read(assigns(:cache_key)).present?
   end
 
   test "preview with empty data redirects back with error" do
@@ -41,78 +43,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert flash[:error].present?
   end
 
-  test "preview stores import data in cache and sets cache_key" do
-    tsv = <<~TSV
-      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
-      s9999999\tNew User\t07/09/2025\tStudent\tnew@example.com
-    TSV
-
-    post :preview, params: { paste_data: tsv }
-
-    assert assigns(:cache_key).present?
-    assert Rails.cache.read(assigns(:cache_key)).present?
-  end
-
   test "confirm without cache data redirects with error" do
     post :confirm, params: { cache_key: "nonexistent_key" }
 
     assert_redirected_to new_admin_membership_import_path
     assert flash[:error].present?
-  end
-
-  test "confirm activates user by student_id" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-    assert_not user.has_role?(:member)
-
-    cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
-      activate_by_id: [
-        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "test@example.com")
-      ]
-    ))
-
-    post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
-
-    assert_redirected_to new_admin_membership_import_path
-    assert user.reload.has_role?(:member)
-    assert flash[:success].any? { |msg| msg.include?("activated") }
-  end
-
-  test "confirm creates new user" do
-    cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
-      create_new: [
-        import_entry(index: 0, original_name: "Brand New User", first_name: "Brand", last_name: "New User", student_id: "s9999999", email: "brandnew@example.com")
-      ]
-    ))
-
-    assert_difference "User.count", 1 do
-      post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
-    end
-
-    assert_redirected_to new_admin_membership_import_path
-    new_user = User.find_by(email: "brandnew@example.com")
-    assert new_user.present?
-    assert new_user.has_role?(:member)
-    assert_equal "s9999999", new_user.student_id
-    assert flash[:success].any? { |msg| msg.include?("created") }
-  end
-
-  test "confirm skips when action is skip" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-
-    cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
-      activate_by_id: [
-        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "test@example.com")
-      ]
-    ))
-
-    post :confirm, params: { cache_key: cache_key, actions: { "0" => "skip" } }
-
-    assert_redirected_to new_admin_membership_import_path
-    assert_not user.reload.has_role?(:member)
-    assert flash[:success].any? { |msg| msg.include?("skipped") }
   end
 
   test "confirm merges when action is merge" do
@@ -137,8 +72,8 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert flash[:success].any? { |msg| msg.include?("merged") }
   end
 
-  test "confirm updates unknown email during activation" do
-    user = FactoryBot.create(:user, student_id: "s1234567", email: "unknown_abcd1234@bedlamtheatre.co.uk")
+  test "activation fills a placeholder email and a missing student_id" do
+    user = FactoryBot.create(:user, associate_id: "ASSOC1", student_id: nil, email: "unknown_abcd1234@bedlamtheatre.co.uk")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
     write_import_cache(cache_key, membership_import_buckets(
@@ -149,22 +84,9 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
 
-    assert_equal "real@example.com", user.reload.email
-  end
-
-  test "confirm adds missing student_id during activation" do
-    user = FactoryBot.create(:user, student_id: nil, email: "existing@example.com")
-
-    cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
-      activate_by_email: [
-        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "existing@example.com")
-      ]
-    ))
-
-    post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
-
-    assert_equal "s1234567", user.reload.student_id
+    user.reload
+    assert_equal "real@example.com", user.email
+    assert_equal "s1234567", user.student_id
   end
 
   test "confirm generates placeholder email for new user without email" do
@@ -206,8 +128,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
       }
     end
 
+    assert_redirected_to new_admin_membership_import_path
+    assert_equal [ "Import complete: 1 activated, 1 created, 1 skipped" ], flash[:success]
     assert user_to_activate.reload.has_role?(:member)
-    assert User.find_by(email: "create@example.com").present?
+    created = User.find_by(email: "create@example.com")
+    assert created.has_role?(:member)
+    assert_equal "s2222222", created.student_id
     assert_nil User.find_by(email: "skip@example.com")
   end
 

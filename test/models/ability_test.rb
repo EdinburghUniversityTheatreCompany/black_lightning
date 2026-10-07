@@ -95,21 +95,6 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(private_user, "another user with a private profile", @ability, [], allowed_actions + forbidden_actions)
   end
 
-  test "users can see debt status of users that are on the same proposal" do
-    skip "This permission is no longer granted, but the test is still there for future reference."
-    allowed_actions = %I[debt_status]
-    # show edit update destroy
-    forbidden_actions = %I[index read create check_membership]
-
-    proposal = FactoryBot.create(:proposal)
-    user = proposal.team_members.first.user
-    ability = Ability.new(user)
-
-    helper_test_actions(proposal.team_members.last.user, "an user with shared proposal", ability, allowed_actions, forbidden_actions)
-
-    helper_test_actions(@user, "an user without shared proposal", ability, [], allowed_actions + forbidden_actions)
-  end
-
   test "users have the correct proposal permissions before the submission deadline" do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 4))
     helper_set_up_proposal
@@ -330,10 +315,10 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     hexagon_team_member = hexagon_show.team_members.sample
     hexagon_team_member.position = "Hexagon"
-    team_member.save
+    hexagon_team_member.save
 
     hexagon_ability = Ability.new(hexagon_team_member.user)
-    helper_test_actions(other_show, "show where they are a hexagon", hexagon_ability, [], allowed_actions + forbidden_actions)
+    helper_test_actions(hexagon_show, "show where they are a hexagon", hexagon_ability, [], allowed_actions + forbidden_actions)
   end
 
   test "guests can only read reviews for public shows" do
@@ -397,58 +382,22 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
   end
 
-  test "producer on a future show can check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
+  test "producers on a current or future show can check_debt" do
+    [
+      [ "Producer", 1.week.from_now, true ],
+      [ "Co-Producer", 1.week.from_now, true ],
+      [ "Director / Producer", 1.week.from_now, true ],
+      [ "Director", 1.week.from_now, false ],
+      [ "Producer", 2.months.ago, false ]
+    ].each do |position, start_date, expected|
+      show = FactoryBot.create(:show, start_date: start_date, end_date: start_date + 1.week)
+      user = FactoryBot.create(:user)
+      FactoryBot.create(:team_member, user: user, teamwork: show, position: position)
 
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
-  end
-
-  test "producer on a future show cannot index Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:index, Admin::Debt)
-  end
-
-  test "producer on a past show cannot check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 2.months.ago, end_date: 1.month.ago)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:check_debt, Admin::Debt)
-  end
-
-  test "non-producer on a future show cannot check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director")
-
-    ability = Ability.new(user)
-    assert ability.cannot?(:check_debt, Admin::Debt)
-  end
-
-  test "co-producer on a future show can check_debt on Admin::Debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Co-Producer")
-
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
-  end
-
-  test "compound position with producer on a future show can check_debt" do
-    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director / Producer")
-
-    ability = Ability.new(user)
-    assert ability.can?(:check_debt, Admin::Debt)
+      ability = Ability.new(user)
+      assert_equal expected, ability.can?(:check_debt, Admin::Debt), "#{position} on a show starting #{start_date.to_date}"
+      assert ability.cannot?(:index, Admin::Debt) if expected
+    end
   end
 
   test "users can edit and read opportunities that they created" do
