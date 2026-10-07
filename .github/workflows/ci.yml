@@ -29,9 +29,6 @@ jobs:
           ruby-version: .ruby-version
           bundler-cache: true
 
-      - name: Make bin files executable
-        run: chmod +x bin/*
-
       - name: Scan for common Rails security vulnerabilities using static analysis
         run: bin/brakeman --no-pager
 
@@ -54,9 +51,6 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-
-      - name: Make bin files executable
-        run: chmod +x bin/*
 
       - name: Lint Ruby code for consistent style
         run: bin/rubocop -f github
@@ -151,11 +145,6 @@ jobs:
         # 30s of patience at a finer interval: Docker waits a full interval before the first probe.
         options: --health-cmd="mysqladmin ping" --health-interval=3s
           --health-timeout=5s --health-retries=10
-      # redis:
-      #   image: redis
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
       # Keep in step with the production Dockerfile and .devcontainer/Dockerfile.dev. Name
@@ -190,9 +179,6 @@ jobs:
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Make bin files executable
-        run: chmod +x bin/*
-
       - name: Build JavaScript assets
         run: bin/vite build --mode=test
         env:
@@ -203,7 +189,6 @@ jobs:
           RAILS_ENV: test
           DB_USERNAME: root
           DB_PASSWORD: ""
-          # REDIS_URL: redis://localhost:6379/0
         run: bin/rails db:test:prepare test test:system
 
       - name: Model/DB consistency (database_consistency, advisory)
