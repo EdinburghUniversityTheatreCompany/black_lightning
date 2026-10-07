@@ -1,6 +1,5 @@
 class Admin::NavbarComponent < ViewComponent::Base
-  def initialize(current_user:, title: nil, header_badges: [])
-    @current_user = current_user
+  def initialize(title: nil, header_badges: [])
     @title = title
     @header_badges = header_badges || []
   end

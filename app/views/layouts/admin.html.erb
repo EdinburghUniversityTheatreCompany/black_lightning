@@ -35,7 +35,7 @@
         ) %>
 
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-      <%= render Admin::NavbarComponent.new(current_user: current_user, title: @title, header_badges: @header_badges) %>
+      <%= render Admin::NavbarComponent.new(title: @title, header_badges: @header_badges) %>
 
       <%= render "/layouts/alert_div" %>
 
