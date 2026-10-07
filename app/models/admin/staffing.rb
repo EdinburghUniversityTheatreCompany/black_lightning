@@ -35,7 +35,7 @@ class Admin::Staffing < ApplicationRecord
   after_save     :update_reminder
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
   after_save     :send_calendar_update_emails, if: :staffing_details_changed?
-  before_destroy :reminder_cleanup
+  before_destroy :cancel_scheduled_reminder
 
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
@@ -64,16 +64,14 @@ class Admin::Staffing < ApplicationRecord
 
   private
 
-  # A reminder left queued for a deleted staffing would fail.
-  def reminder_cleanup
-    if scheduled_job_id.present?
-      begin
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
-      end
-    end
+  # Also runs before destroy: a reminder left queued for a deleted staffing would fail.
+  # The queue database may be unreachable, so a failure is only logged.
+  def cancel_scheduled_reminder
+    return if scheduled_job_id.blank?
+
+    SolidQueue::Job.find_by(active_job_id: scheduled_job_id)&.destroy
+  rescue => e
+    Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
   end
 
   ##
@@ -85,14 +83,7 @@ class Admin::Staffing < ApplicationRecord
     # Don't schedule a new job if we're just marking the current job as executed
     return if saved_change_to_reminder_job_executed? && reminder_job_executed?
 
-    if scheduled_job_id.present?
-      begin
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel existing job #{scheduled_job_id}: #{e.message}"
-      end
-    end
+    cancel_scheduled_reminder
 
     job = StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
 
