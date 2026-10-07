@@ -6,7 +6,6 @@ require "test_helper"
 # must not drop silently.
 class TeamMemberOrderingTest < ActiveSupport::TestCase
   setup do
-    @show = FactoryBot.create(:show)
     @users = FactoryBot.create_list(:member, 3)
   end
 
@@ -20,24 +19,15 @@ class TeamMemberOrderingTest < ActiveSupport::TestCase
     @show.reload.team_members.ordered.pluck(:position, :display_order)
   end
 
-  test "stamps the row order when assigned a plain hash" do
-    @show.update!(team_members_attributes: rows)
-
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
-  end
-
-  test "stamps the row order when assigned ActionController::Parameters" do
+  test "stamps the row order whatever shape the rows arrive in" do
     params = ActionController::Parameters.new(team_members_attributes: rows)
                                          .permit(team_members_attributes: [ :position, :user_id ])
 
-    @show.update!(team_members_attributes: params[:team_members_attributes])
+    { hash: rows, parameters: params[:team_members_attributes], array: rows.values }.each do |shape, attributes|
+      @show = FactoryBot.create(:show)
+      @show.update!(team_members_attributes: attributes)
 
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
-  end
-
-  test "stamps the row order when assigned an array of rows" do
-    @show.update!(team_members_attributes: rows.values)
-
-    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order
+      assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Stage Manager", 2 ] ], saved_order, shape
+    end
   end
 end

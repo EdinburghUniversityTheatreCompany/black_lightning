@@ -6,21 +6,13 @@ class Event::DetailsTest < ActiveSupport::TestCase
     @show = FactoryBot.create(:show, start_date: Date.new(2026, 3, 3), end_date: Date.new(2026, 3, 7))
   end
 
-  test "a running time must be a positive number of minutes" do
-    [ 0, -30 ].each do |minutes|
+  test "a running time must be a positive number of minutes, and under a day" do
+    [ 0, -30, 1500 ].each do |minutes| # 1500: nothing at Bedlam runs for a day, so a fat finger
       @show.duration_minutes = minutes
 
       assert_not @show.valid?, "#{minutes} minutes should be rejected"
       assert @show.errors[:duration_minutes].present?
     end
-  end
-
-  # A fat-finger backstop. Nothing at Bedlam runs for a day.
-  test "a running time longer than a day is rejected" do
-    @show.duration_minutes = 1500
-
-    assert_not @show.valid?
-    assert @show.errors[:duration_minutes].present?
   end
 
   test "a blank running time is fine" do
@@ -84,17 +76,14 @@ class Event::DetailsTest < ActiveSupport::TestCase
     assert_nil occurrence.doors_open_at
   end
 
-  test "the running time renders as an ISO 8601 duration" do
+  test "the running time renders as an ISO 8601 duration, or nothing when blank" do
     { 135 => "PT2H15M", 60 => "PT1H", 45 => "PT45M", 120 => "PT2H" }.each do |minutes, expected|
       @show.duration_minutes = minutes
 
       assert_equal expected, @show.iso8601_duration, "#{minutes} minutes"
     end
-  end
 
-  test "no running time means no duration to state" do
     @show.duration_minutes = nil
-
     assert_nil @show.iso8601_duration
   end
 end

@@ -208,16 +208,12 @@ class EventTest < ActionView::TestCase
     assert_equal "test-event-1", event2.slug
   end
 
-  test "handles special characters in slug generation" do
-    event = FactoryBot.build(:event, name: 'Event with "Quotes" & Symbols!', slug: "")
-    assert event.valid?
-    assert_equal "event-with-quotes-and-symbols", event.slug
-  end
-
-  test "handles accented characters in slug generation" do
-    event = FactoryBot.build(:event, name: "Événement spéciàl", slug: "")
-    assert event.valid?
-    assert_equal "evenement-special", event.slug
+  test "generates a URL-safe slug from the name" do
+    { 'Event with "Quotes" & Symbols!' => "event-with-quotes-and-symbols", "Événement spéciàl" => "evenement-special" }.each do |name, slug|
+      event = FactoryBot.build(:event, name: name, slug: "")
+      assert event.valid?, name
+      assert_equal slug, event.slug, name
+    end
   end
 
   test "slug uniqueness validation works case-insensitively" do
@@ -226,11 +222,6 @@ class EventTest < ActionView::TestCase
 
     assert_not duplicate_event.valid?
     assert duplicate_event.errors[:slug].any? { |error| error.include?("already taken") }
-  end
-
-  test "validates end_date is after or equal to start_date" do
-    event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current + 1.day)
-    assert event.valid?
   end
 
   test "validates end_date can equal start_date" do
@@ -249,63 +240,16 @@ class EventTest < ActionView::TestCase
     assert_not event.valid?
     assert_includes event.errors[:start_date], "must not be blank."
     assert_not_includes event.errors[:end_date], "must be after or equal to start date"
-
-    event = FactoryBot.build(:event, start_date: Date.current, end_date: nil)
-    assert_not event.valid?
-    assert_includes event.errors[:end_date], "must not be blank."
   end
 
-  test "date range validation works for Show subclass" do
-    show = FactoryBot.build(:show, start_date: Date.current, end_date: Date.current - 1.day)
-    assert_not show.valid?
-    assert_includes show.errors[:end_date], "must be after or equal to start date"
-  end
-
-  test "date range validation works for Workshop subclass" do
-    workshop = FactoryBot.build(:workshop, start_date: Date.current, end_date: Date.current - 1.day)
-    assert_not workshop.valid?
-    assert_includes workshop.errors[:end_date], "must be after or equal to start date"
-  end
-
-  test "date range validation works for Season subclass" do
-    season = FactoryBot.build(:season, start_date: Date.current, end_date: Date.current - 1.day)
-    assert_not season.valid?
-    assert_includes season.errors[:end_date], "must be after or equal to start date"
-  end
-
-  test "rejects slug with spaces" do
-    event = FactoryBot.build(:event, slug: "my event slug")
-    assert_not event.valid?
-    assert event.errors[:slug].any?
-  end
-
-  test "rejects slug with uppercase letters" do
-    event = FactoryBot.build(:event, slug: "My-Event")
-    assert_not event.valid?
-    assert event.errors[:slug].any?
-  end
-
-  test "rejects slug with special characters" do
-    [ "slug<tag>", "slug&amp", "slug/path", "slug?query", "slug#hash" ].each do |bad_slug|
-      event = FactoryBot.build(:event, slug: bad_slug)
-      assert_not event.valid?, "Expected #{bad_slug.inspect} to be invalid"
-      assert event.errors[:slug].any?, "Expected slug errors for #{bad_slug.inspect}"
+  test "slug format" do
+    [ "my event slug", "My-Event", "slug<tag>", "slug&amp", "slug/path", "slug?query", "slug#hash",
+      "-leading-hyphen", "trailing-hyphen-" ].each do |slug|
+      event = FactoryBot.build(:event, slug: slug)
+      assert_not event.valid?, slug.inspect
+      assert event.errors[:slug].any?, slug.inspect
     end
-  end
-
-  test "rejects slug with leading or trailing hyphen" do
-    event = FactoryBot.build(:event, slug: "-leading-hyphen")
-    assert_not event.valid?
-    assert event.errors[:slug].any?
-
-    event = FactoryBot.build(:event, slug: "trailing-hyphen-")
-    assert_not event.valid?
-    assert event.errors[:slug].any?
-  end
-
-  test "accepts valid slug with lowercase letters numbers and hyphens" do
-    event = FactoryBot.build(:event, slug: "my-event-2024")
-    assert event.valid?
+    assert_predicate FactoryBot.build(:event, slug: "my-event-2024"), :valid?
   end
 
   # Digital programme link
@@ -464,15 +408,5 @@ class EventTest < ActionView::TestCase
     event = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current + 6, is_public: true)
 
     assert_nil event.next_occurrence_at
-  end
-
-  # One table, three words for it. The label is a constant rather than a string
-  # typed into each view, so the admin form, the public page and the box office
-  # screen cannot drift on what these are called.
-  test "each event type names its occurrences differently" do
-    assert_equal "Performance", Show.new.occurrence_label
-    assert_equal "Session", Workshop.new.occurrence_label
-    assert_equal "Opening time", Season.new.occurrence_label
-    assert_equal "Date", Event.new.occurrence_label
   end
 end

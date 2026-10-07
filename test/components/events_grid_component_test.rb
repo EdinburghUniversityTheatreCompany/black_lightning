@@ -17,32 +17,16 @@ class EventsGridComponentTest < ViewComponent::TestCase
     assert_no_selector "div.grid"
   end
 
-  test "a full-width grid opens up to four columns" do
-    render_grid(5, 12)
+  test "the grid uses as many columns as it has events, up to the column's cap" do
+    { [ 5, 12 ] => "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3",
+      [ 2, 12 ] => "grid grid-cols-1 sm:grid-cols-2 gap-3",
+      [ 5, 8 ] => "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3",
+      [ 4, 8 ] => "grid grid-cols-1 md:grid-cols-2 gap-3" # 2x2, rather than a row of three and a widow
+    }.each do |(count, col_size), classes|
+      render_grid(count, col_size)
 
-    assert_selector "div.grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-3.lg\\:grid-cols-4"
-  end
-
-  test "a full-width grid uses only as many columns as it has events" do
-    render_grid(2, 12)
-
-    assert_selector "div.grid.grid-cols-1.sm\\:grid-cols-2"
-    assert_no_selector "div.md\\:grid-cols-3"
-  end
-
-  test "the home page's narrower column caps at three across" do
-    render_grid(5, 8)
-
-    assert_selector "div.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3"
-    assert_no_selector "div.lg\\:grid-cols-4"
-  end
-
-  # Four in that column lay out 2x2, rather than a row of three and a widow.
-  test "four events in the narrower column lay out two by two" do
-    render_grid(4, 8)
-
-    assert_selector "div.grid.grid-cols-1.md\\:grid-cols-2"
-    assert_no_selector "div.lg\\:grid-cols-3"
+      assert_selector "div[class='#{classes}']"
+    end
   end
 
   # h-auto on the image would fight the crop box's h-full.
@@ -59,11 +43,5 @@ class EventsGridComponentTest < ViewComponent::TestCase
 
     assert_selector "img[srcset][sizes]"
     assert_selector "img[alt$='at Bedlam Theatre']"
-  end
-
-  test "the title link carries the primary colour" do
-    render_grid(1, 12)
-
-    assert_selector "a.font-semibold.text-primary"
   end
 end

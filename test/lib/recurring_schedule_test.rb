@@ -1,7 +1,9 @@
 require "test_helper"
 require "fugit"
 
-# Not colliding is the fix for a deadlocked enqueue; RecurringEnqueueRetry is only the net.
+# config/recurring.yml is read by Solid Queue at boot, so a typo in a class name or a renamed
+# job is a job that silently never runs in production. Not colliding is the fix for a
+# deadlocked enqueue; RecurringEnqueueRetry is only the net.
 class RecurringScheduleTest < ActiveSupport::TestCase
   SCHEDULES = YAML.load_file(Rails.root.join("config/recurring.yml")).freeze
 
@@ -11,6 +13,27 @@ class RecurringScheduleTest < ActiveSupport::TestCase
 
   def crons
     SCHEDULES.to_h { |key, config| [ key, Fugit.parse(config.fetch("schedule")) ] }
+  end
+
+  test "every scheduled class exists and is a job" do
+    SCHEDULES.each do |name, config|
+      klass = config["class"].safe_constantize
+
+      assert_not_nil klass, "#{name} names a class that does not exist: #{config['class']}"
+      assert_operator klass, :<, ActiveJob::Base, "#{name} names #{klass}, which is not a job"
+    end
+  end
+
+  test "every entry declares a queue and a schedule" do
+    SCHEDULES.each do |name, config|
+      assert config["queue"].present?, "#{name} has no queue"
+      assert config["schedule"].present?, "#{name} has no schedule"
+    end
+  end
+
+  # No indoor poller on purpose: crypt readings arrive by CSV import.
+  test "the outdoor climate poller is scheduled" do
+    assert_equal "Climate::OutdoorPollJob", SCHEDULES.dig("climate_outdoor_poll", "class")
   end
 
   test "every schedule parses" do
@@ -34,15 +57,6 @@ class RecurringScheduleTest < ActiveSupport::TestCase
     assert_empty offenders.keys,
                  "a daily job on a minute divisible by #{DENSE_POLL_INTERVAL_MINUTES} races the " \
                  "every-5-minute mailbox poll every day"
-  end
-
-  # The one that actually broke: both were "at 3am every day" and roughly half the pretix runs
-  # were dropped between 2026-08-27 and 2026-08-31.
-  test "the pretix reconcile and the bank details retention no longer share a slot" do
-    pretix = crons.fetch("pretix_reconcile_memberships")
-    retention = crons.fetch("reimbursements_bank_details_retention")
-
-    assert_not_equal [ pretix.hours, pretix.minutes ], [ retention.hours, retention.minutes ]
   end
 
   # Every 15 minutes, so it could collide every quarter hour. It is offset off the

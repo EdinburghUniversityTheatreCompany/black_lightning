@@ -100,19 +100,8 @@ FactoryBot.define do
       feedback_count { 0 }
     end
 
-    trait :with_debts do
-      maintenance_debt_start { 1.month.from_now }
-      staffing_debt_start { 1.month.from_now }
-      maintenance_debt_amount { 2 }
-      staffing_debt_amount { 2 }
-    end
-
     after(:create) do |show, evaluator|
       create_list(:feedback, evaluator.feedback_count, show: show) if evaluator.feedback_count > 0
-    end
-
-    trait :with_feedback do
-      feedback_count { 1 }
     end
   end
 

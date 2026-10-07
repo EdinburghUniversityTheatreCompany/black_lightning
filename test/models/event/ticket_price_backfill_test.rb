@@ -31,15 +31,7 @@ class Event::TicketPriceBackfillTest < ActiveSupport::TestCase
     assert summary.applied
     assert_equal [ [ 10.0, "standard" ], [ 8.0, "concession" ], [ 7.0, "member" ] ],
                  event.reload.ticket_prices.map { |p| [ p.amount.to_f, p.category ] }
-  end
-
-  # Why the backfill uses update_columns.
-  test "applying never rewrites the display string" do
-    event = show(price: "10/8/7")
-
-    backfill(apply: true)
-
-    assert_equal "10/8/7", event.reload.price
+    assert_equal "£10/8/7", event.price # update_columns: the display string is never rewritten
   end
 
   test "applying stores a booking fee where the string carried one" do

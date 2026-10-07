@@ -76,95 +76,47 @@ class TeamMemberTest < ActiveSupport::TestCase
     show = FactoryBot.create(:show, team_member_count: 0)
     user = FactoryBot.create(:user)
 
-    assert_no_difference "Admin::MaintenanceDebt.count" do
-      assert_no_difference "Admin::StaffingDebt.count" do
-        show.team_members.create!(user_id: user.id, position: "Director")
-      end
+    assert_no_difference [ "Admin::MaintenanceDebt.count", "Admin::StaffingDebt.count" ] do
+      show.team_members.create!(user_id: user.id, position: "Director")
     end
   end
 
   test "should not create debts when added to non-show teamwork" do
-    event = FactoryBot.create(:event)
-    user = FactoryBot.create(:user)
+    workshop = FactoryBot.create(:workshop, start_date: start_of_year, end_date: start_of_year.advance(days: 5),
+                                            maintenance_debt_amount: 1, maintenance_debt_start: Date.current,
+                                            staffing_debt_amount: 2, staffing_debt_start: Date.current)
 
-    assert_no_difference "Admin::MaintenanceDebt.count" do
-      assert_no_difference "Admin::StaffingDebt.count" do
-        event.team_members.create!(user_id: user.id, position: "Director")
-      end
+    assert_no_difference [ "Admin::MaintenanceDebt.count", "Admin::StaffingDebt.count" ] do
+      workshop.team_members.create!(user: FactoryBot.create(:user), position: "Director")
     end
   end
 
-  # cast? and cast_display_name
-
-  test "cast? is true for Actor position" do
-    assert TeamMember.new(position: "Actor (King)").cast?
+  test "cast? reads an Actor or Cast segment anywhere in the position" do
+    { "Actor (King)" => true, "Cast (King)" => true, "aCtor ( King ) " => true, "CAST ( Queen ) " => true,
+      "Actor (The King) / Stage Manager" => true, "Actor (Gustave/Franz)" => true,
+      "Director" => false, "Tech Manager / Lighting Designer" => false }.each do |position, expected|
+      assert_equal expected, TeamMember.new(position: position).cast?, position
+    end
   end
 
-  test "cast? is true for Cast position" do
-    assert TeamMember.new(position: "Cast (King)").cast?
-  end
-
-  test "cast? is true for Actor position with loose casing and whitespace" do
-    assert TeamMember.new(position: "aCtor ( King ) ").cast?
-  end
-
-  test "cast? is true for Cast position with loose casing" do
-    assert TeamMember.new(position: "CAST ( Queen ) ").cast?
-  end
-
-  test "cast? is true when Actor is first of multiple segments" do
-    assert TeamMember.new(position: "Actor (The King) / Stage Manager").cast?
-  end
-
-  test "cast? is false for crew-only position" do
-    assert_not TeamMember.new(position: "Director").cast?
-  end
-
-  test "cast? is false for multi-role crew position" do
-    assert_not TeamMember.new(position: "Tech Manager / Lighting Designer").cast?
-  end
-
-  test "cast_display_name returns role name for simple actor" do
-    assert_equal "King", TeamMember.new(position: "Actor (King)").cast_display_name
-  end
-
-  test "cast_display_name returns role name for Cast keyword" do
-    assert_equal "King", TeamMember.new(position: "Cast (King)").cast_display_name
-  end
-
-  test "cast_display_name strips whitespace from role name" do
-    assert_equal "King", TeamMember.new(position: "aCtor ( King ) ").cast_display_name
-  end
-
-  test "cast_display_name returns multiple character names as comma list" do
-    assert_equal "The King, The Beggar", TeamMember.new(position: "Actor (The King, The Beggar)").cast_display_name
-  end
-
-  test "cast_display_name appends crew roles with Crew () wrapper" do
-    assert_equal "The King / Crew<wbr>(Stage Manager)</wbr>", TeamMember.new(position: "Actor (The King) / Stage Manager").cast_display_name
-  end
-
-  test "cast_display_name handles multiple crew roles" do
-    assert_equal "King / Crew<wbr>(Sound Designer, Lighting Designer)</wbr>", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
-  end
-
-  test "cast? is true when actor name contains a slash" do
-    assert TeamMember.new(position: "Actor (Gustave/Franz)").cast?
-  end
-
-  test "cast_display_name returns role name containing a slash" do
-    assert_equal "Gustave/Franz", TeamMember.new(position: "Actor (Gustave/Franz)").cast_display_name
+  test "cast_display_name" do
+    { "Actor (King)" => "King", "Cast (King)" => "King", "aCtor ( King ) " => "King",
+      "Actor (The King, The Beggar)" => "The King, The Beggar", "Actor (Gustave/Franz)" => "Gustave/Franz",
+      "Actor (The King) / Stage Manager" => "The King / Crew<wbr>(Stage Manager)</wbr>",
+      "Actor (King) / Sound Designer / Lighting Designer" =>
+        "King / Crew<wbr>(Sound Designer, Lighting Designer)</wbr>" }.each do |position, expected|
+      assert_equal expected, TeamMember.new(position: position).cast_display_name, position
+    end
   end
 
   # ordered scope
 
-  test "ordered scope sorts by display_order with nulls last" do
-    first_id  = team_members(:ordered_first).id
-    second_id = team_members(:ordered_second).id
-    null_id   = team_members(:ordered_null).id
+  test "ordered sorts by display_order, nulls last, then by name" do
+    numbered = %i[ordered_first ordered_second ordered_null].map { |name| team_members(name).id }
+    unnumbered = %i[alpha_first alpha_last].map { |name| team_members(name).id }
 
-    ordered = TeamMember.where(id: [ first_id, second_id, null_id ]).ordered
-    assert_equal [ first_id, second_id, null_id ], ordered.map(&:id)
+    assert_equal numbered, TeamMember.where(id: numbered).ordered.ids
+    assert_equal unnumbered, TeamMember.where(id: unnumbered).ordered.ids
   end
 
   test "in_display_order agrees with the ordered scope" do
@@ -192,35 +144,16 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal [ ordered, added ], TeamMember.in_display_order([ added, ordered ])
   end
 
-  test "ordered scope sorts null display_order records alphabetically by name" do
-    alpha_id = team_members(:alpha_first).id
-    last_id  = team_members(:alpha_last).id
-
-    ordered = TeamMember.where(id: [ alpha_id, last_id ]).ordered
-    assert_equal [ alpha_id, last_id ], ordered.map(&:id)
-  end
-
   # display_order for rows written outside the form
 
-  test "rows created on an empty teamwork are numbered in creation order" do
-    show = FactoryBot.create(:show)
-    first = show.team_members.create!(user: FactoryBot.create(:user), position: "Director")
-    second = show.team_members.create!(user: FactoryBot.create(:user), position: "Producer")
-
-    assert_equal 0, first.reload.display_order
-    assert_equal 1, second.reload.display_order
-    assert_equal [ first, second ], show.team_members.ordered.to_a
-  end
-
-  test "a row appended to a numbered teamwork lands at the end" do
+  test "rows are numbered in creation order, a later row landing at the end" do
     show = FactoryBot.create(:show)
     show.team_members.create!(user: FactoryBot.create(:user), position: "Director")
     show.team_members.create!(user: FactoryBot.create(:user), position: "Producer")
+    TeamMember.create!(teamwork: show, user: FactoryBot.create(:user), position: "Proposer")
 
-    proposer = TeamMember.create!(teamwork: show, user: FactoryBot.create(:user), position: "Proposer")
-
-    assert_equal 2, proposer.reload.display_order
-    assert_equal proposer, show.team_members.ordered.last
+    assert_equal [ [ "Director", 0 ], [ "Producer", 1 ], [ "Proposer", 2 ] ],
+                 show.team_members.ordered.pluck(:position, :display_order)
   end
 
   # The max + 1 trap: on an all-nil teamwork the new row would take 0 and, as

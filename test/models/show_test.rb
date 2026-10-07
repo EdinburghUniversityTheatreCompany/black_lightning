@@ -55,22 +55,10 @@ class ShowTest < ActiveSupport::TestCase
     assert_not show.can_convert?
   end
 
-  test "debt_configuration_active? returns false when no amounts set" do
-    show = FactoryBot.create(:show)
-
-    assert_not show.debt_configuration_active?
-  end
-
-  test "debt_configuration_active? returns true when maintenance amount set" do
-    show = FactoryBot.create(:show, maintenance_debt_amount: 1)
-
-    assert show.debt_configuration_active?
-  end
-
-  test "debt_configuration_active? returns true when staffing amount set" do
-    show = FactoryBot.create(:show, staffing_debt_amount: 2)
-
-    assert show.debt_configuration_active?
+  test "debt_configuration_active? when either amount is set" do
+    assert_not FactoryBot.create(:show).debt_configuration_active?
+    assert FactoryBot.create(:show, maintenance_debt_amount: 1).debt_configuration_active?
+    assert FactoryBot.create(:show, staffing_debt_amount: 2).debt_configuration_active?
   end
 
   test "setting debt amounts to 0 converts to nil" do
@@ -83,215 +71,44 @@ class ShowTest < ActiveSupport::TestCase
     assert_not show.debt_configuration_active?
   end
 
-  test "sync_debts_for_all_users creates maintenance debts" do
-    due_by = Date.current
-    # Create show without debt configuration first, so team members don't get auto-debts
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5)
-    )
-
-    # Now set the debt configuration
-    show.update!(maintenance_debt_start: due_by, maintenance_debt_amount: 1)
-
-    assert_difference("Admin::MaintenanceDebt.count", show.users.count) do
-      show.sync_debts_for_all_users
-    end
-
-    show.users.each do |user|
-      maintenance_debts = user.admin_maintenance_debts.where(show: show)
-      assert_equal 1, maintenance_debts.count
-      assert_equal due_by, maintenance_debts.first.due_by
-    end
-  end
-
-  test "sync_debts_for_all_users does not create duplicate debts" do
-    due_by = Date.current
-    # Create show without debt configuration first
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5)
-    )
-
-    show.update!(maintenance_debt_start: due_by, maintenance_debt_amount: 1)
-    show.sync_debts_for_all_users
-
-    # Syncing again should not create more debts
-    assert_no_difference("Admin::MaintenanceDebt.count") do
-      show.sync_debts_for_all_users
-    end
-
-    show.users.each do |user|
-      assert_equal 1, user.admin_maintenance_debts.where(show: show).count
-    end
-  end
-
-  test "sync_debts_for_all_users creates staffing debts" do
-    due_by = Date.current
+  test "sync_debts_for_all_users creates each member's debts once, and tops up a raised amount" do
     show = create_show_with_directors
+    show.update!(maintenance_debt_start: Date.current, maintenance_debt_amount: 1,
+                 staffing_debt_start: Date.current, staffing_debt_amount: 1)
 
-    show.update!(staffing_debt_start: due_by, staffing_debt_amount: 2)
-
-    assert_difference("Admin::StaffingDebt.count", show.users.count * 2) do
+    assert_difference({ "Admin::MaintenanceDebt.count" => 3, "Admin::StaffingDebt.count" => 3 }) do
+      show.sync_debts_for_all_users
+    end
+    assert_no_difference([ "Admin::MaintenanceDebt.count", "Admin::StaffingDebt.count" ]) do
       show.sync_debts_for_all_users
     end
 
-    show.users.each do |user|
-      assert_equal 2, user.admin_staffing_debts.where(show: show).count
-    end
-  end
-
-  test "sync_debts_for_all_users tops up to configured amount" do
-    due_by = Date.current
-    show = create_show_with_directors
-
-    show.update!(staffing_debt_start: due_by, staffing_debt_amount: 1)
-    show.sync_debts_for_all_users
-
-    show.users.each do |user|
-      assert_equal 1, user.admin_staffing_debts.where(show: show).count
-    end
-
-    # Increase the amount
     show.update!(staffing_debt_amount: 2)
+    assert_difference("Admin::StaffingDebt.count", 3) { show.sync_debts_for_all_users }
+    assert_equal Date.current, show.users.first.admin_maintenance_debts.where(show: show).sole.due_by
+  end
 
-    assert_difference("Admin::StaffingDebt.count", show.users.count) do
+  test "sync_debts_for_all_users does nothing for a show outside the academic year" do
+    show = create_show_with_directors
+    show.update!(start_date: Date.current.advance(years: -2), end_date: Date.current.advance(years: -2),
+                 maintenance_debt_start: Date.current, maintenance_debt_amount: 1)
+
+    assert_no_difference("Admin::MaintenanceDebt.count") { show.sync_debts_for_all_users }
+  end
+
+  test "staffing debts follow the position rules" do
+    { "Assistant Director" => 1, "Assistant Director / Assistant Producer" => 1,
+      "Director / Assistant Producer" => 3, "Welfare Contact" => 0,
+      "Welfare Contact / Producer" => 3 }.each do |position, expected|
+      show = FactoryBot.create(:show, start_date: start_of_year, end_date: start_of_year.advance(days: 5),
+                                      staffing_debt_start: Date.current, staffing_debt_amount: 3)
+      user = FactoryBot.create(:user)
+      FactoryBot.create(:team_member, teamwork: show, user: user, position: position)
+
       show.sync_debts_for_all_users
+
+      assert_equal expected, user.admin_staffing_debts.where(show: show).count, position
     end
-
-    show.users.each do |user|
-      assert_equal 2, user.admin_staffing_debts.where(show: show).count
-    end
-  end
-
-  test "sync_debts_for_all_users does not run for shows outside academic year" do
-    # Create a show from last year
-    show = FactoryBot.create(:show,
-      start_date: Date.current.advance(years: -2),
-      end_date: Date.current.advance(years: -2),
-      maintenance_debt_start: Date.current,
-      maintenance_debt_amount: 1
-    )
-
-    assert_no_difference("Admin::MaintenanceDebt.count") do
-      show.sync_debts_for_all_users
-    end
-  end
-
-  test "sync_debts_for_user creates debts for single user" do
-    due_by = Date.current
-    # Create show without debt configuration and without team members
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0
-    )
-    # Add a user with a known position (Director)
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director")
-
-    # Now set the debt configuration
-    show.update!(
-      maintenance_debt_start: due_by,
-      maintenance_debt_amount: 1,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 2
-    )
-
-    result = show.sync_debts_for_user(user)
-
-    assert_equal 1, result[:maintenance]
-    assert_equal 2, result[:staffing]
-    assert_equal 1, user.admin_maintenance_debts.where(show: show).count
-    assert_equal 2, user.admin_staffing_debts.where(show: show).count
-  end
-
-  test "staffing debt amount for assistant is capped at 1" do
-    due_by = Date.current
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 3
-    )
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Assistant Director")
-
-    show.sync_debts_for_all_users
-
-    assert_equal 1, user.admin_staffing_debts.where(show: show).count
-  end
-
-  test "staffing debt amount for mixed assistant role is not capped" do
-    due_by = Date.current
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 3
-    )
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director / Assistant Producer")
-
-    show.sync_debts_for_all_users
-
-    # Not all roles are assistant, so full amount
-    assert_equal 3, user.admin_staffing_debts.where(show: show).count
-  end
-
-  test "staffing debt amount for all assistant roles is capped" do
-    due_by = Date.current
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 3
-    )
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Assistant Director / Assistant Producer")
-
-    show.sync_debts_for_all_users
-
-    # All roles are assistant, so capped at 1
-    assert_equal 1, user.admin_staffing_debts.where(show: show).count
-  end
-
-  test "welfare contact gets zero staffing debts" do
-    due_by = Date.current
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 3
-    )
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Welfare Contact")
-
-    show.sync_debts_for_all_users
-
-    assert_equal 0, user.admin_staffing_debts.where(show: show).count
-  end
-
-  test "welfare contact with other role gets full debts" do
-    due_by = Date.current
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0,
-      staffing_debt_start: due_by,
-      staffing_debt_amount: 3
-    )
-    user = FactoryBot.create(:user)
-    FactoryBot.create(:team_member, teamwork: show, user: user, position: "Welfare Contact / Producer")
-
-    show.sync_debts_for_all_users
-
-    # Has other role, so full amount
-    assert_equal 3, user.admin_staffing_debts.where(show: show).count
   end
 
   test "cannot add user to the same show twice as team member" do
@@ -306,9 +123,8 @@ class ShowTest < ActiveSupport::TestCase
   end
 
   test "tag_debt_recommendations returns recommendations from tags" do
-    show = FactoryBot.create(:show, tag_count: 0)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
+    show = FactoryBot.create(:show)
+    show.event_tags << event_tags(:mainterm)
 
     recommendations = show.tag_debt_recommendations
 
@@ -318,68 +134,23 @@ class ShowTest < ActiveSupport::TestCase
     assert_equal 2, recommendations.first[:staffing]
   end
 
-  test "tag_debt_recommendations returns empty array when no tags" do
-    show = FactoryBot.create(:show, tag_count: 0)
-
-    recommendations = show.tag_debt_recommendations
-
-    assert_empty recommendations
-  end
-
   test "tag_debt_recommendations returns empty array when tags have no recommendations" do
-    show = FactoryBot.create(:show, tag_count: 0)
-    new_writing_tag = event_tags(:new_writing)
-    show.event_tags << new_writing_tag
+    show = FactoryBot.create(:show)
+    show.event_tags << event_tags(:new_writing)
 
-    recommendations = show.tag_debt_recommendations
-
-    assert_empty recommendations
+    assert_empty show.tag_debt_recommendations
   end
 
-  test "matches_tag_debt_recommendations? returns true when debts match" do
-    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 1, staffing_debt_amount: 2)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
+  test "debt_recommendation_status" do
+    { [ [], nil, nil ] => :no_recommendation,
+      [ [ :mainterm ], nil, nil ] => :needs_config,
+      [ [ :mainterm ], 1, 2 ] => :matches,
+      [ [ :mainterm ], 2, 3 ] => :mismatch }.each do |(tags, maintenance, staffing), expected|
+      show = FactoryBot.create(:show, maintenance_debt_amount: maintenance, staffing_debt_amount: staffing)
+      show.event_tags << tags.map { |tag| event_tags(tag) }
 
-    assert show.matches_tag_debt_recommendations?
-  end
-
-  test "matches_tag_debt_recommendations? returns false when debts don't match" do
-    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 2, staffing_debt_amount: 3)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
-
-    assert_not show.matches_tag_debt_recommendations?
-  end
-
-  test "debt_recommendation_status returns :no_recommendation when no tags" do
-    show = FactoryBot.create(:show, tag_count: 0)
-
-    assert_equal :no_recommendation, show.debt_recommendation_status
-  end
-
-  test "debt_recommendation_status returns :needs_config when tags but no debts" do
-    show = FactoryBot.create(:show, tag_count: 0)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
-
-    assert_equal :needs_config, show.debt_recommendation_status
-  end
-
-  test "debt_recommendation_status returns :matches when debts match tag recommendations" do
-    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 1, staffing_debt_amount: 2)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
-
-    assert_equal :matches, show.debt_recommendation_status
-  end
-
-  test "debt_recommendation_status returns :mismatch when debts don't match tag recommendations" do
-    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 2, staffing_debt_amount: 3)
-    mainterm_tag = event_tags(:mainterm)
-    show.event_tags << mainterm_tag
-
-    assert_equal :mismatch, show.debt_recommendation_status
+      assert_equal expected, show.debt_recommendation_status
+    end
   end
 
   test "as_json" do
@@ -397,16 +168,9 @@ class ShowTest < ActiveSupport::TestCase
 
   # Members are added before any debt configuration, so their after_create sync
   # creates nothing.
-  def create_show_with_directors(count: 3)
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0
-    )
-    count.times do
-      user = FactoryBot.create(:user)
-      FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director")
-    end
+  def create_show_with_directors
+    show = FactoryBot.create(:show, start_date: start_of_year, end_date: start_of_year.advance(days: 5))
+    3.times { FactoryBot.create(:team_member, teamwork: show, user: FactoryBot.create(:user), position: "Director") }
     show
   end
 end

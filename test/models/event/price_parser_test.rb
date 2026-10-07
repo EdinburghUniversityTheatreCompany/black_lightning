@@ -21,29 +21,19 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     assert_equal expected, bands("£5/£4/£3")
   end
 
-  test "reads a two-band price" do
-    assert_equal [ [ 5.0, "standard" ], [ 4.5, "concession" ] ], bands("4.50/5.00")
-    assert_equal [ [ 6.0, "standard" ], [ 5.0, "concession" ] ], bands("£6/£5")
-  end
-
-  test "reads a single amount as the standard band" do
-    assert_equal [ [ 2.5, "standard" ] ], bands("£2.50")
-    assert_equal [ [ 4.0, "standard" ] ], bands("4.00")
-  end
-
-  test "reads the double-slash separator" do
-    assert_equal [ [ 3.0, "standard" ], [ 2.5, "concession" ] ], bands("£3.00 // £2.50")
-  end
-
-  test "tolerates spacing around the currency symbol and separators" do
-    assert_equal [ [ 5.0, "standard" ], [ 4.5, "concession" ], [ 4.0, "member" ] ],
-                 bands("£5.00 / £4.50 / £4.00")
-    assert_equal [ [ 3.0, "standard" ], [ 2.5, "concession" ] ], bands("£ 3 / 2.50 ")
-  end
-
-  # Pre-decimal pence is "d", so a "p" past the date gate is decimal.
-  test "reads pence" do
-    assert_equal [ [ 0.3, "standard" ] ], bands("30p")
+  test "reads ordinary prices" do
+    {
+      "4.50/5.00" => [ [ 5.0, "standard" ], [ 4.5, "concession" ] ],
+      "£6/£5" => [ [ 6.0, "standard" ], [ 5.0, "concession" ] ],
+      "£2.50" => [ [ 2.5, "standard" ] ],
+      "4.00" => [ [ 4.0, "standard" ] ],
+      "£3.00 // £2.50" => [ [ 3.0, "standard" ], [ 2.5, "concession" ] ],
+      "£5.00 / £4.50 / £4.00" => [ [ 5.0, "standard" ], [ 4.5, "concession" ], [ 4.0, "member" ] ],
+      "£ 3 / 2.50 " => [ [ 3.0, "standard" ], [ 2.5, "concession" ] ],
+      "30p" => [ [ 0.3, "standard" ] ] # pre-decimal pence is "d", so a "p" past the date gate is decimal
+    }.each do |text, expected|
+      assert_equal expected, bands(text), text.inspect
+    end
   end
 
   test "a named band wins over its position" do
@@ -138,24 +128,10 @@ class Event::PriceParserTest < ActiveSupport::TestCase
     end
   end
 
-  # Not sterling, so we cannot claim to have read it.
-  test "refuses a foreign currency" do
-    assert_nil parse("$5")
-  end
-
-  test "refuses nil" do
-    assert_nil parse(nil)
-  end
-
-  # Both read as ordinary output: "150" is £1.50 without the dot, and "1/75" is
-  # £1.75, not a 75x spread between two bands.
-  test "refuses an amount too large to be a ticket here" do
-    assert_nil parse("150")
-    assert_nil parse("£120/100")
-  end
-
-  test "refuses an implausible spread between bands" do
-    assert_nil parse("1/75")
+  # "$5" is not sterling. "150" is £1.50 without the dot and "1/75" is £1.75, not a
+  # 75x spread between two bands.
+  test "refuses foreign, missing and implausible amounts" do
+    [ "$5", nil, "150", "£120/100", "1/75" ].each { |text| assert_nil parse(text), text.inspect }
   end
 
   test "keeps a wide but believable spread, and a believable single amount" do

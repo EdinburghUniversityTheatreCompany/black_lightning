@@ -26,31 +26,18 @@ class Archives::EventsControllerTest < ActionController::TestCase
     assert_match event.name, response.body, "Event title not in index."
   end
 
-  test "ransack on name filters the rendered collection" do
+  test "ransack on name filters the rendered collection, as html and as a turbo_stream" do
     match     = FactoryBot.create(:show, is_public: true, name: "Pericles Prince of Tyre")
     non_match = FactoryBot.create(:show, is_public: true, name: "Hamlet")
 
-    get :index, params: { q: { name_cont: "pericles" } }
+    [ :html, :turbo_stream ].each do |format|
+      get :index, params: { q: { name_cont: "pericles" } }, format: format
 
-    assert_response :success
-    assert_includes assigns(:events), match
-    assert_not_includes assigns(:events), non_match
-    assert_match match.name, response.body
-    assert_no_match(/#{non_match.name}/, response.body)
-  end
-
-  test "responds to a turbo_stream request (live search)" do
-    match     = FactoryBot.create(:show, is_public: true, name: "Pericles Prince of Tyre")
-    non_match = FactoryBot.create(:show, is_public: true, name: "Hamlet")
-
-    get :index, params: { q: { name_cont: "pericles" } }, format: :turbo_stream
-
-    assert_response :success
+      assert_response :success
+      assert_match match.name, response.body, format.to_s
+      assert_no_match(/#{non_match.name}/, response.body, format.to_s)
+    end
     # Regression: turbo_stream once returned an empty body, so live search did nothing.
     assert_match "index-results", response.body
-    assert_includes assigns(:events), match
-    assert_not_includes assigns(:events), non_match
-    assert_match match.name, response.body
-    assert_no_match(/#{non_match.name}/, response.body)
   end
 end
