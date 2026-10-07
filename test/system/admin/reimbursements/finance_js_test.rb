@@ -423,7 +423,11 @@ module Admin
 
         fill_in "Description", with: "Edited then abandoned"
         click_button "Approve (override sign-off)"
-        within("dialog[open]") { click_button "Save Changes" }
+        within("dialog[open]") do
+          # The override button names its own verb in the dialog title.
+          assert_text "save the changes before approving?"
+          click_button "Save Changes"
+        end
         # Cancelling the override's own confirm aborts the submit with the fields appended.
         within(".swal2-container") { click_button "Cancel" }
         assert_no_selector ".swal2-container"

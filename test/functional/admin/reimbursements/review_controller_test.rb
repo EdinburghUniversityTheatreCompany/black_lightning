@@ -1051,16 +1051,6 @@ module Admin
         assert_select "dialog[aria-labelledby=?][data-action*=?]", title_id, "close->review-decision#closed"
         assert_select "h2##{title_id}[data-review-decision-target=title]"
       end
-
-      test "the review card wires the guard on the owner-gate override button too" do
-        gated_expense
-        sign_in @user
-
-        get :index, params: { tab: "awaiting_owner" }
-
-        assert_response :success
-        assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
-      end
     end
   end
 end
