@@ -46,10 +46,6 @@ export default class extends Controller {
     this.dialogTarget.showModal()
   }
 
-  close() {
-    this.dialogTarget.close()
-  }
-
   #select() {
     this.#selected = this.#templates.find((t) => String(t.id) === this.listTarget.value) ?? null
     this.loadButtonTarget.disabled = !this.#selected
