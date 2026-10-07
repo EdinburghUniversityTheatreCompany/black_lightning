@@ -1,9 +1,4 @@
-alice = User.find_by!(email: "alice.jones@sms.ed.ac.uk")
-ben = User.find_by!(email: "ben.mackenzie@sms.ed.ac.uk")
-chloe = User.find_by!(email: "chloe.harvey@sms.ed.ac.uk")
-david = User.find_by!(email: "david.osei@sms.ed.ac.uk")
-emma = User.find_by!(email: "emma.thornton@sms.ed.ac.uk")
-finn = User.find_by!(email: "finn.obrien@sms.ed.ac.uk")
+alice, ben, chloe, david, emma, finn = seed_demo_users.values_at(:alice, :ben, :chloe, :david, :emma, :finn)
 
 [
   {

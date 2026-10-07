@@ -1,10 +1,5 @@
-alice = User.find_by!(email: "alice.jones@sms.ed.ac.uk")
-ben = User.find_by!(email: "ben.mackenzie@sms.ed.ac.uk")
-chloe = User.find_by!(email: "chloe.harvey@sms.ed.ac.uk")
-david = User.find_by!(email: "david.osei@sms.ed.ac.uk")
-finn = User.find_by!(email: "finn.obrien@sms.ed.ac.uk")
-grace = User.find_by!(email: "grace.liu@sms.ed.ac.uk")
-harry = User.find_by!(email: "harry.walsh@sms.ed.ac.uk")
+alice, ben, chloe, david, finn, grace, harry =
+  seed_demo_users.values_at(:alice, :ben, :chloe, :david, :finn, :grace, :harry)
 
 hamlet  = Show.find_by(slug: "hamlet")
 cabaret = Show.find_by(slug: "cabaret")
@@ -12,12 +7,12 @@ rent    = Show.find_by(slug: "rent")
 midsummer = Show.find_by(slug: "a-midsummer-nights-dream")
 
 staffing_debts = [
-  { user: alice,  show: hamlet,  due_by: Date.new(2023, 10, 21), state: :forgiven, converted_from_maintenance_debt: false },
-  { user: ben,    show: cabaret, due_by: Date.new(2024, 2, 17),  state: :forgiven, converted_from_maintenance_debt: false },
-  { user: finn,   show: midsummer, due_by: Date.new(2024, 10, 20), state: :normal, converted_from_maintenance_debt: false },
-  { user: chloe,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
-  { user: david,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
-  { user: harry,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal, converted_from_maintenance_debt: false },
+  { user: alice,  show: hamlet,  due_by: Date.new(2023, 10, 21), state: :forgiven },
+  { user: ben,    show: cabaret, due_by: Date.new(2024, 2, 17),  state: :forgiven },
+  { user: finn,   show: midsummer, due_by: Date.new(2024, 10, 20), state: :normal },
+  { user: chloe,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal },
+  { user: david,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal },
+  { user: harry,  show: rent, due_by: Date.new(2025, 8, 1), state: :normal },
   { user: grace,  show: rent, due_by: Date.new(2025, 9, 1), state: :normal, converted_from_maintenance_debt: true }
 ]
 
@@ -29,12 +24,12 @@ staffing_debts.each do |attrs|
 end
 
 maintenance_debts = [
-  { user: alice,  show: hamlet,    due_by: Date.new(2023, 12, 1),  state: :normal, converted_from_staffing_debt: false },
-  { user: ben,    show: cabaret,   due_by: Date.new(2024, 4, 1),   state: :forgiven, converted_from_staffing_debt: false },
-  { user: david,  show: midsummer, due_by: Date.new(2024, 12, 1),  state: :normal, converted_from_staffing_debt: false },
-  { user: chloe,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
-  { user: finn,   show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
-  { user: harry,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
+  { user: alice,  show: hamlet,    due_by: Date.new(2023, 12, 1),  state: :normal },
+  { user: ben,    show: cabaret,   due_by: Date.new(2024, 4, 1),   state: :forgiven },
+  { user: david,  show: midsummer, due_by: Date.new(2024, 12, 1),  state: :normal },
+  { user: chloe,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal },
+  { user: finn,   show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal },
+  { user: harry,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal },
   { user: grace,  show: rent,      due_by: Date.new(2025, 10, 1),  state: :normal, converted_from_staffing_debt: true }
 ]
 
