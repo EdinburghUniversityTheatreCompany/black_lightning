@@ -15,8 +15,6 @@ class GetInvolvedController < ApplicationController
 
     @editable_block = Admin::EditableBlock.find_by(url: "get_involved/opportunities")
 
-    set_meta_from_editable_block
-
     # Explicit, not block-derived: this page must win "theatre opportunities Edinburgh" whether or
     # not the editable block is written.
     @title = "Opportunities"
@@ -58,12 +56,6 @@ class GetInvolvedController < ApplicationController
     else
       rerender_new
     end
-  end
-
-  def page
-    @editable_block = Admin::EditableBlock.find_by!(url: @current_path.delete_prefix("/"))
-
-    set_meta_from_editable_block
   end
 
   private
