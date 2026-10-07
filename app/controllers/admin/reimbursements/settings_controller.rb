@@ -211,12 +211,11 @@ module Admin
         end
 
         @site = graph.get_site(@cost_centre.sharepoint_site_url)
-        @site_id = @site.id
 
         if @drive_id
           @items = graph.list_folder_contents(drive_id: @drive_id, item_id: @path.last&.dig(:id))
         else
-          @drives = graph.list_drives(@site_id)
+          @drives = graph.list_drives(@site.id)
         end
       rescue StandardError => e
         flash.now[:alert] = "SharePoint browse failed: #{e.message}"
@@ -228,7 +227,6 @@ module Admin
         names = Array(params[:path_names])
         ids.each_with_index.map { |id, index| { id: id, name: names[index].to_s } }
       end
-      helper_method :browse_path
     end
   end
 end

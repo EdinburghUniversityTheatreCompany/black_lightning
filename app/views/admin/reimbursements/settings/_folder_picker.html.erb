@@ -42,7 +42,7 @@
           <div class="flex flex-col gap-1">
             <% @drives.each do |drive| %>
               <%= link_to edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose,
-                            site_id: @site_id, drive_id: drive.id),
+                            drive_id: drive.id),
                           class: "text-sm text-blue-700 hover:underline" do %>
                 <span aria-hidden="true">→</span> <%= drive.name %>
               <% end %>
@@ -60,7 +60,7 @@
           </p>
           <% if @path.any? %>
             <% parent = @path[0..-2] %>
-            <%= link_to edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: @site_id,
+            <%= link_to edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose,
                           drive_id: @drive_id, path_ids: parent.map { |s| s[:id] }, path_names: parent.map { |s| s[:name] }),
                         class: "text-sm text-blue-700 hover:underline" do %>
               <span aria-hidden="true">↑</span> Up one level
@@ -69,7 +69,7 @@
 
           <div class="flex flex-col gap-1 mt-1">
             <% Array(@items).select(&:folder).each do |item| %>
-              <%= link_to edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: @site_id,
+              <%= link_to edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose,
                             drive_id: @drive_id,
                             path_ids: @path.map { |s| s[:id] } + [ item.id ],
                             path_names: @path.map { |s| s[:name] } + [ item.name ]),
