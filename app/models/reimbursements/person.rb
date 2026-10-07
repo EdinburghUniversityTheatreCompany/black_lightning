@@ -48,7 +48,6 @@ module Reimbursements
     def bic = payment_details&.bic.to_s
     def notes = payment_details&.notes.to_s
     def verified = payment_details.present? && payment_details.verified
-    alias verified? verified
 
     def bank_details?
       sort_code.present? && account_number.present?

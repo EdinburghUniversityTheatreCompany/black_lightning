@@ -243,7 +243,7 @@ module Admin
                                sort_code: "20-20-20", account_number: "50502366" }
 
       assert_redirected_to_person verified_person
-      assert_not verified_person.reload.verified?,
+      assert_not verified_person.reload.verified,
                  "a bank-detail correction must not leave a stale Verified badge standing"
     end
 

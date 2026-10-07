@@ -19,7 +19,7 @@ module Reimbursements
       assert_equal "80-22-60", person.sort_code
       assert_equal "12345678", person.account_number
       assert_equal "checked", person.notes
-      assert person.verified?
+      assert person.verified
       assert person.bank_details?
     end
 

@@ -194,12 +194,12 @@ module Reimbursements
       assert_equal "Pat P", person.name
       assert_equal "80-22-60", person.sort_code
       assert_equal "12345678", person.account_number
-      assert person.verified?
+      assert person.verified
       assert_equal "ok", person.notes
       assert_equal 1, PaymentDetails.count
 
       store.update_person!(person.record_id, verified: false)
-      assert_not person.reload.verified?
+      assert_not person.reload.verified
     end
 
     test "actuals: create, per-period lookup, and linking" do
