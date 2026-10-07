@@ -121,7 +121,7 @@ export default class extends Controller {
     this.vatWarningTarget.classList.toggle("hidden", !missing)
   }
 
-  // Mirrors ExpenseForm#parse_decimal: a trailing "," with 1-2 digits and no "."
+  // Mirrors Reimbursements::AmountParser.parse: a trailing "," with 1-2 digits and no "."
   // is a decimal comma ("999,99" -> 999.99), otherwise commas are thousands
   // separators. Else 999,99 falsely trips the large-amount warning.
   #parseAmount(raw) {
