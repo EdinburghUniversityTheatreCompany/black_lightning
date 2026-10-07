@@ -95,16 +95,13 @@ module Reimbursements
 
     test "no-ops without touching the mailbox when outbound is disabled" do
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
 
-      MailboxPollJob.perform_now
+      without_outbound { MailboxPollJob.perform_now }
 
       assert_empty @mailbox.replies, "outbound disabled -> the mailbox is never polled or replied to"
       assert_empty @mailbox.moves
       assert_empty @mailbox.reads
       assert_equal 0, Expense.count
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     # The reply names the cost centre whose mailbox the message arrived on, not the Fringe's.
@@ -416,8 +413,6 @@ module Reimbursements
       setup_job(messages: [])
       person = create_reimbursements_person(name: "Moved Morgan", email: "morgan@example.com")
       pdf = Base64.strict_encode64(PDF_ATTACHMENT[:bytes])
-      item_not_found = { error: { code: "ErrorItemNotFound",
-                                  message: "The specified object was not found in the store." } }.to_json
       http = FakeHttp.new([
         [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ],                  # token
         [ 200, { value: [ { id: "msgMoved", subject: "Receipt", bodyPreview: "see attached",
@@ -425,7 +420,7 @@ module Reimbursements
         [ 200, { value: [ { "@odata.type" => "#microsoft.graph.fileAttachment",
                             name: PDF_ATTACHMENT[:filename], contentType: PDF_ATTACHMENT[:content_type],
                             contentBytes: pdf } ] }.to_json ],                         # attachments
-        [ 404, item_not_found ],                                                       # mark_read -> 404
+        [ 404, GRAPH_ITEM_NOT_FOUND ],                                                 # mark_read -> 404
         [ 200, { id: "msgMovedNewId" }.to_json ]                                       # ...but it IS still there
       ])
       MailboxPollJob.mailbox_builder = lambda do |cost_centre|

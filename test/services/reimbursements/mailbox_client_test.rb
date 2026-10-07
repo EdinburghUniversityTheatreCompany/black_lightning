@@ -4,22 +4,6 @@ module Reimbursements
   class MailboxClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
-    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
-    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
-      def outbound_enabled?
-        Reimbursements::Settings.outbound_enabled?
-      end
-    end
-
-    def settings
-      FakeSettings.new("tenant-1", "client-1", "secret-1")
-    end
-
-    def token_response(expires_in: 3600)
-      [ 200, { access_token: "tok-1", expires_in: expires_in }.to_json ]
-    end
-
     def messages_response(messages)
       [ 200, { value: messages }.to_json ]
     end
@@ -32,14 +16,14 @@ module Reimbursements
 
     def build_client(responses, clock: -> { Time.zone.local(2026, 7, 9, 12) }, sleeper: nil)
       http = FakeHttp.new(responses)
-      client = Graph::MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
+      client = Graph::MailboxClient.new(mailbox: "reimbursements@example.com", settings: graph_settings,
                                  http: http, clock: clock, sleeper: sleeper)
       [ client, http ]
     end
 
     test "fetches a token once and lists unread messages" do
       raw = { id: "msg1", subject: "Receipt", bodyPreview: "see attached", from: { emailAddress: { address: "PAT@Example.com" } } }
-      client, http = build_client([ token_response, messages_response([ raw ]),
+      client, http = build_client([ graph_token_response, messages_response([ raw ]),
                                     messages_response([]) ])
 
       messages = client.unread_messages
@@ -86,7 +70,7 @@ module Reimbursements
           "contentBytes" => Base64.strict_encode64("BIGPNG") },
         { "@odata.type" => "#microsoft.graph.itemAttachment", "name" => "fwd" }
       ]
-      client, = build_client([ token_response, [ 200, { value: value }.to_json ] ])
+      client, = build_client([ graph_token_response, [ 200, { value: value }.to_json ] ])
 
       attachments = client.attachments("msg1")
 
@@ -96,7 +80,7 @@ module Reimbursements
     end
 
     test "reply posts a comment" do
-      client, http = build_client([ token_response, [ 202, "" ] ])
+      client, http = build_client([ graph_token_response, [ 202, "" ] ])
 
       client.reply("msg1", html: "<p>Thanks!</p>")
 
@@ -106,23 +90,22 @@ module Reimbursements
     end
 
     test "reply/move/mark_read are suppressed (no Graph mutation) when outbound is disabled" do
-      client, http = build_client([ token_response ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([ graph_token_response ])
 
-      assert_nil client.reply("msg1", html: "<p>hi</p>")
-      assert_nil client.move("msg1", :processed)
-      assert_nil client.mark_read("msg1")
+      without_outbound do
+        assert_nil client.reply("msg1", html: "<p>hi</p>")
+        assert_nil client.move("msg1", :processed)
+        assert_nil client.mark_read("msg1")
+      end
 
       assert_empty http.requests, "no outbound Graph call (not even a token) when outbound is disabled"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "mark_read_and_move moves to an existing folder, then marks read" do
       # Moves first: a move failure must leave the message unread (safe to retry on this reject
       # path), not read-but-unfiled for ever.
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { value: [ { id: "fld-processed" } ] }.to_json ],    # folder lookup
         [ 201, { id: "moved" }.to_json ],                           # move
         [ 200, "" ]                                                # PATCH isRead
@@ -142,7 +125,7 @@ module Reimbursements
 
     test "creates the folder when missing and memoizes its id" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { value: [] }.to_json ],                 # lookup: missing
         [ 201, { id: "fld-new" }.to_json ],             # create folder
         [ 201, { id: "moved" }.to_json ],               # move
@@ -159,7 +142,7 @@ module Reimbursements
     end
 
     test "raises AuthError when graph rejects the token" do
-      client, = build_client([ token_response, [ 401, "expired" ] ])
+      client, = build_client([ graph_token_response, [ 401, "expired" ] ])
 
       assert_raises(GraphAuth::AuthError) { client.unread_messages }
     end
@@ -169,7 +152,7 @@ module Reimbursements
     [ 502, 503, 504 ].each do |status|
       test "a GET answered #{status} is retried once after a pause" do
         pauses = []
-        client, = build_client([ token_response, [ status, "UnknownError" ], messages_response([]) ],
+        client, = build_client([ graph_token_response, [ status, "UnknownError" ], messages_response([]) ],
                                sleeper: ->(seconds) { pauses << seconds })
 
         assert_equal [], client.unread_messages
@@ -179,7 +162,7 @@ module Reimbursements
 
     test "a GET still failing after its retry raises Error with the second status" do
       pauses = []
-      client, = build_client([ token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ],
+      client, = build_client([ graph_token_response, [ 502, "UnknownError" ], [ 503, "busy" ] ],
                              sleeper: ->(seconds) { pauses << seconds })
 
       error = assert_raises(GraphAuth::Error) { client.unread_messages }
@@ -189,7 +172,7 @@ module Reimbursements
 
     test "a 500 is not retried: it is Graph refusing the request, not its gateway" do
       pauses = []
-      client, = build_client([ token_response, [ 500, "boom" ] ], sleeper: ->(seconds) { pauses << seconds })
+      client, = build_client([ graph_token_response, [ 500, "boom" ] ], sleeper: ->(seconds) { pauses << seconds })
 
       assert_raises(GraphAuth::Error) { client.unread_messages }
       assert_empty pauses
@@ -197,19 +180,15 @@ module Reimbursements
 
     test "a write answered 502 is not retried, since the first attempt may have landed" do
       pauses = []
-      client, = build_client([ token_response, [ 502, "UnknownError" ] ], sleeper: ->(seconds) { pauses << seconds })
+      client, = build_client([ graph_token_response, [ 502, "UnknownError" ] ], sleeper: ->(seconds) { pauses << seconds })
 
       assert_raises(GraphAuth::Error) { client.reply("msg1", html: "<p>Thanks</p>") }
       assert_empty pauses
     end
 
-    # The real Graph body for a message handled or deleted by hand in Outlook.
-    ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",
-                                message: "The specified object was not found in the store." } }.to_json
-
     test "a bare graph_request 404 raises NotFoundError (loud, for non-mutation paths)" do
       # unread_messages is a read path: a 404 there is a real problem and must surface.
-      client, = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+      client, = build_client([ graph_token_response, [ 404, GRAPH_ITEM_NOT_FOUND ] ])
 
       error = assert_raises(GraphAuth::NotFoundError) { client.unread_messages }
       assert_kind_of GraphAuth::Error, error, "NotFoundError must be a subclass of Error"
@@ -229,7 +208,7 @@ module Reimbursements
 
     MUTATIONS.each do |name, (prefix, verb, path, call)|
       test "#{name} swallows a 404 once a re-GET confirms the message is gone" do
-        client, http = build_client([ token_response, *prefix, [ 404, ITEM_NOT_FOUND ], [ 404, ITEM_NOT_FOUND ] ])
+        client, http = build_client([ graph_token_response, *prefix, [ 404, GRAPH_ITEM_NOT_FOUND ], [ 404, GRAPH_ITEM_NOT_FOUND ] ])
 
         assert_nil call.(client)
         attempted = http.requests[-2]
@@ -239,7 +218,7 @@ module Reimbursements
       end
 
       test "#{name} stays loud when the message still exists" do
-        client, = build_client([ token_response, *prefix, [ 404, ITEM_NOT_FOUND ], [ 200, { id: "msg1" }.to_json ] ])
+        client, = build_client([ graph_token_response, *prefix, [ 404, GRAPH_ITEM_NOT_FOUND ], [ 200, { id: "msg1" }.to_json ] ])
 
         error = assert_raises(GraphAuth::NotFoundError) { call.(client) }
         assert_match(/ErrorItemNotFound/, error.message)
@@ -250,8 +229,8 @@ module Reimbursements
     # taking the loud path.
     test "an inconclusive existence check keeps the 404 loud" do
       client, = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ], # mark_read -> 404
+        graph_token_response,
+        [ 404, GRAPH_ITEM_NOT_FOUND ], # mark_read -> 404
         [ 500, "boom" ]          # confirmation inconclusive
       ])
 
@@ -261,8 +240,8 @@ module Reimbursements
     # A 404 from the FOLDER lookup must not read as "message gone": it is a mailbox setup problem.
     test "a 404 from the folder lookup is not mislabelled as the message being gone" do
       client, http = build_client([
-        token_response,
-        [ 404, ITEM_NOT_FOUND ] # the mailFolders lookup itself 404s
+        graph_token_response,
+        [ 404, GRAPH_ITEM_NOT_FOUND ] # the mailFolders lookup itself 404s
       ])
 
       error = assert_raises(GraphAuth::NotFoundError) { client.move("msg1", :processed) }

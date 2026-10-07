@@ -4,25 +4,9 @@ module Reimbursements
   class GraphClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
-    # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
-    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
-      def outbound_enabled?
-        Reimbursements::Settings.outbound_enabled?
-      end
-    end
-
-    def settings
-      FakeSettings.new("tenant-1", "client-1", "secret-1")
-    end
-
-    def token_response
-      [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ]
-    end
-
     def build_client(responses)
       http = FakeHttp.new(responses)
-      [ GraphClient.new(settings: settings, http: http, clock: -> { Time.zone.local(2026, 7, 9, 12) }), http ]
+      [ GraphClient.new(settings: graph_settings, http: http, clock: -> { Time.zone.local(2026, 7, 9, 12) }), http ]
     end
 
     def attachment(bytes, name: "file.pdf")
@@ -31,7 +15,7 @@ module Reimbursements
 
     test "create_draft inlines small attachments and returns the draft id + webLink" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 201, { id: "msg-1", webLink: "https://outlook.example/msg-1" }.to_json ]
       ])
 
@@ -54,7 +38,7 @@ module Reimbursements
     test "create_draft streams a >3MB attachment via an upload session" do
       big = "x" * (GraphClient::INLINE_ATTACHMENT_LIMIT + 10)
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 201, { id: "msg-2", webLink: "https://outlook.example/msg-2" }.to_json ], # create draft
         [ 200, { uploadUrl: "https://upload.example/session" }.to_json ],           # createUploadSession
         [ 201, { id: "att-1" }.to_json ]                                            # single chunk PUT
@@ -71,7 +55,7 @@ module Reimbursements
     end
 
     test "delete_message issues a DELETE to the mailbox message" do
-      client, http = build_client([ token_response, [ 204, "" ] ])
+      client, http = build_client([ graph_token_response, [ 204, "" ] ])
 
       client.delete_message(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
 
@@ -81,7 +65,7 @@ module Reimbursements
     end
 
     test "draft_message? returns true for a message Graph still reports as an unsent draft" do
-      client, http = build_client([ token_response, [ 200, { isDraft: true }.to_json ] ])
+      client, http = build_client([ graph_token_response, [ 200, { isDraft: true }.to_json ] ])
 
       assert client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
       get = http.requests.last
@@ -95,14 +79,14 @@ module Reimbursements
         "404" => [ 404, { error: { message: "not found" } }.to_json ],
         "transport failure" => Net::OpenTimeout.new("execution expired")
       }.each do |label, response|
-        client, = build_client([ token_response, response ])
+        client, = build_client([ graph_token_response, response ])
 
         assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1"), label
       end
     end
 
     test "send_mail posts sendMail with saveToSentItems" do
-      client, http = build_client([ token_response, [ 202, "" ] ])
+      client, http = build_client([ graph_token_response, [ 202, "" ] ])
 
       client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>")
 
@@ -112,29 +96,27 @@ module Reimbursements
     end
 
     test "send_mail is suppressed (returns nil, no request) when outbound is disabled" do
-      client, http = build_client([ token_response, [ 202, "" ] ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([ graph_token_response, [ 202, "" ] ])
 
-      result = client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>")
+      result = without_outbound do
+        client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>")
+      end
 
       assert_nil result
       assert_empty http.requests, "no Graph call (not even a token) when outbound is disabled"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "create_draft is suppressed and returns a stub Draft when outbound is disabled" do
-      client, http = build_client([ token_response, [ 201, { id: "msg-1", webLink: "x" }.to_json ] ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([ graph_token_response, [ 201, { id: "msg-1", webLink: "x" }.to_json ] ])
 
-      draft = client.create_draft(mailbox: "send@x", to: [ "p@x" ], subject: "s", html: "<p>b</p>",
-                                  attachments: [ attachment("PDF", name: "bacs.xlsx") ])
+      draft = without_outbound do
+        client.create_draft(mailbox: "send@x", to: [ "p@x" ], subject: "s", html: "<p>b</p>",
+                            attachments: [ attachment("PDF", name: "bacs.xlsx") ])
+      end
 
       assert_match(/\Asuppressed-/, draft.id)
       assert_equal "", draft.web_link
       assert_empty http.requests, "no Graph call when outbound is disabled"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     # Upload and delete are gated because they carry bank details (the BACS xlsx and receipts go
@@ -142,55 +124,53 @@ module Reimbursements
     # stubbed upload would stamp receipts_offloaded on a receipt never backed up, and a stubbed
     # delete would report the old EUSA draft gone while it is still there.
     test "upload_to_folder is suppressed with no Graph request when outbound is disabled" do
-      client, http = build_client([ token_response, [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ] ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([ graph_token_response, [ 201, { webUrl: "https://sp.example/r.pdf" }.to_json ] ])
 
-      error = assert_raises(GraphAuth::OutboundSuppressedError) do
-        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "r.pdf", content: "BYTES")
+      error = without_outbound do
+        assert_raises(GraphAuth::OutboundSuppressedError) do
+          client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "r.pdf", content: "BYTES")
+        end
       end
 
       assert_match(/SharePoint upload/i, error.message)
       assert_empty http.requests, "no Graph call (not even a token) when outbound is disabled"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "delete_message is suppressed with no Graph request when outbound is disabled" do
-      client, http = build_client([ token_response, [ 204, "" ] ])
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+      client, http = build_client([ graph_token_response, [ 204, "" ] ])
 
-      assert_raises(GraphAuth::OutboundSuppressedError) do
-        client.delete_message(mailbox: "send@x", message_id: "msg-1")
+      without_outbound do
+        assert_raises(GraphAuth::OutboundSuppressedError) do
+          client.delete_message(mailbox: "send@x", message_id: "msg-1")
+        end
       end
 
       assert_empty http.requests, "no Graph call when outbound is disabled"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     # Read-only probes stay ungated: the Settings dashboard and folder picker use them on a real tenant.
     test "read-only Graph probes are not gated by the outbound switch" do
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { id: "site-1", displayName: "Finance", webUrl: "https://sp.example/sites/f" }.to_json ],
         [ 200, { id: "inbox" }.to_json ],
         [ 200, { isDraft: true }.to_json ]
       ])
 
-      assert_equal "site-1", client.get_site("https://tenant.sharepoint.com/sites/Finance").id
-      assert client.check_mailbox("send@x")
-      assert client.draft_message?(mailbox: "send@x", message_id: "msg-1")
+      without_outbound do
+        assert_equal "site-1", client.get_site("https://tenant.sharepoint.com/sites/Finance").id
+        assert client.check_mailbox("send@x")
+        assert client.draft_message?(mailbox: "send@x", message_id: "msg-1")
+      end
+
       graph_calls = http.requests.reject { |r| r.uri.include?("login.microsoftonline.com") }
       assert_equal %w[get get get], graph_calls.map { |r| r.method.to_s },
                    "every probe is a GET; only the token exchange is a POST"
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "upload_to_folder does a simple PUT for a small file and returns webUrl" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 201, { webUrl: "https://sp.example/receipts/r.pdf" }.to_json ]
       ])
 
@@ -207,7 +187,7 @@ module Reimbursements
     test "upload_to_folder streams a >=4MB file via a chunked upload session" do
       big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
         [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk PUT
       ])
@@ -228,7 +208,7 @@ module Reimbursements
     # paths swallow 404s.
     { 403 => GraphAuth::AuthError, 404 => GraphAuth::NotFoundError, 500 => GraphAuth::Error }.each do |status, error|
       test "upload_to_folder's small-file PUT answered #{status} raises #{error.name.demodulize}" do
-        client, = build_client([ token_response, [ status, "{}" ] ])
+        client, = build_client([ graph_token_response, [ status, "{}" ] ])
 
         raised = assert_raises(GraphAuth::Error) do
           client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
@@ -238,7 +218,7 @@ module Reimbursements
     end
 
     test "upload_to_folder refuses an empty file" do
-      client, = build_client([ token_response ])
+      client, = build_client([ graph_token_response ])
       assert_raises(GraphAuth::Error) do
         client.upload_to_folder(drive_id: "d", folder_id: "f", filename: "x.pdf", content: "")
       end
@@ -247,7 +227,7 @@ module Reimbursements
     test "upload_to_folder's chunked path issues one PUT per chunk for a genuinely multi-chunk file" do
       big = "x" * (GraphClient::UPLOAD_CHUNK_SIZE + 1)
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
         [ 202, "" ],                                                     # chunk 1 PUT (not yet complete)
         [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk 2 PUT (final)
@@ -268,7 +248,7 @@ module Reimbursements
 
     test "surfaces the Graph error code and message from the body" do
       client, = build_client([
-        token_response,
+        graph_token_response,
         [ 400, { error: { code: "ErrorInvalidRecipients", message: "bad address" } }.to_json ]
       ])
 
@@ -281,7 +261,7 @@ module Reimbursements
 
     test "list_folder_contents maps folders and files" do
       client, = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { value: [ { "id" => "1", "name" => "Receipts", "folder" => {}, "webUrl" => "u1" },
                           { "id" => "2", "name" => "note.txt", "webUrl" => "u2" } ] }.to_json ]
       ])
@@ -294,7 +274,7 @@ module Reimbursements
 
     test "list_folder_contents follows @odata.nextLink instead of truncating to the first page" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { value: [ { "id" => "1", "name" => "a.pdf", "webUrl" => "u1" } ],
                 "@odata.nextLink" => "https://graph.microsoft.com/v1.0/next-page" }.to_json ],
         [ 200, { value: [ { "id" => "2", "name" => "b.pdf", "webUrl" => "u2" } ] }.to_json ]
@@ -308,7 +288,7 @@ module Reimbursements
 
     test "get_site resolves a site URL to its Graph id via the path form" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { id: "tenant,guid1,guid2", displayName: "Finance",
                  webUrl: "https://tenant.sharepoint.com/sites/Finance" }.to_json ]
       ])
@@ -323,7 +303,7 @@ module Reimbursements
 
     test "list_drives maps each drive, defaulting an unnamed one to Documents" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { value: [ { "id" => "drv1", "name" => "Documents" },
                           { "id" => "drv2" } ] }.to_json ]
       ])
@@ -336,14 +316,14 @@ module Reimbursements
     end
 
     test "list_drives returns an empty array when the site has none" do
-      client, = build_client([ token_response, [ 200, {}.to_json ] ])
+      client, = build_client([ graph_token_response, [ 200, {}.to_json ] ])
 
       assert_empty client.list_drives("site-1")
     end
 
     test "check_mailbox probes the mailbox inbox and returns true" do
       client, http = build_client([
-        token_response,
+        graph_token_response,
         [ 200, { id: "inbox" }.to_json ]
       ])
 
@@ -355,7 +335,7 @@ module Reimbursements
 
     test "check_mailbox raises when the app can't reach the mailbox" do
       client, = build_client([
-        token_response,
+        graph_token_response,
         [ 403, { error: { code: "ErrorAccessDenied", message: "Access is denied." } }.to_json ]
       ])
 
@@ -363,7 +343,7 @@ module Reimbursements
     end
 
     test "check_reachable acquires a token and returns true without touching a resource" do
-      client, http = build_client([ token_response ])
+      client, http = build_client([ graph_token_response ])
 
       assert client.check_reachable
       # Only the token request: no per-resource Graph call.

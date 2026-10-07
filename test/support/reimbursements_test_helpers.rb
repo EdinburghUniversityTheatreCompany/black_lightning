@@ -148,6 +148,36 @@ module ReimbursementsTestHelpers
     grant_role_permission(user, "Producer", "access", "reimbursements")
   end
 
+  # --- Graph plumbing -------------------------------------------------------
+
+  # Delegates outbound_enabled? to the real Settings, so a suppression test can delete the
+  # REIMBURSEMENTS_ENABLE_OUTBOUND opt-in the suite sets.
+  FakeGraphSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
+    def outbound_enabled?
+      Reimbursements::Settings.outbound_enabled?
+    end
+  end
+
+  # The real Graph body for a message handled or deleted by hand in Outlook.
+  GRAPH_ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",
+                                    message: "The specified object was not found in the store." } }.to_json
+
+  def graph_settings
+    FakeGraphSettings.new("tenant-1", "client-1", "secret-1")
+  end
+
+  def graph_token_response(expires_in: 3600)
+    [ 200, { access_token: "tok-1", expires_in: expires_in }.to_json ]
+  end
+
+  # Runs the block with the suite's outbound opt-in switched off.
+  def without_outbound
+    original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+    yield
+  ensure
+    ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+  end
+
   # Modulus verdict keyed by account number, so tests need no gitignored Pay.UK rule files.
   class FakeModulusChecker
     def initialize(by_account = {})

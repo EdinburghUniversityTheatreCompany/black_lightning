@@ -284,7 +284,6 @@ module Reimbursements
     # real Azure credentials must not PUT full bank details into production
     # SharePoint, nor record receipts_offloaded for files never written.
     test "a batch built with outbound disabled issues no Graph request and offloads nothing" do
-      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
       build_scenario
       store = FlakyStore.new
       http = FakeHttp.new([]) # any request at all would raise "no queued response"
@@ -292,7 +291,7 @@ module Reimbursements
       processor = BatchProcessor.new(store: store, graph: graph, cost_centre: configured_cost_centre,
                                     sleeper: ->(_seconds) { })
 
-      result = run_batch(processor, store)
+      result = without_outbound { run_batch(processor, store) }
 
       assert_empty http.requests,
                    "no Graph request may leave a non-production environment, token exchange included"
@@ -303,8 +302,6 @@ module Reimbursements
         assert_not expense.receipts_offloaded,
                    "a suppressed upload must never be recorded as an offloaded receipt"
       end
-    ensure
-      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "a BACS-xlsx SharePoint upload failure doesn't block sending to EUSA or the receipt uploads" do
