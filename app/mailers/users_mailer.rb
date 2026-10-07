@@ -7,10 +7,10 @@ class UsersMailer < ApplicationMailer
     @subject = "Welcome to Bedlam Theatre"
 
     # Generate profile completion URL for incomplete profiles
-    @profile_completion_url = if @user.profile_incomplete?
-      profile_completion_url(token: @user.profile_completion_token, protocol: "https")
-    else
+    @profile_completion_url = if @user.profile_complete?
       new_user_session_url(protocol: "https")
+    else
+      profile_completion_url(token: @user.profile_completion_token, protocol: "https")
     end
 
     # Select editable block based on membership status

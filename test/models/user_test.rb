@@ -336,14 +336,12 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   # Profile completion tests
-  test "profile_complete? and profile_incomplete? read profile_completed_at" do
+  test "profile_complete? reads profile_completed_at" do
     @user.update_column(:profile_completed_at, nil)
-    assert @user.profile_incomplete?
     assert_not @user.profile_complete?
 
     @user.update!(profile_completed_at: Time.current)
     assert @user.profile_complete?
-    assert_not @user.profile_incomplete?
   end
 
   test "complete_profile! stamps completion and consent and resets the salt" do

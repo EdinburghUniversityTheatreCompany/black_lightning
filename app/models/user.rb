@@ -689,10 +689,6 @@ class User < ApplicationRecord
     profile_completed_at.present?
   end
 
-  def profile_incomplete?
-    !profile_complete?
-  end
-
   def complete_profile!
     # Reset salt to invalidate any existing tokens
     update!(profile_completed_at: Time.current, consented: Date.current, profile_completion_salt: SecureRandom.hex(8))
