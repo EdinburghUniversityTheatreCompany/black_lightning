@@ -12,11 +12,12 @@ module Admin
       private
 
       # Claims charged to any of these lines, newest first. Reads the store's one
-      # preloaded expense list rather than a query per line.
+      # preloaded expense list rather than a query per line. A draft keeps its budget
+      # but is the submitter's alone (see ClaimTabs), so it is left out.
       def claims_for_lines(lines)
         ids = Array(lines).map(&:record_id).to_set
         store.expenses
-             .select { |expense| ids.include?(expense.budget&.record_id) }
+             .select { |expense| ids.include?(expense.budget&.record_id) && expense.status != ::Reimbursements::Status::DRAFT }
              .sort_by { |expense| [ expense.submitted_at || Time.at(0), expense.auto_number.to_i ] }
              .reverse
       end

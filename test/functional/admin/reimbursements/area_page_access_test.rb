@@ -52,6 +52,25 @@ module Admin
         assert_not_includes response.body, "A waiting one"
       end
 
+      # A draft keeps its budget but belongs on the submitter's own page (see ClaimTabs).
+      test "a producer's draft is neither listed nor counted on the area's claims table" do
+        grant_finance_permission(users(:admin))
+        sign_in users(:admin)
+        line = create_reimbursements_budget(name: "Marketing", initial_budget: 1_100, area: @area)
+        payee = create_reimbursements_person(email: "payee@example.com", name: "Nadia Ferreira")
+        create_reimbursements_expense(person: payee, budget: line, description: "Settled poster run",
+                                      status: ::Reimbursements::Status::PAID)
+        create_reimbursements_expense(person: payee, budget: line, description: "Half-typed draft",
+                                      status: ::Reimbursements::Status::DRAFT)
+
+        get :show, params: { id: @area.record_id }
+
+        assert_response :success
+        assert_includes response.body, "Settled poster run"
+        assert_not_includes response.body, "Half-typed draft"
+        assert_select "nav a[aria-current=page]", text: /All\s+\(1\)/
+      end
+
       test "an owner sees the claims but no bank details" do
         line = create_reimbursements_budget(name: "Marketing", initial_budget: 1_100, area: @area)
         payee = create_reimbursements_person(email: "payee@example.com", name: "Nadia Ferreira",
