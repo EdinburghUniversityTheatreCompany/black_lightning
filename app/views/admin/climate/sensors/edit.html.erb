@@ -9,5 +9,4 @@
   <% end %>
 <% end %>
 
-<%= render "form", url: admin_climate_sensor_path(@sensor), method: :patch, submit_label: "Save",
-                   title: @sensor.display_name, intro: intro %>
+<%= render "form", submit_label: "Save", title: @sensor.display_name, intro: intro %>

@@ -1,6 +1,6 @@
-<%# locals: (url:, method:, submit_label:, title:, intro:) %>
+<%# locals: (submit_label:, title:, intro:) %>
 <%# The card sits inside the form so the footer's Save and Cancel stay inside it. %>
-<%= simple_form_for @sensor, url: url, method: method, as: :climate_sensor do |f| %>
+<%= simple_form_for [:admin, @sensor] do |f| %>
   <%= render CardComponent.new(title: title) do |card| %>
     <% card.with_footer do %>
       <%= render "shared/form/actions", submit: submit_label, cancel_path: admin_climate_sensors_path %>
