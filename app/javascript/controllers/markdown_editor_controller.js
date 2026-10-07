@@ -26,7 +26,9 @@ export default class extends Controller {
     uploadUrl: String,
     height: { type: String, default: "300px" },
     itemType: String,
-    itemId: String
+    itemId: String,
+    primaryButtonClass: String,
+    secondaryButtonClass: String
   }
 
   async connect() {
@@ -208,21 +210,21 @@ export default class extends Controller {
     this.element.appendChild(toolbar)
 
     this.#editorEl = document.createElement("div")
-    this.#editorEl.className = "milkdown-editor-wrap milkdown-panel rounded-bottom"
+    this.#editorEl.className = "milkdown-editor-wrap milkdown-panel rounded-b"
     this.#editorEl.style.minHeight = this.heightValue
     this.element.appendChild(this.#editorEl)
 
     this.#sourceEl = document.createElement("div")
     this.#sourceEl.style.display = "none"
     this.#sourceTextarea = document.createElement("textarea")
-    this.#sourceTextarea.className = "form-control font-monospace border-top-0 rounded-top-0"
+    this.#sourceTextarea.className = "form-control font-mono border-t-0 rounded-t-none"
     this.#sourceTextarea.style.height = this.heightValue
     this.#sourceTextarea.style.resize = "vertical"
     this.#sourceEl.appendChild(this.#sourceTextarea)
     this.element.appendChild(this.#sourceEl)
 
     this.#previewEl = document.createElement("div")
-    this.#previewEl.className = "markdown-body prose max-w-none p-3 milkdown-panel rounded-bottom"
+    this.#previewEl.className = "markdown-body prose max-w-none p-3 milkdown-panel rounded-b"
     this.#previewEl.style.display = "none"
     this.element.appendChild(this.#previewEl)
 
@@ -253,8 +255,8 @@ export default class extends Controller {
         <p class="milkdown-link-dialog__title">${title}</p>
         ${fieldsHtml}
         <div class="milkdown-link-dialog__actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary">Insert</button>
+          <button type="button" class="${this.secondaryButtonClassValue}" data-cancel>Cancel</button>
+          <button type="submit" class="${this.primaryButtonClassValue}">Insert</button>
         </div>
       </form>
     `
