@@ -6,8 +6,6 @@ module Admin
     # section alone, so a half-typed mailbox in the centre's own form survives.
     # Reads NominalCode directly: it is a settings table the store does not cover.
     class NominalCodesController < FinanceController
-      include ListsNominalCodes
-
       before_action :set_cost_centre
 
       def create
@@ -51,7 +49,7 @@ module Admin
 
       # A turbo stream is processed whatever the status, so a refusal keeps its 422.
       def respond_with_section(message:, error: false, new_nominal_code: nil)
-        load_nominal_codes(@cost_centre, new_nominal_code: new_nominal_code)
+        @new_nominal_code = new_nominal_code
         @toast = { type: error ? "error" : "success", message: message }
         respond_to do |format|
           format.turbo_stream do

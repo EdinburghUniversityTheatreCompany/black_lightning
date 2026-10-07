@@ -6,11 +6,7 @@ module Admin
     # configured site's drives -> folders server-side (GET params carry the
     # navigation), so it needs no JavaScript and tests with a fake Graph client.
     class SettingsController < FinanceController
-      include ListsNominalCodes
-
       before_action :set_cost_centre, only: %i[edit update test_access microsoft_setup]
-      # Every action that can render :edit needs the nominal-codes list.
-      before_action :set_nominal_codes, only: %i[edit update test_access]
 
       # Each SharePoint destination: its label (as on the folder-picker headings)
       # and the CostCentre columns it writes.
@@ -53,7 +49,7 @@ module Admin
       end
 
       # The one-off Microsoft 365 steps, on a page of their own so it can be sent
-      # to IT. No set_nominal_codes: it shows none of that panel.
+      # to IT.
       def microsoft_setup
         @title = "Microsoft setup: #{@cost_centre.name}"
       end
@@ -76,10 +72,6 @@ module Admin
       def set_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.find_by!(key: params[:key])
         @title = "Settings: #{@cost_centre.name}"
-      end
-
-      def set_nominal_codes
-        load_nominal_codes(@cost_centre)
       end
 
       def edit_path

@@ -131,7 +131,8 @@ module Admin
 
         get :edit, params: { key: @cost_centre.key }
 
-        assert_equal [ "432320" ], assigns(:nominal_codes).map(&:code)
+        assert_select "#nominal_codes div[id^=nominal_code_]", 1
+        assert_select "#nominal_code_#{code.record_id} span.font-mono", text: "432320"
         assert_select "#nominal_codes input##{"label_#{code.record_id}"}[value=?]", "Marketing"
         assert_select "#nominal_codes form[action=?]",
                       admin_reimbursements_nominal_codes_path(@cost_centre.key)

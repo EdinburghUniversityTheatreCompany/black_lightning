@@ -1,6 +1,10 @@
-<%# locals: (cost_centre:, codes:, usage_counts:, new_nominal_code:) %>
+<%# locals: (cost_centre:, new_nominal_code: nil) %>
 <%# A SIBLING of the cost-centre form, never nested in it: a form inside a form
-    is invalid HTML and the inner submit silently does nothing. %>
+    is invalid HTML and the inner submit silently does nothing. +new_nominal_code+
+    carries a refused Add back with its typed values and errors. %>
+<% new_nominal_code ||= ::Reimbursements::NominalCode.new %>
+<% codes = ::Reimbursements::NominalCode.for_cost_centre(cost_centre).to_a %>
+<% usage_counts = ::Reimbursements::NominalCode.usage_counts(cost_centre, codes.map(&:code)) %>
 <div id="nominal_codes">
   <%= render CardComponent.new(title: "Nominal codes", html_class: "mt-4") do %>
     <p class="text-sm text-gray-600 mb-3">
