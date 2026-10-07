@@ -7,19 +7,13 @@ module Admin
     class FinanceJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
-      # Always VALID, so "no receipt" is the only needs-attention flag.
-      class FakeChecker
-        def check(_sort_code, _account_number)
-          ::Reimbursements::ModulusCheck::VALID
-        end
-      end
-
       setup do
         grant_finance_permission(users(:member))
         @person = create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
                                                sort_code: "08-99-99", account_number: "66374958")
         @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
-        @checker = FakeChecker.new
+        # VALID, so "no receipt" is the only needs-attention flag.
+        @checker = FakeModulusChecker.new("66374958" => ::Reimbursements::ModulusCheck::VALID)
         ExpenseEditsController.checker_builder = -> { @checker }
         ReviewController.checker_builder = -> { @checker }
         login_as users(:member)
@@ -88,7 +82,7 @@ module Admin
         page.driver.browser.manage.window.resize_to(width, height)
       end
 
-      test "needs-attention popover opens on click and closes on Escape" do
+      test "needs-attention popover opens on click and closes on Escape or an outside click" do
         expense = seed_expense(status: "Pending", receipt: false)
 
         visit admin_reimbursements_expense_edits_path
@@ -106,15 +100,7 @@ module Admin
         trigger.send_keys(:escape)
         assert_equal "false", trigger["aria-expanded"]
         assert_no_selector "##{panel}"
-      end
 
-      test "needs-attention popover closes on an outside click" do
-        expense = seed_expense(status: "Pending", receipt: false)
-
-        visit admin_reimbursements_expense_edits_path
-
-        panel = "reasons-edits-adv-#{expense.record_id}"
-        trigger = find("button[aria-controls='#{panel}']")
         trigger.click
         assert_equal "true", trigger["aria-expanded"]
         assert_selector "##{panel}", visible: true
@@ -179,15 +165,14 @@ module Admin
 
       # A PDF gets a real first-page thumbnail, not the generic document icon.
       test "a PDF receipt renders a real first-page preview in the strip" do
-        expense = seed_expense(status: "Pending", receipt: false)
-        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
+        seed_expense(status: "Pending")
 
         visit admin_reimbursements_review_path
 
-        thumbnail = "button[aria-label='View receipt 1 of 1, invoice.pdf'] img"
+        thumbnail = "button[aria-label='View receipt 1 of 1, receipt.pdf'] img"
         assert_selector thumbnail
         assert image_rendered?(thumbnail), "the PDF's first page must decode as a real preview"
-        assert_no_selector "button[aria-label='View receipt 1 of 1, invoice.pdf'] i.fa-file-lines",
+        assert_no_selector "button[aria-label='View receipt 1 of 1, receipt.pdf'] i.fa-file-lines",
                            visible: true
       end
 
@@ -207,12 +192,22 @@ module Admin
 
       # On a phone the columns must stack, not squeeze into slivers.
       test "the receipt pane sits beside the claim details, and stacks on a phone" do
-        expense = seed_expense(status: "Pending", receipt: false)
-        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
+        expense = seed_expense(status: "Pending")
         pane = "receipt-pane-#{expense.record_id}"
 
         visit admin_reimbursements_review_path
-        find("button[aria-label='View receipt 1 of 1, invoice.pdf']").click
+        assert_selector "button[aria-label='View receipt 1 of 1, receipt.pdf']"
+
+        # The column must end with its content, not rule the divider down blank space
+        # to the card floor.
+        attach = attach_form.native.rect
+        column = attach_form.find(:xpath, "..").native.rect
+        assert_operator column.x, :>, find("form[action*='/save']").native.rect.x,
+                        "the column is beside the details on a wide screen"
+        assert_in_delta column.y + column.height, attach.y + attach.height, 8,
+                        "the column stops at its last row rather than being stretched"
+
+        find("button[aria-label='View receipt 1 of 1, receipt.pdf']").click
         assert_selector "##{pane}", visible: true
 
         details = find("form[action*='/save']").native.rect
@@ -251,23 +246,6 @@ module Admin
                         "no side column, so the receipts block starts at the same edge as the details"
         assert_operator receipts.y, :>, details.y + details.height,
                         "and sits below the details rather than beside them"
-      end
-
-      # The receipt column must end with its content, not rule the divider down blank
-      # space to the card floor.
-      test "the receipt column ends with its content instead of stretching to the card floor" do
-        expense = seed_expense(status: "Pending", receipt: false)
-        attach_test_receipt(expense, filename: "invoice.pdf", bytes: renderable_pdf_bytes)
-
-        visit admin_reimbursements_review_path
-        assert_selector "button[aria-label='View receipt 1 of 1, invoice.pdf']"
-
-        attach = attach_form.native.rect
-        column = attach_form.find(:xpath, "..").native.rect
-        assert_operator column.x, :>, find("form[action*='/save']").native.rect.x,
-                        "the column is beside the details on a wide screen"
-        assert_in_delta column.y + column.height, attach.y + attach.height, 8,
-                        "the column stops at its last row rather than being stretched"
       end
 
       # The wizard renders its next step directly (the stateless re-POST can't redirect),
@@ -349,15 +327,8 @@ module Admin
       end
 
       # Capybara's `select` cannot drive a Tom Select (select_controller.js hides the
-      # <select>): click the widget instead.
-      def tom_select(option_text, select_id:)
-        wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
-        wrapper.find(".ts-control").click
-        wrapper.find(".ts-dropdown-content .option", text: option_text, match: :first).click
-      end
-
-      # A remote Tom Select loads nothing until typed into, and its search box is inside the
-      # dropdown: open it, type, then click the option the AJAX round trip returned.
+      # <select>), and a remote one loads nothing until typed into, with its search box
+      # inside the dropdown: open it, type, then click the option the AJAX round trip returned.
       def tom_select_remote(query, option_text, select_id:)
         wrapper = find("##{select_id}", visible: :any).find(:xpath, "..")
         wrapper.find(".ts-control").click
@@ -387,13 +358,12 @@ module Admin
       end
 
       # A dirty card must not silently drop its edit on Approve: it pops the three-option
-      # dialog, and Cancel leaves the edit intact.
-      test "a dirty review card intercepts Approve with the unsaved-edits dialog" do
-        seed_expense(status: "Pending")
+      # dialog, and Cancel or Escape leaves the edit intact.
+      test "a dirty review card intercepts Approve with a dialog that Cancel and Escape both dismiss" do
+        expense = seed_expense(status: "Pending")
 
         visit admin_reimbursements_review_path
 
-        assert_no_selector "dialog[open]", wait: 1
         fill_in "Description", with: "Edited in the browser"
         click_button "Approve", exact: true
 
@@ -409,40 +379,36 @@ module Admin
         assert_no_selector "dialog[open]"
         assert_selector "h1", text: "Review Expenses"
         assert_field "Description", with: "Edited in the browser"
+
+        # Escape bypasses the Cancel button, so the close event must reset the pending
+        # decision, matching Cancel.
+        click_button "Approve", exact: true
+        assert_selector "dialog[open]", wait: 5
+        find("dialog[open]").send_keys(:escape)
+
+        assert_no_selector "dialog[open]"
+        assert_field "Description", with: "Edited in the browser"
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
       end
 
       # Save Changes is the only end-to-end driver of saveThenDecide / #injectEditFields:
       # the server tests hand-craft the params, so dropping the injected inputs would
-      # silently discard every edit.
-      test "Save Changes saves the edit and then runs the decision" do
-        expense = seed_expense(status: "Pending", description: "Original wording")
+      # silently discard every edit. Discard runs the decision without the edit.
+      { "Save Changes" => "Edited then saved", "Discard Changes" => "Original wording" }.each do |button, persisted|
+        test "#{button} runs the decision and leaves the description as #{persisted.inspect}" do
+          expense = seed_expense(status: "Pending", description: "Original wording")
 
-        visit admin_reimbursements_review_path
+          visit admin_reimbursements_review_path
 
-        fill_in "Description", with: "Edited then saved"
-        click_button "Approve", exact: true
-        within("dialog[open]") { click_button "Save Changes" }
+          fill_in "Description", with: "Edited then saved"
+          click_button "Approve", exact: true
+          within("dialog[open]") { click_button button }
 
-        assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
-        expense.reload
-        assert_equal "Edited then saved", expense.description, "the edit must be persisted"
-        assert_equal ::Reimbursements::Status::APPROVED, expense.status, "and the decision must run"
-      end
-
-      # Discard: the decision runs, the edit does not land.
-      test "Discard Changes runs the decision without saving the edit" do
-        expense = seed_expense(status: "Pending", description: "Original wording")
-
-        visit admin_reimbursements_review_path
-
-        fill_in "Description", with: "Edited then discarded"
-        click_button "Approve", exact: true
-        within("dialog[open]") { click_button "Discard Changes" }
-
-        assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
-        expense.reload
-        assert_equal "Original wording", expense.description, "the discarded edit must not persist"
-        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+          assert_selector ".swal2-container", text: "Approved ##{expense.auto_number}", wait: 5
+          expense.reload
+          assert_equal persisted, expense.description, "the description after #{button}"
+          assert_equal ::Reimbursements::Status::APPROVED, expense.status, "the decision must run"
+        end
       end
 
       # An aborted Save must not leave injected inputs in the DOM for a later Discard to
@@ -473,24 +439,6 @@ module Admin
         assert_equal ::Reimbursements::Status::APPROVED, expense.status
       end
 
-      # Escape bypasses the Cancel button, so the close event must reset the pending
-      # decision, matching Cancel.
-      test "Escape closes the unsaved-edits dialog and decides nothing" do
-        expense = seed_expense(status: "Pending")
-
-        visit admin_reimbursements_review_path
-
-        fill_in "Description", with: "Edited in the browser"
-        click_button "Approve", exact: true
-        assert_selector "dialog[open]", wait: 5
-
-        find("dialog[open]").send_keys(:escape)
-
-        assert_no_selector "dialog[open]"
-        assert_field "Description", with: "Edited in the browser"
-        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status
-      end
-
       # The dirty check must encode separators, or two different sets of values serialise
       # alike, the form reads as pristine and the decision drops the edits. The seeded
       # payment reference exceeds maxlength, which only constrains typing.
@@ -509,12 +457,17 @@ module Admin
                      "the decision must not have run behind the operator's back"
       end
 
-      # A pristine card skips the dialog; the decision's own confirm fires. The reason is
-      # filled in first because the box is `required`.
-      test "a pristine review card skips the dialog and runs the normal confirm" do
+      # Only a browser sees `required` stop a blank rejection before the can't-be-undone
+      # confirm (a request test POSTs straight to the action). Once filled in, a pristine
+      # card skips the unsaved-edits dialog and the decision's own confirm fires.
+      test "Reject is stopped while the reason is blank, then goes straight to its confirm" do
         seed_expense(status: "Pending")
 
         visit admin_reimbursements_review_path
+
+        click_button "Reject", exact: true
+        assert_no_selector ".swal2-container", wait: 2
+        assert_no_selector "dialog[open]", wait: 1
 
         fill_in "Reason for rejection", with: "No receipt"
         click_button "Reject", exact: true
@@ -537,19 +490,6 @@ module Admin
         scrolled = page.evaluate_script("document.querySelector('main').scrollTop")
         assert scrolled.to_i.positive?,
                "expected <main> to have scrolled to the anchored card, got scrollTop #{scrolled}"
-      end
-
-      # Only a browser sees `required` stop a blank rejection before the can't-be-undone
-      # confirm; a request test POSTs straight to the action.
-      test "a blank rejection reason never reaches the can't-be-undone confirm" do
-        seed_expense(status: "Pending")
-
-        visit admin_reimbursements_review_path
-
-        click_button "Reject", exact: true
-
-        assert_no_selector ".swal2-container", wait: 2
-        assert_no_selector "dialog[open]", wait: 1
       end
 
       # The bulk reason box is shared with "Approve selected", so it cannot be `required`:

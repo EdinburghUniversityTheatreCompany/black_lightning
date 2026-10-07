@@ -40,15 +40,8 @@ module ReimbursementsTestHelpers
                                       send_mailbox: "out@bedlamtheatre.invalid", **attrs)
   end
 
-  def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
-                                   budget_type: "Expense", initial_budget: nil, notes: nil,
-                                   owners: [], cost_centre: nil, financial_year: nil, area: nil)
-    budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
-                                            active: active, budget_type: budget_type,
-                                            initial_budget: initial_budget, notes: notes,
-                                            cost_centre: cost_centre,
-                                            financial_year: financial_year,
-                                            area: area)
+  def create_reimbursements_budget(name: "Props", nominal_code: "4000", owners: [], **attrs)
+    budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code, **attrs)
     Array(owners).each { |person| budget.own_owners << person }
     budget
   end
@@ -72,17 +65,15 @@ module ReimbursementsTestHelpers
                                         cost_centre: cost_centre || Reimbursements::CostCentre.default)
   end
 
-  def create_reimbursements_expense(person: nil, budget: nil, batch: nil,
-                                    status: Reimbursements::Status::PENDING,
+  def create_reimbursements_expense(status: Reimbursements::Status::PENDING,
                                     amount: BigDecimal("12.5"),
                                     amount_excl_vat: BigDecimal("10.42"),
                                     description: "Fake blood",
                                     payment_reference: "PROPS PAT",
                                     receipt: true, **attrs)
     expense = Reimbursements::Expense.create!(
-      person: person, budget: budget, batch: batch, status: status, amount: amount,
-      amount_excl_vat: amount_excl_vat, description: description,
-      payment_reference: payment_reference, **attrs
+      status: status, amount: amount, amount_excl_vat: amount_excl_vat,
+      description: description, payment_reference: payment_reference, **attrs
     )
     attach_test_receipt(expense) if receipt
     expense
@@ -148,21 +139,13 @@ module ReimbursementsTestHelpers
 
   # Grants :manage, :reimbursements_finance through the Business Manager role.
   def grant_finance_permission(user)
-    role = ::Role.find_by(name: "Business Manager") || ::Role.create!(name: "Business Manager").tap do |r|
-      r.permissions << Admin::Permission.create(action: "manage", subject_class: "reimbursements_finance")
-    end
-    user.add_role("Business Manager")
-    role
+    grant_role_permission(user, "Business Manager", "manage", "reimbursements_finance")
   end
 
   # Grants :access, :reimbursements through a Producer role, to prove portal access alone
   # does not open the finance surfaces.
   def grant_producer_permission(user)
-    role = ::Role.find_by(name: "Producer") || ::Role.create!(name: "Producer").tap do |r|
-      r.permissions << Admin::Permission.create(action: "access", subject_class: "reimbursements")
-    end
-    user.add_role("Producer")
-    role
+    grant_role_permission(user, "Producer", "access", "reimbursements")
   end
 
   # Modulus verdict keyed by account number, so tests need no gitignored Pay.UK rule files.
@@ -294,6 +277,12 @@ module ReimbursementsTestHelpers
     end
   end
 
-  # Shared with the climate clients (test/support/fake_http.rb); aliased for unqualified use.
-  FakeHttp = ::FakeHttp
+  private
+
+  def grant_role_permission(user, name, action, subject)
+    ::Role.find_by(name: name) || ::Role.create!(name: name).tap do |role|
+      role.permissions << Admin::Permission.create(action: action, subject_class: subject)
+    end
+    user.add_role(name)
+  end
 end
