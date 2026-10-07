@@ -85,6 +85,8 @@ module Admin
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp1.record_id)
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp2.record_id)
         assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@exp3.record_id)
+        assert_select "a[href=?]", admin_reimbursements_expense_import_path(cost_centre: nil),
+                      text: "Import expenses"
       end
 
       test "index filters and search narrow to exactly the matching claims" do

@@ -120,14 +120,6 @@ module Admin
 
         assert_equal termtime, ::Reimbursements::Expense.sole.cost_centre
       end
-
-      test "the finance expenses index links into the wizard" do
-        visit admin_reimbursements_expense_edits_path
-
-        click_on "Import expenses"
-
-        assert_text "Paste the sheet of claims the portal doesn't have"
-      end
     end
   end
 end
