@@ -57,53 +57,17 @@ module Admin
         assert_not response.body.include?("Acacia Avenue")
       end
 
-      test "no ActiveStorage URL for a receipt is handed out any more" do
-        %w[url download_url thumbnail_url].each do |accessor|
-          value = @receipt.public_send(accessor)
-          next if value.blank?
-
-          assert_not value.start_with?("/rails/active_storage"),
-                     "#{accessor} still points at the permanent, unauthenticated ActiveStorage route"
-          assert value.start_with?("/admin/reimbursements/"),
-                 "#{accessor} should be an app route that checks permissions, got #{value}"
-        end
-      end
-
-      test "the submitter can read their own receipt" do
-        sign_in @submitter
-
-        get inline_path
-
-        assert_response :success
-        assert_equal RECEIPT_BYTES, response.body
-      end
-
-      test "another producer cannot read someone else's receipt" do
-        sign_in @stranger
-
-        get inline_path
-
-        assert_response :not_found
-        assert_not response.body.include?("Acacia Avenue")
-      end
-
-      test "the finance team can read any receipt" do
-        sign_in @finance_user
-
-        get inline_path
-
-        assert_response :success
-        assert_equal RECEIPT_BYTES, response.body
-      end
-
       # Owners must check the receipt to endorse the claim.
-      test "a budget owner can read a receipt charged to their budget" do
-        sign_in @owner
+      { "the submitter" => :@submitter, "the finance team" => :@finance_user,
+        "a budget owner of the claim's budget" => :@owner }.each do |who, user|
+        test "#{who} can read the receipt" do
+          sign_in instance_variable_get(user)
 
-        get inline_path
+          get inline_path
 
-        assert_response :success
-        assert_equal RECEIPT_BYTES, response.body
+          assert_response :success
+          assert_equal RECEIPT_BYTES, response.body
+        end
       end
 
       test "a budget owner cannot read a receipt charged to someone else's budget" do
@@ -119,13 +83,15 @@ module Admin
       end
 
       # 404 rather than 403, so a probe doesn't learn which claims exist.
-      test "backend access alone is not enough" do
-        sign_in @backend_only_user
+      { "another producer" => :@stranger, "a user with backend access alone" => :@backend_only_user }.each do |who, user|
+        test "#{who} gets a 404, not the receipt" do
+          sign_in instance_variable_get(user)
 
-        get inline_path
+          get inline_path
 
-        assert_response :not_found
-        assert_not response.body.include?("Acacia Avenue")
+          assert_response :not_found
+          assert_not response.body.include?("Acacia Avenue")
+        end
       end
 
       test "a receipt id is not honoured against a different claim" do

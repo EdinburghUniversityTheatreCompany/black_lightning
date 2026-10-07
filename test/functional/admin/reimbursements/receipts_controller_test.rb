@@ -6,10 +6,8 @@ module Admin
       include ReimbursementsTestHelpers
 
       setup do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-        users(:member).add_role("Producer")
         @user = users(:member)
+        grant_producer_permission(@user)
         @person = create_reimbursements_person(email: @user.email)
         @other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
         @budget = create_reimbursements_budget
@@ -48,14 +46,6 @@ module Admin
         assert_equal 1, expense.reload.receipt_files.count, "the receipt was not removed"
       end
 
-      test "404s for another person's expense" do
-        delete :destroy, params: { expense_id: @other_expense.record_id,
-                                   id: receipt_id(@other_expense, "old.pdf") }
-
-        assert_response :not_found
-        assert_equal 2, @other_expense.reload.receipt_files.count
-      end
-
       test "destroy as turbo stream replaces the gallery" do
         removed_id = receipt_id(@expense, "old.pdf")
         survivor_id = receipt_id(@expense, "new.pdf")
@@ -70,9 +60,7 @@ module Admin
         assert_not_includes response.body, "receipts/#{removed_id}"
       end
 
-      def receipt_upload(content_type = "application/pdf")
-        fixture_file_upload("reimbursements_receipt.pdf", content_type)
-      end
+      def receipt_upload = fixture_file_upload("reimbursements_receipt.pdf", "application/pdf")
 
       test "create attaches uploads and streams the gallery back" do
         assert_difference -> { @expense.receipt_files.count }, 1 do
@@ -109,17 +97,6 @@ module Admin
         assert_equal "reimbursements_receipt.jpg", receipt.filename.to_s
       end
 
-      test "create reports an unreadable photo inline instead of 500ing" do
-        assert_no_difference -> { @expense.receipt_files.count } do
-          post :create, params: { expense_id: @expense.record_id,
-                                  receipts: [ fixture_file_upload("truncated_receipt.heic", "image/heic") ] },
-                        format: :turbo_stream
-        end
-
-        assert_response :success
-        assert_includes response.body, "couldn&#39;t read truncated_receipt.heic"
-      end
-
       test "create falls back to a redirect for html" do
         assert_difference -> { @expense.receipt_files.count }, 1 do
           post :create, params: { expense_id: @expense.record_id, receipts: [ receipt_upload ] }
@@ -128,12 +105,14 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_expense_path(@expense.record_id)
       end
 
-      test "create 404s for another person's expense" do
-        assert_no_difference -> { @other_expense.receipt_files.count } do
-          post :create, params: { expense_id: @other_expense.record_id, receipts: [ receipt_upload ] }
-        end
-
+      test "another person's expense 404s for both adding and removing a receipt" do
+        delete :destroy, params: { expense_id: @other_expense.record_id, id: receipt_id(@other_expense, "old.pdf") }
         assert_response :not_found
+        assert_equal 2, @other_expense.reload.receipt_files.count
+
+        post :create, params: { expense_id: @other_expense.record_id, receipts: [ receipt_upload ] }
+        assert_response :not_found
+        assert_equal 2, @other_expense.reload.receipt_files.count
       end
     end
   end

@@ -2,25 +2,16 @@ require "test_helper"
 
 module Reimbursements
   class FilenameSanitizerTest < ActiveSupport::TestCase
-    test "passes safe text unchanged" do
-      assert_equal "New XLR cables", FilenameSanitizer.sanitize_component("New XLR cables")
-    end
-
-    test "replaces forbidden chars with a space" do
-      assert_equal "file name with bad chars",
-        FilenameSanitizer.sanitize_component("file/name:with*bad?chars")
-    end
-
-    test "collapses runs of whitespace" do
-      assert_equal "too many spaces", FilenameSanitizer.sanitize_component("too    many    spaces")
-    end
-
-    test "trims leading and trailing whitespace" do
-      assert_equal "padded", FilenameSanitizer.sanitize_component("  padded  ")
-    end
-
-    test "strips control chars" do
-      assert_equal "text with nulls", FilenameSanitizer.sanitize_component("text\x00with\x1fnulls")
+    {
+      "New XLR cables" => "New XLR cables",
+      "file/name:with*bad?chars" => "file name with bad chars",
+      "too    many    spaces" => "too many spaces",
+      "  padded  " => "padded",
+      "text\x00with\x1fnulls" => "text with nulls"
+    }.each do |input, expected|
+      test "sanitize_component turns #{input.inspect} into #{expected.inspect}" do
+        assert_equal expected, FilenameSanitizer.sanitize_component(input)
+      end
     end
 
     test "short descriptions unchanged" do
@@ -29,10 +20,7 @@ module Reimbursements
 
     test "truncates at a word boundary" do
       text = "This is a fairly long description that needs to be truncated at some point"
-      result = FilenameSanitizer.truncate_description(text, max_length: 30)
-      refute result.end_with?("t") # not mid-word "truncat"
-      assert_includes result, " "
-      assert_operator result.length, :<=, 30
+      assert_equal "This is a fairly long", FilenameSanitizer.truncate_description(text, max_length: 30)
     end
 
     test "hard cut if no word break" do
@@ -40,45 +28,19 @@ module Reimbursements
       assert_equal 30, result.length
     end
 
-    test "basic construction" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 5, 13), budget_name: "Tech",
-        description: "New XLR cables", original_filename: "IMG_1234.jpg"
-      )
-      assert_equal "2026-05-13 Tech - New XLR cables.jpg", result
-    end
-
-    test "pdf extension preserved and downcased" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 5, 13), budget_name: "Marketing",
-        description: "Poster printing", original_filename: "receipt.PDF"
-      )
-      assert result.end_with?(".pdf")
-    end
-
-    test "second attachment has suffix" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 5, 13), budget_name: "Tech",
-        description: "Cables", original_filename: "img.jpg", index: 2
-      )
-      assert_equal "2026-05-13 Tech - Cables (2).jpg", result
-    end
-
-    test "unsafe characters in description are cleaned" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 5, 13), budget_name: "Tech",
-        description: "Mic + DI: stage left/right", original_filename: "r.jpg"
-      )
-      refute_includes result, "/"
-      refute_includes result.sub(/\.jpg\z/, ""), ":"
-    end
-
-    test "no extension falls back to bin" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 5, 13), budget_name: "Tech",
-        description: "Mystery file", original_filename: "receipt_no_ext"
-      )
-      assert result.end_with?(".bin")
+    {
+      [ "New XLR cables", "IMG_1234.jpg", 1 ] => "2026-05-03 Tech - New XLR cables.jpg",
+      [ "Cables", "receipt.PDF", 1 ] => "2026-05-03 Tech - Cables.pdf",
+      [ "Cables", "img.jpg", 2 ] => "2026-05-03 Tech - Cables (2).jpg",
+      [ "Mic + DI: stage left/right", "r.jpg", 1 ] => "2026-05-03 Tech - Mic + DI stage left right.jpg",
+      [ "Mystery file", "receipt_no_ext", 1 ] => "2026-05-03 Tech - Mystery file.bin"
+    }.each do |(description, original, index), expected|
+      test "build_receipt_filename gives #{expected}" do
+        assert_equal expected, FilenameSanitizer.build_receipt_filename(
+          bacs_date: Date.new(2026, 5, 3), budget_name: "Tech", description: description,
+          original_filename: original, index: index
+        )
+      end
     end
 
     test "long description keeps the filename bounded" do
@@ -88,14 +50,6 @@ module Reimbursements
         description: long_desc, original_filename: "r.jpg"
       )
       assert_operator result.length, :<, 200
-    end
-
-    test "date format is iso" do
-      result = FilenameSanitizer.build_receipt_filename(
-        bacs_date: Date.new(2026, 1, 5), budget_name: "FoH",
-        description: "Bar restock", original_filename: "r.jpg"
-      )
-      assert result.start_with?("2026-01-05 ")
     end
   end
 end

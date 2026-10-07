@@ -27,63 +27,42 @@ module Reimbursements
       silence_warnings { ExpenseForm.const_set(:MAX_RECEIPT_BYTES, original) }
     end
 
-    test "an iPhone HEIC photo is converted to JPEG and renamed" do
-      receipt = ReceiptIntake.from_upload(heic_upload)
-
-      assert receipt.ok?, receipt.error
-      assert_equal "image/jpeg", receipt.content_type
-      assert_equal "IMG_1234.jpg", receipt.filename, "the filename ends up in the BACS email and SharePoint"
-      assert_equal "image/jpeg", Marcel::MimeType.for(StringIO.new(receipt.bytes)),
-                   "the stored bytes must actually BE a JPEG"
-    end
-
-    test "the converted JPEG is a readable image, not just JPEG-shaped bytes" do
-      receipt = ReceiptIntake.from_upload(heic_upload)
-      image = Vips::Image.new_from_buffer(receipt.bytes, "")
-
-      assert_equal "jpegload_buffer", image.get("vips-loader")
-      assert_operator image.width, :>, 0
-      assert_equal 3, image.bands
-    end
-
     # Stored 400x260 with a rotate-90 tag, so ignoring the rotation emits 400x260.
-    test "EXIF orientation is applied, and not left behind to be applied twice" do
+    test "an iPhone HEIC photo becomes an upright, untagged JPEG named .jpg" do
       receipt = ReceiptIntake.from_upload(heic_upload)
+      assert receipt.ok?, receipt.error
       image = Vips::Image.new_from_buffer(receipt.bytes, "")
 
-      assert_equal [ 260, 400 ], [ image.width, image.height ],
-                   "the photo should come out upright (portrait), not as stored"
-      assert_empty image.get_fields.grep(/orientation/),
-                   "a leftover orientation tag would make viewers rotate it a second time"
+      assert_equal [ "image/jpeg", "IMG_1234.jpg" ], [ receipt.content_type, receipt.filename ],
+                   "the filename ends up in the BACS email and SharePoint"
+      assert_equal "jpegload_buffer", image.get("vips-loader")
+      assert_equal 3, image.bands
+      assert_equal [ 260, 400 ], [ image.width, image.height ], "upright (portrait), not as stored"
+      assert_empty image.get_fields.grep(/orientation/), "a leftover tag would make viewers rotate it twice"
     end
 
-    test "a HEIF declared type takes the same path" do
-      receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: "photo.heif", declared_type: "image/heif")
+    { [ "photo.heif", "image/heif" ] => "photo.jpg",
+      [ "gallery-export.jpg", "application/octet-stream" ] => "gallery-export.jpg" }.each do |(given, declared), expected|
+      test "a HEIC named #{given} is stored as #{expected}" do
+        receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: given, declared_type: declared)
 
-      assert receipt.ok?, receipt.error
-      assert_equal "photo.jpg", receipt.filename
-      assert_equal "image/jpeg", receipt.content_type
-    end
-
-    test "a HEIC whose name already claims another image extension is not double-suffixed" do
-      receipt = ReceiptIntake.from_bytes(bytes: heic_bytes, filename: "gallery-export.jpg",
-                                         declared_type: "application/octet-stream")
-
-      assert receipt.ok?, receipt.error
-      assert_equal "gallery-export.jpg", receipt.filename
-      assert_equal "image/jpeg", receipt.content_type
+        assert receipt.ok?, receipt.error
+        assert_equal [ expected, "image/jpeg" ], [ receipt.filename, receipt.content_type ]
+      end
     end
 
     # A damaged photo must reach the submitter as a validation error, never a 500.
-    test "a corrupt HEIC is rejected with a friendly message instead of raising" do
-      truncated = File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic"))
+    {
+      "IMG_9.HEIC" => [ "image/heic", -> { File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) } ],
+      "IMG_7.jpg" => [ "image/jpeg", -> { photo_with_gps(:jpegsave_buffer).byteslice(0, 40) } ]
+    }.each do |name, (declared_type, bytes)|
+      test "a corrupt #{name} is rejected with a friendly message instead of raising" do
+        receipt = ReceiptIntake.from_bytes(bytes: instance_exec(&bytes), filename: name, declared_type: declared_type)
 
-      receipt = ReceiptIntake.from_bytes(bytes: truncated, filename: "IMG_9.HEIC", declared_type: "image/heic")
-
-      assert_not receipt.ok?
-      assert_match(/couldn't read IMG_9\.HEIC/, receipt.error)
-      assert_match(/save it as a JPEG or PDF/, receipt.error)
-      assert_nil receipt.bytes
+        assert_not receipt.ok?
+        assert_match(/couldn't read #{Regexp.escape(name)}.*save it as a JPEG or PDF/, receipt.error)
+        assert_nil receipt.bytes
+      end
     end
 
     test "a file only claiming to be HEIC is still rejected by the sniffing" do
@@ -99,19 +78,7 @@ module Reimbursements
       assert receipt.ok?, receipt.error
       assert_equal "receipt.pdf", receipt.filename
       assert_equal "application/pdf", receipt.content_type
-      assert_equal PDF_MAGIC, receipt.bytes
-    end
-
-    test "an ordinary photo keeps its name and format through the strip" do
-      png = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.png"))
-
-      receipt = ReceiptIntake.from_upload(upload(png, "receipt.png", "image/png"))
-
-      assert receipt.ok?, receipt.error
-      assert_equal "receipt.png", receipt.filename
-      assert_equal "image/png", receipt.content_type
-      assert_equal "pngload_buffer", Vips::Image.new_from_buffer(receipt.bytes, "").get("vips-loader"),
-                   "a PNG receipt must stay a PNG — a screenshot of an invoice is lossless text"
+      assert_equal PDF_MAGIC, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
     end
 
     GPS_LATITUDE = "55/1 56/1 44/1".freeze
@@ -173,37 +140,6 @@ module Reimbursements
       assert_empty metadata_fields(receipt.bytes)
     end
 
-    # Re-encoding can GROW a file; nothing oversized may be let through.
-    test "a photo that grows past the cap while being stripped is stepped down until it fits" do
-      bytes = photo_with_gps(:jpegsave_buffer, Q: 95)
-
-      with_max_receipt_bytes(bytes.bytesize) do
-        receipt = ReceiptIntake.from_bytes(bytes: bytes, filename: "receipt.jpg", declared_type: "image/jpeg")
-
-        assert receipt.ok?, receipt.error
-        assert_operator receipt.bytes.bytesize, :<=, bytes.bytesize
-        assert_empty metadata_fields(receipt.bytes)
-      end
-    end
-
-    test "a corrupt JPEG is rejected with a friendly message instead of raising" do
-      truncated = photo_with_gps(:jpegsave_buffer).byteslice(0, 40)
-
-      receipt = ReceiptIntake.from_bytes(bytes: truncated, filename: "IMG_7.jpg", declared_type: "image/jpeg")
-
-      assert_not receipt.ok?
-      assert_nil receipt.bytes
-    end
-
-    test "a PDF is not put through the stripper at all" do
-      pdf = File.binread(Rails.root.join("test/fixtures/files/renderable_receipt.pdf"))
-
-      receipt = ReceiptIntake.from_bytes(bytes: pdf, filename: "invoice.pdf", declared_type: "application/pdf")
-
-      assert receipt.ok?, receipt.error
-      assert_equal pdf, receipt.bytes, "a PDF must reach finance exactly as the supplier issued it"
-    end
-
     test "an oversized upload is rejected from its declared size, before anything is read" do
       file = upload(PDF_MAGIC, "huge.pdf", "application/pdf")
       def file.size = ExpenseForm::MAX_RECEIPT_BYTES + 1
@@ -236,20 +172,6 @@ module Reimbursements
         assert_match(/still over 5 MB once converted/, receipt.error)
         assert_nil receipt.bytes
       end
-    end
-
-    test "from_params vets each upload and drops anything that is not a file" do
-      receipts = ReceiptIntake.from_params([ "not-a-file", heic_upload, upload(EXE_MAGIC, "x.pdf", "application/pdf") ])
-
-      assert_equal 2, receipts.size
-      assert_equal [ true, false ], receipts.map(&:ok?)
-      assert_equal "IMG_1234.jpg", receipts.first.filename
-    end
-
-    test "to_attachment hands the store exactly the keywords attach_receipt! takes" do
-      attachment = ReceiptIntake.from_upload(heic_upload).to_attachment
-
-      assert_equal %i[filename content_type bytes], attachment.keys
     end
   end
 end

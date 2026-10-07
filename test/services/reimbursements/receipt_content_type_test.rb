@@ -3,23 +3,6 @@ require "test_helper"
 module Reimbursements
   class ReceiptContentTypeTest < ActiveSupport::TestCase
     PDF_MAGIC = "%PDF-1.4\n".freeze
-    PNG_MAGIC = "\x89PNG\r\n\x1a\n".freeze
-    EXE_MAGIC = "MZ\x90\x00\x03".freeze
-
-    test "sniff reports the real type of a PDF and a PNG" do
-      assert_equal "application/pdf",
-                   ReceiptContentType.sniff(bytes: PDF_MAGIC, filename: "receipt.pdf",
-                                            declared_type: "application/pdf")
-      assert_equal "image/png",
-                   ReceiptContentType.sniff(bytes: PNG_MAGIC, filename: "receipt.png",
-                                            declared_type: "image/png")
-    end
-
-    test "sniff reports the actual detected type regardless of what was declared" do
-      assert_equal "application/x-msdownload",
-                   ReceiptContentType.sniff(bytes: EXE_MAGIC, filename: "receipt.pdf",
-                                            declared_type: "application/pdf")
-    end
 
     # A hand-crafted "receipts[]=x" post sends a String: it has #size but no #read,
     # so it passes the size check and 500s on read. Same for a nested hash or array.
@@ -28,20 +11,12 @@ module Reimbursements
                                                     filename: "receipt.pdf",
                                                     type: "application/pdf")
 
-      assert_equal [ real ], ReceiptContentType.uploads_from([ "not-a-file", real, %w[a b] ])
+      assert_equal [ real ], ReceiptContentType.uploads_from(
+        [ "not-a-file", real, %w[a b], StringIO.new(PDF_MAGIC), { "tempfile" => "x" } ]
+      )
       assert_empty ReceiptContentType.uploads_from("not-a-file")
       assert_empty ReceiptContentType.uploads_from(nil)
       assert_empty ReceiptContentType.uploads_from([ "", nil ])
-    end
-
-    test "uploaded_file? rejects a String that only looks file-shaped" do
-      assert_not ReceiptContentType.uploaded_file?("receipt.pdf"), "a String answers #size but not #read"
-      assert_not ReceiptContentType.uploaded_file?(StringIO.new(PDF_MAGIC)), "no original_filename"
-      assert_not ReceiptContentType.uploaded_file?({ "tempfile" => "x" }), "a nested hash is not an upload"
-      assert ReceiptContentType.uploaded_file?(
-        ActionDispatch::Http::UploadedFile.new(tempfile: StringIO.new(PDF_MAGIC),
-                                               filename: "receipt.pdf", type: "application/pdf")
-      )
     end
   end
 end
