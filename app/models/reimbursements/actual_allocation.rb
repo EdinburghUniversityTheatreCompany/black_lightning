@@ -27,8 +27,6 @@ module Reimbursements
   # direction says income or spend). The shares must sum to the row's income, which no per-row
   # validation can see: DatabaseStore#apportion_actual! owns that.
   class ActualAllocation < ApplicationRecord
-    self.table_name = "reimbursements_actual_allocations"
-
     belongs_to :eusa_actual, class_name: "Reimbursements::EusaActual",
                              inverse_of: :allocations
     belongs_to :budget, class_name: "Reimbursements::Budget"
