@@ -71,7 +71,7 @@ Rails.application.configure do
   config.active_job.queue_adapter = :test
 
   # Throwaway ActiveRecord Encryption keys, safe to commit, so the bank-detail encryption roundtrip
-  # needs no ENV or credentials. Production and development source theirs elsewhere (config/application.rb).
+  # needs no ENV or credentials. Production reads its credentials; development has its own in development.rb.
   config.active_record.encryption.primary_key = "test_ar_encryption_primary_key_000000000"
   config.active_record.encryption.deterministic_key = "test_ar_encryption_deterministic_key_0000"
   config.active_record.encryption.key_derivation_salt = "test_ar_encryption_key_derivation_salt_00"

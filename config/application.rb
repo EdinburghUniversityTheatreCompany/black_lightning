@@ -84,8 +84,8 @@ module ChaosRails
     # ActiveRecord Encryption protects payee bank details (Reimbursements::PaymentDetails and the
     # Expense override trio). Keys: production reads `active_record_encryption:` from its
     # credentials (nothing wired here); development takes REIMBURSEMENTS_AR_ENCRYPTION_* from ENV,
-    # else the throwaway literals below (the development credentials are public, so never put real
-    # keys there); test uses literals in config/environments/test.rb.
+    # else throwaway literals in config/environments/development.rb (the development credentials
+    # are public, so never put real keys there); test uses literals in test.rb.
     #
     # The rollout is finished (production backfilled 2026-07-26), so a stray plaintext value now
     # raises instead of being served. Turning this back on reopens the cleartext read path: do it
@@ -99,20 +99,6 @@ module ChaosRails
     # ("can't add a new key into hash during iteration"). Wide columns plus explicit plaintext
     # length validations on the models do the job.
     config.active_record.encryption.validate_column_size = false
-
-    if Rails.env.development?
-      # Throwaway fallbacks: an encrypted attribute needs a key on write even when blank, so
-      # without them every Expense.create! raises. Published in the repo, they protect nothing;
-      # never reuse them.
-      config.active_record.encryption.primary_key =
-        ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"].presence || "dev-only-insecure-primary-key"
-      config.active_record.encryption.deterministic_key =
-        ENV["REIMBURSEMENTS_AR_ENCRYPTION_DETERMINISTIC_KEY"].presence ||
-        "dev-only-insecure-deterministic-key"
-      config.active_record.encryption.key_derivation_salt =
-        ENV["REIMBURSEMENTS_AR_ENCRYPTION_KEY_DERIVATION_SALT"].presence ||
-        "dev-only-insecure-key-derivation-salt"
-    end
 
     # Set image loading to lazy.
     config.action_view.image_loading = "lazy"
