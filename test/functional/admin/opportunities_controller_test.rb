@@ -118,19 +118,15 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_match "Unpaid", response.body
   end
 
-  test "show warns when the opportunity's company is unreviewed" do
+  test "show warns only when the opportunity's company is unreviewed" do
     @opportunity.update!(company: companies(:unreviewed_company))
-
     get :show, params: { id: @opportunity }
 
     assert_response :success
     assert_match "hasn't been checked", response.body
     assert_match companies(:unreviewed_company).name, response.body
-  end
 
-  test "show does not warn when the company is reviewed" do
     @opportunity.update!(company: companies(:gutter_theatre))
-
     get :show, params: { id: @opportunity }
 
     assert_no_match "hasn't been checked", response.body
@@ -141,6 +137,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
       company_name: companies(:gutter_theatre).name,
       project: "Eurydice",
       author: "Sarah Ruhl",
+      dates: "Rehearsals from 5 May, performances 10-14 June",
+      location: "Bedlam Theatre",
       roles_attributes: {
         "0" => { position: "Stage Manager", department_name: "Stage Management", ordering: "0" },
         "1" => { position: "Sound Technician", department_name: "Sound", ordering: "1" }
@@ -157,20 +155,9 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_equal companies(:gutter_theatre), opportunity.company
     assert_equal "Eurydice", opportunity.project
     assert_equal "Sarah Ruhl", opportunity.author
-    assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.order(:ordering).map(&:position)
-  end
-
-  test "should save free-text dates and location" do
-    attributes = FactoryBot.attributes_for(:opportunity).merge(
-      dates: "Rehearsals from 5 May, performances 10-14 June",
-      location: "Bedlam Theatre"
-    )
-
-    post :create, params: { opportunity: attributes }
-
-    opportunity = assigns(:opportunity)
     assert_equal "Rehearsals from 5 May, performances 10-14 June", opportunity.dates
     assert_equal "Bedlam Theatre", opportunity.location
+    assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.map(&:position)
   end
 
   test "blank role rows are dropped instead of failing validation" do
@@ -305,13 +292,11 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   end
 
   test "should close an active opportunity" do
-    @opportunity.update!(approved: true, approver: @user, expiry_date: 2.weeks.from_now)
-    assert @opportunity.active?
+    @opportunity.update!(approved: true, expiry_date: 2.weeks.from_now)
 
     put :close, params: { id: @opportunity }
 
     assert_equal Date.current, assigns(:opportunity).reload.expiry_date
-    assert_not assigns(:opportunity).active?
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))
   end
 

@@ -1,96 +1,33 @@
 require "test_helper"
 
 class OpportunityDigestMailerTest < ActionMailer::TestCase
-  test "digest has correct subject" do
+  test "digest is addressed to the reviewer and lists each opportunity in both parts" do
     user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
+    opportunity = opportunities(:unapproved_opportunity)
 
     email = OpportunityDigestMailer.digest(user, [ opportunity ])
 
     assert_equal "Opportunities awaiting review", email.subject
-  end
-
-  test "digest is sent to the given user" do
-    user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
-
-    email = OpportunityDigestMailer.digest(user, [ opportunity ])
-
     assert_equal [ user.email ], email.to
+    [ email.html_part, email.text_part ].each do |part|
+      assert_includes part.body.to_s, opportunity.title
+      assert_includes part.body.to_s, opportunity.creator.full_name
+    end
   end
 
-  test "digest HTML body includes opportunity title" do
-    user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
+  test "digest renders creator-less and on-behalf submissions" do
+    attrs = { description: "D", expiry_date: 2.weeks.from_now, approved: false,
+              submitter_name: "Casey External", submitter_email: "casey@example.com" }
+    external = Opportunity.create!(title: "External pending", **attrs)
+    on_behalf = Opportunity.create!(title: "On-behalf pending", creator_id: 1, **attrs)
 
-    email = OpportunityDigestMailer.digest(user, [ opportunity ])
-    html_body = email.html_part.body.to_s
+    email = OpportunityDigestMailer.digest(users(:committee), [ external, on_behalf ])
 
-    assert_includes html_body, opportunity.title
-  end
-
-  test "digest text body includes opportunity title" do
-    user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
-
-    email = OpportunityDigestMailer.digest(user, [ opportunity ])
-    text_body = email.text_part.body.to_s
-
-    assert_includes text_body, opportunity.title
-  end
-
-  test "digest includes submitter name" do
-    user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
-
-    email = OpportunityDigestMailer.digest(user, [ opportunity ])
-    html_body = email.html_part.body.to_s
-
-    assert_includes html_body, opportunity.creator.full_name
-  end
-
-  test "digest renders external (creator-less) submissions using the submitter name" do
-    user = users(:committee)
-    external = Opportunity.create!(
-      title: "External pending opportunity",
-      description: "Submitted by someone without an account.",
-      expiry_date: 2.weeks.from_now,
-      approved: false,
-      submitter_name: "Casey External",
-      submitter_email: "casey@example.com"
-    )
-
-    email = OpportunityDigestMailer.digest(user, [ external ])
-
-    assert_includes email.html_part.body.to_s, "Casey External"
-    assert_includes email.text_part.body.to_s, "Casey External"
-  end
-
-  test "digest credits both parties for an on-behalf submission" do
-    user = users(:committee)
-    on_behalf = Opportunity.create!(
-      title: "On-behalf pending opportunity",
-      description: "Entered by a manager for an external person.",
-      expiry_date: 2.weeks.from_now,
-      approved: false,
-      creator_id: 1,
-      submitter_name: "Casey External",
-      submitter_email: "casey@example.com"
-    )
-
-    email = OpportunityDigestMailer.digest(user, [ on_behalf ])
-
-    assert_includes email.html_part.body.to_s, "on behalf of Casey External"
-    assert_includes email.text_part.body.to_s, "on behalf of Casey External"
-  end
-
-  test "digest renders correctly for multiple opportunities" do
-    user = users(:committee)
-    opportunity = opportunities(:pending_digest_opportunity)
-
-    email = OpportunityDigestMailer.digest(user, [ opportunity, opportunity ])
-    html_body = email.html_part.body.to_s
-
-    assert html_body.scan(opportunity.title).count >= 2
+    [ email.html_part, email.text_part ].each do |part|
+      body = part.body.to_s
+      assert_includes body, "External pending"
+      assert_includes body, "on behalf of Casey External"
+      assert_equal 2, body.scan("Casey External").size, "each row credits the submitter"
+    end
   end
 end

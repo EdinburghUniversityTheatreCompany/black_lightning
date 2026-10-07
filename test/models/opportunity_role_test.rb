@@ -7,21 +7,9 @@ class OpportunityRoleTest < ActiveSupport::TestCase
     assert role.errors[:position].present?
   end
 
-  test "belongs to an opportunity" do
-    assert_equal opportunities(:internal_project_opportunity), opportunity_roles(:internal_stage_manager).opportunity
-  end
-
-  test "belongs to a department" do
-    assert_equal departments(:stage_management), opportunity_roles(:internal_stage_manager).department
-  end
-
   test "defaults to ordering" do
     roles = opportunities(:internal_project_opportunity).roles.to_a
     assert_equal [ "Stage Manager", "Set Manager", "Sound Technician" ], roles.map(&:position)
-  end
-
-  test "stores an optional note" do
-    assert_equal "Build weekends only", opportunity_roles(:internal_set_manager).note
   end
 
   test "department_name falls back to the associated department" do

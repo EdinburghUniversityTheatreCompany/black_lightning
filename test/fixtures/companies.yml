@@ -12,12 +12,6 @@ gutter_theatre:
   website: "https://example.com/gutter"
   reviewed: true
 
-paradok:
-  name: "Theatre Paradok"
-  slug: "theatre-paradok"
-  internal: false
-  reviewed: true
-
 unreviewed_company:
   name: "Freshly Added Players"
   slug: "freshly-added-players"

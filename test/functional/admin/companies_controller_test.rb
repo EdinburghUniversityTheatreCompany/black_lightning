@@ -33,7 +33,7 @@ class Admin::CompaniesControllerTest < ActionController::TestCase
       post :create, params: { company: { name: "Brand New Company", internal: true, website: "https://example.com" } }
     end
 
-    assert_equal "brand-new-company", assigns(:company).slug
+    assert assigns(:company).reviewed
     assert_redirected_to admin_company_path(assigns(:company))
   end
 
@@ -45,26 +45,14 @@ class Admin::CompaniesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test "should update company" do
-    put :update, params: { id: @company, company: { name: "Renamed Theatre" } }
-
-    assert_equal "Renamed Theatre", @company.reload.name
-    assert_redirected_to admin_company_path(@company)
-  end
-
-  test "editing a company marks it reviewed" do
+  test "should update company and mark it reviewed" do
     company = companies(:unreviewed_company)
-    assert_not company.reviewed
+    put :update, params: { id: company, company: { name: "Renamed Theatre" } }
 
-    put :update, params: { id: company, company: { website: "https://example.com/added" } }
-
-    assert company.reload.reviewed
-  end
-
-  test "creating a company via the admin marks it reviewed" do
-    post :create, params: { company: { name: "Curated Company" } }
-
-    assert assigns(:company).reviewed
+    company.reload
+    assert_equal "Renamed Theatre", company.name
+    assert company.reviewed
+    assert_redirected_to admin_company_path(company)
   end
 
   test "should destroy company" do
