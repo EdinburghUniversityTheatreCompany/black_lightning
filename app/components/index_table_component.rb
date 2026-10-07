@@ -4,14 +4,13 @@
 # rendering one spec twice must not add a second Edit button.
 class IndexTableComponent < ViewComponent::Base
   def initialize(headers:, field_sets:, resource_class:, q: nil,
-                 include_edit_button: true, include_link_to_item: true, col_widths: [])
+                 include_edit_button: true, include_link_to_item: true)
     @headers = headers
     @field_sets = field_sets
     @resource_class = resource_class
     @q = q
     @include_edit_button = include_edit_button
     @include_link_to_item = include_link_to_item
-    @col_widths = col_widths
   end
 
   private
