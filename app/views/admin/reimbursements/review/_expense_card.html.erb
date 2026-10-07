@@ -134,15 +134,7 @@
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
       (not the submitter <%= expense.person&.name %>), paying
-      <% if expense.international? %>
-        IBAN <strong><%= Reimbursements::BankDetails.format_iban(expense.effective_iban) %></strong>
-        (BIC <strong><%= expense.effective_bic %></strong>)
-      <% else %>
-        <%= render Admin::Reimbursements::BankDetailsComponent.new(
-              sort_code: expense.effective_sort_code,
-              account_number: expense.effective_account_number,
-              payee: expense.effective_payee_name) %>
-      <% end %>.
+      <%= render "admin/reimbursements/shared/payee_bank_details", expense: expense %>.
       Confirm these match the invoice before approving.
     <% end %></div>
   <% end %>

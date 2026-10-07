@@ -1,0 +1,11 @@
+<%# locals: (expense:) %>
+<%# The account the claim pays into, on the rail it pays on: an IBAN and BIC internationally, else the masked UK pair. %>
+<% if expense.international? %>
+  IBAN <strong><%= Reimbursements::BankDetails.format_iban(expense.effective_iban) %></strong>
+  (BIC <strong><%= expense.effective_bic %></strong>)
+<% else %>
+  <%= render Admin::Reimbursements::BankDetailsComponent.new(
+        sort_code: expense.effective_sort_code,
+        account_number: expense.effective_account_number,
+        payee: expense.effective_payee_name) %>
+<% end %>

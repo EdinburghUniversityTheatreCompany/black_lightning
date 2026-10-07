@@ -43,12 +43,10 @@
                   <%= render BadgeComponent.new(type: :warning, pill: true).with_content("→ third party") %>
                 <% end %>
               </td>
-              <%# Masked: this page would otherwise print every account number on load. %>
+              <%# UK pairs are masked: this page would otherwise print every account number on
+                  load. An IBAN shows in full, as on the review card. %>
               <td class="py-1 pr-3">
-                <%= render Admin::Reimbursements::BankDetailsComponent.new(
-                      sort_code: expense.effective_sort_code,
-                      account_number: expense.effective_account_number,
-                      payee: expense.effective_payee_name) %>
+                <%= render "admin/reimbursements/shared/payee_bank_details", expense: expense %>
               </td>
               <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>

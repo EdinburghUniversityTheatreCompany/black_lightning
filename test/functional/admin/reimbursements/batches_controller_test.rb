@@ -60,6 +60,25 @@ module Admin
                         "default EUSA subject is prefilled"
       end
 
+      # The UK pair is blank on that rail, so the row read "- / -" for a claim EUSA pays by IBAN.
+      test "new shows an international claim's IBAN and BIC" do
+        supplier = create_reimbursements_person(name: "Alice Producer", email: "alice@example.com")
+        create_reimbursements_expense(
+          person: supplier, budget: create_reimbursements_budget(name: "Props", nominal_code: "4000"),
+          auto_number: 12, status: ::Reimbursements::Status::APPROVED,
+          payment_method: ::Reimbursements::Expense::PAYMENT_METHOD_INTERNATIONAL,
+          foreign_currency: "EUR", foreign_amount: BigDecimal("640"), payee_name_override: "Studio Bühne",
+          iban_override: "DE89370400440532013000", bic_override: "DEUTDEFF"
+        )
+        sign_in @user
+
+        get :new
+
+        assert_response :success
+        assert_includes response.body, ::Reimbursements::BankDetails.format_iban("DE89370400440532013000")
+        assert_includes response.body, "DEUTDEFF"
+      end
+
       # Otherwise every account number is on screen the moment the page loads.
       test "new masks bank details, keeping the full pair only behind the reveal" do
         one_approved
