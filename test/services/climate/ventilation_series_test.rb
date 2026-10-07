@@ -12,52 +12,36 @@ class Climate::VentilationSeriesTest < ActiveSupport::TestCase
 
   setup { @outdoor = outdoor_climate_sensor }
 
-  test "picks the coldest crypt sensor by default" do
+  test "defaults to the coldest, reported as WORST, and an explicit choice wins" do
     warm = create_climate_sensor(display_name: "Warm", in_crypt: true)
     cold = create_climate_sensor(display_name: "Cold", in_crypt: true)
     create_climate_reading(sensor: warm, recorded_at: Time.zone.parse("2026-08-05 12:00"), temperature_c: 16.0)
     create_climate_reading(sensor: cold, recorded_at: Time.zone.parse("2026-08-05 12:00"), temperature_c: 9.0)
 
-    assert_equal cold, build([ warm, cold ]).sensor
-  end
+    default = build([ warm, cold ])
 
-  test "an explicit selection wins over the coldest" do
-    warm = create_climate_sensor(display_name: "Warm", in_crypt: true)
-    cold = create_climate_sensor(display_name: "Cold", in_crypt: true)
-    create_climate_reading(sensor: warm, recorded_at: Time.zone.parse("2026-08-05 12:00"), temperature_c: 16.0)
-    create_climate_reading(sensor: cold, recorded_at: Time.zone.parse("2026-08-05 12:00"), temperature_c: 9.0)
+    assert_equal cold, default.sensor
+    assert_equal Climate::VentilationSeries::WORST, default.selected_key
 
-    subject = build([ warm, cold ], selected: warm.id.to_s)
+    chosen = build([ warm, cold ], selected: warm.id.to_s)
 
-    assert_equal warm, subject.sensor
-    assert_nil subject.notice
-    assert_equal warm.id.to_s, subject.selected_key
+    assert_equal warm, chosen.sensor
+    assert_nil chosen.notice
+    assert_equal warm.id.to_s, chosen.selected_key
   end
 
   # Like DateRange's clamp, a fallback says so rather than silently showing something else.
-  test "a sensor that is not in the crypt falls back and says so" do
+  test "a sensor outside the crypt, or an unparseable one, falls back and says so" do
     crypt = create_climate_sensor(display_name: "Crypt", in_crypt: true)
     elsewhere = create_climate_sensor(display_name: "Dressing room", in_crypt: false)
 
-    subject = build([ crypt ], selected: elsewhere.id.to_s)
+    [ elsewhere.id.to_s, "haddock" ].each do |selected|
+      subject = build([ crypt ], selected: selected)
 
-    assert_equal crypt, subject.sensor
-    assert subject.notice.present?
-  end
-
-  test "an unparseable selection falls back and says so" do
-    crypt = create_climate_sensor(in_crypt: true)
-
-    subject = build([ crypt ], selected: "haddock")
-
-    assert_equal crypt, subject.sensor
-    assert subject.notice.present?
-  end
-
-  test "the worst-case key is reported as worst, not as the resolved sensor" do
-    crypt = create_climate_sensor(in_crypt: true)
-
-    assert_equal Climate::VentilationSeries::WORST, build([ crypt ]).selected_key
+      assert_equal crypt, subject.sensor, selected
+      assert_equal Climate::VentilationSeries::NOT_IN_CRYPT, subject.notice, selected
+      assert_equal Climate::VentilationSeries::WORST, subject.selected_key, selected
+    end
   end
 
   test "draws crypt temperature, crypt dew point and outdoor dew point" do
@@ -73,14 +57,7 @@ class Climate::VentilationSeriesTest < ActiveSupport::TestCase
     assert_in_delta 12.0, series[0][:points].first[:value], 0.001
     assert_in_delta 10.0, series[1][:points].first[:value], 0.001
     assert_in_delta 6.0, series[2][:points].first[:value], 0.001
-  end
-
-  test "the outdoor line is styled apart from the crypt ones" do
-    crypt = create_climate_sensor(in_crypt: true)
-    create_climate_reading(sensor: crypt, recorded_at: Time.zone.parse("2026-08-05 12:00"))
-    create_climate_reading(sensor: @outdoor, recorded_at: Time.zone.parse("2026-08-05 12:00"))
-
-    assert_equal %w[solid muted dashed], build([ crypt ]).series.map { |line| line[:style] }
+    assert_equal %w[solid muted dashed], series.pluck(:style)
   end
 
   test "draws the crypt on its own when there is no outdoor feed" do

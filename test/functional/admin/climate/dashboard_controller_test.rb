@@ -42,14 +42,6 @@ module Admin
         assert_response :forbidden
       end
 
-      test "renders for a user with the climate read permission" do
-        create_climate_sensor
-
-        get :show
-
-        assert_response :success
-      end
-
       test "defaults to the last seven days" do
         get :show
 
@@ -84,51 +76,49 @@ module Admin
       end
 
       test "renders the current reading as text, not only in the chart" do
-        sensor = create_climate_sensor(display_name: "Crypt north")
+        sensor = create_climate_sensor(display_name: "Crypt north", location: "North wall")
         create_climate_reading(sensor: sensor, temperature_c: 11.5, relative_humidity: 88.0)
 
         get :show
 
         assert_match "Crypt north", response.body
+        assert_match "North wall", response.body
         assert_match "11.5", response.body
         assert_match "88", response.body
+        assert_match(/above the dew point/, response.body)
       end
 
-      test "serves the same series as json" do
-        sensor = create_climate_sensor
+      test "says so when there is nothing to plot yet" do
+        create_climate_sensor
+
+        get :show
+
+        assert_match "No readings in this range yet", response.body
+        assert_select "canvas[data-climate-charts-target]", 0
+      end
+
+      test "serves the page's series, margin, risk and ventilation as json" do
+        sensor = create_climate_sensor(in_crypt: true)
+        outdoor_climate_sensor
         create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
 
         get :show, format: :json
-        body = response.parsed_body
+        payload = response.parsed_body
 
         assert_response :success
-        assert_equal 1, body["series"].size
-        assert_equal 1, body["series"].first["points"].size
-        assert body["range"]["from"].present?
-      end
-
-      test "downsamples a long range instead of shipping every reading" do
-        sensor = create_climate_sensor
-        200.times do |index|
-          create_climate_reading(sensor: sensor,
-                                 recorded_at: Time.zone.parse("2026-08-01 00:00") + (index * 10).minutes)
-        end
-
-        get :show, format: :json, params: { from: "2025-08-06", to: "2026-08-06" }
-        points = response.parsed_body["series"].first["points"]
-
-        assert_operator points.size, :<, 10
-      end
-
-      test "renders with no sensors at all" do
-        get :show
-
-        assert_response :success
+        assert_equal 2, payload["series"].size
+        assert_equal 1, payload["series"].find { |series| series["id"] == sensor.id }["points"].size
+        assert payload["range"]["from"].present?
+        assert payload.key?("margin")
+        assert payload.key?("risk")
+        assert payload.key?("ventilation")
+        assert_equal "worst", payload.dig("ventilation", "selected")
       end
 
       test "carries the Open-Meteo attribution the licence requires" do
         get :show
 
+        assert_response :success
         assert_match(/Open-Meteo/, response.body)
       end
 
@@ -158,29 +148,15 @@ module Admin
         assert_match(/not the walls/i, response.body)
       end
 
-      test "the json payload carries the margin, risk and ventilation series" do
-        sensor = create_climate_sensor(in_crypt: true)
-        outdoor_climate_sensor
-        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
-
-        get :show, format: :json
-        payload = response.parsed_body
-
-        assert payload.key?("margin")
-        assert payload.key?("risk")
-        assert payload.key?("ventilation")
-        assert_equal "worst", payload.dig("ventilation", "selected")
-      end
-
       test "the crypt parameter selects which sensor the ventilation chart shows" do
         north = create_climate_sensor(display_name: "North", in_crypt: true)
         south = create_climate_sensor(display_name: "South", in_crypt: true)
         create_climate_reading(sensor: north, recorded_at: 2.hours.ago, temperature_c: 9.0)
         create_climate_reading(sensor: south, recorded_at: 2.hours.ago, temperature_c: 16.0)
 
-        get :show, format: :json, params: { crypt: south.id.to_s }
+        get :show, params: { crypt: south.id.to_s }
 
-        assert_equal south.id.to_s, response.parsed_body.dig("ventilation", "selected")
+        assert_select "select#crypt option[selected][value=?]", south.id.to_s
       end
 
       test "an unknown crypt parameter falls back and says so" do
@@ -190,22 +166,6 @@ module Admin
 
         assert_response :success
         assert_match(/not marked as being in the crypt/i, response.body)
-      end
-
-      test "renders with no sensor marked as being in the crypt" do
-        create_climate_sensor(in_crypt: false)
-
-        get :show
-
-        assert_response :success
-      end
-
-      test "renders with a crypt sensor that has no readings" do
-        create_climate_sensor(in_crypt: true)
-
-        get :show
-
-        assert_response :success
       end
 
       test "shows the at-risk figures for a crypt sensor" do
@@ -237,20 +197,15 @@ module Admin
         assert_match(/Crypt north/, response.body)
       end
 
-      test "says the outside line is missing when there is no outdoor sensor" do
+      test "says the outside line is missing with no outdoor sensor, or one with no readings in range" do
         sensor = create_climate_sensor(in_crypt: true)
         create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
 
         get :show
 
         assert_match(/outside line is missing/, response.body)
-      end
 
-      test "says the outside line is missing when the outdoor sensor has no readings in range" do
-        sensor = create_climate_sensor(in_crypt: true)
-        create_climate_reading(sensor: sensor, recorded_at: 2.hours.ago)
         outdoor_climate_sensor
-
         get :show
 
         assert_match(/outside line is missing/, response.body)

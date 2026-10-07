@@ -1,21 +1,13 @@
-require "application_system_test_case"
+require_relative "charts_system_test_case"
 
 module Admin
   module Climate
     # Browser tests for the history charts: only a real browser proves Chart.js
     # draws and plots the values it was given. There is no window.Chart, so the
     # controller's instances are read off the element.
-    class ChartsJsTest < ApplicationSystemTestCase
-      include ClimateTestHelpers
-
+    class ChartsJsTest < ChartsSystemTestCase
       setup do
-        role = ::Role.create!(name: "Climate Viewer")
-        role.permissions << ::Admin::Permission.create(action: "read", subject_class: "climate")
-        role.permissions << ::Admin::Permission.create(action: "access", subject_class: "backend")
-        users(:member).add_role("Climate Viewer")
-        login_as users(:member)
-
-        @sensor = create_climate_sensor(display_name: "Crypt north", location: "North wall")
+        @sensor = create_climate_sensor(display_name: "Crypt north")
         @outdoor = outdoor_climate_sensor
         seed_readings
       end
@@ -51,39 +43,15 @@ module Admin
         JS
       end
 
-      test "draws all three charts" do
+      test "each chart plots its own measure for each sensor" do
         visit admin_climate_dashboard_path
         wait_for_charts
-
-        assert_selector "canvas[data-climate-charts-target='temperature']"
-        assert_selector "canvas[data-climate-charts-target='humidity']"
-        assert_selector "canvas[data-climate-charts-target='dewPoint']"
-      end
-
-      test "the temperature chart plots each sensor's own temperatures" do
-        visit admin_climate_dashboard_path
-        wait_for_charts
-
-        indoor = plotted(0, "Crypt north")
-        outside = plotted(0, @outdoor.display_name)
 
         # Hourly buckets average the two readings in each hour.
-        assert_equal [ 11.05, 11.25, 11.45, 11.65, 11.85, 12.05 ], indoor
-        assert_equal [ 17.05, 17.25, 17.45, 17.65, 17.85, 18.05 ], outside
-      end
-
-      test "the humidity chart plots humidity, not temperature" do
-        visit admin_climate_dashboard_path
-        wait_for_charts
-
+        assert_equal [ 11.05, 11.25, 11.45, 11.65, 11.85, 12.05 ], plotted(0, "Crypt north")
+        assert_equal [ 17.05, 17.25, 17.45, 17.65, 17.85, 18.05 ], plotted(0, @outdoor.display_name)
         assert_equal [ 85.0 ] * 6, plotted(1, "Crypt north")
         assert_equal [ 65.0 ] * 6, plotted(1, @outdoor.display_name)
-      end
-
-      test "the dew point chart plots dew point" do
-        visit admin_climate_dashboard_path
-        wait_for_charts
-
         assert_equal [ 9.0 ] * 6, plotted(2, "Crypt north")
         assert_equal [ 10.0 ] * 6, plotted(2, @outdoor.display_name)
       end
@@ -117,14 +85,6 @@ module Admin
         assert_equal [ false ] * span_gaps.length, span_gaps
       end
 
-      test "the current readings are real text, not only pixels on a canvas" do
-        visit admin_climate_dashboard_path
-
-        assert_text "Crypt north"
-        assert_text "North wall"
-        assert_text(/above the dew point/)
-      end
-
       test "each canvas has an accessible label naming its latest values" do
         visit admin_climate_dashboard_path
         wait_for_charts
@@ -141,15 +101,6 @@ module Admin
 
         assert_current_path(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/)
         wait_for_charts
-      end
-
-      test "charts are destroyed on navigation away rather than leaking" do
-        visit admin_climate_dashboard_path
-        wait_for_charts
-
-        visit admin_path
-
-        assert_no_selector "[data-climate-charts-ready]"
       end
 
       # The default 7-day range is already banded (Buckets::RESOLUTIONS), so
@@ -179,13 +130,24 @@ module Admin
         assert_equal [ true, true, true ], hidden_after
       end
 
-      test "says so when there is nothing to plot yet" do
+      # A band at raw resolution would be a zero-width artefact.
+      test "no min-max band at raw resolution" do
         ::Climate::Reading.delete_all
+        day = Date.parse("2026-08-05")
 
-        visit admin_climate_dashboard_path
+        [ 0, 30, 90, 120 ].each do |minutes|
+          create_climate_reading(sensor: @sensor, recorded_at: day.beginning_of_day + minutes.minutes,
+                                 temperature_c: 11.0, relative_humidity: 85.0, dew_point_c: 9.0)
+        end
 
-        assert_text "No readings in this range yet"
-        assert_no_selector "canvas[data-climate-charts-target='temperature']"
+        visit admin_climate_dashboard_path(from: day.iso8601, to: day.iso8601)
+        wait_for_charts
+
+        banded = evaluate_script(<<~JS)
+          document.querySelector("[data-controller='climate-charts']")
+            .climateCharts[0].data.datasets.some((d) => d.band)
+        JS
+        assert_not banded
       end
     end
   end

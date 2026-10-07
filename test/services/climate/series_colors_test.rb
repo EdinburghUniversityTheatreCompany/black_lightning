@@ -8,10 +8,13 @@ class Climate::SeriesColorsTest < ActiveSupport::TestCase
     first = create_climate_sensor(display_name: "North")
     second = create_climate_sensor(display_name: "South")
 
-    both = Climate::SeriesColors.new
+    colors = Climate::SeriesColors.new
+    before = colors.index_for(second)
+    assert_not_equal colors.index_for(first), before
 
-    assert_equal both.index_for(second), Climate::SeriesColors.new.index_for(second)
-    assert_not_equal both.index_for(first), both.index_for(second)
+    first.update!(active: false)
+
+    assert_equal before, Climate::SeriesColors.new.index_for(second)
   end
 
   test "an unknown sensor falls back to the first colour" do
