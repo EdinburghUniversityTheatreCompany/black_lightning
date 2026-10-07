@@ -1,6 +1,8 @@
 # Runs a real rake task from a test, so maintenance tasks (backfills, rollout steps) get covered.
-# Loading the tasks twice re-appends every action, hence the task_defined? guard. Rake remembers a
-# task already ran, so each invoke re-enables it, or a second test would silently invoke nothing.
+# Loading the tasks twice re-appends every action, hence the guard on Rails' own `environment`
+# task, which exists exactly once load_tasks has run (a guard on the requested name would reload
+# everything for a misspelled one). Rake remembers a task already ran, so each invoke re-enables
+# it, or a second test would silently invoke nothing.
 require "rake"
 
 module RakeTaskTestHelpers
@@ -8,7 +10,7 @@ module RakeTaskTestHelpers
   # deadlocks ("recursive locking") when nested under `parallelize`, and it drops its buffer
   # when the block raises. Keeping the buffer for #last_rake_output means no caller nests.
   def run_rake_task(name, *args)
-    Rails.application.load_tasks unless Rake::Task.task_defined?(name)
+    Rails.application.load_tasks unless Rake::Task.task_defined?("environment")
     task = Rake::Task[name]
     task.reenable
 
