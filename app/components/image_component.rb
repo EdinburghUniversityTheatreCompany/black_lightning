@@ -7,7 +7,7 @@ class ImageComponent < ViewComponent::Base
     @variant = variant
     @full_width = full_width
     @priority = priority
-    @alt_text = alt.to_s # Always emitted (WCAG 1.1.1); empty marks the image decorative.
+    @alt = alt.to_s # Always emitted (WCAG 1.1.1); empty marks the image decorative.
     @srcset_variants = srcset_variants
     @image_options = image_options
     @proxy = proxy
@@ -18,8 +18,6 @@ class ImageComponent < ViewComponent::Base
   end
 
   private
-
-  attr_reader :alt_text
 
   def warn_or_raise_without_variant
     if Rails.env.local?
