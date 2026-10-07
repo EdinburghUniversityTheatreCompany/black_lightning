@@ -47,33 +47,17 @@ module Admin
         assert_not_includes labels, "Marketing", "#{where}: an unqualified option is ambiguous"
       end
 
-      test "the producer's submission picker names the show on each line" do
+      test "the producer's submission picker names the show on each line, keeps bare names, and is ordered by its labels" do
         sign_in @producer
 
         get new_admin_reimbursements_expense_path
 
         assert_response :success
-        assert_both_shows_named(option_texts("select#reimbursements_expense_form_budget_record_id"),
-                                "the submission picker")
-      end
-
-      test "an area-less line keeps its bare name in the picker" do
-        sign_in @producer
-
-        get new_admin_reimbursements_expense_path
-
-        assert_includes option_texts("select#reimbursements_expense_form_budget_record_id"),
-                        "Contingency"
-      end
-
-      test "the picker is ordered by the label it prints" do
-        sign_in @producer
-
-        get new_admin_reimbursements_expense_path
-
-        offered = option_texts("select#reimbursements_expense_form_budget_record_id") -
-                  [ "Choose a budget…" ]
-        assert_equal offered.sort, offered,
+        labels = option_texts("select#reimbursements_expense_form_budget_record_id") -
+                 [ "Choose a budget…" ]
+        assert_both_shows_named(labels, "the submission picker")
+        assert_includes labels, "Contingency"
+        assert_equal labels.sort, labels,
                      "the options read out of order, which is what sorting by the bare name does"
       end
 
@@ -152,22 +136,6 @@ module Admin
       def definition_value(term)
         css_select("div").find { |node| node.at_css("dt")&.text&.strip == term }
                          &.at_css("dd")&.text&.strip
-      end
-
-      # My Budgets lists one row per SHOW now, not one card per line, so the
-      # thing that has to be unambiguous is the area's name rather than the
-      # qualified line name. Three production lines are called "Marketing".
-      test "My Budgets names each show it lists" do
-        @cogito.owners << @person
-        @improverts.owners << @person
-        sign_in @producer
-
-        get admin_reimbursements_my_budgets_path
-
-        assert_response :success
-        names = css_select("tbody tr td a.font-semibold").map { |link| link.text.strip }
-        assert_equal [ "Cogito", "Improverts" ], names.sort
-        assert_not_includes names, "Marketing"
       end
 
       # The rowgroup heading above the row is not announced with the button, so

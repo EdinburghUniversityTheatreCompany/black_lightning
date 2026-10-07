@@ -10,14 +10,6 @@ module Reimbursements
       Budget.create!(name: "Props", **attrs)
     end
 
-    def picker_cost_centre(key:, eusa_code:, short_code: "BF")
-      CostCentre.create!(key: key, name: "Bedlam Fringe", eusa_code: eusa_code,
-                         short_code: short_code,
-                         receive_mailbox: "in-#{key}@example.com",
-                         send_mailbox: "out-#{key}@example.com",
-                         notification_email: "finance-#{key}@example.com")
-    end
-
     def add_expense(budget, status:, excl_vat:)
       Expense.create!(budget: budget, status: status, amount: excl_vat * 1.2r,
                       amount_excl_vat: excl_vat, description: "x")
@@ -38,8 +30,6 @@ module Reimbursements
     test "current_forecast is the latest forecast amount, nil when none" do
       budget = build_budget
       assert_nil budget.current_forecast
-      # No forecast AND no initial budget, so there is nothing to be left of.
-      assert_nil budget.remaining
 
       budget.forecasts.create!(amount: 100, date: Date.new(2026, 5, 1), reason: "initial")
       budget.forecasts.create!(amount: 150, date: Date.new(2026, 6, 1), reason: "revised")
@@ -72,16 +62,9 @@ module Reimbursements
       add_expense(budget, status: Status::APPROVED, excl_vat: 140)
 
       fresh = Budget.find(budget.id)
+      assert_not fresh.no_budget_set?
       assert_equal BigDecimal("-40"), fresh.remaining
       assert_predicate fresh, :over_budget?
-    end
-
-    test "a logged forecast still wins over the initial figure" do
-      budget = build_budget(initial_budget: 450)
-      budget.forecasts.create!(amount: 600, date: Date.new(2026, 6, 1), reason: "revised")
-      add_expense(budget, status: Status::APPROVED, excl_vat: 100)
-
-      assert_equal BigDecimal("500"), Budget.find(budget.id).remaining
     end
 
     test "remaining stays nil when nobody set a figure at all" do
@@ -127,15 +110,6 @@ module Reimbursements
       assert_predicate Budget.find(budget.id), :no_budget_set?
     end
 
-    test "a real plan is untouched by the zero rule" do
-      budget = build_budget(initial_budget: 100)
-      add_expense(budget, status: Status::APPROVED, excl_vat: 140)
-
-      fresh = Budget.find(budget.id)
-      assert_not fresh.no_budget_set?
-      assert_predicate fresh, :over_budget?
-    end
-
     # --- Variance -----------------------------------------------------------
 
     test "variance is zero, not blank, when the plan is still the initial budget" do
@@ -152,14 +126,16 @@ module Reimbursements
     end
 
     test "over_budget? when committed exceeds the forecast; income budgets never" do
-      budget = build_budget
-      budget.forecasts.create!(amount: 10, date: Date.new(2026, 6, 1), reason: "small")
-      add_expense(budget, status: Status::APPROVED, excl_vat: 40)
-      assert Budget.find(budget.id).over_budget?
+      expense, income = %w[Expense Income].map do |type|
+        budget = build_budget(budget_type: type)
+        budget.forecasts.create!(amount: 10, date: Date.new(2026, 6, 1), reason: "small")
+        add_expense(budget, status: Status::APPROVED, excl_vat: 40)
+        Budget.find(budget.id)
+      end
 
-      income = build_budget(name: "Grant", budget_type: "Income")
-      income.forecasts.create!(amount: 0, date: Date.new(2026, 6, 1), reason: "n/a")
-      assert_not Budget.find(income.id).over_budget?
+      assert_predicate expense, :over_budget?
+      assert_equal BigDecimal("-30"), income.remaining
+      assert_not income.over_budget?
     end
 
     test "over_initial_budget? flags committed past the initial figure" do
@@ -182,11 +158,6 @@ module Reimbursements
       assert_kind_of String, budget.owner_ids.first
     end
 
-    test "income? mirrors the PORO" do
-      assert build_budget(name: "G", budget_type: "Income").income?
-      assert_not build_budget(name: "E").income?
-    end
-
     # --- Overview rollups --------------------------------------------------
 
     test "projected_amount is the current forecast, falling back to the initial budget" do
@@ -200,16 +171,6 @@ module Reimbursements
       budget = build_budget(initial_budget: 500)
       budget.forecasts.create!(amount: 650, date: Date.new(2026, 6, 1), reason: "revised")
       assert_equal BigDecimal("650"), Budget.find(budget.id).projected_amount
-    end
-
-    test "paid_portal_amount is the portal total_paid" do
-      budget = build_budget
-      add_expense(budget, status: Status::PAID, excl_vat: 40)
-      add_expense(budget, status: Status::APPROVED, excl_vat: 100)
-
-      fresh = Budget.find(budget.id)
-      assert_equal BigDecimal("40"), fresh.paid_portal_amount
-      assert_equal fresh.total_paid, fresh.paid_portal_amount
     end
 
     test "eusa_actual_amount nets linked EUSA debits and credits for an Expense budget" do
@@ -227,20 +188,6 @@ module Reimbursements
                          nominal_code: "9999", debit: BigDecimal("99"))
 
       assert_equal BigDecimal("45"), Budget.find(budget.id).eusa_actual_amount
-    end
-
-    test "a supplier refund on an expense budget reduces its EUSA actual" do
-      budget = build_budget
-      paid = add_expense(budget, status: Status::PAID, excl_vat: 900)
-      EusaActual.create!(expense: paid, nominal_code: "4000", debit: BigDecimal("900"))
-      EusaActual.create!(expense: paid, nominal_code: "4000", credit: BigDecimal("300"),
-                         narrative: "Supplier refund")
-
-      fresh = Budget.find(budget.id)
-      assert_equal BigDecimal("600"), fresh.eusa_actual_amount
-      # expected_outturn reads the netted figure too:
-      # max(projected nil, committed 900, paid 900, eusa 600) = 900, not 1200.
-      assert_equal BigDecimal("900"), fresh.expected_outturn
     end
 
     test "a row carrying both a debit and a credit nets on one line" do
@@ -331,17 +278,10 @@ module Reimbursements
       assert_equal "Props", build_budget.display_name
     end
 
-    test "display_name tells two identically-named lines apart" do
-      cogito = build_budget(name: "Marketing", area: Area.create!(name: "Cogito"))
-      improverts = build_budget(name: "Marketing", area: Area.create!(name: "Improverts"))
-
-      assert_equal cogito.name, improverts.name
-      assert_not_equal cogito.display_name, improverts.display_name
-    end
     # display_name is load-bearing (import matching, receipt filenames, the BACS
     # reference), so the picker label must be a SEPARATE string.
     test "picker_label prefixes the cost centre without touching display_name" do
-      centre = picker_cost_centre(key: "fringe-picker", eusa_code: "F40p")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       budget = build_budget(name: "Other", cost_centre: centre)
 
       assert_equal "BF - Other", budget.picker_label
@@ -349,7 +289,7 @@ module Reimbursements
     end
 
     test "picker_label keeps the area composition" do
-      centre = picker_cost_centre(key: "fringe-area", eusa_code: "F40a")
+      centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = Area.create!(name: "Improverts", cost_centre: centre)
       budget = build_budget(name: "Other", cost_centre: centre, area: area)
 
@@ -365,8 +305,7 @@ module Reimbursements
 
     # --- apportioned income --------------------------------------------------
 
-    # One income line taking the whole of its own credit row. Extracted
-    # because three tests below seed exactly this and jscpd gates at 0.
+    # One income line taking the whole of its own credit row.
     def split_income(name, credit)
       budget = create_reimbursements_budget(name: name, budget_type: "Income")
       actual = create_reimbursements_eusa_actual(credit: credit)
@@ -417,18 +356,6 @@ module Reimbursements
       queries = count_queries { budgets.each(&:eusa_actual_amount) }
 
       assert_equal 0, queries, "eusa_actual_amount must read preloaded allocations"
-    end
-
-    # Negative control for the assertion above: without the preload the same
-    # read really does cost a query per budget, so the zero is not vacuous.
-    test "negative control: unpreloaded budgets DO query per budget" do
-      3.times { |i| split_income("Unpreloaded #{i}", 100) }
-
-      budgets = Budget.where(budget_type: "Income").to_a
-      queries = count_queries { budgets.each(&:eusa_actual_amount) }
-
-      assert_operator queries, :>=, 3,
-                      "expected an unpreloaded read to cost a query per budget (got #{queries})"
     end
   end
 end

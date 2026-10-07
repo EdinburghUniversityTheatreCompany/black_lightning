@@ -12,11 +12,10 @@ module Admin
         login_as users(:member)
       end
 
-      test "moves a budget to a different area from its own form in the browser" do
-        create_reimbursements_area(name: "Cogito")
+      test "moves a budget to a different area, then detaches it, from its own form in the browser" do
+        cogito = create_reimbursements_area(name: "Cogito")
         create_reimbursements_area(name: "Improverts")
-        budget = create_reimbursements_budget(name: "Cogito: Marketing",
-                                              area: ::Reimbursements::Area.find_by!(name: "Cogito"))
+        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: cogito)
 
         visit edit_admin_reimbursements_budget_path(budget.record_id)
         select "Improverts", from: "Area"
@@ -24,12 +23,8 @@ module Admin
 
         assert_text "Budget saved"
         assert_equal "Improverts", budget.reload.area.name
-      end
 
-      test "detaches a budget from its area from its own form in the browser" do
-        area = create_reimbursements_area(name: "Cogito")
-        budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area)
-
+        # A fresh visit: the first save's flash would satisfy the next assert_text early.
         visit edit_admin_reimbursements_budget_path(budget.record_id)
         select "No area", from: "Area"
         click_on "Save budget"
