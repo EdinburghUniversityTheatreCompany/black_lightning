@@ -35,7 +35,7 @@ module UserMatching
     return [] if row[:last_name].blank?
 
     User.where(last_name: row[:last_name]).where(id: eligible_ids)
-        .select { |user| User.fuzzy_first_name_match?(row[:first_name], user.first_name) }
+        .select { |user| StringSimilarity.fuzzy_name_match?(row[:first_name], user.first_name) }
         .sort_by { |user| -StringSimilarity.match_confidence(row[:first_name], user.first_name) }
   end
 

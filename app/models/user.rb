@@ -573,10 +573,6 @@ class User < ApplicationRecord
       (other_user.not_duplicate_user_ids || []).include?(id)
   end
 
-  def self.fuzzy_first_name_match?(name1, name2, threshold: 0.6)
-    StringSimilarity.fuzzy_name_match?(name1, name2, threshold: threshold)
-  end
-
   # Potential duplicate pairs, in three buckets:
   #   same_id: same student_id, associate_id or equivalent sms email (definite duplicates)
   #   fuzzy_name_overlapping / fuzzy_name_non_overlapping: same last name, fuzzy first name,
@@ -618,7 +614,7 @@ class User < ApplicationRecord
         users = users_by_last_name[ln.downcase]
         users.combination(2).each do |u1, u2|
           next if u1.marked_not_duplicate?(u2)
-          next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
+          next unless StringSimilarity.fuzzy_name_match?(u1.first_name, u2.first_name)
 
           bucket = u1.years_overlap?(u2, years_active_cache: years_active_cache) ? :fuzzy_name_overlapping : :fuzzy_name_non_overlapping
           duplicates[bucket] << { users: [ u1, u2 ], years_active_cache: years_active_cache }
