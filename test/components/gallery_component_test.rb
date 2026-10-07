@@ -19,15 +19,13 @@ class GalleryComponentTest < ViewComponent::TestCase
     assert_selector "h4", text: "Gallery"
   end
 
-  test "omits picture tags by default" do
-    render_inline(GalleryComponent.new(pictures: picture_with_tag))
+  test "lists picture tags only when show_tags is set" do
+    pictures = picture_with_tag
 
+    render_inline(GalleryComponent.new(pictures:))
     assert_no_text "Dress Rehearsal"
-  end
 
-  test "lists picture tags when show_tags is set" do
-    render_inline(GalleryComponent.new(pictures: picture_with_tag, show_tags: true))
-
+    render_inline(GalleryComponent.new(pictures:, show_tags: true))
     assert_selector "a", text: "Dress Rehearsal"
   end
 end

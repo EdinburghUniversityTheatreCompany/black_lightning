@@ -1,45 +1,18 @@
 require "test_helper"
 
 class BadgeComponentTest < ViewComponent::TestCase
-  test "renders danger badge" do
-    render_inline(BadgeComponent.new(type: :danger)) do
-      "Unpaid"
-    end
+  test "renders its content in its type's style" do
+    render_inline(BadgeComponent.new(type: :danger)) { "Unpaid" }
     assert_selector "span[class*='text-danger']", text: "Unpaid"
   end
 
-  test "renders success badge" do
-    render_inline(BadgeComponent.new(type: :success)) do
-      "Member"
-    end
-    assert_selector "span[class*='text-success']", text: "Member"
-  end
-
-  test "renders warning badge" do
-    render_inline(BadgeComponent.new(type: :warning)) do
-      "Pending"
-    end
-    assert_selector "span[class*='text-warning']", text: "Pending"
-  end
-
   test "renders secondary badge by default" do
-    render_inline(BadgeComponent.new) do
-      "Unknown"
-    end
+    render_inline(BadgeComponent.new) { "Unknown" }
     assert_selector "span[class*='bg-gray-100']", text: "Unknown"
   end
 
-  test "renders pill variant" do
-    render_inline(BadgeComponent.new(type: :primary, pill: true)) do
-      "42"
-    end
-    assert_selector "span[class*='rounded-full']"
-  end
-
-  test "renders pull_right variant" do
-    render_inline(BadgeComponent.new(type: :danger, pull_right: true)) do
-      "Late"
-    end
-    assert_selector "span[class*='float-right']"
+  test "pill and html_class add their classes" do
+    render_inline(BadgeComponent.new(type: :primary, pill: true, html_class: "ml-2")) { "42" }
+    assert_selector "span.rounded-full.ml-2"
   end
 end

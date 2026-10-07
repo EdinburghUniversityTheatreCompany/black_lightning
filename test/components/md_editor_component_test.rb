@@ -38,11 +38,6 @@ class MdEditorComponentTest < ViewComponent::TestCase
     assert_no_selector "div.md\\:w-3\\/12"
     assert_no_selector "div.md\\:w-9\\/12"
     assert_selector "div.mb-4 > label.block.text-sm.font-medium.text-gray-700"
-  end
-
-  test "both layouts wire up the markdown editor controller" do
-    render_editor(layout: :vertical)
-
     assert_selector "[data-controller='markdown-editor'] textarea.form-control"
   end
 end

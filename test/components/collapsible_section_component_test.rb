@@ -1,6 +1,6 @@
 require "test_helper"
 
-class CollapsibleSectionComponentInAdminTest < ViewComponent::TestCase
+class CollapsibleSectionComponentTest < ViewComponent::TestCase
   test "renders title in toggle button" do
     render_inline CollapsibleSectionComponent.new(title: "My Section") { "Content" }
     assert_selector "button", text: /My Section/

@@ -12,11 +12,12 @@ class TableComponentTest < ViewComponent::TestCase
     assert_selector "thead th", count: 2
   end
 
-  test "symbol headers are translated, others left alone" do
+  test "symbol headers are translated, others left alone, and neither links without ransack" do
     render_inline(TableComponent.new(headers: [ :name, "Literal" ], field_sets: []))
 
     assert_selector "th", text: I18n.t("simple_form.labels.defaults.name")
     assert_selector "th", text: "Literal"
+    assert_no_selector "th a"
   end
 
   # sort_link builds a URL against the current request, so the test needs one.
@@ -26,12 +27,6 @@ class TableComponentTest < ViewComponent::TestCase
     end
 
     assert_selector "th a.sort_link"
-  end
-
-  test "without a ransack object a header is plain text" do
-    render_inline(TableComponent.new(headers: [ :name ], field_sets: []))
-
-    assert_no_selector "th a"
   end
 
   test "column widths switch the table to a fixed layout" do

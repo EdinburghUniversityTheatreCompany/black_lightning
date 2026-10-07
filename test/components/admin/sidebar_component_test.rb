@@ -7,43 +7,31 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
         { title: "Shows", path: "/admin/shows", fa_icon: "fa-masks-theater" }
       ] }
     ]
-    @user = users(:admin)
   end
 
-  test "renders navigation categories" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user, current_path: "/admin/shows")
-    assert_selector "summary", text: /Productions/
-    assert_selector "a[href='/admin/shows']", text: /Shows/
+  def render_sidebar(current_path, nav_items: @nav_items, **options)
+    render_inline Admin::SidebarComponent.new(nav_items:, current_user: users(:admin), current_path:, **options)
   end
 
-  test "marks active item" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user, current_path: "/admin/shows")
-    assert_selector "a.active[href='/admin/shows']"
-  end
+  test "renders categories, marks the current item active and opens its category" do
+    render_sidebar "/admin/shows"
 
-  test "marks category as open when child is active" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user, current_path: "/admin/shows")
-    assert_selector "details[open]"
-  end
-
-  test "marks an item active on its own child pages" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user,
-                                              current_path: "/admin/shows/12/edit")
-    assert_selector "a.active[href='/admin/shows']"
+    assert_selector "details[open] summary", text: /Productions/
+    assert_selector "a.active[href='/admin/shows']", text: /Shows/
+    assert_no_selector "details p"
   end
 
   # current_path is request.fullpath, so filter state arrives as a query string.
-  test "marks an item active when the URL carries filter state" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user,
-                                              current_path: "/admin/shows?q%5Bname_cont%5D=hamlet")
-    assert_selector "a.active[href='/admin/shows']"
-  end
-
   # A character-wise prefix match would light "/admin/shows" up for "/admin/shows_archive".
-  test "does not mark an item active for a sibling sharing its prefix" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user,
-                                              current_path: "/admin/shows_archive")
-    assert_no_selector "a.active[href='/admin/shows']"
+  { "/admin/shows/12/edit" => true,
+    "/admin/shows?q%5Bname_cont%5D=hamlet" => true,
+    "/admin/shows_archive" => false }.each do |path, active|
+    test "#{path} #{active ? 'marks' : 'does not mark'} the Shows item active" do
+      render_sidebar path
+
+      selector = "a.active[href='/admin/shows']"
+      active ? assert_selector(selector) : assert_no_selector(selector)
+    end
   end
 
   test "an exact item is active only on its own page" do
@@ -52,8 +40,7 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
       { title: "Sensors", path: "/admin/climate/sensors", fa_icon: "fa-thermometer" }
     ] } ]
 
-    render_inline Admin::SidebarComponent.new(nav_items: nav, current_user: @user,
-                                              current_path: "/admin/climate/sensors")
+    render_sidebar "/admin/climate/sensors", nav_items: nav
 
     assert_no_selector "a.active[href='/admin/climate']"
     assert_selector "a.active[href='/admin/climate/sensors']"
@@ -66,8 +53,7 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
       { group: "Setup", title: "People", path: "/admin/reimbursements/people", fa_icon: "fa-address-book" }
     ] } ]
 
-    render_inline Admin::SidebarComponent.new(nav_items: grouped, current_user: @user,
-                                              current_path: "/admin/reimbursements/review")
+    render_sidebar "/admin/reimbursements/review", nav_items: grouped
 
     headings = page.all("details p").map(&:text)
     assert_equal [ "Pay claims", "Setup" ], headings
@@ -79,17 +65,9 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
       { group: "Budgets", title: "Budgets", path: "/admin/reimbursements/budgets", fa_icon: "fa-sack-dollar" }
     ] } ]
 
-    render_inline Admin::SidebarComponent.new(nav_items: finance, current_user: @user,
-                                              current_path: "/admin/reimbursements/budget_import")
+    render_sidebar "/admin/reimbursements/budget_import", nav_items: finance
 
     assert_selector "details[open]"
-  end
-
-  test "a category with no group headings renders none" do
-    render_inline Admin::SidebarComponent.new(nav_items: @nav_items, current_user: @user,
-                                              current_path: "/admin/shows")
-
-    assert_no_selector "details p"
   end
 
   # --- Finance selectors: the year and cost centre must survive a sidebar click ---
@@ -104,11 +82,8 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
     ] } ]
   end
 
-  def render_scoped(scope_params)
-    render_inline Admin::SidebarComponent.new(
-      nav_items: scoped_items, current_user: @user,
-      current_path: "/admin/reimbursements/budgets", scope_params: scope_params
-    )
+  def render_scoped(scope_params, nav_items: scoped_items)
+    render_sidebar "/admin/reimbursements/budgets", nav_items:, scope_params:
   end
 
   test "a scoped item carries the year and cost centre the operator is on" do
@@ -148,10 +123,7 @@ class Admin::SidebarComponentTest < ViewComponent::TestCase
   test "a parameter merely containing a selector's name does not block it" do
     items = scoped_items
     items.first[:children].first[:path] = "/admin/reimbursements/budgets?financial_year=9"
-    render_inline Admin::SidebarComponent.new(
-      nav_items: items, current_user: @user,
-      current_path: "/admin/reimbursements/budgets", scope_params: { "year" => "fringe-2027" }
-    )
+    render_scoped({ "year" => "fringe-2027" }, nav_items: items)
 
     assert_selector "a[href*='financial_year=9'][href*='year=fringe-2027']", text: /Budgets/
   end

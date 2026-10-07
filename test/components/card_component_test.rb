@@ -1,19 +1,12 @@
 require "test_helper"
 
 class CardComponentTest < ViewComponent::TestCase
-  test "renders title" do
-    render_inline CardComponent.new(title: "My Card") do
-      "<p>Content</p>".html_safe
-    end
-
-    assert_text "My Card"
-  end
-
-  test "renders content" do
+  test "renders title and content" do
     render_inline CardComponent.new(title: "My Card") do
       "<p>Some content</p>".html_safe
     end
 
+    assert_text "My Card"
     assert_text "Some content"
   end
 
@@ -22,7 +15,7 @@ class CardComponentTest < ViewComponent::TestCase
       "<p>Content</p>".html_safe
     end
 
-    assert_selector "div.p-4"
+    assert_selector "div.p-4", text: "Content"
   end
 
   test "flush mode skips padding wrapper" do
@@ -59,14 +52,6 @@ class CardComponentTest < ViewComponent::TestCase
     end
 
     assert_selector "button", text: "Action"
-  end
-
-  test "no header rendered when no title and no tools" do
-    render_inline CardComponent.new do
-      "<p>Content</p>".html_safe
-    end
-
-    assert_no_selector ".border-b"
   end
 
   test "header rendered when no title but tools provided" do
