@@ -52,11 +52,12 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm generates placeholder email for new user without email" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
+    write_import_cache(
+      cache_key,
       create_new: [
         import_entry(index: 0, original_name: "No Email User", first_name: "No", last_name: "Email User", student_id: nil, email: nil)
       ]
-    ))
+    )
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -71,12 +72,13 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     existing_user = FactoryBot.create(:user, student_id: "s1111111")
 
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
+    write_import_cache(
+      cache_key,
       exact_match_id: [
         import_entry(index: 0, existing_user_id: existing_user.id, original_name: "Existing User", first_name: "Existing", last_name: "User", student_id: "s1111111", email: "existing@example.com")
       ],
       create_new: create_me_and_skip_me_entries
-    ))
+    )
 
     assert_difference "User.count", 1 do
       post :confirm, params: {
@@ -97,13 +99,14 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm reports a row that cannot be created and carries on" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets(
+    write_import_cache(
+      cache_key,
       create_new: [
         import_entry(index: 0, original_name: "First Twin", first_name: "First", last_name: "Twin", student_id: "s1111111", email: "twin@example.com"),
         import_entry(index: 1, original_name: "Second Twin", first_name: "Second", last_name: "Twin", student_id: "s2222222", email: "twin@example.com"),
         import_entry(index: 2, original_name: "Third Person", first_name: "Third", last_name: "Person", student_id: "s3333333", email: "third@example.com")
       ]
-    ))
+    )
 
     assert_difference "User.count", 2 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create", "1" => "create", "2" => "create" } }
@@ -116,7 +119,7 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm clears cache after processing" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, user_import_buckets)
+    write_import_cache(cache_key, create_new: [])
 
     post :confirm, params: { cache_key: cache_key }
 

@@ -18,25 +18,6 @@ module ImportCacheTestHelpers
     Rails.cache.write(cache_key, buckets.transform_keys(&:to_s), expires_in: 1.hour)
   end
 
-  def membership_import_buckets(already_active: [], activate_by_id: [], activate_by_email: [], propose_merge: [], create_new: [])
-    {
-      "already_active" => already_active,
-      "activate_by_id" => activate_by_id,
-      "activate_by_email" => activate_by_email,
-      "propose_merge" => propose_merge,
-      "create_new" => create_new
-    }
-  end
-
-  def user_import_buckets(exact_match_id: [], exact_match_email: [], fuzzy_match: [], create_new: [])
-    {
-      "exact_match_id" => exact_match_id,
-      "exact_match_email" => exact_match_email,
-      "fuzzy_match" => fuzzy_match,
-      "create_new" => create_new
-    }
-  end
-
   def create_me_and_skip_me_entries
     [
       import_entry(index: 1, original_name: "Create Me", first_name: "Create", last_name: "Me", student_id: "s2222222", email: "create@example.com"),

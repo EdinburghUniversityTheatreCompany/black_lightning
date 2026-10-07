@@ -218,7 +218,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
 
   def write_crew_cache(event_id: @show.id, existing: {}, **buckets)
     cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, { "event_id" => event_id, "categorized" => user_import_buckets(**buckets), "existing_team_members" => existing })
+    write_import_cache(cache_key, { "event_id" => event_id, "categorized" => buckets.transform_keys(&:to_s), "existing_team_members" => existing })
     cache_key
   end
 

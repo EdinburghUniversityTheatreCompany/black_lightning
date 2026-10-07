@@ -67,11 +67,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user = FactoryBot.create(:user, associate_id: "ASSOC1", student_id: nil, email: "unknown_abcd1234@bedlamtheatre.co.uk")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
+    write_import_cache(
+      cache_key,
       activate_by_id: [
         import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "real@example.com")
       ]
-    ))
+    )
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
 
@@ -82,11 +83,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
   test "confirm generates placeholder email for new user without email" do
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
+    write_import_cache(
+      cache_key,
       create_new: [
         import_entry(index: 0, original_name: "No Email User", first_name: "No", last_name: "Email User", student_id: "s8888888", email: nil)
       ]
-    ))
+    )
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -101,12 +103,13 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user_to_activate = FactoryBot.create(:user, student_id: "s1111111")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
+    write_import_cache(
+      cache_key,
       activate_by_id: [
         import_entry(index: 0, existing_user_id: user_to_activate.id, original_name: "Activate Me", student_id: "s1111111", email: "activate@example.com")
       ],
       create_new: create_me_and_skip_me_entries
-    ))
+    )
 
     assert_difference "User.count", 1 do
       post :confirm, params: {
@@ -130,7 +133,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
   test "confirm clears cache after processing" do
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets)
+    write_import_cache(cache_key, create_new: [])
 
     post :confirm, params: { cache_key: cache_key }
 
@@ -142,11 +145,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user2 = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr", email: "unknown_bbb@bedlamtheatre.co.uk")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    write_import_cache(cache_key, membership_import_buckets(
+    write_import_cache(
+      cache_key,
       propose_merge: [
         import_entry(index: 0, existing_user_ids: [ user1.id, user2.id ], original_name: "Alex Kerr", first_name: "Alex", last_name: "Kerr", student_id: "s1234567", email: "alex@example.com")
       ]
-    ))
+    )
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge_#{user2.id}" } }
 
