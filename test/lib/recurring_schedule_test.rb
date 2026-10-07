@@ -15,31 +15,22 @@ class RecurringScheduleTest < ActiveSupport::TestCase
     SCHEDULES.to_h { |key, config| [ key, Fugit.parse(config.fetch("schedule")) ] }
   end
 
-  test "every scheduled class exists and is a job" do
+  test "every entry names a job, declares a queue and has a schedule that parses" do
+    parsed = crons
     SCHEDULES.each do |name, config|
-      klass = config["class"].safe_constantize
+      klass = config["class"].to_s.safe_constantize
 
-      assert_not_nil klass, "#{name} names a class that does not exist: #{config['class']}"
-      assert_operator klass, :<, ActiveJob::Base, "#{name} names #{klass}, which is not a job"
-    end
-  end
-
-  test "every entry declares a queue and a schedule" do
-    SCHEDULES.each do |name, config|
+      assert klass && klass < ActiveJob::Base, "#{name} names #{config['class'].inspect}, which is not a job"
       assert config["queue"].present?, "#{name} has no queue"
+      # Not covered by the parse below: Fugit reads a blank string as a zero Duration.
       assert config["schedule"].present?, "#{name} has no schedule"
+      assert_not_nil parsed[name], "#{name} has an unparseable schedule"
     end
   end
 
   # No indoor poller on purpose: crypt readings arrive by CSV import.
   test "the outdoor climate poller is scheduled" do
     assert_equal "Climate::OutdoorPollJob", SCHEDULES.dig("climate_outdoor_poll", "class")
-  end
-
-  test "every schedule parses" do
-    crons.each do |key, cron|
-      assert_not_nil cron, "#{key} has an unparseable schedule"
-    end
   end
 
   test "no two daily jobs are due at the same time" do
@@ -72,7 +63,8 @@ class RecurringScheduleTest < ActiveSupport::TestCase
   private
 
   # Cron entries pinned to a specific hour and minute. The interval schedules ("every 5 minutes")
-  # parse to a Fugit::Duration and have no fixed slot to collide on.
+  # parse to a Fugit::Cron too, but with no hours, so the `hours.present?` test is what leaves
+  # them out: they have no fixed slot to collide on.
   def daily_jobs
     crons.select { |_, cron| cron.is_a?(Fugit::Cron) && cron.hours.present? && cron.minutes.present? }
   end
