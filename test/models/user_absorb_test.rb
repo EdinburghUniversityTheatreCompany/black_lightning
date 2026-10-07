@@ -6,8 +6,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
     @source_user = FactoryBot.create(:member)
   end
 
-  # Basic validation tests
-
   test "absorb returns error when trying to absorb self" do
     result = @target_user.absorb(@target_user)
 
@@ -22,15 +20,13 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_includes result[:errors], "Source user not found"
   end
 
-  # Team membership tests
-
   test "absorb transfers team memberships" do
     show = FactoryBot.create(:show)
     source_team_member = FactoryBot.create(:team_member, user: @source_user, teamwork: show, position: "Director")
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert result[:success], result[:errors].inspect
     assert_includes @target_user.team_membership.reload.pluck(:teamwork_id), show.id
     assert_not User.exists?(@source_user.id), "Source user should be deleted"
   end
@@ -44,14 +40,12 @@ class UserAbsorbTest < ActiveSupport::TestCase
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert result[:success], result[:errors].inspect
     # One membership per user per show, so the positions are joined with '/'.
     assert_equal initial_count, @target_user.team_membership.reload.count
     position = @target_user.team_membership.find_by(teamwork: show).position
     assert_equal "Director / Producer", position
   end
-
-  # Staffing, debt and credit tests
 
   test "absorb moves staffing jobs, debts, notifications and credits to the target" do
     records = [
@@ -70,8 +64,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal 1, result[:transferred][:staffing_debts]
   end
 
-  # Role tests
-
   test "absorb unions roles without duplicating them and never transfers Admin" do
     @source_user.add_role(:admin)
     @source_user.add_role(:committee)
@@ -84,8 +76,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal 1, @target_user.roles.where(name: "Member").count
     assert_equal [ "Committee" ], result[:transferred][:roles]
   end
-
-  # Email handling tests
 
   test "absorb takes the source's email only when the target holds an unknown_ placeholder" do
     [
@@ -101,8 +91,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
       assert_equal expected, target.reload.email, "#{target_email} absorbing #{source_email}"
     end
   end
-
-  # Field preference tests (keep_from_source parameter)
 
   test "absorb copies the fields named in keep_from_source" do
     @target_user.update!(first_name: "John", last_name: "Target", email: "target@example.com",
@@ -123,13 +111,11 @@ class UserAbsorbTest < ActiveSupport::TestCase
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert result[:success], result[:errors].inspect
     @target_user.reload
     assert_equal "John", @target_user.first_name
     assert_equal "Target", @target_user.last_name
   end
-
-  # Cached duplicate tests
 
   test "absorb removes all cached duplicates involving source user" do
     user1 = FactoryBot.create(:member)
@@ -143,15 +129,13 @@ class UserAbsorbTest < ActiveSupport::TestCase
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert result[:success], result[:errors].inspect
     assert_not CachedDuplicate.exists?(dup1.id), "Cached duplicate 1 should be deleted"
     assert_not CachedDuplicate.exists?(dup2.id), "Cached duplicate 2 should be deleted"
     assert_not CachedDuplicate.exists?(dup3.id), "Cached duplicate 3 should be deleted"
     assert CachedDuplicate.exists?(dup_keep.id), "Unrelated cached duplicate should remain"
     assert_not User.exists?(@source_user.id), "Source user should be deleted"
   end
-
-  # sms.ed.ac.uk emails
 
   test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
     # Raw SQL bypasses the normalizes callback, to simulate data stored before the normalisation.
@@ -180,8 +164,6 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { source.reload }
     assert_equal "s9922002@ed.ac.uk", third_user.reload.email
   end
-
-  # Avatar tests
 
   test "absorb with keep_from_source avatar takes the source's avatar" do
     attach_avatar(@target_user)
