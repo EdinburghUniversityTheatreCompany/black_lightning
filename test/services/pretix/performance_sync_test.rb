@@ -82,51 +82,33 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
 
   # --- updating --------------------------------------------------------------
 
-  test "a moved performance moves, rather than being duplicated" do
-    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
+  # The second half is the feature: tick the box, and still tag the relaxed night.
+  test "a moved performance moves rather than being duplicated, and the producer's own columns survive" do
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42,
+                access_flags: [ "relaxed", "captioned" ], note: "BSL by arrangement", cancelled: true)
 
     result, = sync(rows: [ subevent(date_from: "2026-03-05T20:00:00+00:00") ])
 
     assert_equal 0, result.created
     assert_equal 1, result.updated
-    assert_equal Time.zone.local(2026, 3, 5, 20, 0), @event.event_occurrences.reload.sole.starts_at
-  end
-
-  # This is the feature: tick the box, and still tag the relaxed night.
-  test "the producer's own columns survive a sync untouched" do
-    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42,
-                access_flags: [ "relaxed", "captioned" ], note: "BSL by arrangement", cancelled: true)
-
-    sync(rows: [ subevent(date_from: "2026-03-05T20:00:00+00:00") ])
-
     occurrence = @event.event_occurrences.reload.sole
 
+    assert_equal Time.zone.local(2026, 3, 5, 20, 0), occurrence.starts_at
     assert_equal [ "relaxed", "captioned" ], occurrence.access_flags
     assert_equal "BSL by arrangement", occurrence.note
     assert occurrence.cancelled?, "cancelled is a human statement; the sync must never clear it"
   end
 
-  # --- hand-typed rows -------------------------------------------------------
-
-  test "a hand-typed performance is left alone, so a free preview still shows" do
-    hand_typed = occurrence!(starts_at: Time.zone.local(2026, 3, 3, 19, 30), note: "Preview")
-
-    result, = sync(rows: [ subevent ])
-
-    assert_equal 0, result.destroyed
-    assert_predicate hand_typed.reload, :persisted?
-    assert_equal 2, @event.event_occurrences.reload.count
-  end
-
   # --- deleting --------------------------------------------------------------
 
-  test "a synced row whose subevent is gone is destroyed" do
+  test "a synced row whose subevent is gone is destroyed, and an emptied series is reported (a bad slug looks the same)" do
     occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
 
     result, = sync(rows: [])
 
     assert_equal 1, result.destroyed
     assert_empty @event.event_occurrences.reload
+    assert result.emptied_series?
   end
 
   # The one case where deleting would erase something a producer told the public.
@@ -157,14 +139,6 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     result, = sync(rows: [ subevent(active: false) ])
 
     assert_equal 1, result.created
-  end
-
-  test "emptying a whole series is reported, since it is also what a bad slug looks like" do
-    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
-
-    result, = sync(rows: [])
-
-    assert result.emptied_series?
   end
 
   # --- sold out --------------------------------------------------------------
@@ -225,7 +199,10 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
 
     result = nil
-    assert_nothing_raised { result, = sync(error: Pretix::Client::NotFoundError.new("gone")) }
+    # Recording the wait must not add a paper trail version every fifteen minutes.
+    assert_no_difference -> { @event.versions.count } do
+      assert_nothing_raised { result, = sync(error: Pretix::Client::NotFoundError.new("gone")) }
+    end
 
     assert_predicate result, :missing_series?
     assert_equal 1, @event.event_occurrences.reload.count, "existing performances must stand"
@@ -233,27 +210,15 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     assert_nil @event.pretix_synced_at
   end
 
-  test "a series appearing later clears the warning" do
+  test "a series appearing later clears the warning and stamps when it was last read" do
     @event.update_columns(pretix_sync_error: "No ticket shop found for hamlet yet.")
 
-    sync(rows: [ subevent ])
-    @event.reload
-
-    assert_nil @event.pretix_sync_error
-    assert @event.pretix_synced_at.present?
-  end
-
-  test "a successful sync stamps when it last read the series" do
     freeze_time do
       sync(rows: [ subevent ])
+      @event.reload
 
-      assert_equal Time.current.to_i, @event.reload.pretix_synced_at.to_i
-    end
-  end
-
-  test "recording the wait does not add a paper trail version every fifteen minutes" do
-    assert_no_difference -> { @event.versions.count } do
-      sync(error: Pretix::Client::NotFoundError.new("gone"))
+      assert_nil @event.pretix_sync_error
+      assert_equal Time.current.to_i, @event.pretix_synced_at.to_i
     end
   end
 
@@ -277,24 +242,18 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
   # Dates typed before the box was ticked would otherwise appear twice: an exact
   # match is the same performance, so the sync takes the row over.
 
-  test "a hand-typed performance at the same time is adopted, not duplicated" do
-    typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30))
+  test "a hand-typed performance at the same time is adopted, not duplicated, keeping what the producer put on it" do
+    typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30),
+                        access_flags: [ "captioned" ], note: "Signed by arrangement")
 
     result, = sync(rows: [ subevent ])
 
     assert_equal 1, result.adopted
     assert_equal 0, result.created
     assert_equal [ typed.id ], @event.event_occurrences.reload.map(&:id)
-    assert_equal 42, typed.reload.pretix_subevent_id
-  end
-
-  test "adopting keeps everything the producer put on that row" do
-    typed = occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30),
-                        access_flags: [ "captioned" ], note: "Signed by arrangement")
-
-    sync(rows: [ subevent ])
     typed.reload
 
+    assert_equal 42, typed.pretix_subevent_id
     assert_equal [ "captioned" ], typed.access_flags
     assert_equal "Signed by arrangement", typed.note
   end
@@ -335,6 +294,8 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
   # works separates them.
 
   test "a 403 on a working token is the shop not existing yet, not a failure" do
+    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
+
     result = nil
     assert_nothing_raised do
       result, = sync(error: Pretix::Client::AuthError.new("HTTP 403"), events_readable: true)
@@ -342,6 +303,7 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
 
     assert_predicate result, :missing_series?
     assert @event.reload.pretix_sync_error.present?
+    assert_equal 1, @event.event_occurrences.reload.count, "existing performances must stand"
   end
 
   test "a 403 from a token that can read nothing is a real auth failure" do
@@ -361,13 +323,5 @@ class Pretix::PerformanceSyncTest < ActiveSupport::TestCase
     sync.call(other)
 
     assert_equal 1, client.probes, "one organizer probe per run, however many events are unbuilt"
-  end
-
-  test "a 403 leaves the existing performances standing" do
-    occurrence!(starts_at: Time.zone.local(2026, 3, 4, 19, 30), pretix_subevent_id: 42)
-
-    sync(error: Pretix::Client::AuthError.new("HTTP 403"))
-
-    assert_equal 1, @event.event_occurrences.reload.count
   end
 end

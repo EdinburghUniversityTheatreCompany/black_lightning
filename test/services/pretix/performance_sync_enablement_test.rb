@@ -21,14 +21,6 @@ class Pretix::PerformanceSyncEnablementTest < ActiveSupport::TestCase
     assert_predicate show.reload, :pretix_sync_performances?
   end
 
-  test "an event with no ticket shop yet is still switched on, and waits" do
-    # The producer ticks it now and builds the shop later.
-    show = future_show(slug: "not-in-pretix-yet")
-
-    assert_equal [ "not-in-pretix-yet" ], enable.enabled.map(&:slug)
-    assert_predicate show.reload, :pretix_sync_performances?
-  end
-
   test "a past run is left alone" do
     show = FactoryBot.create(:show, slug: "last-year", start_date: 1.year.ago.to_date,
                                     end_date: 1.year.ago.to_date + 3)

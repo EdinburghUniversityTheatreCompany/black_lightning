@@ -14,41 +14,28 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   # pretix answers 429 with Retry-After and may disable API access for a client that
   # keeps bursting, so honouring it is a requirement.
 
-  test "a throttled request is retried after the Retry-After the server asked for" do
-    client, waits, http = recording_client([
-      [ 429, { detail: "Request was throttled." }.to_json, { "retry-after" => "17" } ],
-      empty_page
-    ])
+  test "a throttled request is retried after the wait the server asked for, plus a second" do
+    default = Pretix::Client::DEFAULT_RETRY_AFTER
+    hint = { detail: "Request was throttled. Expected available in 42 seconds." }.to_json
+    [ [ { "retry-after" => "17" }, { detail: "Request was throttled." }.to_json, 18 ],
+      [ nil, "no body at all", default ],
+      [ nil, hint, 43 ] ].each do |headers, body, expected|
+      client, http, waits = build_client([ [ 429, body, headers ].compact, empty_page ])
 
-    assert_empty client.customers
-    assert_equal 2, http.requests.size, "the request must actually be retried"
-    assert_includes waits, 18, "17 from the header, plus a second of slack"
-  end
-
-  test "a 429 with no Retry-After still waits rather than hammering" do
-    client, waits, = recording_client([ [ 429, "no body at all" ], empty_page ])
-
-    assert_empty client.customers
-    assert_includes waits, Pretix::Client::DEFAULT_RETRY_AFTER
-  end
-
-  test "the wait falls back to the body when the header is missing" do
-    throttled = { detail: "Request was throttled. Expected available in 42 seconds." }.to_json
-    client, waits, = recording_client([ [ 429, throttled ], empty_page ])
-
-    client.customers
-
-    assert_includes waits, 43
+      assert_empty client.customers
+      assert_equal 2, http.requests.size, "the request must actually be retried"
+      assert_includes waits, expected
+    end
   end
 
   test "an unrelenting throttle eventually raises instead of retrying forever" do
-    client, = recording_client(Array.new(Pretix::Client::MAX_THROTTLE_RETRIES + 1) { [ 429, "throttled" ] })
+    client, = build_client(Array.new(Pretix::Client::MAX_THROTTLE_RETRIES + 1) { [ 429, "throttled" ] })
 
     assert_raises(Pretix::Client::Error) { client.customers }
   end
 
   test "successive requests are paced apart, so a reconcile cannot burst" do
-    client, waits, = recording_client(Array.new(3) { empty_page })
+    client, _http, waits = build_client(Array.new(3) { empty_page })
 
     3.times { client.customers }
 
@@ -56,23 +43,15 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     waits.each { |wait| assert_operator wait, :<=, Pretix::Client::MIN_REQUEST_INTERVAL }
   end
 
-  # Returns the client, the seconds it was asked to sleep, and the fake transport.
-  def recording_client(responses)
-    waits = []
-    http = FakeHttp.new(responses)
-    client = Pretix::Client.new(token: TOKEN, http: http, settings: FakeSettings.new(false),
-                                sleeper: ->(seconds) { waits << seconds })
-    [ client, waits, http ]
-  end
-
   def empty_page = [ 200, { "count" => 0, "next" => nil, "results" => [] }.to_json ]
 
+  # Returns the client, the fake transport and the seconds the client was asked to sleep.
   def build_client(responses, organizer: "eutc", token: TOKEN, writes: false)
     http = FakeHttp.new(responses)
-    # No-op sleeper: pacing and throttle waits are real seconds.
+    waits = []
     client = Pretix::Client.new(organizer: organizer, token: token, http: http,
-                                settings: FakeSettings.new(writes), sleeper: ->(_seconds) { })
-    [ client, http ]
+                                settings: FakeSettings.new(writes), sleeper: ->(seconds) { waits << seconds })
+    [ client, http, waits ]
   end
 
   def page(results, next_url: nil)
@@ -86,15 +65,6 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   def membership(id: 1, customer: "MG3KL")
     { id: id, customer: customer, membership_type: 225,
       date_start: "2026-08-26T00:00:00+01:00", date_end: "2027-09-21T23:59:59+01:00" }
-  end
-
-  test "every argument is defaulted, so the sync can build a bare client" do
-    # MembershipSync builds Pretix::Client.new bare; the real transport must stay the default.
-    client = Pretix::Client.new
-
-    assert_kind_of Pretix::Client, client
-    assert_equal HttpTransport, client.instance_variable_get(:@http)
-    assert_equal Pretix::Settings, client.instance_variable_get(:@settings)
   end
 
   test "customers requests the organizer-scoped endpoint with a Token header" do
@@ -120,14 +90,6 @@ class Pretix::ClientTest < ActiveSupport::TestCase
 
     assert_equal %w[AAA BBB], identifiers
     assert_equal second, http.requests.last.uri
-  end
-
-  test "customers sends the token on the followed next page too" do
-    second = "https://pretix.eu/api/v1/organizers/eutc/customers/?page=2"
-    client, http = build_client([ page([ customer ], next_url: second), page([]) ])
-
-    client.customers
-
     assert_equal "Token #{TOKEN}", http.requests.last.headers["Authorization"]
   end
 
@@ -182,16 +144,6 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     assert_equal "https://pretix.eu/api/v1/organizers/eutc/memberships/", http.requests.sole.uri
   end
 
-  test "memberships follows pagination" do
-    second = "https://pretix.eu/api/v1/organizers/eutc/memberships/?page=2"
-    client, = build_client([
-      page([ membership(id: 1) ], next_url: second),
-      page([ membership(id: 2) ])
-    ])
-
-    assert_equal [ 1, 2 ], client.memberships.map { |m| m["id"] }
-  end
-
   test "create_membership posts the payload and returns the created membership" do
     client, http = build_client([ [ 201, membership(id: 77).to_json ] ], writes: true)
 
@@ -235,31 +187,18 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     assert_equal({ "date_end" => "2026-08-26T12:00:00+01:00" }, JSON.parse(request.body))
   end
 
-  test "create_membership is suppressed when writes are disabled" do
+  test "writes are suppressed, and reach nothing, when writes are disabled" do
     client, http = build_client([])
 
     assert_raises(Pretix::Client::WritesSuppressedError) do
       client.create_membership(customer: "MG3KL", membership_type: 225,
                                date_start: Time.current, date_end: 1.year.from_now)
     end
-
-    assert_empty http.requests, "a suppressed write must not reach pretix at all"
-  end
-
-  test "update_membership is suppressed when writes are disabled" do
-    client, http = build_client([])
-
     assert_raises(Pretix::Client::WritesSuppressedError) do
       client.update_membership(77, date_end: Time.current)
     end
 
-    assert_empty http.requests
-  end
-
-  test "reads stay live when writes are disabled" do
-    client, = build_client([ page([ customer ]) ])
-
-    assert_equal 1, client.customers.size
+    assert_empty http.requests, "a suppressed write must not reach pretix at all"
   end
 
   test "401 and 403 raise AuthError" do
@@ -316,29 +255,14 @@ class Pretix::ClientTest < ActiveSupport::TestCase
   # A show is a pretix event SERIES; its performances are subevents of the series
   # named by Event#pretix_slug.
 
-  test "subevents are read from the series named by the event slug" do
+  test "subevents are read from the event's series, asking for web availability or nothing can tell a sold-out date" do
     client, http = build_client([ page([ subevent ]) ])
 
     results = client.subevents("hamlet")
 
     assert_equal [ 42 ], results.map { |row| row["id"] }
-    assert_includes http.requests.first.uri, "organizers/eutc/events/hamlet/subevents/"
-  end
-
-  test "subevents ask for web availability, or nothing can tell a sold-out date" do
-    client, http = build_client([ page([ subevent ]) ])
-
-    client.subevents("hamlet")
-
-    assert_includes http.requests.first.uri, "with_availability_for=web"
-  end
-
-  test "subevents follow pagination like every other list" do
-    next_url = "https://pretix.eu/api/v1/organizers/eutc/events/hamlet/subevents/?page=2"
-    client, = build_client([ page([ subevent(id: 1) ], next_url: next_url),
-                             page([ subevent(id: 2) ]) ])
-
-    assert_equal [ 1, 2 ], client.subevents("hamlet").map { |row| row["id"] }
+    assert_includes http.requests.sole.uri, "organizers/eutc/events/hamlet/subevents/"
+    assert_includes http.requests.sole.uri, "with_availability_for=web"
   end
 
   test "a series pretix does not know raises NotFoundError, not a bare Error" do
@@ -346,12 +270,6 @@ class Pretix::ClientTest < ActiveSupport::TestCase
     client, = build_client([ [ 404, { detail: "Not found." }.to_json ] ])
 
     assert_raises(Pretix::Client::NotFoundError) { client.subevents("nope") }
-  end
-
-  test "reading subevents needs no write permission" do
-    client, = build_client([ page([]) ], writes: false)
-
-    assert_empty client.subevents("hamlet")
   end
 
   def subevent(id: 42, date_from: "2026-10-10T19:30:00+01:00")

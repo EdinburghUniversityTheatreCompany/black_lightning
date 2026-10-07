@@ -32,22 +32,12 @@ class PretixModalTest < ApplicationSystemTestCase
                                         end_date: 1.week.from_now)
   end
 
-  test "opening the modal shows a widget for the show that was clicked" do
-    visit_home_with_fake_pretix
-
-    buy_tickets_for(@rocky)
-    pretix_finishes_loading
-
-    assert_selector "#pretix-modal[open]"
-    assert_selector "#pretix-modal h5", text: @rocky.name
-    assert_selector "#pretix-modal", text: "tickets for #{shop_url_for(@rocky)}"
-  end
-
   test "reopening for a different show rebuilds the widget instead of relabelling a spent one" do
     visit_home_with_fake_pretix
 
     buy_tickets_for(@rocky)
-    pretix_finishes_loading
+    assert_selector "#pretix-modal[open]"
+    assert_selector "#pretix-modal h5", text: @rocky.name
     assert_selector "#pretix-modal", text: "tickets for #{shop_url_for(@rocky)}"
     close_modal
 
@@ -105,12 +95,6 @@ class PretixModalTest < ApplicationSystemTestCase
       ".setAttribute('data-pretix-modal-base-url-value', '#{fake_shop_url}')"
     )
     page.execute_script(FAKE_PRETIX)
-  end
-
-  # The real script builds whatever is already on the page as soon as it loads, which is what
-  # consumes the first widget. Nothing announces later ones.
-  def pretix_finishes_loading
-    page.execute_script("window.PretixWidget.buildWidgets()")
   end
 
   def shop_url_for(show)

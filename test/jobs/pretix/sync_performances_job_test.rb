@@ -61,11 +61,9 @@ class Pretix::SyncPerformancesJobTest < ActiveSupport::TestCase
     assert_equal [ tonight ], @sync.events
   end
 
-
   # One producer's wrong slug must not cost every other show its sync.
   test "one failing event does not stop the rest" do
     @sync = FakeSync.new(failing_slugs: [ "broken" ])
-    Pretix::SyncPerformancesJob.sync_builder = -> { @sync }
     event(slug: "broken")
     working = event(slug: "working")
 

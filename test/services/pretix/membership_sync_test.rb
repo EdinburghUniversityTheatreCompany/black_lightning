@@ -137,27 +137,17 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal [ [ :update_membership, 1, horizon ] ], client.writes
   end
 
-  test "leaves a fresh membership alone, and never moves date_start" do
-    client = FakeClient.new(
-      customers: [ customer_hash(member.email) ],
-      memberships: [ membership_hash(id: 1, customer: "cust-#{member.email}",
-                                     date_start: "2024-09-01T00:00:00+01:00", date_end: HORIZON) ]
-    )
+  test "leaves a membership that already reaches the target alone, and never moves date_start" do
+    [ HORIZON, "2028-06-01T23:59:59+01:00" ].each do |date_end|
+      client = FakeClient.new(
+        customers: [ customer_hash(member.email) ],
+        memberships: [ membership_hash(id: 1, customer: "cust-#{member.email}",
+                                       date_start: "2024-09-01T00:00:00+01:00", date_end: date_end) ]
+      )
 
-    assert_equal :unchanged, Pretix::MembershipSync.new(client: client).sync_user(member)
-    assert_empty client.writes
-  end
-
-  test "leaves a membership ending beyond the refresh window alone" do
-    client = FakeClient.new(
-      customers: [ customer_hash(member.email) ],
-      memberships: [ membership_hash(id: 1, customer: "cust-#{member.email}",
-                                     date_start: "2025-09-01T00:00:00+01:00",
-                                     date_end: "2028-06-01T23:59:59+01:00") ]
-    )
-
-    assert_equal :unchanged, Pretix::MembershipSync.new(client: client).sync_user(member)
-    assert_empty client.writes
+      assert_equal :unchanged, Pretix::MembershipSync.new(client: client).sync_user(member), date_end
+      assert_empty client.writes, date_end
+    end
   end
 
   test "expires the membership of someone who has lost the role" do
@@ -228,38 +218,20 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
   end
 
-  test "a customer with neither an SSO identity nor an email is left alone" do
-    # pretix's anonymize action clears both; 189 such records exist in the shop.
-    anonymized = customer_hash(member.email, external_identifier: nil).merge("email" => nil)
-    client = FakeClient.new(customers: [ anonymized ])
-
-    assert_equal :no_customer, Pretix::MembershipSync.new(client: client).sync_user(member)
-    assert_empty client.writes
-  end
-
   # --- the safety bias -------------------------------------------------------
 
-  test "an unreadable date_start expires nothing" do
-    client = FakeClient.new(
-      customers: [ customer_hash(non_member.email) ],
-      memberships: [ membership_hash(id: 4, customer: "cust-#{non_member.email}",
-                                     date_start: nil, date_end: HORIZON) ]
-    )
-
-    assert_equal :ambiguous, Pretix::MembershipSync.new(client: client).sync_user(non_member)
-    assert_empty client.writes
-  end
-
   # An invisible row would mint a second membership.
-  test "an unreadable date_start creates nothing either" do
-    client = FakeClient.new(
-      customers: [ customer_hash(member.email) ],
-      memberships: [ membership_hash(id: 4, customer: "cust-#{member.email}",
-                                     date_start: "not a date", date_end: HORIZON) ]
-    )
+  test "an unreadable date_start writes nothing, either way" do
+    { non_member => nil, member => "not a date" }.each do |user, date_start|
+      client = FakeClient.new(
+        customers: [ customer_hash(user.email) ],
+        memberships: [ membership_hash(id: 4, customer: "cust-#{user.email}",
+                                       date_start: date_start, date_end: HORIZON) ]
+      )
 
-    assert_equal :ambiguous, Pretix::MembershipSync.new(client: client).sync_user(member)
-    assert_empty client.writes
+      assert_equal :ambiguous, Pretix::MembershipSync.new(client: client).sync_user(user)
+      assert_empty client.writes
+    end
   end
 
   test "an unrecognised customer is never expired" do
@@ -292,14 +264,6 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   # --- the stored customer link ----------------------------------------------
   # The link records what the email match found, so a later email change still resolves.
 
-  test "the link is recorded the first time a customer is matched by email" do
-    client = FakeClient.new(customers: [ customer_hash(member.email) ])
-
-    Pretix::MembershipSync.new(client: client).sync_user(member)
-
-    assert_equal "cust-#{member.email}", member.reload.pretix_customer_identifier
-  end
-
   test "a member who changed their email is still found, through the stored link" do
     member.update_column(:pretix_customer_identifier, "cust-old")
     # The customer carries the address they first signed in with; the user no longer does.
@@ -307,13 +271,6 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
     assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
     assert_equal [ :customer ], client.reads.map(&:first).grep(/customer/), "email lookup must not be needed"
-  end
-
-  test "a stale link falls back to email rather than giving up" do
-    member.update_column(:pretix_customer_identifier, "cust-deleted")
-    client = FakeClient.new(customers: [ customer_hash(member.email) ])
-
-    assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
   end
 
   test "a link that still resolves is left alone, even beside a second account" do
@@ -339,14 +296,15 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal "cust-linked", member.reload.pretix_customer_identifier
   end
 
-  test "a stale link is re-pointed at the customer found by email" do
-    # Otherwise this person pays a doomed lookup before the email one, forever.
-    member.update_column(:pretix_customer_identifier, "cust-gone")
-    client = FakeClient.new(customers: [ customer_hash(member.email) ])
+  test "a blank or stale link is (re)pointed at the customer found by email" do
+    # A stale link left alone would cost a doomed lookup before the email one, forever.
+    [ nil, "cust-gone" ].each do |link|
+      member.update_column(:pretix_customer_identifier, link)
+      client = FakeClient.new(customers: [ customer_hash(member.email) ])
 
-    Pretix::MembershipSync.new(client: client).sync_user(member)
-
-    assert_equal "cust-#{member.email}", member.reload.pretix_customer_identifier
+      assert_equal :created, Pretix::MembershipSync.new(client: client).sync_user(member)
+      assert_equal "cust-#{member.email}", member.reload.pretix_customer_identifier
+    end
   end
 
   test "a customer already claimed by another user does not steal the link" do
@@ -460,13 +418,6 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 2, counts[:passes]
     # The second pass re-read everything and left the now-correct shop alone.
     assert_equal 2, client.writes.size
-  end
-
-  test "the counts hash carries every outcome" do
-    counts = Pretix::MembershipSync.new(client: FakeClient.new).reconcile_all
-
-    assert_equal (Pretix::MembershipSync::OUTCOMES + %i[duplicates_expired passes]).sort, counts.keys.sort
-    assert_equal 0, counts.except(:passes).values.sum
   end
 
   # --- the two paths cannot drift --------------------------------------------

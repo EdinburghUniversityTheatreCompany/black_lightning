@@ -17,25 +17,15 @@ class PretixLoginSyncTest < ApplicationIntegrationTest
 
   teardown { ENV["PRETIX_API_TOKEN"] = @token }
 
-  test "authorizing the shop enqueues a membership sync for the signed-in user" do
+  test "authorizing the shop enqueues a delayed membership sync for the signed-in user" do
+    # Delayed because pretix creates the customer after we respond.
+    freeze_time
     login_as @user
 
-    assert_enqueued_with(job: Pretix::SyncMembershipJob, args: [ @user.id ]) do
+    assert_enqueued_with(job: Pretix::SyncMembershipJob, args: [ @user.id ],
+                         at: Pretix::SyncMembershipJob::FIRST_LOGIN_DELAY.from_now) do
       authorize!
     end
-  end
-
-  test "the sync is delayed, because pretix creates the customer after we respond" do
-    login_as @user
-
-    assert_enqueued_jobs 1, only: Pretix::SyncMembershipJob do
-      authorize!
-    end
-
-    enqueued = enqueued_jobs.find { |job| job["job_class"] == Pretix::SyncMembershipJob.name }
-    scheduled_at = enqueued["scheduled_at"]
-    assert scheduled_at.present?, "a first login finds no customer yet, so the sync must be deferred"
-    assert_operator Time.zone.parse(scheduled_at.to_s), :>, Time.current
   end
 
   test "signing in to a DIFFERENT oauth client enqueues nothing" do

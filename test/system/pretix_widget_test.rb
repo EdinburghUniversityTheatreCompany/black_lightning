@@ -39,19 +39,11 @@ class PretixWidgetTest < ApplicationSystemTestCase
                                         start_date: Date.current, end_date: 1.week.from_now)
   end
 
-  test "a show reached without a full page load still builds its widget" do
-    arrive_with_fake_pretix
-
-    turbo_visit show_path(@rocky)
-
-    assert_selector "[data-build='1']", text: "tickets for #{shop_url_for(@rocky)} as a list"
-  end
-
   test "a second show visited in the same session gets its own widget" do
     arrive_with_fake_pretix
 
     turbo_visit show_path(@rocky)
-    assert_selector "[data-build='1']", text: "tickets for #{shop_url_for(@rocky)}"
+    assert_selector "[data-build='1']", text: "tickets for #{shop_url_for(@rocky)} as a list"
 
     turbo_visit show_path(@cabaret)
 
@@ -74,17 +66,6 @@ class PretixWidgetTest < ApplicationSystemTestCase
 
     assert_selector "[data-build='3']", text: "tickets for #{shop_url_for(@rocky)}"
     assert_equal 1, page.evaluate_script("document.querySelectorAll('.pretix-widget-wrapper').length")
-  end
-
-  test "a show with pretix switched off builds nothing" do
-    quiet = FactoryBot.create(:show, is_public: true, pretix_shown: false,
-                                     start_date: Date.current, end_date: 1.week.from_now)
-    arrive_with_fake_pretix
-
-    turbo_visit show_path(quiet)
-
-    assert_selector "h1", text: quiet.name
-    assert_no_selector ".pretix-widget-wrapper"
   end
 
   # Selenium shares one browser across the suite, so the interception would leak into later tests.

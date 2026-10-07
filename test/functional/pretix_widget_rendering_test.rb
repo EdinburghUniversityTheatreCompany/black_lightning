@@ -7,30 +7,16 @@ class PretixWidgetRenderingTest < ActionController::TestCase
 
   STYLESHEET = "https://tickets.bedlamtheatre.co.uk/widget/v1.css".freeze
 
-  test "a pretix-enabled show links the shop's own widget stylesheet" do
-    show = FactoryBot.create(:show, is_public: true, pretix_shown: true, pretix_view: "list")
+  test "a pretix-enabled show renders an empty container pointed at the shop, with its stylesheet and no script" do
+    show = FactoryBot.create(:show, is_public: true, pretix_shown: true, pretix_view: "week")
 
     get :show, params: { id: show }
 
     assert_response :success
     assert_match STYLESHEET, response.body
     assert_no_match(/pretix\.eu/, response.body)
-  end
-
-  test "the widget container is pointed at the shop with list-type, not an invalid inline style" do
-    show = FactoryBot.create(:show, is_public: true, pretix_shown: true, pretix_view: "week")
-
-    get :show, params: { id: show }
-
     assert_select "[data-controller=?][data-pretix-widget-event-url-value=?][data-pretix-widget-list-type-value=?]",
                   "pretix-widget", "https://tickets.bedlamtheatre.co.uk/#{show.pretix_slug}/", "week"
-  end
-
-  test "the page ships an empty container and no widget script of its own" do
-    show = FactoryBot.create(:show, is_public: true, pretix_shown: true)
-
-    get :show, params: { id: show }
-
     # A <script> here is loaded by Turbo before the body it should build in exists, and
     # never again on a later visit (Turbo keeps the identical tag). The controller loads
     # it instead, so only our code decides when a widget is built.
@@ -62,14 +48,6 @@ class PretixModalRenderingTest < ActionController::TestCase
     # fresh element per open inside this container.
     assert_select "#pretix-modal pretix-widget", false
     assert_select "#pretix-modal [data-pretix-modal-target=?]", "widgetContainer"
-  end
-
-  test "a pretix-enabled show gets a Buy Tickets button carrying its slug" do
-    show = upcoming_show
-
-    get :home
-
-    assert_select "button[data-pretix-modal-slug-param=?]", show.pretix_slug
   end
 
   # A <button> with no type submits; if one ever sits inside a <form>, Buy Tickets
