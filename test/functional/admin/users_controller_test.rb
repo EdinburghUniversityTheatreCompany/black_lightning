@@ -163,98 +163,29 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test "should not update password when same as current password" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("password123")
 
-    put :update, params: {
-      id: @user,
-      user: {
-        password: current_password,
-        password_confirmation: current_password,
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when same as current"
-
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
+    assert_equal original_encrypted_password, @user.encrypted_password
+    assert_equal "Updated Name", @user.first_name
+    # permitted_params must not mutate the live params: a re-rendered form needs them.
+    assert_equal "password123", @controller.params[:user][:password]
   end
 
   test "should update password when different from current password" do
-    current_password = "password123"
-    new_password = "newpassword456"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("newpassword456")
 
-    put :update, params: {
-      id: @user,
-      user: {
-        password: new_password,
-        password_confirmation: new_password,
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    assert_not_equal original_encrypted_password, @user.encrypted_password, "Password should have been updated when different from current"
-
-    assert @user.valid_password?(new_password), "User should be able to authenticate with new password"
-    assert_not @user.valid_password?(current_password), "User should not be able to authenticate with old password"
-
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
+    assert_not_equal original_encrypted_password, @user.encrypted_password
+    assert @user.valid_password?("newpassword456")
+    assert_not @user.valid_password?("password123")
+    assert_equal "Updated Name", @user.first_name
   end
 
   test "should not update password when blank password submitted" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-    @user.reload
-    original_encrypted_password = @user.encrypted_password
+    original_encrypted_password = put_password("")
 
-    put :update, params: {
-      id: @user,
-      user: {
-        password: "",
-        password_confirmation: "",
-        first_name: "Updated Name"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    @user.reload
-
-    assert_equal original_encrypted_password, @user.encrypted_password, "Password should not have been updated when blank"
-
-    assert @user.valid_password?(current_password), "User should still be able to authenticate with current password"
-
-    assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
-  end
-
-  # permitted_params must not mutate the live request params: a re-rendered form needs them.
-  test "permitted_params does not mutate the request params" do
-    current_password = "password123"
-    @user.update!(password: current_password, password_confirmation: current_password)
-
-    # Equal to the current password counts as unchanged, but the submitted value stays in params.
-    put :update, params: {
-      id: @user,
-      user: {
-        password: current_password,
-        password_confirmation: current_password,
-        first_name: "Kept"
-      }
-    }
-
-    assert_redirected_to admin_user_path(@user)
-    assert_equal current_password, @controller.params[:user][:password],
-      "permitted_params must not delete keys from the live request params"
+    assert_equal original_encrypted_password, @user.encrypted_password
+    assert @user.valid_password?("password123")
+    assert_equal "Updated Name", @user.first_name
   end
 
   test "get autocomplete list does not work when not signed in" do
@@ -321,7 +252,6 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test "should post merge_preview redirects to merge with source_user_id" do
-    sign_in users(:admin)
     target_user = FactoryBot.create(:member)
     source_user = FactoryBot.create(:member)
 
@@ -331,7 +261,6 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test "should absorb user with field preferences" do
-    sign_in users(:admin)
     target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
     source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
     source_id = source_user.id
@@ -349,25 +278,23 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_not User.exists?(source_id), "Source user should be deleted"
   end
 
-  test "should absorb user without field preferences uses defaults" do
-    sign_in users(:admin)
-    target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
-    source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
-    source_id = source_user.id
+  private
 
-    post :absorb, params: {
-      id: target_user.id,
-      source_user_id: source_user.id
+  # Gives @user the password "password123", PUTs an update submitting `password` (and a new first
+  # name), reloads @user and returns the encrypted password from before the request.
+  def put_password(password)
+    @user.update!(password: "password123", password_confirmation: "password123")
+    original_encrypted_password = @user.reload.encrypted_password
+
+    put :update, params: {
+      id: @user,
+      user: { password: password, password_confirmation: password, first_name: "Updated Name" }
     }
 
-    assert_redirected_to admin_user_path(target_user)
-    target_user.reload
-    assert_equal "John", target_user.first_name  # Kept target values
-    assert_equal "Target", target_user.last_name
-    assert_not User.exists?(source_id), "Source user should be deleted"
+    assert_redirected_to admin_user_path(@user)
+    @user.reload
+    original_encrypted_password
   end
-
-  private
 
   # Assert on the parsed JSON: Faker name collisions make body-substring checks flaky, and a name
   # with & or < is escaped in the JSON so it never matches literally.

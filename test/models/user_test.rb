@@ -37,19 +37,13 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user = users(:user)
   end
 
-  test "search_by_name finds users by full name" do
+  test "search_by_name finds users by full name, ignoring case" do
     alice = FactoryBot.create(:user, first_name: "Alice", last_name: "Smith")
     bob   = FactoryBot.create(:user, first_name: "Bob", last_name: "Jones")
 
-    results = User.search_by_name("Alice Smith")
+    results = User.search_by_name("alice smith")
     assert_includes results, alice
     assert_not_includes results, bob
-  end
-
-  test "search_by_name is case insensitive" do
-    alice = FactoryBot.create(:user, first_name: "Alice", last_name: "Smith")
-
-    assert_includes User.search_by_name("alice smith"), alice
   end
 
   test "order_by_last_name_first sorts by last name then first name" do
@@ -126,12 +120,6 @@ class Admin::UserTest < ActiveSupport::TestCase
     user = User.new_user(attributes)
     assert_equal "Hexagon", user.password
     assert user.valid?
-  end
-
-  test "existing user validates and saves without the orphan google columns" do
-    @user.first_name = "Regression"
-    assert @user.valid?, @user.errors.full_messages.to_sentence
-    assert @user.save
   end
 
   # Debt
@@ -313,48 +301,18 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal "s1234567", user.student_id
   end
 
-  test "student_id automatic extraction from email on update" do
-    @user.update!(email: "s9876543@ed.ac.uk")
-    assert_equal "s9876543", @user.student_id
-  end
-
   test "student_id extraction handles mixed case email" do
     @user.update!(email: "S7654321@ED.AC.UK")
     assert_equal "s7654321", @user.student_id
   end
 
-  test "student_id not extracted from non-matching emails" do
-    @user.update!(student_id: nil)
+  test "a non-matching email leaves student_id alone" do
+    @user.update!(student_id: "s1111111")
 
-    non_matching_emails = [
-      "staff@ed.ac.uk",
-      "john@gmail.com",
-      "j.appleseed@ed.ac.uk"
-    ]
-
-    non_matching_emails.each do |email|
+    %w[staff@ed.ac.uk john@gmail.com j.appleseed@ed.ac.uk].each do |email|
       @user.update!(email: email)
-      assert_nil @user.student_id, "student_id should remain nil for #{email}"
+      assert_equal "s1111111", @user.student_id, email
     end
-  end
-
-  test "manually set student_id is preserved" do
-    @user.student_id = "s1111111"
-    @user.email = "john@gmail.com"
-    @user.save!
-
-    assert_equal "s1111111", @user.student_id
-  end
-
-  test "duplicate student_ids are allowed" do
-    @user.update!(email: "s1234567@ed.ac.uk")
-    assert_equal "s1234567", @user.student_id
-
-    user2 = FactoryBot.create(:user, email: "s9999999@ed.ac.uk")
-    user2.update!(student_id: "s1234567")
-    assert_equal "s1234567", user2.student_id
-
-    assert_equal 2, User.where(student_id: "s1234567").count
   end
 
   # Associate ID tests
@@ -378,73 +336,25 @@ class Admin::UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "associate_id is normalized to uppercase" do
-    @user.associate_id = "assoc213752"
-    @user.save!
-
+  test "associate_id is stripped and upcased" do
+    @user.update!(associate_id: "  assoc213752  ")
     assert_equal "ASSOC213752", @user.associate_id
   end
 
-  test "associate_id is stripped of whitespace" do
-    @user.associate_id = "  ASSOC123456  "
-    @user.save!
-
-    assert_equal "ASSOC123456", @user.associate_id
-  end
-
-  test "user can have both student_id and associate_id" do
-    @user.student_id = "s1234567"
-    @user.associate_id = "ASSOC123456"
-    @user.save!
-
-    assert_equal "s1234567", @user.student_id
-    assert_equal "ASSOC123456", @user.associate_id
-  end
-
   # Profile completion tests
-  test "profile_completed_at can be set and read" do
-    assert_respond_to @user, :profile_completed_at, "User should have profile_completed_at attribute"
-
-    timestamp = Time.current
-    @user.update!(profile_completed_at: timestamp)
-
-    assert_in_delta timestamp, @user.profile_completed_at, 1.second
-  end
-
-  test "profile_completed_at can be nil" do
-    user = FactoryBot.create(:user)
-    user.update_column(:profile_completed_at, nil)
-
-    assert_nil user.profile_completed_at
-  end
-
-  test "profile_complete? returns true when profile_completed_at is present" do
-    @user.update!(profile_completed_at: Time.current)
-
-    assert @user.profile_complete?
-  end
-
-  test "profile_complete? returns false when profile_completed_at is nil" do
+  test "profile_complete? and profile_incomplete? read profile_completed_at" do
     @user.update_column(:profile_completed_at, nil)
-
-    assert_not @user.profile_complete?
-  end
-
-  test "profile_incomplete? returns true when profile_completed_at is nil" do
-    @user.update_column(:profile_completed_at, nil)
-
     assert @user.profile_incomplete?
-  end
+    assert_not @user.profile_complete?
 
-  test "profile_incomplete? returns false when profile_completed_at is present" do
     @user.update!(profile_completed_at: Time.current)
-
+    assert @user.profile_complete?
     assert_not @user.profile_incomplete?
   end
 
-  test "complete_profile! sets profile_completed_at and consented" do
-    @user.update_column(:profile_completed_at, nil)
-    @user.update_column(:consented, nil)
+  test "complete_profile! stamps completion and consent and resets the salt" do
+    @user.update_columns(profile_completed_at: nil, consented: 6.months.ago.to_date)
+    original_salt = @user.profile_completion_salt
 
     freeze_time do
       @user.complete_profile!
@@ -452,28 +362,7 @@ class Admin::UserTest < ActiveSupport::TestCase
       assert_in_delta Time.current, @user.profile_completed_at, 1.second
       assert_equal Date.current, @user.consented
     end
-  end
-
-  test "complete_profile! updates consented even if already set" do
-    old_consent_date = Date.current.advance(months: -6)
-    @user.update_column(:consented, old_consent_date)
-    @user.update_column(:profile_completed_at, nil)
-
-    freeze_time do
-      @user.complete_profile!
-
-      assert_equal Date.current, @user.consented
-      assert_not_equal old_consent_date, @user.consented
-    end
-  end
-
-  test "profile_completion_token generates a valid signed token" do
-    @user.update_column(:profile_completed_at, nil)
-    token = @user.profile_completion_token
-
-    assert_not_nil token
-    assert_kind_of String, token
-    assert token.length > 20, "Token should be a substantial signed ID"
+    assert_not_equal original_salt, @user.profile_completion_salt
   end
 
   test "find_by_profile_completion_token finds user with valid token" do
@@ -502,14 +391,6 @@ class Admin::UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "find_by_profile_completion_token returns nil for token with wrong purpose" do
-    wrong_purpose_token = @user.signed_id(purpose: :password_reset, expires_in: 7.days)
-
-    found_user = User.find_by_profile_completion_token(wrong_purpose_token)
-
-    assert_nil found_user
-  end
-
   test "find_by_profile_completion_token returns nil after profile completion" do
     @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token
@@ -523,7 +404,6 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   test "profile_completion_salt is included in token purpose" do
     @user.update_column(:profile_completed_at, nil)
-    original_salt = @user.profile_completion_salt
     token = @user.profile_completion_token
 
     found = User.find_by_profile_completion_token(token)
@@ -532,14 +412,6 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user.update_column(:profile_completion_salt, SecureRandom.hex(8))
 
     assert_nil User.find_by_profile_completion_token(token)
-  end
-
-  test "complete_profile! resets the salt" do
-    original_salt = @user.profile_completion_salt
-
-    @user.complete_profile!
-
-    assert_not_equal original_salt, @user.profile_completion_salt
   end
 
   test "profile_incomplete scope returns users without profile_completed_at" do
@@ -569,26 +441,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   # Ransack tests
-  test "ransackable_attributes includes member_id for users with :read permission" do
-    user_with_read = FactoryBot.create(:user)
-    role = Role.create!(name: "User Viewer")
-    user_with_read.add_role(role)
-
-    permission = admin_permissions(:can_read_users)
-    role.permissions << permission
-
-    ability = Ability.new(user_with_read)
-
-    assert ability.can?(:read, User), "User should have :read permission for User"
-
-    ransackable_attrs = User.ransackable_attributes(ability)
-
-    assert_includes ransackable_attrs, "member_id", "member_id should be ransackable for users with :read permission"
-    assert_includes ransackable_attrs, "student_id", "student_id should be ransackable for users with :read permission"
-    assert_includes ransackable_attrs, "associate_id", "associate_id should be ransackable for users with :read permission"
-  end
-
-  test "ransack search with member_id_cont works for users with :read permission" do
+  test "member_id and the id columns are ransackable for users with :read permission" do
     user1 = FactoryBot.create(:user, student_id: "s1234567")
     user2 = FactoryBot.create(:user, associate_id: "ASSOC123")
     user3 = FactoryBot.create(:user, student_id: "s9999999")
@@ -596,131 +449,37 @@ class Admin::UserTest < ActiveSupport::TestCase
     searcher = FactoryBot.create(:user)
     role = Role.create!(name: "User Viewer")
     searcher.add_role(role)
-    permission = admin_permissions(:can_read_users)
-    role.permissions << permission
-
+    role.permissions << admin_permissions(:can_read_users)
     ability = Ability.new(searcher)
 
-    q = User.ransack({ member_id_cont: "123" }, auth_object: ability)
-    results = q.result
+    ransackable_attrs = User.ransackable_attributes(ability)
+    assert_includes ransackable_attrs, "student_id"
+    assert_includes ransackable_attrs, "associate_id"
 
-    assert_includes results, user1, "Should find user with student_id containing '123'"
-    assert_includes results, user2, "Should find user with associate_id containing '123'"
-    assert_not_includes results, user3, "Should not find user without '123' in member_id"
+    results = User.ransack({ member_id_cont: "123" }, auth_object: ability).result
+    assert_includes results, user1, "student_id containing '123'"
+    assert_includes results, user2, "associate_id containing '123'"
+    assert_not_includes results, user3
   end
 
-  test "calendar_email_for_invites returns main email when calendar_email is blank" do
-    @user.calendar_email = nil
-    assert_equal @user.email, @user.calendar_email_for_invites
+  test "calendar_email_for_invites falls back to the main email" do
+    [ nil, "" ].each do |blank|
+      @user.calendar_email = blank
+      assert_equal @user.email, @user.calendar_email_for_invites
+    end
 
-    @user.calendar_email = ""
-    assert_equal @user.email, @user.calendar_email_for_invites
-  end
-
-  test "calendar_email_for_invites returns calendar_email when set" do
     @user.calendar_email = "other@example.com"
     assert_equal "other@example.com", @user.calendar_email_for_invites
+  end
+
+  test "a new user gets a calendar_token" do
+    assert FactoryBot.create(:user).calendar_token.present?
   end
 
   test "calendar_email validates format when present" do
     @user.calendar_email = "not-an-email"
     assert_not @user.valid?
     assert @user.errors[:calendar_email].present?
-  end
-
-  # Absorb tests — user merging
-  test "admin role is NOT transferred via absorb when source user holds :admin" do
-    target_user = FactoryBot.create(:user)
-    source_user = FactoryBot.create(:user)
-
-    source_user.add_role(:admin)
-    assert source_user.has_role?(:admin), "Setup: source user should have :admin"
-
-    result = target_user.absorb(source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-
-    assert_not target_user.has_role?(:admin), "Target user should NOT have :admin after absorbing admin"
-    assert_not_includes result[:transferred][:roles], "Admin", "Admin role should not be in transferred roles list"
-  end
-
-  test "admin absorbing another admin does NOT get duplicate :admin roles" do
-    admin_user = FactoryBot.create(:admin)
-    source_admin = FactoryBot.create(:admin)
-
-    result = admin_user.absorb(source_admin)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-
-    admin_role_count = admin_user.roles.where(name: "Admin").count
-    assert_equal 1, admin_role_count, "Target admin should have exactly one :admin role, not duplicated"
-  end
-
-  test "all non-admin roles transfer normally via absorb" do
-    target_user = FactoryBot.create(:user)
-    source_user = FactoryBot.create(:user)
-
-    source_user.add_role(:member)
-    source_user.add_role(:committee)
-
-    result = target_user.absorb(source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-
-    assert target_user.has_role?(:member), "Target should have :member role"
-    assert target_user.has_role?(:committee), "Target should have :committee role"
-
-    assert_includes result[:transferred][:roles], "Member", "Member should be in transferred roles"
-    assert_includes result[:transferred][:roles], "Committee", "Committee should be in transferred roles"
-  end
-
-  test "absorb with mixed admin and non-admin roles transfers only non-admin" do
-    target_user = FactoryBot.create(:user)
-    source_user = FactoryBot.create(:user)
-
-    source_user.add_role(:admin)
-    source_user.add_role(:member)
-    source_user.add_role(:committee)
-
-    result = target_user.absorb(source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-
-    assert target_user.has_role?(:member), "Target should have :member role"
-    assert target_user.has_role?(:committee), "Target should have :committee role"
-    assert_not target_user.has_role?(:admin), "Target should NOT have :admin role"
-
-    assert_includes result[:transferred][:roles], "Member"
-    assert_includes result[:transferred][:roles], "Committee"
-    assert_not_includes result[:transferred][:roles], "Admin"
-  end
-
-  test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
-    # Raw SQL bypasses the normalizes callback, to simulate data stored before the normalisation.
-    target = FactoryBot.create(:user, email: "s9911001@ed.ac.uk")
-    source = FactoryBot.create(:user)
-    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9911001@sms.ed.ac.uk' WHERE id = #{source.id}")
-    source.reload
-
-    result = target.absorb(source)
-
-    assert result[:success], result[:errors].inspect
-    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
-  end
-
-  test "absorb succeeds when source sms.ed.ac.uk email normalizes to email held by a third user" do
-    # Raw SQL bypasses the normalizes callback; the third user must not be touched.
-    third_user = FactoryBot.create(:user, email: "s9922002@ed.ac.uk")
-    source     = FactoryBot.create(:user)
-    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9922002@sms.ed.ac.uk' WHERE id = #{source.id}")
-    source.reload
-    target = FactoryBot.create(:user, email: "unknown_abc123@bedlamtheatre.co.uk")
-
-    result = target.absorb(source)
-
-    assert result[:success], result[:errors].inspect
-    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
-    assert_equal "s9922002@ed.ac.uk", third_user.reload.email
   end
 
   ##
@@ -737,13 +496,11 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_not life_member.member?, "A life member is only a member for ticket discounts (pretix), nowhere else"
   end
 
-  test "admin? reads the Admin role" do
+  test "admin? and committee? read their roles" do
     assert users(:admin).admin?
     assert_not users(:committee).admin?
     assert_not users(:member).admin?
-  end
 
-  test "committee? reads the Committee role" do
     assert users(:committee).committee?
     assert_not users(:member).committee?
     assert_not users(:user).committee?

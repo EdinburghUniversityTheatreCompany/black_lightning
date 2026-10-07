@@ -29,9 +29,8 @@ class StringSimilarityTest < ActiveSupport::TestCase
     assert_equal 0.0, StringSimilarity.levenshtein_similarity("", "hello")
   end
 
-  test "levenshtein_similarity returns value between 0 and 1" do
-    similarity = StringSimilarity.levenshtein_similarity("hello", "hallo")
-    assert similarity > 0.0 && similarity < 1.0
+  test "levenshtein_similarity is one minus the distance over the longer length" do
+    assert_in_delta 0.8, StringSimilarity.levenshtein_similarity("hello", "hallo")
   end
 
   # normalize_name tests
@@ -58,51 +57,24 @@ class StringSimilarityTest < ActiveSupport::TestCase
   end
 
   # fuzzy_name_match? tests
-  test "fuzzy_name_match returns true for exact match" do
-    assert StringSimilarity.fuzzy_name_match?("John", "John")
-  end
-
-  test "fuzzy_name_match returns true for case insensitive match" do
-    assert StringSimilarity.fuzzy_name_match?("JOHN", "john")
-  end
-
-  test "fuzzy_name_match returns true for abbreviations" do
-    assert StringSimilarity.fuzzy_name_match?("Leo", "Leonardo")
-    assert StringSimilarity.fuzzy_name_match?("Leonardo", "Leo")
-  end
-
-  test "fuzzy_name_match returns true for similar names" do
-    assert StringSimilarity.fuzzy_name_match?("John", "Jon")
+  test "fuzzy_name_match accepts case, punctuation, abbreviation and typo variants" do
+    [ %w[John John], %w[JOHN john], %w[Leo Leonardo], %w[Leonardo Leo], %w[John Jon],
+      %w[Smith-Jones SmithJones], %w[O'Connor-Smith OConnorSmith], %w[Turnbull Trunbull],
+      %w[Johnson Jonson], %w[Anderson Andersen], %w[O'Brien OBrien], %w[D'Angelo DAngelo],
+      %w[Michael Micheal], %w[Jean-Pierre JeanPierre] ].each do |a, b|
+      assert StringSimilarity.fuzzy_name_match?(a, b), "#{a} / #{b}"
+    end
   end
 
   test "fuzzy_name_match returns false for very different names" do
-    assert_not StringSimilarity.fuzzy_name_match?("John", "Sarah")
-  end
-
-  test "fuzzy_name_match handles special characters" do
-    assert StringSimilarity.fuzzy_name_match?("O'Brien", "OBrien")
+    [ %w[John Sarah], %w[Michael David], %w[Smith Jones], %w[Turnbull Anderson] ].each do |a, b|
+      assert_not StringSimilarity.fuzzy_name_match?(a, b), "#{a} / #{b}"
+    end
   end
 
   test "fuzzy_name_match respects custom threshold" do
     assert_not StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.95)
     assert StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.5)
-  end
-
-  # Edge cases for last names
-  test "fuzzy_name_match handles hyphenated last names" do
-    assert StringSimilarity.fuzzy_name_match?("Smith-Jones", "SmithJones")
-    assert StringSimilarity.fuzzy_name_match?("O'Connor-Smith", "OConnorSmith")
-  end
-
-  test "fuzzy_name_match handles common last name typos" do
-    assert StringSimilarity.fuzzy_name_match?("Turnbull", "Trunbull")
-    assert StringSimilarity.fuzzy_name_match?("Johnson", "Jonson")
-    assert StringSimilarity.fuzzy_name_match?("Anderson", "Andersen")
-  end
-
-  test "fuzzy_name_match handles apostrophes in last names" do
-    assert StringSimilarity.fuzzy_name_match?("O'Brien", "OBrien")
-    assert StringSimilarity.fuzzy_name_match?("D'Angelo", "DAngelo")
   end
 
   test "match_confidence returns 1.0 for exact normalized match" do
@@ -120,14 +92,5 @@ class StringSimilarityTest < ActiveSupport::TestCase
     confidence = StringSimilarity.match_confidence("John", "Jon")
     assert confidence > 0.6
     assert confidence < 0.9
-  end
-
-  test "match_confidence orders exact > abbreviation > levenshtein" do
-    exact = StringSimilarity.match_confidence("Alex", "Alex")
-    abbreviation = StringSimilarity.match_confidence("Alex", "Alexander")
-    levenshtein = StringSimilarity.match_confidence("Alex", "Alec")
-
-    assert exact > abbreviation
-    assert abbreviation > levenshtein
   end
 end

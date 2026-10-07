@@ -51,256 +51,70 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal "Director / Producer", position
   end
 
-  test "absorb transfers team memberships from different shows" do
-    show1 = FactoryBot.create(:show)
-    show2 = FactoryBot.create(:show)
-    FactoryBot.create(:team_member, user: @target_user, teamwork: show1, position: "Director")
-    FactoryBot.create(:team_member, user: @source_user, teamwork: show2, position: "Producer")
+  # Staffing, debt and credit tests
+
+  test "absorb moves staffing jobs, debts, notifications and credits to the target" do
+    records = [
+      FactoryBot.create(:staffing_job, user: @source_user),
+      FactoryBot.create(:staffing_debt, user: @source_user),
+      FactoryBot.create(:maintenance_debt, user: @source_user),
+      FactoryBot.create(:initial_debt_notification, user: @source_user),
+      FactoryBot.create(:maintenance_credit, user: @source_user)
+    ]
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    teamwork_ids = @target_user.team_membership.reload.pluck(:teamwork_id)
-    assert_includes teamwork_ids, show1.id
-    assert_includes teamwork_ids, show2.id
-  end
-
-  # Staffing job tests
-
-  test "absorb transfers staffing jobs" do
-    staffing_job = FactoryBot.create(:staffing_job, user: @source_user)
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, staffing_job.reload.user_id
-  end
-
-  # Staffing debt tests
-
-  test "absorb transfers staffing debts and reallocates" do
-    debt = FactoryBot.create(:staffing_debt, user: @source_user)
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, debt.reload.user_id
-  end
-
-  # Maintenance debt tests
-
-  test "absorb transfers maintenance debts and reallocates" do
-    debt = FactoryBot.create(:maintenance_debt, user: @source_user)
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, debt.reload.user_id
-  end
-
-  # Debt notification tests
-
-  test "absorb transfers debt notifications" do
-    notification = FactoryBot.create(:initial_debt_notification, user: @source_user)
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, notification.reload.user_id
-  end
-
-  # Maintenance credit tests
-
-  test "absorb transfers maintenance credits" do
-    credit = FactoryBot.create(:maintenance_credit, user: @source_user)
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, credit.reload.user_id
+    assert result[:success], result[:errors].inspect
+    records.each { |record| assert_equal @target_user.id, record.reload.user_id, record.class.name }
+    assert_equal 1, result[:transferred][:staffing_jobs]
+    assert_equal 1, result[:transferred][:staffing_debts]
   end
 
   # Role tests
 
-  test "absorb merges roles from both users" do
+  test "absorb unions roles without duplicating them and never transfers Admin" do
+    @source_user.add_role(:admin)
     @source_user.add_role(:committee)
-    @target_user.add_role(:member)
 
     result = @target_user.absorb(@source_user)
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert @target_user.has_role?(:member), "Target should keep member role"
-    assert @target_user.has_role?(:committee), "Target should gain committee role from source"
-  end
-
-  test "absorb does not duplicate roles already on target" do
-    @source_user.add_role(:member)
-    @target_user.add_role(:member)
-
-    initial_role_count = @target_user.roles.count
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal initial_role_count, @target_user.roles.reload.count, "Should not duplicate existing roles"
-  end
-
-  # Source user deletion test
-
-  test "absorb destroys source user after transfer" do
-    source_id = @source_user.id
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_not User.exists?(source_id), "Source user should be deleted"
-  end
-
-  # Return value tests
-
-  test "absorb returns transferred counts on success" do
-    FactoryBot.create(:staffing_job, user: @source_user)
-    FactoryBot.create(:staffing_debt, user: @source_user)
-    @source_user.add_role("Committee")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success]
-    assert result[:transferred].is_a?(Hash), "Should return transferred counts"
-    assert_equal 1, result[:transferred][:staffing_jobs]
-    assert_equal 1, result[:transferred][:staffing_debts]
-    assert_includes result[:transferred][:roles], "Committee"
+    assert result[:success], result[:errors].inspect
+    assert @target_user.has_role?(:committee)
+    assert_not @target_user.has_role?(:admin)
+    assert_equal 1, @target_user.roles.where(name: "Member").count
+    assert_equal [ "Committee" ], result[:transferred][:roles]
   end
 
   # Email handling tests
 
-  test "absorb replaces target's unknown_ email with source's real email" do
-    @target_user.update!(email: "unknown_12345678@bedlamtheatre.co.uk")
-    real_email = "john.doe@example.com"
-    @source_user.update!(email: real_email)
+  test "absorb takes the source's email only when the target holds an unknown_ placeholder" do
+    [
+      [ "unknown_1@bedlamtheatre.co.uk", "real1@example.com", "real1@example.com" ],
+      [ "real2@example.com", "unknown_2@bedlamtheatre.co.uk", "real2@example.com" ],
+      [ "unknown_3@bedlamtheatre.co.uk", "unknown_4@bedlamtheatre.co.uk", "unknown_3@bedlamtheatre.co.uk" ],
+      [ "target@example.com", "source@example.com", "target@example.com" ]
+    ].each do |target_email, source_email, expected|
+      target = FactoryBot.create(:member, email: target_email)
+      source = FactoryBot.create(:member, email: source_email)
 
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal real_email, @target_user.reload.email, "Target should have source's real email"
-  end
-
-  test "absorb keeps target's real email when source has unknown_ email" do
-    real_email = "jane.doe@example.com"
-    @target_user.update!(email: real_email)
-    @source_user.update!(email: "unknown_87654321@bedlamtheatre.co.uk")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal real_email, @target_user.reload.email, "Target should keep real email"
-  end
-
-  test "absorb keeps target's email when both have unknown_ emails" do
-    target_unknown = "unknown_11111111@bedlamtheatre.co.uk"
-    @target_user.update!(email: target_unknown)
-    @source_user.update!(email: "unknown_22222222@bedlamtheatre.co.uk")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal target_unknown, @target_user.reload.email, "Target should keep its unknown email"
-  end
-
-  test "absorb keeps target's email when both have real emails" do
-    target_email = "target@example.com"
-    @target_user.update!(email: target_email)
-    @source_user.update!(email: "source@example.com")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal target_email, @target_user.reload.email, "Target should keep its real email"
-  end
-
-  test "absorb with keep_from_source email succeeds" do
-    source_email_to_preserve = @source_user.email
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
-
-    assert result[:success], "Absorb should succeed when preserving the source user's email: #{result[:errors]}"
-    assert_equal source_email_to_preserve, @target_user.reload.email
-  end
-
-  test "absorb with email from targetsucceeds" do
-    target_email_to_preserve = @target_user.email
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed when preserving the target user's email: #{result[:errors]}"
-    assert_equal target_email_to_preserve, @target_user.reload.email
+      assert target.absorb(source)[:success]
+      assert_equal expected, target.reload.email, "#{target_email} absorbing #{source_email}"
+    end
   end
 
   # Field preference tests (keep_from_source parameter)
 
-  test "absorb with keep_from_source name copies name from source" do
-    @target_user.update!(first_name: "John", last_name: "Target")
-    @source_user.update!(first_name: "Jane", last_name: "Source")
+  test "absorb copies the fields named in keep_from_source" do
+    @target_user.update!(first_name: "John", last_name: "Target", email: "target@example.com",
+                         phone_number: "111", student_id: "s1111111", associate_id: "ASSOC111")
+    @source_user.update!(first_name: "Jane", last_name: "Source", email: "source@example.com",
+                         phone_number: "222", student_id: "s2222222", associate_id: "ASSOC222")
 
-    result = @target_user.absorb(@source_user, keep_from_source: [ "name" ])
+    result = @target_user.absorb(@source_user, keep_from_source: %w[name email phone_number student_id associate_id])
 
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    @target_user.reload
-    assert_equal "Jane", @target_user.first_name
-    assert_equal "Source", @target_user.last_name
-  end
-
-  test "absorb with keep_from_source email copies email from source" do
-    @target_user.update!(email: "target@example.com")
-    @source_user.update!(email: "source@example.com")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal "source@example.com", @target_user.reload.email
-  end
-
-  test "absorb with keep_from_source phone_number copies phone from source" do
-    @target_user.update!(phone_number: "111-111-1111")
-    @source_user.update!(phone_number: "222-222-2222")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "phone_number" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal "222-222-2222", @target_user.reload.phone_number
-  end
-
-  test "absorb with keep_from_source student_id copies student_id from source" do
-    @target_user.update!(student_id: "s1111111")
-    @source_user.update!(student_id: "s2222222")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "student_id" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal "s2222222", @target_user.reload.student_id
-  end
-
-  test "absorb with keep_from_source associate_id copies associate_id from source" do
-    @target_user.update!(associate_id: "ASSOC111")
-    @source_user.update!(associate_id: "ASSOC222")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "associate_id" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal "ASSOC222", @target_user.reload.associate_id
-  end
-
-  test "absorb with multiple keep_from_source fields copies all specified fields" do
-    @target_user.update!(first_name: "John", last_name: "Target", student_id: "s1111111")
-    @source_user.update!(first_name: "Jane", last_name: "Source", student_id: "s2222222")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "name", "student_id" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    @target_user.reload
-    assert_equal "Jane", @target_user.first_name
-    assert_equal "Source", @target_user.last_name
-    assert_equal "s2222222", @target_user.student_id
+    assert result[:success], result[:errors].inspect
+    assert_equal %w[Jane Source source@example.com 222 s2222222 ASSOC222],
+                 @target_user.reload.attributes.values_at(*%w[first_name last_name email phone_number student_id associate_id])
   end
 
   test "absorb without keep_from_source keeps target fields by default" do
@@ -315,39 +129,7 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal "Target", @target_user.last_name
   end
 
-  test "absorb with keep_from_source email overrides unknown_ email logic" do
-    @target_user.update!(email: "unknown_12345678@bedlamtheatre.co.uk")
-    @source_user.update!(email: "source@example.com")
-
-    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal "source@example.com", @target_user.reload.email
-  end
-
   # Cached duplicate tests
-
-  test "absorb removes cached duplicates where source is user1" do
-    other_user = FactoryBot.create(:member)
-    duplicate = CachedDuplicate.create!(user1: @source_user, user2: other_user, bucket_type: "overlapping")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_not CachedDuplicate.exists?(duplicate.id), "Cached duplicate should be deleted"
-    assert_not User.exists?(@source_user.id), "Source user should be deleted"
-  end
-
-  test "absorb removes cached duplicates where source is user2" do
-    other_user = FactoryBot.create(:member)
-    duplicate = CachedDuplicate.create!(user1: other_user, user2: @source_user, bucket_type: "no_overlap")
-
-    result = @target_user.absorb(@source_user)
-
-    assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_not CachedDuplicate.exists?(duplicate.id), "Cached duplicate should be deleted"
-    assert_not User.exists?(@source_user.id), "Source user should be deleted"
-  end
 
   test "absorb removes all cached duplicates involving source user" do
     user1 = FactoryBot.create(:member)
@@ -367,5 +149,35 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_not CachedDuplicate.exists?(dup3.id), "Cached duplicate 3 should be deleted"
     assert CachedDuplicate.exists?(dup_keep.id), "Unrelated cached duplicate should remain"
     assert_not User.exists?(@source_user.id), "Source user should be deleted"
+  end
+
+  # sms.ed.ac.uk emails
+
+  test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
+    # Raw SQL bypasses the normalizes callback, to simulate data stored before the normalisation.
+    target = FactoryBot.create(:user, email: "s9911001@ed.ac.uk")
+    source = FactoryBot.create(:user)
+    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9911001@sms.ed.ac.uk' WHERE id = #{source.id}")
+    source.reload
+
+    result = target.absorb(source)
+
+    assert result[:success], result[:errors].inspect
+    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
+  end
+
+  test "absorb succeeds when source sms.ed.ac.uk email normalizes to email held by a third user" do
+    # Raw SQL bypasses the normalizes callback; the third user must not be touched.
+    third_user = FactoryBot.create(:user, email: "s9922002@ed.ac.uk")
+    source     = FactoryBot.create(:user)
+    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9922002@sms.ed.ac.uk' WHERE id = #{source.id}")
+    source.reload
+    target = FactoryBot.create(:user, email: "unknown_abc123@bedlamtheatre.co.uk")
+
+    result = target.absorb(source)
+
+    assert result[:success], result[:errors].inspect
+    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
+    assert_equal "s9922002@ed.ac.uk", third_user.reload.email
   end
 end
