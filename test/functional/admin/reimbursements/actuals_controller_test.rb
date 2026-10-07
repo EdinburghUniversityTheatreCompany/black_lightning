@@ -5,13 +5,6 @@ module Admin
   class ActualsControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
-    # The actual-to-expense link write always fails (the conversion's second write).
-    class UnlinkableStore < ::Reimbursements::DatabaseStore
-      def link_actual_to_expense!(_actual_id, _expense_id)
-        raise "blip"
-      end
-    end
-
     # Hands the controller a stale row: the before_action's copy looks unlinked while the stored
     # row is already converted, as a second click on a double-submitted form sees it.
     class StaleActualStore < ::Reimbursements::DatabaseStore
@@ -422,26 +415,6 @@ module Admin
     end
 
     # --- Conversion is one unit ---------------------------------------------
-    # The expense and its link must commit together, or a failed link leaves the row offering
-    # "Create expense" and the next click double-counts the charge.
-
-    test "a conversion whose link write fails creates no expense at all" do
-      BaseController.store_builder = ->(**) { UnlinkableStore.new }
-      sign_in @user
-
-      assert_no_difference -> { ::Reimbursements::Expense.count } do
-        assert_raises(RuntimeError) do
-          post :create_expense, params: {
-            id: @unlinked.record_id,
-            reimbursements_expense_form: { budget_record_id: @budget.record_id,
-                                           description: "Room hire recharge",
-                                           payment_reference: "J000001234" }
-          }
-        end
-      end
-
-      assert_nil @unlinked.reload.expense_id
-    end
 
     # The convertibility check is re-taken inside the writing transaction: a second click's
     # before_action read predates the first click's commit.

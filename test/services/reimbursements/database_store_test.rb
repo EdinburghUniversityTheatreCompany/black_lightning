@@ -246,6 +246,18 @@ module Reimbursements
       assert_equal 1, Expense.count, "the second attempt writes nothing"
     end
 
+    # The expense and its link commit together, or a failed link leaves the row still offering
+    # "Create expense" and the next click double-counts the charge.
+    test "create_expense_for_actual! writes nothing when the link fails" do
+      failing = Class.new(DatabaseStore) { def link_actual_to_expense!(*) = raise("blip") }.new
+      actual = failing.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+
+      assert_no_difference -> { Expense.count } do
+        assert_raises(RuntimeError) { failing.create_expense_for_actual!(actual.record_id, status: Status::PAID) }
+      end
+      assert_nil actual.reload.expense_id
+    end
+
     test "create_expense_for_actual! refuses an offsetting leg" do
       actual = store.create_actual!(nominal_code: "4000", narrative: "Accrual", debit: 42)
       counterpart = store.create_actual!(nominal_code: "4000", narrative: "Reversal", credit: 42)
