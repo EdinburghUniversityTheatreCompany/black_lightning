@@ -12,7 +12,7 @@ class SeoDuplicationTest < ActionDispatch::IntegrationTest
               archives_events_path, archives_shows_path, archives_workshops_path, archives_seasons_path ]
 
     # welcome_week is claimed by an earlier redirect route, so its template is never reached.
-    static = StaticController::PAGE_TITLES.keys - [ "welcome_week" ]
+    static = StaticController::PAGES.keys - [ "welcome_week" ]
 
     fixed + static.map { |page| static_path(page) }
   end

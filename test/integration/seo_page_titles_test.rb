@@ -3,7 +3,7 @@ require "test_helper"
 # Static pages and editable-block subpages name themselves in the title and description.
 class SeoPageTitlesTest < ActionDispatch::IntegrationTest
   test "every static page names itself in the title" do
-    StaticController::PAGE_TITLES.each do |page, expected|
+    StaticController::PAGES.each do |page, (expected, _description)|
       get static_path(page)
 
       # /welcome_week is claimed by an earlier redirect route; it stays in the map as the allow-list.
