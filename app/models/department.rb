@@ -31,13 +31,6 @@ class Department < ApplicationRecord
     match_terms.to_s.split(/[,\n]/).map { |term| term.strip.downcase }.reject(&:blank?)
   end
 
-  def self.match_for(position)
-    text = position.to_s.downcase
-    return if text.blank?
-
-    all.find { |department| department.match_term_list.any? { |term| text.include?(term) } }
-  end
-
   # Matches the name case-insensitively.
   def self.find_or_build_by_name(name)
     name = name.to_s.strip
@@ -49,10 +42,6 @@ class Department < ApplicationRecord
   # For the department-suggest Stimulus controller.
   def self.suggestions
     all.map { |department| { name: department.name, terms: department.match_term_list } }
-  end
-
-  def to_label
-    name
   end
 
   def self.ransackable_attributes(auth_object = nil)

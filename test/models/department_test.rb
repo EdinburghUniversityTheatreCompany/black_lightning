@@ -12,16 +12,6 @@ class DepartmentTest < ActiveSupport::TestCase
     assert_equal [ "stage manager", "asm", "deputy stage" ], department.match_term_list
   end
 
-  test "match_for returns the first department whose term is in the position" do
-    assert_equal departments(:stage_management), Department.match_for("Assistant Stage Manager")
-    assert_equal departments(:lighting), Department.match_for("Lighting Designer")
-  end
-
-  test "match_for returns nil when nothing matches" do
-    assert_nil Department.match_for("Dramaturg")
-    assert_nil Department.match_for("")
-  end
-
   test "find_or_build_by_name finds case-insensitively or builds a new record" do
     assert_equal departments(:sound), Department.find_or_build_by_name("SOUND")
 
