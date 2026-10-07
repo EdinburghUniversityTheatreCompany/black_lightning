@@ -10,22 +10,15 @@ class DatabaseIsolationTest < ActiveSupport::TestCase
     %w[test]
   ].freeze
 
-  test "every dev and test database name carries WORKTREE_DB_SUFFIX when it is set" do
-    config = load_database_yml("_agent7")
+  test "every dev and test database name carries WORKTREE_DB_SUFFIX, which defaults to empty" do
+    plain = load_database_yml(nil)
+    suffixed = load_database_yml("_agent7")
 
     ISOLATED_KEYS.each do |path|
-      name = config.dig(*path)["database"]
+      name = suffixed.dig(*path)["database"]
       assert_match(/_agent7/, name, "#{path.join('.')} database ignores WORKTREE_DB_SUFFIX")
+      assert_equal plain.dig(*path)["database"], name.sub("_agent7", "")
     end
-  end
-
-  test "the suffix defaults to empty so the main checkout keeps the plain names" do
-    config = load_database_yml(nil)
-
-    assert_equal "bedlam_blacklightning_development", config.dig("development", "primary")["database"]
-    assert_equal "bedlam_blacklightning_development_queue", config.dig("development", "queue")["database"]
-    assert_equal "bedlam_blacklightning_development_cache", config.dig("development", "cache")["database"]
-    assert_equal "bedlam_blacklightning_test", config["test"]["database"]
   end
 
   # Production must NOT interpolate it: a stray variable in the deployed environment would
