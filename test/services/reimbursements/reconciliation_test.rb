@@ -3,11 +3,12 @@ require "bigdecimal"
 
 module Reimbursements
   class ReconciliationTest < ActiveSupport::TestCase
+    include ReimbursementsTestHelpers
+
     # The pure matchers read the AR models' public interface; built unpersisted.
     Expense = Reimbursements::Expense
     Budget = Reimbursements::Budget
 
-    HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
     SAMPLE_ROW = "439999\tF40\tBACS001\t15/03/2025\t03\tAlice Producer\tSome show\t123.45\t\t123.45".freeze
     SAMPLE_CSV_ROW = "439999,F40,BACS001,15/03/2025,03,Alice Producer,Some show,123.45,,123.45".freeze
 
@@ -43,7 +44,7 @@ module Reimbursements
     end
 
     test "tab-separated single row" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{SAMPLE_ROW}")
       assert_equal 1, rows.length
       row = rows.first
       assert_equal "439999", row.nominal_code
@@ -67,13 +68,13 @@ module Reimbursements
     end
 
     test "skips blank lines" do
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{SAMPLE_ROW}\n\n#{SAMPLE_ROW}")
       assert_equal 2, rows.length
     end
 
     test "credit row" do
       row_text = "250000\tF40\tINC001\t10/04/2025\t04\tGrant income\t\t\t1000.00\t-1000.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{row_text}")
       assert_equal bd("1000.00"), rows.first.credit
       assert_equal bd(0), rows.first.debit
       assert_equal bd("-1000.00"), rows.first.net
@@ -81,7 +82,7 @@ module Reimbursements
 
     test "raises on too few columns" do
       error = assert_raises(ArgumentError) do
-        Reconciliation.parse_actuals_rows("#{HEADER}\n439999\tF40\tBACS001")
+        Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n439999\tF40\tBACS001")
       end
       assert_match(/columns/, error.message)
     end
@@ -105,21 +106,21 @@ module Reimbursements
 
     test "parses an ISO 8601 date when the DD/MM/YYYY parse doesn't apply" do
       row_text = "439999\tF40\tBACS001\t2024-12-01\t12\tNarr\tNarr1\t50.00\t\t50.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{row_text}")
       assert_equal Date.new(2024, 12, 1), rows.first.date
     end
 
     test "an unreadable date raises, and a two-digit year does not silently land in year 89" do
       %w[15/03/89 not-a-date].each do |date|
         row_text = "439999\tF40\tBACS001\t#{date}\t12\tNarr\tNarr1\t50.00\t\t50.00"
-        error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
+        error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{row_text}") }
         assert_match(/Cannot parse date/, error.message)
       end
     end
 
     test "amounts with commas are parsed" do
       row_text = "439999\tF40\tBACS001\t15/03/2025\t03\tNarr\tNarr1\t1,234.56\t\t1,234.56"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{row_text}")
       assert_equal bd("1234.56"), rows.first.debit
     end
 
@@ -130,7 +131,7 @@ module Reimbursements
       bed = "439999\tBED\tBACS001\t15/03/2025\t03\tAlice\tShow\t10.00\t\t10.00"
       other = "439999\tF99\tBACS002\t15/03/2025\t03\tBob\tOther\t50.00\t\t50.00"
       blank = "439999\t\tBACS003\t15/03/2025\t03\tCarol\tShow\t5.00\t\t5.00"
-      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{bed}\n#{other}\n#{blank}")
+      rows = Reconciliation.parse_actuals_rows("#{ACTUALS_HEADER}\n#{SAMPLE_ROW}\n#{bed}\n#{other}\n#{blank}")
       assert_equal [ "F40", "BED", "F99", "" ], rows.map(&:cost_centre)
     end
 

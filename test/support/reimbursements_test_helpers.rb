@@ -90,6 +90,9 @@ module ReimbursementsTestHelpers
     Reimbursements::Batch.create!(date_sent: date_sent, **attrs)
   end
 
+  # The header row of EUSA's ledger export, as pasted into Reconcile.
+  ACTUALS_HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
+
   def create_reimbursements_actual(nominal_code: "439999", narrative: "Alice Producer",
                                    debit: BigDecimal("123.45"), **attrs)
     Reimbursements::EusaActual.create!(nominal_code: nominal_code, narrative: narrative,

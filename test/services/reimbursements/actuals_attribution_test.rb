@@ -5,8 +5,6 @@ module Reimbursements
   class ActualsAttributionTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
-
     setup do
       @fringe = reimbursements_cost_centres(:fringe)
       @termtime = create_reimbursements_cost_centre(key: "termtime", name: "Bedlam Termtime",
@@ -21,7 +19,7 @@ module Reimbursements
 
     def parse(*cost_centres)
       Reconciliation.parse_actuals_rows(
-        ([ HEADER ] + cost_centres.each_with_index.map { |cc, i| row_text(cc, narrative: "Row #{i}") })
+        ([ ACTUALS_HEADER ] + cost_centres.each_with_index.map { |cc, i| row_text(cc, narrative: "Row #{i}") })
           .join("\n")
       )
     end

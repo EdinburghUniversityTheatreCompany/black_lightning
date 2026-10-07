@@ -5,8 +5,6 @@ module Admin
   class ReconcileControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
-    HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
-
     # DatabaseStore whose actual-link writes raise for chosen targets.
     class FlakyLinkStore < ::Reimbursements::DatabaseStore
       attr_accessor :fail_expense_link_ids, :fail_budget_links
@@ -113,7 +111,7 @@ module Admin
       sign_in @user
       ::Reimbursements::CostCentre.delete_all
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_includes response.body, "No cost centre is set up yet"
@@ -122,7 +120,7 @@ module Admin
 
     test "preview matches a debit row to a submitted expense" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_debits).size
@@ -142,7 +140,7 @@ module Admin
       @expense.update!(amount_excl_vat: BigDecimal("0"))
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
       assert_select "tbody tr td:last-child", text: "£123.45"
@@ -151,7 +149,7 @@ module Admin
 
     test "preview matches a credit row to an income budget" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_credits).size
@@ -170,7 +168,7 @@ module Admin
 
     test "preview alerts when the paste has only a header row, no data" do
       sign_in @user
-      post :preview, params: { pasted_text: HEADER }
+      post :preview, params: { pasted_text: ACTUALS_HEADER }
 
       assert_response :success
       assert_includes response.body, "No data rows found"
@@ -190,7 +188,7 @@ module Admin
       @expense.update!(payment_confirmed_date: Date.new(2026, 5, 1))
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_empty assigns(:matched_debits), "already-paid-by-another-route expenses must not be re-matched"
@@ -202,7 +200,7 @@ module Admin
                                    narrative: "Alice Producer", debit: BigDecimal("123.45"))
       sign_in @user
 
-      two_rows = "#{HEADER}\n#{debit_row(period: '03')}\n#{debit_row(period: '04')}"
+      two_rows = "#{ACTUALS_HEADER}\n#{debit_row(period: '03')}\n#{debit_row(period: '04')}"
       post :preview, params: { pasted_text: two_rows }
 
       assert_response :success
@@ -214,7 +212,7 @@ module Admin
 
     test "one expense is claimed by at most one debit row" do
       sign_in @user
-      two_rows = "#{HEADER}\n#{debit_row}\n#{debit_row(date: '14/05/2026')}"
+      two_rows = "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(date: '14/05/2026')}"
       post :preview, params: { pasted_text: two_rows }
 
       assert_response :success
@@ -227,7 +225,7 @@ module Admin
     test "apply creates actuals, links them, and flips the expense to Paid without emailing" do
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_empty @graph.send_mails, "marking an expense Paid must not email the producer"
       assert_match(/Nobody was emailed/, response.body, "and the apply page says so")
@@ -245,7 +243,7 @@ module Admin
     test "apply links a matched credit to its budget" do
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal @income.id, ::Reimbursements::EusaActual.sole.budget_id
@@ -256,7 +254,7 @@ module Admin
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(nominal: '999999')}"
       }
 
       assert_response :success
@@ -279,7 +277,7 @@ module Admin
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(narrative: 'Alice Producer NEW')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(narrative: 'Alice Producer NEW')}"
       }
 
       assert_response :success
@@ -300,7 +298,7 @@ module Admin
       sign_in @user
 
       post :apply, params: {
-        pasted_text: "#{HEADER}\n#{debit_row}\n#{debit_row(nominal: '555555', narrative: 'Alice Producer', debit: '55.00')}"
+        pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(nominal: '555555', narrative: 'Alice Producer', debit: '55.00')}"
       }
 
       assert_response :success
@@ -315,7 +313,7 @@ module Admin
       BaseController.store_builder = ->(**) { FlakyLinkStore.new(fail_budget_links: true) }
       sign_in @user
 
-      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+      post :apply, params: { pasted_text: "#{ACTUALS_HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal 0, assigns(:credits_linked), "a row whose link write failed must not count as linked"
@@ -348,7 +346,7 @@ module Admin
     end
 
     def offsetting_paste
-      "#{HEADER}\n#{accrual_row}\n#{reversal_row}"
+      "#{ACTUALS_HEADER}\n#{accrual_row}\n#{reversal_row}"
     end
 
     def lookalike_expense
@@ -441,7 +439,7 @@ module Admin
       lookalike_expense
       sign_in @user
 
-      post :preview, params: { pasted_text: [ HEADER, accrual_row, reversal_row,
+      post :preview, params: { pasted_text: [ ACTUALS_HEADER, accrual_row, reversal_row,
                                               accrual_row, reversal_row ].join("\n") }
 
       assert_response :success
@@ -475,7 +473,7 @@ module Admin
     def duplicate_pairs_paste
       accrual = accrual_row(amount: "10.00")
       reversal = reversal_row(amount: "10.00")
-      [ HEADER, accrual, reversal, accrual, reversal ].join("\n")
+      [ ACTUALS_HEADER, accrual, reversal, accrual, reversal ].join("\n")
     end
 
     test "two byte-identical pairs render as two separately tickable rows" do
@@ -514,7 +512,7 @@ module Admin
     test "a paste spanning two cost centres imports every row under its own" do
       create_second_reimbursements_cost_centre
       sign_in @user
-      paste = [ HEADER, debit_row(narrative: "Fringe spend"),
+      paste = [ ACTUALS_HEADER, debit_row(narrative: "Fringe spend"),
                 debit_row(narrative: "Termtime spend", cost_centre: "BED") ].join("\n")
 
       post :apply, params: { pasted_text: paste }
@@ -528,7 +526,7 @@ module Admin
     # Another society's spend in a whole-organisation export: skipped, but never silently.
     test "preview reports the rows it skipped for an unconfigured cost centre, and names the codes" do
       sign_in @user
-      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
+      paste = [ ACTUALS_HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12"),
                 debit_row(narrative: "Someone else again", cost_centre: "H03") ].join("\n")
 
       post :preview, params: { pasted_text: paste }
@@ -542,7 +540,7 @@ module Admin
 
     test "apply imports only the rows whose cost centre is set up here" do
       sign_in @user
-      paste = [ HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12") ].join("\n")
+      paste = [ ACTUALS_HEADER, debit_row, debit_row(narrative: "Someone else", cost_centre: "G12") ].join("\n")
 
       post :apply, params: { pasted_text: paste }
 
@@ -554,7 +552,7 @@ module Admin
     # --- Blank cost centres always need an explicit answer -----------------
 
     def blank_centre_paste
-      [ HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
+      [ ACTUALS_HEADER, debit_row, debit_row(narrative: "No centre named", cost_centre: "") ].join("\n")
     end
 
     # Not inferred even here, with the fixture as the only centre: that guess files real spend under
@@ -616,7 +614,7 @@ module Admin
     test "an accrual and a reversal in different cost centres are never paired" do
       create_second_reimbursements_cost_centre
       sign_in @user
-      paste = [ HEADER, accrual_row, reversal_row(cost_centre: "BED") ].join("\n")
+      paste = [ ACTUALS_HEADER, accrual_row, reversal_row(cost_centre: "BED") ].join("\n")
 
       post :preview, params: { pasted_text: paste }
 
@@ -633,7 +631,7 @@ module Admin
       @income.update!(cost_centre: termtime)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}\n#{credit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{credit_row}" }
 
       assert_empty assigns(:matched_debits), "a Fringe debit must not pay a termtime claim"
       assert_empty assigns(:matched_credits)
@@ -645,7 +643,7 @@ module Admin
       @budget.update!(cost_centre: fringe_cost_centre)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
@@ -657,7 +655,7 @@ module Admin
       create_second_reimbursements_cost_centre
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_empty assigns(:matched_debits),
@@ -673,7 +671,7 @@ module Admin
                                    debit: BigDecimal("123.45"), cost_centre: fringe_cost_centre)
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}\n#{debit_row(cost_centre: 'BED')}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row}\n#{debit_row(cost_centre: 'BED')}" }
 
       assert_equal %w[F40], assigns(:skipped_rows).map(&:cost_centre)
       assert_equal %w[BED], assigns(:new_rows).map(&:cost_centre),
@@ -688,7 +686,7 @@ module Admin
                                    debit: BigDecimal("123.45"))
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(cost_centre: 'BED')}" }
+      post :preview, params: { pasted_text: "#{ACTUALS_HEADER}\n#{debit_row(cost_centre: 'BED')}" }
 
       assert_response :success
       assert_equal 1, assigns(:skipped_rows).size
@@ -748,7 +746,7 @@ module Admin
     test "an uploaded xlsx previews like a paste and is carried on as text" do
       sign_in @user
 
-      post :preview, params: { actuals_file: actuals_xlsx([ HEADER.split("\t"), debit_row.split("\t") ]) }
+      post :preview, params: { actuals_file: actuals_xlsx([ ACTUALS_HEADER.split("\t"), debit_row.split("\t") ]) }
 
       assert_equal @expense.record_id, assigns(:matched_debits).sole.last.record_id
       carriers = css_select("input[name=pasted_text][type=hidden]")
@@ -759,7 +757,7 @@ module Admin
     test "a csv upload is read as the text it already is" do
       sign_in @user
 
-      post :preview, params: { actuals_file: actuals_csv("#{HEADER}\n#{debit_row}") }
+      post :preview, params: { actuals_file: actuals_csv("#{ACTUALS_HEADER}\n#{debit_row}") }
 
       assert_response :success
       assert_match(/Alice Producer/, response.body)
@@ -817,9 +815,9 @@ module Admin
       # The tab has to be INSIDE one cell, which a row built by splitting on tabs would never show.
       cells = debit_row.split("\t")
       cells[5] = "Alice\tProducer"
-      text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ HEADER.split("\t"), cells ]))
+      text = ::Reimbursements::ActualsUpload.to_text(actuals_xlsx([ ACTUALS_HEADER.split("\t"), cells ]))
 
-      assert_equal HEADER.split("\t").size, text.lines.last.split("\t").size
+      assert_equal ACTUALS_HEADER.split("\t").size, text.lines.last.split("\t").size
       assert_includes text, "Alice Producer", "the tab becomes a space rather than a column break"
     end
   end

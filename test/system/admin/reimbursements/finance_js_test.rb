@@ -259,7 +259,7 @@ module Admin
         assert_text "Could not parse actuals", wait: 5
 
         fill_in "Actuals data (tab- or comma-separated, include the header row)",
-                with: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet\n" \
+                with: "#{ACTUALS_HEADER}\n" \
                       "439999\tF40\tBACS001\t15/03/2026\t03\tSystem Test Row\t\t123.45\t\t123.45"
         click_on "Parse and match"
         assert_text "Step 3: Apply reconciliation", wait: 5
@@ -272,7 +272,7 @@ module Admin
       test "unticking one of two identical offsetting pairs leaves the other ticked" do
         accrual = "331300\tF40\tJ000000884\t27/04/2026\t01\tVenue hire accrual\tShow\t10.00\t\t10.00"
         reversal = "331300\tF40\tJ000000884\t28/04/2026\t02\tVenue hire accrual\tShow\t\t10.00\t-10.00"
-        header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet"
+        header = ACTUALS_HEADER
 
         visit admin_reimbursements_reconciliation_path
         fill_in "Actuals data (tab- or comma-separated, include the header row)",
