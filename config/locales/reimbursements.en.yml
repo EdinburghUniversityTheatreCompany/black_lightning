@@ -15,8 +15,7 @@ en:
         sort_code_override: "Payee sort code"
         account_number_override: "Payee account number"
         receipts: "Receipt"
-  # One line per export sheet, keyed by the exporter's SLUG. A sheet with no line here
-  # falls back to "One row per record." rather than raising.
+  # One line per sheet of the combined export, keyed by the exporter's SLUG.
   reimbursements:
     export_sheets:
       expenses: "Every claim: who, how much, which budget, what status, and which batch paid it."

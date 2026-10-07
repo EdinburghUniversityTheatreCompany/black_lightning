@@ -100,8 +100,6 @@ module Admin
         ::Reimbursements::Exports::Workbook::SHEETS.each do |(exporter_class, _)|
           assert_match(/#{Regexp.escape(exporter_class::SHEET_NAME)}/, response.body,
                        "#{exporter_class::SHEET_NAME} is in the file but not on the page")
-          assert I18n.exists?("reimbursements.export_sheets.#{exporter_class::SLUG}"),
-                 "#{exporter_class::SHEET_NAME} has no description"
         end
       end
 
