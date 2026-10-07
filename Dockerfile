@@ -13,9 +13,7 @@ WORKDIR /rails
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development:test" \
-    RAILS_LOG_TO_STDOUT="1" \
-    RAILS_SERVE_STATIC_FILES="true"
+    BUNDLE_WITHOUT="development:test"
 
 # libheif-plugin-libde265 lets libvips decode the HEVC inside a HEIC (iOS photos), which receipts
 # convert to JPEG (Reimbursements::ReceiptIntake). Debian's libvips pulls it in as a dependency,
@@ -31,8 +29,7 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       libheif-plugin-libde265 \
       poppler-utils \
       default-mysql-client \
-      tzdata \
-      cron && \
+      tzdata && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
 FROM base AS build
@@ -44,8 +41,7 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       git \
       libmariadb-dev-compat \
       libyaml-dev \
-      pkg-config \
-      curl && \
+      pkg-config && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
 # The Node major comes from .node-version (shared with mise/config.toml and the dev container), so
@@ -79,7 +75,6 @@ RUN chmod +x bin/* && \
     sed -i 's/ruby\.exe$/ruby/' bin/*
 
 # Precompile assets for production without requiring the real master key
- # DATABASE_URL="mysql2://user:pass@127.0.0.1:3306/dummy" 
 RUN ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 rails assets:precompile
 
 RUN rm -rf \
