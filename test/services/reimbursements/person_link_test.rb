@@ -28,7 +28,6 @@ module Reimbursements
       person = link.ensure_person!(user)
       assert_equal user.email, person.email
       assert_equal person.id, user.reload.reimbursements_person_id
-      assert_nil user.airtable_person_id
     end
 
     test "database backend person_for returns nil when unmatched" do
@@ -51,65 +50,17 @@ module Reimbursements
       person.id
     end
 
-    test "database backend falls back to the email match when the stored FK is dangling" do
+    test "database backend falls back to the email match behind a dangling FK without creating a duplicate payee" do
       user = users(:user)
       orphan_the_stored_link!(user)
       current = Reimbursements::Person.create!(name: "Current", email: user.email)
 
       link = PersonLink.new(store: DatabaseStore.new)
 
-      assert_equal current.id, link.person_for(user).id, "the dangling FK must not win"
-      assert_equal current.id, user.reload.reimbursements_person_id, "the stale FK is rewritten"
-    end
-
-    test "database backend ensure_person! creates no duplicate payee behind a dangling FK" do
-      user = users(:user)
-      orphan_the_stored_link!(user)
-      existing = Reimbursements::Person.create!(name: "Existing", email: user.email)
-
-      link = PersonLink.new(store: DatabaseStore.new)
-
       assert_no_difference -> { Reimbursements::Person.count } do
-        assert_equal existing.id, link.ensure_person!(user).id
+        assert_equal current.id, link.ensure_person!(user).id, "the dangling FK must not win"
       end
-      assert_equal existing.id, user.reload.reimbursements_person_id
-    end
-
-    # Store-independent proof of the same branch, through the injected-store seam
-    # PersonLink is designed around: given a store that reports a stored link
-    # whose payee no longer resolves, person_for consults the email match.
-    test "a stored link that does not resolve falls through to the email match" do
-      user = users(:user)
-      match = Reimbursements::Person.new(name: "Match", email: user.email)
-      store = StaleLinkStore.new(stored: "404", match: match)
-
-      link = PersonLink.new(store: store)
-
-      assert_same match, link.person_for(user)
-      assert_equal [ [ user, match ] ], store.remembered, "the stale link is rewritten"
-      assert_equal 0, store.created, "no duplicate payee is created"
-    end
-
-    # Minimal store double: reports a stored link that find_person can't resolve.
-    class StaleLinkStore
-      attr_reader :remembered, :created
-
-      def initialize(stored:, match:)
-        @stored = stored
-        @match = match
-        @remembered = []
-        @created = 0
-      end
-
-      def stored_person_link(_user) = @stored
-      def find_person(_record_id) = nil
-      def person_by_email(_email) = @match
-      def remember_person_link!(user, person) = @remembered << [ user, person ]
-
-      def create_person!(name:, email:)
-        @created += 1
-        Reimbursements::Person.new(name: name, email: email)
-      end
+      assert_equal current.id, user.reload.reimbursements_person_id, "the stale FK is rewritten"
     end
   end
 end

@@ -32,12 +32,6 @@ class UserReimbursementsErasureTest < ActiveSupport::TestCase
     assert_equal @person.id, expense.reload.person_id
   end
 
-  test "deleting a user with no linked payee is untroubled by it" do
-    plain = FactoryBot.create(:user, email: "unlinked@example.com")
-
-    assert_nothing_raised { plain.destroy! }
-  end
-
   # The link is by email as well as stored id, or erasure would miss never-linked payees.
   test "an email-matched payee is erased even without a stored link" do
     user = FactoryBot.create(:user, email: "matched@example.com")

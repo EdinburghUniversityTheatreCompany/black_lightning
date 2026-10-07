@@ -6,11 +6,8 @@ module Admin
     include ReimbursementsTestHelpers
 
     setup do
-      producer = Role.create!(name: "Producer")
-      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
-      users(:member).add_role("Producer")
-      users(:member_with_phone_number).add_role("Producer")
       @user = users(:member)
+      grant_producer_permission(@user)
       @person = create_reimbursements_person(email: @user.email)
       sign_in @user
     end
@@ -37,6 +34,7 @@ module Admin
 
     test "update creates the people record for unmatched users" do
       other = users(:member_with_phone_number)
+      grant_producer_permission(other)
       sign_in other
 
       assert_difference -> { ::Reimbursements::Person.count }, 1 do

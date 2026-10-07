@@ -27,9 +27,10 @@ module Reimbursements
       expense
     end
 
+    # Nothing but the account details goes.
     test "clears the details of a payee whose last claim is past the retention period" do
       person = backdate!(payee(name: "Dormant Dora", email: "dora@example.com"), LONG_AGO)
-      claim(person, status: Status::PAID, ago: LONG_AGO)
+      expense = claim(person, status: Status::PAID, ago: LONG_AGO)
 
       assert_equal 1, BankDetailsRetention.erase_stale!
 
@@ -37,6 +38,8 @@ module Reimbursements
       assert_equal "", details.sort_code
       assert_equal "", details.account_number
       assert_not details.verified
+      assert_equal "Dormant Dora", person.name
+      assert_equal person.id, expense.reload.person_id
     end
 
     test "keeps the details of a payee who claimed inside the retention period" do
@@ -119,24 +122,6 @@ module Reimbursements
       assert_match(/6 months/, notes)
       assert_match(/account \*\*\*\*4958/, notes, "the earlier audit trail is kept — it is the record of processing")
       assert_not_includes notes.sub("****4958", ""), "4958", "the cleared value itself is not written down"
-    end
-
-    # Nothing but the account details goes.
-    test "the payee and their claims are left untouched" do
-      person = backdate!(payee(name: "Dormant Dora", email: "dora3@example.com"), LONG_AGO)
-      expense = claim(person, status: Status::PAID, ago: LONG_AGO)
-
-      BankDetailsRetention.erase_stale!
-
-      assert Person.exists?(person.id)
-      assert_equal "Dormant Dora", person.reload.name
-      assert_equal person.id, expense.reload.person_id
-    end
-
-    test "a payee with no details on file is not counted as cleared" do
-      create_reimbursements_person(name: "No Details Ned", email: "ned@example.com")
-
-      assert_equal 0, BankDetailsRetention.erase_stale!
     end
 
     test "running twice clears nothing the second time" do

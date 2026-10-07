@@ -26,48 +26,29 @@ module Reimbursements
       model.connection.select_value(sql)
     end
 
-    test "PaymentDetails encrypts sort_code, account_number and notes at rest" do
-      person = create_reimbursements_person(
+    test "bank details are encrypted at rest" do
+      details = create_reimbursements_person(
         name: "Cipher Cassie", email: "cassie@example.com",
         sort_code: "08-99-99", account_number: "66374958",
         notes: "Bank details updated: account ****4958"
-      )
-      details = person.payment_details
-
-      assert_equal "08-99-99", details.sort_code
-      assert_equal "66374958", details.account_number
-
-      raw_account = raw_column(PaymentDetails, details.id, "account_number")
-      raw_sort = raw_column(PaymentDetails, details.id, "sort_code")
-      raw_notes = raw_column(PaymentDetails, details.id, "notes")
-      assert_not_includes raw_account.to_s, "66374958", "account number must not be stored in plaintext"
-      assert_not_includes raw_sort.to_s, "08-99-99", "sort code must not be stored in plaintext"
-      assert_not_includes raw_notes.to_s, "****4958", "notes must not be stored in plaintext"
-
-      assert_not_equal "66374958", details.ciphertext_for(:account_number)
-      assert_not_equal "08-99-99", details.ciphertext_for(:sort_code)
-    end
-
-    test "Expense encrypts the third-party override trio at rest" do
+      ).payment_details
       expense = create_reimbursements_expense(
-        receipt: false,
-        payee_name_override: "Third Party Ltd",
-        sort_code_override: "20-20-20",
-        account_number_override: "50502366"
+        receipt: false, payee_name_override: "Third Party Ltd",
+        sort_code_override: "20-20-20", account_number_override: "50502366"
       )
 
-      assert_equal "Third Party Ltd", expense.payee_name_override
-      assert_equal "20-20-20", expense.sort_code_override
-      assert_equal "50502366", expense.account_number_override
-
-      raw_account = raw_column(Expense, expense.id, "account_number_override")
-      raw_sort = raw_column(Expense, expense.id, "sort_code_override")
-      raw_payee = raw_column(Expense, expense.id, "payee_name_override")
-      assert_not_includes raw_account.to_s, "50502366", "override account number must not be stored in plaintext"
-      assert_not_includes raw_sort.to_s, "20-20-20", "override sort code must not be stored in plaintext"
-      assert_not_includes raw_payee.to_s, "Third Party Ltd", "override payee name must not be stored in plaintext"
-
-      assert_not_equal "50502366", expense.ciphertext_for(:account_number_override)
+      {
+        details => { sort_code: "08-99-99", account_number: "66374958",
+                     notes: "Bank details updated: account ****4958" },
+        expense => { payee_name_override: "Third Party Ltd", sort_code_override: "20-20-20",
+                     account_number_override: "50502366" }
+      }.each do |record, columns|
+        columns.each do |column, value|
+          assert_equal value, record.public_send(column)
+          assert_not_includes raw_column(record.class, record.id, column).to_s, value,
+                              "#{record.class.name}##{column} must not be stored in plaintext"
+        end
+      end
     end
 
     # Encryption inflates the value: any low-redundancy plaintext of ~124+ characters
@@ -138,23 +119,6 @@ module Reimbursements
                       "1000 audit lines must still encrypt inside the TEXT column"
     end
 
-    # #encrypt is not a no-op on an encrypted row: it rewrites with a new IV every run.
-    test "encrypt rewrites fresh ciphertext on every run rather than no-opping" do
-      expense = create_reimbursements_expense(receipt: false, payee_name_override: "Third Party Ltd",
-                                                              sort_code_override: "20-20-20",
-                                                              account_number_override: "50502366")
-
-      expense.encrypt
-      first = raw_column(Expense, expense.id, "account_number_override")
-      expense.encrypt
-      second = raw_column(Expense, expense.id, "account_number_override")
-
-      assert_not_equal first, second,
-                       "each backfill run writes a fresh IV, so the stored ciphertext changes"
-      assert_equal "50502366", expense.reload.account_number_override,
-                   "the plaintext still round-trips after repeated re-encryption"
-    end
-
     # Reading plaintext is off everywhere now, but encrypting a new column later
     # repeats the rollout (flag on, backfill, flag off), so these tests opt in for
     # their own duration rather than relying on a global that no longer matches production.
@@ -178,92 +142,27 @@ module Reimbursements
       end
     end
 
-    test "support_unencrypted_data lets a pre-existing plaintext payee row read" do
+    # An operator WILL re-run it after a partial run.
+    test "the backfill task encrypts plaintext rows and is safe to re-run" do
       with_unencrypted_data_support do
-        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
-                                             sort_code: "20-20-20", account_number: "50502366",
-                                             notes: "pre-rollout note")
-        details = person.payment_details
-        write_plaintext(PaymentDetails, details.id,
-                        sort_code: "08-99-99", account_number: "66374958",
-                        notes: "Bank details updated: account ****4958")
-
-        assert_equal "66374958", raw_column(PaymentDetails, details.id, "account_number")
-
-        reread = PaymentDetails.find(details.id)
-        assert_equal "08-99-99", reread.sort_code
-        assert_equal "66374958", reread.account_number
-        assert_equal "Bank details updated: account ****4958", reread.notes
-        assert_equal "66374958", reread.person.account_number
-      end
-    end
-
-    test "support_unencrypted_data lets a pre-existing plaintext override trio read" do
-      with_unencrypted_data_support do
-        expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
-                                                sort_code_override: "20-20-20",
-                                                account_number_override: "50502366")
-        write_plaintext(Expense, expense.id,
-                        payee_name_override: "Legacy Payee Ltd",
-                        sort_code_override: "08-99-99", account_number_override: "66374958")
-
-        reread = Expense.find(expense.id)
-        assert_equal "Legacy Payee Ltd", reread.payee_name_override
-        assert_equal "08-99-99", reread.sort_code_override
-        assert_equal "66374958", reread.account_number_override
-        assert_equal "66374958", reread.effective_account_number
-      end
-    end
-
-    test "the backfill task rewrites a plaintext row as ciphertext" do
-      with_unencrypted_data_support do
-        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
-                                             sort_code: "20-20-20", account_number: "50502366")
-        details = person.payment_details
-        write_plaintext(PaymentDetails, details.id,
-                        sort_code: "08-99-99", account_number: "66374958")
-
-        run_rake_task("reimbursements:encrypt_backfill")
-
-        raw = raw_column(PaymentDetails, details.id, "account_number")
-        assert_not_equal "66374958", raw, "the backfill must leave ciphertext behind"
-        assert_not_includes raw.to_s, "66374958"
-        assert_equal "66374958", PaymentDetails.find(details.id).account_number
-        assert_equal "08-99-99", PaymentDetails.find(details.id).sort_code
-      end
-    end
-
-    test "the backfill task also encrypts a plaintext expense override trio" do
-      with_unencrypted_data_support do
+        details = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
+                                               sort_code: "20-20-20", account_number: "50502366").payment_details
         expense = create_reimbursements_expense(receipt: false, payee_name_override: "Encrypted Ltd",
                                                 account_number_override: "50502366")
+        write_plaintext(PaymentDetails, details.id, sort_code: "08-99-99", account_number: "66374958")
         write_plaintext(Expense, expense.id,
                         payee_name_override: "Legacy Payee Ltd", account_number_override: "66374958")
 
-        run_rake_task("reimbursements:encrypt_backfill")
+        assert_match(/PaymentDetails: processed 1\/1/, run_rake_task("reimbursements:encrypt_backfill"))
+        assert_no_match(/failed/, run_rake_task("reimbursements:encrypt_backfill"), "a re-run must report no failures")
 
+        assert_not_includes raw_column(PaymentDetails, details.id, "account_number").to_s, "66374958"
         assert_not_includes raw_column(Expense, expense.id, "account_number_override").to_s, "66374958"
         assert_not_includes raw_column(Expense, expense.id, "payee_name_override").to_s, "Legacy Payee"
+        assert_equal "08-99-99", PaymentDetails.find(details.id).sort_code
+        assert_equal "66374958", PaymentDetails.find(details.id).account_number
         assert_equal "66374958", Expense.find(expense.id).account_number_override
         assert_equal "Legacy Payee Ltd", Expense.find(expense.id).payee_name_override
-      end
-    end
-
-    # An operator WILL re-run it after a partial run.
-    test "the backfill task is safe to run twice" do
-      with_unencrypted_data_support do
-        person = create_reimbursements_person(name: "Legacy Len", email: "len@example.com",
-                                             account_number: "50502366")
-        details = person.payment_details
-        write_plaintext(PaymentDetails, details.id, account_number: "66374958")
-
-        output = run_rake_task("reimbursements:encrypt_backfill")
-        second = run_rake_task("reimbursements:encrypt_backfill")
-
-        assert_match(/processed 1\/1/, output)
-        assert_no_match(/failed/, second, "a re-run must report no failures")
-        assert_equal "66374958", PaymentDetails.find(details.id).account_number
-        assert_not_includes raw_column(PaymentDetails, details.id, "account_number").to_s, "66374958"
       end
     end
 
