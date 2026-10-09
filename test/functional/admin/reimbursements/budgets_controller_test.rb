@@ -652,6 +652,16 @@ module Admin
         assert_select "select#owner_ids option[value=#{@bob.record_id}][selected]", false
       end
 
+      # The Glossary is the one definition; the figures' old hover notes had drifted from it.
+      test "edit's read-only figures carry no tooltip of their own" do
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_select "dl dd", minimum: 8
+        assert_select "dl dd[title]", count: 0
+      end
+
       test "the forecast log flags a forecast that came from a budget update" do
         sign_in @user
         store = ::Reimbursements::DatabaseStore.new
