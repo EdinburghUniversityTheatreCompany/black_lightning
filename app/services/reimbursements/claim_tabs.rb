@@ -1,19 +1,19 @@
 module Reimbursements
   ##
-  # The status tabs above an area's claims, labelled from the claimant's side:
-  # "Submitted" reads as "I submitted it" and "Pending" says nothing about who
-  # holds the claim. Draft is absent: it belongs on the submitter's own page.
+  # The status tabs above an area's claims. Each is named with its status's producer word
+  # (ReimbursementsHelper::PRODUCER_STATUS), so a claimant reads the same word here as on
+  # their own claim. Draft is absent: it belongs on the submitter's own page.
   module ClaimTabs
     ALL = "all".freeze
 
-    # key => [label, statuses], in the order the money moves.
+    # key => status, in the order the money moves.
     TABS = {
-      ALL => [ "All", nil ],
-      "waiting" => [ "Waiting for approval", [ Status::PENDING ] ],
-      "approved" => [ "Approved", [ Status::APPROVED ] ],
-      "with_eusa" => [ "With EUSA", [ Status::SUBMITTED ] ],
-      "paid" => [ "Paid", [ Status::PAID ] ],
-      "rejected" => [ "Rejected", [ Status::REJECTED ] ]
+      ALL => nil,
+      "waiting" => Status::PENDING,
+      "approved" => Status::APPROVED,
+      "with_eusa" => Status::SUBMITTED,
+      "paid" => Status::PAID,
+      "rejected" => Status::REJECTED
     }.freeze
 
     class << self
@@ -23,13 +23,16 @@ module Reimbursements
         TABS.key?(key) ? key : ALL
       end
 
-      def label(key) = TABS.fetch(key, TABS[ALL]).first
+      def label(key)
+        status = TABS[key]
+        status ? ReimbursementsHelper::PRODUCER_STATUS.fetch(status).first : "All"
+      end
 
       def filter(claims, key)
-        statuses = TABS.fetch(key, TABS[ALL]).last
-        return claims if statuses.nil?
+        status = TABS[key]
+        return claims if status.nil?
 
-        claims.select { |claim| statuses.include?(claim.status) }
+        claims.select { |claim| claim.status == status }
       end
 
       def counts(claims)

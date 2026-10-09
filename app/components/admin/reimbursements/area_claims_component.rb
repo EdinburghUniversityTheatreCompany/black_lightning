@@ -4,16 +4,16 @@ module Admin
     # Every claim charged to an area, or to one loose budget line, under status
     # tabs, newest first.
     #
-    # It answers "where has my money got to", so the status is a PLACE the claim
-    # has reached rather than the stored word (see ::Reimbursements::ClaimTabs):
-    # "With EUSA" beats "Submitted", which a producer reads as "I submitted it".
+    # Statuses use the producer's words, the ones a claimant sees on their own
+    # claim, with tooltips about someone else's claim: owners and finance read this.
     #
     # An owner sees the claims but never bank details: a row carries the payee's
     # name, the amount and what it was for, nothing that would turn a show's page
     # into a directory of its members' account numbers.
     class AreaClaimsComponent < ViewComponent::Base
       # A component gets no helpers of its own (paginate included).
-      delegate :reimbursements_money, :reimbursements_date, :paginate, to: :helpers
+      delegate :reimbursements_money, :reimbursements_date, :reimbursements_producer_status_badge,
+               :paginate, to: :helpers
 
       def initialize(claims:, counts:, tab:, finance:, area: nil, budget: nil, current_person: nil)
         @claims = claims
@@ -58,25 +58,6 @@ module Admin
         return nil if current_person.nil? || claim.person&.record_id != current_person.record_id
 
         helpers.admin_reimbursements_expense_path(claim.record_id)
-      end
-
-      def status_key(claim)
-        ::Reimbursements::ClaimTabs::TABS.find { |_, (_, statuses)|
-          statuses&.include?(claim.status)
-        }&.first
-      end
-
-      def status_label(claim) = status_key(claim) ? label_for(status_key(claim)) : claim.status
-
-      def status_classes(claim)
-        case claim.status
-        when ::Reimbursements::Status::PAID then "border-green-200 bg-green-50 text-success"
-        when ::Reimbursements::Status::SUBMITTED then "border-blue-200 bg-blue-50 text-info"
-        when ::Reimbursements::Status::APPROVED then "border-violet-200 bg-violet-50 text-violet-800"
-        when ::Reimbursements::Status::PENDING then "border-amber-200 bg-amber-50 text-warning"
-        when ::Reimbursements::Status::REJECTED then "border-red-200 bg-red-50 text-danger"
-        else "border-gray-300 bg-white text-gray-600"
-        end
       end
     end
   end

@@ -12,7 +12,7 @@
         <%= link_to tab_path(key),
                     class: "rounded border px-3 py-1 text-sm #{key == tab ? "border-gray-300 bg-white font-semibold" : "border-transparent text-gray-600 hover:bg-gray-100"}",
                     aria: { current: (key == tab ? "page" : nil) } do %>
-          <%# Parenthesised so "With EUSA 1" does not read as a date. %>
+          <%# Parenthesised so the count does not read as part of the label. %>
           <%= label_for(key) %> <span class="tabular-nums">(<%= count_for(key) %>)</span>
         <% end %>
       <% end %>
@@ -41,10 +41,8 @@
                   <span class="font-semibold">#<%= claim.auto_number %></span>
                 <% end %>
               </td>
-              <td class="px-3 py-2">
-                <span class="inline-block rounded-full border px-2 text-xs font-semibold whitespace-nowrap <%= status_classes(claim) %>">
-                  <%= status_label(claim) %>
-                </span>
+              <td class="px-3 py-2 whitespace-nowrap">
+                <%= reimbursements_producer_status_badge(claim.status, own_claim: false) %>
               </td>
               <td class="px-3 py-2 text-right tabular-nums"><%= reimbursements_money(claim.amount) %></td>
               <td class="px-3 py-2"><%= claim.budget&.name %></td>

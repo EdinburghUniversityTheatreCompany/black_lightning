@@ -148,6 +148,16 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes reimbursements_producer_status_badge("Rejected"), "text-danger"
   end
 
+  test "producer status badge about someone else's claim keeps the word but not the second person" do
+    html = reimbursements_producer_status_badge("Paid", own_claim: false)
+    assert_match(/>\s*Paid\s*</, html)
+    assert_includes html, 'title="EUSA has paid it."'
+    assert_not_includes html, "your bank account"
+    # A tooltip with nothing addressed to the submitter is shared as is.
+    assert_includes reimbursements_producer_status_badge("Approved", own_claim: false),
+                    "waiting to be sent to EUSA for payment."
+  end
+
   test "producer status badge falls back to the raw status for an unknown value" do
     html = reimbursements_producer_status_badge("Weird")
     assert_includes html, "Weird"

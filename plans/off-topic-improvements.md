@@ -96,11 +96,6 @@ The back end exists and nothing calls it: `Reimbursements::BudgetFinder`,
 An area is also the natural place for a future `belongs_to :event`, tying a show's money to its
 `Event`. Not built; don't design anything that rules it out.
 
-### The area page's defaults were never confirmed
-
-The area page shipped with three defaults Mick has not explicitly confirmed: "With EUSA" as a
-label, pending claims counting against **Left**, and owners seeing every claim on their area.
-
 ### No export on My Budgets
 
 Every finance list has a "Download CSV" and there is a combined workbook, but

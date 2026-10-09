@@ -288,17 +288,21 @@ module ReimbursementsHelper
   end
 
   # Producer-facing status wording ("where's my money?"); finance pages keep the raw status.
+  # [label, tooltip to the submitter, tooltip about someone else's claim where that differs].
   PRODUCER_STATUS = {
-    "Draft" => [ "Draft", "Only you can see this. Submit it when you're ready." ],
-    "Pending" => [ "Waiting for review", "With the finance team, waiting to be checked." ],
+    "Draft" => [ "Draft", "Only you can see this. Submit it when you're ready.", "Not submitted yet." ],
+    "Pending" => [ "Waiting for review", "With the finance team, waiting to be checked.",
+                   "Waiting for a budget owner or the finance team to check it." ],
     "Approved" => [ "Approved", "Checked and approved; waiting to be sent to EUSA for payment." ],
     "Submitted" => [ "Sent to EUSA", "Sent to the Students' Association (EUSA) for payment." ],
-    "Paid" => [ "Paid", "Paid into your bank account." ],
-    "Rejected" => [ "Rejected", "Not approved. See the reason on the row." ]
+    "Paid" => [ "Paid", "Paid into your bank account.", "EUSA has paid it." ],
+    "Rejected" => [ "Rejected", "Not approved. See the reason on the row.", "Not approved, so it will not be paid." ]
   }.freeze
 
-  def reimbursements_producer_status_badge(status)
-    label, tip = PRODUCER_STATUS.fetch(status, [ status, nil ])
+  # own_claim: false on a page read by owners and finance (an area's claims), where "you" is wrong.
+  def reimbursements_producer_status_badge(status, own_claim: true)
+    label, tip, others_tip = PRODUCER_STATUS.fetch(status, [ status, nil ])
+    tip = others_tip || tip unless own_claim
     render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(status)).with_content(label))
       .then { |html| tip ? content_tag(:span, html, title: tip, class: "inline-block") : html }
   end
