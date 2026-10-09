@@ -113,6 +113,21 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "creating a show with one person in the team twice re-renders the form with the error" do
+    user = FactoryBot.create(:user)
+    attributes = FactoryBot.attributes_for(:show, team_members_attributes: {
+      "0" => { user_id: user.id, position: "Director" },
+      "1" => { user_id: user.id, position: "Producer" }
+    })
+
+    assert_no_difference [ "Show.count", "TeamMember.count" ] do
+      post :create, params: { show: attributes }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "is already a team member on this show"
+  end
+
   test "should get edit" do
     @show = FactoryBot.create(:show)
 

@@ -16,6 +16,45 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert tm2.errors[:user_id].any? { |msg| msg.match?(/already a team member/) }, "Should have error message about duplicate"
   end
 
+  test "a new event naming one person twice fails validation instead of hitting the unique index" do
+    user = FactoryBot.create(:user)
+    show = FactoryBot.build(:show, team_members_attributes: [
+      { user_id: user.id, position: "Director" },
+      { user_id: user.id, position: "Producer" }
+    ])
+
+    assert_no_difference "TeamMember.count" do
+      assert_not show.save
+    end
+    first, second = show.team_members.to_a
+    assert_empty first.errors[:user_id]
+    assert second.errors[:user_id].any? { |msg| msg.include?("already a team member on this show") }
+  end
+
+  test "a new proposal naming one person twice fails validation instead of hitting the unique index" do
+    user = FactoryBot.create(:user)
+    proposal = FactoryBot.build(:proposal, team_members_attributes: [
+      { user_id: user.id, position: "Director" },
+      { user_id: user.id, position: "Producer" }
+    ])
+
+    assert_no_difference "TeamMember.count" do
+      assert_not proposal.save
+    end
+    assert proposal.team_members.last.errors[:user_id].any? { |msg| msg.include?("already a team member on this proposal") }
+  end
+
+  test "a team member saved outside its teamwork's loaded rows is still checked against the database" do
+    show = FactoryBot.create(:show, team_member_count: 1)
+    existing = show.team_members.first
+    show.team_members.build(user_id: existing.user_id, position: "Unsaved twin")
+
+    outsider = TeamMember.new(teamwork: show, user_id: existing.user_id, position: "Producer")
+
+    assert_not outsider.valid?
+    assert outsider.errors[:user_id].present?
+  end
+
   test "should allow same user on different events" do
     event1 = FactoryBot.create(:event)
     event2 = FactoryBot.create(:event)

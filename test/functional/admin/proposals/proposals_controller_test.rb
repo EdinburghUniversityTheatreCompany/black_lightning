@@ -115,6 +115,22 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "creating a proposal with one person in the team twice re-renders the form with the error" do
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
+    user_id = FactoryBot.create(:member).id
+    attributes[:team_members_attributes] = {
+      "0" => { user_id:, position: "Director" },
+      "1" => { user_id:, position: "Producer" }
+    }
+
+    assert_no_difference [ "Admin::Proposals::Proposal.count", "TeamMember.count" ] do
+      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "is already a team member on this proposal"
+  end
+
   test "should not create after the submission deadline" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(hours: -1))
     attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)

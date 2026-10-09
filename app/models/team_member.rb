@@ -113,14 +113,19 @@ class TeamMember < ActiveRecord::Base
     teamwork.sync_debts_for_user(user)
   end
 
+  # validates_uniqueness_of reads the database, so it cannot see two unsaved rows
+  # naming one person; the second INSERT would hit the unique index instead.
   def uniqueness_in_parent_collection
     return unless teamwork && user_id
-    return if teamwork.new_record?
-    return if teamwork.respond_to?(:type_changed?) && teamwork.type_changed?
+    # A new event's STI type always reads as changed, so only a converting one is skipped.
+    return if teamwork.persisted? && teamwork.respond_to?(:type_changed?) && teamwork.type_changed?
 
     # The loaded target, not a query, so the association cache is left intact.
     collection = teamwork.association(:team_members).target
     my_index = collection.index(self)
+    # Saved on its own (TeamMember.create with a teamwork), so not in the collection:
+    # validates_uniqueness_of covers it.
+    return if my_index.nil?
 
     duplicates = collection.each_with_index.select do |tm, idx|
       tm != self &&
@@ -130,7 +135,7 @@ class TeamMember < ActiveRecord::Base
     end
 
     if duplicates.any?
-      errors.add(:user_id, "is already a team member on this #{teamwork_type.underscore.humanize.downcase}")
+      errors.add(:user_id, "is already a team member on this #{teamwork.model_name.human.downcase}")
     end
   end
 end
