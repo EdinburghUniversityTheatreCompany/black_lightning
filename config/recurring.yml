@@ -25,14 +25,6 @@ reimbursements_credentials_check:
   queue: default
   schedule: at 8:08am every day
 
-# Nudges budget owners about pending claims awaiting their sign-off (the
-# owner-endorsement gate). Sent via the website mailer; the job no-ops when
-# nothing awaits, so a daily trigger is safe.
-reimbursements_owner_endorsement_digest:
-  class: Reimbursements::OwnerEndorsementDigestJob
-  queue: default
-  schedule: at 7:07am every day
-
 # Storage limitation: clears the bank details of payees who have not claimed in
 # six months. No-ops on nights with nothing to clear, so a daily trigger is safe.
 reimbursements_bank_details_retention:
