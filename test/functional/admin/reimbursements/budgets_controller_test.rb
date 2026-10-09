@@ -211,7 +211,7 @@ module Admin
         assert_csv_download("budgets")
       end
 
-      test "index CSV export carries every rollup column the table shows" do
+      test "index CSV export carries every rollup column, the ones the table leaves out included" do
         sign_in @user
         seed_pipeline_and_eusa_debit
         @income.update!(active: false)
