@@ -127,7 +127,7 @@ module Reimbursements
     # Outside a request the default renderer answers *_url with http://example.org, so it takes
     # the mailer's host and protocol instead.
     def renderer
-      url = Rails.application.config.action_mailer.default_url_options || {}
+      url = Rails.application.config.action_mailer.default_url_options
       ApplicationController.renderer.new(http_host: [ url.fetch(:host), url[:port] ].compact.join(":"),
                                          https: url[:protocol].to_s.start_with?("https"))
     end
