@@ -92,12 +92,12 @@
 <%= render CardComponent.new(title: "Actuals not attributed to any budget", html_class: "mt-4") do %>
   <%
     # The ledger, not Reconcile, which has no per-row linking. It carries the
-    # cost centre the tables above are scoped to.
+    # cost centre the tables above are scoped to, merged after compact_blank,
+    # which would drop an explicit All.
     ledger_path = lambda do |extra = {}|
       admin_reimbursements_actuals_path(
-        { cost_centre: selected_cost_centre&.key,
-          state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION }
-          .merge(extra).compact_blank
+        { state: ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION }
+          .merge(extra).compact_blank.merge(scope_params)
       )
     end
   %>

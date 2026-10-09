@@ -113,6 +113,16 @@ module Admin
                       text: "Import expenses"
       end
 
+      # The wizard reads an empty cost_centre= as no centre chosen, so it still asks.
+      test "Import expenses keeps an explicit All" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", admin_reimbursements_expense_import_path(cost_centre: ""), text: "Import expenses"
+      end
+
       test "index filters and search narrow to exactly the matching claims" do
         seed_multi_expenses
         # A third-party invoice's submitter must be findable by name and email.

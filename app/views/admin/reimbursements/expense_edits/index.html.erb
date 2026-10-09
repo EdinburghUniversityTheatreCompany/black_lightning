@@ -49,7 +49,7 @@
   <span class="flex flex-wrap gap-2">
     <%# Carries the selected centre, so the import lands in the pot on screen. %>
     <%= link_to "Import expenses",
-                admin_reimbursements_expense_import_path(cost_centre: selected_cost_centre&.key),
+                admin_reimbursements_expense_import_path(**scope_params),
                 class: btn_classes(:secondary, :sm) %>
     <%= link_to "Download CSV",
                 admin_reimbursements_expense_edits_path(request.query_parameters.merge(format: :csv)),

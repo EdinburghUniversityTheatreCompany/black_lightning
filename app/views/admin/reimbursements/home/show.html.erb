@@ -17,23 +17,21 @@
                detail: "Yours to decide.",
                warning: true,
                link_text: "Review claims",
-               path: admin_reimbursements_review_path(tab: "to_approve",
-                                                      cost_centre: selected_cost_centre&.key) %>
+               path: admin_reimbursements_review_path(tab: "to_approve", **scope_params) %>
     <%= render "stat",
                label: "Waiting on a budget owner",
                count: @home.awaiting_owner.size,
                amount: @home.awaiting_owner_total,
                detail: "Owners are reminded on this centre's run days; you can override.",
                link_text: "Awaiting owner",
-               path: admin_reimbursements_review_path(tab: "awaiting_owner",
-                                                      cost_centre: selected_cost_centre&.key) %>
+               path: admin_reimbursements_review_path(tab: "awaiting_owner", **scope_params) %>
     <%= render "stat",
                label: "Approved, ready to batch",
                count: @home.approved.size,
                amount: @home.approved_total,
                detail: "What the next BACS spreadsheet would pay.",
                link_text: "Build batch",
-               path: new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key) %>
+               path: new_admin_reimbursements_batch_path(**scope_params) %>
   </div>
 <% end %>
 
@@ -46,7 +44,7 @@
     </p>
     <p class="mt-2">
       <%= link_to "Build batch",
-                  new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
+                  new_admin_reimbursements_batch_path(**scope_params),
                   class: btn_classes(:secondary, :sm) %>
     </p>
   <% else %>
@@ -64,10 +62,10 @@
       <% else %>
         <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft: needs a look") %>
       <% end %>
-      <%= link_to "Batch detail", admin_reimbursements_batch_path(batch.record_id),
+      <%= link_to "Batch detail", admin_reimbursements_batch_path(batch.record_id, **scope_params),
                   class: btn_classes(:secondary, :sm) %>
       <%= link_to "All batches",
-                  admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
+                  admin_reimbursements_batches_path(**scope_params),
                   class: btn_classes(:secondary, :sm) %>
     </div>
     <p class="mt-2 text-sm text-gray-600">
@@ -117,7 +115,7 @@
       </ul>
     <% end %>
     <p class="flex flex-wrap gap-2">
-      <%= link_to "Ledger", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key),
+      <%= link_to "Ledger", admin_reimbursements_actuals_path(**scope_params),
                   class: btn_classes(:secondary, :sm) %>
       <%= link_to "Reconcile a new export", admin_reimbursements_reconciliation_path,
                   class: btn_classes(:secondary, :sm) %>
@@ -141,7 +139,7 @@
         <% @home.over_budget_preview.each do |budget| %>
           <li class="flex flex-wrap items-baseline gap-x-2">
             <%= link_to budget.display_name,
-                        edit_admin_reimbursements_budget_path(budget.record_id),
+                        edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
                         class: "grow underline" %>
             <span class="tabular-nums text-danger">
               <%# "£412.00 over", as elsewhere, rather than a bare negative. %>
@@ -157,12 +155,10 @@
     <% end %>
     <p class="flex flex-wrap gap-2">
       <%= link_to "Budget overview",
-                  overview_admin_reimbursements_budgets_path(year: selected_financial_year&.key,
-                                                             cost_centre: selected_cost_centre&.key),
+                  overview_admin_reimbursements_budgets_path(**scope_params),
                   class: btn_classes(:secondary, :sm) %>
       <%= link_to "Budgets",
-                  admin_reimbursements_budgets_path(year: selected_financial_year&.key,
-                                                    cost_centre: selected_cost_centre&.key),
+                  admin_reimbursements_budgets_path(**scope_params),
                   class: btn_classes(:secondary, :sm) %>
     </p>
   <% end %>

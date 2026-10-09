@@ -151,6 +151,34 @@ module Admin
         assert_equal 2, assigns(:home).reminder_cost_centres.size
       end
 
+      # An explicit All (cost_centre=) is a choice: a link that drops it lets the
+      # sidebar put the operator's home centre back on the next click. An active
+      # year, so a link that adds it when the URL names none fails here.
+      test "the dashboard's links keep an explicit All" do
+        create_second_reimbursements_cost_centre
+        year = ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+        batch = create_reimbursements_batch(date_sent: Date.new(2026, 6, 1), name: "Last")
+        over = create_reimbursements_budget(name: "Over", cost_centre: @cost_centre, financial_year: year,
+                                            initial_budget: BigDecimal("100"))
+        create_reimbursements_expense(person: @person, budget: over, amount: BigDecimal("150"),
+                                      amount_excl_vat: BigDecimal("150"), status: ::Reimbursements::Status::PAID)
+        sign_in @user
+
+        get :show, params: { cost_centre: "" }
+
+        [ admin_reimbursements_review_path(tab: "to_approve", cost_centre: ""),
+          admin_reimbursements_review_path(tab: "awaiting_owner", cost_centre: ""),
+          new_admin_reimbursements_batch_path(cost_centre: ""),
+          admin_reimbursements_batch_path(batch.record_id, cost_centre: ""),
+          admin_reimbursements_batches_path(cost_centre: ""),
+          admin_reimbursements_actuals_path(cost_centre: ""),
+          overview_admin_reimbursements_budgets_path(cost_centre: ""),
+          admin_reimbursements_budgets_path(cost_centre: ""),
+          edit_admin_reimbursements_budget_path(over.record_id, cost_centre: "") ].each do |path|
+          assert_select "main a[href=?]", path
+        end
+      end
+
       private
 
       # £11 here and £22 in a second centre, so scoped and unscoped totals

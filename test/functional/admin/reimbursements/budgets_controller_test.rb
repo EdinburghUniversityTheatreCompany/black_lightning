@@ -105,6 +105,34 @@ module Admin
         assert_select "a[href=?]", new_admin_reimbursements_budget_path, text: "New budget"
       end
 
+      # The wizard reads an empty cost_centre= as no centre chosen, so it still asks.
+      test "Import budgets keeps an explicit All and adds no year" do
+        create_second_reimbursements_cost_centre
+        seed_two_years
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", admin_reimbursements_budget_import_path(cost_centre: ""), text: "Import budgets"
+      end
+
+      test "the overview's ledger links keep an explicit All" do
+        create_second_reimbursements_cost_centre
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             ref: "AUDIT-7", period: "06", debit: BigDecimal("42.00"))
+        sign_in @user
+
+        get :overview, params: { cost_centre: "" }
+
+        assert_select "main a[href=?]",
+                      admin_reimbursements_actuals_path(cost_centre: "", state: "needs_attention"),
+                      text: "EUSA Actuals ledger"
+        assert_select "main a[href=?]",
+                      admin_reimbursements_actuals_path(cost_centre: "", state: "needs_attention",
+                                                        period: "06", search: "AUDIT-7"),
+                      text: "Mystery charge"
+      end
+
       test "the row a save came back for is highlighted" do
         sign_in @user
 
