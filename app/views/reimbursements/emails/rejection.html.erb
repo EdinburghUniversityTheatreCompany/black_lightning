@@ -27,12 +27,11 @@
   </tbody>
 </table>
 
-<p>If you believe this decision is incorrect, or you have addressed the reason above, reply to
-this email and we can put the claim back in the queue. You can also
-<%= link_to "file a new one", new_admin_reimbursements_expense_url %>, attaching the corrected receipt.</p>
+<p>You can <%= link_to "file a new claim", new_admin_reimbursements_expense_url %> with the corrected receipt.</p>
 
 <% if @cost_centre.contact_email %>
-  <p>If you have any questions, contact us at <%= mail_to @cost_centre.contact_email %>.</p>
+  <p>If you believe this decision is wrong, or you have fixed the reason above, write to
+  <%= mail_to @cost_centre.contact_email %> and we can put the claim back in the queue.</p>
 <% end %>
 
 <p>Best,<br>

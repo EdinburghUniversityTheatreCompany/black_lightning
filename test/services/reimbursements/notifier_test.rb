@@ -40,6 +40,11 @@ module Reimbursements
       assert_includes mail[:html], %(href="#{PORTAL}/expenses/42")
       assert_includes mail[:html], %(href="#{PORTAL}/expenses/new")
       assert_includes mail[:html], %(href="mailto:#{FINANCE}")
+      text = Nokogiri::HTML(mail[:html]).text.squish
+      # A reply reaches the send mailbox, which here is the one email-in polls.
+      assert_not_includes text, "reply to this email"
+      assert_includes text, "If you believe this decision is wrong, or you have fixed the reason above, " \
+                            "write to #{FINANCE} and we can put the claim back in the queue."
     end
 
     test "producer_notification lists the payee's expenses and totals" do
@@ -273,6 +278,7 @@ module Reimbursements
 
       graph.send_mails.each do |mail|
         assert_not_includes mail[:html], "mailto:#{MAILBOX}"
+        assert_not_includes mail[:html], %(href="mailto:"), "no contact address, so no empty contact link"
         assert_not_includes mail[:html], "contact us"
       end
     end
