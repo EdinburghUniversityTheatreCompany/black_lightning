@@ -131,7 +131,10 @@ module Admin
         end
 
         store.update_budget!(@budget.record_id, attrs)
-        redirect_to admin_reimbursements_budgets_path(**scope_params, anchor: "budget_#{@budget.record_id}"),
+        # ?budget= as well as the fragment: Turbo follows the redirect with
+        # fetch and drops the fragment, so scroll_to_controller reads the param.
+        redirect_to admin_reimbursements_budgets_path(**scope_params, budget: @budget.record_id,
+                                                                      anchor: "budget_#{@budget.record_id}"),
                     notice: "Budget saved."
       end
 

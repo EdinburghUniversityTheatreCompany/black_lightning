@@ -1,19 +1,19 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
-<p class="mb-3 text-gray-600">
-  Every budget line with its live financials. Only the initial figure is typed; the rest is
-  computed.
-</p>
+<%= render "tabs" %>
+<%# Scrolls to the line a save came back for (?budget=); see scroll_to_controller. %>
+<div data-controller="scroll-to" data-scroll-to-param-value="budget" data-scroll-to-prefix-value="budget_"></div>
 
 <%= render "admin/reimbursements/shared/glossary_terms",
+           summary: "About these figures",
+           intro: "Every budget line with its live financials. Only the initial figure is typed; " \
+                  "the rest is computed.",
            terms: ::Reimbursements::Glossary.terms(:initial_budget, :projected, :committed,
-                                                   :pipeline, :remaining, :expected_outturn,
+                                                   :remaining, :expected_outturn,
                                                    :variance, :eusa_actual) %>
 
 <p class="mb-3 flex flex-wrap gap-2">
-  <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path(**scope_params),
-        class: btn_classes(:secondary, :sm) %>
   <%= link_to "New budget",
         new_admin_reimbursements_budget_path(year: selected_financial_year&.key,
                                              cost_centre: selected_cost_centre&.key),
@@ -50,9 +50,10 @@
   <% projected_header = content_tag(:span, "Projected",
        title: "The line's current plan: the latest logged forecast, falling back to the " \
               "initial budget, which is marked as such.") %>
-  <% headers = [ "Budget", "Type", "Visible", "Initial", projected_header, "Committed",
-                 "Pipeline", "Paid (portal)", "EUSA actual", expected_header,
-                 "Remaining", "Variance", "Owners", "" ] %>
+  <%# [label, money?] — money columns are right-aligned to line up the pence. %>
+  <% headers = [ [ "Budget" ], [ "Initial", true ], [ projected_header, true ], [ "Committed", true ],
+                 [ "EUSA actual", true ], [ expected_header, true ], [ "Remaining", true ],
+                 [ "Variance", true ], [ "Owners" ], [ "" ] ] %>
   <%
     # Grouped off the budgets in the selected year and cost centre (not the
     # full store list), so an area shows only its in-scope lines, in the order

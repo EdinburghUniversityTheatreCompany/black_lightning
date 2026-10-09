@@ -29,6 +29,18 @@ export default class extends Controller {
     // "start" rather than centring: these rows are tall, and the operator
     // wants the top of the card they acted on under the sticky header, which
     // the element's own scroll-margin already accounts for.
-    target.scrollIntoView({ block: "start" })
+    const box = target.closest(".table-scroll")
+    if (!box) {
+      target.scrollIntoView({ block: "start" })
+      return
+    }
+
+    // Inside a table's own scroll box, scrollIntoView also scrolls the page
+    // until the box's sticky column headers leave the screen. Bring the box
+    // into view first, then scroll only the box, leaving the row's
+    // scroll-margin for the headers above it.
+    box.scrollIntoView({ block: "start" })
+    const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0
+    box.scrollTop += target.getBoundingClientRect().top - box.getBoundingClientRect().top - margin
   }
 }

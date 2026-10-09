@@ -69,11 +69,10 @@ module Admin
         assert_equal 2, assigns(:budgets).size
         assert_includes response.body, "Props"
         assert_includes response.body, "Ticket income"
-        # Current forecast, committed, total paid and remaining surface
-        # (computed: forecast 800, committed 300, paid 150, remaining 500).
+        # Projected, committed and remaining surface
+        # (computed: forecast 800, committed 300, remaining 500).
         assert_includes response.body, "800"
         assert_includes response.body, "300"
-        assert_includes response.body, "150"
         assert_includes response.body, "500"
       end
 
@@ -99,7 +98,9 @@ module Admin
                                             debit: BigDecimal("161.00"))
       end
 
-      test "index shows the pipeline, EUSA-actual and expected-outturn columns" do
+      # Type, Visible, Pipeline and Paid (portal) are kept off the index for
+      # width; the CSV carries them.
+      test "index shows the EUSA-actual and expected-outturn columns, not the cut ones" do
         sign_in @user
         @income.destroy!
         seed_pipeline_and_eusa_debit
@@ -107,13 +108,39 @@ module Admin
         get :index
 
         assert_response :success
-        assert_includes response.body, "Pipeline"
-        assert_includes response.body, "Paid (portal)"
-        assert_includes response.body, "EUSA actual"
-        assert_includes response.body, "Expected outturn"
-        # Pipeline £275, EUSA actual £161, expected outturn = max(800, 300, 150, 161) = 800.
-        assert_includes response.body, "275"
-        assert_includes response.body, "161"
+        headers = css_select("thead th").map { |th| th.text.strip }
+        assert_equal [ "Budget", "Initial", "Projected", "Committed", "EUSA actual", "Expected outturn",
+                       "Remaining", "Variance", "Owners", "" ], headers
+        assert_select "td.text-right", text: /161/
+      end
+
+      test "a hidden line is tagged after its name rather than in a column" do
+        @props.update!(active: false)
+        sign_in @user
+
+        get :index
+
+        assert_select "tr#budget_#{@props.record_id} td:first-child span", text: "(hidden)"
+      end
+
+      test "the index and the overview are tabs that keep the filters" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
+                      admin_reimbursements_budgets_path(cost_centre: termtime.key)
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(cost_centre: termtime.key)
+      end
+
+      test "the row a save came back for is highlighted" do
+        sign_in @user
+
+        get :index, params: { budget: @props.record_id }
+
+        assert_select "tr#budget_#{@props.record_id} td.bg-yellow-50"
       end
 
       def seed_many_budgets(count)
@@ -191,10 +218,9 @@ module Admin
         assert_response :success
         # Over-budget indicator surfaces.
         assert_includes response.body, "Over budget"
-        # The health figures (initial, committed, total paid) all render.
+        # The health figures (initial, committed) render.
         assert_includes response.body, "1,000"
         assert_includes response.body, "1,400"
-        assert_includes response.body, "1,250"
       end
 
       test "does not flag an in-budget budget as over budget" do
@@ -1119,7 +1145,7 @@ module Admin
                                  initial_budget: "1875.5", budget_type: "Expense", active: "1",
                                  owner_ids: [ @alice.record_id, @bob.record_id ] }
 
-        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal "Set & construction", @props.name
         assert_equal "4200", @props.nominal_code
@@ -1267,7 +1293,7 @@ module Admin
                                  nominal_code: "4321", area_id: area.record_id,
                                  owner_ids: [ @alice.record_id ] }
 
-        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{budget.record_id}")
+        assert_redirected_to admin_reimbursements_budgets_path(budget: budget.record_id, anchor: "budget_#{budget.record_id}")
         assert_equal "4321", budget.reload.nominal_code, "the edit itself must still land"
         assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
                      "the posted owner list must be ignored, not written to own_owners"
@@ -1710,7 +1736,7 @@ module Admin
                                  budget_type: "Expense", active: "1", area_id: area.record_id,
                                  owner_ids: [ "" ] }
 
-        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal area.id, @props.area_id
         assert_equal [ @alice.record_id ], @props.own_owners.map(&:record_id)
@@ -1788,7 +1814,8 @@ module Admin
                                  cost_centre: termtime.key }
 
         assert_redirected_to admin_reimbursements_budgets_path(
-          year: next_year.key, cost_centre: termtime.key, anchor: "budget_#{@props.record_id}"
+          year: next_year.key, cost_centre: termtime.key, budget: @props.record_id,
+          anchor: "budget_#{@props.record_id}"
         )
       end
 
@@ -1798,7 +1825,7 @@ module Admin
         patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Expense" }
 
-        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
       end
 
       test "the edit page's form, back link and forecast form carry the filters" do

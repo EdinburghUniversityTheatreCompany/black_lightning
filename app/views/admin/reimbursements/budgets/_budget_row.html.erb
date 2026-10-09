@@ -14,7 +14,8 @@
             class: "font-medium text-primary underline",
             "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
-    reimbursements_budget_health_badge(budget)
+    reimbursements_budget_health_badge(budget),
+    (content_tag(:span, "(hidden)", class: "text-gray-400 text-xs") unless budget.active)
   ].compact, " ")
   # "No owner" is a warning only for a live (Visible) budget — Hidden
   # overhead lines (payroll, NI, contracts) will never have a producer
@@ -26,25 +27,20 @@
             else
               content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
             end)
-  visible = if budget.active
-              render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
-            else
-              render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
-            end
+  money = "text-right whitespace-nowrap"
+  # Server-side as well as :target, because a Turbo redirect drops the fragment.
+  highlighted = params[:budget] == budget.record_id
 %>
-<tr id="budget_<%= budget.record_id %>" class="scroll-mt-24 target:bg-yellow-50">
-  <td><%= name %></td>
-  <td><%= budget.budget_type %></td>
-  <td><%= visible %></td>
-  <td><%= reimbursements_money(budget.initial_budget) %></td>
-  <td><%= reimbursements_budget_projected(budget) %></td>
-  <td><%= reimbursements_money(budget.committed_amount) %></td>
-  <td><%= reimbursements_money(budget.pipeline_amount) %></td>
-  <td><%= reimbursements_money(budget.paid_portal_amount) %></td>
-  <td><%= reimbursements_money(budget.eusa_actual_amount) %></td>
-  <td><%= reimbursements_money(budget.expected_outturn) %></td>
-  <td><%= reimbursements_budget_remaining(budget) %></td>
-  <td><%= reimbursements_budget_variance(budget) %></td>
+<tr id="budget_<%= budget.record_id %>" class="group scroll-mt-28">
+  <td class="<%= class_names("sticky left-0 z-10 group-target:bg-yellow-50",
+                             highlighted ? "bg-yellow-50" : "bg-white") %>"><%= name %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.initial_budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_projected(budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.committed_amount) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.eusa_actual_amount) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.expected_outturn) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_remaining(budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_variance(budget) %></td>
   <td><%= owners %></td>
   <td>
     <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),

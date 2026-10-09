@@ -1,0 +1,13 @@
+<%# The index and the overview are two views of the same budgets, so they sit
+    as tabs that keep the page's year and cost centre. %>
+<nav class="mb-3 flex gap-1 border-b border-gray-200" aria-label="Budget views">
+  <% [ [ "Budgets", admin_reimbursements_budgets_path(**scope_params), "index" ],
+       [ "Overview", overview_admin_reimbursements_budgets_path(**scope_params), "overview" ] ].each do |label, path, action| %>
+    <% current = action_name == action %>
+    <%= link_to label, path,
+                "aria-current": (current ? "page" : nil),
+                class: class_names("-mb-px border-b-2 px-3 py-2 text-sm",
+                                   "border-blue-600 font-medium text-blue-800" => current,
+                                   "border-transparent text-gray-600 hover:text-gray-900" => !current) %>
+  <% end %>
+</nav>

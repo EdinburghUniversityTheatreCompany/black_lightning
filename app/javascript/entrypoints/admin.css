@@ -52,10 +52,11 @@ select.simple-select2 {
      it is grouping. Re-measure if the header's padding or font changes.
 
      Cells, not the <tr> — the same reason the header above sticks its cells:
-     Safari and older Chrome ignore `position: sticky` on a <tr>. z-10 keeps it
-     over the row content and under the header (z-20). */
+     Safari and older Chrome ignore `position: sticky` on a <tr>. z-15 keeps it
+     over the row content, including the z-10 pinned first and last cells, and
+     under the header (z-20). */
   .table-sticky-head>tbody>tr>th[scope="rowgroup"] {
-    @apply sticky z-10 bg-gray-50;
+    @apply sticky z-15 bg-gray-50;
 
     /* Set by sticky_table_controller from the header's measured height: the
        header wraps to two lines at 1366px and one at 1920px, so a constant

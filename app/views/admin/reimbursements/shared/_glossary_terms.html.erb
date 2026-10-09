@@ -1,4 +1,4 @@
-<%# locals: (terms:, summary: "What these columns mean") %>
+<%# locals: (terms:, summary: "What these columns mean", intro: nil) %>
 <%# The definitions where the reader is, not only on the glossary page.
     A <details> rather than a title= tooltip: a tooltip is invisible on a
     touch screen and to the keyboard, and these are the figures the whole
@@ -6,6 +6,9 @@
     itself, so a column note cannot drift from its definition. %>
 <details class="mb-3 rounded border border-gray-200 bg-gray-50 p-3">
   <summary class="cursor-pointer text-sm font-medium"><%= summary %></summary>
+  <% if intro %>
+    <p class="mt-2 mb-0 text-sm text-gray-700"><%= intro %></p>
+  <% end %>
   <dl class="mt-2 flex flex-col gap-2">
     <% terms.each do |term| %>
       <div>
