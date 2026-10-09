@@ -52,6 +52,9 @@ module Reimbursements
   class EusaActual < ApplicationRecord
     include RecordId
 
+    # Airtable's month label, which nothing reads or writes. The next deploy drops it.
+    self.ignored_columns += %w[source_month]
+
     # Stamped on both legs of an offsetting pair (an accrual and its reversal).
     STATUS_OFFSET = "offset".freeze
 

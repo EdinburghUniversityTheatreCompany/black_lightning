@@ -44,15 +44,17 @@ production database, and it costs nothing at about 300 rows a financial year.
 ### Drop the columns the models ignore (once the release ignoring them is live)
 
 `Reimbursements::PaymentDetails` ignores `iban` and `bic` (`ignored_columns`): nothing ever wrote
-them, and an international claim carries its own. The drop needs a release of its own: Rails names
-every column on INSERT, so dropping in the release that adds the ignore breaks the outgoing
-container's writes while the new one boots.
+them, and an international claim carries its own. `Reimbursements::EusaActual` ignores
+`source_month`, Airtable's month label, which nothing reads or writes. The drop needs a release of
+its own: Rails names every column on INSERT, so dropping in the release that adds the ignore breaks
+the outgoing container's writes while the new one boots.
 
-**Fix:** one migration (`bin/rails g migration`) that removes them inside `safety_assured`, each
-guarded by `column_exists?`, with a `down` that re-adds empty `string, default: "", null: false`
-columns (no data comes back). Delete the `ignored_columns` line in the same commit. Once it has
-run, never `kamal rollback` past the ignoring release: older code reads `person.iban` on every
-international claim page.
+**Fix:** one migration (`bin/rails g migration`) that removes them, and `source_month`'s index,
+inside `safety_assured`, each guarded by `column_exists?`, with a `down` that re-adds empty
+`string, default: "", null: false` columns and the index (no data comes back). Delete both
+`ignored_columns` lines in the same commit. Export any `source_month` values worth keeping first.
+Once it has run, never `kamal rollback` past the ignoring release: older code reads `person.iban`
+on every international claim page.
 
 ## Reimbursements: areas and budgets
 

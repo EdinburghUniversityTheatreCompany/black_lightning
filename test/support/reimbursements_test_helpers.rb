@@ -127,11 +127,10 @@ module ReimbursementsTestHelpers
   # credit, as EusaActual.net derives it, so a test cannot seed a second source of truth.
   def create_reimbursements_eusa_actual(nominal_code: "4100", narrative: "Stripe payout",
                                         debit: nil, credit: nil, date: Date.current,
-                                        period: "06", source_month: "2026-09", **attrs)
+                                        period: "06", **attrs)
     Reimbursements::EusaActual.create!(
       nominal_code: nominal_code, narrative: narrative, debit: debit, credit: credit,
-      net: (debit || 0) - (credit || 0), date: date, period: period,
-      source_month: source_month, **attrs
+      net: (debit || 0) - (credit || 0), date: date, period: period, **attrs
     )
   end
 

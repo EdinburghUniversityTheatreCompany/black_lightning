@@ -350,9 +350,8 @@ module Admin
         false
       end
 
-      # source_month is never written (the EUSA period scopes). The cost centre is stored as the
-      # resolved FK only: the exported code is the input to attribution, and storing it beside the
-      # answer would let the two disagree.
+      # The cost centre is stored as the resolved FK only: the exported code is the input to
+      # attribution, and storing it beside the answer would let the two disagree.
       def actuals_attrs(entry, imported_at)
         row = entry.row
         {
