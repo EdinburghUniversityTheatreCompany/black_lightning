@@ -27,13 +27,15 @@
             else
               content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
             end)
-  money = "text-right whitespace-nowrap"
   # Server-side as well as :target, because a Turbo redirect drops the fragment.
+  # Every cell, since the pinned first and last cells paint their own background.
   highlighted = params[:budget] == budget.record_id
+  highlight = class_names("group-target:bg-yellow-50", "bg-yellow-50" => highlighted)
+  money = class_names("text-right whitespace-nowrap", highlight)
 %>
 <tr id="budget_<%= budget.record_id %>" class="group scroll-mt-28">
-  <td class="<%= class_names("sticky left-0 z-10 group-target:bg-yellow-50",
-                             highlighted ? "bg-yellow-50" : "bg-white") %>"><%= name %></td>
+  <td class="<%= class_names("sticky left-0 z-10", highlight,
+                             "bg-white group-hover:bg-gray-50" => !highlighted) %>"><%= name %></td>
   <td class="<%= money %>"><%= reimbursements_money(budget.initial_budget) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_projected(budget) %></td>
   <td class="<%= money %>"><%= reimbursements_money(budget.committed_amount) %></td>
@@ -41,8 +43,8 @@
   <td class="<%= money %>"><%= reimbursements_money(budget.expected_outturn) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_remaining(budget) %></td>
   <td class="<%= money %>"><%= reimbursements_budget_variance(budget) %></td>
-  <td><%= owners %></td>
-  <td>
+  <td class="<%= highlight %>"><%= owners %></td>
+  <td class="<%= highlight %>">
     <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           "aria-label": "Edit #{budget.display_name}", class: btn_classes(:secondary, :sm)) %>
   </td>

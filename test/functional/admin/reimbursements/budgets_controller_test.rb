@@ -162,7 +162,8 @@ module Admin
 
         get :index, params: { budget: @props.record_id }
 
-        assert_select "tr#budget_#{@props.record_id} td.bg-yellow-50"
+        assert_select "tr#budget_#{@props.record_id} td.bg-yellow-50", count: 10
+        assert_select "tr#budget_#{@props.record_id} td.bg-white", count: 0
       end
 
       def seed_many_budgets(count)
