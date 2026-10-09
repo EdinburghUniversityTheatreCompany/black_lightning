@@ -23,17 +23,10 @@ module Pretix
     # target: the window alone would re-write the same date nightly from March.
     REFRESH_WINDOW = 18.months
 
-    # The customer list is paged without a unique tiebreaker, so a pass can miss
-    # rows: repeat until one finds nothing to do. The cap stops a bug looping forever.
-    MAX_PASSES = 5
-
     OUTCOMES = %i[
       created extended expired deduplicated unchanged
       no_customer no_identifier no_user ambiguous suppressed failed
     ].freeze
-
-    # Writes accumulate across passes; every other count is the final pass's snapshot.
-    CUMULATIVE_COUNTS = %i[created extended expired deduplicated duplicates_expired].freeze
 
     Patch = Data.define(:membership_id, :date_end)
     Creation = Data.define(:date_start, :date_end)
@@ -86,29 +79,13 @@ module Pretix
       end.outcome
     end
 
-    # One customer list per pass, then one membership read per customer that
-    # resolves to a User (see reconcile_customer).
+    # One customer list, then one membership read per customer that resolves to a
+    # User (see reconcile_customer).
     #
     # A failure on the customer list is deliberately NOT caught: it is fatal for
     # every customer, and a run that carried on would report a shop full of
     # customers with no memberships. Per-customer failures are caught and counted.
     def reconcile_all
-      totals = blank_counts
-      passes = 0
-
-      MAX_PASSES.times do
-        passes += 1
-        counts = reconcile_pass
-        totals = merge_counts(totals, counts)
-        break unless CUMULATIVE_COUNTS.any? { |key| counts[key].positive? }
-      end
-
-      totals.merge(passes: passes)
-    end
-
-    private
-
-    def reconcile_pass
       counts = blank_counts
       customers = @client.customers
       users = users_by_email(customers)
@@ -122,6 +99,8 @@ module Pretix
 
       counts
     end
+
+    private
 
     def reconcile_customer(customer, users, linked_users)
       identifier = customer["identifier"]
@@ -199,12 +178,6 @@ module Pretix
     end
 
     def blank_counts = OUTCOMES.index_with(0).merge(duplicates_expired: 0)
-
-    def merge_counts(totals, counts)
-      counts.to_h do |key, value|
-        [ key, CUMULATIVE_COUNTS.include?(key) ? totals.fetch(key, 0) + value : value ]
-      end
-    end
 
     # Only called for an email match, so the stored link was blank or stale:
     # re-point it rather than costing that person two lookups forever. A link that

@@ -274,8 +274,10 @@ people who already had a membership. It failed in the reassuring direction, whic
 not running at all.
 
 The step-0 backfill made it markedly worse by giving 198 rows an identical `date_end`, and that
-run reported "89 patched, 0 failed" while 16 records were still stale. Writes shift the pages too,
-which is why `reconcile_all` re-fetches and repeats until a pass finds nothing to do.
+run reported "89 patched, 0 failed" while 16 records were still stale. Writes shifted the pages
+too, and `reconcile_all` once repeated until a pass wrote nothing. Now that memberships are read
+per customer, a write shifts no page, so `reconcile_all` makes one pass. The customer list is still
+paged without a tiebreaker, so a customer it drops one night waits for the next run.
 
 **Duplicates are real**: 198 live memberships across 125 customers before the first reconcile.
 They are double-activations, not allowance top-ups — `max_usages` is null, so one membership
@@ -305,11 +307,6 @@ grant themselves a membership.
   filter is email, and 189 native accounts exist carrying no `external_identifier`. Matching on the
   customer's own `email` field would grant a membership to an account the reconcile — which keys on
   `external_identifier` — could never find again, so the two paths would disagree by construction.
-- **The re-fetch loop is capped at 5 passes**, stopping as soon as a pass writes nothing, and
-  `reconcile_all` returns `passes:` so a job log shows whether it converged. `ReconcileMembershipsJob`
-  warns when it hits the cap, because that is the tell that the pagination hazard is biting.
-- **Write counts accumulate across passes; read-only counts are the last pass's snapshot.** Summing
-  the latter would double-count the same customer on every pass.
 - `users.email` is uniquely indexed, so an email resolves to exactly one `User` — no ambiguity
   branch is needed there. `date_start` ties are broken by membership id, for determinism.
 

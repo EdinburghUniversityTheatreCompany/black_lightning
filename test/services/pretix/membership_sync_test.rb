@@ -3,8 +3,7 @@ require "test_helper"
 class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   include HoneybadgerTestHelpers
 
-  # It MUTATES its own store on every write, so a test can assert that a second
-  # reconcile pass finds nothing left to do.
+  # Writes change its store, as they do pretix's.
   class FakeClient
     WRITE_CALLS = %i[create_membership update_membership].freeze
 
@@ -277,8 +276,7 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
   test "a link that still resolves is left alone, even beside a second account" do
     # Two pretix accounts for one person (an @sms.ed.ac.uk one and its rewritten
     # @ed.ac.uk twin): whichever the loop reaches second would re-point the link if
-    # nothing stopped it. Both get a membership needing no change so the run settles
-    # in ONE pass; with two, the next pass undoes the re-pointing and hides the churn.
+    # nothing stopped it.
     member.update_column(:pretix_customer_identifier, "cust-linked")
     client = FakeClient.new(
       customers: [
@@ -291,9 +289,8 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
       ]
     )
 
-    counts = Pretix::MembershipSync.new(client: client).reconcile_all
+    Pretix::MembershipSync.new(client: client).reconcile_all
 
-    assert_equal 1, counts[:passes], "the scenario must settle in one pass or the churn is invisible"
     assert_equal "cust-linked", member.reload.pretix_customer_identifier
   end
 
@@ -352,18 +349,17 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     assert_equal 1, counts[:created]
     assert_equal 1, counts[:expired]
     assert_equal 1, counts[:no_user]
-    assert_equal 2, counts[:passes]
 
-    # One customer list per pass, then one membership read per customer that
-    # RESOLVES TO A USER (the ghost costs none). Slicing one whole-shop list is what
-    # this forbids: pretix pages it with no unique tiebreaker and drops rows.
+    # One customer list, then one membership read per customer that RESOLVES TO A
+    # USER (the ghost costs none). Slicing one whole-shop list is what this forbids:
+    # pretix pages it with no unique tiebreaker and drops rows.
     reads = client.reads.map(&:first)
-    assert_equal 2, reads.count(:customers), "one customer list per pass"
-    assert_equal 4, reads.count(:memberships), "two resolvable customers, two passes"
+    assert_equal 1, reads.count(:customers)
+    assert_equal 2, reads.count(:memberships), "one per resolvable customer"
     assert_equal :customers, reads.first
   end
 
-  test "a shop that is already correct is one pass and no writes" do
+  test "a shop that is already correct gets no writes" do
     client = FakeClient.new(
       customers: [ customer_hash(member.email) ],
       memberships: [ membership_hash(id: 1, customer: "cust-#{member.email}",
@@ -373,11 +369,11 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
     counts = Pretix::MembershipSync.new(client: client).reconcile_all
 
     assert_equal 1, counts[:unchanged]
-    assert_equal 1, counts[:passes]
     assert_empty client.writes
   end
 
-  test "re-fetches after writing and stops once a pass finds nothing to do" do
+  # Memberships are read per customer, so a write moves nothing paged: nothing to re-read for.
+  test "reads the shop once, even when it writes" do
     identifier = "cust-#{member.email}"
     client = FakeClient.new(
       customers: [ customer_hash(member.email) ],
@@ -392,9 +388,8 @@ class Pretix::MembershipSyncTest < ActiveSupport::TestCase
 
     assert_equal 1, counts[:extended]
     assert_equal 1, counts[:duplicates_expired]
-    assert_equal 2, counts[:passes]
-    # The second pass re-read everything and left the now-correct shop alone.
     assert_equal 2, client.writes.size
+    assert_equal 1, client.reads.count { |call| call.first == :customers }
   end
 
   # --- the two paths cannot drift --------------------------------------------
