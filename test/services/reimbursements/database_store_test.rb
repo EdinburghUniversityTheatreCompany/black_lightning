@@ -169,7 +169,6 @@ module Reimbursements
 
     test "batch lifecycle mirrors BatchProcessor's writes" do
       batch = store.create_batch!(date_sent: Date.new(2026, 5, 13),
-                                  notes: "BACS SharePoint: https://sp/x",
                                   sharepoint_backup_url: "https://sp/x",
                                   draft_message_id: "AAMkAG=")
 

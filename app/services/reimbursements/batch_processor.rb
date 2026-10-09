@@ -226,7 +226,6 @@ module Reimbursements
           # draft_web_link is stored because Graph returns it only once, here;
           # it cannot be derived from the message id later.
           @store.create_batch!(date_sent: result.bacs_date,
-                               notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
                                sharepoint_backup_url: result.bacs_sharepoint_url,
                                draft_message_id: result.eusa_draft_message_id,
                                draft_web_link: result.eusa_draft_web_link.presence)

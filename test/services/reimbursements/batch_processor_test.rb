@@ -167,6 +167,9 @@ module Reimbursements
       assert_equal "msg-1", batch.draft_message_id
       # Graph returns the webLink only once, so the batch must keep it.
       assert_equal "https://outlook.example/draft-1", batch.draft_web_link
+      assert_equal "https://sp.example/fldB/2026-05-13-bedlam-fringe-BACS-request-F40.xlsx",
+                   batch.sharepoint_backup_url
+      assert_nil batch.notes, "the link has its own field; the Detail page already prints it"
       [ @expense_a, @expense_b ].each do |expense|
         expense.reload
         assert_equal Status::SUBMITTED, expense.status
