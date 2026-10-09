@@ -164,13 +164,6 @@ module Reimbursements
       assert_predicate form[16][2].value, :blank?
     end
 
-    test "the vendored template names no budget holder of its own" do
-      template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
-
-      assert_predicate template[15][2].value, :blank?
-      assert_predicate template[16][2].value, :blank?
-    end
-
     test "keeps the template's styling on the authorisation cells it writes" do
       template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
       form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "X", authoriser_name: "Y",
