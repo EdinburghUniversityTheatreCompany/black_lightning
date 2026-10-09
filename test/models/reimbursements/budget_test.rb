@@ -24,6 +24,13 @@ module Reimbursements
                       amount_excl_vat: excl_vat, description: "x")
     end
 
+    test "index_order breaks a name tie by id, so the edit page's neighbours are stable" do
+      first = create_reimbursements_budget(name: "Props")
+      second = create_reimbursements_budget(name: "props", nominal_code: "4001")
+
+      assert_equal [ first, second ], Reimbursements::Budget.index_order([ second, first ])
+    end
+
     test "committed_amount sums excl-VAT amounts of Approved, Submitted and Paid" do
       budget = build_budget
       add_expense(budget, status: Status::APPROVED, excl_vat: 10)

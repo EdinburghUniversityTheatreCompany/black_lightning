@@ -121,7 +121,7 @@ module Reimbursements
     # stepping through them walks the table as it reads.
     def self.index_order(budgets)
       budgets.sort_by do |budget|
-        [ budget.area ? 0 : 1, budget.area&.name.to_s.downcase, budget.area_id.to_i, budget.name.to_s.downcase ]
+        [ budget.area ? 0 : 1, budget.area&.name.to_s.downcase, budget.area_id.to_i, budget.name.to_s.downcase, budget.id.to_i ]
       end
     end
 
