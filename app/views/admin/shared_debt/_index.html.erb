@@ -1,4 +1,4 @@
-<%# locals: (debts:, debt_class:, convert_permission:, is_specific_user:, forgive_partial:, from_type:, to_type:) %>
+<%# locals: (debt_class:, is_specific_user:) %>
 <% search_fields = is_specific_user ? nil : {
   user_full_name_cont:  { slug: 'defaults.user' },
   show_name_cont:       { slug: 'defaults.show_name' },
