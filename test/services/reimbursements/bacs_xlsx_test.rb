@@ -173,6 +173,39 @@ module Reimbursements
       assert_equal "SUM(BREAKDOWN!B3:B202)", auth_total.formula.expression
     end
 
+    def authorisation_form(bytes)
+      RubyXL::Parser.parse_buffer(bytes)["AUTHORISATION FORM"]
+    end
+
+    test "prints the cost centre and its budget holder on the authorisation form" do
+      form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "Bedlam Fringe 2026",
+                                                            authoriser_name: "Jo Producer",
+                                                            authoriser_designation: "Fringe Treasurer"))
+
+      assert_equal "Bedlam Fringe 2026", form[3][3].value
+      assert_equal "Jo Producer", form[15][2].value
+      assert_equal "Fringe Treasurer", form[16][2].value
+      assert_equal "SUM(BREAKDOWN!B3:B202)", form[10][2].formula.expression
+    end
+
+    test "leaves the budget holder blank when the cost centre names nobody" do
+      form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "Bedlam Theatre"))
+
+      assert_equal "Bedlam Theatre", form[3][3].value
+      assert_predicate form[15][2].value, :blank?
+      assert_predicate form[16][2].value, :blank?
+    end
+
+    test "keeps the template's styling on the authorisation cells it writes" do
+      template = RubyXL::Parser.parse(BacsXlsx::DEFAULT_TEMPLATE_PATH.to_s)["AUTHORISATION FORM"]
+      form = authorisation_form(BacsXlsx.new.generate(rows, centre_name: "X", authoriser_name: "Y",
+                                                            authoriser_designation: "Z"))
+
+      [ [ 3, 3 ], [ 15, 2 ], [ 16, 2 ] ].each do |row, col|
+        assert_equal template[row][col].style_index, form[row][col].style_index
+      end
+    end
+
     test "refuses a batch bigger than the template's row capacity instead of corrupting the total" do
       error = assert_raises(BacsXlsx::TemplateError) { BacsXlsx.new.generate(full_batch(BacsXlsx::MAX_ROWS + 1)) }
 

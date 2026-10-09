@@ -177,7 +177,9 @@ module Reimbursements
         )
       end
       filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
-      xlsx_attachment(filename, @xlsx.generate(rows))
+      xlsx_attachment(filename, @xlsx.generate(rows, centre_name: @cost_centre.name,
+                                                     authoriser_name: @cost_centre.authoriser_name,
+                                                     authoriser_designation: @cost_centre.authoriser_designation))
     end
 
     # One form for one claim. The amount on it is the FOREIGN one: EUSA's bank

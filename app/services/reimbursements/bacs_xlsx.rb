@@ -21,6 +21,11 @@ module Reimbursements
                          keyword_init: true)
 
     SHEET_NAME = "BREAKDOWN".freeze
+    AUTHORISATION_SHEET_NAME = "AUTHORISATION FORM".freeze
+    # 0-based [row, column]: D4, C16, C17.
+    CENTRE_NAME_CELL = [ 3, 3 ].freeze
+    AUTHORISER_NAME_CELL = [ 15, 2 ].freeze
+    AUTHORISER_DESIGNATION_CELL = [ 16, 2 ].freeze
     # 0-based: rows 0 (header) and 1 (example) are reserved by the template.
     DATA_START_ROW = 2
     # The template's GRAND TOTAL row (0-based) sits right after the last data
@@ -55,7 +60,7 @@ module Reimbursements
     # Render the spreadsheet as bytes, suitable for attaching to an email or
     # uploading to SharePoint. The template is re-read on every call so one
     # instance can produce many workbooks without state bleed.
-    def generate(rows)
+    def generate(rows, centre_name: nil, authoriser_name: nil, authoriser_designation: nil)
       # Loaded here rather than at file scope: this class is eager-loaded in
       # production, so a top-level require would pull rubyXL into every process
       # at boot even though only the BACS build touches it (Gemfile require:false).
@@ -86,6 +91,11 @@ module Reimbursements
         write_row(sheet, DATA_START_ROW + index, row)
       end
 
+      authorisation = workbook[AUTHORISATION_SHEET_NAME]
+      write_template_cell(authorisation, CENTRE_NAME_CELL, centre_name)
+      write_template_cell(authorisation, AUTHORISER_NAME_CELL, authoriser_name)
+      write_template_cell(authorisation, AUTHORISER_DESIGNATION_CELL, authoriser_designation)
+
       workbook.stream.string
     end
 
@@ -109,6 +119,12 @@ module Reimbursements
       sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre)
       sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
       sheet.add_cell(row_index, COL_DESCRIPTION, sanitize(row.description))
+    end
+
+    # change_contents rather than add_cell, which would replace the cell and drop
+    # the template's styling.
+    def write_template_cell(sheet, (row, column), value)
+      sheet[row][column].change_contents(sanitize(value.to_s))
     end
 
     # Prefix a single quote when a submitter-controlled value begins with a
