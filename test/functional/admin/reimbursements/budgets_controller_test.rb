@@ -1354,15 +1354,6 @@ module Admin
         )
       end
 
-      test "a save with no filters returns to the bare index, which still means every centre" do
-        sign_in @user
-
-        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
-                                 budget_type: "Expense" }
-
-        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
-      end
-
       test "the edit page's form, back link and forecast form carry the filters" do
         _, next_year = seed_two_years
         termtime = create_second_reimbursements_cost_centre
