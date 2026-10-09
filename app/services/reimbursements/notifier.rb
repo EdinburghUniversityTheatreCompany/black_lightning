@@ -89,7 +89,7 @@ module Reimbursements
     # Operator: the EUSA draft awaits review and send. +errors+ lists best-effort step failures
     # (upload, notification, flags): the draft is still valid, but the template must not claim
     # those steps succeeded.
-    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, errors: [], batch_id: nil)
+    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, batch_id:, errors: [])
       count = expenses.size
       send_email(
         to: recipients,

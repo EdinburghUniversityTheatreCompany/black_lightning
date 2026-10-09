@@ -78,7 +78,7 @@ module Reimbursements
                                             budget_name: "Props", description: "Paint",
                                             flags: [ "no receipt" ] } ])
       notifier.batch_ready(recipients: recipients, total: "52.50", run_date: "9 July 2026",
-                           draft_link: "https://outlook.example/draft-1",
+                           draft_link: "https://outlook.example/draft-1", batch_id: 9,
                            expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          budget_name: "Props", description: "Paint" } ])
       notifier.failure(recipients: recipients, error_text: "SharePoint down", run_date: "9 July 2026")
@@ -109,7 +109,7 @@ module Reimbursements
 
       [ [ row ], [ row, row, row ] ].each do |expenses|
         notifier.batch_ready(recipients: [ "ops@example.com" ], expenses: expenses, total: "40.00",
-                             draft_link: nil, run_date: "9 July 2026")
+                             draft_link: nil, run_date: "9 July 2026", batch_id: 9)
       end
 
       one, three = graph.send_mails.map { |mail| Nokogiri::HTML(mail[:html]).text.squish }
@@ -182,7 +182,7 @@ module Reimbursements
                                        rows: [ row ], run_date: "9 July 2026")
       notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "40.00",
                               run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50",
+      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "52.50", batch_id: 9,
                            draft_link: "https://outlook.example/draft-1", run_date: "9 July 2026")
       notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
 
@@ -251,17 +251,14 @@ module Reimbursements
                               run_date: "9 July 2026")
       notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50", batch_id: 9,
                            draft_link: nil, run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50",
-                           draft_link: nil, run_date: "9 July 2026")
       notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
 
-      pending, approved, ready, ready_without_id, failure = graph.send_mails.map { |mail| mail[:html] }
+      pending, approved, ready, failure = graph.send_mails.map { |mail| mail[:html] }
       assert_includes pending, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
       assert_includes pending, %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
       assert_includes approved, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
       assert_includes approved, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
       assert_includes ready, %(href="#{PORTAL}/batches/9")
-      assert_includes ready_without_id, %(href="#{PORTAL}/batches")
       assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
       assert_includes failure, "forward this email to IT"
       assert_not_includes failure, "server logs"
