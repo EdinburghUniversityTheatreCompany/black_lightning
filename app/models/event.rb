@@ -205,11 +205,6 @@ class Event < ApplicationRecord
   after_update :recache_author_list_if_changed
   after_destroy :cleanup_orphaned_company
 
-  # Returns the last event to have finished.
-  def self.last_event
-    reorder("end_date DESC").where([ "end_date < ? AND is_public = ?", Date.current, true ]).first
-  end
-
   # Formats the shows so they can be used in a selection field
   def self.selection_collection
     pluck(:name, :id)

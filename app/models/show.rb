@@ -65,8 +65,6 @@
 class Show < Event
   OCCURRENCE_LABEL = "Performance".freeze
 
-  include ApplicationHelper
-
   validates :author, :price, presence: true
 
   has_many :feedbacks, class_name: "Admin::Feedback", dependent: :restrict_with_error
