@@ -17,6 +17,44 @@ module Admin
         login_as users(:member)
       end
 
+      # A Turbo redirect drops the #budget_<id> fragment, so scroll_to reads
+      # ?budget= and scrolls the table's own box. Measured, because a row hidden
+      # behind the sticky headers looks scrolled-to in every request test.
+      test "saving a budget far down a long index lands with its row in view" do
+        area = create_reimbursements_area(name: "Medea")
+        lines = (1..30).map do |n|
+          create_reimbursements_budget(name: format("Line %02d", n), nominal_code: "4#{n.to_s.rjust(3, '0')}", area: area)
+        end
+        target = lines[27]
+
+        visit edit_admin_reimbursements_budget_path(target.record_id)
+        click_on "Save budget"
+        assert_text "Budget saved"
+        assert_selector "tr#budget_#{target.record_id} td.bg-yellow-50"
+
+        rects = evaluate_script(<<~JS)
+          (() => {
+            const rect = (el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom } }
+            const row = document.getElementById("budget_#{target.record_id}")
+            const box = row.closest(".table-scroll")
+            return {
+              box: rect(box), row: rect(row), scrollTop: box.scrollTop,
+              screenTop: document.querySelector("main").getBoundingClientRect().top,
+              headerTop: Math.min(...[...box.querySelectorAll("thead th")].map((th) => th.getBoundingClientRect().top)),
+              heading: rect(row.closest("tbody").querySelector("th[scope=rowgroup]")),
+              headerBottom: Math.max(...[...box.querySelectorAll("thead th")].map((th) => th.getBoundingClientRect().bottom))
+            }
+          })()
+        JS
+
+        row = rects["row"]
+        assert_operator rects["scrollTop"], :>, 0, "precondition: the row starts out of view"
+        assert_operator rects["headerTop"], :>=, rects["screenTop"] - 1, "column headers scrolled off screen: #{rects}"
+        assert_operator row["top"], :>=, rects["headerBottom"] - 1, "row hidden under the column headers: #{rects}"
+        assert_operator row["top"], :>=, rects["heading"]["bottom"] - 1, "row hidden under its area heading: #{rects}"
+        assert_operator row["bottom"], :<=, rects["box"]["bottom"] + 1, "row below the scroll box: #{rects}"
+      end
+
       test "moves a budget to a different area from its own form in the browser" do
         create_reimbursements_area(name: "Cogito")
         create_reimbursements_area(name: "Improverts")
