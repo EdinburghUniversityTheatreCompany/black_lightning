@@ -15,7 +15,7 @@ module GenericController
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
 
-    response.headers["X-Total-Count"] = resources.count.to_s
+    response.headers["X-Total-Count"] = (resources.respond_to?(:total_count) ? resources.total_count : resources.size).to_s
 
     @editable_block_name = index_editable_block_name
 

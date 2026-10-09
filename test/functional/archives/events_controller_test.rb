@@ -11,6 +11,16 @@ class Archives::EventsControllerTest < ActionController::TestCase
     assert assigns(:events).length > 0, "Make sure there is at least one event. Otherwise, you might need to create some."
   end
 
+  test "X-Total-Count is every matching event, not the rows on this page" do
+    FactoryBot.create_list(:show, 16, is_public: true)
+
+    get :index
+    assert_response :success
+
+    assert_equal 15, assigns(:events).size
+    assert_equal "16", response.headers["X-Total-Count"]
+  end
+
   test "should ransack on event tags" do
     event = FactoryBot.create(:show, is_public: true, tag_count: 1)
     event_tag = event.event_tags.first
