@@ -1,6 +1,4 @@
 module FlashHelper
-  include FormattingHelper
-
   # Adds a message to the flash hash, ensuring that it is an array, and that every message occurs only once.
   def append_to_flash(key, message)
     if flash[key].blank?
@@ -50,19 +48,12 @@ module FlashHelper
     alert_hash
   end
 
-  # This method is used to convert the flash into a hash that has all keys in the correct order and every message html formatted.
+  # The flash as { type => [messages] }, highest priority first. The messages stay plain text:
+  # the browser sets them as text, so a name or title in one cannot inject markup.
   def flash_as_alert_hash
-    alert_hash = {}
-
-    # Order to display flash messages in, from highest to lowest priority.
     priority_order = [ :error, :info, :warning, :success ]
 
-    # Sort the flash keys by the priority order and iterate over them
-    flash.sort_by { |key, _| priority_order.index(key.to_sym) || Float::INFINITY }.each do |key, messages|
-      # If there is a single message, use that. If there are multiple, render them as an HTML list.
-      alert_hash[key.to_sym] = messages.count <= 1 ? messages.first : render_as_list(messages, "ul")
-    end
-
-    alert_hash
+    flash.sort_by { |key, _| priority_order.index(key.to_sym) || Float::INFINITY }
+         .to_h { |key, messages| [ key.to_sym, messages ] }
   end
 end
