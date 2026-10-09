@@ -14,7 +14,7 @@
 <%= render "admin/reimbursements/shared/glossary_terms",
            terms: ::Reimbursements::Glossary.terms(:nominal_code, :area, :projected, :committed,
                                                    :pipeline, :remaining, :eusa_actual,
-                                                   :unattributed) %>
+                                                   :expected_outturn, :unattributed) %>
 
 <%# The health check in one line, above the tables. %>
 <%= render AlertComponent.new(type: @over_budget_count.positive? ? :warning : :info) do %>
@@ -37,17 +37,12 @@
   <% end %>
 <% end %>
 
-<%
-  expected_tip = "The greater of the current projection and what's already been spent or " \
-                 "committed, so the number never drops below reality. Blank on income lines."
-%>
-
 <%# The summary's anchor (CardComponent takes no id). %>
 <div id="budgets-by-code">
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
     <table class="table table-hover table-sticky-head">
-      <%= render "overview_head", expected_tip: expected_tip %>
+      <%= render "overview_head" %>
       <% @rollups.each do |rollup| %>
         <tbody>
           <tr class="bg-gray-50">
@@ -85,7 +80,7 @@
   <% else %>
     <div class="table-scroll">
       <table class="table table-hover table-sticky-head">
-        <%= render "overview_head", expected_tip: expected_tip %>
+        <%= render "overview_head" %>
         <% @area_rollups.each do |rollup| %>
           <%= render "area_group", rollup: rollup, label: rollup.name %>
         <% end %>

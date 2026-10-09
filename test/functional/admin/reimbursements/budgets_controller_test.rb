@@ -309,6 +309,16 @@ module Admin
 
       # --- Overview (nominal-code rollup) ------------------------------------
 
+      # Its column notes come from the Glossary block, not title= tooltips that drift from it.
+      test "overview defines Expected outturn in its glossary block, not in a tooltip" do
+        sign_in @user
+
+        get :overview
+
+        assert_select "details dt", text: "Expected outturn"
+        assert_select "thead [title]", count: 0
+      end
+
       test "overview groups budgets by nominal code with a per-code subtotal" do
         sign_in @user
         # @props is 4000 with initial 1000. Amounts are chosen so no single row
