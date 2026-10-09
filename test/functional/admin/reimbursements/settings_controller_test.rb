@@ -64,7 +64,7 @@ module Admin
       # --- Picker (index) ----------------------------------------------------
 
       test "index lists every cost centre" do
-        create_second_reimbursements_cost_centre
+        create_second_reimbursements_cost_centre(hidden_from_submitters: true)
         sign_in @user
 
         get :index
@@ -73,6 +73,7 @@ module Admin
         assert_equal 2, assigns(:cost_centres).size
         assert_includes response.body, @cost_centre.name
         assert_includes response.body, "Bedlam Termtime"
+        assert_select "span", text: "Hidden from submitters", count: 1
       end
 
       # --- Edit --------------------------------------------------------------
@@ -193,7 +194,7 @@ module Admin
           authoriser_name: "Jo Producer", authoriser_designation: "Fringe Treasurer",
           sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
           notification_email: "finance@bedlamfringe.co.uk",
-          nightly_run_days: %w[1 3 5]
+          nightly_run_days: %w[1 3 5], hidden_from_submitters: "1"
         } }
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
@@ -209,19 +210,7 @@ module Admin
         assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.sharepoint_site_url
         assert_equal [ "finance@bedlamfringe.co.uk" ], @cost_centre.notification_emails
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
-      end
-
-      test "update hides a cost centre's budgets from submitters" do
-        sign_in @user
-
-        patch :update, params: { key: @cost_centre.key, cost_centre: {
-          hidden_from_submitters: "1", nightly_run_days: @cost_centre.nightly_run_days
-        } }
-
-        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
-        assert_predicate @cost_centre.reload, :hidden_from_submitters?
-        get :index
-        assert_select ".bg-gray-100", text: "Hidden from submitters"
+        assert_predicate @cost_centre, :hidden_from_submitters?
       end
 
       # settings_params turns a missing nightly_run_days into [], which fails
