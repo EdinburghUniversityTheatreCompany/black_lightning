@@ -34,14 +34,16 @@ module Reimbursements
       assert_empty @actual.reload.allocations
     end
 
+    # A credit already on a budget would count twice: whole on that line and in shares on these.
     test "refuses a row that is not apportionable" do
-      debit = create_reimbursements_eusa_actual(debit: 500)
+      [ create_reimbursements_eusa_actual(debit: 500),
+        create_reimbursements_eusa_actual(credit: 500, budget: @b) ].each do |row|
+        assert_raises(DatabaseStore::NotApportionableError) do
+          @store.apportion_actual!(row.id, [ { budget_id: @a.id, amount: BigDecimal("500") } ])
+        end
 
-      assert_raises(DatabaseStore::NotApportionableError) do
-        @store.apportion_actual!(debit.id, [ { budget_id: @a.id, amount: BigDecimal("500") } ])
+        assert_empty row.reload.allocations
       end
-
-      assert_empty debit.reload.allocations
     end
 
     test "removing an apportionment restores the row to unlinked" do
