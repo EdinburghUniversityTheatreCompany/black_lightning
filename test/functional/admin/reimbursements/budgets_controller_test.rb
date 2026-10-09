@@ -1522,6 +1522,18 @@ module Admin
         assert_equal [ @alice.record_id ], budget.owner_ids
       end
 
+      test "create lands on the centre the form chose, not the page's" do
+        termtime = create_second_reimbursements_cost_centre
+        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        sign_in @user
+
+        post :create, params: { cost_centre: termtime.key, cost_centre_id: fringe.id, name: "Late addition",
+                                nominal_code: "4200", budget_type: "Expense", active: "1" }
+
+        budget = ::Reimbursements::Budget.find_by(name: "Late addition")
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id, cost_centre: fringe.key)
+      end
+
       test "create rejects a blank name without writing" do
         sign_in @user
 

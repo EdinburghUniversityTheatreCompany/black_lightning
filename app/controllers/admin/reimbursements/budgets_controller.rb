@@ -103,8 +103,10 @@ module Admin
 
         budget = store.create_budget!(attrs.merge(financial_year: selected_financial_year,
                                                   cost_centre: chosen_cost_centre))
-        redirect_to edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
-                    notice: "Budget created."
+        # The centre the form picked, so the edit page and its back link show the line.
+        scope = scope_params
+        scope[:cost_centre] = chosen_cost_centre.key if params[:cost_centre_id].present?
+        redirect_to edit_admin_reimbursements_budget_path(budget.record_id, **scope), notice: "Budget created."
       end
 
       def edit

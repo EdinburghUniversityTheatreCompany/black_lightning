@@ -61,6 +61,18 @@ module Admin
                       "option[value=#{bob.record_id}][selected]", false
       end
 
+      test "create lands on the centre the form chose, not the page's" do
+        termtime = create_second_reimbursements_cost_centre
+        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+
+        post :create, params: { cost_centre: termtime.key, name: "Cogito",
+                                reimbursements_area: { name: "Cogito", cost_centre_id: fringe.id } }
+
+        area = ::Reimbursements::Area.order(:id).last
+        assert_equal fringe, area.cost_centre
+        assert_redirected_to edit_admin_reimbursements_area_path(area.record_id, cost_centre: fringe.key)
+      end
+
       test "creates an area with its owners" do
         person = create_reimbursements_person(name: "Alice", email: "alice@example.com")
 
