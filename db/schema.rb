@@ -1200,6 +1200,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_140000) do
     t.datetime "profile_completed_at"
     t.string "profile_completion_salt"
     t.boolean "public_profile", default: true
+    t.bigint "reimbursements_cost_centre_id"
     t.bigint "reimbursements_person_id"
     t.datetime "remember_created_at", precision: nil
     t.string "remember_token"
@@ -1215,6 +1216,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_140000) do
     t.index ["last_name"], name: "index_users_on_last_name"
     t.index ["pretix_customer_identifier"], name: "index_users_on_pretix_customer_identifier", unique: true
     t.index ["profile_completed_at"], name: "index_users_on_profile_completed_at"
+    t.index ["reimbursements_cost_centre_id"], name: "index_users_on_reimbursements_cost_centre_id"
     t.index ["reimbursements_person_id"], name: "index_users_on_reimbursements_person_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["student_id"], name: "index_users_on_student_id"
@@ -1321,5 +1323,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_140000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "users", "reimbursements_cost_centres", on_delete: :nullify
   add_foreign_key "users", "reimbursements_people"
 end

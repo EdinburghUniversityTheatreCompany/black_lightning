@@ -618,6 +618,9 @@ survive as historical import provenance and are never written. Spec + plan in
   - **No `?cost_centre=` means EVERY centre**, because `CostCentre.default` is `order(:id).first`
     and defaulting to it silently empties the second centre's screens for the people who work in
     it. `?cost_centre_id=<id>` is still honoured for the budget-import links; the key wins.
+  - **A finance user's home cost centre (`users.reimbursements_cost_centre_id`) only DECORATES
+    links** — the sidebar's day-to-day items and the import wizards' preselect. A bare URL still
+    means every centre; never resolve it, redirect to it or default a store to it.
   - **`CostCentre.default` names an arbitrary pot the moment a second row exists.** Never reach for
     it where the right answer is knowable (the claim's centre, the batch's, the selector), and
     never on a path that moves money or emails a producer — that was the whole class of bug fixed

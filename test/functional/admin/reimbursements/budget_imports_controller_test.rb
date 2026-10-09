@@ -960,6 +960,16 @@ module Admin
         file.rewind
         Rack::Test::UploadedFile.new(file.path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       end
+
+      test "show preselects the operator's home cost centre when no link named one" do
+        termtime = create_second_reimbursements_cost_centre
+        users(:member).update!(reimbursements_cost_centre: termtime)
+        sign_in users(:member)
+
+        get :show
+
+        assert_select "select#cost_centre_id option[selected][value=?]", termtime.id.to_s
+      end
     end
   end
 end

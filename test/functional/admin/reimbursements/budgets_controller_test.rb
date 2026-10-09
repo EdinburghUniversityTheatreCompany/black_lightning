@@ -1851,6 +1851,27 @@ module Admin
                       edit_admin_reimbursements_budget_path(@income.record_id, cost_centre: termtime.key)
       end
 
+      test "the cost-centre selector offers to make the selected centre the default" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: termtime.key),
+                      text: "Make this my default"
+      end
+
+      test "the cost-centre selector says when the selected centre already is the default" do
+        termtime = create_second_reimbursements_cost_centre
+        @user.update!(reimbursements_cost_centre: termtime)
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "span", text: "Your default"
+        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear default"
+      end
+
       # The live year (holding the budgets seeded in setup) plus a draft year
       # with one budget of its own.
       def seed_two_years
