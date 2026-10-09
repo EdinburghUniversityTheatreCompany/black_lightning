@@ -283,6 +283,19 @@ module Reimbursements
       end
     end
 
+    test "a missing mailer host fails loudly rather than linking to http:///" do
+      config = Rails.application.config.action_mailer
+      original = config.default_url_options
+      config.default_url_options = { protocol: "https" }
+      notifier, = build
+
+      assert_raises(KeyError) do
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom", run_date: "9 July 2026")
+      end
+    ensure
+      config.default_url_options = original
+    end
+
     test "no template tells a lone owner that one of several can sign off" do
       Rails.root.glob("app/views/reimbursements/emails/*.erb").each do |template|
         assert_not_includes template.read, "one of you", "#{template} assumes several owners"

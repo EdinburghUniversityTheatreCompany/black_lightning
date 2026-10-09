@@ -5,9 +5,8 @@ module Reimbursements
   # cost centre's send mailbox and land in its Sent Items — rather than through
   # ActionMailer / MailerSend from the generic website-noreply address.
   #
-  # It mirrors EusaEmailComposer's render pattern: each message renders an ERB
-  # template to an HTML string via ApplicationController.render (running outside
-  # a request — from a controller action, BatchProcessor, or the nightly job),
+  # Each message renders an ERB template to an HTML string through #renderer
+  # (outside a request, so it carries the mailer's host for *_url helpers),
   # wrapped in the "reimbursements_mailer" layout (its own minimal <!DOCTYPE>/
   # <head>/<title> wrapper — deliberately not the app's shared, fully-branded
   # mail layout, whose marketing tone doesn't fit a plain finance notice) and
@@ -156,7 +155,7 @@ module Reimbursements
     # http://example.org, so it takes the mailer's host and protocol instead.
     def renderer
       url = Rails.application.config.action_mailer.default_url_options || {}
-      ApplicationController.renderer.new(http_host: [ url[:host], url[:port] ].compact.join(":"),
+      ApplicationController.renderer.new(http_host: [ url.fetch(:host), url[:port] ].compact.join(":"),
                                          https: url[:protocol].to_s.start_with?("https"))
     end
 
