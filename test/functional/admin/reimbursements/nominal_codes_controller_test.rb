@@ -91,7 +91,7 @@ module Admin
 
       # --- Update ------------------------------------------------------------
 
-      test "update corrects the seeded label guess" do
+      test "update corrects a label" do
         code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
                                                   cost_centre: @cost_centre)
         sign_in @user

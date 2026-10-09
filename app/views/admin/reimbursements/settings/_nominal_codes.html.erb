@@ -14,14 +14,7 @@
     </p>
 
     <% if codes.empty? %>
-      <div class="mb-3">
-        <%= render AlertComponent.new(type: :warning) do %>
-          <strong>No codes listed for <%= cost_centre.name %> yet.</strong>
-          Run <code>bin/rails reimbursements:nominal_code_seed</code> to fill the list from the
-          codes its budgets already carry (dry by default; <code>APPLY=1</code> writes), or add
-          them below.
-        <% end %>
-      </div>
+      <p class="mb-3 text-sm text-gray-600">No codes listed for <%= cost_centre.name %> yet. Add them below.</p>
     <% else %>
       <div class="flex flex-col gap-2">
         <% codes.each do |nominal_code| %>

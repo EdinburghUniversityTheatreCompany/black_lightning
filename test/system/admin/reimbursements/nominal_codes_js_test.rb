@@ -45,7 +45,7 @@ module Admin
         assert_nil @cost_centre.reload.eusa_contact_name
       end
 
-      test "corrects a seeded label guess in the browser" do
+      test "corrects a label in the browser" do
         nominal_code = create_reimbursements_nominal_code(code: "432320", label: "Marketing",
                                                           cost_centre: @cost_centre)
 

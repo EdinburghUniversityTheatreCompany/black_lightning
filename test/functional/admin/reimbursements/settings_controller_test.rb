@@ -139,6 +139,14 @@ module Admin
         assert_not_includes response.body, "Termtime printing"
       end
 
+      test "a centre with no nominal codes is told to add them on this page" do
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "#nominal_codes p", text: "No codes listed for #{@cost_centre.name} yet. Add them below."
+      end
+
       # A form inside a form is invalid HTML; its submit silently does nothing.
       test "the nominal codes section is not nested inside the cost centre form" do
         create_reimbursements_nominal_code(code: "432320", cost_centre: @cost_centre)
