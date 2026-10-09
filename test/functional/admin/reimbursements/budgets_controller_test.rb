@@ -1910,15 +1910,20 @@ module Admin
                       text: "Make this my default"
       end
 
-      test "the cost-centre selector says when the selected centre already is the default" do
+      test "the cost-centre selector names the default on every page, offering a switch elsewhere" do
         termtime = create_second_reimbursements_cost_centre
+        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
         @user.update!(reimbursements_cost_centre: termtime)
         sign_in @user
 
-        get :index, params: { cost_centre: termtime.key }
+        { termtime.key => false, nil => false, fringe.key => true }.each do |key, offers_switch|
+          get :index, params: { cost_centre: key }.compact
 
-        assert_select "span", text: "Your default"
-        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear default"
+          assert_includes css_select("[aria-label='Cost centre'] span").map { |span| span.text.squish },
+                          "Default: #{termtime.name}"
+          assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear"
+          assert_select "button", text: "Make this my default", count: offers_switch ? 1 : 0
+        end
       end
 
       # The live year (holding the budgets seeded in setup) plus a draft year

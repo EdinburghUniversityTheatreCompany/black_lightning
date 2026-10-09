@@ -21,16 +21,17 @@
                     "border-gray-300 text-gray-700 hover:bg-gray-50" => !selected
                   ) %>
     <% end %>
-    <% if selected_cost_centre %>
-      <% if current_user.reimbursements_cost_centre_id == selected_cost_centre.id %>
-        <span class="text-sm text-gray-600">Your default</span>
-        <%= button_to "Clear default", admin_reimbursements_home_cost_centre_path, method: :delete,
-                      class: "text-sm text-gray-600 underline", form_class: "inline" %>
-      <% else %>
-        <%= button_to "Make this my default",
-                      admin_reimbursements_home_cost_centre_path(cost_centre: selected_cost_centre.key),
-                      method: :patch, class: "text-sm text-primary underline", form_class: "inline" %>
-      <% end %>
+    <% home = current_user.reimbursements_cost_centre %>
+    <% if selected_cost_centre && selected_cost_centre != home %>
+      <%= button_to "Make this my default",
+                    admin_reimbursements_home_cost_centre_path(cost_centre: selected_cost_centre.key),
+                    method: :patch, class: "text-sm text-primary underline", form_class: "inline" %>
+    <% end %>
+    <% if home %>
+      <span class="text-sm text-gray-600">Default: <%= home.name %></span>
+      <span class="text-sm text-gray-400" aria-hidden="true">&middot;</span>
+      <%= button_to "Clear", admin_reimbursements_home_cost_centre_path, method: :delete,
+                    class: "text-sm text-gray-600 underline", form_class: "inline" %>
     <% end %>
   </div>
 <% end %>
