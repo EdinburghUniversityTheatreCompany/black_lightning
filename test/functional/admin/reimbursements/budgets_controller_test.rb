@@ -917,7 +917,7 @@ module Admin
       test "a Save on an area-bound budget cannot rewrite its own owner rows" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")
-        # The area names Alice; Bob is the own row the backfill keeps.
+        # The area names Alice; Bob is an own row like those the backfill left.
         area.sync_owner_ids!([ @alice.id ])
         budget = create_reimbursements_budget(name: "Cogito: Marketing", area: area,
                                               owners: [ @bob ])
@@ -1253,7 +1253,7 @@ module Admin
       end
 
       # An empty list would reach sync_owner_ids! as where.not(person_id: []),
-      # i.e. WHERE 1=1, deleting the own rows the backfill keeps.
+      # i.e. WHERE 1=1, deleting the own rows the backfill left.
       test "attaching an area with nobody ticked keeps the budget's own owner rows" do
         sign_in @user
         area = create_reimbursements_area(name: "Cogito")

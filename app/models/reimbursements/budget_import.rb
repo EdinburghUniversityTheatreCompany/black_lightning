@@ -148,9 +148,9 @@ module Reimbursements
 
     # +name+ without its "Area: " prefix, but only when the prefix is this
     # line's OWN area: "Improverts: Retreat" under Cogito names another show.
-    # AreaRename rewrites stored rows by this exact call. The committee's sheet
-    # keeps the prefix after the rename, and reading only one spelling
-    # duplicated 17 of the 31 live Fringe budgets in one apply.
+    # The committee's sheet kept the prefix after the 2026-09-11 rename, and
+    # reading only one spelling duplicated 17 of the 31 live Fringe budgets in
+    # one apply.
     def self.bare_name(name, area_name)
       return name.to_s if area_name.blank?
 

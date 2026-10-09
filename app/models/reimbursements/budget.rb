@@ -3,21 +3,19 @@
 # Table name: reimbursements_budgets
 # Database name: primary
 #
-#  id                      :bigint           not null, primary key
-#  active                  :boolean          default(TRUE), not null
-#  area_before_rollback    :json
-#  budget_type             :string(255)      default("Expense"), not null
-#  initial_budget          :decimal(12, 2)
-#  name                    :string(255)      default(""), not null
-#  name_before_area_rename :string(255)
-#  nominal_code            :string(255)      default(""), not null
-#  notes                   :text(65535)
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  airtable_record_id      :string(255)
-#  area_id                 :bigint
-#  cost_centre_id          :bigint
-#  financial_year_id       :bigint
+#  id                 :bigint           not null, primary key
+#  active             :boolean          default(TRUE), not null
+#  budget_type        :string(255)      default("Expense"), not null
+#  initial_budget     :decimal(12, 2)
+#  name               :string(255)      default(""), not null
+#  nominal_code       :string(255)      default(""), not null
+#  notes              :text(65535)
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  airtable_record_id :string(255)
+#  area_id            :bigint
+#  cost_centre_id     :bigint
+#  financial_year_id  :bigint
 #
 # Indexes
 #
@@ -47,6 +45,9 @@ module Reimbursements
   #
   # Each is memoized per instance; one store lives per request.
   class Budget < ApplicationRecord
+    # DropAreaRollbackRecordsFromReimbursementsBudgets, a later migration, drops both; delete this line with it.
+    self.ignored_columns += %w[area_before_rollback name_before_area_rename]
+
     include RecordId
     include PlannedAmount
     TYPES = %w[Expense Income].freeze
@@ -71,8 +72,8 @@ module Reimbursements
                          dependent: :destroy, inverse_of: :budget
     has_many :budget_ownerships, class_name: "Reimbursements::BudgetOwner",
                                  dependent: :destroy, inverse_of: :budget
-    # Read only for a line in no area. The backfill keeps them on area lines so
-    # it can be reversed; there the area's owners are live (#owners).
+    # Read only for a line in no area. Rows the 2026-09-11 backfill left on an
+    # area line apply again only if it leaves its area (#owners).
     has_many :own_owners, through: :budget_ownerships, source: :person
 
     validates :name, presence: true

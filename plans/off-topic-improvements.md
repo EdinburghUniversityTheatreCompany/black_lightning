@@ -43,33 +43,29 @@ production database, and it costs nothing at about 300 rows a financial year.
 
 ## Reimbursements: areas and budgets
 
-### Closing the area rename's rollback window (only on Mick's word)
+### Drop the two area rollback columns
 
-`reimbursements_budgets.name_before_area_rename` is the only record of the `Area: ` prefix strip,
-and `AreaRename.restore!` reads it. Dropping it makes the rename permanently irreversible. Do it
-only when Mick says, in so many words, that rolling the rename back is off the table.
-
-The migration must say so in its own body, because the next person reads that migration and
-nothing else:
+`reimbursements_budgets.area_before_rollback` and `.name_before_area_rename` have been unused since
+the area backfill and rename code went; `Reimbursements::Budget` ignores both. Before dropping them,
+check in production that `area_before_rollback` is NULL on every row, and copy the pre-rename names
+(about 17 rows, their only record) into an issue:
 
 ```ruby
-# Dropping this column closes the area-prefix rename's rollback window FOR GOOD:
-# AreaRename.restore! reads it to put back the exact strings #strip! took off,
-# and raises MissingRecordError once it is gone. Only run this when rolling the
-# rename back is no longer a decision anyone would make.
+require "csv"; puts CSV.generate { |csv| csv << %w[budget_id current_name name_before_area_rename area]; ActiveRecord::Base.connection.select_rows("SELECT b.id, b.name, b.name_before_area_rename, a.name FROM reimbursements_budgets b LEFT JOIN reimbursements_areas a ON a.id = b.area_id WHERE b.name_before_area_rename IS NOT NULL ORDER BY b.id").each { |row| csv << row } }; nil
 ```
 
-Explicit `up`/`down`. Prove that `down` re-adds the column and that `restore!` raises while it is
-absent.
+Then add `DropAreaRollbackRecordsFromReimbursementsBudgets`: both `remove_column`s inside
+`safety_assured` with `if_exists: true` (a database migrated from scratch never gets
+`name_before_area_rename`), a `down` re-adding them with `if_not_exists: true`, and delete the
+`ignored_columns` line in the same commit. Deploy it only once the code ignoring the columns is
+live: with `partial_inserts` off, a process that loaded them names them in every budget INSERT.
 
 ### A rollback past `20260911100600` forgets every area's basis
 
 That migration's `down` drops `areas.budget_basis` and its `up` re-adds it with the `expenses`
 default, so every net allowance comes back as a spend cap with nothing on screen to say so.
-`area_before_rollback` cannot carry it: rollbacks run in descending version order, so the column
-is gone before `AreaMembership.record!` runs, and a `STEP=1` rollback never runs that recorder at
-all. Recording it needs a scratch column of its own. Until then, re-declare the net areas by hand
-after any such rollback.
+Keeping the basis across a rollback needs a scratch column. Until then, re-declare the net areas
+by hand after any such rollback.
 
 ### A test that catches bare budget names (question for Mick)
 

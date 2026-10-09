@@ -54,13 +54,10 @@ module Reimbursements
     BASIS_OPTIONS = BASES.map { |basis| [ "Agreed total (#{basis})", basis ] }.freeze
 
     validates :name, presence: true
-    # has_attribute?, because on a re-migrate after a rollback the backfill
-    # creates areas through this model BEFORE the migration adding the column,
-    # and a bare inclusion would raise NoMethodError and stop the chain.
-    validates :budget_basis, inclusion: { in: BASES }, if: -> { has_attribute?(:budget_basis) }
-    # Areas are matched by name within one (year, centre), as the backfill and
-    # the importer do. The composite index is deliberately NOT unique: MySQL lets
-    # several NULLs through, and an area with no year or centre yet has NULLs in both.
+    validates :budget_basis, inclusion: { in: BASES }
+    # Areas are matched by name within one (year, centre), as the importer does.
+    # The composite index is deliberately NOT unique: MySQL lets several NULLs
+    # through, and an area with no year or centre yet has NULLs in both.
     validates :name, uniqueness: { scope: [ :financial_year_id, :cost_centre_id ] }
 
     # NOT :all_blank: the Type select has no blank option, so an untouched "Add

@@ -281,7 +281,7 @@ module Admin
         attrs[:area_id] = params[:area_id].presence if params.key?(:area_id)
         # Ownership is edited on the area. For a line in (or going into) one,
         # omit the KEY rather than send []: syncing would rewrite the own rows
-        # the backfill keeps, and an empty list is where.not(person_id: []),
+        # the backfill left, and an empty list is where.not(person_id: []),
         # i.e. WHERE 1=1. Read the area being GIVEN, not only the record's:
         # #create's Budget.new has area_id nil.
         unless budget.area_id || posted_area_id.present?

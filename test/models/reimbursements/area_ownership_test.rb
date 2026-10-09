@@ -10,7 +10,7 @@ module Reimbursements
     end
 
     test "the area's owners WIN over rows left on the budget" do
-      # The backfill keeps budget_owners rows so it can be reversed; they must
+      # The 2026-09-11 backfill left budget_owners rows on area lines; they must
       # not also apply, or a claim would need two people's sign-off.
       area = create_reimbursements_area(name: "Cogito")
       area.sync_owner_ids!([ @alice.id ])

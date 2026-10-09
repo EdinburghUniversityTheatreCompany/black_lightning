@@ -847,11 +847,10 @@ module Reimbursements
     def renamed_cogito(*names)
       area = area_named("Cogito")
       budgets = names.map do |name|
-        create_reimbursements_budget(name: "Cogito: #{name}", area: area, initial_budget: 400,
+        create_reimbursements_budget(name: name, area: area, initial_budget: 400,
                                      financial_year: @year, cost_centre: @cost_centre)
       end
-      Reimbursements::AreaRename.strip!
-      [ area, budgets.map(&:reload) ]
+      [ area, budgets ]
     end
 
     # A one-line sheet filing +name+ under +cell+.

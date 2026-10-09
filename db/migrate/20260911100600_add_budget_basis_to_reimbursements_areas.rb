@@ -24,17 +24,6 @@ class AddBudgetBasisToReimbursementsAreas < ActiveRecord::Migration[8.1]
   # rollback past this migration. The loss is conservative — a spend cap leaves
   # income out of Area#allocated, so the area reads as having LESS room, never
   # more.
-  #
-  # It is NOT recorded the way names are (name_before_area_rename) and
-  # membership is (area_before_rollback), and the reason is ordering rather
-  # than worth. A rollback reverts in DESCENDING version order, so this down
-  # runs FIRST: by the time BackfillReimbursementsAreas#down calls
-  # AreaMembership.record!, this column is already gone (probed — after a bare
-  # STEP=1 the areas and their budgets are all still there and
-  # column_exists?(:reimbursements_areas, :budget_basis) is false). And a
-  # STEP=1 rollback, the likeliest way here, never runs that recorder at all.
-  # Recording the basis therefore needs a scratch column of its own, written
-  # and read back here — not a key in a record that already exists. Phase 2c.
   def up
     add_column :reimbursements_areas, :budget_basis, :string, null: false, default: "expenses"
   end
