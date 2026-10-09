@@ -293,13 +293,10 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_select "input#hidden_avatar", false
   end
 
-  test "should post merge_preview redirects to merge with source_user_id" do
-    target_user = FactoryBot.create(:member)
-    source_user = FactoryBot.create(:member)
+  test "the merge page asks for its preview by GET to itself" do
+    get :merge, params: { id: @user }
 
-    post :merge_preview, params: { id: target_user.id, source_user_id: source_user.id }
-
-    assert_redirected_to merge_admin_user_path(target_user, source_user_id: source_user.id)
+    assert_select "form[method=get][action=?] select[name=source_user_id]", merge_admin_user_path(@user)
   end
 
   test "should absorb user with field preferences" do

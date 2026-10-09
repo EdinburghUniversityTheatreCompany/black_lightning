@@ -43,14 +43,7 @@ class Admin::UsersController < AdminController
 
   def merge
     @title = "Merge User Into #{@user.name_or_email}"
-
-    if params[:source_user_id].present?
-      @source_user = User.find_by(id: params[:source_user_id])
-    end
-  end
-
-  def merge_preview
-    redirect_to merge_admin_user_path(@user, source_user_id: params[:source_user_id])
+    @source_user = User.find_by(id: params[:source_user_id])
   end
 
   def absorb
