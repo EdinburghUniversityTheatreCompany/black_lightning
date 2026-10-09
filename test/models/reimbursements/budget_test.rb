@@ -318,43 +318,30 @@ module Reimbursements
       assert_equal "Other", budget.picker_label
     end
 
-    # Area names are unique only per (year, centre), so the heading names both.
-    test "picker_group heads an area-bound line with its centre and area" do
+    # Area names are unique only per (year, centre), so the heading names the centre as well as
+    # the area.
+    test "picker_group heads a line with its centre and area, the bare area with no centre" do
       centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = Area.create!(name: "Cogito", cost_centre: centre)
+      unplaced = build_budget(area: area)
+      unplaced.update_column(:cost_centre_id, nil)
 
       assert_equal "BF - Cogito", build_budget(cost_centre: centre, area: area).picker_group
       assert_equal Budget::NO_AREA_GROUP, build_budget(cost_centre: centre).picker_group
-    end
-
-    test "picker_group names the bare area when the line has no cost centre" do
       assert_equal "Cogito", build_budget(area: Area.create!(name: "Cogito")).picker_group
+      assert_equal "BF - Cogito", unplaced.reload.picker_group, "the area's centre stands in for the line's"
     end
 
-    test "picker_group takes the area's centre when the line has none" do
-      centre = create_second_reimbursements_cost_centre(short_code: "BF")
-      budget = build_budget(area: Area.create!(name: "Cogito", cost_centre: centre))
-      budget.update_column(:cost_centre_id, nil)
+    # "No area / general" would sort between beta and Zeta, so one list proves both orders.
+    test "picker_groups sorts headings as MySQL does, ignoring case and accents, the no-area group last" do
+      abel = build_budget(area: Area.create!(name: "Ábel"))
+      budgets = [ build_budget(name: "Contingency"), build_budget(area: Area.create!(name: "beta")),
+                  build_budget(area: Area.create!(name: "Zeta")), abel ]
 
-      assert_equal "BF - Cogito", budget.reload.picker_group
-    end
+      groups = Budget.picker_groups(budgets)
 
-    test "picker_groups sorts headings as MySQL does, ignoring case and accents" do
-      names = %w[beta Ábel Zeta]
-      budgets = names.map { |name| build_budget(area: Area.create!(name: name)) }
-
-      assert_equal %w[Ábel beta Zeta], Budget.picker_groups(budgets).map(&:first)
-    end
-
-    test "picker_groups sorts the headings and puts the no-area group last" do
-      loose = build_budget(name: "Contingency")
-      zeta = build_budget(name: "Marketing", area: Area.create!(name: "Zeta"))
-      alpha = build_budget(name: "Marketing", area: Area.create!(name: "Alpha"))
-
-      groups = Budget.picker_groups([ loose, zeta, alpha ])
-
-      assert_equal [ "Alpha", "Zeta", Budget::NO_AREA_GROUP ], groups.map(&:first)
-      assert_equal [ [ "Alpha: Marketing", alpha.record_id ] ], groups.first.last
+      assert_equal [ "Ábel", "beta", "Zeta", Budget::NO_AREA_GROUP ], groups.map(&:first)
+      assert_equal [ [ "Ábel: Props", abel.record_id ] ], groups.first.last
     end
 
     # --- apportioned income --------------------------------------------------
