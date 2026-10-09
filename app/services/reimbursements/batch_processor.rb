@@ -23,12 +23,13 @@ module Reimbursements
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
                         :errors, keyword_init: true)
 
-    def initialize(store:, graph:, cost_centre:, sleeper: ->(seconds) { sleep(seconds) })
+    # xlsx: is a test seam: the BACS spreadsheet's authorisation cells are checked through it.
+    def initialize(store:, graph:, cost_centre:, xlsx: BacsXlsx.new, sleeper: ->(seconds) { sleep(seconds) })
       @store = store
       @graph = graph
       @cost_centre = cost_centre
       @sleeper = sleeper
-      @xlsx = BacsXlsx.new
+      @xlsx = xlsx
       @international_xlsx = InternationalXlsx.new
       @composer = EusaEmailComposer.new
       # Producer notifications send from the cost centre's send mailbox, so
