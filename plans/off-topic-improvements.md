@@ -760,3 +760,13 @@ so the second row stays on screen offering an action on a pair that is already r
 herb-lint 0.11.0's `html-no-duplicate-ids` flags these lines; CI is pinned to 0.10.4 until they
 are fixed (see `hk.pkl`). The fix: remove by a class or data attribute, or have the stream remove
 every section's row.
+
+### `bootstrap_compat.css` silently redefines Tailwind's `py-3` (and friends) on both sites
+
+`bootstrap_compat.css` (imported by both `admin.css` and `application.css`) defines unlayered
+`.py-3 { padding: 1rem }`, plus `.py-4`, `.py-5`, `.mb-3`–`.mb-5`, `.mt-3`–`.mt-5`, `.ms-3`, `.me-3`
+with Bootstrap's values. Those class names are also Tailwind utilities, and an unlayered rule beats
+any `@layer utilities` rule, so every Tailwind `py-3` in the app renders 16px rather than 12px, and
+an override like `[&_li>div]:py-2` loses unless it carries `!`. Found measuring the opportunities
+widget (2026-10-09). The fix: drop the shims whose Bootstrap meaning nobody relies on any more, or
+move the file into `@layer components` so utilities win again; either way the visual diff is site-wide.
