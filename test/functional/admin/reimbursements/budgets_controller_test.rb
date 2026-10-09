@@ -137,6 +137,14 @@ module Admin
         assert_select "tr#budget_#{@props.record_id} td.bg-white", count: 0
       end
 
+      test "every cell of a row greys on hover, the pinned Edit cell included" do
+        sign_in @user
+
+        get :index
+
+        assert_select "tr#budget_#{@props.record_id} td[class~='group-hover:bg-gray-50']", count: 10
+      end
+
       def seed_many_budgets(count)
         ::Reimbursements::Expense.delete_all
         ::Reimbursements::BudgetForecast.delete_all
