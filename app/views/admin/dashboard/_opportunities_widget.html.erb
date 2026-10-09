@@ -15,23 +15,23 @@
     <%= display_block("No Opportunities", false) %>
   </div>
 <% else %>
-  <ul class="divide-y divide-gray-100 px-4 [&_li>div]:py-2!">
+  <ul class="flex flex-col">
     <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
-      <li>
+      <li class="list-row py-1 [&>div]:py-0!">
         <%= render OpportunityCardComponent.new(opportunity: opportunity, heading_url: admin_opportunity_path(opportunity)) %>
       </li>
     <% end %>
   </ul>
 
   <% if opportunities.count > displayed_opportunities_count %>
-    <div class="px-4 py-2 border-t border-gray-100">
+    <div class="px-5 py-2 border-t border-gray-100">
       <%= link_to "#{pluralize(opportunities.count - displayed_opportunities_count, 'more opportunity', 'more opportunities')} →", admin_opportunities_path, class: "text-xs text-gray-500 hover:underline" %>
     </div>
   <% end %>
 <% end %>
 
 <% if can?(:create, Opportunity) %>
-  <div class="px-4 py-2 border-t border-gray-100">
+  <div class="px-5 py-2 border-t border-gray-100">
     <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
   </div>
 <% end %>
