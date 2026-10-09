@@ -2,8 +2,7 @@ module Reimbursements
   # Sends the producer and operator emails through Graph (GraphClient#send_mail) so they come
   # from the cost centre's send mailbox and land in its Sent Items, not from the website-noreply
   # address. Each message renders an ERB template (app/views/reimbursements/emails) in the bare
-  # "reimbursements_mailer" layout through #renderer, which carries the mailer's host so *_url
-  # helpers work outside a request.
+  # "reimbursements_mailer" layout through #renderer.
   #
   # +cost_centre+ supplies the mailbox and all society-specific copy, and is added to every
   # template's assigns once, here. IT/credential alerts stay on ActionMailer
@@ -101,7 +100,7 @@ module Reimbursements
       )
     end
 
-    # Operator: the nightly run blew up; check logs and retry.
+    # Operator: a Build Batch or nightly run failed.
     def failure(recipients:, error_text:, run_date:)
       send_email(
         to: recipients,
