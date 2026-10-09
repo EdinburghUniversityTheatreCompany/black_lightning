@@ -405,6 +405,21 @@ module Reimbursements
       assert_equal "Cogito", build_budget(area: Area.create!(name: "Cogito")).picker_group
     end
 
+    test "picker_group takes the area's centre when the line has none" do
+      centre = picker_cost_centre(key: "fringe-inherit", eusa_code: "F40i")
+      budget = build_budget(area: Area.create!(name: "Cogito", cost_centre: centre))
+      budget.update_column(:cost_centre_id, nil)
+
+      assert_equal "BF - Cogito", budget.reload.picker_group
+    end
+
+    test "picker_groups sorts headings as MySQL does, ignoring case and accents" do
+      names = %w[beta Ábel Zeta]
+      budgets = names.map { |name| build_budget(area: Area.create!(name: name)) }
+
+      assert_equal %w[Ábel beta Zeta], Budget.picker_groups(budgets).map(&:first)
+    end
+
     test "picker_groups sorts the headings and puts the no-area group last" do
       loose = build_budget(name: "Contingency")
       zeta = build_budget(name: "Marketing", area: Area.create!(name: "Zeta"))
