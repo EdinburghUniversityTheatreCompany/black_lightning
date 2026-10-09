@@ -15,7 +15,7 @@
         <span class="font-medium min-w-40"><%= cost_centre.name %></span>
         <span class="text-gray-600 font-mono text-sm"><%= cost_centre.eusa_code %></span>
         <% if cost_centre.hidden_from_submitters? %>
-          <span class="text-sm text-gray-600">(hidden from submitters)</span>
+          <%= render BadgeComponent.new(pill: true).with_content("Hidden from submitters") %>
         <% end %>
         <span class="text-gray-600 grow text-sm"><%= cost_centre.receive_mailbox %></span>
         <% if cost_centre.sharepoint_fully_configured? %>

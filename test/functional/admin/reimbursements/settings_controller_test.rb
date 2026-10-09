@@ -267,7 +267,7 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         assert_predicate @cost_centre.reload, :hidden_from_submitters?
         get :index
-        assert_includes response.body, "hidden from submitters"
+        assert_select ".bg-gray-100", text: "Hidden from submitters"
       end
 
       test "update saves the SharePoint site URL" do
