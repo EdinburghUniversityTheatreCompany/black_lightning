@@ -148,6 +148,16 @@ module Admin
                       overview_admin_reimbursements_budgets_path(cost_centre: "")
       end
 
+      test "New budget carries the page's scope, an explicit All included" do
+        create_second_reimbursements_cost_centre
+        seed_two_years
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", new_admin_reimbursements_budget_path(cost_centre: ""), text: "New budget"
+      end
+
       test "with no cost_centre at all, page links stay bare" do
         create_second_reimbursements_cost_centre
         sign_in @user
