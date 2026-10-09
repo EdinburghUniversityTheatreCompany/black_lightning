@@ -86,7 +86,7 @@ class SeoStructuredDataTest < ActionDispatch::IntegrationTest
     assert_predicate event.dig("organizer", "@id").to_s, :present?
   end
 
-  # The parser refused ~38% of the archive, so reading the price string has to stay: with no
+  # Much of the archive has no bands, so reading the price string has to stay: with no
   # bands there are no per-band offers.
   test "a readable price becomes an aggregate offer" do
     get show_path(@show)

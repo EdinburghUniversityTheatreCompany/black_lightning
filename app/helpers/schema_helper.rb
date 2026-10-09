@@ -263,7 +263,7 @@ module SchemaHelper
   end
 
   # Structured bands where there are any, each named ("Concession £8"). Scraping Event#price is
-  # not legacy cruft: the parser refused ~38% of the archive and those rows have nothing else. A
+  # not legacy cruft: much of the archive has no bands, and those rows have nothing else. A
   # wrong price is a promise the box office must honour, so it only fires when a number is readable.
   def event_offers(event, availability: IN_STOCK)
     prices = event.ticket_prices

@@ -467,8 +467,7 @@ class Event < ApplicationRecord
   end
 
   # price stays the display string every view renders, regenerated whenever the
-  # bands change. The backfill writes with update_columns and skips this, so the
-  # archive renders as before.
+  # bands change.
   def derive_price_from_ticket_prices
     prices = ticket_prices
 
