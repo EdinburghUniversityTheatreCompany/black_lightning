@@ -144,7 +144,7 @@
         through formnovalidate. %>
     <%= f.input :budget_record_id, label: "Budget", required: true, as: :grouped_select,
           collection: Reimbursements::Budget.picker_groups(budgets),
-          group_method: :last, group_label_method: :first, label_method: :first, value_method: :last,
+          group_method: :last,
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
           input_html: { data: { placeholder: "Choose a budget…" } } %>

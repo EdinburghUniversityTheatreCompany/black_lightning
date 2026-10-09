@@ -26,8 +26,7 @@
         OPTION PER GROUP (label as text, the whole array as value), which offers no budget at all.
         Groups come from ActualsController#budget_groups_for. %>
     <%= f.input :budget_record_id, label: "Budget", required: true, as: :grouped_select,
-          collection: @budget_groups, group_method: :last, group_label_method: :first,
-          label_method: :first, value_method: :last,
+          collection: @budget_groups, group_method: :last,
           include_blank: "Pick a budget", input_html: { data: { placeholder: "Pick a budget" } },
           hint: "The lines on this row's nominal code " \
                 "are listed first." %>
