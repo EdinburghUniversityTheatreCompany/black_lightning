@@ -6,6 +6,7 @@ module Reimbursements
 
     MAILBOX = "send@bedlamfringe.co.uk".freeze
     FINANCE = "finance@bedlamfringe.co.uk".freeze
+    PORTAL = "https://www.example.com/admin/reimbursements".freeze
 
     def cost_centre(name: "Bedlam Fringe 2026", notification_email: FINANCE)
       CostCentre.new(key: "fringe", name: name, eusa_code: "F40", notification_email: notification_email,
@@ -36,6 +37,9 @@ module Reimbursements
       assert_includes mail[:html], "<html"
       assert_includes mail[:html], '<meta charset="utf-8">'
       assert_includes mail[:html], "<title>Your Bedlam Fringe 2026 expense #7 was not approved</title>"
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/42")
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/new")
+      assert_includes mail[:html], %(href="mailto:#{FINANCE}")
     end
 
     test "producer_notification lists the payee's expenses and totals" do
@@ -189,8 +193,6 @@ module Reimbursements
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"
     end
 
-    PORTAL = "https://www.example.com/admin/reimbursements".freeze
-
     def owner_row(**attrs)
       { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
         description: "Timber", age_days: 5 }.merge(attrs)
@@ -217,18 +219,6 @@ module Reimbursements
 
       assert_includes html, "Set (also owned by Ann Other)"
       assert_equal 1, html.scan("also owned by").size
-    end
-
-    test "rejection links to the claim, a new claim and the cost centre's contact address" do
-      notifier, graph = build
-      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
-                         amount: 12.5, budget_name: "Props", description: "Paint", reason: "No receipt.")
-
-      html = graph.send_mails.sole[:html]
-      assert_includes html, %(href="#{PORTAL}/expenses/42")
-      assert_includes html, %(href="#{PORTAL}/expenses/new")
-      assert_includes html, %(href="mailto:#{FINANCE}")
-      assert_not_includes html, "feel free"
     end
 
     test "producer notification numbers and links each claim and names the contact address" do
