@@ -781,6 +781,18 @@ module Admin
         )
       end
 
+      test "the card masks a third party's IBAN like a UK account, full value only behind the reveal" do
+        international_expense(payee_name_override: "Studio Bühne")
+        sign_in @user
+
+        get :index
+
+        assert_select "[data-bank-details-target='value'][data-revealed=?]", "DE89 3704 0044 0532 0130 00",
+                      text: "****3000"
+        assert_no_match(/>[^<]*DE89/, response.body, "the IBAN must not be rendered as visible text")
+        assert_includes response.body, "DEUTDEFF500"
+      end
+
       test "approve accepts an international claim with an IBAN and both amounts" do
         expense = international_expense
         sign_in @user

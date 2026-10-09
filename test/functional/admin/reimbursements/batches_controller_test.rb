@@ -61,7 +61,8 @@ module Admin
       end
 
       # The UK pair is blank on that rail, so the row read "- / -" for a claim EUSA pays by IBAN.
-      test "new shows an international claim's IBAN and BIC" do
+      # The IBAN is masked like the UK pair, the full value only behind the reveal.
+      test "new shows an international claim's masked IBAN and its BIC" do
         supplier = create_reimbursements_person(name: "Alice Producer", email: "alice@example.com")
         create_reimbursements_expense(
           person: supplier, budget: create_reimbursements_budget(name: "Props", nominal_code: "4000"),
@@ -75,7 +76,10 @@ module Admin
         get :new
 
         assert_response :success
-        assert_includes response.body, ::Reimbursements::BankDetails.format_iban("DE89370400440532013000")
+        assert_select "[data-bank-details-target='value']", text: "****3000"
+        assert_select "[data-bank-details-target='value'][data-revealed=?]", "DE89 3704 0044 0532 0130 00"
+        assert_no_match(/>[^<]*DE89/, response.body, "the IBAN must not be rendered as visible text")
+        assert_select "button[aria-label='Reveal bank details for Studio Bühne']"
         assert_includes response.body, "DEUTDEFF"
       end
 

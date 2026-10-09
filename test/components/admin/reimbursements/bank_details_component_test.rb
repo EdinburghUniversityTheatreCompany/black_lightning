@@ -50,6 +50,24 @@ module Admin
 
         assert_text "****9999 / -"
       end
+
+      test "an IBAN replaces the pair, masked to its last four digits and revealed grouped in fours" do
+        render_inline(BankDetailsComponent.new(iban: "DE89370400440532013000", payee: "Studio Bühne"))
+
+        value = page.find("[data-bank-details-target='value']", visible: :all)
+        assert_equal "****3000", value.text
+        assert_equal "****3000", value["data-masked"]
+        assert_equal "DE89 3704 0044 0532 0130 00", value["data-revealed"]
+        assert_selector "button[aria-label='Reveal bank details for Studio Bühne']"
+      end
+
+      test "a blank IBAN renders a plain dash and no toggle" do
+        render_inline(BankDetailsComponent.new(iban: ""))
+
+        assert_text "-"
+        assert_no_text "- / -"
+        assert_no_selector "button"
+      end
     end
   end
 end

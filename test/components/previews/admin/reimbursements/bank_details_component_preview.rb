@@ -10,6 +10,10 @@ module Admin
         render BankDetailsComponent.new(sort_code: "", account_number: "")
       end
 
+      def international
+        render BankDetailsComponent.new(iban: "DE89370400440532013000", payee: "Studio Bühne")
+      end
+
       # Only half the details made it in.
       def partial_details
         render BankDetailsComponent.new(sort_code: "08-99-99", account_number: "",
