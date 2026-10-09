@@ -36,6 +36,14 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert assigns(:link_to_admin_events)
   end
 
+  # Typing the name was never checked, so the prompt asks a plain question.
+  test "the delete button asks a plain question naming the user" do
+    get :show, params: { id: @user }
+
+    assert_select "form[data-confirm-message-value=?]",
+                  "Delete #{@user.name(users(:admin))}? Content that belongs to them may break."
+  end
+
   # The breadcrumb names the user, so the profile shows the id itself, to its owner as well.
   test "show displays the user's id" do
     get :show, params: { id: @user }

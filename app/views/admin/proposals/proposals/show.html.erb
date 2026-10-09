@@ -14,12 +14,7 @@
   <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful? %>
 
   <% if can?(:approve, @proposal) && @proposal.awaiting_approval? %>
-      <% if @proposal.has_debtors %>
-        <% confirm = "Approving #{ @proposal.show_title}" %>
-        <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
-      <% end %>
-
-      <%= get_link @proposal, :approve, confirm: confirm, detail: detail %>
+      <%= get_link @proposal, :approve, confirm: approve_confirm(@proposal) %>
       <%= get_link @proposal, :reject %>
   <% end %>
 

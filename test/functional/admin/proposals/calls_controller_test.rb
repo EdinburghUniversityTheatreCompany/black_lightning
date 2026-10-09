@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Admin::Proposals::CallsControllerTest < ActionController::TestCase
+  include ProposalTestHelpers
+
   setup do
     sign_in users(:admin)
 
@@ -37,6 +39,14 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     assert_match reject_admin_proposals_proposal_path(awaiting), response.body
     assert_match mark_successful_admin_proposals_proposal_path(approved), response.body
     assert_match mark_unsuccessful_admin_proposals_proposal_path(approved), response.body
+  end
+
+  test "approving a proposal with debtors from the index asks a plain question" do
+    proposal = create_proposal_with_debtor(@call)
+
+    get :index
+
+    assert_debtor_approval_question(proposal)
   end
 
   test "index is viewable without approve permission but hides action buttons" do

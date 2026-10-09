@@ -2,6 +2,7 @@ require "test_helper"
 
 class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   include NameHelper
+  include ProposalTestHelpers
 
   setup do
     @call = FactoryBot.create(:proposal_call, question_count: 5, submission_deadline: DateTime.current.advance(days: 5))
@@ -51,6 +52,15 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_match "In maintenance debt", response.body
 
     assert_match 'text-danger">Has Debtors</span>', response.body, "The Has Debtors label is absent. Are you sure the label generation did not change? Are you sure one of the users is actually in debt (most likely because there is a maintenance debt label)?"
+  end
+
+  # Typing "Ignoring Debt" was never checked, so the prompt asks a plain question.
+  test "approving a proposal with debtors asks a plain question" do
+    proposal = create_proposal_with_debtor(@call)
+
+    get :show, params: { id: proposal }
+
+    assert_debtor_approval_question(proposal)
   end
 
   test "should get new" do

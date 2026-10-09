@@ -3,16 +3,17 @@ module Admin::ProposalsHelper
     can?(:approve, Admin::Proposals::Proposal) || proposals.any? { |p| can?(:withdraw, p) }
   end
 
+  # Approving a show whose team is in debt asks first; nil when nobody is.
+  def approve_confirm(proposal)
+    "#{proposal.show_title} has debtors on its team. Approve it anyway?" if proposal.has_debtors
+  end
+
   def proposal_action_buttons(proposal)
     if can?(:approve, proposal)
       buttons =
         case proposal.status
         when :awaiting_approval
-          approve_link = proposal.has_debtors ?
-            get_link(proposal, :approve, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm") :
-            get_link(proposal, :approve)
-
-          [ approve_link, get_link(proposal, :reject) ]
+          [ get_link(proposal, :approve, confirm: approve_confirm(proposal)), get_link(proposal, :reject) ]
         when :approved
           [ get_link(proposal, :mark_successful),
             get_link(proposal, :mark_unsuccessful) ]
