@@ -602,6 +602,20 @@ module Admin
         assert_equal %w[Ábel Zeta], assigns(:area_rollups).map(&:name)
       end
 
+      # Area names repeat across centres. The newer area's line has the lower code, so it is
+      # met first and only the id tiebreak puts the older one first, as the index does.
+      test "the overview orders two same-named areas by id, as the index does" do
+        sign_in @user
+        older = create_reimbursements_area(name: "Cogito", cost_centre: ::Reimbursements::CostCentre.default)
+        newer = create_reimbursements_area(name: "Cogito", cost_centre: create_second_reimbursements_cost_centre)
+        create_reimbursements_budget(name: "Set", nominal_code: "4400", area: older)
+        create_reimbursements_budget(name: "Set", nominal_code: "4300", area: newer)
+
+        get :overview
+
+        assert_equal [ older.id, newer.id ], assigns(:area_rollups).map { |rollup| rollup.area.id }
+      end
+
       test "overview allocates an area on its declared basis, never netting its subtotals" do
         sign_in @user
         # An agreed total, so the figure the basis governs is reached.

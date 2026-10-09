@@ -154,9 +154,10 @@ module Admin
         areas_by_id = store.areas.index_by(&:record_id)
         by_area_id = budgets.group_by { |budget| budget.area&.record_id }
         unassigned = by_area_id.delete(nil)
+        # Names repeat across centres, so the id breaks a tie as Budget.index_order does.
         @area_rollups = by_area_id
+                        .sort_by { |id, _| [ ::Reimbursements::Budget.collation_key(areas_by_id[id]&.name.to_s), id.to_i ] }
                         .map { |id, group| ::Reimbursements::AreaRollup.new(area: areas_by_id[id], budgets: group) }
-                        .sort_by { |rollup| ::Reimbursements::Budget.collation_key(rollup.name.to_s) }
         # Nil, not empty, so no "Not in an area" heading renders when every
         # line has an area.
         @unassigned_rollup = unassigned && ::Reimbursements::AreaRollup.new(area: nil, budgets: unassigned)
