@@ -919,11 +919,11 @@ module Reimbursements
       in_cost_centre(in_year(records, financial_year), cost_centre)
     end
 
-    # +records+ belonging to +year+, counting a record with NO year as belonging to it. Rows
-    # written before financial years are unstamped until the backfill runs, and the strict
-    # reading would empty the budget list and every submitter's picker with nothing on screen to
-    # say why. An unplaced row shown under the viewed year is visible and correctable; hidden
-    # money is not.
+    # +records+ belonging to +year+, counting a record with NO year as belonging to it. A row can
+    # be unstamped (one older than financial years, or written while no year was active), and the
+    # strict reading would empty the budget list and every submitter's picker with nothing on
+    # screen to say why. An unplaced row shown under the viewed year is visible and correctable;
+    # hidden money is not.
     def in_year(records, year)
       return records if year.nil?
 
