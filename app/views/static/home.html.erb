@@ -10,8 +10,7 @@
     <% cache [ @carousel_events, @standard_carousel_items ] do %>
       <%= render Public::CarouselComponent.new(
             carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
-            aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
-            fit_mode: carousel_config.fetch(:fit_mode, "cover")) %>
+            aspect_ratio: carousel_config[:aspect_ratio]&.join("/")) %>
     <% end %>
 
     <%= render CardComponent.new(title: "What's On", html_class: "mt-3") do %>

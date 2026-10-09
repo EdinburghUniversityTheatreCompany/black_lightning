@@ -24,7 +24,7 @@ class CarouselItem < ApplicationRecord
   CAROUSEL_NAMES = [ "Home" ].freeze
 
   CAROUSEL_CONFIG = {
-    "Home" => { aspect_ratio: [ 960, 500 ], fit_mode: "cover" }
+    "Home" => { aspect_ratio: [ 960, 500 ] }
   }.freeze
 
   validates :title, :tagline, :carousel_name, :ordering, presence: true

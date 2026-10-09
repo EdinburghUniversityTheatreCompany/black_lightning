@@ -74,11 +74,6 @@ img.float-right {
   object-fit: cover;
 }
 
-.carousel-image-wrapper.carousel-image-wrapper--contain img {
-  object-fit: contain;
-  background: transparent;
-}
-
 /* The drag handle shows only on a sortable list's rows (data-sortable-item) */
 .nested-form-wrapper:not([data-sortable-item]) [data-sortable-handle] {
   display: none;
