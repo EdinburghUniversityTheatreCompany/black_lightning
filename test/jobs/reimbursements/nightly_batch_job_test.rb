@@ -87,24 +87,16 @@ module Reimbursements
     # --- Stale-pending reminder -------------------------------------------
 
     test "emails a pending reminder for submissions stuck awaiting approval" do
-      pending_expense(days_ago: 5)
-
-      NightlyBatchJob.perform_now(today: THURSDAY)
-
-      reminder = mailer_calls(:pending_reminder).sole.last
-      assert_equal 1, reminder[:rows].size
-      assert_equal 5, reminder[:rows].first[:age_days]
-      assert_empty mailer_calls(:owner_sign_off_reminder), "an ownerless budget's claim stays finance's"
-      # Nothing approved counts as delivered.
-      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
-    end
-
-    test "the pending reminder carries each claim's id for its edit link" do
       expense = pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_equal expense.record_id, mailer_calls(:pending_reminder).sole.last[:rows].sole[:record_id]
+      row = mailer_calls(:pending_reminder).sole.last[:rows].sole
+      assert_equal 5, row[:age_days]
+      assert_equal expense.record_id, row[:record_id], "the claim's id builds its edit link"
+      assert_empty mailer_calls(:owner_sign_off_reminder), "an ownerless budget's claim stays finance's"
+      # Nothing approved counts as delivered.
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
     test "fresh pending submissions do not trigger a reminder" do
