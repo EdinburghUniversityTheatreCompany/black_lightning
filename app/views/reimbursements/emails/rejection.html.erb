@@ -31,7 +31,9 @@
 this email and we can put the claim back in the queue. You can also
 <%= link_to "file a new one", new_admin_reimbursements_expense_url %>, attaching the corrected receipt.</p>
 
-<p>If you have any questions, contact us at <%= mail_to @cost_centre.contact_email %>.</p>
+<% if @cost_centre.contact_email %>
+  <p>If you have any questions, contact us at <%= mail_to @cost_centre.contact_email %>.</p>
+<% end %>
 
 <p>Best,<br>
 <%= @cost_centre.finance_sender_name %></p>

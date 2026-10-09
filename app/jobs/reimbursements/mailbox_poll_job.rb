@@ -354,7 +354,7 @@ module Reimbursements
         <p>If you're part of #{@current_cost_centre.name}, email from the address you
         registered with, or submit directly through the portal:
         <a href="#{portal_url}">#{portal_url}</a>.</p>
-        <p>Questions? Contact #{contact_email}.</p>
+        #{"<p>Questions? Contact #{contact_email}.</p>" if contact_email}
         <p>#{sign_off}</p>
       HTML
     end
@@ -376,8 +376,8 @@ module Reimbursements
         <p>Hi,</p>
         <p>Thanks for your email! We've received an unusually high number of receipts from
         this address today, so this one hasn't been processed automatically.</p>
-        <p>Please submit it through the portal instead: <a href="#{portal_url}">#{portal_url}</a>,
-        or contact #{contact_email} if this doesn't look right.</p>
+        <p>Please submit it through the portal instead: <a href="#{portal_url}">#{portal_url}</a>#{
+          ", or contact #{contact_email} if this doesn't look right" if contact_email}.</p>
         <p>#{sign_off}</p>
       HTML
     end

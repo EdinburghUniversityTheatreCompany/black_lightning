@@ -35,8 +35,10 @@
 </table>
 
 <p>
-  EUSA typically processes BACS payments within a few business days. If you don't
-  receive payment within two weeks, contact us at <%= mail_to @cost_centre.contact_email %>.
+  EUSA typically processes BACS payments within a few business days.
+  <% if @cost_centre.contact_email %>
+    If you don't receive payment within two weeks, contact us at <%= mail_to @cost_centre.contact_email %>.
+  <% end %>
 </p>
 
 <p>

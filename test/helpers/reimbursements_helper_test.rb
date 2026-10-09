@@ -237,7 +237,8 @@ class ReimbursementsHelperTest < ActionView::TestCase
   test "the contact link names the cost centre of the claim it is shown beside" do
     termtime = create_second_reimbursements_cost_centre
 
-    assert_includes reimbursements_contact_link(termtime), "in@bedlamtheatre.invalid"
+    assert_includes reimbursements_contact_link(termtime), termtime.contact_email
+    assert_not_includes reimbursements_contact_link(termtime), termtime.receive_mailbox
   end
 
   test "the contact link answers from the sole centre when a claim names none" do

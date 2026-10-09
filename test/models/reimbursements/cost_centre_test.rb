@@ -13,6 +13,25 @@ module Reimbursements
       assert_equal "reimbursements@bedlamfringe.co.uk", fringe.send_mailbox
     end
 
+    def contact_centre(receive: "in@example.com", send: "out@example.com", notify: nil)
+      CostCentre.new(receive_mailbox: receive, send_mailbox: send, notification_email: notify)
+    end
+
+    # The receive mailbox is polled by email-in, so a question sent there is
+    # auto-answered and filed as a receipt rather than read by a person.
+    test "contact_email is the first notification address" do
+      centre = contact_centre(notify: " finance@example.com ; ops@example.com")
+      assert_equal "finance@example.com", centre.contact_email
+    end
+
+    test "contact_email falls back to the send mailbox when it is not the polled one" do
+      assert_equal "out@example.com", contact_centre.contact_email
+    end
+
+    test "contact_email is nil rather than the polled mailbox" do
+      assert_nil contact_centre(send: "in@example.com").contact_email
+    end
+
     test "sharepoint_graph_site_path converts the site URL to Graph's path form" do
       cost_centre = CostCentre.default
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance/"

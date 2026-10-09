@@ -5,9 +5,10 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     MAILBOX = "send@bedlamfringe.co.uk".freeze
+    FINANCE = "finance@bedlamfringe.co.uk".freeze
 
-    def cost_centre(name: "Bedlam Fringe 2026")
-      CostCentre.new(key: "fringe", name: name, eusa_code: "F40",
+    def cost_centre(name: "Bedlam Fringe 2026", notification_email: FINANCE)
+      CostCentre.new(key: "fringe", name: name, eusa_code: "F40", notification_email: notification_email,
                      receive_mailbox: MAILBOX, send_mailbox: MAILBOX)
     end
 
@@ -222,7 +223,7 @@ module Reimbursements
       html = graph.send_mails.sole[:html]
       assert_includes html, %(href="#{PORTAL}/expenses/42")
       assert_includes html, %(href="#{PORTAL}/expenses/new")
-      assert_includes html, %(href="mailto:#{MAILBOX}")
+      assert_includes html, %(href="mailto:#{FINANCE}")
       assert_not_includes html, "feel free"
     end
 
@@ -235,7 +236,7 @@ module Reimbursements
 
       html = graph.send_mails.sole[:html]
       assert_includes html, %(href="#{PORTAL}/expenses/42">#7</a>)
-      assert_includes html, %(contact us at <a href="mailto:#{MAILBOX}")
+      assert_includes html, %(contact us at <a href="mailto:#{FINANCE}")
       assert_not_includes html, "let me know"
     end
 
@@ -265,6 +266,21 @@ module Reimbursements
       assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
       assert_includes failure, "forward this email to IT"
       assert_not_includes failure, "server logs"
+    end
+
+    test "producer emails never offer the polled receive mailbox as a contact" do
+      notifier, graph = build(centre: cost_centre(notification_email: nil))
+      notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
+                         amount: 12.5, budget_name: "Props", description: "Paint", reason: "No receipt.")
+      notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
+                                     bacs_date: Date.new(2026, 5, 13),
+                                     line_items: [ { auto_number: 7, record_id: 42, amount: "12.50",
+                                                     budget_name: "Props", description: "Paint" } ])
+
+      graph.send_mails.each do |mail|
+        assert_not_includes mail[:html], "mailto:#{MAILBOX}"
+        assert_not_includes mail[:html], "contact us"
+      end
     end
 
     test "no template tells a lone owner that one of several can sign off" do

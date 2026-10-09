@@ -202,11 +202,13 @@ module Reimbursements
       "#{name} BACS (automated)"
     end
 
-    # Where a submitter should write with a question. The receive mailbox is
-    # the address email-in already answers, so it is the one guaranteed to be
-    # monitored for this cost centre.
+    # Where a submitter should write with a question: an address a person
+    # reads. Never the receive mailbox, which email-in polls, auto-answers and
+    # files as a receipt. nil when there is no such address, and callers then
+    # name none.
     def contact_email
-      receive_mailbox
+      notification_emails.first ||
+        (send_mailbox unless send_mailbox.to_s.casecmp?(receive_mailbox.to_s))
     end
 
     # Filename-safe form of the name, for the BACS spreadsheet sent to EUSA.
