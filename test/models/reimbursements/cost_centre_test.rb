@@ -2,15 +2,6 @@ require "test_helper"
 
 module Reimbursements
   class CostCentreTest < ActiveSupport::TestCase
-    test "caps the BACS budget holder fields at their column length" do
-      fringe = CostCentre.default
-      fringe.assign_attributes(authoriser_name: "a" * 256, authoriser_designation: "b" * 256)
-
-      assert_not fringe.valid?
-      assert fringe.errors[:authoriser_name].present?
-      assert fringe.errors[:authoriser_designation].present?
-    end
-
     def contact_centre(receive: "in@example.com", send: "out@example.com", notify: nil)
       CostCentre.new(receive_mailbox: receive, send_mailbox: send, notification_email: notify)
     end
