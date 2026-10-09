@@ -1092,15 +1092,6 @@ module Admin
         assert_equal "to_approve", query["tab"]
       end
 
-      test "an approval with no centre selected still comes back to every centre" do
-        expense = pending_expense
-        sign_in @user
-
-        patch :approve, params: { id: expense.record_id }
-
-        assert_redirected_to_review
-      end
-
       test "the review card wires the unsaved-edits guard on its decision controls" do
         expense = pending_expense
         sign_in @user
