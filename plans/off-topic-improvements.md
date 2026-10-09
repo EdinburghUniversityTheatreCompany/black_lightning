@@ -106,11 +106,12 @@ assumes the finance-wide view.
 
 ### Budgets index is wider than a laptop
 
-The action column is pinned, so Edit is reachable at 1366x768. The table is still wider than its
-box (1218px of columns in a 1012px scrollport at 1366), so the pinned column covers the Remaining
-cell until the operator scrolls right, clipping a money figure mid-word ("No bu… set"). The
-underlying problem is 14 money columns. Fixes: a column-visibility control, Owners behind a
-popover, or Pipeline/Paid moved to the overview.
+The action column is pinned, so Edit is reachable at 1366x768. The table was wider than its box
+(1218px of columns in a 1012px scrollport at 1366), so the pinned column covered the Remaining
+cell until the operator scrolled right, clipping a money figure mid-word ("No bu… set"). Main's
+3e6580e9 (2026-10-09) then cut Type, Visible, Pipeline and Paid (portal) from the index and pinned
+the name column too. Re-measure at 1366 before doing more; if it still overflows, the remaining
+fixes are a column-visibility control or Owners behind a popover.
 
 ### `Reimbursements::Area#income?` has no callers
 
