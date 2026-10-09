@@ -83,6 +83,30 @@ module Reimbursements
       graph.drafts.first[:attachments]
     end
 
+    class RecordingBacsXlsx < BacsXlsx
+      attr_reader :authorisation
+
+      def generate(rows, **authorisation)
+        @authorisation = authorisation
+        super
+      end
+    end
+
+    test "prints the cost centre's budget holder on the BACS authorisation form" do
+      cost_centre = configured_cost_centre
+      cost_centre.authoriser_name = "Jo Producer"
+      cost_centre.authoriser_designation = "Fringe Treasurer"
+      _processor, store, graph = build_scenario(cost_centre: cost_centre)
+      xlsx = RecordingBacsXlsx.new
+      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, xlsx: xlsx,
+                                     sleeper: ->(_seconds) { })
+
+      run_batch(processor, store)
+
+      assert_equal({ centre_name: "Bedlam Fringe", authoriser_name: "Jo Producer",
+                     authoriser_designation: "Fringe Treasurer" }, xlsx.authorisation)
+    end
+
     test "a mixed batch attaches and backs up the BACS sheet plus one form per international claim" do
       processor, store, graph = build_scenario(expenses: -> { default_expenses; international_expense })
       result = run_batch(processor, store)
@@ -168,6 +192,9 @@ module Reimbursements
                    graph.send_mails.map { |mail| mail[:to] }.flatten.sort
       assert @expense_a.reload.producer_notified
       assert @expense_b.reload.producer_notified
+      alice_mail = graph.send_mails.find { |mail| mail[:to] == [ "alice@example.com" ] }
+      assert_includes alice_mail[:html],
+                      %(href="https://www.example.com/admin/reimbursements/expenses/#{@expense_a.record_id}">#11</a>)
     end
 
     # Each surface reads Budget#display_name, so each names the show.

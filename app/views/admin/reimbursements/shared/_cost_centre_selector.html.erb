@@ -1,8 +1,25 @@
-<%# Each centre is a link keeping the page's other params. "All" (no param) is
-    the default because CostCentre.default is arbitrary. Hidden with one centre. %>
+<%# Each centre is a link keeping the page's other params. "All" is the default because
+    CostCentre.default is arbitrary; its link sends an explicit empty cost_centre= so the user's
+    home centre does not replace it on the sidebar's next click. Hidden with one centre. %>
 <% if selectable_cost_centres.size > 1 %>
+  <% home = current_user.reimbursements_cost_centre %>
+  <% home_controls = capture do %>
+    <% if selected_cost_centre && selected_cost_centre != home %>
+      <%= button_to "Make this my default",
+                    admin_reimbursements_home_cost_centre_path(cost_centre: selected_cost_centre.key),
+                    method: :patch, class: "text-sm text-primary underline", form_class: "inline" %>
+    <% end %>
+    <% if home %>
+      <span class="text-sm text-gray-600">Default: <%= home.name %></span>
+      <span class="text-sm text-gray-400" aria-hidden="true">&middot;</span>
+      <%= button_to "Clear", admin_reimbursements_home_cost_centre_path, method: :delete,
+                    class: "text-sm text-gray-600 underline", form_class: "inline" %>
+    <% end %>
+  <% end %>
   <%= render "admin/reimbursements/shared/scope_selector", label: "Cost centre",
              options: [ nil, *selectable_cost_centres ].map { |centre|
-               [ centre&.name || "All", { cost_centre: centre&.key, cost_centre_id: nil }, centre == selected_cost_centre ]
-             } %>
+               [ centre&.name || "All", { cost_centre: centre&.key || "", cost_centre_id: nil },
+                 centre == selected_cost_centre ]
+             },
+             extra: home_controls %>
 <% end %>

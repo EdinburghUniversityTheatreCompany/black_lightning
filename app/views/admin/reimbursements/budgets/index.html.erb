@@ -1,24 +1,21 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
-<p class="mb-3 text-gray-600">
-  Every budget line with its live financials. Only the initial figure is typed; the rest is
-  computed.
-</p>
+<%= render "tabs" %>
+<%# Scrolls to the line a save came back for (?budget=); see scroll_to_controller. %>
+<div data-controller="scroll-to" data-scroll-to-param-value="budget" data-scroll-to-prefix-value="budget_"></div>
 
 <%= render "admin/reimbursements/shared/glossary_terms",
+           summary: "About these figures",
+           intro: "Every budget line with its live financials. Only the initial figure is typed; " \
+                  "the rest is computed.",
            terms: ::Reimbursements::Glossary.terms(:initial_budget, :projected, :committed,
-                                                   :pipeline, :remaining, :expected_outturn,
+                                                   :remaining, :expected_outturn,
                                                    :variance, :eusa_actual) %>
 
 <p class="mb-3 flex flex-wrap gap-2">
-  <%= link_to "Budget overview",
-        overview_admin_reimbursements_budgets_path(year: selected_financial_year&.key,
-                                                   cost_centre: selected_cost_centre&.key),
-        class: btn_classes(:secondary, :sm) %>
   <%= link_to "New budget",
-        new_admin_reimbursements_budget_path(year: selected_financial_year&.key,
-                                             cost_centre: selected_cost_centre&.key),
+        new_admin_reimbursements_budget_path(**scope_params),
         class: btn_classes(:primary, :sm) %>
   <%# Both selectors carry through, so the import lands in the year and centre
       on screen. %>
@@ -40,15 +37,17 @@
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
 <% else %>
-  <% headers = [ "Budget", "Type", "Visible", "Initial", "Projected", "Committed",
-                 "Pipeline", "Paid (portal)", "EUSA actual", "Expected outturn",
-                 "Remaining", "Variance", "Owners", "" ] %>
+  <%# [label, money?]: money columns are right-aligned to line up the pence. %>
+  <% headers = [ [ "Budget" ], [ "Initial", true ], [ "Projected", true ], [ "Committed", true ],
+                 [ "EUSA actual", true ], [ "Expected outturn", true ], [ "Remaining", true ],
+                 [ "Variance", true ], [ "Owners" ], [ "" ] ] %>
   <%
-    # Grouped off the scoped budgets, so an area shows only its in-scope lines.
-    # Area figures come off @areas_by_id, never budget.area (which would N+1).
+    # Grouped off the scoped budgets, so an area shows only its in-scope lines, in the order
+    # Budget.index_order put them. Area figures come off @areas_by_id, never budget.area (which
+    # would N+1).
     budgets_by_area_id = @budgets.group_by { |budget| budget.area&.record_id }
     none_budgets = budgets_by_area_id.delete(nil) || []
-    ordered_area_ids = budgets_by_area_id.keys.sort_by { |id| @areas_by_id[id]&.name.to_s.downcase }
+    ordered_area_ids = budgets_by_area_id.keys
   %>
   <%= render "shared/pages/index_results",
         resources: @budgets, resource_class: ::Reimbursements::Budget,

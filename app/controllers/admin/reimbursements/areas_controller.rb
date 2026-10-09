@@ -50,7 +50,10 @@ module Admin
         area = store.create_area!(attrs.merge(financial_year: selected_financial_year,
                                               cost_centre: chosen_cost_centre))
         store.sync_area_owners!(area.record_id, posted_owner_ids)
-        redirect_to edit_admin_reimbursements_area_path(area.record_id), notice: "Area created."
+        # The centre the form picked, so the edit page and its back link show the area.
+        scope = scope_params
+        scope[:cost_centre] = chosen_cost_centre.key if area_form_params[:cost_centre_id].present?
+        redirect_to edit_admin_reimbursements_area_path(area.record_id, **scope), notice: "Area created."
       rescue ActiveRecord::RecordInvalid => e
         @area = ::Reimbursements::Area.new(attrs)
         render_form(:new, posted_owner_ids, error: e.record.errors.full_messages.to_sentence)
@@ -68,7 +71,7 @@ module Admin
         @area.budgets_attributes = permitted_budgets_attributes if permitted_budgets_attributes
         @area.save!
         store.sync_area_owners!(@area.record_id, posted_owner_ids)
-        redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
+        redirect_to edit_admin_reimbursements_area_path(@area.record_id, **scope_params), notice: "Area saved."
       rescue ActiveRecord::RecordInvalid => e
         render_form(:edit, posted_owner_ids, error: e.record.errors.full_messages.to_sentence)
       end

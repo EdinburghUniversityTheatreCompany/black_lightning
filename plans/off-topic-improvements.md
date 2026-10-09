@@ -371,6 +371,17 @@ resolved pair. herb-lint 0.11.0's `html-no-duplicate-ids` flags it, which is why
 CI pin 0.10.4. Fix: remove by a class or data attribute, or remove every section's row. Then
 unpin herb-lint.
 
+### `bootstrap_compat.css` silently redefines Tailwind's `py-3` (and friends) on both sites
+
+`bootstrap_compat.css` (imported by both `admin.css` and `application.css`) defines unlayered
+`.py-3 { padding: 1rem }`, plus `.py-4`, `.py-5`, `.mb-3` to `.mb-5`, `.mt-3` to `.mt-5`, `.ms-3`
+and `.me-3` with Bootstrap's values. Those class names are also Tailwind utilities, and an
+unlayered rule beats any `@layer utilities` rule, so every Tailwind `py-3` in the app renders 16px
+rather than 12px, and an override like `[&_li>div]:py-2` loses unless it carries `!`. Found
+measuring the opportunities widget (2026-10-09). Fix: drop the shims whose Bootstrap meaning
+nobody relies on any more, or move the file into `@layer components` so utilities win again;
+either way the visual diff is site-wide.
+
 ### `expense_edits/edit.html.erb` trips `erb-no-duplicate-branch-elements`
 
 Two non-gating herb hints: the `<div class="grid gap-4 sm:grid-cols-2">` wrapper repeats in both

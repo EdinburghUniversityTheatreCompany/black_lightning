@@ -88,17 +88,17 @@ module Admin
                                         payment_confirmed_date: @actual.date,
                                         submitted_at: @actual.date&.beginning_of_day)
         )
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     notice: "Expense ##{expense.auto_number} created from this EUSA row and " \
                             "recorded as already paid."
       rescue ::Reimbursements::DatabaseStore::NotConvertibleError
         # Converted between this request's check and its write (double submit, or another operator).
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     alert: "That row had already been converted to an expense, so nothing was " \
                            "created a second time."
       rescue ::Reimbursements::DatabaseStore::BudgetGoneError
         # The same race on the budget; the transaction rolled back, so the row is still convertible.
-        redirect_to admin_reimbursements_actuals_path,
+        redirect_to actuals_path_with_filters,
                     alert: "That budget was deleted while this page was open, so nothing was " \
                            "created. Pick another budget and try again."
       end
@@ -268,12 +268,18 @@ module Admin
         @include_offsets ? actuals : actuals.reject(&:offset?)
       end
 
-      # The index's own filters, so an action doesn't drop the operator on an unfiltered first page.
-      def actuals_path_with_filters
-        admin_reimbursements_actuals_path(
-          params.permit(:period, :include_offsets, :state, :search).to_h.compact_blank
-        )
+      # The index's own filters and cost centre, so an action taken from a filtered list (or a page
+      # reached from one) comes back to that list.
+      def actual_filters
+        params.permit(:period, :include_offsets, :state, :search).to_h
+              .merge(cost_centre: selected_cost_centre&.key).compact_blank
       end
+      helper_method :actual_filters
+
+      def actuals_path_with_filters
+        admin_reimbursements_actuals_path(actual_filters)
+      end
+      helper_method :actuals_path_with_filters
 
       def set_pairable_actual
         @actual = find_or_404(:find_actual)
@@ -297,14 +303,14 @@ module Admin
         @actual = find_or_404(:find_actual)
         return if @actual.convertible_to_expense?
 
-        redirect_to admin_reimbursements_actuals_path, alert: not_convertible_reason(@actual)
+        redirect_to actuals_path_with_filters, alert: not_convertible_reason(@actual)
       end
 
       def set_apportionable_actual
         @actual = find_or_404(:find_actual)
         return if @actual.apportionable?
 
-        redirect_to admin_reimbursements_actuals_path, alert: not_apportionable_reason(@actual)
+        redirect_to actuals_path_with_filters, alert: not_apportionable_reason(@actual)
       end
 
       def not_apportionable_reason(actual)
@@ -442,22 +448,26 @@ module Admin
         @budget_groups = budget_groups_for(@actual)
       end
 
-      # Two labelled groups: the lines on the row's nominal code first, then the rest. An ORDER, not
-      # a filter: the code is a hint, and the operator may be charging this elsewhere. Each option
-      # prints its nominal code so the grouping can be checked.
+      # The lines on the row's nominal code first, then every other line grouped by area as the
+      # producer's picker is. An ORDER, not a filter: the code is a hint, and the operator may be
+      # charging this elsewhere. Each option prints its nominal code so the grouping can be checked.
       def budget_groups_for(actual)
         matching, others = offerable_budgets.partition do |budget|
           actual.nominal_code.present? && budget.nominal_code == actual.nominal_code
         end
-        return [ [ "Budgets", budget_options(others) ] ] if matching.empty?
-
-        [ [ "Matches this row's nominal code (#{actual.nominal_code})", budget_options(matching) ],
-          [ "Every other budget", budget_options(others) ] ]
+        groups = []
+        if matching.any?
+          groups << [ "Matches this row's nominal code (#{actual.nominal_code})",
+                      budget_options(matching) ]
+        end
+        groups + ::Reimbursements::Budget.picker_groups(others) { |budget| budget_option_label(budget) }
       end
 
       def budget_options(budgets)
-        budgets.map { |budget| [ "#{budget.picker_label} · #{budget.nominal_code}", budget.record_id ] }
+        budgets.map { |budget| [ budget_option_label(budget), budget.record_id ] }
       end
+
+      def budget_option_label(budget) = "#{budget.picker_label} · #{budget.nominal_code}"
 
       # The budget a nominal code unambiguously names; blank when several share it, since guessing
       # is worse than asking.

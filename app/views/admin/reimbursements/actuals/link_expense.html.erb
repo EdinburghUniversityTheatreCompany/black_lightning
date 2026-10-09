@@ -1,4 +1,4 @@
-<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
 
 <p class="mb-3 text-gray-600">
   Attach this EUSA row to a claim the automatic matcher missed. The matcher only links a row it is
@@ -15,14 +15,14 @@
       No claim here can be settled by this row. Paid claims are settled already, and drafts and
       rejected claims are never offered. So this row is income, someone else's, or a cost nobody
       claimed - in which case
-      <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id) %>
+      <%= link_to "create an expense from it", new_expense_admin_reimbursements_actual_path(@actual.record_id, actual_filters) %>
       instead.
     </p>
   <% end %>
 <% else %>
   <%# form_with wraps the card, never the reverse: the footer is a component slot, so a form opened
       inside the card puts the submit button outside the <form>. %>
-  <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id),
+  <%= form_with url: confirm_link_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
                 method: :post do |f| %>
     <%= render CardComponent.new(title: "Which claim did this pay?") do |card| %>
       <p class="mb-3 text-sm text-gray-600">
@@ -63,7 +63,7 @@
       </div>
 
       <% card.with_footer do %>
-        <%= render "shared/form/actions", submit: "Link and mark Paid", cancel_path: admin_reimbursements_actuals_path %>
+        <%= render "shared/form/actions", submit: "Link and mark Paid", cancel_path: actuals_path_with_filters %>
       <% end %>
     <% end %>
   <% end %>

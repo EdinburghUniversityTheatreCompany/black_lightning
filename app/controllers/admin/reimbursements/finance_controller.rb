@@ -18,7 +18,7 @@ module Admin
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
       helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years,
-                    :selected_cost_centre, :selectable_cost_centres
+                    :selected_cost_centre, :selectable_cost_centres, :scope_params
 
       PAGE_SIZE = 50
 
@@ -88,6 +88,14 @@ module Admin
         flash.now[:alert] = "There's no cost centre called #{requested.inspect}. " \
                             "Showing every cost centre instead."
         nil
+      end
+
+      # The year and centre the operator ASKED for, to carry through links and redirects. Only
+      # what was in the URL: filling in the active year or a centre would turn "every centre"
+      # into one on the next page. An explicit All (an empty or unknown cost_centre=) stays empty.
+      def scope_params
+        { year: (selected_financial_year&.key if params[:year].present?),
+          cost_centre: selected_cost_centre&.key || (params[:cost_centre] && "") }.compact
       end
 
       # Read off the model, not the store: this runs in the before_action that decides

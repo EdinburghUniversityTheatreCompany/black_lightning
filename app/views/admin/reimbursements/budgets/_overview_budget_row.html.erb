@@ -4,7 +4,7 @@
 <tr>
   <td>
     <%= link_to (name_area ? budget.display_name : budget.name).presence || "-",
-          edit_admin_reimbursements_budget_path(budget.record_id),
+          edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           class: "text-primary underline" %>
     <%# The same health badge the index draws. %>
     <%= reimbursements_budget_health_badge(budget) %>

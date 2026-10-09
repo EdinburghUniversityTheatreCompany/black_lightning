@@ -5,6 +5,12 @@
   background-color: var(--color-primary);
 }
 
+/* Tom Select draws an <optgroup> heading in the same weight as its options,
+   so a grouped picker would read as one flat list. */
+.ts-dropdown .optgroup-header {
+  font-weight: 600;
+}
+
 /* Collapsible controller state */
 [data-controller="collapsible"] .when-open {
   display: none;

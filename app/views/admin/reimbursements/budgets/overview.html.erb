@@ -1,17 +1,13 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
-<%= render "shared/back_link", text: "All budgets",
-           path: admin_reimbursements_budgets_path(year: selected_financial_year&.key,
-                                                   cost_centre: selected_cost_centre&.key) %>
-
-<p class="mb-3 text-gray-600">
-  The same budgets down two axes: by nominal code, the axis EUSA's ledger uses, and by area,
-  the show the committee agreed a total for. Expense and income budgets are totalled separately,
-  since adding spend to income gives a figure that is neither.
-</p>
+<%= render "tabs" %>
 
 <%= render "admin/reimbursements/shared/glossary_terms",
+           summary: "About these figures",
+           intro: "The same budgets down two axes: by nominal code, the axis EUSA's ledger uses, and " \
+                  "by area, the show the committee agreed a total for. Expense and income budgets " \
+                  "are totalled separately, since adding spend to income gives a figure that is neither.",
            terms: ::Reimbursements::Glossary.terms(:nominal_code, :area, :projected, :committed,
                                                    :pipeline, :remaining, :eusa_actual,
                                                    :expected_outturn, :unattributed) %>
@@ -41,7 +37,7 @@
 <div id="budgets-by-code">
 <%= render CardComponent.new(title: "Budgets by nominal code", flush: true) do %>
   <div class="table-scroll">
-    <table class="table table-hover table-sticky-head">
+    <table class="table table-hover table-sticky-head tabular-nums">
       <%= render "overview_head" %>
       <% @rollups.each do |rollup| %>
         <tbody>
@@ -79,7 +75,7 @@
     <p class="px-4 py-4 text-center text-gray-600">No budgets to group.</p>
   <% else %>
     <div class="table-scroll">
-      <table class="table table-hover table-sticky-head">
+      <table class="table table-hover table-sticky-head tabular-nums">
         <%= render "overview_head" %>
         <% @area_rollups.each do |rollup| %>
           <%= render "area_group", rollup: rollup, label: rollup.name %>
@@ -120,7 +116,7 @@
     </p>
   <% else %>
     <div class="table-scroll">
-      <table class="w-full text-sm table-sticky-head">
+      <table class="w-full text-sm table-sticky-head tabular-nums">
         <thead>
           <tr class="text-left text-gray-500 border-b border-gray-200">
             <th scope="col" class="py-2 pr-3">Date</th>

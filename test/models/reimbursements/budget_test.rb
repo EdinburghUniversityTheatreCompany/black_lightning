@@ -15,6 +15,13 @@ module Reimbursements
                       amount_excl_vat: excl_vat, description: "x")
     end
 
+    test "index_order breaks a name tie by id, so the edit page's neighbours are stable" do
+      first = create_reimbursements_budget(name: "Props")
+      second = create_reimbursements_budget(name: "props", nominal_code: "4001")
+
+      assert_equal [ first, second ], Reimbursements::Budget.index_order([ second, first ])
+    end
+
     test "committed_amount sums excl-VAT amounts of Approved, Submitted and Paid" do
       budget = build_budget
       add_expense(budget, status: Status::APPROVED, excl_vat: 10)
@@ -301,6 +308,45 @@ module Reimbursements
       budget = build_budget(name: "Other", cost_centre: nil)
 
       assert_equal "Other", budget.picker_label
+    end
+
+    # Area names are unique only per (year, centre), so the heading names both.
+    test "picker_group heads an area-bound line with its centre and area" do
+      centre = picker_cost_centre(key: "fringe-group", eusa_code: "F40g")
+      area = Area.create!(name: "Cogito", cost_centre: centre)
+
+      assert_equal "BF - Cogito", build_budget(cost_centre: centre, area: area).picker_group
+      assert_equal Budget::NO_AREA_GROUP, build_budget(cost_centre: centre).picker_group
+    end
+
+    test "picker_group names the bare area when the line has no cost centre" do
+      assert_equal "Cogito", build_budget(area: Area.create!(name: "Cogito")).picker_group
+    end
+
+    test "picker_group takes the area's centre when the line has none" do
+      centre = picker_cost_centre(key: "fringe-inherit", eusa_code: "F40i")
+      budget = build_budget(area: Area.create!(name: "Cogito", cost_centre: centre))
+      budget.update_column(:cost_centre_id, nil)
+
+      assert_equal "BF - Cogito", budget.reload.picker_group
+    end
+
+    test "picker_groups sorts headings as MySQL does, ignoring case and accents" do
+      names = %w[beta Ábel Zeta]
+      budgets = names.map { |name| build_budget(area: Area.create!(name: name)) }
+
+      assert_equal %w[Ábel beta Zeta], Budget.picker_groups(budgets).map(&:first)
+    end
+
+    test "picker_groups sorts the headings and puts the no-area group last" do
+      loose = build_budget(name: "Contingency")
+      zeta = build_budget(name: "Marketing", area: Area.create!(name: "Zeta"))
+      alpha = build_budget(name: "Marketing", area: Area.create!(name: "Alpha"))
+
+      groups = Budget.picker_groups([ loose, zeta, alpha ])
+
+      assert_equal [ "Alpha", "Zeta", Budget::NO_AREA_GROUP ], groups.map(&:first)
+      assert_equal [ [ "Alpha: Marketing", alpha.record_id ] ], groups.first.last
     end
 
     # --- apportioned income --------------------------------------------------

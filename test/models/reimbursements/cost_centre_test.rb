@@ -2,6 +2,28 @@ require "test_helper"
 
 module Reimbursements
   class CostCentreTest < ActiveSupport::TestCase
+    test "caps the BACS budget holder fields at their column length" do
+      fringe = CostCentre.default
+      fringe.assign_attributes(authoriser_name: "a" * 256, authoriser_designation: "b" * 256)
+
+      assert_not fringe.valid?
+      assert fringe.errors[:authoriser_name].present?
+      assert fringe.errors[:authoriser_designation].present?
+    end
+
+    def contact_centre(receive: "in@example.com", send: "out@example.com", notify: nil)
+      CostCentre.new(receive_mailbox: receive, send_mailbox: send, notification_email: notify)
+    end
+
+    # The receive mailbox is polled by email-in, so a question sent there is auto-answered and
+    # filed as a receipt rather than read by a person.
+    test "contact_email is the first notification address, else a send mailbox that is not polled" do
+      assert_equal "finance@example.com",
+                   contact_centre(notify: " finance@example.com ; ops@example.com").contact_email
+      assert_equal "out@example.com", contact_centre.contact_email
+      assert_nil contact_centre(send: "in@example.com").contact_email
+    end
+
     test "sharepoint_graph_site_path converts the site URL to Graph's path form, nil without a valid one" do
       cost_centre = CostCentre.default
       cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance/"

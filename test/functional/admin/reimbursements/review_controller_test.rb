@@ -62,6 +62,15 @@ module Admin
                             bytes: "JPEG#{tag}")
       end
 
+      test "each card's budget select is a Tom Select" do
+        expense = create_reimbursements_expense(person: @person, budget: @budget, status: "Pending")
+        sign_in @user
+
+        get :index
+
+        assert_select "select#budget_record_id_#{expense.record_id}.simple-select2:not([class*=border])"
+      end
+
       test "partitions pending into ready and needs-attention, and lists approved separately" do
         # Distinct amounts, or the two read as duplicates.
         ready = pending_expense(amount: BigDecimal("111"))
@@ -874,6 +883,7 @@ module Admin
         assert_equal [ "pat@example.com" ], mail[:to]
         assert_match(/not approved/, mail[:subject])
         assert_match "Hi Pat,", mail[:html], "Pat Producer is greeted by first name only"
+        assert_includes mail[:html], "https://www.example.com/admin/reimbursements/expenses/#{expense.record_id}"
         assert_match "Missing receipt", mail[:html]
       end
 
@@ -1038,6 +1048,44 @@ module Admin
         gated_expense.reload
         assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
         assert_equal "Wording fixed only", gated_expense.description
+      end
+
+      # --- The chosen cost centre survives every click --------------------
+
+      test "the tab links keep the selected cost centre" do
+        termtime = create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        %w[awaiting_owner to_approve approved].each do |tab|
+          assert_select "a[href=?]", admin_reimbursements_review_path(tab: tab, cost_centre: termtime.key)
+        end
+        assert_select "form[action=?]", admin_reimbursements_approve_review_path(
+          expense.record_id, tab: "to_approve", cost_centre: termtime.key
+        )
+      end
+
+      test "an approval comes back to the same cost centre" do
+        termtime = create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: termtime.key }
+
+        query = Rack::Utils.parse_nested_query(URI.parse(@response.redirect_url).query)
+        assert_equal termtime.key, query["cost_centre"]
+        assert_equal "to_approve", query["tab"]
+      end
+
+      test "an approval with no centre selected still comes back to every centre" do
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        assert_redirected_to_review
       end
 
       test "the review card wires the unsaved-edits guard on its decision controls" do

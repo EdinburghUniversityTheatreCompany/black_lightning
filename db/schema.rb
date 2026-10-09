@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -822,11 +822,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
   end
 
   create_table "reimbursements_cost_centres", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "authoriser_designation"
+    t.string "authoriser_name"
     t.datetime "created_at", null: false
     t.string "eusa_code", null: false
     t.string "eusa_contact_name"
     t.string "eusa_recipient"
     t.string "eusa_signature_name"
+    t.boolean "hidden_from_submitters", default: false, null: false
     t.string "key", null: false
     t.date "last_nightly_run_on"
     t.string "name", null: false
@@ -1197,6 +1200,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
     t.datetime "profile_completed_at"
     t.string "profile_completion_salt"
     t.boolean "public_profile", default: true
+    t.bigint "reimbursements_cost_centre_id"
     t.bigint "reimbursements_person_id"
     t.datetime "remember_created_at", precision: nil
     t.string "remember_token"
@@ -1212,6 +1216,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
     t.index ["last_name"], name: "index_users_on_last_name"
     t.index ["pretix_customer_identifier"], name: "index_users_on_pretix_customer_identifier", unique: true
     t.index ["profile_completed_at"], name: "index_users_on_profile_completed_at"
+    t.index ["reimbursements_cost_centre_id"], name: "index_users_on_reimbursements_cost_centre_id"
     t.index ["reimbursements_person_id"], name: "index_users_on_reimbursements_person_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["student_id"], name: "index_users_on_student_id"
@@ -1318,5 +1323,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_121022) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "users", "reimbursements_cost_centres", on_delete: :nullify
   add_foreign_key "users", "reimbursements_people"
 end

@@ -4,6 +4,7 @@
 
 <pre style="background-color: #f7f7f7; padding: 8px; border-radius: 4px; white-space: pre-wrap;"><%= @error_text %></pre>
 
-<p>Please check the server logs and retry manually from Build Batch.</p>
+<p>Please forward this email to IT, then retry from
+<%= link_to "Build Batch", new_admin_reimbursements_batch_url(cost_centre: @cost_centre.key) %>.</p>
 
 <p>Best,<br><%= @cost_centre.automated_sign_off %></p>

@@ -48,11 +48,12 @@ module Admin
         assert_nil assigns(:expenses), "nothing is previewed before a pot is chosen"
       end
 
-      test "the build is enqueued for the chosen centre, and its attempt row records it" do
+      test "the build is enqueued for the chosen centre, its attempt row records it, and History follows" do
         assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
           post :create, params: { cost_centre: "termtime", bacs_date: Date.current.iso8601 }
         end
 
+        assert_redirected_to admin_reimbursements_batches_path(cost_centre: "termtime")
         assert_equal @termtime.id, ::Reimbursements::BatchAttempt.sole.cost_centre_id
         assert_equal "termtime", enqueued_jobs.last["arguments"].first["cost_centre_key"]
       end

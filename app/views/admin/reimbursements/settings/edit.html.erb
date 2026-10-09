@@ -14,6 +14,9 @@
                 "(\"BF - Improverts: Other\"), so a producer choosing a budget can tell two " \
                 "centres' lines apart. Left blank it falls back to the EUSA code." %>
 
+    <%= f.input :hidden_from_submitters, label: "Hide this centre's budgets from submitters",
+          hint: "Finance screens still list them." %>
+
     <div class="grid gap-x-4 sm:grid-cols-2">
       <%= f.input :receive_mailbox, label: "Receive mailbox (email-in)" %>
       <%= f.input :send_mailbox, label: "Send-from mailbox (drafts)" %>
@@ -58,6 +61,13 @@
       <%= f.input :eusa_signature_name, label: "EUSA email signature name",
             hint: "Who that email is signed off as when no operator name is available. " \
                   "Leave blank to sign off as \"#{@cost_centre.name} Finance\"." %>
+    </div>
+
+    <div class="grid gap-x-4 sm:grid-cols-2">
+      <%= f.input :authoriser_name, label: "Budget holder name",
+            hint: "Printed on the BACS authorisation form as the budget holder. Left blank, the form is filled in by hand." %>
+      <%= f.input :authoriser_designation, label: "Budget holder designation",
+            hint: "Their role, printed under the name on the BACS authorisation form." %>
     </div>
 
     <%= f.input :nightly_run_days, as: :check_boxes, label: "Nightly reminders run on",

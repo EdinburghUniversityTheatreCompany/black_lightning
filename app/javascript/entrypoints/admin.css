@@ -39,9 +39,10 @@ select.simple-select2 {
 
   /* A rowgroup heading (the budgets index's area rows) sticks under the column
      headers, so the show a row belongs to stays on screen. Cells, as above;
-     z-10 is over the rows and under the header. */
+     z-15 is over the rows (including the z-10 pinned first and last cells) and
+     under the header. */
   .table-sticky-head>tbody>tr>th[scope="rowgroup"] {
-    @apply sticky z-10 bg-gray-50;
+    @apply sticky z-15 bg-gray-50;
 
     /* Measured by sticky_table_controller; the fallback is the two-line header. */
     top: var(--sticky-head-height, 57px);

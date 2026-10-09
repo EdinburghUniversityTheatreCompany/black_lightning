@@ -318,6 +318,13 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
   written in `Notifier#send_email`, the single chokepoint; kind = template basename, so a new type
   logs itself). `record` swallows its own failures: an unlogged sent email beats a logged unsent
   one.
+- **Notifier templates may call `*_url` helpers only because `Notifier#renderer` passes in the
+  mailer's host and protocol** (`action_mailer.default_url_options`; a missing host raises). A bare
+  `ApplicationController.render` outside a request answers `http://example.org`, so a render path
+  that skips it ships dead links no relative-path assertion catches.
+- **`CostCentre#contact_email` is never the receive mailbox**: email-in polls it and files a
+  question as a receipt. It is the first notification address, else a send mailbox that is not the
+  polled one, else nil, and producer emails then name no contact.
 - **The EUSA covering email's body is operator-editable raw HTML** ("Body (HTML)" on Build Batch,
   prefilled with the composed message). Plain text plus `{{placeholders}}` was tried and reverted
   (`ebd09724`): the table is for searching old email, and EUSA pays from the BACS spreadsheet.
@@ -494,7 +501,22 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     items are unscoped, as their own claims are.
   - **No `?cost_centre=` means every centre**, never `CostCentre.default`, which would empty the
     second centre's screens. `?cost_centre_id=<id>` still works (the import wizards' and budget
-    form's selects post it); the key wins.
+    form's selects post it); the key wins, so a create reading the form's choice reads
+    `cost_centre_id` first (the form URL carries the page's centre).
+  - **An empty `cost_centre=` is an explicit All, and it is carried**: the selector's All link sends
+    it, `SidebarComponent` keeps it, and `FinanceController#scope_params` (what links and redirects
+    carry: only what the URL named) keeps it, so the home centre does not come back on the next
+    click.
+  - **A finance user's home cost centre (`users.reimbursements_cost_centre_id`) only decorates
+    links**: the sidebar's day-to-day items while the page names no centre
+    (`NavigationHelper#home_cost_centre_scope`, which also lets the sidebar's Build batch skip the
+    chooser) and the import wizards' preselect. A bare URL still means every centre; never resolve
+    it, redirect to it or default a store to it. `HomeCostCentresController` writes it with
+    `update_column`, so no User validation can veto a preference.
+  - **`hidden_from_submitters` filters `submittable_budgets`, the producer picker only.** Never
+    apply it to `active_budgets`: Review, finance expense-edit and the actuals convert read that,
+    and a hidden centre's claims must stay editable there. A line with no centre stays offered, and
+    a producer's claim already on a hidden line keeps it (hidden means no new claims).
   - **`CostCentre.default` (`order(:id).first`) is an arbitrary pot once a second row exists.**
     Never use it where the answer is knowable (the claim's, the batch's, the selector's centre), or
     on a path that moves money or emails a producer. `.sole_configured` is the "nothing to choose"
@@ -652,7 +674,7 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
 - **Both import wizards refuse to guess the cost centre** (`ReadsImportSource#cost_centre_chosen?`
   / `#chosen_cost_centre`); never preselect `selectable_cost_centres.first`. Preview and apply
   re-render step 1 with the paste intact. With one centre configured nothing is asked;
-  `?cost_centre=` / `?cost_centre_id=` prefills.
+  `?cost_centre=` / `?cost_centre_id=` prefills, else the operator's own home centre.
 - **A grouped `<select>` needs `as: :grouped_select`.** A plain `collection:` with
   `group_method:` renders one option per group: it looks right and selects nothing. Assert the
   `<optgroup>` markup, not the controller's ivar.
@@ -811,6 +833,9 @@ receipts on ActiveStorage). Airtable is gone (no `REIMBURSEMENTS_BACKEND` switch
     `TemplateError` rather than corrupting the total.
   - Both xlsx builders write through `Reimbursements::XlsxTemplate#write` (`change_contents`;
     `add_cell` drops the template's styling).
+  - The Authorisation Form's centre name and budget holder come from the centre's Settings
+    (`authoriser_name`, `authoriser_designation`; blank when unset). The vendored template once
+    named a fixed holder, so a re-vendored template needs those two cells blanked again.
   - `result.success` means every expense reached `Submitted`, not just that the draft exists. A
     `mark_submitted` failure is the one post-draft step that is not best effort: it leaves the
     double-draft danger the orphan-draft guard prevents.

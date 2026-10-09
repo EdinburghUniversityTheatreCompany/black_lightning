@@ -4,10 +4,13 @@
 # Database name: primary
 #
 #  id                            :bigint           not null, primary key
+#  authoriser_designation        :string(255)
+#  authoriser_name               :string(255)
 #  eusa_code                     :string(255)      not null
 #  eusa_contact_name             :string(255)
 #  eusa_recipient                :string(255)
 #  eusa_signature_name           :string(255)
+#  hidden_from_submitters        :boolean          default(FALSE), not null
 #  key                           :string(255)      not null
 #  last_nightly_run_on           :date
 #  name                          :string(255)      not null
@@ -64,6 +67,7 @@ module Reimbursements
     validate :notification_email_addresses_are_valid
     validates :eusa_code, uniqueness: true
     validates :short_code, length: { maximum: SHORT_CODE_MAX }, allow_blank: true
+    validates :authoriser_name, :authoriser_designation, length: { maximum: 255 }
     # Two centres sharing a mailbox would make MailboxPollJob file every
     # email-in receipt under whichever centre is polled first.
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
@@ -163,9 +167,11 @@ module Reimbursements
       "#{name} BACS (automated)"
     end
 
-    # Where a submitter writes with a question: email-in already watches it.
+    # Where a submitter writes with a question: an address a person reads, never the receive
+    # mailbox (email-in polls it and files the mail as a receipt). nil names none.
     def contact_email
-      receive_mailbox
+      notification_emails.first ||
+        (send_mailbox unless send_mailbox.to_s.casecmp?(receive_mailbox.to_s))
     end
 
     # Filename-safe form of the name, for the BACS spreadsheet sent to EUSA.

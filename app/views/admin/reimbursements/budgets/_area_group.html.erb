@@ -7,7 +7,7 @@
     <th scope="rowgroup" colspan="11" class="text-left py-2">
       <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <% if rollup.area %>
-          <%= link_to label, admin_reimbursements_area_path(rollup.area.record_id),
+          <%= link_to label, admin_reimbursements_area_path(rollup.area.record_id, **scope_params),
                       class: "font-semibold text-base text-primary underline" %>
         <% else %>
           <span class="font-semibold text-base"><%= label %></span>

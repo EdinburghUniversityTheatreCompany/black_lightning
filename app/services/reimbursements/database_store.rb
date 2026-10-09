@@ -177,7 +177,7 @@ module Reimbursements
     # budget name on last year's claims and stop the year-boundary tail of EUSA credits matching
     # their income line. Screens that list a year's budgets use #budgets_for_year.
     def budgets
-      @budgets ||= Budget.includes(:forecasts, :own_owners, area: :owners).to_a
+      @budgets ||= Budget.includes(:forecasts, :own_owners, :cost_centre, area: %i[owners cost_centre]).to_a
     end
 
     # The selected year's budgets, for the budget screens. An unscoped store sees every budget,
@@ -206,6 +206,12 @@ module Reimbursements
     # a position.
     def active_budgets
       in_year(budgets, FinancialYear.current).select { |b| b.active && !b.income? }.sort_by(&:display_name)
+    end
+
+    # The producer's picker only. Finance's pickers read #active_budgets so a
+    # hidden centre's claims stay editable; a line with no centre stays offered.
+    def submittable_budgets
+      active_budgets.reject { |b| b.cost_centre&.hidden_from_submitters? }
     end
 
     # Every area, every year: an id->record lookup, unscoped for #budgets' reason. Preloads each

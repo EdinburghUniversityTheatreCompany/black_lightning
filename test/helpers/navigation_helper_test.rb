@@ -16,8 +16,54 @@ class NavigationHelperTest < ActionView::TestCase
     current_ability.cannot?(...)
   end
 
+  def current_user
+    @current_user
+  end
+
   setup do
     @current_user = users(:committee)
+  end
+
+  def finance_paths_with_home(centre)
+    grant_finance_permission(@current_user)
+    @current_user.instance_variable_set(:@ability, nil)
+    @current_user.update!(reimbursements_cost_centre: centre)
+    finance_category[:children].to_h { |child| [ child[:title], child[:path] ] }
+  end
+
+  test "a home cost centre decorates only the links whose page reads the centre" do
+    termtime = create_second_reimbursements_cost_centre
+    paths = finance_paths_with_home(termtime)
+
+    [ "Review claims", "Build batch", "Batches", "Budgets", "Overview", "Areas",
+      "Ledger" ].each do |title|
+      assert_match(/[?&]cost_centre=termtime\b/, paths[title], title)
+    end
+    [ "Finance home", "All claims", "Exports", "People", "Cost centres", "Reconcile" ].each do |title|
+      assert_no_match(/cost_centre/, paths[title], title)
+    end
+  end
+
+  test "with no home cost centre every finance link stays bare" do
+    paths = finance_paths_with_home(nil)
+
+    assert_empty paths.values.grep(/cost_centre/)
+  end
+
+  test "a centre already chosen on the page beats the home centre" do
+    termtime = create_second_reimbursements_cost_centre
+    params[:cost_centre] = "fringe"
+    paths = finance_paths_with_home(termtime)
+
+    assert_empty paths.values.grep(/cost_centre/), "the sidebar carries the page's own choice instead"
+  end
+
+  test "an explicit All on the page beats the home centre" do
+    termtime = create_second_reimbursements_cost_centre
+    params[:cost_centre] = ""
+    paths = finance_paths_with_home(termtime)
+
+    assert_empty paths.values.grep(/cost_centre/)
   end
 
   def finance_category

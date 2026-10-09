@@ -1,5 +1,6 @@
-<%# locals: (label:, options:) %>
-<%# One link per [text, query, selected] option, each keeping the page's other params. %>
+<%# locals: (label:, options:, extra: nil) %>
+<%# One link per [text, query, selected] option, each keeping the page's other params; +extra+
+    is markup rendered after them, inside the group. %>
 <div class="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="<%= label %>">
   <span class="text-sm text-gray-600"><%= label %>:</span>
   <% options.each do |text, query, selected| %>
@@ -11,4 +12,5 @@
                   "border-gray-300 text-gray-700 hover:bg-gray-50" => !selected
                 ) %>
   <% end %>
+  <%= extra %>
 </div>

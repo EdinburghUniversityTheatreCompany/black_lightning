@@ -47,7 +47,7 @@ module Admin
         assert_not_includes labels, "Marketing", "#{where}: an unqualified option is ambiguous"
       end
 
-      test "the producer's submission picker names the show on each line, keeps bare names, and is ordered by its labels" do
+      test "the producer's submission picker names the show on each line, keeps bare names, and orders each area group by its labels" do
         sign_in @producer
 
         get new_admin_reimbursements_expense_path
@@ -57,8 +57,13 @@ module Admin
                  [ "Choose a budget…" ]
         assert_both_shows_named(labels, "the submission picker")
         assert_includes labels, "Contingency"
-        assert_equal labels.sort, labels,
-                     "the options read out of order, which is what sorting by the bare name does"
+        groups = css_select("select#reimbursements_expense_form_budget_record_id optgroup")
+        assert_equal ::Reimbursements::Budget::NO_AREA_GROUP, groups.last["label"]
+        groups.each do |group|
+          offered = group.css("option").map { |option| option.text.strip }
+          assert_equal offered.sort, offered,
+                       "#{group['label']} reads out of order, which is what sorting by the bare name does"
+        end
       end
 
       test "the batch budget-update form names the show in each row and each field's label" do

@@ -1,4 +1,4 @@
-<%= render "shared/back_link", text: "All actuals", path: admin_reimbursements_actuals_path %>
+<%= render "shared/back_link", text: "All actuals", path: actuals_path_with_filters %>
 
 <p class="mb-3 text-gray-600">
   Charges this EUSA cost to a budget. It is created <strong>already paid</strong>, so it never
@@ -8,12 +8,12 @@
 <%= render "row_summary", actual: @actual, amount: reimbursements_money(@actual.debit) %>
 
 <%= simple_horizontal_form_for @form,
-      url: create_expense_admin_reimbursements_actual_path(@actual.record_id),
+      url: create_expense_admin_reimbursements_actual_path(@actual.record_id, actual_filters),
       method: :post do |f| %>
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
       <%= f.button :submit, "Create expense as paid", class: btn_classes(:primary) %>
-      <%= link_to "Cancel", admin_reimbursements_actuals_path, class: btn_classes(:secondary) %>
+      <%= link_to "Cancel", actuals_path_with_filters, class: btn_classes(:secondary) %>
     </div>
     <p class="mt-2 mb-0 text-sm text-gray-500">
       The amount comes from the ledger row and can't be edited here: it is what EUSA actually
@@ -28,7 +28,7 @@
     <%= f.input :budget_record_id, label: "Budget", required: true, as: :grouped_select,
           collection: @budget_groups, group_method: :last, group_label_method: :first,
           label_method: :first, value_method: :last,
-          include_blank: "Pick a budget",
+          include_blank: "Pick a budget", input_html: { data: { placeholder: "Pick a budget" } },
           hint: "The lines on this row's nominal code " \
                 "are listed first." %>
     <%= f.input :description, label: "Description",

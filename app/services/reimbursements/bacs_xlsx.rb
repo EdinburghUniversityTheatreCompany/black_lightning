@@ -13,6 +13,11 @@ module Reimbursements
 
     SHEET_NAME = "BREAKDOWN".freeze
     TEMPLATE_LABEL = "BACS template".freeze
+    AUTHORISATION_SHEET_NAME = "AUTHORISATION FORM".freeze
+    # 0-based [row, column]: D4, C16, C17.
+    CENTRE_NAME_CELL = [ 3, 3 ].freeze
+    AUTHORISER_NAME_CELL = [ 15, 2 ].freeze
+    AUTHORISER_DESIGNATION_CELL = [ 16, 2 ].freeze
     # 0-based, below the template's header and example rows.
     DATA_START_ROW = 2
     # The GRAND TOTAL row's SUM (and the Authorisation Form's total) covers
@@ -33,7 +38,7 @@ module Reimbursements
       Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
 
     # Re-reads the template on every call, so one instance builds many workbooks.
-    def generate(rows)
+    def generate(rows, centre_name: nil, authoriser_name: nil, authoriser_designation: nil)
       if rows.size > MAX_ROWS
         raise TemplateError,
               "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity. " \
@@ -51,6 +56,11 @@ module Reimbursements
         write_row(sheet, DATA_START_ROW + index, row)
       end
 
+      authorisation = workbook[AUTHORISATION_SHEET_NAME]
+      write_template_cell(authorisation, CENTRE_NAME_CELL, centre_name)
+      write_template_cell(authorisation, AUTHORISER_NAME_CELL, authoriser_name)
+      write_template_cell(authorisation, AUTHORISER_DESIGNATION_CELL, authoriser_designation)
+
       workbook.stream.string
     end
 
@@ -67,6 +77,10 @@ module Reimbursements
       write(sheet, row_index, COL_COST_CENTRE, row.cost_centre)
       write(sheet, row_index, COL_PAYMENT_REFERENCE, CellSanitizer.sanitize(row.payment_reference))
       write(sheet, row_index, COL_DESCRIPTION, CellSanitizer.sanitize(row.description))
+    end
+
+    def write_template_cell(sheet, (row, column), value)
+      write(sheet, row, column, CellSanitizer.sanitize(value.to_s))
     end
   end
 end

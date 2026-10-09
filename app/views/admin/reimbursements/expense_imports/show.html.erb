@@ -88,7 +88,7 @@
             html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,
                        options_from_collection_for_select(selectable_cost_centres, :id, :name,
-                                                          chosen_cost_centre&.id),
+                                                          (chosen_cost_centre || current_user.reimbursements_cost_centre)&.id),
                        include_blank: "Choose a cost centre…", class: input_classes %>
       <% end %>
 

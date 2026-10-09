@@ -63,7 +63,7 @@ module ChaosRails
     # Protect against csrf attacks by checking origin matches sites address
     config.action_controller.forgery_protection_origin_check = true
 
-    config.action_mailer.default_url_options = { host: "www.bedlamtheatre.co.uk" }
+    config.action_mailer.default_url_options = { host: "bedlamtheatre.co.uk", protocol: "https" }
 
     # Gives every email, Devise's included, SMTP retries with exponential backoff.
     config.action_mailer.delivery_job = "MailDeliveryJob"

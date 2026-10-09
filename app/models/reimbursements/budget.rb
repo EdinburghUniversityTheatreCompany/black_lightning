@@ -50,6 +50,7 @@ module Reimbursements
     include RecordId
     include PlannedAmount
     TYPES = %w[Expense Income].freeze
+    NO_AREA_GROUP = "No area / general"
 
     COMMITTED_STATUSES = [ Status::APPROVED, Status::SUBMITTED, Status::PAID ].freeze
 
@@ -92,12 +93,42 @@ module Reimbursements
       area ? "#{area.name}: #{name}" : name.to_s
     end
 
+    # The budgets index's row order (area lines grouped by area, then the loose ones), shared with
+    # the edit page's previous/next links so stepping through them walks the table as it reads.
+    def self.index_order(budgets)
+      budgets.sort_by do |budget|
+        [ budget.area ? 0 : 1, budget.area&.name.to_s.downcase, budget.area_id.to_i, budget.name.to_s.downcase, budget.id.to_i ]
+      end
+    end
+
     # A <select> label only. It must stay separate from #display_name, which
     # the BACS payment reference, receipt filenames and import matching read.
     # The centre prefix is needed because active_budgets is not centre-scoped.
     def picker_label
       cost_centre ? "#{cost_centre.picker_prefix} - #{display_name}" : display_name
     end
+
+    # The <optgroup> heading for this line. Area names are unique only per
+    # (year, centre), so the centre's prefix is what keeps two shows apart.
+    def picker_group
+      return NO_AREA_GROUP unless area
+
+      # Falls back to the area's centre so one area never splits into two headings.
+      centre = cost_centre || area.cost_centre
+      centre ? "#{centre.picker_prefix} - #{area.name}" : area.name
+    end
+
+    # [[heading, [[label, record_id], ...]], ...] for a grouped select, the
+    # no-area group last. The block overrides the option label.
+    def self.picker_groups(budgets, &label)
+      label ||= :picker_label.to_proc
+      budgets.group_by(&:picker_group)
+             .sort_by { |heading, _| [ heading == NO_AREA_GROUP ? 1 : 0, collation_key(heading) ] }
+             .map { |heading, lines| [ heading, lines.map { |b| [ label.call(b), b.record_id ] } ] }
+    end
+
+    # utf8mb4_unicode_ci folds case and accents; a byte sort would not.
+    def self.collation_key(text) = ActiveSupport::Inflector.transliterate(text).downcase
 
     # The area owns and its budgets inherit. owner_ids are record id STRINGS,
     # compared against person.record_id by OwnerReview and the budgets UI.

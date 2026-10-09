@@ -63,21 +63,22 @@ module NavigationHelper
     # `group:` splits the list into the four jobs, in the order the work is done.
     children = []
     if can? :manage, :reimbursements_finance
+      home = home_cost_centre_scope
       # Ungrouped and first. `exact: true` because the root is a prefix of every finance path.
       children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true, scoped: true }
 
-      children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check", scoped: true }
+      children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path(home), fa_icon: "fa-clipboard-check", scoped: true }
       children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square", scoped: true }
-      children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export", scoped: true }
-      children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left", scoped: true }
+      children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path(home), fa_icon: "fa-file-export", scoped: true }
+      children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path(home), fa_icon: "fa-clock-rotate-left", scoped: true }
 
-      children << { group: "Budgets", title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar", scoped: true }
-      children << { group: "Budgets", title: "Overview", path: overview_admin_reimbursements_budgets_path, fa_icon: "fa-chart-pie", scoped: true }
-      children << { group: "Budgets", title: "Areas", path: admin_reimbursements_areas_path, fa_icon: "fa-diagram-project", scoped: true }
+      children << { group: "Budgets", title: "Budgets", path: admin_reimbursements_budgets_path(home), fa_icon: "fa-sack-dollar", scoped: true }
+      children << { group: "Budgets", title: "Overview", path: overview_admin_reimbursements_budgets_path(home), fa_icon: "fa-chart-pie", scoped: true }
+      children << { group: "Budgets", title: "Areas", path: admin_reimbursements_areas_path(home), fa_icon: "fa-diagram-project", scoped: true }
       children << { group: "Budgets", title: "Forecast revisions", path: admin_reimbursements_budget_updates_path, fa_icon: "fa-calendar-plus", scoped: true }
 
       children << { group: "EUSA ledger", title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced", scoped: true }
-      children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list", scoped: true }
+      children << { group: "EUSA ledger", title: "Ledger", path: admin_reimbursements_actuals_path(home), fa_icon: "fa-table-list", scoped: true }
       children << { group: "EUSA ledger", title: "Exports", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel", scoped: true }
 
       children << { group: "Setup", title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book", scoped: true }
@@ -148,5 +149,17 @@ module NavigationHelper
     navbar_categories << { title: "Log Out", path: destroy_user_session_path, method: :delete, fa_icon: "fa-right-from-bracket", is_logout: true }
 
     navbar_categories
+  end
+
+  private
+
+  # The signed-in finance user's home cost centre, for the links whose page
+  # reads the centre. Only while the page names no centre: a centre already chosen is
+  # carried by the sidebar itself and must win over the default.
+  def home_cost_centre_scope
+    return {} if params.key?(:cost_centre) || params[:cost_centre_id].present?
+
+    key = current_user&.reimbursements_cost_centre&.key
+    key ? { cost_centre: key } : {}
   end
 end

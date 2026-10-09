@@ -184,7 +184,7 @@
     <% end %></div>
   <% end %>
 
-  <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
+  <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                 method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2",
                 data: { review_decision_target: "editForm" } do %>
     <%# fx-rate shows the rate the typed pair implies; it knows no real rate. %>
@@ -231,7 +231,7 @@
                      options_for_select(budget_options, expense.budget&.record_id),
                      include_blank: expense.budget.nil?,
                      id: "budget_record_id_#{expense.record_id}",
-                     class: input_classes %>
+                     class: "simple-select2" %>
       <% if expense.budget %>
         <p class="<%= FormStyles::HINT %>">
           <%= link_to "Open #{expense.budget.display_name}",
@@ -266,7 +266,7 @@
         <% override_confirm = "Approve ##{expense.auto_number} without an owner's sign-off? " \
              "This is recorded against your account. Use it only when no owner can sign off (e.g. no portal account)."
            override_confirm += " It is also flagged: #{attention[:advisory].join('; ')}." if attention[:advisory].any? %>
-        <%= form_with url: admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
+        <%= form_with url: admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                       method: :patch, class: "flex flex-wrap items-center gap-2",
                       data: { turbo_confirm: override_confirm } do %>
           <%= text_field_tag :override_note, nil, placeholder: "Reason for override (optional)",
@@ -281,7 +281,7 @@
         <%# Advisory reasons don't block server-side, so this confirm is the only
             guard between a misclick and an approved flagged claim. %>
         <%= button_to "Approve",
-                      admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
+                      admin_reimbursements_approve_review_path(expense.record_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                       method: :patch, "aria-label": "Approve ##{expense.auto_number}",
                       form: attention[:advisory].any? ? { data: { turbo_confirm:
                         "##{expense.auto_number} is flagged: #{attention[:advisory].join('; ')}. Approve anyway?" } } : {},
@@ -289,7 +289,7 @@
                       class: btn_classes(:success, :sm) %>
       <% end %>
     <% end %>
-    <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
+    <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                   method: :patch, class: "flex items-center gap-2",
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
       <%# required, so a blank reason stops BEFORE the irreversible confirm. The
@@ -319,7 +319,7 @@
           <li class="flex items-center gap-2 text-sm">
             <span class="truncate text-gray-600"><%= receipt.filename.presence || "receipt" %></span>
             <%= button_to "Remove",
-                          admin_reimbursements_review_receipt_path(expense.record_id, receipt.attachment_id, tab: @tab),
+                          admin_reimbursements_review_receipt_path(expense.record_id, receipt.attachment_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                           method: :delete, form: { data: { turbo_confirm: "Remove this receipt?" } },
                           "aria-label": "Remove #{receipt.filename.presence || 'receipt'} from expense ##{expense.auto_number}",
                           class: btn_classes(:danger, :sm) %>
@@ -327,7 +327,7 @@
         <% end %>
       </ul>
     <% end %>
-    <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
+    <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab, cost_centre: selected_cost_centre&.key),
                   method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
       <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
                          "aria-label": "Attach receipts to expense ##{expense.auto_number}",

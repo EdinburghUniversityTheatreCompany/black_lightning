@@ -103,8 +103,9 @@ module Reimbursements
       return true if stale.empty?
 
       rows = stale.map do |expense|
-        { auto_number: expense.auto_number, payee_name: expense.person&.name.to_s,
-          amount: format("%.2f", expense.amount || 0), age_days: pending_age_days(expense, today) }
+        { auto_number: expense.auto_number, record_id: expense.record_id,
+          payee_name: expense.person&.name.to_s, amount: format("%.2f", expense.amount || 0),
+          age_days: pending_age_days(expense, today) }
       end
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
       return true if dry_run
@@ -149,8 +150,10 @@ module Reimbursements
     def remind_one_owner(cost_centre, owner, claims, today)
       rows = claims.sort_by { |claim| claim.submitted_at || Time.current }.map do |claim|
         { auto_number: claim.auto_number, payee_name: claim.person&.name.to_s,
-          amount: format("%.2f", claim.amount || 0), budget_name: claim.budget&.display_name.to_s,
-          description: claim.description.to_s, age_days: pending_age_days(claim, today) }
+          amount: format("%.2f", claim.amount || 0), budget_id: claim.budget.record_id,
+          budget_name: claim.budget.display_name.to_s, description: claim.description.to_s,
+          age_days: pending_age_days(claim, today),
+          also_owned_by: claim.budget.owners.reject { |other| other == owner }.map(&:name).compact_blank.to_sentence }
       end
 
       notify(cost_centre, [ owner.email ]) do |emailer, to|

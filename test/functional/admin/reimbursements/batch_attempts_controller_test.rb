@@ -31,6 +31,15 @@ module Admin
         assert_equal @user.email, attempt.dismissed_by_email
       end
 
+      test "dismissing comes back to the centre History was showing" do
+        termtime = create_second_reimbursements_cost_centre
+        attempt = build_attempt(status: "failed", error_messages: "boom")
+
+        post :dismiss, params: { id: attempt.id, cost_centre: termtime.key }
+
+        assert_redirected_to admin_reimbursements_batches_path(cost_centre: termtime.key)
+      end
+
       test "refuses to dismiss a build that is still running" do
         # Hiding a live build invites a rebuild on top of it.
         attempt = build_attempt

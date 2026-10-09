@@ -83,6 +83,75 @@ module Admin
       assert_select "option", text: "BF - Marketing"
     end
 
+    test "the budget picker groups lines under their area" do
+      centre = create_reimbursements_cost_centre(key: "group-centre", name: "Bedlam Fringe",
+                                                 eusa_code: "F42", short_code: "BF")
+      area = create_reimbursements_area(name: "Cogito", cost_centre: centre)
+      create_reimbursements_budget(name: "Marketing", cost_centre: centre, area: area)
+      sign_in @user
+
+      get :new
+
+      assert_select "select#reimbursements_expense_form_budget_record_id[data-placeholder='Choose a budget…']"
+      assert_select "select.simple-select2#reimbursements_expense_form_budget_record_id" do
+        assert_select "optgroup[label='BF - Cogito'] option", text: "BF - Cogito: Marketing"
+        assert_select "optgroup[label='#{::Reimbursements::Budget::NO_AREA_GROUP}'] option", text: "Props"
+      end
+    end
+
+    def hidden_centre_budget
+      centre = create_second_reimbursements_cost_centre(hidden_from_submitters: true)
+      create_reimbursements_budget(name: "Termtime props", cost_centre: centre)
+    end
+
+    test "the budget picker leaves out a centre hidden from submitters" do
+      hidden_centre_budget
+      sign_in @user
+
+      get :new
+
+      assert_select "option", text: /Termtime props/, count: 0
+    end
+
+    # Hiding a centre stops NEW claims; a claim already on its line keeps it.
+    test "editing a claim on a hidden centre's budget keeps that budget offered" do
+      hidden = hidden_centre_budget
+      @expense.update!(budget: hidden)
+      sign_in @user
+
+      get :edit, params: { id: @expense.record_id }
+
+      assert_select "option[selected][value='#{hidden.record_id}']", text: /Termtime props/
+    end
+
+    test "a claim on a hidden centre's budget saves unchanged, and survives a failed save" do
+      hidden = hidden_centre_budget
+      @expense.update!(budget: hidden)
+      sign_in @user
+      params = valid_form_params.except(:receipts).merge(budget_record_id: hidden.record_id)
+
+      patch :update, params: { id: @expense.record_id,
+                               reimbursements_expense_form: params.merge(description: "") }
+      assert_response :unprocessable_entity
+      assert_select "option[value='#{hidden.record_id}']"
+
+      patch :update, params: { id: @expense.record_id, reimbursements_expense_form: params }
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_equal hidden.record_id, @expense.reload.budget_record_id
+    end
+
+    test "create refuses a budget from a centre hidden from submitters" do
+      sign_in @user
+      params = valid_form_params.merge(budget_record_id: hidden_centre_budget.record_id)
+
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
+
+      assert_response :unprocessable_entity
+      assert_predicate assigns(:form).errors[:budget_record_id], :present?
+    end
+
     test "new renders the receipt-first form" do
       sign_in @user
 

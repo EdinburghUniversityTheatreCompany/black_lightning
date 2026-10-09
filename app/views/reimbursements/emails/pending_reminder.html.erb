@@ -5,7 +5,8 @@
   <%= @rows.size %> <%= "submission".pluralize(@rows.size) %> that
   <%= @rows.size == 1 ? "has" : "have" %> been <strong>waiting for approval</strong>
   for more than <%= @threshold_days %> days. Nothing can be batched or paid until
-  someone approves (or rejects) them on the Review page.
+  someone approves (or rejects) them on the
+  <%= link_to "Review page", admin_reimbursements_review_url(tab: "to_approve", cost_centre: @cost_centre.key) %>.
 </p>
 
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
@@ -17,7 +18,7 @@
   <tbody>
     <% @rows.each do |row| %>
       <tr>
-        <td>#<%= row[:auto_number] %></td>
+        <td><%= link_to "##{row[:auto_number]}", edit_admin_reimbursements_expense_edit_url(row[:record_id]) %></td>
         <td><%= row[:payee_name] %></td>
         <td><%= reimbursements_money(row[:amount]) %></td>
         <td><%= row[:age_days] %> <%= "day".pluralize(row[:age_days]) %></td>
@@ -25,7 +26,5 @@
     <% end %>
   </tbody>
 </table>
-
-<p>Open the Review page to approve or reject <%= @rows.size == 1 ? "it" : "them" %>.</p>
 
 <p>Best,<br><%= @cost_centre.automated_sign_off %></p>

@@ -57,7 +57,9 @@ module Admin
                                             debit: BigDecimal("161.00"))
       end
 
-      test "index shows each line's rollups" do
+      # Type, Visible, Pipeline and Paid (portal) are kept off the index for width; the CSV
+      # carries them.
+      test "index shows each line's rollups, not the cut columns" do
         sign_in @user
         seed_pipeline_and_eusa_debit
 
@@ -65,12 +67,74 @@ module Admin
 
         assert_response :success
         assert_equal 2, assigns(:budgets).size
-        [ "Pipeline", "Paid (portal)", "EUSA actual", "Expected outturn" ].each do |heading|
-          assert_includes response.body, heading
-        end
-        # @props: forecast 800, committed 300, paid 150, remaining 500, then pipeline 275 and
-        # EUSA actual 161 from the seed above.
-        %w[800 300 150 500 275 161].each { |figure| assert_includes response.body, "£#{figure}.00" }
+        headers = css_select("thead th").map { |th| th.text.strip }
+        assert_equal [ "Budget", "Initial", "Projected", "Committed", "EUSA actual", "Expected outturn",
+                       "Remaining", "Variance", "Owners", "" ], headers
+        # @props: forecast 800, committed 300, remaining 500, and EUSA actual 161 from the seed above.
+        %w[800 300 500 161].each { |figure| assert_includes response.body, "£#{figure}.00" }
+        assert_select "td.text-right", text: /161/
+      end
+
+      test "a hidden line is tagged after its name rather than in a column" do
+        @props.update!(active: false)
+        sign_in @user
+
+        get :index
+
+        assert_select "tr#budget_#{@props.record_id} td:first-child span", text: "(hidden)"
+      end
+
+      test "the index and the overview are tabs that keep the filters" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "nav[aria-label='Budget views'] a[aria-current=page][href=?]",
+                      admin_reimbursements_budgets_path(cost_centre: termtime.key)
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(cost_centre: termtime.key)
+      end
+
+      test "All is an explicit empty cost_centre= that the page's own links keep" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_nil assigns(:selected_cost_centre)
+        assert_select "[aria-label='Cost centre'] a[aria-current]", text: "All"
+        assert_select "[aria-label='Cost centre'] a[href=?]", admin_reimbursements_budgets_path(cost_centre: "")
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(cost_centre: "")
+      end
+
+      test "New budget carries the page's scope, an explicit All included" do
+        create_second_reimbursements_cost_centre
+        seed_two_years
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", new_admin_reimbursements_budget_path(cost_centre: ""), text: "New budget"
+      end
+
+      test "with no cost_centre at all, page links stay bare" do
+        create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index
+
+        assert_select "nav[aria-label='Budget views'] a[href=?]", overview_admin_reimbursements_budgets_path
+      end
+
+      test "the row a save came back for is highlighted" do
+        sign_in @user
+
+        get :index, params: { budget: @props.record_id }
+
+        assert_select "tr#budget_#{@props.record_id} td.bg-yellow-50", count: 10
+        assert_select "tr#budget_#{@props.record_id} td.bg-white", count: 0
       end
 
       def seed_many_budgets(count)
@@ -130,9 +194,9 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Over budget"
-        # Committed and paid render.
+        # Initial and committed render.
+        assert_includes response.body, "1,000"
         assert_includes response.body, "1,400"
-        assert_includes response.body, "1,250"
       end
 
       test "flags 'Over original budget' (not 'Over budget') when the forecast still covers the overspend" do
@@ -734,7 +798,7 @@ module Admin
                                  initial_budget: "1875.5", budget_type: "Expense", active: "1",
                                  owner_ids: [ @alice.record_id, @bob.record_id ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal "Set & construction", @props.name
         assert_equal "4200", @props.nominal_code
@@ -863,7 +927,7 @@ module Admin
                                  nominal_code: "4321", area_id: area.record_id,
                                  owner_ids: [ @alice.record_id ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(budget: budget.record_id, anchor: "budget_#{budget.record_id}")
         assert_equal "4321", budget.reload.nominal_code, "the edit itself must still land"
         assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
                      "the posted owner list must be ignored, not written to own_owners"
@@ -993,7 +1057,7 @@ module Admin
         end
 
         budget = ::Reimbursements::Budget.find_by(name: "Late addition")
-        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id, year: next_year.key)
         assert_equal next_year, budget.financial_year
         assert_equal ::Reimbursements::CostCentre.default, budget.cost_centre
         # "£1,200" must reach the decimal column parsed, not as a string AR
@@ -1001,6 +1065,19 @@ module Admin
         assert_equal BigDecimal("1200"), budget.initial_budget
         assert_equal [ @alice.record_id ], budget.owner_ids
         assert_equal "4200", budget.nominal_code
+      end
+
+      test "create lands on the centre the form chose, not the page's" do
+        termtime = create_second_reimbursements_cost_centre
+        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        sign_in @user
+
+        post :create, params: { cost_centre: termtime.key, cost_centre_id: fringe.id, name: "Late addition",
+                                nominal_code: "4200", budget_type: "Expense", active: "1" }
+
+        budget = ::Reimbursements::Budget.find_by(name: "Late addition")
+        assert_equal fringe, budget.cost_centre
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id, cost_centre: fringe.key)
       end
 
       # --- Owners on a line going INTO an area -------------------------------
@@ -1185,7 +1262,7 @@ module Admin
                                  budget_type: "Expense", active: "1", area_id: area.record_id,
                                  owner_ids: [ "" ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal area.id, @props.area_id
         assert_equal [ @alice.record_id ], @props.own_owners.map(&:record_id)
@@ -1257,6 +1334,117 @@ module Admin
 
         assert_response :success
         assert_no_match(/Financial year:/, response.body)
+      end
+
+      # --- Keeping the page's filters through an edit ---------------------
+
+      test "a saved budget returns to the filtered index at its own row" do
+        _, next_year = seed_two_years
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", year: next_year.key,
+                                 cost_centre: termtime.key }
+
+        assert_redirected_to admin_reimbursements_budgets_path(
+          year: next_year.key, cost_centre: termtime.key, budget: @props.record_id,
+          anchor: "budget_#{@props.record_id}"
+        )
+      end
+
+      test "a save with no filters returns to the bare index, which still means every centre" do
+        sign_in @user
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense" }
+
+        assert_redirected_to admin_reimbursements_budgets_path(budget: @props.record_id, anchor: "budget_#{@props.record_id}")
+      end
+
+      test "the edit page's form, back link and forecast form carry the filters" do
+        _, next_year = seed_two_years
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+        scope = { year: next_year.key, cost_centre: termtime.key }
+
+        get :edit, params: { id: @props.record_id, **scope }
+
+        assert_select "form[action=?]", admin_reimbursements_budget_path(@props.record_id, **scope)
+        assert_select "form[action=?]", forecast_admin_reimbursements_budget_path(@props.record_id, **scope)
+        assert_select "a[href=?]", admin_reimbursements_budgets_path(**scope), minimum: 1
+      end
+
+      test "a forecast added from a filtered edit page comes back to it filtered" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :forecast, params: { id: @props.record_id, amount: "900", date: "2026-06-01",
+                                  cost_centre: termtime.key }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key)
+      end
+
+      test "the index row links to the edit page with the filters and anchors the row" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "tr#budget_#{@props.record_id}"
+        assert_select "a[href=?]",
+                      edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key),
+                      minimum: 1
+      end
+
+      test "the edit page links to the previous and next budget in the index's order" do
+        area = create_reimbursements_area(name: "Cogito")
+        in_area = create_reimbursements_budget(name: "Zebra", area: area)
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        # Index order: area lines first (Zebra), then loose lines by name
+        # (Props, Ticket income).
+        get :edit, params: { id: @props.record_id, cost_centre: termtime.key }
+        assert_select "a[rel=prev][href=?]",
+                      edit_admin_reimbursements_budget_path(in_area.record_id, cost_centre: termtime.key)
+        assert_select "a[rel=next][href=?]",
+                      edit_admin_reimbursements_budget_path(@income.record_id, cost_centre: termtime.key)
+      end
+
+      test "a line with no neighbours gets no empty neighbours nav" do
+        @income.destroy!
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_select "nav[aria-label='Neighbouring budgets']", count: 0
+      end
+
+      test "the cost-centre selector offers to make the selected centre the default" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: termtime.key),
+                      text: "Make this my default"
+      end
+
+      test "the cost-centre selector names the default on every page, offering a switch elsewhere" do
+        termtime = create_second_reimbursements_cost_centre
+        fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
+        @user.update!(reimbursements_cost_centre: termtime)
+        sign_in @user
+
+        { termtime.key => false, nil => false, fringe.key => true }.each do |key, offers_switch|
+          get :index, params: { cost_centre: key }.compact
+
+          assert_includes css_select("[aria-label='Cost centre'] span").map { |span| span.text.squish },
+                          "Default: #{termtime.name}"
+          assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear"
+          assert_select "button", text: "Make this my default", count: offers_switch ? 1 : 0
+        end
       end
 
       # The live year (holding the budgets seeded in setup) plus a draft year

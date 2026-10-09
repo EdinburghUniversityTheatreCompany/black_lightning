@@ -182,6 +182,7 @@ module Admin
           short_code: "BF", receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
           eusa_recipient: "eusa@ed.ac.uk", eusa_contact_name: "Craig",
           eusa_signature_name: "Fringe Finance",
+          authoriser_name: "Jo Producer", authoriser_designation: "Fringe Treasurer",
           sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
           notification_email: "finance@bedlamfringe.co.uk",
           nightly_run_days: %w[1 3 5]
@@ -195,9 +196,24 @@ module Admin
         assert_equal "eusa@ed.ac.uk", @cost_centre.eusa_recipient
         assert_equal "Craig", @cost_centre.eusa_contact_name
         assert_equal "Fringe Finance", @cost_centre.eusa_signature_name
+        assert_equal "Jo Producer", @cost_centre.authoriser_name
+        assert_equal "Fringe Treasurer", @cost_centre.authoriser_designation
         assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.sharepoint_site_url
         assert_equal [ "finance@bedlamfringe.co.uk" ], @cost_centre.notification_emails
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
+      end
+
+      test "update hides a cost centre's budgets from submitters" do
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, cost_centre: {
+          hidden_from_submitters: "1", nightly_run_days: @cost_centre.nightly_run_days
+        } }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_predicate @cost_centre.reload, :hidden_from_submitters?
+        get :index
+        assert_select ".bg-gray-100", text: "Hidden from submitters"
       end
 
       # settings_params turns a missing nightly_run_days into [], which fails

@@ -96,7 +96,7 @@ module Admin
       def settings_params
         permitted = params.require(:cost_centre).permit(
           :short_code, :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_contact_name, :eusa_signature_name,
-          :sharepoint_site_url, :notification_email
+          :authoriser_name, :authoriser_designation, :sharepoint_site_url, :notification_email, :hidden_from_submitters
         )
         permitted[:nightly_run_days] = normalized_run_days
         permitted

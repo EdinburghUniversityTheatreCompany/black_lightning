@@ -22,14 +22,14 @@ module Admin
       def index
         @title = "Reimbursements Budgets"
         # budgets_with_actuals: this table and its CSV print each line's EUSA actual.
-        sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
+        budgets = store.budgets_with_actuals
         # Area figures are read off these preloaded objects, never off
         # budget.area, whose unloaded #budgets would N+1.
         @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
           # Not paginated: a page boundary split an area's lines across pages.
-          format.html { @budgets = sorted }
-          format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
+          format.html { @budgets = ::Reimbursements::Budget.index_order(budgets) }
+          format.csv { send_export ::Reimbursements::Exports::Budgets, budgets.sort_by { |budget| budget.name.to_s.downcase } }
         end
       end
 
@@ -76,8 +76,10 @@ module Admin
 
         budget = store.create_budget!(attrs.merge(financial_year: selected_financial_year,
                                                   cost_centre: chosen_cost_centre))
-        redirect_to edit_admin_reimbursements_budget_path(budget.record_id),
-                    notice: "Budget created."
+        # The centre the form picked, so the edit page and its back link show the line.
+        scope = scope_params
+        scope[:cost_centre] = chosen_cost_centre.key if params[:cost_centre_id].present?
+        redirect_to edit_admin_reimbursements_budget_path(budget.record_id, **scope), notice: "Budget created."
       end
 
       def edit
@@ -91,6 +93,7 @@ module Admin
         @forecasts = store.budget_forecasts(@budget.record_id)
         # ?edit_forecast=<id> renders that row as an inline edit form.
         @editing_forecast_id = params[:edit_forecast].presence
+        @previous_budget, @next_budget = neighbours(@budget)
       end
 
       def update
@@ -100,7 +103,11 @@ module Admin
         end
 
         store.update_budget!(@budget.record_id, attrs)
-        redirect_to edit_path, notice: "Budget saved."
+        # ?budget= as well as the fragment: Turbo follows the redirect with
+        # fetch and drops the fragment, so scroll_to_controller reads the param.
+        redirect_to admin_reimbursements_budgets_path(**scope_params, budget: @budget.record_id,
+                                                                      anchor: "budget_#{@budget.record_id}"),
+                    notice: "Budget saved."
       end
 
       # Appends a projected-spend update (amount + date + reason) to this budget;
@@ -182,7 +189,17 @@ module Admin
       end
 
       def edit_path
-        edit_admin_reimbursements_budget_path(@budget.record_id)
+        edit_admin_reimbursements_budget_path(@budget.record_id, **scope_params)
+      end
+
+      # The lines either side of +budget+ in the index's order, nil at the ends
+      # or when the line is outside the page's year and centre.
+      def neighbours(budget)
+        list = ::Reimbursements::Budget.index_order(store.budgets_for_year)
+        index = list.index { |other| other.record_id == budget.record_id }
+        return [ nil, nil ] if index.nil?
+
+        [ (list[index - 1] if index.positive?), list[index + 1] ]
       end
 
       # No form object backs this write, so the checks that tell the operator
@@ -280,10 +297,11 @@ module Admin
         params[:area_id].presence
       end
 
-      # With several centres the form posts cost_centre_id (resolve_cost_centre!
-      # reads it); with one there is nothing to choose.
+      # The form's cost_centre_id first: the form URL carries the page's ?cost_centre=, which
+      # resolve_cost_centre! prefers, and the form's choice must win over the page's.
       def chosen_cost_centre
-        selected_cost_centre || ::Reimbursements::CostCentre.default
+        ::Reimbursements::CostCentre.find_by(id: params[:cost_centre_id]) ||
+          selected_cost_centre || ::Reimbursements::CostCentre.default
       end
     end
   end

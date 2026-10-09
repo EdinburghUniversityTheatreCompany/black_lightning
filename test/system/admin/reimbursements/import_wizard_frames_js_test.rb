@@ -25,7 +25,7 @@ module Admin
       end
 
       test "the budget import's back link leaves the frame" do
-        assert_escapes_frame admin_reimbursements_budget_import_path, "All budgets", "Budget overview"
+        assert_escapes_frame admin_reimbursements_budget_import_path, "All budgets", "New budget"
       end
 
       test "the expense import's back link leaves the frame" do

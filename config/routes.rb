@@ -179,6 +179,9 @@ ChaosRails::Application.routes.draw do
       # their area page, and a producer reads "Submitted" on a claim.
       get "glossary", to: "glossary#show", as: :glossary
 
+      # A finance user's home cost centre (?cost_centre= names it on PATCH).
+      resource :home_cost_centre, only: %i[update destroy]
+
       # Finance review queue: Awaiting owner / To approve / Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
       # Bulk actions over the ticked Pending expenses: static paths, declared before the :id member

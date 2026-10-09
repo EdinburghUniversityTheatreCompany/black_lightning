@@ -6,11 +6,12 @@
     # The accessible name is the QUALIFIED one (the rowgroup heading is not
     # announced with the link), and deliberately does not start with "Edit",
     # which is the row's button.
-    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
+    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
             class: "font-medium text-primary underline",
             "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
-    reimbursements_budget_health_badge(budget)
+    reimbursements_budget_health_badge(budget),
+    (content_tag(:span, "(hidden)", class: "text-gray-400 text-xs") unless budget.active)
   ].compact, " ")
   # "No owner" warns only on a Visible line: hidden overheads (payroll, NI)
   # never have one.
@@ -20,28 +21,25 @@
             else
               content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
             end)
-  visible = if budget.active
-              render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
-            else
-              render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
-            end
+  # Server-side as well as :target, because a Turbo redirect drops the fragment.
+  # Every cell, since the pinned first and last cells paint their own background.
+  highlighted = params[:budget] == budget.record_id
+  highlight = class_names("group-target:bg-yellow-50", "bg-yellow-50" => highlighted)
+  money = class_names("text-right whitespace-nowrap", highlight)
 %>
-<tr>
-  <td><%= name %></td>
-  <td><%= budget.budget_type %></td>
-  <td><%= visible %></td>
-  <td><%= reimbursements_money(budget.initial_budget) %></td>
-  <td><%= reimbursements_budget_projected(budget) %></td>
-  <td><%= reimbursements_money(budget.committed_amount) %></td>
-  <td><%= reimbursements_money(budget.pipeline_amount) %></td>
-  <td><%= reimbursements_money(budget.paid_portal_amount) %></td>
-  <td><%= reimbursements_money(budget.eusa_actual_amount) %></td>
-  <td><%= reimbursements_money(budget.expected_outturn) %></td>
-  <td><%= reimbursements_budget_remaining(budget) %></td>
-  <td><%= reimbursements_budget_variance(budget) %></td>
-  <td><%= owners %></td>
-  <td>
-    <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
+<tr id="budget_<%= budget.record_id %>" class="group scroll-mt-28">
+  <td class="<%= class_names("sticky left-0 z-10", highlight,
+                             "bg-white group-hover:bg-gray-50" => !highlighted) %>"><%= name %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.initial_budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_projected(budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.committed_amount) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.eusa_actual_amount) %></td>
+  <td class="<%= money %>"><%= reimbursements_money(budget.expected_outturn) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_remaining(budget) %></td>
+  <td class="<%= money %>"><%= reimbursements_budget_variance(budget) %></td>
+  <td class="<%= highlight %>"><%= owners %></td>
+  <td class="<%= highlight %>">
+    <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           "aria-label": "Edit #{budget.display_name}", class: btn_classes(:secondary, :sm)) %>
   </td>
 </tr>

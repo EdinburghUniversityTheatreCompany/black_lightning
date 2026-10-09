@@ -13,6 +13,25 @@ module Admin
         login_as users(:member)
       end
 
+      test "the budget picker shows area headings and a show's name narrows to its lines" do
+        cogito = create_reimbursements_area(name: "Cogito")
+        marketing = create_reimbursements_budget(name: "Marketing", area: cogito)
+        create_reimbursements_budget(name: "Marketing", area: create_reimbursements_area(name: "Zeta"))
+        visit new_admin_reimbursements_expense_path
+
+        wrapper = find("#reimbursements_expense_form_budget_record_id", visible: :any).find(:xpath, "..")
+        wrapper.find(".ts-control").click
+        assert_selector ".ts-dropdown .optgroup-header", text: "Cogito"
+        assert_selector ".ts-dropdown .optgroup-header", text: ::Reimbursements::Budget::NO_AREA_GROUP
+
+        wrapper.find(".ts-control input").send_keys("Cogito")
+        assert_no_selector ".ts-dropdown .option", text: "Zeta: Marketing"
+        find(".ts-dropdown .option", text: "Cogito: Marketing").click
+
+        assert_equal marketing.record_id,
+                     find("#reimbursements_expense_form_budget_record_id", visible: :any).value
+      end
+
       # A file input cannot be repopulated by the server, so the controller
       # restores it through a DataTransfer.
       test "an attached receipt survives a failed submit" do

@@ -18,13 +18,6 @@ reimbursements_credentials_check:
   queue: default
   schedule: at 8:08am every day
 
-# Nudges budget owners about claims awaiting their sign-off, via the website mailer. No-ops when
-# nothing awaits.
-reimbursements_owner_endorsement_digest:
-  class: Reimbursements::OwnerEndorsementDigestJob
-  queue: default
-  schedule: at 7:07am every day
-
 # Clears the bank details of payees who have not claimed in six months. No-ops when none are due.
 reimbursements_bank_details_retention:
   class: Reimbursements::BankDetailsRetentionJob

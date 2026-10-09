@@ -116,11 +116,21 @@ module Reimbursements
       assert_match(/isn't in our submitter list/, reply)
       assert_includes reply, "<p>Hi,</p>", "no matched person, so there is no name to greet"
       assert_includes reply, "If you're part of Bedlam Termtime,"
-      assert_includes reply, "Contact #{termtime.contact_email}."
+      assert_includes reply, "Contact termtime-finance@example.invalid."
+      assert_not_includes reply, "Contact #{termtime.receive_mailbox}", "never the polled mailbox"
       assert_includes reply, "Bedlam Termtime finance (automated reply)"
       assert_not_includes reply, "Fringe"
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
       assert_equal 0, Expense.count
+    end
+
+    test "the reply names no contact rather than the polled mailbox itself" do
+      CostCentre.default.update_columns(notification_email: nil)
+      setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
+
+      MailboxPollJob.perform_now
+
+      assert_not_includes @mailbox.replies.sole.last, "Questions?"
     end
 
     test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do

@@ -9,16 +9,17 @@
 <% if @flagged_count.to_i.positive? %>
   <p>
     <%= @flagged_count %> of <%= @flagged_count == 1 ? "them needs" : "them need" %> a look on
-    the Review page first: the <strong>Needs attention</strong> column below says why.
+    the <%= link_to "Review page", admin_reimbursements_review_url(tab: "approved", cost_centre: @cost_centre.key) %> first: the <strong>Needs attention</strong> column below says why.
   </p>
 <% end %>
 
 <p>
   Nothing has been submitted automatically. When you're ready, open
-  <strong>Build Batch</strong> to create the EUSA draft, then review and send it.
+  <%= link_to "Build Batch", new_admin_reimbursements_batch_url(cost_centre: @cost_centre.key) %>
+  to create the EUSA draft, then review and send it.
 </p>
 
-<p><strong>Approved queue:</strong></p>
+<p><strong><%= link_to "Approved queue", admin_reimbursements_review_url(tab: "approved", cost_centre: @cost_centre.key) %>:</strong></p>
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
   <thead style="background-color: #f0f0f0;">
     <tr>

@@ -15,7 +15,9 @@ class Admin::SidebarComponent < ViewComponent::Base
     @nav_items = nav_items
     @current_user = current_user
     @current_path = current_path
-    @scope_params = scope_params.to_h.slice(*SCOPE_PARAMS).compact_blank
+    # An empty cost_centre= is an explicit "All", which must outlive the click.
+    @scope_params = scope_params.to_h.slice(*SCOPE_PARAMS)
+                                .reject { |key, value| value.blank? && key != "cost_centre" }
   end
 
   private

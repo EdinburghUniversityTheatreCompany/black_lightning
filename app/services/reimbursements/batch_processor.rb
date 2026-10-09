@@ -140,7 +140,9 @@ module Reimbursements
         )
       end
       filename = "#{bacs_date.iso8601}-#{@cost_centre.slug}-BACS-request-#{@cost_centre.eusa_code}.xlsx"
-      xlsx_attachment(filename, @xlsx.generate(rows))
+      xlsx_attachment(filename, @xlsx.generate(rows, centre_name: @cost_centre.name,
+                                                     authoriser_name: @cost_centre.authoriser_name,
+                                                     authoriser_designation: @cost_centre.authoriser_designation))
     end
 
     # The amount on the form is the FOREIGN one: EUSA's bank pays the supplier
@@ -300,7 +302,8 @@ module Reimbursements
     # False when the send failed; the failure is collected, never raised.
     def deliver_producer_email(result, email, items, bacs_date)
       line_items = items.map do |expense|
-        { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
+        { auto_number: expense.auto_number, record_id: expense.record_id,
+          amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.display_name.to_s,
           description: expense.description.to_s }
       end
       @notifier.producer_notification(

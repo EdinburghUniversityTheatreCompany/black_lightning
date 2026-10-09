@@ -8,11 +8,11 @@
 </p>
 
 <%
-  # Every filter the page is on, so a row's Remove split / Not offsetting
-  # button comes back to the list the operator was reading rather than to an
-  # unfiltered first page. Built once here, since four controls need it.
+  # Every filter the page is on, so each row action comes back to the list
+  # the operator was reading rather than to an unfiltered first page.
   filters = { period: @period.presence, search: @search.presence, state: @state,
-              include_offsets: (@include_offsets ? "1" : nil) }.compact
+              include_offsets: (@include_offsets ? "1" : nil),
+              cost_centre: selected_cost_centre&.key }.compact
   attention_state = ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
   needs_attention = @state == attention_state
   all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
@@ -20,6 +20,7 @@
 
 <%= render CardComponent.new(title: "Filter") do %>
   <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
+    <%= hidden_field_tag :cost_centre, selected_cost_centre.key if selected_cost_centre %>
     <div>
       <%= label_tag :state, "Show", class: FormStyles::LABEL %>
       <%= select_tag :state,
@@ -49,7 +50,7 @@
     <% end %>
     <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
     <% if @period.present? || @search.present? || @include_offsets || !needs_attention %>
-      <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
+      <%= link_to "Clear", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key), class: "text-sm text-gray-600 underline" %>
     <% end %>
   <% end %>
 <% end %>
@@ -146,15 +147,15 @@
            safe_join([ (if actual.convertible_to_expense?
               safe_join([
                 link_to("Link to claim",
-                        link_expense_admin_reimbursements_actual_path(actual.record_id),
+                        link_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm)),
                 link_to("Create expense",
-                        new_expense_admin_reimbursements_actual_path(actual.record_id),
+                        new_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm))
               ], " ")
             elsif actual.apportionable?
               link_to("Split across budgets",
-                      apportion_admin_reimbursements_actual_path(actual.record_id),
+                      apportion_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             elsif actual.apportioned?
               button_to("Remove split",
@@ -177,7 +178,7 @@
            # Additive: a row needing attention gets its main action AND this.
            (if actual.pairable?
               link_to("Mark as offsetting",
-                      offset_pair_admin_reimbursements_actual_path(actual.record_id),
+                      offset_pair_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             end),
            # Additive, not an elsif: a budget-linked debit is still convertible, and a linked

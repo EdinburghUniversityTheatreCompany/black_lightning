@@ -99,6 +99,14 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
+    test "the pending reminder carries each claim's id for its edit link" do
+      expense = pending_expense(days_ago: 5)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal expense.record_id, mailer_calls(:pending_reminder).sole.last[:rows].sole[:record_id]
+    end
+
     test "fresh pending submissions do not trigger a reminder" do
       pending_expense(days_ago: 1)
 
@@ -160,6 +168,32 @@ module Reimbursements
       assert_empty mailer_calls(:owner_sign_off_reminder)
       # Finance's now, and stale.
       assert_equal 1, mailer_calls(:pending_reminder).size
+    end
+
+    test "each owner is told who else owns the budget, and nobody is told about themselves" do
+      ann = create_reimbursements_person(name: "Ann Other", email: "ann@example.com")
+      owned_budget.own_owners << ann
+      gated_pending
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      rows = mailer_calls(:owner_sign_off_reminder).to_h { |_, call| [ call[:to].sole, call[:rows].sole ] }
+      assert_equal "Ann Other", rows["olive@example.com"][:also_owned_by]
+      assert_equal "Olive Owner", rows["ann@example.com"][:also_owned_by]
+    end
+
+    test "owner rows carry the budget id and skip a co-owner with no name" do
+      blank = create_reimbursements_person(name: "Temp", email: "blank@example.com")
+      blank.update_columns(name: "")
+      owned_budget.own_owners << blank
+      owned_budget.own_owners << create_reimbursements_person(name: "Bo Other", email: "bo@example.com")
+      gated_pending
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      row = mailer_calls(:owner_sign_off_reminder).find { |_, call| call[:to] == [ owner_person.email ] }.last[:rows].sole
+      assert_equal owned_budget.record_id, row[:budget_id]
+      assert_equal "Bo Other", row[:also_owned_by]
     end
 
     test "an owner with no email address is skipped rather than raising" do
