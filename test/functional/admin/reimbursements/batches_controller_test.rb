@@ -206,6 +206,33 @@ module Admin
         assert_includes response.body, "/admin/reimbursements/batches?format=csv"
       end
 
+      # An explicit All (cost_centre=) is a choice: a link that drops it lets the
+      # sidebar put the operator's home centre back on the next click.
+      test "History's own links keep an explicit All" do
+        create_second_reimbursements_cost_centre
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        failed = ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                                        bacs_date: Date.new(2026, 5, 12), status: "failed")
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "main a[href=?]", new_admin_reimbursements_batch_path(cost_centre: ""), text: "Build a new batch"
+        assert_select "a[href=?]", admin_reimbursements_batch_path(@batch.record_id, cost_centre: ""), text: "Detail"
+        assert_select "form[action=?]", reopen_admin_reimbursements_batch_path(@batch.record_id, cost_centre: "")
+        assert_select "form[action=?]", dismiss_admin_reimbursements_batch_attempt_path(failed, cost_centre: "")
+      end
+
+      test "Detail's back link keeps an explicit All" do
+        create_second_reimbursements_cost_centre
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        get :show, params: { id: @batch.record_id, cost_centre: "" }
+
+        assert_select "main a[href=?]", admin_reimbursements_batches_path(cost_centre: ""), text: /Back to history/
+      end
+
       # --- CSV export --------------------------------------------------------
 
       test "index CSV export is a text/csv download with one row per batch" do
@@ -291,6 +318,16 @@ module Admin
         assert_nil @expense.batch
         assert_not ::Reimbursements::Batch.exists?(@batch.id)
         assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
+      end
+
+      test "a reopen from an explicit All comes back to All" do
+        create_second_reimbursements_cost_centre
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        post :reopen, params: { id: @batch.record_id, cost_centre: "" }
+
+        assert_redirected_to admin_reimbursements_batches_path(cost_centre: "")
       end
 
       test "reopen deletes the stale EUSA draft via Graph using the send mailbox and stored id" do

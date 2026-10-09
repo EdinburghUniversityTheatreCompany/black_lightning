@@ -109,7 +109,7 @@ module Admin
       end
 
       def history_path
-        admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key)
+        admin_reimbursements_batches_path(**scope_params)
       end
 
       def assign_new_form

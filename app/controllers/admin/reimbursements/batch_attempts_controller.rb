@@ -6,15 +6,14 @@ module Admin
     class BatchAttemptsController < FinanceController
       def dismiss
         attempt = ::Reimbursements::BatchAttempt.find(params[:id])
+        history = admin_reimbursements_batches_path(**scope_params)
 
         unless attempt.dismissible?
-          return redirect_to(admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
-                             alert: "That build is still running. Wait for it to finish.")
+          return redirect_to(history, alert: "That build is still running. Wait for it to finish.")
         end
 
         attempt.dismiss!(email: current_user&.email)
-        redirect_to admin_reimbursements_batches_path(cost_centre: selected_cost_centre&.key),
-                    notice: "Alert dismissed."
+        redirect_to history, notice: "Alert dismissed."
       end
     end
   end
