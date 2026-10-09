@@ -33,15 +33,15 @@ class NavigationHelperTest < ActionView::TestCase
     finance_category[:children].to_h { |child| [ child[:title], child[:path] ] }
   end
 
-  test "a home cost centre decorates the day-to-day finance links and nothing else" do
+  test "a home cost centre decorates only the links whose page reads the centre" do
     termtime = create_second_reimbursements_cost_centre
     paths = finance_paths_with_home(termtime)
 
-    [ "Review claims", "All claims", "Build batch", "Batches", "Budgets", "Overview", "Areas",
+    [ "Review claims", "Build batch", "Batches", "Budgets", "Overview", "Areas",
       "Ledger" ].each do |title|
       assert_match(/[?&]cost_centre=termtime\b/, paths[title], title)
     end
-    [ "Finance home", "Exports", "People", "Cost centres", "Reconcile" ].each do |title|
+    [ "Finance home", "All claims", "Exports", "People", "Cost centres", "Reconcile" ].each do |title|
       assert_no_match(/cost_centre/, paths[title], title)
     end
   end

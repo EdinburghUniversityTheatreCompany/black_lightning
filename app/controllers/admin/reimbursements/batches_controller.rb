@@ -254,9 +254,9 @@ module Admin
         selectable_cost_centres.one? ? selectable_cost_centres.first : nil
       end
 
-      # ASK, rather than bounce. The sidebar's "Build Batch" entry carries no
-      # cost centre and never can (one link on every admin page), so redirecting
-      # here would make Build Batch unreachable from where most operators start.
+      # ASK, rather than bounce. From an "All" page with no home centre the
+      # sidebar's Build batch link names no centre, so redirecting here would
+      # make Build Batch unreachable from where most operators start.
       def render_cost_centre_chooser
         @title = "Build batch"
         render :choose_cost_centre

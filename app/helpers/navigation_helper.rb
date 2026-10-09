@@ -93,7 +93,7 @@ module NavigationHelper
       children << { title: "Finance home", path: admin_reimbursements_root_path, fa_icon: "fa-house", exact: true, scoped: true }
 
       children << { group: "Pay claims", title: "Review claims", path: admin_reimbursements_review_path(home), fa_icon: "fa-clipboard-check", scoped: true }
-      children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path(home), fa_icon: "fa-pen-to-square", scoped: true }
+      children << { group: "Pay claims", title: "All claims", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square", scoped: true }
       children << { group: "Pay claims", title: "Build batch", path: new_admin_reimbursements_batch_path(home), fa_icon: "fa-file-export", scoped: true }
       children << { group: "Pay claims", title: "Batches", path: admin_reimbursements_batches_path(home), fa_icon: "fa-clock-rotate-left", scoped: true }
 
@@ -181,8 +181,8 @@ module NavigationHelper
 
   private
 
-  # The signed-in finance user's home cost centre, for the links they use day
-  # to day. Only while the page names no centre: a centre already chosen is
+  # The signed-in finance user's home cost centre, for the links whose page
+  # reads the centre. Only while the page names no centre: a centre already chosen is
   # carried by the sidebar itself and must win over the default.
   def home_cost_centre_scope
     return {} if params[:cost_centre].present? || params[:cost_centre_id].present?

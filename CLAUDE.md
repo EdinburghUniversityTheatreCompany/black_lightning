@@ -639,7 +639,8 @@ survive as historical import provenance and are never written. Spec + plan in
     appends `?year=` and `?cost_centre=` to every `scoped: true` finance item), so Build Batch
     opens on the pot the operator was looking at. With no centre selected — the "All" default —
     `new` still renders a **chooser**, which is what keeps "the wizards refuse to guess" true:
-    the centre is carried from an explicit choice, never inferred.
+    the centre is carried from an explicit choice, never inferred. A finance user's home centre
+    is added to that link when the page names none, so it skips the chooser from the sidebar.
   - **A batch's mailbox is a GUESS for anything built before this, so reopen probes a LIST**
     (derived centre, then default). Older batches all drafted into the default centre's mailbox,
     and `GraphClient#draft_message?` fails closed, so one wrong guess read as "may already have
