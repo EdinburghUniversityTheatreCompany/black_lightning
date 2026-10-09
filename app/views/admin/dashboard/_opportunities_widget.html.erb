@@ -17,7 +17,7 @@
 <% else %>
   <ul class="flex flex-col">
     <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
-      <li class="list-row py-1 [&>div]:py-0!">
+      <li class="list-row py-1">
         <%= render OpportunityCardComponent.new(opportunity: opportunity, heading_url: admin_opportunity_path(opportunity)) %>
       </li>
     <% end %>
