@@ -8,9 +8,8 @@
 </p>
 
 <%
-  # Every filter the page is on, so a row's Remove split / Not offsetting
-  # button comes back to the list the operator was reading rather than to an
-  # unfiltered first page. Built once here, since four controls need it.
+  # Every filter the page is on, so each row action comes back to the list
+  # the operator was reading rather than to an unfiltered first page.
   filters = { period: @period.presence, search: @search.presence, state: @state,
               include_offsets: (@include_offsets ? "1" : nil),
               cost_centre: selected_cost_centre&.key }.compact
@@ -165,17 +164,17 @@
               # and nobody claimed (convert it).
               safe_join([
                 link_to("Link to claim",
-                        link_expense_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
+                        link_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm)),
                 link_to("Create expense",
-                        new_expense_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
+                        new_expense_admin_reimbursements_actual_path(actual.record_id, **filters),
                         class: btn_classes(:secondary, :sm))
               ], " ")
             elsif actual.apportionable?
               # A credit covering several shows: split it rather than letting
               # the whole payout land on one income line.
               link_to("Split across budgets",
-                      apportion_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
+                      apportion_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             elsif actual.apportioned?
               # The way back out, finance-gated as "Not offsetting" is. The row
@@ -217,7 +216,7 @@
            # at all.
            (if actual.pairable?
               link_to("Mark as offsetting",
-                      offset_pair_admin_reimbursements_actual_path(actual.record_id, cost_centre: selected_cost_centre&.key),
+                      offset_pair_admin_reimbursements_actual_path(actual.record_id, **filters),
                       class: btn_classes(:secondary, :sm))
             end),
            (if actual.linked_expense_ids.any? || actual.linked_budget_ids.any?

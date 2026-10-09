@@ -556,6 +556,21 @@ module Admin
       assert_select "a[href=?]", admin_reimbursements_actuals_path(cost_centre: termtime.key), minimum: 1
     end
 
+    test "the row action links carry every filter the ledger is on" do
+      sign_in @user
+
+      get :index, params: { state: ActualsController::STATE_ALL, include_offsets: "1" }
+
+      actions = css_select("a").select do |a|
+        [ "Link to claim", "Create expense", "Split across budgets", "Mark as offsetting" ].include?(a.text.strip)
+      end
+      assert_not_empty actions
+      actions.each do |a|
+        assert_includes a["href"], "include_offsets=1", "#{a.text.strip} drops the filters"
+        assert_includes a["href"], "state=#{ActualsController::STATE_ALL}", "#{a.text.strip} drops the filters"
+      end
+    end
+
     test "unoffset refuses a row that is not marked offsetting" do
       sign_in @user
 
@@ -1214,7 +1229,7 @@ module Admin
 
       assert row.convertible_to_expense?, "precondition: the conversion controls are offered"
       assert_select "form[action^=?]", unlink_admin_reimbursements_actual_path(row.record_id)
-      assert_select "a[href=?]", new_expense_admin_reimbursements_actual_path(row.record_id)
+      assert_select "a[href^=?]", new_expense_admin_reimbursements_actual_path(row.record_id, state: "all")
     end
 
     # --- Pairing two rows by hand -------------------------------------------
@@ -1347,9 +1362,9 @@ module Admin
 
       get :index, params: { state: "all" }
 
-      assert_select "a[href=?]", offset_pair_admin_reimbursements_actual_path(@unlinked.record_id)
-      assert_select "a[href=?]",
-                    offset_pair_admin_reimbursements_actual_path(@linked_expense.record_id), count: 0
+      assert_select "a[href^=?]", offset_pair_admin_reimbursements_actual_path(@unlinked.record_id, state: "all")
+      assert_select "a[href^=?]",
+                    offset_pair_admin_reimbursements_actual_path(@linked_expense.record_id, state: "all"), count: 0
     end
   end
   end
