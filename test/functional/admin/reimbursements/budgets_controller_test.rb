@@ -578,6 +578,17 @@ module Admin
         assert_not_includes response.body, "No budgets to group."
       end
 
+      test "the overview orders its area cards as the index orders its groups" do
+        sign_in @user
+        %w[Zeta Ábel].each do |name|
+          create_reimbursements_budget(name: "Set", area: create_reimbursements_area(name: name))
+        end
+
+        get :overview
+
+        assert_equal %w[Ábel Zeta], assigns(:area_rollups).map(&:name)
+      end
+
       test "overview allocates an area on its declared basis, never netting its subtotals" do
         sign_in @user
         # An agreed total, so the figure the basis governs is reached.

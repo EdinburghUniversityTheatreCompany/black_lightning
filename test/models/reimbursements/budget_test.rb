@@ -22,6 +22,14 @@ module Reimbursements
       assert_equal [ first, second ], Reimbursements::Budget.index_order([ second, first ])
     end
 
+    test "index_order sorts areas and names as MySQL does, as the picker heads them" do
+      budgets = [ build_budget(area: Area.create!(name: "Zeta")), build_budget(name: "Zinc"),
+                  build_budget(name: "Éclair"), build_budget(area: Area.create!(name: "Ábel")) ]
+
+      assert_equal [ "Ábel: Props", "Zeta: Props", "Éclair", "Zinc" ],
+                   Budget.index_order(budgets).map(&:display_name)
+    end
+
     test "committed_amount sums excl-VAT amounts of Approved, Submitted and Paid" do
       budget = build_budget
       add_expense(budget, status: Status::APPROVED, excl_vat: 10)

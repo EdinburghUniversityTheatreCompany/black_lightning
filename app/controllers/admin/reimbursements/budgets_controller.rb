@@ -156,7 +156,7 @@ module Admin
         unassigned = by_area_id.delete(nil)
         @area_rollups = by_area_id
                         .map { |id, group| ::Reimbursements::AreaRollup.new(area: areas_by_id[id], budgets: group) }
-                        .sort_by { |rollup| rollup.name.to_s.downcase }
+                        .sort_by { |rollup| ::Reimbursements::Budget.collation_key(rollup.name.to_s) }
         # Nil, not empty, so no "Not in an area" heading renders when every
         # line has an area.
         @unassigned_rollup = unassigned && ::Reimbursements::AreaRollup.new(area: nil, budgets: unassigned)

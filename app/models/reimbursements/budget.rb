@@ -98,7 +98,8 @@ module Reimbursements
     # the edit page's previous/next links so stepping through them walks the table as it reads.
     def self.index_order(budgets)
       budgets.sort_by do |budget|
-        [ budget.area ? 0 : 1, budget.area&.name.to_s.downcase, budget.area_id.to_i, budget.name.to_s.downcase, budget.id.to_i ]
+        [ budget.area ? 0 : 1, collation_key(budget.area&.name.to_s), budget.area_id.to_i,
+          collation_key(budget.name.to_s), budget.id.to_i ]
       end
     end
 
