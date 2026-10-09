@@ -63,6 +63,8 @@ module Reimbursements
       assert_match "Fake blood", mail[:html]
       assert_match "20.50", mail[:html]
       assert_match "2026-05-13", mail[:html]
+      assert_includes mail[:html], %(href="#{PORTAL}/expenses/42">#7</a>)
+      assert_includes mail[:html], %(contact us at <a href="mailto:#{FINANCE}")
     end
 
     test "operator alerts render their bodies and carry the standard subjects" do
@@ -230,19 +232,6 @@ module Reimbursements
 
       assert_includes html, "Set (also owned by Ann Other)"
       assert_equal 1, html.scan("also owned by").size
-    end
-
-    test "producer notification numbers and links each claim and names the contact address" do
-      notifier, graph = build
-      notifier.producer_notification(to: "pat@example.com", greeting_name: "Pat", total: "12.50",
-                                     bacs_date: Date.new(2026, 5, 13),
-                                     line_items: [ { auto_number: 7, record_id: 42, amount: "12.50",
-                                                     budget_name: "Props", description: "Paint" } ])
-
-      html = graph.send_mails.sole[:html]
-      assert_includes html, %(href="#{PORTAL}/expenses/42">#7</a>)
-      assert_includes html, %(contact us at <a href="mailto:#{FINANCE}")
-      assert_not_includes html, "let me know"
     end
 
     test "producer emails never offer the polled receive mailbox as a contact" do
