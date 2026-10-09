@@ -29,6 +29,18 @@ module Admin
         assert_redirected_to "http://test.host/admin/reimbursements/review?cost_centre=termtime"
       end
 
+      # A preference, so an unrelated legacy field failing User's validations
+      # must not block it.
+      test "sets and clears the default for a user who fails validation" do
+        @user.update_column(:phone_number, "not a phone number")
+
+        patch :update, params: { cost_centre: "termtime" }
+        assert_equal @termtime, @user.reload.reimbursements_cost_centre
+
+        delete :destroy
+        assert_nil @user.reload.reimbursements_cost_centre
+      end
+
       test "refuses to set a default with no centre named" do
         patch :update
 
