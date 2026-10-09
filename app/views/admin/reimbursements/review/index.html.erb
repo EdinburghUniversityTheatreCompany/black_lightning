@@ -17,7 +17,7 @@
     in a claim's life; To approve is the default. %>
 <nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
   <% { "awaiting_owner" => @awaiting_owner, "to_approve" => @to_approve, "approved" => @approved }.each do |tab, list| %>
-    <%= link_to "#{tab.humanize} (#{list.size})", admin_reimbursements_review_path(tab: tab, cost_centre: selected_cost_centre&.key),
+    <%= link_to "#{tab.humanize} (#{list.size})", admin_reimbursements_review_path(tab: tab, **scope_params),
                 "aria-current": ("page" if @tab == tab),
                 class: (@tab == tab ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600") %>
   <% end %>
@@ -41,7 +41,7 @@
       <%# Carries the selected cost centre: a batch is built for one pot. %>
       Ready to submit on
       <%= link_to "the Build Batch page",
-                  new_admin_reimbursements_batch_path(cost_centre: selected_cost_centre&.key),
+                  new_admin_reimbursements_batch_path(**scope_params),
                   class: "text-primary underline" %>.
     </p>
     <% @approved.each do |expense| %>
@@ -78,7 +78,7 @@
           Select all
         </label>
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab, cost_centre: selected_cost_centre&.key),
+        <%= form_with url: admin_reimbursements_bulk_override_approve_review_path(tab: @tab, **scope_params),
                       method: :patch, id: "bulk-review-form",
                       class: "flex flex-wrap items-center gap-2" do %>
           <%= text_field_tag :override_note, nil,
@@ -105,7 +105,7 @@
       Nothing to approve.
       <% if @awaiting_owner.any? %>
         <%= link_to pluralize(@awaiting_owner.size, "claim"),
-                    admin_reimbursements_review_path(tab: "awaiting_owner", cost_centre: selected_cost_centre&.key),
+                    admin_reimbursements_review_path(tab: "awaiting_owner", **scope_params),
                     class: "text-primary underline" %>
         <%= @awaiting_owner.one? ? "is" : "are" %> still with a budget owner.
       <% end %>
@@ -125,7 +125,7 @@
           Select all
         </label>
         <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
-        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab, cost_centre: selected_cost_centre&.key), method: :patch,
+        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab, **scope_params), method: :patch,
                       id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
           <%# Deliberately NOT required: the box is shared with Approve selected.
               bulk-review enables Reject only once it is filled. %>
@@ -136,7 +136,7 @@
                          data: { bulk_review_target: "approveButton" }, disabled: true,
                          class: btn_classes(:success, :sm) %>
           <%= submit_tag "Reject selected",
-                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab, cost_centre: selected_cost_centre&.key),
+                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab, **scope_params),
                          data: { bulk_review_target: "rejectButton", disable_with: false,
                                  turbo_confirm: "Reject the selected expenses and email each producer?" },
                          disabled: true, class: btn_classes(:danger, :sm) %>

@@ -373,7 +373,7 @@ module Admin
         # BOTH ?focus= and the fragment: Turbo's fetch follows the 302 itself and
         # drops the fragment, so scroll_to_controller reads focus. A no-JS
         # navigation honours the fragment.
-        redirect_to admin_reimbursements_review_path(tab: params[:tab], cost_centre: selected_cost_centre&.key,
+        redirect_to admin_reimbursements_review_path(tab: params[:tab], **scope_params,
                                                      focus: target, anchor: target),
                     **flash
       end

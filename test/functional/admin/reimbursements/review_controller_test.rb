@@ -1090,6 +1090,31 @@ module Admin
         assert_redirected_to_review(tab: "to_approve", cost_centre: termtime.key)
       end
 
+      # An explicit All (cost_centre=) is a choice: a page that drops it lets the
+      # sidebar put the operator's home centre back on the next click.
+      test "the tab links and card actions keep an explicit All" do
+        create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", admin_reimbursements_review_path(tab: "approved", cost_centre: "")
+        assert_select "form[action=?]", admin_reimbursements_approve_review_path(
+          expense.record_id, tab: "to_approve", cost_centre: ""
+        )
+      end
+
+      test "an approval from an explicit All comes back to All" do
+        create_second_reimbursements_cost_centre
+        expense = pending_expense
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: "" }
+
+        assert_redirected_to_review(tab: "to_approve", cost_centre: "")
+      end
+
       test "the review card wires the unsaved-edits guard on its decision controls" do
         expense = pending_expense
         sign_in @user
