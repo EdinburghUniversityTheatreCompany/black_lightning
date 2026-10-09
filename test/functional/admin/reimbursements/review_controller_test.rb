@@ -33,11 +33,11 @@ module Admin
       end
 
       # The queue redirect, ignoring the ?focus= anchor, which has tests of its own.
-      def assert_redirected_to_review(tab: nil)
+      def assert_redirected_to_review(**query)
         target = URI.parse(@response.redirect_url)
         rest = Rack::Utils.parse_nested_query(target.query.to_s).except("focus")
-        query = rest.any? ? "?#{rest.to_query}" : ""
-        assert_equal admin_reimbursements_review_path(tab: tab), "#{target.path}#{query}"
+        query_string = rest.any? ? "?#{rest.to_query}" : ""
+        assert_equal admin_reimbursements_review_path(**query), "#{target.path}#{query_string}"
       end
 
       # Where the last redirect came back to: ?focus= and the fragment must agree.
@@ -1087,9 +1087,7 @@ module Admin
 
         patch :approve, params: { id: expense.record_id, tab: "to_approve", cost_centre: termtime.key }
 
-        query = Rack::Utils.parse_nested_query(URI.parse(@response.redirect_url).query)
-        assert_equal termtime.key, query["cost_centre"]
-        assert_equal "to_approve", query["tab"]
+        assert_redirected_to_review(tab: "to_approve", cost_centre: termtime.key)
       end
 
       test "the review card wires the unsaved-edits guard on its decision controls" do
