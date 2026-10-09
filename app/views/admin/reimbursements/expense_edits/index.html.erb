@@ -12,11 +12,11 @@
                      options_for_select([ [ "All statuses", "" ] ] + @statuses.map { |s| [ s, s ] }, @status_filter),
                      class: input_classes(width: "w-44") %>
     </div>
-    <div>
+    <div class="w-72">
       <%= label_tag :budget, "Budget", class: FormStyles::LABEL %>
       <%= select_tag :budget,
-                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.display_name, b.record_id ] }, @budget_filter),
-                     class: input_classes(width: "w-44") %>
+                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.picker_label, b.record_id ] }, @budget_filter),
+                     class: "simple-select2", data: { allow_clear: "true" } %>
     </div>
     <div>
       <%= label_tag :q, "Search", class: FormStyles::LABEL %>

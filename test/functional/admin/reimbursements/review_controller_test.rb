@@ -81,6 +81,15 @@ module Admin
         assert_redirected_to new_user_session_path
       end
 
+      test "each card's budget select is a Tom Select" do
+        expense = create_reimbursements_expense(person: @person, budget: @budget, status: "Pending")
+        sign_in @user
+
+        get :index
+
+        assert_select "select#budget_record_id_#{expense.record_id}.simple-select2:not([class*=border])"
+      end
+
       test "denies members without the finance permission" do
         sign_in users(:committee)
         get :index

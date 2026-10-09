@@ -89,6 +89,33 @@ module Admin
                            amount: BigDecimal("5"), amount_excl_vat: BigDecimal("4.17"))
       end
 
+      def centred_budget
+        centre = create_reimbursements_cost_centre(key: "edit-centre", name: "Bedlam Fringe",
+                                                   eusa_code: "F43", short_code: "BF")
+        create_reimbursements_budget(name: "Lights", nominal_code: "4200", cost_centre: centre)
+      end
+
+      test "the edit page's budget select is a Tom Select labelled with each line's centre" do
+        @budget = centred_budget
+        expense = expense_at("Pending")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_select "select.simple-select2[name=budget_record_id]:not([class*=border])" do
+          assert_select "option[selected]", text: "BF - Lights"
+        end
+      end
+
+      test "the index's budget filter is a Tom Select labelled with each line's centre" do
+        centred_budget
+        sign_in @user
+
+        get :index
+
+        assert_select "select.simple-select2[name=budget]:not([class*=border]) option", text: "BF - Lights"
+      end
+
       test "index requires the finance permission (producer access alone is forbidden)" do
         other = users(:member_with_phone_number)
         grant_producer_permission(other)

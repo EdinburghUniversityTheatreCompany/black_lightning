@@ -295,7 +295,7 @@
                      options_for_select(budget_options, expense.budget&.record_id),
                      include_blank: expense.budget&.record_id.blank?,
                      id: "budget_record_id_#{expense.record_id}",
-                     class: input_classes %>
+                     class: "simple-select2" %>
       <% if expense.budget&.record_id.present? %>
         <p class="<%= FormStyles::HINT %>">
           <%= link_to "Open #{expense.budget.display_name}",
