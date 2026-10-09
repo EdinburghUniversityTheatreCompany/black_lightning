@@ -15,7 +15,7 @@
     <%= display_block("No Opportunities", false) %>
   </div>
 <% else %>
-  <ul class="divide-y divide-gray-100 px-4">
+  <ul class="divide-y divide-gray-100 px-4 [&_li>div]:py-2!">
     <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
       <li>
         <%= render OpportunityCardComponent.new(opportunity: opportunity, heading_url: admin_opportunity_path(opportunity)) %>
@@ -31,7 +31,7 @@
 <% end %>
 
 <% if can?(:create, Opportunity) %>
-  <div class="px-4 py-3 border-t border-gray-100">
+  <div class="px-4 py-2 border-t border-gray-100">
     <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
   </div>
 <% end %>
