@@ -38,6 +38,7 @@ class GetInvolvedController < ApplicationController
     authorize! :create, Opportunity
 
     @opportunity = Opportunity.new(opportunity_params)
+    @opportunity.roles.each { |role| role.existing_department_only = true }
     @opportunity.creator = current_user
     @opportunity.approved = false
 

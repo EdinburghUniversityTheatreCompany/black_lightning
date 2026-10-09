@@ -27,6 +27,11 @@ class Department < ApplicationRecord
 
   default_scope { order(:ordering) }
 
+  # The public listing's filter: departments with a role on a listed opportunity.
+  scope :with_listable_roles, -> {
+    where(id: OpportunityRole.unscoped.joins(:opportunity).merge(Opportunity.listable).select(:department_id))
+  }
+
   def match_term_list
     match_terms.to_s.split(/[,\n]/).map { |term| term.strip.downcase }.reject(&:blank?)
   end

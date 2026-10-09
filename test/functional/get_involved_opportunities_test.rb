@@ -150,6 +150,18 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_not_includes listed, opportunities(:external_project_opportunity)
   end
 
+  test "the department filter offers only departments on listed opportunities" do
+    opportunities(:unapproved_opportunity).roles.create!(position: "Puppeteer", department: Department.create!(name: "Puppetry"))
+    Department.create!(name: "Pyrotechnics")
+
+    get :opportunities
+
+    offered = css_select("select[name='q[roles_department_id_eq]'] option").map(&:text)
+    assert_includes offered, "Lighting"
+    assert_not_includes offered, "Puppetry"
+    assert_not_includes offered, "Pyrotechnics"
+  end
+
   test "opportunities filters by compensation type" do
     get :opportunities, params: { q: { compensation_type_eq: Opportunity.compensation_types[:paid] } }
 

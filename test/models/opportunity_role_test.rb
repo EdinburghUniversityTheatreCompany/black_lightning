@@ -29,6 +29,28 @@ class OpportunityRoleTest < ActiveSupport::TestCase
     assert_equal "Rigging", role.department.name
   end
 
+  test "on a public submission a new department name creates nothing and waits in the note" do
+    role = OpportunityRole.new(opportunity: opportunities(:internal_project_opportunity), position: "Puppeteer",
+                               note: "Evenings only", department_name: "Puppetry", existing_department_only: true)
+
+    assert_no_difference("Department.count") { 2.times { role.save! } }
+    assert_nil role.department
+    assert_equal "Evenings only; Department: Puppetry", role.reload.note
+  end
+
+  test "on a public submission an existing department name still resolves" do
+    role = OpportunityRole.new(position: "LX op", department_name: "lighting", existing_department_only: true)
+    role.validate
+    assert_equal departments(:lighting), role.department
+  end
+
+  test "on a public submission a note with no room for the typed department is refused, not cut" do
+    role = OpportunityRole.new(opportunity: opportunities(:internal_project_opportunity), position: "Puppeteer",
+                               note: "x" * 250, department_name: "Puppetry", existing_department_only: true)
+    assert_not role.valid?
+    assert role.errors[:note].present?
+  end
+
   test "a saved role whose only edit is its department, set or cleared, is saved through the opportunity" do
     role = opportunity_roles(:internal_stage_manager)
 
