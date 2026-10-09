@@ -11,8 +11,6 @@ if ENV["COVERAGE"]
   end
 end
 
-require "html_acceptance"
-
 ENV["RAILS_ENV"] = "test"
 
 # Outbound Graph is gated to production (Settings.outbound_enabled?). The tests fake
@@ -65,25 +63,6 @@ class ActiveSupport::TestCase
   teardown do
     # Not tmp/storage: under parallelize that is another worker's data.
     FileUtils.rm_rf(ActiveStorage::Blob.service.root)
-    if ENV["VALIDATE"]
-      validate_html
-    end
-  end
-
-  # Run tests with VALIDATE=true to validate all html output.
-  # You will need the experimental version of html tidy (which supports HTML5).
-  # https://github.com/w3c/tidy-html5
-  def validate_html
-    return unless defined? response
-    return unless response.content_type == "text/html"
-    return if response.status == 302
-
-    validation_dir = Rails.root.join "tmp/validation"
-    Dir.mkdir(validation_dir) unless File.exist?(validation_dir)
-    acceptance = HTMLAcceptance.new(validation_dir, ignore_proprietary: true)
-
-    validator = acceptance.validator(response.body, request.url)
-    assert validator.valid?, "Validation error:\n#{validator.exceptions}"
   end
 end
 

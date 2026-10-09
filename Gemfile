@@ -129,8 +129,6 @@ end
 group :test do
   gem "simplecov"
   gem "simplecov-rcov"
-
-  gem "html_acceptance"
 end
 
 

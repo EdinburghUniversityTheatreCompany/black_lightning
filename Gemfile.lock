@@ -228,7 +228,6 @@ GEM
     honeybadger (6.9.2)
       logger
       ostruct
-    html_acceptance (0.1.19)
     htmlentities (4.4.2)
     i18n (1.15.2)
       concurrent-ruby (~> 1.0)
@@ -678,7 +677,6 @@ DEPENDENCIES
   foreman
   herb
   honeybadger
-  html_acceptance
   icalendar
   image_processing
   json (< 3)
