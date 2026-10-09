@@ -91,6 +91,20 @@ module Admin
         end
       end
 
+      # The real checker passes this pair, so only the injected one can answer Invalid.
+      test "the People and Expenses sheets both read the injected modulus checker" do
+        @checker = FakeModulusChecker.new(RAW_ACCOUNT_NUMBER => MC::INVALID)
+        sign_in @user
+
+        get :download
+
+        book = workbook
+        headers, *people = sheet_rows(book, "People")
+        assert_equal "Invalid", people.sole[headers.index("Modulus check")]
+        headers, *expenses = sheet_rows(book, "Expenses")
+        assert_includes expenses.sole[headers.index("Needs attention")].to_s, "failed the bank modulus check"
+      end
+
       test "the page lists every sheet the workbook carries" do
         sign_in @user
 
