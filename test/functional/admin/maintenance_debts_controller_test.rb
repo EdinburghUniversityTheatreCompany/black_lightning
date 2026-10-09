@@ -21,8 +21,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:maintenance_debts)
     assert_not assigns(:is_specific_user)
 
-    # Ensure only non-members are included in the index.
-    assert assigns(:maintenance_debts).all { |debt| debt.user.has_role?(:member) }, "The index includes a few non_members"
+    assert assigns(:maintenance_debts).all? { |debt| debt.user.has_role?(:member) }, "The index includes a few non_members"
     assert_not_includes assigns(:maintenance_debts), non_member_debt
   end
 

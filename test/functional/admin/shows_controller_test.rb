@@ -389,9 +389,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       end
     end
 
-    assert assigns(:show).pictures.count, file_data.size
-
-    assert(assigns(:show).pictures.all { |picture| picture.access_level == 0 })
+    assert_equal file_data.size, assigns(:show).pictures.count
+    assert(assigns(:show).pictures.all? { |picture| picture.access_level == 0 })
     assert_redirected_to admin_show_path(assigns(:show))
   end
 

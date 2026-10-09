@@ -123,12 +123,13 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     sign_out @user
 
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
-
-    # Assert that the user cannot see phone numbers even though they have read permission on themselves.
     sign_in staffing.users.first
 
-    # Assert that the phone number column is not visible, because (at least this version of) committee does not have user read permission.
-    assert_no_match "<th>Phone Number</th>", response.body
+    get :show, params: { id: staffing }
+
+    assert_response :success
+    assert_select "th", text: "Staffed By"
+    assert_select "th", text: "Phone Number", count: 0
   end
 
   test "should get new" do
