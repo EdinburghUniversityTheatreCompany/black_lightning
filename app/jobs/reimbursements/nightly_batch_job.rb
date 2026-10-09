@@ -12,8 +12,6 @@ module Reimbursements
   # recording it marks the day handled forever. The price is re-sending the one
   # that worked: duplicates over silence, so don't loosen the .all? in
   # #deliver_reminders.
-  #
-  # A +dry_run+ logs the same decisions without sending or recording.
   class NightlyBatchJob < Reimbursements::ApplicationJob
     queue_as :default
     # Well above the default 3-minute lock: one expiring mid-run would let a
@@ -29,8 +27,8 @@ module Reimbursements
     class_attribute :notifier_builder,
                     default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
-    def perform(dry_run: false, today: Date.current)
-      CostCentre.all.each { |cost_centre| run_for(cost_centre, dry_run: dry_run, today: today) }
+    def perform(today: Date.current)
+      CostCentre.all.each { |cost_centre| run_for(cost_centre, today: today) }
     end
 
     private
@@ -46,7 +44,7 @@ module Reimbursements
 
     # Recipients are resolved first. With none, warn and do NOT record the
     # run-day, so tomorrow retries rather than marking the alert handled.
-    def run_for(cost_centre, dry_run:, today:)
+    def run_for(cost_centre, today:)
       unless cost_centre.nightly_due?(today)
         Rails.logger.info("Nightly: #{cost_centre.key} not due on #{today} — skipping")
         return
@@ -55,10 +53,10 @@ module Reimbursements
       recipients = cost_centre.operator_recipients
       return warn_no_recipients(cost_centre) if recipients.empty?
 
-      delivered = deliver_reminders(cost_centre, recipients, dry_run: dry_run, today: today)
-      record_run(cost_centre, today) if delivered && !dry_run
+      delivered = deliver_reminders(cost_centre, recipients, today: today)
+      record_run(cost_centre, today) if delivered
     rescue StandardError => e
-      handle_failure(cost_centre, recipients, e, today, dry_run)
+      handle_failure(cost_centre, recipients, e, today)
     end
 
     def warn_no_recipients(cost_centre)
@@ -70,7 +68,7 @@ module Reimbursements
 
     # The array literal makes sure both finance reminders are ATTEMPTED:
     # `a && b` would drop the second whenever the first failed.
-    def deliver_reminders(cost_centre, recipients, dry_run:, today:)
+    def deliver_reminders(cost_centre, recipients, today:)
       claims = claims_for(cost_centre)
       pending = claims.select(&:pending?)
       # One split for both reminders, so they agree on whose claim is whose.
@@ -78,10 +76,9 @@ module Reimbursements
       awaiting_owner, finances = pending.partition { |e| gated_ids.include?(e.record_id) }
       # Best effort, OUTSIDE the .all?: one owner's dead address must not
       # withhold the run-day and re-send finance's reminders tomorrow.
-      remind_budget_owners(cost_centre, awaiting_owner, today: today, dry_run: dry_run)
-      [ remind_stale_pending(cost_centre, recipients, finances, today: today, dry_run: dry_run),
-        remind_approved(cost_centre, recipients, claims.select(&:approved?),
-                        today: today, dry_run: dry_run) ].all?
+      remind_budget_owners(cost_centre, awaiting_owner, today: today)
+      [ remind_stale_pending(cost_centre, recipients, finances, today: today),
+        remind_approved(cost_centre, recipients, claims.select(&:approved?), today: today) ].all?
     end
 
     # --- Which claims belong to which cost centre --------------------------
@@ -96,7 +93,7 @@ module Reimbursements
 
     # False only when a send failed; "nothing to say" counts as delivered.
     # +pending+ is finance's half of the Pending queue.
-    def remind_stale_pending(cost_centre, recipients, pending, today:, dry_run:)
+    def remind_stale_pending(cost_centre, recipients, pending, today:)
       cutoff = today.to_time(:utc) - PENDING_REMINDER_DAYS.days
       stale = pending.select { |e| e.submitted_at && e.submitted_at <= cutoff }
                      .sort_by(&:submitted_at)
@@ -108,7 +105,6 @@ module Reimbursements
           age_days: pending_age_days(expense, today) }
       end
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
-      return true if dry_run
 
       notify(cost_centre, recipients) do |emailer, to|
         emailer.pending_reminder(recipients: to, rows: rows, run_date: run_date(today),
@@ -127,13 +123,12 @@ module Reimbursements
     # One email per owner, to their own address. No age threshold: a claim
     # awaiting your sign-off is new work, named every run-day until it is
     # endorsed or rejected. Best effort (see #deliver_reminders).
-    def remind_budget_owners(cost_centre, awaiting_owner, today:, dry_run:)
+    def remind_budget_owners(cost_centre, awaiting_owner, today:)
       by_owner = claims_by_owner(awaiting_owner)
       return if by_owner.empty?
 
       Rails.logger.info("Nightly: #{awaiting_owner.size} claim(s) awaiting sign-off from " \
                         "#{by_owner.size} owner(s) for #{cost_centre.key}")
-      return if dry_run
 
       # map, not a short-circuit: every owner is ATTEMPTED even after a failure.
       failed = by_owner.map { |owner, claims| remind_one_owner(cost_centre, owner, claims, today) }
@@ -181,7 +176,7 @@ module Reimbursements
 
     # The whole Approved queue in one reminder: a flagged claim is listed with
     # its reasons, never held back. Returns as #remind_stale_pending does.
-    def remind_approved(cost_centre, recipients, approved, today:, dry_run:)
+    def remind_approved(cost_centre, recipients, approved, today:)
       if approved.empty?
         Rails.logger.info("Nightly: no approved expenses for #{cost_centre.key}")
         return true
@@ -192,7 +187,6 @@ module Reimbursements
       flagged = rows.count { |row| Array(row[:flags]).any? }
       Rails.logger.info("Nightly: #{rows.size} approved expense(s) ready to batch " \
                         "(#{flagged} flagged) for #{cost_centre.key}")
-      return true if dry_run
 
       notify(cost_centre, recipients) do |emailer, to|
         emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
@@ -221,10 +215,9 @@ module Reimbursements
 
     # +recipients+ is nil when the raise came before they resolved; the report
     # has gone to Honeybadger either way.
-    def handle_failure(cost_centre, recipients, error, today, dry_run)
+    def handle_failure(cost_centre, recipients, error, today)
       log_and_notify("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}", error,
                      context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
-      return if dry_run
 
       recipients = Array(recipients).compact_blank
       return if recipients.empty?

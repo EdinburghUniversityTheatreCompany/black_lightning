@@ -322,21 +322,13 @@ module Reimbursements
                    "a reminder with nothing to say counts as delivered"
     end
 
-    test "an error raised mid-run emails failure and does not record the run (so it retries)" do
+    test "an error raised mid-run is reported, emails failure and does not record the run (so it retries)" do
       NightlyBatchJob.store_builder = -> { BoomStore.new }
 
-      NightlyBatchJob.perform_now(today: THURSDAY)
+      notified = capture_honeybadger_notices { NightlyBatchJob.perform_now(today: THURSDAY) }
 
+      assert_equal [ "backend down" ], notified.map { |error, _| error.message }
       assert_equal 1, mailer_calls(:failure).size
-      assert_nil CostCentre.default.reload.last_nightly_run_on
-    end
-
-    test "a preview run never sends a real failure email, even when the run itself raises" do
-      NightlyBatchJob.store_builder = -> { BoomStore.new }
-
-      assert_nothing_raised { NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY) }
-
-      assert_empty mailer_calls(:failure), "dry_run must still log-and-notify Honeybadger, but never email"
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -353,18 +345,6 @@ module Reimbursements
       assert_equal 1, notified.size, "the record-write failure must still be reported"
     ensure
       CostCentre.define_method(:record_nightly_run!, original)
-    end
-
-    # --- Dry run -----------------------------------------------------------
-
-    test "dry run logs decisions without sending email or recording" do
-      approved_expense
-      pending_expense(days_ago: 5)
-
-      NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY)
-
-      assert_empty @notifier.calls
-      assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
     # --- Operator recipients ----------------------------------------------
