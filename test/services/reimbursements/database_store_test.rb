@@ -579,14 +579,14 @@ module Reimbursements
       assert_includes scoped.active_budgets.map(&:id), theirs.id
     end
 
-    test "submittable_budgets drops a hidden centre's lines and keeps unplaced ones" do
-      hidden = second_cost_centre
-      hidden.update!(hidden_from_submitters: true)
+    test "submittable_budgets drops only a hidden centre's lines, keeping unplaced ones" do
+      hidden = create_second_reimbursements_cost_centre(hidden_from_submitters: true)
       theirs = Budget.create!(name: "Termtime props", active: true, cost_centre: hidden)
       unplaced = Budget.create!(name: "Contingency", active: true)
+      visible = Budget.create!(name: "Props", active: true, cost_centre: CostCentre.default)
 
-      assert_equal [ unplaced.id ], DatabaseStore.new.submittable_budgets.map(&:id)
-      assert_includes DatabaseStore.new.active_budgets.map(&:id), theirs.id
+      assert_equal [ unplaced.id, visible.id ], store.submittable_budgets.map(&:id)
+      assert_includes store.active_budgets.map(&:id), theirs.id
     end
 
     test "the money path owns an unplaced claim once, not once per centre" do
