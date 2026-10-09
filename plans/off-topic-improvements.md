@@ -528,6 +528,12 @@ with full output until it reproduces
 `^Error:` / `^Failure:`), name the test, and fix the race. Most likely a bare assertion racing a
 Turbo or Stimulus render.
 
+One named candidate (2026-10-09, seed 17556): `KonamiCodeTest` failed as the first test of a full
+run with "no unicorn on /". The screenshot shows the "YOU ITIFIED!" counter, so the controller fired
+and appended a `.__itify_head`; the div only has a size once its `<img>` loads, and it was not
+visible within the test's 3s. It then passed 9 times in a row on its own. Check whether the
+first request of a run serves the head image slowly before changing the assertion.
+
 ### CI setup time is apt-get update and an image pull
 
 Measured 2026-07-27: `Install packages` 26 to 37s and `Initialize containers` 28 to 31s, unmoved by
