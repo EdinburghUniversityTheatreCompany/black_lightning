@@ -232,7 +232,8 @@ module Reimbursements
       rows = claims.sort_by { |claim| claim.submitted_at || Time.current }.map do |claim|
         { auto_number: claim.auto_number, payee_name: claim.person&.name.to_s,
           amount: format("%.2f", claim.amount || 0), budget_name: claim.budget&.display_name.to_s,
-          description: claim.description.to_s, age_days: pending_age_days(claim, today) }
+          description: claim.description.to_s, age_days: pending_age_days(claim, today),
+          also_owned_by: claim.budget.owners.reject { |other| other == owner }.map(&:name).to_sentence }
       end
 
       notify(cost_centre, [ owner.email ]) do |emailer, to|

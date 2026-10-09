@@ -1,8 +1,9 @@
 <p>Hi <%= @greeting_name %>,</p>
+<% budget_count = @rows.map { |row| row[:budget_name] }.uniq.size %>
 
 <p>
-  <%= @rows.size %> <%= "claim".pluralize(@rows.size) %> charged to
-  <%= @rows.size == 1 ? "a budget you own" : "budgets you own" %>
+  <%= @rows.size %> <%= "claim".pluralize(@rows.size) %>
+  charged to <%= budget_count == 1 ? "a budget you own" : "budgets you own" %>
   <%= @rows.size == 1 ? "is" : "are" %> waiting for your <strong>sign-off</strong>.
   The finance team can't approve <%= @rows.size == 1 ? "it" : "them" %> or pay the producer
   until you confirm the spend was agreed.
@@ -21,7 +22,7 @@
         <td>#<%= row[:auto_number] %></td>
         <td><%= row[:payee_name] %></td>
         <td><%= reimbursements_money(row[:amount]) %></td>
-        <td><%= row[:budget_name] %></td>
+        <td><%= row[:budget_name] %><%= " (also owned by #{row[:also_owned_by]})" if row[:also_owned_by].present? %></td>
         <td><%= row[:description] %></td>
         <td><%= row[:age_days] %> <%= "day".pluralize(row[:age_days]) %></td>
       </tr>
@@ -30,7 +31,7 @@
 </table>
 
 <p>
-  Open <strong>My Budgets</strong> in the reimbursements portal to endorse or reject
+  Open <%= link_to "My Budgets", admin_reimbursements_my_budgets_url %> to endorse or reject
   <%= @rows.size == 1 ? "it" : "each one" %>. If something here isn't right, reject it with a
   reason and the producer will be told why.
 </p>

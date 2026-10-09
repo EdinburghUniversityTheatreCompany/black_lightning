@@ -187,6 +187,33 @@ module Reimbursements
 
     PORTAL = "https://www.example.com/admin/reimbursements".freeze
 
+    def owner_row(**attrs)
+      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Set",
+        description: "Timber", age_days: 5 }.merge(attrs)
+    end
+
+    def remind_owner(*rows)
+      notifier, graph = build
+      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
+                                       rows: rows, run_date: "9 July 2026")
+      graph.send_mails.sole[:html]
+    end
+
+    test "owner reminder counts the budgets, not the claims, and links to My Budgets" do
+      html = remind_owner(owner_row, owner_row(auto_number: 8))
+
+      assert_includes html, "charged to a budget you own"
+      assert_includes html, %(href="#{PORTAL}/my_budgets")
+      assert_includes remind_owner(owner_row, owner_row(budget_name: "Props")), "charged to budgets you own"
+    end
+
+    test "owner reminder names a budget's other owners on that budget only" do
+      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_name: "Props"))
+
+      assert_includes html, "Set (also owned by Ann Other)"
+      assert_equal 1, html.scan("also owned by").size
+    end
+
     test "rejection links to the claim, a new claim and the cost centre's contact address" do
       notifier, graph = build
       notifier.rejection(to: "pat@example.com", greeting_name: "Pat", auto_number: 7, record_id: 42,
@@ -238,6 +265,12 @@ module Reimbursements
       assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
       assert_includes failure, "forward this email to IT"
       assert_not_includes failure, "server logs"
+    end
+
+    test "no template tells a lone owner that one of several can sign off" do
+      Rails.root.glob("app/views/reimbursements/emails/*.erb").each do |template|
+        assert_not_includes template.read, "one of you", "#{template} assumes several owners"
+      end
     end
 
     test "a Graph send failure propagates so callers can rescue it" do

@@ -217,6 +217,18 @@ module Reimbursements
                    reminder[:rows].map { |row| row[:auto_number] }.sort
     end
 
+    test "each owner is told who else owns the budget, and nobody is told about themselves" do
+      ann = create_reimbursements_person(name: "Ann Other", email: "ann@example.com")
+      owned_budget.own_owners << ann
+      gated_pending
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      rows = mailer_calls(:owner_sign_off_reminder).to_h { |_, call| [ call[:to].sole, call[:rows].sole ] }
+      assert_equal "Ann Other", rows["olive@example.com"][:also_owned_by]
+      assert_equal "Olive Owner", rows["ann@example.com"][:also_owned_by]
+    end
+
     test "an owner with no email address is skipped rather than raising" do
       owner_person.update!(email: nil)
       gated_pending(days_ago: 5)
