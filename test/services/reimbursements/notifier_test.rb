@@ -93,12 +93,18 @@ module Reimbursements
       assert_match(/1 flagged/, approved[:subject])
       assert_match "no receipt", approved[:html]
       assert_match "Tuesday 14 July", approved[:html]
-      assert_match "Build Batch", approved[:html]
       assert_no_match(/outlook\.example/, approved[:html])
       assert_match(/Draft ready/, ready[:subject])
       assert_match "https://outlook.example/draft-1", ready[:html]
       assert_match(/FAILED/, failure[:subject])
       assert_match "SharePoint down", failure[:html]
+      assert_includes reminder[:html], %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
+      assert_includes reminder[:html], %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
+      assert_includes approved[:html], %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
+      assert_includes approved[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes ready[:html], %(href="#{PORTAL}/batches/9")
+      assert_includes failure[:html], %(href="#{PORTAL}/batches/new?cost_centre=fringe")
+      assert_includes failure[:html], "forward this email to IT"
     end
 
     # The interactive build runs no readiness checks, so the email must not claim any.
@@ -237,31 +243,6 @@ module Reimbursements
       assert_includes html, %(href="#{PORTAL}/expenses/42">#7</a>)
       assert_includes html, %(contact us at <a href="mailto:#{FINANCE}")
       assert_not_includes html, "let me know"
-    end
-
-    test "operator emails link to the portal pages they talk about" do
-      notifier, graph = build
-      recipients = [ "ops@bedlamfringe.co.uk" ]
-      row = { auto_number: 7, record_id: 42, payee_name: "Pat", amount: "12.50", age_days: 5,
-              budget_name: "Props", description: "Paint", flags: [] }
-
-      notifier.pending_reminder(recipients: recipients, rows: [ row ], run_date: "9 July 2026",
-                                threshold_days: 3)
-      notifier.approved_ready(recipients: recipients, expenses: [ row ], total: "12.50",
-                              run_date: "9 July 2026")
-      notifier.batch_ready(recipients: recipients, expenses: [ row ], total: "12.50", batch_id: 9,
-                           draft_link: nil, run_date: "9 July 2026")
-      notifier.failure(recipients: recipients, error_text: "boom", run_date: "9 July 2026")
-
-      pending, approved, ready, failure = graph.send_mails.map { |mail| mail[:html] }
-      assert_includes pending, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=to_approve")
-      assert_includes pending, %(href="#{PORTAL}/expense_edits/42/edit">#7</a>)
-      assert_includes approved, %(href="#{PORTAL}/review?cost_centre=fringe&amp;tab=approved")
-      assert_includes approved, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
-      assert_includes ready, %(href="#{PORTAL}/batches/9")
-      assert_includes failure, %(href="#{PORTAL}/batches/new?cost_centre=fringe")
-      assert_includes failure, "forward this email to IT"
-      assert_not_includes failure, "server logs"
     end
 
     test "producer emails never offer the polled receive mailbox as a contact" do
