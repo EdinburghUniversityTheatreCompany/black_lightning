@@ -88,6 +88,11 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
   has_secure_token :calendar_token
 
+  # complete_profile! rotates the salt, so a used link stops working.
+  generates_token_for :profile_completion, expires_in: 7.days do
+    profile_completion_salt
+  end
+
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: "Please enter a valid mobile number" }
   validates :email, presence: true
@@ -155,15 +160,11 @@ class User < ApplicationRecord
     where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
   end
 
+  # A non-string token (?token[]=x) would raise inside MessageVerifier.
   def self.find_by_profile_completion_token(token)
-    where(profile_completed_at: nil).each do |user|
-      found = find_signed(token, purpose: [ :profile_completion, user.profile_completion_salt ])
-      return found if found && found == user
-    end
+    return unless token.is_a?(String)
 
-    nil
-  rescue StandardError
-    nil
+    where(profile_completed_at: nil).find_by_token_for(:profile_completion, token)
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -694,9 +695,7 @@ class User < ApplicationRecord
     update!(profile_completed_at: Time.current, consented: Date.current, profile_completion_salt: SecureRandom.hex(8))
   end
 
-  def profile_completion_token
-    signed_id(purpose: [ :profile_completion, profile_completion_salt ], expires_in: 7.days)
-  end
+  def profile_completion_token = generate_token_for(:profile_completion)
 
   def send_welcome_email
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")

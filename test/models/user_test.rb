@@ -372,6 +372,37 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_nil found_user
   end
 
+  test "find_by_profile_completion_token returns nil for a tampered token" do
+    @user.update_column(:profile_completed_at, nil)
+    token = @user.profile_completion_token
+    tampered = token.dup
+    tampered[-1] = tampered[-1] == "a" ? "b" : "a"
+
+    assert_nil User.find_by_profile_completion_token(tampered)
+  end
+
+  test "find_by_profile_completion_token returns nil for a token that is not a string" do
+    assert_nil User.find_by_profile_completion_token([ "invalid_token" ])
+  end
+
+  # Links emailed before the switch to generates_token_for stop working.
+  test "find_by_profile_completion_token refuses the old signed_id link" do
+    @user.update_column(:profile_completed_at, nil)
+    old_link = @user.signed_id(purpose: [ :profile_completion, @user.profile_completion_salt ], expires_in: 7.days)
+
+    assert_nil User.find_by_profile_completion_token(old_link)
+  end
+
+  test "find_by_profile_completion_token reads one user, however many profiles are incomplete" do
+    @user.update_column(:profile_completed_at, nil)
+    FactoryBot.create_list(:user, 3, profile_completed_at: nil)
+    token = @user.profile_completion_token
+
+    found = assert_queries_count(1) { User.find_by_profile_completion_token(token) }
+
+    assert_equal @user, found
+  end
+
   test "find_by_profile_completion_token returns nil for expired token" do
     @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token

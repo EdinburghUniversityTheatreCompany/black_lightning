@@ -35,6 +35,22 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_match "Invalid or expired profile completion token", response.body
   end
 
+  test "show with an expired token" do
+    token = @incomplete_user.profile_completion_token
+
+    travel 8.days do
+      get :show, params: { token: token }
+    end
+
+    assert_response 404
+  end
+
+  test "show with a token that is not a string" do
+    get :show, params: { token: [ "invalid_token" ] }
+
+    assert_response 404
+  end
+
   test "show with token belonging to different user than signed in user" do
     different_user = FactoryBot.create(:user, profile_completed_at: nil)
     sign_in different_user
