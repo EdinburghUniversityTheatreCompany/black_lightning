@@ -126,16 +126,21 @@ module Reimbursements
       [ one, three ].each { |text| assert_no_match(/readiness|checks/, text) }
     end
 
-    test "owner_sign_off_reminder greets the owner and lists their claims" do
+    def owner_row(**attrs)
+      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
+        description: "Timber", age_days: 5 }.merge(attrs)
+    end
+
+    def remind_owner(*rows)
       notifier, graph = build
+      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
+                                       rows: rows, run_date: "9 July 2026")
+      graph.send_mails.sole
+    end
 
-      notifier.owner_sign_off_reminder(
-        to: [ "olive@example.com" ], greeting_name: "Olive", run_date: "9 July 2026",
-        rows: [ { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Owned Set",
-                  description: "Timber", age_days: 5 } ]
-      )
+    test "owner_sign_off_reminder greets the owner and lists their claims" do
+      mail = remind_owner(owner_row(budget_name: "Owned Set"))
 
-      mail = graph.send_mails.sole
       assert_equal MAILBOX, mail[:mailbox]
       assert_equal [ "olive@example.com" ], mail[:to]
       assert_match(/1 claim needs your sign-off \(9 July 2026\)/, mail[:subject])
@@ -144,19 +149,6 @@ module Reimbursements
       assert_match "Timber", mail[:html]
       assert_match "12.50", mail[:html]
       assert_match "5 day", mail[:html]
-      assert_match "My Budgets", mail[:html]
-    end
-
-    test "owner_sign_off_reminder pluralises its subject for several claims" do
-      notifier, graph = build
-      row = { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_name: "Set",
-              description: "Timber", age_days: 5 }
-
-      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
-                                       rows: [ row, row.merge(auto_number: 8) ],
-                                       run_date: "9 July 2026")
-
-      assert_match(/2 claims need your sign-off/, graph.send_mails.sole[:subject])
     end
 
     test "operator alert subjects reflect run_date, not wall-clock today" do
@@ -206,29 +198,18 @@ module Reimbursements
       assert_includes graph.send_mails.last[:html], "Termtime Payments BACS (automated)"
     end
 
-    def owner_row(**attrs)
-      { auto_number: 7, payee_name: "Pat", amount: "12.50", budget_id: 1, budget_name: "Set",
-        description: "Timber", age_days: 5 }.merge(attrs)
-    end
-
-    def remind_owner(*rows)
-      notifier, graph = build
-      notifier.owner_sign_off_reminder(to: [ "olive@example.com" ], greeting_name: "Olive",
-                                       rows: rows, run_date: "9 July 2026")
-      graph.send_mails.sole[:html]
-    end
-
     test "owner reminder counts the budgets, not the claims, and links to My Budgets" do
-      html = remind_owner(owner_row, owner_row(auto_number: 8))
+      mail = remind_owner(owner_row, owner_row(auto_number: 8))
 
-      assert_includes html, "charged to a budget you own"
-      assert_includes html, %(href="#{PORTAL}/my_budgets")
-      assert_includes remind_owner(owner_row, owner_row(budget_id: 2)), "charged to budgets you own",
+      assert_match(/2 claims need your sign-off/, mail[:subject])
+      assert_includes mail[:html], "charged to a budget you own"
+      assert_includes mail[:html], %(href="#{PORTAL}/my_budgets")
+      assert_includes remind_owner(owner_row, owner_row(budget_id: 2))[:html], "charged to budgets you own",
                       "two lines can share a display name"
     end
 
     test "owner reminder names a budget's other owners on that budget only" do
-      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_id: 2, budget_name: "Props"))
+      html = remind_owner(owner_row(also_owned_by: "Ann Other"), owner_row(budget_id: 2, budget_name: "Props"))[:html]
 
       assert_includes html, "Set (also owned by Ann Other)"
       assert_equal 1, html.scan("also owned by").size
