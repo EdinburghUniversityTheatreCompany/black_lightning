@@ -16,9 +16,11 @@ module Reimbursements
                                     status: status)
     end
 
+    # As BatchesController#create enqueues it: the attempt row exists from the click.
     def enqueue_args(**overrides)
       { cost_centre_key: CostCentre.default.key, bacs_date: BACS_DATE, sender_name: "Fringe Finance",
-        eusa_recipient: "finance@eusa.ed.ac.uk", operator_emails: OPERATOR }.merge(overrides)
+        eusa_recipient: "finance@eusa.ed.ac.uk", operator_emails: OPERATOR,
+        attempt_id: overrides[:attempt_id] || click_time_attempt.id }.merge(overrides)
     end
 
     def click_time_attempt
@@ -62,19 +64,25 @@ module Reimbursements
       assert_equal "recBat1", ready[:batch_id]
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
 
-      attempt = BatchAttempt.sole
-      assert attempt.completed?
-      assert_equal OPERATOR.first, attempt.triggered_by_email
+      assert BatchAttempt.sole.completed?
     end
 
-    test "a malformed bacs_date falls back to today rather than raising" do
+    # perform, not perform_now: ApplicationJob's retry_on would take the error and re-enqueue.
+    test "an unreadable BACS date raises rather than paying on today's date" do
       approved_expense
 
-      travel_to Time.zone.local(2026, 5, 20) do
-        BuildBatchJob.perform_now(**enqueue_args(bacs_date: "not-a-date"))
-      end
+      assert_raises(Date::Error) { BuildBatchJob.new.perform(**enqueue_args(bacs_date: "not-a-date")) }
 
-      assert_equal Date.new(2026, 5, 20), @processor.calls.sole[:bacs_date]
+      assert_empty @processor.calls
+    end
+
+    test "a run whose click-time attempt is missing raises rather than inventing one" do
+      approved_expense
+
+      assert_raises(ActiveRecord::RecordNotFound) { BuildBatchJob.new.perform(**enqueue_args(attempt_id: 0)) }
+
+      assert_empty @processor.calls
+      assert_empty BatchAttempt.all
     end
 
     test "builds the graph client once per run, not once per call site" do

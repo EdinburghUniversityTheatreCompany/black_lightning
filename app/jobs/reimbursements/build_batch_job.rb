@@ -22,22 +22,21 @@ module Reimbursements
     class_attribute :notifier_builder,
                     default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
-    def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
-                eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
+    def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:, attempt_id:,
+                eusa_subject: nil, eusa_body_html: nil)
       # The row the controller created at the click, by id: "the oldest
       # building row" mislabels History when builds race or a prior job died.
-      attempt = attempt_id && BatchAttempt.find_by(id: attempt_id)
+      attempt = BatchAttempt.find(attempt_id)
+      # Raises rather than guess: today's date by accident is a wrong payment date.
+      bacs_date = Date.iso8601(bacs_date)
 
       cost_centre = CostCentre.find_by(key: cost_centre_key)
       if cost_centre.nil?
         Rails.logger.warn("Build batch: no cost centre #{cost_centre_key.inspect} — skipping")
-        attempt&.resolve!(status: "failed", error_messages: "Cost centre #{cost_centre_key} no longer exists.")
+        attempt.resolve!(status: "failed", error_messages: "Cost centre #{cost_centre_key} no longer exists.")
         return
       end
 
-      # A run with no click-time row (a direct perform_now) still leaves a trace.
-      attempt ||= BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
-                                       triggered_by_email: Array(operator_emails).compact_blank.first)
       # The claims this centre OWNS, not the screens' lenient filter (which
       # lets two centres build the same claim).
       approved = store.expenses_owned_by_cost_centre(cost_centre)
@@ -49,7 +48,7 @@ module Reimbursements
       end
 
       result = processor(cost_centre).process(
-        expenses: approved, bacs_date: parse_date(bacs_date),
+        expenses: approved, bacs_date: bacs_date,
         sender_name: sender_name.presence || cost_centre.finance_sender_name,
         eusa_recipient: eusa_recipient,
         eusa_subject: eusa_subject, eusa_body_html: eusa_body_html
@@ -63,7 +62,7 @@ module Reimbursements
       # included, so escalate straight to IT.
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre_key} — #{e.message}")
       GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
-      attempt&.resolve!(status: "failed", error_messages: "Microsoft authentication failed: #{e.message}")
+      attempt.resolve!(status: "failed", error_messages: "Microsoft authentication failed: #{e.message}")
     end
 
     private
@@ -75,12 +74,6 @@ module Reimbursements
 
     def processor(cost_centre)
       processor_builder.call(store: store, graph: graph, cost_centre: cost_centre)
-    end
-
-    def parse_date(value)
-      value.is_a?(Date) ? value : Date.parse(value.to_s)
-    rescue ArgumentError
-      Date.current
     end
 
     # A Graph outage here must not fail the job: the batch already ran.
@@ -118,7 +111,7 @@ module Reimbursements
     end
 
     def run_date(date)
-      parse_date(date).strftime("%-d %B %Y")
+      date.strftime("%-d %B %Y")
     end
   end
 end
