@@ -169,12 +169,6 @@ ChaosRails::Application.routes.draw do
         get  :template
       end
 
-      # Bookmarks of the old year-nested wizard; only the GET is worth keeping.
-      get "financial_years/:financial_year_key/budget_import",
-          to: redirect { |path_params, _request|
-            "/admin/reimbursements/budget_import?year=#{CGI.escape(path_params[:financial_year_key])}"
-          }
-
       # On the base portal permission, not finance: an owner reads "committed" and "endorse" on
       # their area page, and a producer reads "Submitted" on a claim.
       get "glossary", to: "glossary#show", as: :glossary
