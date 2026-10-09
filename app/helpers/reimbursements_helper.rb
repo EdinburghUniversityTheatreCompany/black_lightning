@@ -253,6 +253,14 @@ module ReimbursementsHelper
     record.owners.filter_map { |person| person.name.presence }.join(", ")
   end
 
+  # A finance budget select's options. The claim's own line is kept when no longer offered,
+  # so a Save never drops it.
+  def reimbursements_budget_options(budgets, current)
+    options = budgets.map { |budget| [ budget.picker_label, budget.record_id ] }
+    options.unshift([ current.picker_label, current.record_id ]) if current && budgets.exclude?(current)
+    options_for_select(options, current&.record_id)
+  end
+
   # An accessible disclosure badge (a button toggling a panel via popover_controller.js,
   # not a title= tooltip) listing an expense's reasons. +record_label+ (e.g. "#123")
   # scopes the accessible name to the row.

@@ -66,6 +66,24 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_equal "Pat Producer, Alex", budget_owner_names(budget)
   end
 
+  # [label, value, selected?] for each option.
+  def option_rows(html)
+    Nokogiri::HTML::DocumentFragment.parse(html).css("option")
+                                    .map { |option| [ option.text, option["value"], option.key?("selected") ] }
+  end
+
+  test "reimbursements_budget_options keeps a claim's own line when it is no longer offered" do
+    offered = create_reimbursements_budget(name: "Props")
+    retired = create_reimbursements_budget(name: "Old set", active: false)
+
+    assert_equal [ [ "Old set", retired.record_id, true ], [ "Props", offered.record_id, false ] ],
+                 option_rows(reimbursements_budget_options([ offered ], retired))
+    assert_equal [ [ "Props", offered.record_id, true ] ],
+                 option_rows(reimbursements_budget_options([ offered ], offered))
+    assert_equal [ [ "Props", offered.record_id, false ] ],
+                 option_rows(reimbursements_budget_options([ offered ], nil))
+  end
+
   test "reimbursements_date is ISO 8601, or a dash when blank" do
     { Date.new(2026, 7, 11) => "2026-07-11", Time.utc(2026, 7, 11, 9, 30) => "2026-07-11",
       nil => "-", "" => "-" }.each do |value, expected|
