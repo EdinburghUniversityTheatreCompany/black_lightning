@@ -116,6 +116,15 @@ module Reimbursements
       area ? "#{area.name}: #{name}" : name.to_s
     end
 
+    # The budgets index's row order — area lines first, grouped by area, then
+    # the loose ones — shared with the edit page's previous/next links so
+    # stepping through them walks the table as it reads.
+    def self.index_order(budgets)
+      budgets.sort_by do |budget|
+        [ budget.area ? 0 : 1, budget.area&.name.to_s.downcase, budget.area_id.to_i, budget.name.to_s.downcase ]
+      end
+    end
+
     # How this line reads in a <select>, and NOWHERE else.
     #
     # It has to be separate from #display_name, which is load-bearing:

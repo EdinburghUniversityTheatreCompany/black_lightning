@@ -5,7 +5,7 @@
 <tr>
   <td>
     <%= link_to (name_area ? budget.display_name : budget.name).presence || "-",
-          edit_admin_reimbursements_budget_path(budget.record_id),
+          edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           class: "text-primary underline" %>
     <%# The SAME badge the budgets index draws, through the one helper: this
         screen showed no health signal at all, so a line badged red there

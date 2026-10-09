@@ -1119,7 +1119,7 @@ module Admin
                                  initial_budget: "1875.5", budget_type: "Expense", active: "1",
                                  owner_ids: [ @alice.record_id, @bob.record_id ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal "Set & construction", @props.name
         assert_equal "4200", @props.nominal_code
@@ -1267,7 +1267,7 @@ module Admin
                                  nominal_code: "4321", area_id: area.record_id,
                                  owner_ids: [ @alice.record_id ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{budget.record_id}")
         assert_equal "4321", budget.reload.nominal_code, "the edit itself must still land"
         assert_equal [ @bob.record_id ], budget.own_owners.reload.map(&:record_id),
                      "the posted owner list must be ignored, not written to own_owners"
@@ -1465,7 +1465,7 @@ module Admin
         end
 
         budget = ::Reimbursements::Budget.find_by(name: "Late addition")
-        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id)
+        assert_redirected_to edit_admin_reimbursements_budget_path(budget.record_id, year: next_year.key)
         assert_equal next_year, budget.financial_year
         assert_equal ::Reimbursements::CostCentre.default, budget.cost_centre
         # "£1,200" must reach the decimal column parsed, not as a string AR
@@ -1710,7 +1710,7 @@ module Admin
                                  budget_type: "Expense", active: "1", area_id: area.record_id,
                                  owner_ids: [ "" ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
         @props.reload
         assert_equal area.id, @props.area_id
         assert_equal [ @alice.record_id ], @props.own_owners.map(&:record_id)
@@ -1774,6 +1774,81 @@ module Admin
 
         assert_response :success
         assert_no_match(/Financial year:/, response.body)
+      end
+
+      # --- Keeping the page's filters through an edit ---------------------
+
+      test "a saved budget returns to the filtered index at its own row" do
+        _, next_year = seed_two_years
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", year: next_year.key,
+                                 cost_centre: termtime.key }
+
+        assert_redirected_to admin_reimbursements_budgets_path(
+          year: next_year.key, cost_centre: termtime.key, anchor: "budget_#{@props.record_id}"
+        )
+      end
+
+      test "a save with no filters returns to the bare index, which still means every centre" do
+        sign_in @user
+
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense" }
+
+        assert_redirected_to admin_reimbursements_budgets_path(anchor: "budget_#{@props.record_id}")
+      end
+
+      test "the edit page's form, back link and forecast form carry the filters" do
+        _, next_year = seed_two_years
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+        scope = { year: next_year.key, cost_centre: termtime.key }
+
+        get :edit, params: { id: @props.record_id, **scope }
+
+        assert_select "form[action=?]", admin_reimbursements_budget_path(@props.record_id, **scope)
+        assert_select "form[action=?]", forecast_admin_reimbursements_budget_path(@props.record_id, **scope)
+        assert_select "a[href=?]", admin_reimbursements_budgets_path(**scope), minimum: 1
+      end
+
+      test "a forecast added from a filtered edit page comes back to it filtered" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        post :forecast, params: { id: @props.record_id, amount: "900", date: "2026-06-01",
+                                  cost_centre: termtime.key }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key)
+      end
+
+      test "the index row links to the edit page with the filters and anchors the row" do
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        get :index, params: { cost_centre: termtime.key }
+
+        assert_select "tr#budget_#{@props.record_id}"
+        assert_select "a[href=?]",
+                      edit_admin_reimbursements_budget_path(@props.record_id, cost_centre: termtime.key),
+                      minimum: 1
+      end
+
+      test "the edit page links to the previous and next budget in the index's order" do
+        area = create_reimbursements_area(name: "Cogito")
+        in_area = create_reimbursements_budget(name: "Zebra", area: area)
+        termtime = create_second_reimbursements_cost_centre
+        sign_in @user
+
+        # Index order: area lines first (Zebra), then loose lines by name
+        # (Props, Ticket income).
+        get :edit, params: { id: @props.record_id, cost_centre: termtime.key }
+        assert_select "a[rel=prev][href=?]",
+                      edit_admin_reimbursements_budget_path(in_area.record_id, cost_centre: termtime.key)
+        assert_select "a[rel=next][href=?]",
+                      edit_admin_reimbursements_budget_path(@income.record_id, cost_centre: termtime.key)
       end
 
       # The live year (holding the budgets seeded in setup) plus a draft year

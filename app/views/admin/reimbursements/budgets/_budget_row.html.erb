@@ -10,7 +10,7 @@
     # are ambiguous. It deliberately does NOT start with "Edit": that is the
     # button at the end of the row, and two controls on one row both
     # announcing "Edit Cogito: Marketing" is worse than one.
-    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id),
+    link_to(budget.name.presence || "-", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
             class: "font-medium text-primary underline",
             "aria-label": budget.display_name),
     (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
@@ -32,7 +32,7 @@
               render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
             end
 %>
-<tr>
+<tr id="budget_<%= budget.record_id %>" class="scroll-mt-24 target:bg-yellow-50">
   <td><%= name %></td>
   <td><%= budget.budget_type %></td>
   <td><%= visible %></td>
@@ -47,7 +47,7 @@
   <td><%= reimbursements_budget_variance(budget) %></td>
   <td><%= owners %></td>
   <td>
-    <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
+    <%= link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
           "aria-label": "Edit #{budget.display_name}", class: btn_classes(:secondary, :sm)) %>
   </td>
 </tr>

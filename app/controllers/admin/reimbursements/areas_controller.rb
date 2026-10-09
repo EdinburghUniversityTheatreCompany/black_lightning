@@ -77,7 +77,7 @@ module Admin
         area = store.create_area!(attrs.merge(financial_year: selected_financial_year,
                                               cost_centre: chosen_cost_centre))
         store.sync_area_owners!(area.record_id, Array(area_form_params[:owner_ids]).compact_blank)
-        redirect_to edit_admin_reimbursements_area_path(area.record_id), notice: "Area created."
+        redirect_to edit_admin_reimbursements_area_path(area.record_id, **scope_params), notice: "Area created."
       end
 
       # GET /admin/reimbursements/areas/:id/edit
@@ -103,7 +103,7 @@ module Admin
         @area.budgets_attributes = budgets_attrs if budgets_attrs
         @area.save!
         store.sync_area_owners!(@area.record_id, Array(area_form_params[:owner_ids]).compact_blank)
-        redirect_to edit_admin_reimbursements_area_path(@area.record_id), notice: "Area saved."
+        redirect_to edit_admin_reimbursements_area_path(@area.record_id, **scope_params), notice: "Area saved."
       end
 
       private

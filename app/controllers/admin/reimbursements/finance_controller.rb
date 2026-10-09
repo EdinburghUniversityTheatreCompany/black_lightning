@@ -26,7 +26,7 @@ module Admin
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
       helper_method :modulus_checker, :selected_financial_year, :selectable_financial_years,
-                    :selected_cost_centre, :selectable_cost_centres
+                    :selected_cost_centre, :selectable_cost_centres, :scope_params
 
       # A page of records for an index view. One shared page size (50) across
       # every finance list, so a future change to it is a single edit.
@@ -116,6 +116,14 @@ module Admin
 
       def selected_cost_centre
         @selected_cost_centre
+      end
+
+      # The year and centre the operator ASKED for, to carry through links and
+      # redirects. Only what was in the URL: filling in the active year or a
+      # centre here would turn "every centre" into one on the next page.
+      def scope_params
+        { year: (selected_financial_year&.key if params[:year].present?),
+          cost_centre: selected_cost_centre&.key }.compact
       end
 
       # Every configured cost centre, for the selector. Read straight off the

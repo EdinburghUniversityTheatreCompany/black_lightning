@@ -37,7 +37,7 @@ module Admin
         @title = "Reimbursements Budgets"
         # This table (and its CSV) shows the EUSA-actual rollup per line, so it's
         # one of the two readers that pays for the actuals preload.
-        sorted = store.budgets_with_actuals.sort_by { |budget| budget.name.to_s.downcase }
+        budgets = store.budgets_with_actuals
         @people_by_id = store.people.index_by(&:record_id)
         # The unscoped, fully-preloaded id->Area lookup (owners, and each
         # area's budgets' expenses/forecasts) — the grouped index reads every
@@ -47,8 +47,8 @@ module Admin
         @areas_by_id = store.areas.index_by(&:record_id)
         respond_to do |format|
           # Not paginated: a page boundary split an area's lines across pages.
-          format.html { @budgets = sorted }
-          format.csv { send_export ::Reimbursements::Exports::Budgets, sorted }
+          format.html { @budgets = ::Reimbursements::Budget.index_order(budgets) }
+          format.csv { send_export ::Reimbursements::Exports::Budgets, budgets.sort_by { |budget| budget.name.to_s.downcase } }
         end
       end
 
@@ -103,7 +103,7 @@ module Admin
 
         budget = store.create_budget!(attrs.merge(financial_year: selected_financial_year,
                                                   cost_centre: chosen_cost_centre))
-        redirect_to edit_admin_reimbursements_budget_path(budget.record_id),
+        redirect_to edit_admin_reimbursements_budget_path(budget.record_id, **scope_params),
                     notice: "Budget created."
       end
 
@@ -121,6 +121,7 @@ module Admin
         # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
         # edit form (no JS), so a mistyped forecast can be corrected in place.
         @editing_forecast_id = params[:edit_forecast].presence
+        @previous_budget, @next_budget = neighbours(@budget)
       end
 
       def update
@@ -130,7 +131,8 @@ module Admin
         end
 
         store.update_budget!(@budget.record_id, attrs)
-        redirect_to edit_path, notice: "Budget saved."
+        redirect_to admin_reimbursements_budgets_path(**scope_params, anchor: "budget_#{@budget.record_id}"),
+                    notice: "Budget saved."
       end
 
       # Appends a projected-spend update (amount + date + reason) to this budget;
@@ -238,7 +240,17 @@ module Admin
       end
 
       def edit_path
-        edit_admin_reimbursements_budget_path(@budget.record_id)
+        edit_admin_reimbursements_budget_path(@budget.record_id, **scope_params)
+      end
+
+      # The lines either side of +budget+ in the index's order, nil at the ends
+      # or when the line is outside the page's year and centre.
+      def neighbours(budget)
+        list = ::Reimbursements::Budget.index_order(store.budgets_for_year)
+        index = list.index { |other| other.record_id == budget.record_id }
+        return [ nil, nil ] if index.nil?
+
+        [ (list[index - 1] if index.positive?), list[index + 1] ]
       end
 
       # The budget write path has no model-backed form object, so a blank

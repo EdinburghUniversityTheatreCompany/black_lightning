@@ -1,9 +1,23 @@
-<%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path(**scope_params) %>
+  <nav class="mb-3 flex gap-3 text-sm" aria-label="Neighbouring budgets">
+    <% if @previous_budget %>
+      <%= link_to "← #{@previous_budget.display_name}",
+                  edit_admin_reimbursements_budget_path(@previous_budget.record_id, **scope_params),
+                  rel: "prev", class: "text-primary underline" %>
+    <% end %>
+    <% if @next_budget %>
+      <%= link_to "#{@next_budget.display_name} →",
+                  edit_admin_reimbursements_budget_path(@next_budget.record_id, **scope_params),
+                  rel: "next", class: "text-primary underline" %>
+    <% end %>
+  </nav>
+</div>
 
-<%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch do |form| %>
+<%= form_with url: admin_reimbursements_budget_path(@budget.record_id, **scope_params), method: :patch do |form| %>
   <%= render CardComponent.new(title: "Edit #{@budget.display_name.presence || 'budget'}") do |card| %>
     <% card.with_footer do %>
-      <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path %>
+      <%= render "shared/form/actions", submit: "Save budget", cancel_path: admin_reimbursements_budgets_path(**scope_params) %>
     <% end %>
 
     <%# owner_ids is the budget's OWN rows, which is what this form writes —
@@ -49,7 +63,7 @@
     projection changes.
   </p>
 
-  <%= form_with url: forecast_admin_reimbursements_budget_path(@budget.record_id), method: :post,
+  <%= form_with url: forecast_admin_reimbursements_budget_path(@budget.record_id, **scope_params), method: :post,
                 class: "flex flex-wrap items-end gap-3 mb-4" do %>
     <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount, html_class: "w-40" do %>
       <%= number_field_tag :amount, nil, step: "0.01", class: input_classes %>
@@ -83,7 +97,7 @@
             <% if forecast.record_id == @editing_forecast_id %>
               <tr class="border-b border-gray-100 bg-amber-50">
                 <td colspan="4" class="py-2">
-                  <%= form_with url: update_forecast_admin_reimbursements_budget_path(@budget.record_id),
+                  <%= form_with url: update_forecast_admin_reimbursements_budget_path(@budget.record_id, **scope_params),
                                 method: :patch, class: "flex flex-wrap items-end gap-3" do %>
                     <%= hidden_field_tag :forecast_id, forecast.record_id %>
                     <%= render "shared/form/field", label: "Amount (£, excl. VAT)", name: :amount,
@@ -103,7 +117,7 @@
                                          class: input_classes %>
                     <% end %>
                     <%= submit_tag "Save", class: btn_classes(:primary, :sm) %>
-                    <%= link_to "Cancel", edit_admin_reimbursements_budget_path(@budget.record_id), class: btn_classes(:secondary, :sm) %>
+                    <%= link_to "Cancel", edit_admin_reimbursements_budget_path(@budget.record_id, **scope_params), class: btn_classes(:secondary, :sm) %>
                   <% end %>
                 </td>
               </tr>
@@ -120,13 +134,13 @@
                 </td>
                 <td class="py-2 text-right whitespace-nowrap">
                   <%= link_to "Edit",
-                        edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),
+                        edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id, **scope_params),
                         "aria-label": "Edit forecast from #{reimbursements_date(forecast.date)}",
                         class: btn_classes(:secondary, :sm) %>
                   <%# inline-block on the button_to FORM (not the inner button) so
                       Delete sits beside Edit instead of dropping to its own line. %>
                   <%= button_to "Delete",
-                        delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id),
+                        delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id, **scope_params),
                         method: :delete, class: btn_classes(:danger, :sm),
                         "aria-label": "Delete forecast from #{reimbursements_date(forecast.date)}",
                         form: { class: "inline-block",

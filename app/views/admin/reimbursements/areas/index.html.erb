@@ -30,12 +30,12 @@
        agreed += " (#{area.basis_qualifier})" unless area.projected_amount.nil?
        owners = budget_owner_names(area, @people_by_id).presence ||
                 content_tag(:span, reimbursements_value(nil), class: "text-gray-400")
-       edit = link_to("Edit", edit_admin_reimbursements_area_path(area.record_id),
+       edit = link_to("Edit", edit_admin_reimbursements_area_path(area.record_id, **scope_params),
                       "aria-label": "Edit #{area.name}", class: btn_classes(:secondary, :sm))
        {
          fields: [
            area,
-           link_to(area.name, admin_reimbursements_area_path(area.record_id),
+           link_to(area.name, admin_reimbursements_area_path(area.record_id, **scope_params),
                    class: "font-medium"),
            agreed,
            reimbursements_money(area.committed_amount),

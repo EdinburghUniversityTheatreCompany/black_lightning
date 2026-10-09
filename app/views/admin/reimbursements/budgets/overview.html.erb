@@ -1,7 +1,7 @@
 <%= render "admin/reimbursements/shared/year_selector" %>
 <%= render "admin/reimbursements/shared/cost_centre_selector" %>
 
-<%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path %>
+<%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path(**scope_params) %>
 
 <p class="mb-3 text-gray-600">
   The same budgets down two axes: by nominal code, the axis EUSA's ledger uses, and by area,
