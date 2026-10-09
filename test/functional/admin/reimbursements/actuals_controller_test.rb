@@ -1010,6 +1010,7 @@ module Admin
 
       assert_response :success
       assert_select "select.simple-select2 optgroup[label='Cogito'] option", text: /Cogito: Marketing/
+      assert_select "select[data-placeholder='Pick a budget']"
     end
 
     test "link_expense refuses a row that is already linked" do

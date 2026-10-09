@@ -174,7 +174,7 @@
           group_method: :last, group_label_method: :first, label_method: :first, value_method: :last,
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
-          input_html: { required: false } %>
+          input_html: { required: false, data: { placeholder: "Choose a budget…" } } %>
 
     <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
           input_html: { required: false } %>

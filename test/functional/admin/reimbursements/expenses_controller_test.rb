@@ -127,6 +127,7 @@ module Admin
 
       get :new
 
+      assert_select "select#reimbursements_expense_form_budget_record_id[data-placeholder='Choose a budget…']"
       assert_select "select.simple-select2#reimbursements_expense_form_budget_record_id" do
         assert_select "optgroup[label='BF - Cogito'] option", text: "BF - Cogito: Marketing"
         assert_select "optgroup[label='#{::Reimbursements::Budget::NO_AREA_GROUP}'] option", text: "Props"
