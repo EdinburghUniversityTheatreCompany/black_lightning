@@ -184,14 +184,20 @@ class EventTest < ActionView::TestCase
     assert_equal "test-event-name", event.slug
   end
 
-  test "updates slug when name changes and slug was auto-generated" do
-    event = FactoryBot.create(:event, name: "Original Name")
-    original_slug = event.slug
+  # The slug is the event's URL: links to the old one must keep working.
+  test "a renamed event keeps its generated slug" do
+    event = FactoryBot.create(:event, name: "Original Name", slug: "")
+    assert_equal "original-name", event.slug
 
-    event.name = "New Event Name"
-    event.valid?
-    assert_not_equal original_slug, event.slug
-    assert_equal "new-event-name", event.slug
+    event.update!(name: "New Event Name")
+    assert_equal "original-name", event.reload.slug
+  end
+
+  test "clearing a saved event's slug generates one from its name" do
+    event = FactoryBot.create(:event, name: "Original Name")
+
+    event.update!(name: "New Event Name", slug: "")
+    assert_equal "new-event-name", event.reload.slug
   end
 
   test "does not update slug when name changes if slug was manually set" do

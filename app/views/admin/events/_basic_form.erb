@@ -1,6 +1,6 @@
 <%# locals: (f:) %>
 
-<div data-controller="slug-generator">
+<div data-controller="slug-generator" data-slug-generator-persisted-value="<%= f.object.persisted? %>">
   <%= f.input :name, input_html: {
         id: 'event_name',
         data: { 'slug-generator-target': 'name', action: 'input->slug-generator#nameChanged' }

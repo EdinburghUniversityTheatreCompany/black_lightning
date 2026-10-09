@@ -47,14 +47,12 @@ class NewsTest < ActionView::TestCase
     assert_equal "test-news-title", news.slug
   end
 
-  test "updates slug when title changes and slug was auto-generated" do
-    news = FactoryBot.create(:news, title: "Original Title")
-    original_slug = news.slug
+  test "a renamed news item keeps its generated slug" do
+    news = FactoryBot.create(:news, title: "Original Title", slug: "")
+    assert_equal "original-title", news.slug
 
-    news.title = "New News Title"
-    news.valid?
-    assert_not_equal original_slug, news.slug
-    assert_equal "new-news-title", news.slug
+    news.update!(title: "New News Title")
+    assert_equal "original-title", news.reload.slug
   end
 
   test "does not update slug when title changes if slug was manually set" do

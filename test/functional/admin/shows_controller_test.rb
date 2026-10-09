@@ -182,6 +182,15 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
+  test "renaming a show keeps its URL" do
+    show = FactoryBot.create(:show, name: "Original Name", slug: "")
+
+    patch :update, params: { id: show.to_param, show: { name: "Renamed Show", slug: show.slug } }
+
+    assert_redirected_to admin_show_path("original-name")
+    assert_equal [ "Renamed Show", "original-name" ], show.reload.values_at(:name, :slug)
+  end
+
   test "should update the digital programme link, and offer it on the edit form" do
     @show = FactoryBot.create(:show)
     attributes = FactoryBot.attributes_for(:show, digital_programme_url: "https://example.com/programme.pdf")

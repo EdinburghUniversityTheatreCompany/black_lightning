@@ -2,7 +2,7 @@
 
 <%= simple_horizontal_form_for [:admin, @news] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
-    <div data-controller="slug-generator">
+    <div data-controller="slug-generator" data-slug-generator-persisted-value="<%= f.object.persisted? %>">
       <%= f.input :title, input_html: {
             id: 'event_name',
             data: { 'slug-generator-target': 'name', action: 'input->slug-generator#nameChanged' }

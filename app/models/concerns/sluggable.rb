@@ -11,7 +11,8 @@ module Sluggable
   end
 
   class_methods do
-    # Generates the slug from +attribute+ until someone sets one by hand.
+    # Fills a blank slug from +attribute+. A rename leaves the slug alone: it is the
+    # record's URL, and links to the old one would 404.
     def slug_from(attribute)
       before_validation { generate_slug_from(attribute) }
     end
@@ -20,19 +21,9 @@ module Sluggable
   private
 
   def generate_slug_from(attribute)
-    return unless public_send(attribute).present?
-    return if slug.present? && !attribute_changed?(attribute)
+    return if slug.present? || public_send(attribute).blank?
 
     base_slug = public_send(attribute).to_url
-
-    # A renamed record keeps a hand-set slug: only one still matching the old value
-    # (or its -N suffix) was generated. A new record's pre-set slug is hand-set.
-    if attribute_changed?(attribute) && slug.present?
-      old_slug = attribute_was(attribute)&.to_url
-      return if old_slug.nil?
-      return unless slug == old_slug || slug.start_with?("#{old_slug}-")
-    end
-
     candidate_slug = base_slug
     counter = 1
 
