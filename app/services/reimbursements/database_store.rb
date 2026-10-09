@@ -216,7 +216,7 @@ module Reimbursements
     # of EUSA credits matching their income line. The screens that LIST a year's
     # budgets use #budgets_for_year.
     def budgets
-      @budgets ||= Budget.includes(:forecasts, :own_owners, area: :owners).to_a
+      @budgets ||= Budget.includes(:forecasts, :own_owners, :cost_centre, area: :owners).to_a
     end
 
     # The selected financial year's budgets — what the budget screens list.

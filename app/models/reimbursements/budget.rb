@@ -52,6 +52,7 @@ module Reimbursements
     include BudgetHealth
     include PlannedAmount
     TYPES = %w[Expense Income].freeze
+    NO_AREA_GROUP = "No area / general"
 
     COMMITTED_STATUSES = [ Status::APPROVED, Status::SUBMITTED, Status::PAID ].freeze
 
@@ -130,6 +131,24 @@ module Reimbursements
     # screen to tell them apart.
     def picker_label
       cost_centre ? "#{cost_centre.picker_prefix} - #{display_name}" : display_name
+    end
+
+    # The <optgroup> heading for this line. Area names are unique only per
+    # (year, centre), so the centre's prefix is what keeps two shows apart.
+    def picker_group
+      return NO_AREA_GROUP unless area
+
+      cost_centre ? "#{cost_centre.picker_prefix} - #{area.name}" : area.name
+    end
+
+    # [[heading, [[label, record_id], ...]], ...] for a grouped select,
+    # headings sorted with the no-area group last. The block overrides the
+    # option label.
+    def self.picker_groups(budgets, &label)
+      label ||= :picker_label.to_proc
+      budgets.group_by(&:picker_group)
+             .sort_by { |heading, _| [ heading == NO_AREA_GROUP ? 1 : 0, heading ] }
+             .map { |heading, lines| [ heading, lines.map { |b| [ label.call(b), b.record_id ] } ] }
     end
 
     # The area owns and its budgets inherit; a budget with no area owns

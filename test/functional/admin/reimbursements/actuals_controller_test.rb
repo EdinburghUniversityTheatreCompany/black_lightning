@@ -1001,6 +1001,17 @@ module Admin
                       .map { |option| option.text.strip }.join(" "), "Sundries"
     end
 
+    test "new_expense groups the other budgets by area" do
+      area = create_reimbursements_area(name: "Cogito")
+      create_reimbursements_budget(name: "Marketing", area: area)
+      sign_in @user
+
+      get :new_expense, params: { id: @unlinked.record_id }
+
+      assert_response :success
+      assert_select "select.simple-select2 optgroup[label='Cogito'] option", text: /Cogito: Marketing/
+    end
+
     test "link_expense refuses a row that is already linked" do
       sign_in @user
 

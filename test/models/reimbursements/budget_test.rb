@@ -392,6 +392,30 @@ module Reimbursements
       assert_equal "Other", budget.picker_label
     end
 
+    # Area names are unique only per (year, centre), so the heading names both.
+    test "picker_group heads an area-bound line with its centre and area" do
+      centre = picker_cost_centre(key: "fringe-group", eusa_code: "F40g")
+      area = Area.create!(name: "Cogito", cost_centre: centre)
+
+      assert_equal "BF - Cogito", build_budget(cost_centre: centre, area: area).picker_group
+      assert_equal Budget::NO_AREA_GROUP, build_budget(cost_centre: centre).picker_group
+    end
+
+    test "picker_group names the bare area when the line has no cost centre" do
+      assert_equal "Cogito", build_budget(area: Area.create!(name: "Cogito")).picker_group
+    end
+
+    test "picker_groups sorts the headings and puts the no-area group last" do
+      loose = build_budget(name: "Contingency")
+      zeta = build_budget(name: "Marketing", area: Area.create!(name: "Zeta"))
+      alpha = build_budget(name: "Marketing", area: Area.create!(name: "Alpha"))
+
+      groups = Budget.picker_groups([ loose, zeta, alpha ])
+
+      assert_equal [ "Alpha", "Zeta", Budget::NO_AREA_GROUP ], groups.map(&:first)
+      assert_equal [ [ "Alpha: Marketing", alpha.record_id ] ], groups.first.last
+    end
+
     # --- apportioned income --------------------------------------------------
 
     # One income line taking the whole of its own credit row. Extracted

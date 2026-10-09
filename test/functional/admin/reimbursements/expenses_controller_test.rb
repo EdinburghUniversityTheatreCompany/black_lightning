@@ -118,6 +118,21 @@ module Admin
       assert_select "option", text: "BF - Marketing"
     end
 
+    test "the budget picker groups lines under their area, searchable by Tom Select" do
+      centre = create_reimbursements_cost_centre(key: "group-centre", name: "Bedlam Fringe",
+                                                 eusa_code: "F42", short_code: "BF")
+      area = create_reimbursements_area(name: "Cogito", cost_centre: centre)
+      create_reimbursements_budget(name: "Marketing", cost_centre: centre, area: area)
+      sign_in @user
+
+      get :new
+
+      assert_select "select.simple-select2#reimbursements_expense_form_budget_record_id" do
+        assert_select "optgroup[label='BF - Cogito'] option", text: "BF - Cogito: Marketing"
+        assert_select "optgroup[label='#{::Reimbursements::Budget::NO_AREA_GROUP}'] option", text: "Props"
+      end
+    end
+
     test "new renders the receipt-first form" do
       sign_in @user
 

@@ -560,8 +560,8 @@ module Admin
         offerable_budgets.map(&:record_id)
       end
 
-      # The budget picker as two labelled groups: the lines on the row's own
-      # nominal code first, then everything else.
+      # The budget picker: the lines on the row's own nominal code first, then
+      # everything else grouped by area as the producer's picker is.
       #
       # The nominal code is the strongest hint the row carries and the picker
       # ignored it entirely, listing all 34 budgets alphabetically — with eight
@@ -581,13 +581,14 @@ module Admin
           groups << [ "Matches this row's nominal code (#{actual.nominal_code})",
                       budget_options(matching) ]
         end
-        groups << [ matching.any? ? "Every other budget" : "Budgets", budget_options(others) ]
-        groups
+        groups + ::Reimbursements::Budget.picker_groups(others) { |budget| budget_option_label(budget) }
       end
 
       def budget_options(budgets)
-        budgets.map { |budget| [ "#{budget.picker_label} · #{budget.nominal_code}", budget.record_id ] }
+        budgets.map { |budget| [ budget_option_label(budget), budget.record_id ] }
       end
+
+      def budget_option_label(budget) = "#{budget.picker_label} · #{budget.nominal_code}"
 
       # The budget a nominal code unambiguously belongs to, so the operator
       # doesn't retype what the code already says. Left blank when several
