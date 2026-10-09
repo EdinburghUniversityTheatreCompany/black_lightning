@@ -69,8 +69,8 @@ module Admin
       }
     end
 
-    # active_budgets is not cost-centre scoped, so the picker must say whose
-    # line each is.
+    # submittable_budgets is not cost-centre scoped, so the picker must say
+    # whose line each is.
     test "the budget picker groups lines under their area" do
       centre = create_second_reimbursements_cost_centre(short_code: "BF")
       area = create_reimbursements_area(name: "Cogito", cost_centre: centre)
