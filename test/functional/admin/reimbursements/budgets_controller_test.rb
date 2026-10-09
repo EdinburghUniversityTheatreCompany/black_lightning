@@ -1362,7 +1362,7 @@ module Admin
 
         assert_select "form[action=?]", admin_reimbursements_budget_path(@props.record_id, **scope)
         assert_select "form[action=?]", forecast_admin_reimbursements_budget_path(@props.record_id, **scope)
-        assert_select "a[href=?]", admin_reimbursements_budgets_path(**scope), text: /All budgets/
+        assert_select "main a[href=?]", admin_reimbursements_budgets_path(**scope), text: /All budgets/
       end
 
       test "a forecast added from a filtered edit page comes back to it filtered" do

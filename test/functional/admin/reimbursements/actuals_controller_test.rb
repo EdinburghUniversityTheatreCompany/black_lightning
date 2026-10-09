@@ -317,7 +317,8 @@ module Admin
       assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
     end
 
-    test "the row actions and the convert page carry the selected cost centre" do
+    # In <main>: the sidebar's own Ledger link carries the centre too.
+    test "the convert page carries the selected cost centre" do
       termtime = create_second_reimbursements_cost_centre
       sign_in @user
 
@@ -325,13 +326,16 @@ module Admin
 
       assert_select "form[action=?]",
                     create_expense_admin_reimbursements_actual_path(@unlinked.record_id, cost_centre: termtime.key)
-      assert_select "a[href=?]", admin_reimbursements_actuals_path(cost_centre: termtime.key), minimum: 1
+      ledger = admin_reimbursements_actuals_path(cost_centre: termtime.key)
+      assert_select "main a[href=?]", ledger, text: /All actuals/
+      assert_select "main a[href=?]", ledger, text: "Cancel"
     end
 
     test "the row action links carry every filter the ledger is on" do
+      termtime = create_second_reimbursements_cost_centre
       sign_in @user
 
-      get :index, params: { state: ActualsController::STATE_ALL, include_offsets: "1" }
+      get :index, params: { state: ActualsController::STATE_ALL, include_offsets: "1", cost_centre: termtime.key }
 
       actions = css_select("a").select do |a|
         [ "Link to claim", "Create expense", "Split across budgets", "Mark as offsetting" ].include?(a.text.strip)
@@ -340,6 +344,7 @@ module Admin
       actions.each do |a|
         assert_includes a["href"], "include_offsets=1", "#{a.text.strip} drops the filters"
         assert_includes a["href"], "state=#{ActualsController::STATE_ALL}", "#{a.text.strip} drops the filters"
+        assert_includes a["href"], "cost_centre=#{termtime.key}", "#{a.text.strip} drops the cost centre"
       end
     end
 
