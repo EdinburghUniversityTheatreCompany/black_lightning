@@ -1401,16 +1401,6 @@ module Admin
         assert_select "nav[aria-label='Neighbouring budgets']", count: 0
       end
 
-      test "the cost-centre selector offers to make the selected centre the default" do
-        termtime = create_second_reimbursements_cost_centre
-        sign_in @user
-
-        get :index, params: { cost_centre: termtime.key }
-
-        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: termtime.key),
-                      text: "Make this my default"
-      end
-
       test "the cost-centre selector names the default on every page, offering a switch elsewhere" do
         termtime = create_second_reimbursements_cost_centre
         fringe = ::Reimbursements::CostCentre.where.not(id: termtime.id).first
@@ -1425,6 +1415,9 @@ module Admin
           assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path, text: "Clear"
           assert_select "button", text: "Make this my default", count: offers_switch ? 1 : 0
         end
+        # The last page read was fringe's.
+        assert_select "form[action=?] button", admin_reimbursements_home_cost_centre_path(cost_centre: fringe.key),
+                      text: "Make this my default"
       end
 
       # The live year (holding the budgets seeded in setup) plus a draft year
