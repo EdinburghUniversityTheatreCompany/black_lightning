@@ -290,31 +290,13 @@ module Admin
 
     test "unoffset keeps the operator's filters" do
       accrual, = create_offsetting_pair
-      sign_in @user
-
-      post :unoffset, params: { id: accrual.record_id, period: "04", include_offsets: "1" }
-
-      assert_redirected_to admin_reimbursements_actuals_path(period: "04", include_offsets: "1")
-    end
-
-    test "unoffset keeps the selected cost centre" do
-      accrual, = create_offsetting_pair
       termtime = create_second_reimbursements_cost_centre
       sign_in @user
 
-      post :unoffset, params: { id: accrual.record_id, cost_centre: termtime.key }
+      post :unoffset, params: { id: accrual.record_id, period: "04", include_offsets: "1", cost_centre: termtime.key }
 
-      assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
-    end
-
-    test "a refused conversion returns to the selected cost centre" do
-      accrual, = create_offsetting_pair
-      termtime = create_second_reimbursements_cost_centre
-      sign_in @user
-
-      get :new_expense, params: { id: accrual.record_id, cost_centre: termtime.key }
-
-      assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
+      assert_redirected_to admin_reimbursements_actuals_path(period: "04", include_offsets: "1",
+                                                             cost_centre: termtime.key)
     end
 
     # In <main>: the sidebar's own Ledger link carries the centre too.
@@ -436,13 +418,14 @@ module Admin
 
     test "a row that cannot become an expense is bounced with the reason" do
       accrual, = create_offsetting_pair
+      termtime = create_second_reimbursements_cost_centre
       sign_in @user
 
       { accrual => /offset/i, @linked_budget => /debit/i,
         @linked_expense => /already/i }.each do |row, reason|
-        get :new_expense, params: { id: row.record_id }
+        get :new_expense, params: { id: row.record_id, cost_centre: termtime.key }
 
-        assert_redirected_to admin_reimbursements_actuals_path
+        assert_redirected_to admin_reimbursements_actuals_path(cost_centre: termtime.key)
         assert_match reason, flash[:alert]
       end
     end
