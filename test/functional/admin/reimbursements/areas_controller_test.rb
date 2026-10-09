@@ -43,6 +43,15 @@ module Admin
         end
       end
 
+      test "New area carries only the scope the URL named, an explicit All included" do
+        create_second_reimbursements_cost_centre
+        ::Reimbursements::FinancialYear.create!(label: "Fringe 2026", active: true)
+
+        get :index, params: { cost_centre: "" }
+
+        assert_select "a[href=?]", new_admin_reimbursements_area_path(cost_centre: ""), text: "New area"
+      end
+
       # The empty hidden field beside a multiple select is what clears the list:
       # without it, removing the last owner posts no owner_ids key at all.
       test "the edit form offers owners as one searchable multi-select and a type and amount per line" do
