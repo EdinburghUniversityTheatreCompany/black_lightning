@@ -14,7 +14,7 @@ module Admin
       before_action :set_forecast, only: %i[update_forecast delete_forecast]
 
       def show
-        @title = @budget.name
+        @title = @budget.display_name
         @summary = ::Reimbursements::SpendSummary.for_budget(@budget)
         load_claims([ @budget ])
       end
