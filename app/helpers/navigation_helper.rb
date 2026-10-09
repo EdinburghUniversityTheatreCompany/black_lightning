@@ -154,7 +154,7 @@ module NavigationHelper
   private
 
   # The signed-in finance user's home cost centre, for the links whose page
-  # reads the centre. Only while the page names no centre: a centre already chosen is
+  # reads the centre. Only while the page names no centre: one chosen with ?cost_centre= is
   # carried by the sidebar itself and must win over the default.
   def home_cost_centre_scope
     return {} if params.key?(:cost_centre) || params[:cost_centre_id].present?

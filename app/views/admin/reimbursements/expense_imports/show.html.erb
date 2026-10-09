@@ -83,7 +83,8 @@
                        class: input_classes %>
       <% end %>
 
-      <%# No preselected centre: a sheet of claims in the wrong pot is a large quiet mistake. %>
+      <%# Preselected only from the link, the sole centre or the operator's home centre: a sheet of
+          claims in the wrong pot is a large quiet mistake. %>
       <%= render "shared/form/field", label: "Cost centre", name: :cost_centre_id,
             html_class: "sm:w-1/2" do %>
         <%= select_tag :cost_centre_id,

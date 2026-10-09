@@ -119,8 +119,8 @@ class User < ApplicationRecord
   belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
              optional: true, inverse_of: :user
 
-  # A finance user's home cost centre: decorates their finance links only. Bare finance URLs still
-  # mean every centre.
+  # A finance user's home cost centre: decorates their finance links and the import wizards'
+  # preselect only. Bare finance URLs still mean every centre.
   belongs_to :reimbursements_cost_centre, class_name: "Reimbursements::CostCentre", optional: true
 
   # An erasure request is served by deleting the account, so this must reach the linked payee's

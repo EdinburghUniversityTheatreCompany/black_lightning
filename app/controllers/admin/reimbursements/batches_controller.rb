@@ -175,8 +175,9 @@ module Admin
         @cost_centre = selected_cost_centre || sole_cost_centre
         return if @cost_centre
 
-        # ASK rather than bounce: from an "All" page with no home centre the sidebar's link names
-        # none, and a redirect would make Build Batch unreachable from where most operators start.
+        # ASK rather than bounce: the sidebar's link names no centre when there is no home centre
+        # or All is chosen, and a redirect would make Build Batch unreachable from where most
+        # operators start.
         if selectable_cost_centres.any?
           @title = "Build batch"
           return render :choose_cost_centre
