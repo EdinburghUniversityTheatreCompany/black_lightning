@@ -1311,7 +1311,7 @@ module Admin
         assert_equal [ "Next year props" ], names
       end
 
-      test "the links between the index and the overview keep the selected year and centre" do
+      test "the tabs between the index and the overview keep the selected year and centre" do
         this_year, = seed_two_years
         other = create_second_reimbursements_cost_centre
         sign_in @user
@@ -1319,11 +1319,13 @@ module Admin
 
         get :index, params: scope
 
-        assert_select "a[href=?]", overview_admin_reimbursements_budgets_path(scope), text: "Budget overview"
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      overview_admin_reimbursements_budgets_path(scope), text: "Overview"
 
         get :overview, params: scope
 
-        assert_select "a[href=?]", admin_reimbursements_budgets_path(scope), text: /All budgets/
+        assert_select "nav[aria-label='Budget views'] a[href=?]",
+                      admin_reimbursements_budgets_path(scope), text: "Budgets"
       end
 
       test "the selector is hidden while only one year exists" do
