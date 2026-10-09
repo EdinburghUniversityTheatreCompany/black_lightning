@@ -1,4 +1,10 @@
-<%# locals: (headers:, ordered_area_ids:, budgets_by_area_id:, none_budgets:, areas_by_id:) %>
+<%# locals: (budgets:, areas_by_id:) %>
+<%# [label, money?]: money columns are right-aligned to line up the pence. %>
+<% headers = [ [ "Budget" ], [ "Initial", true ], [ "Projected", true ], [ "Committed", true ],
+               [ "EUSA actual", true ], [ "Expected outturn", true ], [ "Remaining", true ],
+               [ "Variance", true ], [ "Owners" ], [ "" ] ] %>
+<% by_area = budgets.group_by { |budget| budget.area&.record_id } %>
+<% loose = by_area.delete(nil) %>
 <div class="table-scroll">
   <%# table-pinned-actions: at 1366x768 the Edit column sat 87px off screen. %>
   <table class="table table-hover table-sticky-head table-pinned-actions tabular-nums"
@@ -11,9 +17,8 @@
         <% end %>
       </tr>
     </thead>
-    <% ordered_area_ids.each do |area_id| %>
+    <% by_area.each do |area_id, lines| %>
       <% area = areas_by_id[area_id] %>
-      <% visible_count = budgets_by_area_id[area_id].size %>
       <%# area.budgets is preloaded (store.areas), so .size reads the loaded
           array, not a COUNT. It counts every line linked to the area, matching
           the figures beside it. %>
@@ -25,9 +30,9 @@
               <%= link_to area.name, admin_reimbursements_area_path(area.record_id, **scope_params),
                           class: "font-semibold text-base" %>
               <%# Only shown when some of the area's lines sit in another year or cost centre. %>
-              <% if visible_count < total_count %>
+              <% if lines.size < total_count %>
                 <span class="text-sm text-gray-500">
-                  <%= visible_count %> of <%= pluralize(total_count, "line") %> shown
+                  <%= lines.size %> of <%= pluralize(total_count, "line") %> shown
                 </span>
               <% end %>
               <%# no_budget_set?, not projected_amount.nil?: a £0 total with
@@ -57,19 +62,17 @@
             </div>
           </th>
         </tr>
-        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: budgets_by_area_id[area_id],
-              as: :budget %>
+        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: lines, as: :budget %>
       </tbody>
     <% end %>
-    <% if none_budgets.present? %>
+    <% if loose %>
       <tbody data-area="none">
         <tr class="bg-gray-50">
           <th scope="rowgroup" colspan="<%= headers.size %>" class="text-left font-semibold py-2">
             Not in an area
           </th>
         </tr>
-        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: none_budgets,
-              as: :budget %>
+        <%= render partial: "admin/reimbursements/budgets/budget_row", collection: loose, as: :budget %>
       </tbody>
     <% end %>
   </table>

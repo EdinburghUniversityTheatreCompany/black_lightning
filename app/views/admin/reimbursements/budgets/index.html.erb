@@ -37,22 +37,8 @@
     <p class="py-4 text-center text-gray-600">No budgets found.</p>
   <% end %>
 <% else %>
-  <%# [label, money?]: money columns are right-aligned to line up the pence. %>
-  <% headers = [ [ "Budget" ], [ "Initial", true ], [ "Projected", true ], [ "Committed", true ],
-                 [ "EUSA actual", true ], [ "Expected outturn", true ], [ "Remaining", true ],
-                 [ "Variance", true ], [ "Owners" ], [ "" ] ] %>
-  <%
-    # Grouped off the scoped budgets, so an area shows only its in-scope lines, in the order
-    # Budget.index_order put them. Area figures come off @areas_by_id, never budget.area (which
-    # would N+1).
-    budgets_by_area_id = @budgets.group_by { |budget| budget.area&.record_id }
-    none_budgets = budgets_by_area_id.delete(nil) || []
-    ordered_area_ids = budgets_by_area_id.keys
-  %>
   <%= render "shared/pages/index_results",
         resources: @budgets, resource_class: ::Reimbursements::Budget,
         include_pagination: false,
-        content: render("grouped_table", headers: headers, ordered_area_ids: ordered_area_ids,
-                        budgets_by_area_id: budgets_by_area_id, none_budgets: none_budgets,
-                        areas_by_id: @areas_by_id) %>
+        content: render("grouped_table", budgets: @budgets, areas_by_id: @areas_by_id) %>
 <% end %>
