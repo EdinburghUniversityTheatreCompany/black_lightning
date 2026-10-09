@@ -26,7 +26,6 @@ class NavigationHelperTest < ActionView::TestCase
 
   def finance_paths_with_home(centre)
     grant_finance_permission(@current_user)
-    @current_user.instance_variable_set(:@ability, nil)
     @current_user.update!(reimbursements_cost_centre: centre)
     finance_category[:children].to_h { |child| [ child[:title], child[:path] ] }
   end
@@ -50,20 +49,15 @@ class NavigationHelperTest < ActionView::TestCase
     assert_empty paths.values.grep(/cost_centre/)
   end
 
-  test "a centre already chosen on the page beats the home centre" do
+  # The sidebar carries the page's own choice instead.
+  test "a centre or an explicit All on the page beats the home centre" do
     termtime = create_second_reimbursements_cost_centre
-    params[:cost_centre] = "fringe"
-    paths = finance_paths_with_home(termtime)
+    [ "fringe", "" ].each do |chosen|
+      params[:cost_centre] = chosen
+      paths = finance_paths_with_home(termtime)
 
-    assert_empty paths.values.grep(/cost_centre/), "the sidebar carries the page's own choice instead"
-  end
-
-  test "an explicit All on the page beats the home centre" do
-    termtime = create_second_reimbursements_cost_centre
-    params[:cost_centre] = ""
-    paths = finance_paths_with_home(termtime)
-
-    assert_empty paths.values.grep(/cost_centre/)
+      assert_empty paths.values.grep(/cost_centre/), "cost_centre=#{chosen.inspect}"
+    end
   end
 
   def finance_category
