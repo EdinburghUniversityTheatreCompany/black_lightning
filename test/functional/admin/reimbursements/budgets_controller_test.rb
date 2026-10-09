@@ -1912,6 +1912,15 @@ module Admin
                       edit_admin_reimbursements_budget_path(@income.record_id, cost_centre: termtime.key)
       end
 
+      test "a line with no neighbours gets no empty neighbours nav" do
+        @income.destroy!
+        sign_in @user
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_select "nav[aria-label='Neighbouring budgets']", count: 0
+      end
+
       test "the cost-centre selector offers to make the selected centre the default" do
         termtime = create_second_reimbursements_cost_centre
         sign_in @user

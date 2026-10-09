@@ -1,17 +1,19 @@
 <div class="flex flex-wrap items-baseline justify-between gap-3">
   <%= render "shared/back_link", text: "All budgets", path: admin_reimbursements_budgets_path(**scope_params) %>
-  <nav class="mb-3 flex gap-3 text-sm" aria-label="Neighbouring budgets">
-    <% if @previous_budget %>
-      <%= link_to "← #{@previous_budget.display_name}",
-                  edit_admin_reimbursements_budget_path(@previous_budget.record_id, **scope_params),
-                  rel: "prev", class: "text-primary underline" %>
-    <% end %>
-    <% if @next_budget %>
-      <%= link_to "#{@next_budget.display_name} →",
-                  edit_admin_reimbursements_budget_path(@next_budget.record_id, **scope_params),
-                  rel: "next", class: "text-primary underline" %>
-    <% end %>
-  </nav>
+  <% if @previous_budget || @next_budget %>
+    <nav class="mb-3 flex gap-3 text-sm" aria-label="Neighbouring budgets">
+      <% if @previous_budget %>
+        <%= link_to "← #{@previous_budget.display_name}",
+                    edit_admin_reimbursements_budget_path(@previous_budget.record_id, **scope_params),
+                    rel: "prev", class: "text-primary underline" %>
+      <% end %>
+      <% if @next_budget %>
+        <%= link_to "#{@next_budget.display_name} →",
+                    edit_admin_reimbursements_budget_path(@next_budget.record_id, **scope_params),
+                    rel: "next", class: "text-primary underline" %>
+      <% end %>
+    </nav>
+  <% end %>
 </div>
 
 <%= form_with url: admin_reimbursements_budget_path(@budget.record_id, **scope_params), method: :patch do |form| %>
