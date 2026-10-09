@@ -29,24 +29,19 @@ module Admin
         expense.receipt_files.reload.find { |file| file.filename.to_s == filename }.blob_id.to_s
       end
 
-      test "removes a receipt from an own pending expense" do
-        delete :destroy, params: { expense_id: @expense.record_id, id: receipt_id(@expense, "old.pdf") }
-
-        assert_redirected_to edit_admin_reimbursements_expense_path(@expense.record_id)
-        assert_equal [ "new.pdf" ], @expense.reload.receipt_files.map { |f| f.filename.to_s }
-      end
-
       test "refuses to remove the last receipt" do
         expense = create_reimbursements_expense(person: @person, budget: @budget) # one receipt.pdf
 
-        delete :destroy, params: { expense_id: expense.record_id, id: receipt_id(expense, "receipt.pdf") }
+        delete :destroy, params: { expense_id: expense.record_id, id: receipt_id(expense, "receipt.pdf") },
+                         format: :turbo_stream
 
-        assert_redirected_to edit_admin_reimbursements_expense_path(expense.record_id)
-        assert_match(/last receipt/, flash[:alert])
+        assert_response :success
+        assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
+        assert_match(/can&#39;t remove the last receipt/, response.body)
         assert_equal 1, expense.reload.receipt_files.count, "the receipt was not removed"
       end
 
-      test "destroy as turbo stream replaces the gallery" do
+      test "destroy removes a receipt from an own pending expense and replaces the gallery" do
         removed_id = receipt_id(@expense, "old.pdf")
         survivor_id = receipt_id(@expense, "new.pdf")
 
@@ -58,6 +53,7 @@ module Admin
         # The survivor's remove-control URL renders, the removed receipt's doesn't.
         assert_includes response.body, "receipts/#{survivor_id}"
         assert_not_includes response.body, "receipts/#{removed_id}"
+        assert_equal [ "new.pdf" ], @expense.reload.receipt_files.map { |f| f.filename.to_s }
       end
 
       def receipt_upload = fixture_file_upload("reimbursements_receipt.pdf", "application/pdf")
@@ -95,14 +91,6 @@ module Admin
         receipt = @expense.receipt_files.reload.last
         assert_equal "image/jpeg", receipt.content_type
         assert_equal "reimbursements_receipt.jpg", receipt.filename.to_s
-      end
-
-      test "create falls back to a redirect for html" do
-        assert_difference -> { @expense.receipt_files.count }, 1 do
-          post :create, params: { expense_id: @expense.record_id, receipts: [ receipt_upload ] }
-        end
-
-        assert_redirected_to edit_admin_reimbursements_expense_path(@expense.record_id)
       end
 
       test "another person's expense 404s for both adding and removing a receipt" do

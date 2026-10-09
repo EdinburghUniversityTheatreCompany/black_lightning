@@ -953,39 +953,16 @@ module Admin
         assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
       end
 
-      test "remove_receipt drops a receipt and redirects to edit" do
-        expense = two_receipt_expense
-        removed = expense.receipt_files.find { |file| file.filename.to_s == "a.pdf" }
-        sign_in @user
-
-        delete :remove_receipt, params: { id: expense.record_id, attachment_id: removed.blob_id.to_s }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        assert_equal [ "b.pdf" ], expense.reload.receipt_files.map { |file| file.filename.to_s }
-      end
-
-      test "add_receipts attaches an uploaded file and redirects to edit" do
-        expense = expense_at("Paid")
-        sign_in @user
-
-        assert_difference -> { expense.receipt_files.count }, 1 do
-          post :add_receipts, params: { id: expense.record_id,
-                                        receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/pdf") ] }
-        end
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-      end
-
       test "add_receipts with no file attaches nothing and says so" do
         expense = expense_at("Paid")
         sign_in @user
 
         assert_no_difference -> { expense.receipt_files.count } do
-          post :add_receipts, params: { id: expense.record_id }
+          post :add_receipts, params: { id: expense.record_id }, format: :turbo_stream
         end
 
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
-        assert_equal AttachesReceipts::NOTHING_USABLE, flash[:alert]
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(AttachesReceipts::NOTHING_USABLE)
       end
 
       # The checker returns INVALID for a blank pair, which drew "likely a typo"

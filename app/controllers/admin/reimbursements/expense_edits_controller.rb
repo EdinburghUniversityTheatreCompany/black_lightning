@@ -71,9 +71,8 @@ module Admin
 
       def add_receipts
         expense = find_expense!
-        attached, upload_errors = attach_posted_receipts(expense)
-        notice = "Attached #{attached} receipt(s) to ##{expense.auto_number}." if attached.positive?
-        respond_with_finance_gallery(expense, upload_errors: upload_errors, notice: notice)
+        _, upload_errors = attach_posted_receipts(expense)
+        respond_with_finance_gallery(expense, upload_errors: upload_errors)
       rescue StandardError => e # AR/ActiveStorage failures
         raise if expense.nil?
 
@@ -83,7 +82,7 @@ module Admin
       def remove_receipt
         expense = find_expense!
         store.remove_receipt!(expense.record_id, params[:attachment_id])
-        respond_with_finance_gallery(expense, notice: "Removed a receipt from ##{expense.auto_number}.")
+        respond_with_finance_gallery(expense)
       rescue ::Reimbursements::DatabaseStore::LastReceiptError
         respond_with_finance_gallery(expense, upload_errors: [ "Can't remove the last receipt from a submitted expense." ])
       rescue StandardError => e
@@ -322,10 +321,8 @@ module Admin
         redirect_to edit_admin_reimbursements_expense_edit_path(expense.record_id), **flash
       end
 
-      def respond_with_finance_gallery(expense, upload_errors: [], notice: nil)
-        respond_with_receipts_gallery(expense, upload_errors: upload_errors,
-                                      notice: notice, finance: true,
-                                      redirect_path: edit_admin_reimbursements_expense_edit_path(expense.record_id))
+      def respond_with_finance_gallery(expense, upload_errors: [])
+        respond_with_receipts_gallery(expense, upload_errors: upload_errors, finance: true)
       end
     end
   end

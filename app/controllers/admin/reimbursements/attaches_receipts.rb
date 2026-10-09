@@ -21,10 +21,9 @@ module Admin
         [ usable.size, rejected.map(&:error) ]
       end
 
-      # Answers with a turbo stream replacing #receipts-gallery, or a redirect for
-      # a plain post. `finance` points the remove buttons at the finance routes.
-      def respond_with_receipts_gallery(expense, redirect_path:, upload_errors: [], notice: nil,
-                                        finance: false)
+      # Answers with a turbo stream replacing #receipts-gallery: receipts_upload_controller
+      # is the only client. `finance` points the remove buttons at the finance routes.
+      def respond_with_receipts_gallery(expense, upload_errors: [], finance: false)
         # Expense#reload resets its receipts, so the gallery shows what is attached now.
         expense = expense.reload
         respond_to do |format|
@@ -34,9 +33,6 @@ module Admin
               partial: "admin/reimbursements/expenses/receipts_gallery",
               locals: { expense: expense, upload_errors: upload_errors, finance: finance }
             )
-          end
-          format.html do
-            redirect_to redirect_path, notice: notice, alert: upload_errors.presence&.to_sentence
           end
         end
       end
