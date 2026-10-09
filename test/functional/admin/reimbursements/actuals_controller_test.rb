@@ -343,6 +343,34 @@ module Admin
       end
     end
 
+    # An explicit All (cost_centre=) is a choice: a link that drops it lets the
+    # sidebar put the operator's home centre back on the next click.
+    test "the ledger's links and filter form keep an explicit All" do
+      create_second_reimbursements_cost_centre
+      sign_in @user
+
+      get :index, params: { state: ActualsController::STATE_ALL, cost_centre: "" }
+
+      assert_select "input[type=hidden][name=cost_centre][value=?]", ""
+      assert_select "main a[href=?]", admin_reimbursements_actuals_path(cost_centre: ""), text: "Clear"
+      actions = css_select("a").select { |a| [ "Create expense", "Mark as offsetting" ].include?(a.text.strip) }
+      assert_not_empty actions
+      actions.each do |a|
+        query = Rack::Utils.parse_nested_query(URI.parse(a["href"]).query)
+        assert_equal "", query["cost_centre"], "#{a.text.strip} drops the explicit All"
+      end
+    end
+
+    test "unoffset from an explicit All comes back to All" do
+      accrual, = create_offsetting_pair
+      create_second_reimbursements_cost_centre
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id, cost_centre: "" }
+
+      assert_redirected_to admin_reimbursements_actuals_path(cost_centre: "")
+    end
+
     test "unoffset refuses a row that is not marked offsetting" do
       sign_in @user
 

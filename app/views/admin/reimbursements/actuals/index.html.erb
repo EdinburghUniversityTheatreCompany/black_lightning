@@ -11,8 +11,7 @@
   # Every filter the page is on, so each row action comes back to the list
   # the operator was reading rather than to an unfiltered first page.
   filters = { period: @period.presence, search: @search.presence, state: @state,
-              include_offsets: (@include_offsets ? "1" : nil),
-              cost_centre: selected_cost_centre&.key }.compact
+              include_offsets: (@include_offsets ? "1" : nil) }.compact.merge(scope_params)
   attention_state = ::Admin::Reimbursements::ActualsController::STATE_NEEDS_ATTENTION
   needs_attention = @state == attention_state
   all_state = ::Admin::Reimbursements::ActualsController::STATE_ALL
@@ -20,7 +19,9 @@
 
 <%= render CardComponent.new(title: "Filter") do %>
   <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
-    <%= hidden_field_tag :cost_centre, selected_cost_centre.key if selected_cost_centre %>
+    <% scope_params.each do |key, value| %>
+      <%= hidden_field_tag key, value %>
+    <% end %>
     <div>
       <%= label_tag :state, "Show", class: FormStyles::LABEL %>
       <%= select_tag :state,
@@ -50,7 +51,7 @@
     <% end %>
     <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
     <% if @period.present? || @search.present? || @include_offsets || !needs_attention %>
-      <%= link_to "Clear", admin_reimbursements_actuals_path(cost_centre: selected_cost_centre&.key), class: "text-sm text-gray-600 underline" %>
+      <%= link_to "Clear", admin_reimbursements_actuals_path(scope_params), class: "text-sm text-gray-600 underline" %>
     <% end %>
   <% end %>
 <% end %>

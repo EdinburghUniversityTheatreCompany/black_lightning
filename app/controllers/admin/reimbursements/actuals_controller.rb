@@ -269,10 +269,10 @@ module Admin
       end
 
       # The index's own filters and cost centre, so an action taken from a filtered list (or a page
-      # reached from one) comes back to that list.
+      # reached from one) comes back to that list. scope_params goes after compact_blank, which would
+      # drop an explicit All.
       def actual_filters
-        params.permit(:period, :include_offsets, :state, :search).to_h
-              .merge(cost_centre: selected_cost_centre&.key).compact_blank
+        params.permit(:period, :include_offsets, :state, :search).to_h.compact_blank.merge(scope_params)
       end
       helper_method :actual_filters
 
