@@ -5,60 +5,10 @@ module Admin
     class StatusControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
-      # Settings reads ENV before credentials; without these Graph is "not configured".
-      GRAPH_ENV = {
-        "REIMBURSEMENTS_AZURE_TENANT_ID" => "tenant",
-        "REIMBURSEMENTS_AZURE_CLIENT_ID" => "client",
-        "REIMBURSEMENTS_AZURE_CLIENT_SECRET" => "secret"
-      }.freeze
-
-      def with_env(vars)
-        original = vars.keys.index_with { |key| ENV[key] }
-        vars.each { |key, value| ENV[key] = value }
-        yield
-      ensure
-        original.each { |key, value| ENV[key] = value }
-      end
-
-      # Raises to stand in for expired Azure credentials.
-      class FakeGraph
-        def initialize(ok: true)
-          @ok = ok
-        end
-
-        def check_reachable
-          raise ::GraphAuth::AuthError, "Graph rejected the token (401)" unless @ok
-
-          true
-        end
-      end
-
       setup do
         grant_finance_permission(users(:member))
         @user = users(:member)
         @cost_centre = ::Reimbursements::CostCentre.default
-
-        StatusController.graph_builder = -> { FakeGraph.new }
-      end
-
-      teardown do
-        StatusController.graph_builder = -> { ::Reimbursements::GraphClient.new }
-      end
-
-      test "run denies members without the finance permission" do
-        sign_in users(:committee)
-        post :run
-        assert_response :forbidden
-      end
-
-      test "show renders the dashboard for a finance user" do
-        sign_in @user
-        get :show
-
-        assert_response :success
-        assert_includes response.body, "Integration checks"
-        assert_includes response.body, "Run checks"
-        assert_nil assigns(:checks)
       end
 
       test "show renders the last nightly-run date per cost centre" do
@@ -80,46 +30,6 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Never"
-      end
-
-      test "run reports every integration OK when the probes succeed" do
-        sign_in @user
-
-        with_env(GRAPH_ENV) { post :run }
-
-        assert_response :success
-        assert_includes response.body, "Microsoft Graph"
-        assert_includes response.body, "acquired an app token"
-      end
-
-      test "run flags Microsoft Graph with the error message when the token probe raises" do
-        StatusController.graph_builder = -> { FakeGraph.new(ok: false) }
-        sign_in @user
-
-        with_env(GRAPH_ENV) { post :run }
-
-        assert_response :success
-        assert_includes response.body, "Graph rejected the token (401)"
-        assert_includes response.body, "Contact IT"
-      end
-
-      test "run skips Graph when the Azure credentials are absent" do
-        sign_in @user
-
-        post :run
-
-        assert_response :success
-        assert_includes response.body, "No Azure credentials configured yet"
-      end
-
-      test "run still shows the last nightly-run date alongside the probe results" do
-        @cost_centre.update!(last_nightly_run_on: Date.new(2026, 6, 30))
-        sign_in @user
-
-        with_env(GRAPH_ENV) { post :run }
-
-        assert_response :success
-        assert_includes response.body, "2026-06-30"
       end
 
       test "flags a cost centre with no notification address" do
@@ -153,16 +63,6 @@ module Admin
         assert_response :success
         assert_includes response.body,
                         edit_admin_reimbursements_setting_path(@cost_centre.key)
-      end
-
-      test "run answers a turbo stream that updates the results in place" do
-        sign_in @user
-
-        with_env(GRAPH_ENV) { post :run, as: :turbo_stream }
-
-        assert_response :success
-        assert_includes response.media_type, "turbo-stream"
-        assert_includes response.body, "integration_check_results"
       end
 
       def logged_send(recipient:, kind: "pending_reminder", sent_at: Time.current,

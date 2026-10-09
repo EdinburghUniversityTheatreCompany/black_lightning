@@ -119,13 +119,6 @@ module Reimbursements
       true
     end
 
-    # Acquires an app-only token: confirms the Azure credentials work and Microsoft login is
-    # reachable, touching no mailbox or site. Raises on failure.
-    def check_reachable
-      graph_token
-      true
-    end
-
     # --- SharePoint browse (Settings folder picker) ------------------------
 
     # Resolves a site by its browser URL through the server-relative path form. A Sites.Selected

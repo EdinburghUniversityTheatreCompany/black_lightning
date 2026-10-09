@@ -22,7 +22,7 @@ module Admin
 
       PAGE_SIZE = 50
 
-      # One row of an integration or access probe's results.
+      # One row of the Settings access check's results.
       Check = Struct.new(:label, :status, :detail, keyword_init: true)
 
       private

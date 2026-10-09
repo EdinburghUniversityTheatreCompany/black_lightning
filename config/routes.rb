@@ -237,9 +237,8 @@ ChaosRails::Application.routes.draw do
         get :download
       end
 
-      # Integration health dashboard; #run is the on-demand "Run checks" POST that probes Graph.
-      get  "status",     to: "status#show", as: :status
-      post "status/run", to: "status#run",  as: :run_status_checks
+      # Integration health dashboard: nightly runs, recipients and the send log.
+      get "status", to: "status#show", as: :status
 
       # Build Batch (new/create) and History (index/show/reopen). batch_attempts#dismiss clears a
       # handled build-attempt banner from History.

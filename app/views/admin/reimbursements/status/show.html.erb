@@ -1,6 +1,5 @@
 <p class="mb-3 text-gray-600">
-  What the portal has emailed, and whether Microsoft is reachable. Press
-  <strong>Run checks</strong> to probe the live services.
+  What the portal has emailed, and to whom.
 </p>
 
 <%= render CardComponent.new(title: "Last nightly run") do %>
@@ -47,22 +46,6 @@
       </li>
     <% end %>
   </ul>
-<% end %>
-
-<%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
-  <p class="text-sm text-gray-600 mb-2">
-    Probe Microsoft Graph with the app's own credentials. Graph is the only integration this
-    portal has to reach, so it is the only check here.
-  </p>
-  <div data-controller="busy-dim"
-       data-action="turbo:submit-start->busy-dim#start turbo:submit-end->busy-dim#end">
-    <%= button_to "Run checks", admin_reimbursements_run_status_checks_path,
-                  method: :post, class: btn_classes(:secondary, :sm),
-                  data: { turbo_submits_with: "Checking…" } %>
-    <div id="integration_check_results" data-busy-dim-target="dimmable">
-      <%= render "admin/reimbursements/shared/checks", checks: @checks %>
-    </div>
-  </div>
 <% end %>
 
 <%= render CardComponent.new(title: "What has been emailed", html_class: "mt-4") do %>
