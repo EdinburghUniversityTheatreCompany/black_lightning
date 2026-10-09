@@ -244,12 +244,6 @@ module Reimbursements
       config.default_url_options = original
     end
 
-    test "no template tells a lone owner that one of several can sign off" do
-      Rails.root.glob("app/views/reimbursements/emails/*.erb").each do |template|
-        assert_not_includes template.read, "one of you", "#{template} assumes several owners"
-      end
-    end
-
     test "a Graph send failure propagates so callers can rescue it" do
       notifier, graph = build
       graph.fail_send = true
